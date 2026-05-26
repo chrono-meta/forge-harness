@@ -1,0 +1,146 @@
+---
+name: convergence-loop
+description: A universal gate-reinforcement meta-skill that replaces the "single-pass = done" pattern with a converging loop of up to N rounds. Can be applied to any gate, checkpoint, or verification step. Only declares "truly passed" after FAIL→FIX→re-verify repeats until convergence (all items pass). Escalates to structural redesign if not converged within N rounds. Triggers on: "convergence-loop", "how many rounds do we need", "suspicious of single-pass", "not sure if it really passed", or equivalent phrasing.
+user-invocable: true
+allowed-tools: ["Read", "Write", "Bash", "Agent"]
+model: sonnet
+origin: contention-layer
+contention-parents: [mcp-spec-to-tc P3 gate, harvest-loop]
+---
+
+# convergence-loop — Universal Convergence Loop Gate Reinforcement
+
+> A single pass declaration is hard to trust. A fix exposes new FAILs, and round 2 catches what round 1 missed. convergence-loop assigns a "truly passed" criterion to any gate.
+
+## Origin
+
+Extracted after the same pattern appeared in two separate places (2026-05-23):
+- `mcp-spec-to-tc` Step 4.5 P3 gate: round 1 ✅, then additional FAILs found in rounds 2~3 → convergence loop internalized as 3 rounds
+- `harvest-loop` Step H1~H5: pattern extraction → attack → synthesis → the repeating structure must run until convergence
+
+When the same structure appears twice, it is a skill.
+
+## Applicable Targets
+
+| Applicable Gate | Example |
+|---|---|
+| TC quality gate | mcp-spec-to-tc P3 9/9 + Wave-P3 |
+| Skill diagnostic gate | harness-doctor + apex-review |
+| Session harvest loop | harvest-loop Step H1~H5 |
+| External asset audit | steel-quench Wave 1~N |
+| Any FAIL→FIX repeating structure | User-defined gate |
+
+---
+
+## Pipeline Structure
+
+```
+[Input] gate name + pass criteria + max rounds N (default 3)
+    │
+    ▼
+Round 1
+    │  Execute gate
+    │  → All items pass: ✅ Round 1 passed → Round 2 (verification)
+    │  → FAIL occurs: List FAIL items → Execute FIX → Round 2
+    │
+    ▼
+Round 2
+    │  Re-execute same gate (with FIX applied + search for new FAILs)
+    │  → All items pass: ✅ Round 2 passed → Round 3 (final check)
+    │  → New FAIL: List → FIX → Round 3
+    │
+    ▼
+Round 3 (final)
+    │  → All items pass: ✅ Declare truly passed
+    │  → FAILs remain: "Structural redesign required" → Escalate
+    │
+    ▼ (if not converged within N rounds)
+Escalation
+    → Classify root cause: ambiguous criteria / FIX capability limit / gate design flaw
+    → Output recommended action
+```
+
+**Core principle**: A fix exposing new FAILs is not a failure — it is a **signal that the gate is working correctly**. The deeper the round, the more fundamental the FAILs it uncovers.
+
+---
+
+## Execution Guidelines
+
+### Setup (confirm before running)
+
+```
+Gate name:       [what checkpoint is this]
+Pass criteria:   [specify pass condition — "all items ✅" or concrete criteria]
+Max rounds:      [default 3; simple gates 2; complex gates up to 5]
+FIX owner:       [auto-fixable / requires human / mixed]
+Escalation:      [who to escalate to / how, if not converged within N rounds]
+```
+
+### Per-Round Execution Rules
+
+**What must stay constant across rounds**:
+- Pass criteria are immutable (no relaxing criteria per round)
+- Cumulative tracking of FAIL items (verify that prior-round FAILs were fixed)
+- New FAILs explicitly labeled (distinguish newly surfaced items from fix chain)
+
+**What changes across rounds**:
+- FIX-applied targets (revised TCs, skills, documents)
+- FAIL list (should shrink; growth is also acceptable — it means items are surfacing)
+
+### Convergence Judgment
+
+```
+Convergence = 0 new FAILs across 2 consecutive rounds
+Conditions to declare truly passed:
+  1. All items pass AND
+  2. At least 2 rounds executed (single-round pass treated as "provisionally passed" only)
+```
+
+### Escalation Root Cause Classification
+
+| Cause | Signal | Recommended Action |
+|---|---|---|
+| Ambiguous pass criteria | Same item judged differently each round | Restate criteria explicitly, then restart |
+| FIX capability limit | FAILs detected but fix method unknown | Bring in expert or reduce scope |
+| Gate design flaw | Same FAIL repeats after N rounds | Redesign the gate itself → meta-prompt-builder |
+
+---
+
+## Output Format
+
+```
+## convergence-loop Result
+
+Gate: [gate name]
+Max rounds: N | Actual convergence round: M
+
+| Round | Verdict | FAIL Items | New FAILs | FIX Applied |
+|:---:|:---:|---|:---:|:---:|
+| 1 | FAIL/PASS | [item list] | — | Y/N |
+| 2 | FAIL/PASS | [item list] | [new] | Y/N |
+| 3 | PASS | none | none | — |
+
+✅ Truly passed (converged at round M)
+❌ Not converged within N rounds → Escalation: [root cause classification]
+```
+
+---
+
+## Related Skills
+
+| Situation | Related Skill |
+|---|---|
+| Applied to TC P3 gate | `mcp-spec-to-tc` Step 4.5 (built-in implementation) |
+| Applied to skill diagnostic gate | `harness-doctor` → convergence-loop wrapper |
+| Applied to quench wave | `steel-quench` Wave 3+ convergence criteria (same principle) |
+| Applied to session harvest loop | `harvest-loop` Step H1~H5 |
+| When gate redesign is needed | `meta-prompt-builder` |
+
+## Done When
+
+```
+Setup complete (gate name, pass criteria, max rounds confirmed)
++ Minimum 2 rounds executed
++ Convergence declared (all items pass for 2 consecutive rounds) or escalation triggered
++ Per-round result table output
+```

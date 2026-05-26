@@ -1,0 +1,20 @@
+{
+  "name": "fh-commons",
+  "version": "0.1.1",
+  "description": "Cross-project utility skill bundle — 2 skills + 1 agent. Domain-agnostic and portable across projects: convergence-loop (N-round convergence gate reinforcement) + deliberation (Innovator→Devil→Mediator multi-perspective synthesis) + quench-challenger (Devil+Innovator+Prescriber combined steel-quench dedicated agent).",
+  "author": {
+    "name": "harness-contributor",
+    "email": "contributor@example.com"
+  },
+  "keywords": [
+    "commons",
+    "convergence-loop",
+    "gate-reinforcement",
+    "multi-round-validation",
+    "deliberation",
+    "multi-perspective-synthesis",
+    "forge-skill",
+    "domain-agnostic",
+    "cross-project"
+  ]
+}
