@@ -330,6 +330,33 @@ After user approval, dispatch background agents via the Agent tool.
 - **E**: User modifies the plan then re-confirms. Adding/removing agents and changing order are allowed.
 - **N**: Cancel. Keep the composition plan for reference only.
 
+### Step 3.1 — Worktree Isolation (Parallel Proposal Mode)  ← v1.2: harness-evolver pattern
+
+When parallel agents in the same Wave may write to the same files (e.g., proposing alternative SKILL.md drafts, competing harness designs, parallel feature patches), use **git worktree isolation** to prevent file conflicts and keep each proposal on a clean branch.
+
+**Activation condition**: 2+ agents in the same Wave targeting overlapping file paths, where each agent produces independent candidate outputs (not just reads).
+
+**Execution pattern**:
+
+```
+1. Before dispatch: create an isolated worktree per agent
+   EnterWorktree(branch="proposal/{agent-name}-{slug}")
+   → each agent operates on its own branch, no shared file state
+
+2. After Wave completes: fan-in results from each worktree
+   → compare outputs across branches
+   → winning proposal cherry-picked or merged to main branch
+   → losing worktrees discarded (auto-cleaned if unchanged)
+
+3. Composition plan output adds worktree marker:
+   [A] {agent name} — {role}  [worktree: proposal/A-{slug}]
+   [B] {agent name} — {role}  [worktree: proposal/B-{slug}]
+```
+
+**When to skip**: Read-only agents (recon, fact-checker), single-agent Waves, or agents targeting disjoint files → standard dispatch (no worktree overhead).
+
+**Tool prerequisite**: `EnterWorktree` / `ExitWorktree` tools must be available (Claude Code native). Check with `ToolSearch query "select:EnterWorktree"` before dispatching worktree-isolated agents.
+
 ---
 
 ## Step 3.5 — Inter-Wave Adaptation Check (Runtime Adaptation)
