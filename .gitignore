@@ -1,6 +1,3 @@
-# Ignore session logs specific to local development
-tracks/_audit/session_*.md
-
 # Local operational environment (not for public repo)
 .claude/memory/
 .claude/settings.local.json
@@ -14,5 +11,8 @@ context/
 .idea/
 
 # tracks — local work only (.gitkeep preserves directory structure)
-tracks/*
-!tracks/.gitkeep
+# All session records, digests, and personal work history stay local.
+# Only .gitkeep files are committed to preserve directory skeleton.
+tracks/**
+!tracks/**/
+!tracks/**/.gitkeep
