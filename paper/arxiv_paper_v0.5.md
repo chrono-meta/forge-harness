@@ -1,6 +1,6 @@
 ---
 title: "forge-harness: Engineering Methods for Robust AI Collaboration Harnesses"
-authors: ["권성진 (Gwon Seongjin)"]
+authors: ["권성진 (Kwon Sungjin)"]
 date: 2026-05-26
 version: v0.5
 target: arXiv cs.SE / cs.AI
@@ -10,7 +10,7 @@ repo: https://github.com/chrono-code/forge-harness
 
 # forge-harness: Engineering Methods for Robust AI Collaboration Harnesses
 
-**권성진 (Gwon Seongjin)**  
+**권성진 (Kwon Sungjin)**  
 Independent Researcher  
 akaa1941@gmail.com
 
