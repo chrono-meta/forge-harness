@@ -44,7 +44,7 @@ Time: ~3 min (50% reduction vs full). Skip Steps 3/3.5/4 — creative synthesis 
 
 **Lightweight mode Done When**:
 ```
-Step 1 (field-harvest) + Step 2 (contention-layer) + Step 5 (verify-bidirectional) complete
+Step 0 (Regression Guard) + Step 1 (field-harvest) + Step 2 (contention-layer) + Step 5 (verify-bidirectional) complete
 + harvested pattern summary 1~3 lines output
 + "run full harvest-loop?" proposed (if patterns found)
 ```
@@ -75,6 +75,16 @@ Conditions for running mid-session harvest-loop without waiting for session end.
 
 ```
 Session end
+    │
+    ▼
+[Step 0] Regression Guard  ← v1.2: harness-evolver Learn-stage pattern
+    │  Before extracting new patterns, check: does anything from this session
+    │  conflict with or regress an already-validated skill?
+    │  → Scan tracks/{project}/learnings/ + existing FH SKILL.md Done When criteria
+    │  → Regression detected: flag the conflicting signal, route to contention-layer
+    │    for explicit resolution (do not silently overwrite validated patterns)
+    │  → No regression: proceed normally
+    │  → Output: "Regression check: clear / N conflicts flagged"
     │
     ▼
 [Step 1] field-harvest
@@ -404,7 +414,7 @@ synthesizer: [HIGH N / MED N / rejected N]
 ## Done When
 
 ```
-All stages Step 1 → 2 → 3 (parallel) → 3.5 → 3.75 → 4 → 5 complete
+All stages Step 0 → 1 → 2 → 3 (parallel) → 3.5 → 3.75 → 4 → 5 complete
 + synthesizer grade readjustment complete (rejected candidates separated)
 + Step 3.75 Critic verdict complete (PASS/CONDITIONAL PASS/FAIL stated)
 + Final proposal list output (sorted by HIGH/MED criteria)
