@@ -1,10 +1,10 @@
-# === pay-meta-harness 표준 .claudeignore ===
-# Claude Code context 차단 패턴 (.gitignore 동일 syntax)
-# 효과: per-session token cost 20-40% 절감 (대형 프로젝트 기준)
-# 사용법: 본 파일을 프로젝트 루트에 `.claudeignore`로 복사 + 필요 시 커스터마이즈
-# 신설: 2026-05-07
+# === forge-harness standard .claudeignore ===
+# Claude Code context exclusion patterns (same syntax as .gitignore)
+# Effect: 20-40% per-session token cost reduction (on large projects)
+# Usage: copy this file to your project root as `.claudeignore`, then customize as needed
+# Created: 2026-05-07
 
-# === 의존성 ===
+# === Dependencies ===
 node_modules/
 vendor/
 __pycache__/
@@ -12,7 +12,7 @@ __pycache__/
 venv/
 .tox/
 
-# === 빌드 산출물 ===
+# === Build artifacts ===
 dist/
 build/
 out/
@@ -24,7 +24,7 @@ target/
 *.pyc
 *.class
 
-# === Lock 파일 ===
+# === Lock files ===
 *.lock
 package-lock.json
 yarn.lock
@@ -32,12 +32,12 @@ pnpm-lock.yaml
 poetry.lock
 Cargo.lock
 
-# === 압축·미니파이·소스맵 ===
+# === Minified / source maps ===
 *.min.js
 *.min.css
 *.map
 
-# === 로그·임시 ===
+# === Logs / temp ===
 *.log
 tmp/
 .tmp/
@@ -46,7 +46,7 @@ tmp/
 .DS_Store
 Thumbs.db
 
-# === 비밀·환경 변수 (보안) ===
+# === Secrets / env (security) ===
 .env
 .env.local
 .env.*.local
@@ -60,7 +60,7 @@ credentials/
 .vscode/
 *.iml
 
-# === Claude Code 자체 캐시 ===
+# === Claude Code internal cache ===
 .claude/cache/
 .claude/local/
 

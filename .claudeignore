@@ -3,11 +3,11 @@
 # Git internals
 .git/
 
-# 로컬 전용 디렉토리 (gitignore 대상과 일치)
+# Local-only directories (mirrors .gitignore)
 context/
 tracks/
 .claude/memory/
 
-# 임시·로그
+# Temp / logs
 *.log
 *.tmp

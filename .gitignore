@@ -10,6 +10,9 @@ context/
 # macOS system files
 .DS_Store
 
-# tracks — local work only (.gitkeep으로 디렉토리 구조만 유지)
+# IDE
+.idea/
+
+# tracks — local work only (.gitkeep preserves directory structure)
 tracks/*
 !tracks/.gitkeep

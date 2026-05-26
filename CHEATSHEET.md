@@ -93,26 +93,16 @@ git add -A && git commit -m "message"
 
 ## 7. Weekly improvement cycle
 
-The hub audits and improves itself weekly.
-
-```bash
-# Phase 1.5 scanner run (default: 7 days)
-./tracks/_audit/_scanner.sh "7 days ago"
-
-# Write weekly audit report
-cp tracks/_audit/_template_weekly.md tracks/_audit/weekly_audit_$(date +%Y-%m-%d).md
-# Then paste scanner output into the corresponding section
-```
+The hub audits and improves itself weekly through `/harvest-loop` (the unified session-wrap + pattern-harvest pipeline).
 
 | What you want | What to say to Claude |
 |-------------|---------------------|
-| Run weekly audit | "run weekly audit" → runs scanner + fills template + proposes 3-tier improvements |
-| Scan latest CC features + FH gap analysis | `/audit-learnings --cc-scan` or "check CC features" → collects CC release notes via WebSearch + analyzes unincorporated feature gaps + proposes upgrade candidates (monthly recommended) |
+| Run session wrap + weekly harvest | `/harvest-loop` or "wrap up this week" → pattern scan + 3-tier improvement proposals + PR draft |
 | Meta-simulation audit | `/sim-conductor B` → internal 3-persona audit + M/S/R backlog auto-generation (Area B weekly recommended) |
-| Check status | "when was the last audit?" |
+| Check status | "when was the last harvest?" |
 | Apply improvements | "apply only 🟥 mandatory items now" |
 
-**L1 auto-detection:** When hub cwd session starts, Claude auto-checks recent audit file mtime → proposes audit if 7+ days elapsed.
+**L1 auto-detection:** When hub cwd session starts, Claude auto-checks recent harvest file mtime → proposes `/harvest-loop` if 7+ days elapsed.
 
 ---
 
@@ -146,8 +136,6 @@ Copy just 1 agent without plugin install and it's immediately callable. Updates 
 | Code review | "review this diff" → calls project `code-reviewer` |
 | Naming gap detection + ideation | `/persona-innovator` or "find naming candidates" → 6-type classification + external signal scan |
 | Meta-simulation run | `/sim-conductor` (Area C default) · `/sim-conductor B` (internal audit) · `/sim-conductor A` (external user perspective) |
-| Monitor for PR review arrival | `/pr-review-watcher <PR-number>` → auto-notify on review arrival + propose response |
-| Check invocation log | "check sub-agent promotion signals" → aggregates subagent_invocations_log.yaml |
 
 **Promotion gate (after 2+ week pilot):** accepted ≥ 60% → maintain · rejected ≥ 40% → deprecate.
 
@@ -278,7 +266,7 @@ Catch signals of new technology.
 
 | Signal source | Tool |
 |---|---|
-| Claude Code new features (release notes) | `/audit-learnings --cc-scan` |
+| Claude Code new features (release notes) | `/frontier-digest` |
 | Patterns discovered in field projects | `/field-harvest` |
 | User direct utterance ("should we try this?") | Immediately to Step 2 |
 

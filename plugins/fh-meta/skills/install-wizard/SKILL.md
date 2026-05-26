@@ -448,7 +448,7 @@ install-wizard — Complete
 
 🔀 Don't want to lose your accumulated assets — fork as your own hub:
    Personal skills/rules/notes added directly to FH may be lost on FH updates.
-   git clone <FH_URL> ~/my-forge   # name is up to you (my-forge, jeff-forge, etc.)
+   git clone <FH_URL> ~/my-forge   # name is up to you (my-forge, team-forge, etc.)
    → Build freely in your fork and preserve permanently with git
    → When you discover valuable patterns, /field-harvest to reverse-contribute to FH anytime
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
