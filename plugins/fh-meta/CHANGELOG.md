@@ -1,0 +1,579 @@
+# forge-harness (fh-meta) Changelog
+
+All notable changes to fh-meta plugin and all skills.
+
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
+
+**Version policy**: v0.x = internal validation phase / v1.0 = external install confirmed
+
+---
+
+## Plugin Level
+
+### [1.1.4] — 2026-05-26
+
+**feat: Verifiable + Evolution maturity upgrade — scoring formula defined + execution flow updated**
+
+Pre-quench triple layer (meta-devil · devil-advocate · newcomer) + synthesizer output applied.
+Achieved verifiable 75%→85%, evolution 60%→80% by changing execution flow instead of adding assets.
+
+- `knowledge/shared/harness-core/skill_quality_rubric.md` added: verifiable · evolution axis scoring formula (numeric claims without formula = cold audit self-declaration violation)
+- harvest-loop Step 3.75 expanded: pattern spec for connecting Critic isolation judgment after core 5 skills execution
+- harvest-loop Step 6-b expanded: pmh_signal grep → skill_usage.md Leaderboard automatic aggregation integration (replaces manual estimation)
+- Core 5 skills Done When strengthened: external verification path (Critic link) added for harness-doctor · verify-bidirectional · hub-cc-pr-reviewer · context-doctor · sim-conductor
+- Deprecated: Verification Criteria new section (merged into Done When), EVOLUTION.md on hold, usage_notes field on hold
+
+---
+
+### [1.1.3] — 2026-05-26
+
+**feat: Harness Evolution Cadence — harvest-loop Step 6-b added**
+
+DemoEvolve strategy (arxiv 2605.24539) implementation: agent capability adjustment by updating escalate_when parameters only, without model retraining.
+
+- harvest-loop Step 6-b added: 4-week cycle complexity_routing condition validity check
+- Auto-proposal when 2+ pmh_signals accumulated, outputs removal/addition candidates before user approval gate
+- Rationale: frontier-digest 2026-05-26 pmh_signal (DemoEvolve strategy application candidate)
+
+---
+
+### [1.1.2] — 2026-05-26
+
+**feat: Destructive Action Gate — agent-composer Step 2.7 added**
+
+Safety gate before autonomous dispatch to prevent AI agent control violations (DB deletion · OpenClaw type).
+
+- agent-composer Step 2.7 added: scan for 3 types — external output · file destruction · production impact
+- 🚨 On detection: "this cannot be undone" warning + separate yes/no approval required before Y/E/N prompt
+- Step 2.5: `destructive` escalate_when condition added + 1-line audit log mandatory
+- CONTRIBUTING.md: `destructive` condition documented in complexity_routing schema
+- Rationale: frontier-digest 2026-05-26 caution signal (AI agent DB deletion · OpenClaw case)
+
+---
+
+### [1.1.1] — 2026-05-26
+
+**feat: P5 Model Routing — complexity_routing schema + applied to 6 skills**
+
+New routing system that dynamically escalates the skill execution model based on task complexity.
+
+- CONTRIBUTING.md: `complexity_routing` field schema documented (base/high/escalate_when)
+- agent-composer Step 2.5 added: 5-condition escalation judgment table + routing rules
+- `complexity_routing` added to 6 skills:
+  - `harness-doctor`: cold_start, cross_project
+  - `context-doctor`: cold_start, cross_project
+  - `verify-bidirectional`: full_revalidation, high_stakes
+  - `hub-cc-pr-reviewer`: adversarial, cross_project, high_stakes
+  - `cross-ecosystem-synergy-detection`: cross_project, cold_start
+  - `deep-clarify`: cross_project, high_stakes
+
+---
+
+### [1.0.1] — 2026-05-20
+
+**feat: context-bridge-dispatch skill added (18th skill)**
+
+Resolves session context disconnection problem during parallel agent dispatch.
+Structural correction for the P8 variant blind spot where sub-agents can read files but do not know the main session's living context.
+
+- `context-bridge-dispatch` v0.1 added
+- Context Card format defined (4 fields: purpose / completed / agent task / caution)
+- Auto-trigger before 2+ parallel dispatches
+
+---
+
+### [1.0.0] — 2026-05-19
+
+**🎉 v1.0 official release — all C1~C5 conditions met**
+
+All 5 v1.0 release criteria satisfied:
+- C1 ✅ Natural language trigger activation confirmed for all 17 skills (cascade α complete)
+- C2 ✅ Validated by an external user — autonomous skill execution confirmed (cascade β, 2026-05-12)
+- C3 ✅ meta-devil M1 · M2 S-tier issues fully resolved
+- C4 ✅ install-wizard G6 bootstrap paradox resolved (2026-05-18)
+- C5 ✅ Three-Doctor Loop closed-loop operation confirmed
+
+Natural language trigger reinforced for 8 skills (C1 complete):
+- deliberation, agent-composer, marketplace-gate, field-harvest
+- asset-placement-gate, cross-ecosystem-synergy-detection, meta-prompt-builder, apex-review
+
+---
+
+### [0.3.0] — 2026-05-19
+
+**bump: M1/M2 S-tier resolved + fallback guide confirmed + sim-conductor human gate formalized (last minor before v1.0)**
+
+Handling remaining incomplete items among v1.0 criteria C1~C5:
+
+M1 resolved (trigger coverage audit 2026-05-17 M-tier):
+- install-wizard Step 5 completion report: "next-step skills" block added
+  - hub-persona-auditor introduction added ("quality audit after completing assets for external publication")
+  - agent-composer connection hint added
+  - plugin-recommender connection hint added
+
+M2 resolved (trigger coverage audit 2026-05-17 M-tier):
+- agent-composer Wave 0 composition criteria: 3-line fact-checker role description added
+  - "No need for the user to call directly — agent-composer auto-dispatches in Wave 0" specified
+  - Direct call path (mode D) specified
+
+sim-conductor human gate formalized:
+- "Human Gate principle" section added
+  - 4-case table for escalation from tentative convergence to final convergence formalized
+  - Structural bias-blocking rationale specified
+
+fallback-guide (confirmed at v0.3.0):
+- references/fallback-guide.md existing content maintained (AI dependency single point of failure W4-1 response)
+
+---
+
+### [0.2.8] — 2026-05-18
+
+**feat: steel-quench skill added (comprehensive quench validation)**
+
+steel-quench v0.1.0 added:
+- Meta-skill that concretizes designer anxiety into AI-driven devil attacks and resolves it through defense strategy
+- Wave structure: Wave 1 (Devil attack) → Wave 2 (Defense) → Wave 3+ (convergence, ends with 0 S-tier blockers)
+- 5-angle mandatory attack checklist: reason for existence · real-world usage validation · bus factor · platform obsolescence · self-referential structure
+- Severity S/A/B classification + rebuttal feasibility judgment (○/△/×) standardized
+- 3 defense principles: WebSearch for external cases · cover with experience · implement first
+- 5 cross-project common patterns as initial seed: P1 single bus factor · P2 doc-code mismatch · P3 self-referential diagnostic structure · P4 real-world validation absence · P5 platform obsolescence no plan
+- Downstream links after convergence: meta-prompt-builder · sim-conductor · verify-bidirectional · harness-doctor
+- plugin.json skills array registered (alphabetical order: after sim-conductor)
+
+---
+
+### [0.2.7] — 2026-05-18
+
+**Wave 4 Final Judgment Gate + Composability Gate categorization + 2 skills officially deprecated**
+
+agent-composer Wave 4 Final Judgment Gate added:
+- M-tier 0 → PASS / M-tier≥1 → BLOCK judgment logic (based on loom fan-in contract)
+- Phase Guard pattern: enforces logical dependency order between Waves
+- CONTRIBUTING.md: 3 mandatory pre-rc-bump checklists (fact-checker · marketplace-gate · CHANGELOG) added
+
+Composability Gate categorization:
+- `category: Composability Gate` frontmatter added to install-wizard · install-doctor · marketplace-gate
+- Common layer for 3 skills specified — external install compatibility gating role formalized
+
+Officially deprecated (moved to `deprecated/` folder):
+- `frontier-status-summary`: replaced by cc meta-monitoring hook (PostToolUse)
+- `pr-review-watcher`: fully merged into hub-cc-pr-reviewer, separate skill unnecessary
+
+cc FH meta-monitoring hook integration:
+- cc `settings.json` PostToolUse hook added — auto check guidance for hub-cc-pr-reviewer on FH change detection
+- FH external change monitoring circuit first activated
+
+---
+
+### [0.2.6] — 2026-05-18
+
+**meta-prompt-builder v0.2 integration confirmed + README natural trigger reinforced**
+
+meta-prompt-builder v0.2 integration gate released:
+- Scenario 1 · 2 · 3 measured PASS: 91.1% overall achieved (S1 100% · S2 90% · S3 83.3%)
+- [0.1.1] status "integration gating: scenario 1 measurement pending" → v0.2 officially integrated
+
+README natural trigger reinforced (root-memory removed + 4 abbreviations expanded + failure examples added):
+- Fallback phrase changed: "read root memory" → "what have we done so far?" / "where did we get to?"
+- Failure symptom & action block added (3 cases: generic response · CLAUDE.md error · auth error)
+- 4 abbreviations expanded: cascade → cascade (sequential validation chain), agents → agents (parallel execution mode), meta-sim → meta-sim (multi-agent simulation), fan-in → fan-in (stage where results from multiple agents are combined)
+
+---
+
+### [0.2.5] — 2026-05-18
+
+**apex-review v0.1 added — decision-maker review layer**
+
+15 skills → 16 skills.
+
+New skill added that reviews technical proposals from the perspective of decision-maker personas (CTO · engineering director · QA team lead · conference organizer) and generates HTML presentation materials. Unlike hub-persona-auditor (reader comprehension), it simulates decision approval likelihood.
+Flow: proposal structuring → HTML PPT generation → persona review → approval gate → sim-conductor link.
+Added to agent-composer mapping table (decision-maker approval review work type).
+
+---
+
+### [0.2.4] — 2026-05-17
+
+**audit-learnings deprecated from FH → transferred to source development hub only**
+
+Judgment: a tool for the source development layer that *evolves* FH, not for users who merely *use* FH.
+External FH users are unlikely to develop their own meta-harness the same way → FH exposure unnecessary.
+
+audit-learnings continues in the hub (project scope maintained).
+plugin.json: 16 skills → 15 skills
+
+---
+
+### [0.2.3] — 2026-05-17
+
+**audit-learnings v0.6 → v0.7 — _scanner.sh external dependency resolved**
+
+audit-learnings conditional retention condition met:
+- Step 1 self-detection structure replaced: full scanner when `_scanner.sh` exists / auto git fallback when absent
+- git fallback 5 sections (COMMITS / TOP MODIFIED / NEW FILES / TAG COUNTS / STALE) inlined
+- Constraints section updated: "git fallback auto-used when absent" specified
+- Phase 3 entry condition updated: git fallback v0.7 inlined = phase 1 achieved
+- deliberation 3-party judgment "conditional retain" → officially retained after condition met
+
+---
+
+### [0.2.2] — 2026-05-17
+
+**frontier-status-summary deprecated + install-wizard suitability pre-flight absorbed**
+
+frontier-status-summary (v0.4) deprecated:
+- Judgment: deliberation 3-party review result — ~80% dependent on personal assets, only positioning judgment value extracted
+- "Is this tool right for me?" 3-item checklist → absorbed into install-wizard Step 0-A
+- Moved to deprecated/ archive
+
+install-wizard v0.3 → v0.3.1:
+- Step 0-A added: FH suitability pre-flight check (CC usage · project scale · collaboration willingness)
+- frontier-status-summary migration noted (2026-05-17)
+
+plugin.json: 17 skills → 16 skills
+
+---
+
+### [0.2.1] — 2026-05-17
+
+**pr-review-watcher deprecated + cross-ecosystem-synergy-detection structural separation**
+
+pr-review-watcher (v0.1) deprecated:
+- Judgment: deliberation 3-party review result — directly replaceable by `gh pr view --json reviews`, no real-world usage evidence
+- Moved to deprecated/ archive
+- hub-cc-pr-reviewer reference → replaced with deprecation notice
+
+cross-ecosystem-synergy-detection v0.4 → v0.5 structural separation:
+- SKILL.md: 279 lines → 103 lines (core algorithm only)
+- examples/env_reference.md added: internal GHE org inventory, 3-cluster classification, 8-asset self-X matrix, phase history
+
+plugin.json: 18 skills → 17 skills
+
+---
+
+### [0.2.0] — 2026-05-17
+
+**deliberation added — forge skill + Wave next-D integration**
+
+deliberation v0.1 added (18th skill):
+- Innovator (proposal) → Devil (rebuttal) → Mediator (synthesis) 3-layer base structure
+- Optional 5-layer: 2-3 deep-insight jurors in parallel + Mediator final synthesis
+- Synthesis formula: "Innovator core + Devil warning fragments → conditional judgment" (simple winner selection prohibited)
+- 5 WARN auto-detection types: unresolvable rebuttal · simple judgment · conflict-free battle · juror overload · ambiguous Done When
+- Design principle: a rope for those who haven't challenged yet to climb / the forge creates new alloys
+
+agent-composer patch:
+- Step 4-b state transition gate ⑤ added: design decision conflict → Wave next-D
+
+Naming candidate (delegated to user decision):
+- **Forge Skill** — value-based naming candidate for deliberation
+
+---
+
+### [0.1.1] — 2026-05-17
+
+**State transition gate + meta-prompt-builder added — innovator chaining architecture realized**
+
+agent-composer:
+- Step 4-b added: automatic evaluation of conditions ①②③④ after fan-in completion → Wave next-M/I/E or end
+- Innovator chaining gating condition met
+
+meta-prompt-builder v0.1 added (17th skill):
+- For agent-composer power users — designing "what to say" after "which agent to use"
+- Goal/Context/Constraints/Done When structure reinterpreted as FH harness state
+- Meta-sim completed (QA + devil-advocate 2-agent): trigger redefinition · Step 3 Read mandatory · Done When 3-point check · 4 WARN patterns
+- Integration gating: scenario 1 real measurement (≤70% turns) pending
+
+Naming adopted (2026-05-17):
+- **Proactive Chain** — closed loop where sim completion triggers next proposal
+- **State Transition Gate** — fan-in result becomes next agent selection condition
+- **Prompt Delegation Skill** — value-based naming for meta-prompt-builder
+
+### [0.1.0] — 2026-05-16
+
+**Version scheme normalization** — v1.0.0-rc10 → v0.1.0 (external ecosystem alignment)
+
+- Claiming v1.0.0 without external install evidence is excessive — consistent versioning humility with peers in the same ecosystem
+- rc1~rc10 iterations consolidated into single v0.1.0 tag (rc history preserved in CHANGELOG)
+- Version policy formalized: v0.x = internal validation / v1.0 = external validation complete
+
+_Internal iteration history: rc1 (2026-04-29) ~ rc10 (2026-05-15), 10 cycles total_
+
+### [rc10] — 2026-05-15
+
+**16 skills system — marketplace-gate v0.1 added (marketplace listing suitability gate)**
+
+marketplace-gate:
+- v0.1 added: 5-point check automation before repo listing
+  - Check 1 README completeness / Check 2 zero-config / Check 3 maintenance signal / Check 4 duplicate detection / Check 5 public safety
+  - Overall judgment: 🟢 Recommended / 🟡 Conditional / 🔴 Hold
+  - Links: hub-persona-auditor · cross-ecosystem-synergy-detection · harness-doctor · install-doctor
+
+plugin.json:
+- version: 1.0.0-rc9 → 1.0.0-rc10
+- description: "15 skills" → "16 skills"
+- keywords: "marketplace-gate" added
+
+### [1.0-rc9] — 2026-05-15
+
+**--dry-run analysis mode introduced — bg dispatch compatibility secured**
+
+install-wizard:
+- v0.2 → v0.3: `--dry-run` analysis mode added
+  - Outputs Step 2 report then skips Step 3~4 (approval · execution) → bg dispatch compatible
+  - `## Execution Modes` section added (normal / analysis mode comparison table)
+
+audit-learnings:
+- v0.5 → v0.6: `--dry-run` analysis mode added
+  - Performs only Step 1~4 scan and draft generation, skips all Step 5~9 gates → bg dispatch compatible
+  - `## Execution Modes` section added / user approval gate table expanded (normal/dry-run branches)
+
+agent-composer:
+- Composition table ⚠️ comment updated: `--dry-run` bg parallel possible specified
+
+### [1.0-rc8] — 2026-05-15
+
+**15 skills system official — agent-composer added (agent composition layer)**
+
+agent-composer (new — coordinator skill):
+- v0.2: agent composition layer coordinator skill — FH "agent composition layer" identity realized
+- Step 0~4: context collection → agent mapping → composition plan output → approval → execution → fan-in result integration
+- Wave 0: fact-checker preemptive gate (prior verification for all tasks including new assets)
+- (S)/(A) notation: distinguishes Skill tool / Agent bg dispatch call method
+- ⚠️ Conversational isolation: install-wizard · audit-learnings bg parallel dispatch not available (placed last in Wave, standalone)
+- M/S/R tier definitions added (fan-in integration report criteria)
+
+install-wizard:
+- v0.1 → v0.2: version field updated
+
+README:
+- Agent dispatch guide added (agent-composer usage + 3-agent mapping table + parallel patterns)
+- Plugin catalog: 14 skills → 15 skills (agent-composer joined), rc4 → rc8
+- 18-asset active check updated (agent-composer added)
+
+### [1.0-rc7] — 2026-05-15
+
+**Meta-sim gate passed — M-tier all resolved (M1~M9 + M-A)**
+
+asset-placement-gate:
+- M1: ① cross-project value elevated to mandatory gate together with ④ (①+④ mandatory + 1 of ②③)
+- M2: Step 0 natural language input requires 3-field forced confirmation (purpose · trigger · caller) — blocks hallucination judgment
+- M4: description "forge-harness (FH)" full name stated once
+
+install-wizard:
+- M3+M8: /install-doctor pre-call block added before Step 1 + doctor result mapping scope specified (M-A)
+- M5: ## Key Terms table added (sentinel · CronCreate · zshrc hook definitions)
+- M6: {FH_REPO_URL} → 2 URL variants (internal / external) specified
+- New: Step 5 personal fork guidance (asset loss prevention motivation + reverse-harvest welcome)
+
+README + install-wizard:
+- Command tower orchestration pattern specified (work type cwd assignment table + 6-agent real-world proof)
+
+### [1.0-rc6.1] — 2026-05-15
+
+- asset-placement-gate M7: frontmatter `tools: Read, Grep, Glob` → `allowed-tools: ["Read", "Grep", "Glob"]` + `user-invocable`, `model`, `version` fields added (rc6 self-contradiction resolved — only skill among all skills missing this standardization)
+
+### [1.0-rc6] — 2026-05-15
+
+- asset-placement-gate M5: trigger section specifies 4-step operation order (path request → Read load → 4-criteria evaluation → FH suitable / skill-free output)
+- install-wizard M9: frontmatter `tools:` → `allowed-tools:` standardized (aligned with other FH skills)
+- install-wizard M6/M7/M8: settings.json dict/list branch, Streamlit AND condition, zshrc idempotency guard — confirmed already reflected before rc5
+
+### [1.0-rc5] — 2026-05-14
+
+- 14 skills system (asset-placement-gate joined)
+- asset-placement-gate v0.1 — 3-way routing gate for new asset FH suitability (FH meta skill / project local agent / drop)
+
+### [1.0-rc4] — 2026-05-14
+
+- 13 skills system (install-wizard joined)
+- install-wizard v0.1 — onboarding wizard (environment detection → gap diagnosis → per-item approval → execution → acceleration baseline setting)
+- CONTRIBUTING.md added — external contributor PR guide
+- templates/cc_audit_check.zsh — recurring audit zshrc hook general template
+
+### [1.0-rc3] — 2026-05-13
+
+- 12 skills + 3 agents system confirmed (install-doctor joined + .claude/agents/ dual registration)
+- `.claude/agents/` added — fact-checker · hub-persona-auditor · persona-innovator callable directly from hub cwd without plugin (mode D)
+- New technology introduction pipeline (§11) documented — proposal → sim → optimization 3-step standard path
+- CHEATSHEET: /goal condition evaluation LLM mechanism measured and documented + Lever 5 updated
+
+### [1.0-rc2] — 2026-05-11
+
+- 11 skills system (field-harvest · pr-review-watcher joined)
+- sim-conductor Area D expanded (D-consumer: session · skill · memory consumer sim 3 types)
+- sim-conductor Area E added (output quality review)
+- persona-innovator v0.2 Mode T added (technology bridge exploration)
+
+### [1.0-rc1] — 2026-05-08
+
+- Plugin level promotion v0.5.0 → v1.0-rc1 (Release Candidate 1)
+- 8 release requirements: 7 met + 1 pending (external user install measurement data accumulation)
+
+### [0.5.0] — 2026-05-08
+
+- 6 skills operating baseline established (audit-learnings + verify-bidirectional + frontier-status-summary + plugin-recommender + cross-ecosystem-synergy-detection + hub-cc-pr-reviewer)
+- hub-cc-pr-reviewer v0.1 joined (PR review automation)
+
+---
+
+## Skills
+
+### audit-learnings
+
+| version | date | changes |
+|:-:|:-:|---|
+| 0.5 | 2026-05-13 | Step 1.7 CC feature signal scan added — auto-collect CC releases via WebSearch → FH gap analysis → upgrade candidate proposal (`--cc-scan`) / Step 0 /goal recommended stage added |
+| 0.4 | 2026-05-08 | External user perspective refinement / cwd auto-detection + scope auto-mapping fallback / self-audit path |
+| 0.3 | 2026-05-08 | Path B generalization (external user environment adaptation) |
+| 0.2 | 2026-05-08 | Official release / Phase 2+ PR automation (2026-05-06) |
+| 0.1 | 2026-04-27 | Phase 2 activation / weekly audit automation baseline |
+
+### verify-bidirectional
+
+| version | date | changes |
+|:-:|:-:|---|
+| 0.8 | 2026-05-10 | Proactive concern expression channel added — active type (AI preemptively flags premise errors) / expression format + 3 constraints formalized |
+| 0.7 | 2026-05-08 | External user perspective refinement / 8-asset self-X circuit cross-ref / autonomous activation path baseline |
+| 0.6 | 2026-05-08 | Path B generalization |
+| 0.5 | 2026-05-08 | Mode A · B · C + autonomous activation path baseline |
+| 0.4 | 2026-05-06 | Step 4.5 diff gate added |
+| 0.3 | 2026-05-04 | Conscious full application channel |
+| 0.2 | 2026-05-04 | Internal model cross-check (environment-specific) |
+| 0.1 | 2026-05-03 | Skill promoted / 8-iteration baseline |
+
+### frontier-status-summary
+
+| version | date | changes |
+|:-:|:-:|---|
+| 0.4 | 2026-05-08 | Step 1~5 path B generalization fallback / external user utilization reached |
+| 0.3 | 2026-05-08 | Path B generalization (external user environment adaptation) |
+| 0.2 | 2026-05-08 | Meta-harness differentiation value + internal GHE cluster cross-link |
+| 0.1 | 2026-05-03 | Added (Phase γ option γ) |
+
+### plugin-recommender
+
+| version | date | changes |
+|:-:|:-:|---|
+| 0.7 | 2026-05-13 | Step 5-B external asset transplant path added — SKILL.md conversion guide + 3 transplant suitability criteria + location branch (FH official · local · mode D) when non-plugin asset found |
+| 0.6 | 2026-05-11 | Step 5-0 same-name conflict detection + Step 2 [Priority 2.5] Tier 2.5 project contribution path |
+| 0.5 | 2026-05-10 | Step 5-0 pre-check added — duplicate detection before install (manual install + repo-level enabledPlugins bidirectional) |
+| 0.4 | 2026-05-08 | External user perspective refinement / Step 0 · 2 · 5 external environment automation |
+| 0.3 | 2026-05-08 | Path B generalization |
+| 0.2 | 2026-05-08 | Official release / Tier 1 · 2 · 3 classification / Step 0 auth check + Step 2 sibling assets |
+| 0.1 | 2026-04 | Added / internal GitHub + external open-source recommendation baseline |
+
+### cross-ecosystem-synergy-detection
+
+| version | date | changes |
+|:-:|:-:|---|
+| 0.4 | 2026-05-08 | 8-asset cross-applicability matrix + self-X circuit matrix baseline |
+| 0.3 | 2026-05-08 | Path B generalization |
+| 0.2 | 2026-05-08 | Official release / Tier 1 · 2 · 3 classification / internal GHE org inventory / 13th naming (ecosystem synergy) |
+| 0.1 | 2026-05 | Added (automated synergy exploration implementation) |
+
+### hub-cc-pr-reviewer
+
+| version | date | changes |
+|:-:|:-:|---|
+| 0.2 | 2026-05-08 | PR #7~#13 lifecycle accumulated / autonomous activation path baseline / disable path + persona synergy catch § added |
+| 0.1 | 2026-05-08 | Added / PR review automation / PR #7~#11 lifecycle 5-iteration baseline |
+
+### asset-placement-gate
+
+| version | date | changes |
+|:-:|:-:|---|
+| 0.2 | 2026-05-15 | M5: trigger section specifies 4-step operation order (FH suitable / skill-free output label formalized) |
+| 0.1 | 2026-05-14 | Added / FH 4-criteria judgment + project local value judgment 3-way routing / origin: wrong landing case (2026-05-14) |
+
+### install-wizard
+
+| version | date | changes |
+|:-:|:-:|---|
+| 0.5 | 2026-05-19 | Step 5 completion report "next-step skills" block added — hub-persona-auditor · agent-composer · plugin-recommender 3 introductions added (M1 resolved) |
+| 0.4 | 2026-05-15 | M9: frontmatter `tools:` → `allowed-tools:` standardized (aligned with other FH skill spec) |
+| 0.3 | 2026-05-14 | Step 2 proposal list: your-mcp-service MCP item specified — path A commitment fulfilled (`claude mcp add <your-mcp-service> -- npx -y <your-mcp-service>`) / your-mcp-service MISS item added to diagnostic sample output |
+| 0.2 | 2026-05-14 | PMH_DIR not set branch: bootstrap guidance added (Step 0 immediate stop + clone · plugin install guide) / sentinel project-independent (`{project}_wizard_done`) — prevents malfunction with multiple projects on same machine / your-mcp-service MCP connection check added |
+| 0.1 | 2026-05-14 | Added / onboarding wizard — environment detection → gap diagnosis → per-item approval → execution → acceleration baseline setting / Propose-First principle / auto-switches to check mode on re-run |
+
+### install-doctor
+
+| version | date | changes |
+|:-:|:-:|---|
+| 0.1 | 2026-05-13 | Added / 5-area conflict diagnosis before/after plugin install (CLAUDE.md · skill triggers · hooks · .claudeignore · audit practices) + Layer A fallback guidance |
+
+### context-doctor
+
+| version | date | changes |
+|:-:|:-:|---|
+| 0.3 | 2026-05-14 | Step 5 added — hub context periodic audit (CLAUDE.md · MEMORY.md · memory/*.md bloat detection → compression proposal) / trigger keywords reinforced (context diet · memory audit) |
+| 0.2 | 2026-05-13 | Three-Doctor Loop integration section added (closed loop with harness-doctor · sim-conductor) |
+| 0.1 | 2026-05-10 | Added / .claudeignore auto-generation + large file burst detection + /clear · model switching timing + audit-learnings integration / standalone install (mode C) supported |
+
+### harness-doctor
+
+| version | date | changes |
+|:-:|:-:|---|
+| 0.3 | 2026-05-13 | Step 3-4 periodic skill activity check added — weekly_audit mtime detection → 14/30-day S/M-tier warning (signal 2 implemented) |
+| 0.2 | 2026-05-13 | Three-Doctor Loop integration section added (closed loop with context-doctor · sim-conductor) |
+
+### persona-innovator (agent)
+
+| version | date | changes |
+|:-:|:-:|---|
+| 0.2 | 2026-05-11 | Mode T added — technology bridge exploration (transport type identification → bridge architecture proposal) / your-mcp-service SSE real-world proof |
+| 0.1 | 2026-05-10 | Added / 3-mode (I · E · F) + ideation algorithm 6-type named classification + frontier scan + simplification guard built in / Path B (external environment) supported |
+
+### pr-review-watcher
+
+| version | date | changes |
+|:-:|:-:|---|
+| 0.1 | 2026-05-11 | Added / PR review arrival monitoring + immediate summary / --once · --interval · --repo flags / multi-reviewer tracking |
+
+### field-harvest
+
+| version | date | changes |
+|:-:|:-:|---|
+| 0.2 | 2026-05-13 | Step 0 hardcoded paths removed → 3-step auto-discover (FH mapping → find PycharmProjects → cwd parent scan) |
+| 0.1 | 2026-05-11 | Added / field pattern harvesting + FH reverse-harvest PR auto-proposal / --watch · --once flags |
+
+### sim-conductor
+
+| version | date | changes |
+|:-:|:-:|---|
+| 0.4 | 2026-05-19 | "Human Gate principle" section added — 4-case table for escalation from tentative to final convergence formalized / structural bias-blocking rationale |
+| 0.3 | 2026-05-13 | Three-Doctor Loop integration section added |
+| 0.2 | 2026-05-11 | Area D expanded (D-consumer: session · skill · memory consumer sim 3 types) + Area E added (output quality review 3 scenarios) |
+| 0.1 | 2026-05-10 | Added / Area A (external user 3 scenarios) + B (internal 3-persona) + C (innovator) / Step 0~4 autonomous completion / M-tier auto PR + R1 frequency limit built in / Path B supported |
+
+---
+
+## Refactor History
+
+### [refactor] — 2026-05-09 / PR #18 (`ac3202c`)
+
+5/9 sim round scenario 3 persona-devil-advocate catch follow-through:
+
+- 6 skill SKILL.md description: 80% of self-promotional language · iteration counts · version history · emphasis words removed
+- description first-line essential spec obligation applied (audit-learnings · hub-cc-pr-reviewer)
+- Embedded names avoided (verify-bidirectional: "specific-user or install environment user" → "user")
+- Internal tone corrected (frontier-status-summary · cross-ecosystem-synergy-detection: "this harness AI" → "meta-harness")
+- Internal-only references generalized (plugin-recommender)
+- description "PR" truncation catch avoided (hub-cc-pr-reviewer)
+- version history now references this CHANGELOG.md path
+
+### [feat] — 2026-05-10 / PR #19 (CHANGELOG added)
+
+- This CHANGELOG.md added (dead link avoidance / 6 skill version history persisted)
+- Plugin Level + 6 skill integrated persistence (simplification guard / 1-file integration path)
+- Keep a Changelog format applied
+
+---
+
+## Cross-link
+
+- Sim round baseline: `feedback_description_diet_baseline.md` (hub / 5/9 scenario 3 catch)
+- External install compatibility: `feedback_external_install_compatibility.md` (hub / 5/9 scenario 2 catch)
+- description plain text + external friendliness: `feedback_skill_frontmatter_description_plain_text.md` (hub / 5/9 scenario 1 catch)
+
+Earlier history: see git log or commit messages.

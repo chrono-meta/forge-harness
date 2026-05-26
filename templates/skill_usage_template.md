@@ -1,68 +1,68 @@
 ---
 name: skill_usage_leaderboard
-description: PMH 스킬 호출 빈도 추적 — 4주 미호출 시 폐기 후보 플래그
+description: forge-harness skill call frequency tracker — flags skills unused for 4 weeks as deprecation candidates
 updated: 2026-05-26
 ---
 
-# PMH Skill Usage Leaderboard
+# forge-harness Skill Usage Leaderboard
 
-> **업데이트**: harvest-loop 실행 시 수동 기입 또는 세션 노트에서 집계
-> **폐기 기준**: `last_used` 기준 28일(4주) 초과 시 → `⚠️ 폐기 후보` 플래그
-> **부활 기준**: 폐기 후보라도 외부 사용자 요청 1건 이상이면 유지
+> **Update**: Enter manually after harvest-loop runs, or aggregate from session notes
+> **Deprecation threshold**: `last_used` older than 28 days (4 weeks) → `⚠️ Deprecation candidate` flag
+> **Revival threshold**: Keep any deprecation candidate that has at least 1 external user request
 
 ## Leaderboard
 
-| 스킬 | 마지막 사용 | 30일 호출 추정 | 상태 |
+| Skill | Last Used | Est. 30-day Calls | Status |
 |---|---|:---:|---|
-| harness-doctor | 2026-05-26 | 12+ | ✅ 핵심 활성 |
-| context-doctor | 2026-05-26 | 8+ | ✅ 활성 |
-| sim-conductor | 2026-05-26 | 6+ | ✅ 활성 |
-| source-grounding-audit | 2026-05-26 | 3 | 🆕 신설 |
-| agent-composer | 2026-05-24 | 5+ | ✅ 활성 |
-| steel-quench | 2026-05-26 | 4+ | ✅ 활성 |
-| harvest-loop | 2026-05-25 | 6+ | ✅ 활성 |
-| field-harvest | 2026-05-25 | 4+ | ✅ 활성 |
-| install-wizard | 2026-05-15 | 2 | 🟡 저빈도 |
-| install-doctor | 2026-05-15 | 2 | 🟡 저빈도 |
-| plugin-recommender | 2026-05-12 | 2 | 🟡 저빈도 |
-| verify-bidirectional | 2026-05-20 | 3 | 🟡 저빈도 |
-| sim-conductor | 2026-05-26 | 6+ | ✅ 활성 |
-| hub-cc-pr-reviewer | 2026-05-18 | 3 | 🟡 저빈도 |
-| apex-review | 2026-05-10 | 1 | ⚠️ 관찰 중 |
-| deep-clarify | 2026-05-26 | 0 | 🆕 신설 |
-| frontier-digest | 2026-05-24 | 3 | 🟡 저빈도 |
-| cross-ecosystem-synergy-detection | 2026-05-08 | 1 | ⚠️ 관찰 중 |
-| self-marketing-lint | 2026-05-09 | 1 | ⚠️ 관찰 중 |
-| meta-prompt-builder | 2026-05-10 | 1 | ⚠️ 관찰 중 |
-| asset-placement-gate | 2026-05-10 | 1 | ⚠️ 관찰 중 |
-| marketplace-gate | 2026-05-10 | 1 | ⚠️ 관찰 중 |
-| contention-layer | 2026-05-15 | 2 | 🟡 저빈도 |
-| context-bridge-dispatch | 2026-05-15 | 2 | 🟡 저빈도 |
+| harness-doctor | 2026-05-26 | 12+ | ✅ Core Active |
+| context-doctor | 2026-05-26 | 8+ | ✅ Active |
+| sim-conductor | 2026-05-26 | 6+ | ✅ Active |
+| source-grounding-audit | 2026-05-26 | 3 | 🆕 New |
+| agent-composer | 2026-05-24 | 5+ | ✅ Active |
+| steel-quench | 2026-05-26 | 4+ | ✅ Active |
+| harvest-loop | 2026-05-25 | 6+ | ✅ Active |
+| field-harvest | 2026-05-25 | 4+ | ✅ Active |
+| install-wizard | 2026-05-15 | 2 | 🟡 Low Frequency |
+| install-doctor | 2026-05-15 | 2 | 🟡 Low Frequency |
+| plugin-recommender | 2026-05-12 | 2 | 🟡 Low Frequency |
+| verify-bidirectional | 2026-05-20 | 3 | 🟡 Low Frequency |
+| sim-conductor | 2026-05-26 | 6+ | ✅ Active |
+| hub-cc-pr-reviewer | 2026-05-18 | 3 | 🟡 Low Frequency |
+| apex-review | 2026-05-10 | 1 | ⚠️ Under Observation |
+| deep-clarify | 2026-05-26 | 0 | 🆕 New |
+| frontier-digest | 2026-05-24 | 3 | 🟡 Low Frequency |
+| cross-ecosystem-synergy-detection | 2026-05-08 | 1 | ⚠️ Under Observation |
+| self-marketing-lint | 2026-05-09 | 1 | ⚠️ Under Observation |
+| meta-prompt-builder | 2026-05-10 | 1 | ⚠️ Under Observation |
+| asset-placement-gate | 2026-05-10 | 1 | ⚠️ Under Observation |
+| marketplace-gate | 2026-05-10 | 1 | ⚠️ Under Observation |
+| contention-layer | 2026-05-15 | 2 | 🟡 Low Frequency |
+| context-bridge-dispatch | 2026-05-15 | 2 | 🟡 Low Frequency |
 
-## 상태 기준
+## Status Criteria
 
-| 상태 | 조건 |
+| Status | Condition |
 |---|---|
-| ✅ 핵심 활성 | 30일 8회+ 또는 Three-Doctor Loop 구성 |
-| ✅ 활성 | 30일 3회+ |
-| 🆕 신설 | 생성 후 4주 미만 |
-| 🟡 저빈도 | 30일 1-2회 — 모니터링 |
-| ⚠️ 관찰 중 | 30일 1회 이하 — 폐기 후보 검토 필요 |
-| ❌ 폐기 후보 | 28일 미호출 + 외부 사용 없음 |
+| ✅ Core Active | 8+ calls in 30 days, or part of Three-Doctor Loop |
+| ✅ Active | 3+ calls in 30 days |
+| 🆕 New | Created less than 4 weeks ago |
+| 🟡 Low Frequency | 1-2 calls in 30 days — monitoring |
+| ⚠️ Under Observation | 1 or fewer calls in 30 days — review for deprecation |
+| ❌ Deprecation Candidate | No calls in 28 days + no external usage |
 
-## 갱신 방법
+## How to Update
 
-harvest-loop 종료 시 이 파일에 이번 세션에서 호출된 스킬을 기입:
+At the end of each harvest-loop, record the skills used this session in this file:
 
 ```
-세션 날짜: YYYY-MM-DD
-사용 스킬: harness-doctor, context-doctor, steel-quench, ...
+Session date: YYYY-MM-DD
+Skills used: harness-doctor, context-doctor, steel-quench, ...
 ```
 
-### 최근 세션 기록
+### Recent Session Log
 
-| 날짜 | 사용 스킬 |
+| Date | Skills Used |
 |---|---|
-| 2026-05-26 | harness-doctor, context-doctor, sim-conductor, source-grounding-audit, steel-quench, agent-composer, harvest-loop, deep-clarify(신설), plan(신설) |
+| 2026-05-26 | harness-doctor, context-doctor, sim-conductor, source-grounding-audit, steel-quench, agent-composer, harvest-loop, deep-clarify(new), plan(new) |
 | 2026-05-25 | harvest-loop, field-harvest, harness-doctor, verify-bidirectional |
-| 2026-05-22 | steel-quench, sim-conductor, source-grounding-audit(신설) |
+| 2026-05-22 | steel-quench, sim-conductor, source-grounding-audit(new) |

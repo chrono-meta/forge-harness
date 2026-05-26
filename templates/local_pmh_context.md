@@ -1,16 +1,16 @@
 ---
 scope: local-only
-description: PMH 위치·스킬 목록 포인터 — 로컬 전용, 공용 리포 커밋 X
+description: forge-harness path and skill list pointer — local only, do not commit to shared repo
 ---
 
-# PMH 크로스 컨텍스트
+# forge-harness Cross-Context
 
-> 설치: `cp {PMH_ROOT}/templates/local_pmh_context.md .claude/rules/local_pmh_context.md`
-> 로컬 전용: `echo ".claude/rules/local_pmh_context.md" >> .git/info/exclude`
+> Install: `cp {FH_ROOT}/templates/local_pmh_context.md .claude/rules/local_pmh_context.md`
+> Local only: `echo ".claude/rules/local_pmh_context.md" >> .git/info/exclude`
 
-**PMH 경로**: `~/PycharmProjects/pay-meta-harness` (실제 설치 경로로 교체)
-**세션 기록**: `{PMH_ROOT}/tracks/_meta/`
+**forge-harness path**: `~/path/to/forge-harness` (replace with your actual install path)
+**Session records**: `{FH_ROOT}/tracks/_meta/`
 
-**가용 스킬 (fh-meta)**: audit-learnings · verify-bidirectional · plugin-recommender · sim-conductor · harness-doctor · field-harvest · context-doctor · hub-cc-pr-reviewer · install-doctor · frontier-status-summary · cross-ecosystem-synergy-detection · pr-review-watcher
+**Available skills (fh-meta)**: audit-learnings · verify-bidirectional · plugin-recommender · sim-conductor · harness-doctor · field-harvest · context-doctor · hub-cc-pr-reviewer · install-doctor · frontier-status-summary · cross-ecosystem-synergy-detection · pr-review-watcher
 
-스킬 상세는 `{PMH_ROOT}/plugins/fh-meta/skills/{skill-name}/SKILL.md` 온디맨드 참조.
+Skill details available on demand at `{FH_ROOT}/plugins/fh-meta/skills/{skill-name}/SKILL.md`.

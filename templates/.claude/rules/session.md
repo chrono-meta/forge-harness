@@ -1,153 +1,153 @@
 <!--
-session.md — Claude Code 세션 운영 규칙 템플릿
+session.md — Claude Code Session Rules Template
 
-이 파일의 역할:
-- Claude의 세션 운영 규칙 정의 (어떻게 행동할 것인가)
-- 프로젝트 전체에 적용되는 행동 지침
-- Git에 커밋하여 팀과 공유
-- 사용자가 직접 편집/관리
+Purpose of this file:
+- Define Claude's session operating rules (how to behave)
+- Behavioral guidelines applied across the entire project
+- Commit to Git and share with the team
+- Edited and managed directly by the user
 
-MEMORY.md와의 차이:
-- MEMORY.md: 대화 중 학습한 데이터/경험 저장 (Claude가 자동 관리)
-- session.md: Claude가 따를 절차/규칙 정의 (사용자가 직접 편집)
+Difference from MEMORY.md:
+- MEMORY.md: Stores data/experience learned during conversation (auto-managed by Claude)
+- session.md: Defines procedures/rules for Claude to follow (edited directly by the user)
 
-사용법:
-- 이 파일을 프로젝트의 .claude/rules/session.md에 복사
-- 프로젝트에 맞게 섹션을 추가/삭제/수정
-- [CUSTOMIZE] 주석이 있는 부분을 프로젝트에 맞게 변경
+Usage:
+- Copy this file to your project's .claude/rules/session.md
+- Add, remove, or modify sections to fit your project
+- Change sections marked with [CUSTOMIZE] comments to match your project
 -->
 
-### 세션 시작 시 자동 작업
+### Automatic Actions at Session Start
 
-#### 루트 메모리 (Knowledge Hub) 연결
+#### Root Memory (Knowledge Hub) Connection
 
-대화 시작 시 ("안녕", "시작하자", "루트메모리 읽어줘") 다음을 수행:
+At the start of a conversation ("hello", "let's start", "load root memory"), perform the following:
 
-1. `~/PycharmProjects/pay-meta-harness/CATALOG.md` 읽기
-   - 최근 작업 맥락 파악
-   - 오늘 할 일(todo/plan) 확인
+1. Read `{FH_ROOT}/CATALOG.md`
+   - Understand recent work context
+   - Check today's tasks (todo/plan)
 
-2. 프로젝트 메모리 인덱스 로드
-   - `.claude/projects/.../memory/MEMORY.md` 확인
-   - 현재 작업과 관련성 높은 메모리 우선 로드
-   - 메모리 로드 사실을 사용자에게 알리지 않고 자연스럽게 진행
+2. Load project memory index
+   - Check `.claude/projects/.../memory/MEMORY.md`
+   - Prioritize loading memory most relevant to current work
+   - Proceed naturally without notifying the user that memory was loaded
 
-#### 예외 상황
-- 사용자가 명시적으로 메모리 사용 안 함을 요청한 경우
-- 단순 질문이나 일회성 작업인 경우는 선택적 로드
+#### Exceptions
+- If the user explicitly requests not to use memory
+- For simple one-off questions, load is optional
 
 ---
 
-### 테스트 시작 전 세션 백업
+### Session Backup Before Tests
 
-<!-- [CUSTOMIZE] 테스트 프레임워크에 맞게 트리거 조건 수정 -->
+<!-- [CUSTOMIZE] Adjust trigger conditions to match your test framework -->
 
-#### 자동 백업 트리거
+#### Automatic Backup Trigger
 
-테스트 실행 가능 시점에 **자동으로** 세션 백업을 수행할 것:
+At any point when tests could be run, **automatically** perform a session backup:
 
-1. **내가 테스트를 권장할 때** — 테스트 권장 메시지 **직전**
-2. **사용자가 테스트 시작 의사를 밝힐 때** — 테스트 명령어 실행 **전**
+1. **When I recommend running tests** — **immediately before** the recommendation message
+2. **When the user signals intent to start tests** — **before** running the test command
 
-#### 백업 이유
-- 테스트 시작 시 세션이 강제 종료될 수 있음
-- 대화 컨텍스트, 분석 결과, 수정 내역 손실 방지
+#### Why Backup
+- Sessions can be forcibly terminated when tests start
+- Prevents loss of conversation context, analysis results, and change history
 
-#### 백업 방법
+#### How to Backup
 
 ```bash
 cat > .claude/session_backup_$(date +%Y%m%d_%H%M%S).md << 'EOF'
-# 세션 백업 - [작업 제목]
+# Session Backup - [Task Title]
 
-## 문제 상황
-- [현재 해결 중인 이슈]
+## Problem
+- [Issue currently being resolved]
 
-## 수정 내역
-- [파일명:라인]
-- [변경 전/후]
+## Changes Made
+- [filename:line]
+- [before/after]
 
-## 다음 단계
-- [테스트 후 확인할 사항]
+## Next Steps
+- [Things to verify after tests]
 EOF
 ```
 
-#### 중요
-- 사용자가 명시적으로 요청하지 않아도 **자동으로** 수행
-- 백업 없이 테스트 권장 금지
+#### Important
+- Perform **automatically** even without an explicit user request
+- Never recommend tests without first creating a backup
 
 ---
 
-### 이슈 발생 시 자동 대응
+### Automatic Response to Issues
 
-<!-- [CUSTOMIZE] 리포트 도구/경로를 프로젝트에 맞게 수정 -->
+<!-- [CUSTOMIZE] Adjust report tool/path to match your project -->
 
-#### 자동 확인 트리거
+#### Automatic Check Trigger
 
-사용자가 문제 발생을 언급하면 **자동으로** 최신 테스트 리포트를 탐색하고 분석:
+When the user mentions a problem, **automatically** locate and analyze the latest test report:
 
-1. **트리거 키워드**
-   - "문제가 생겼어", "에러났어", "실패했어", "안돼"
-   - "이슈 발생", "테스트 실패", "broken", "failed"
+1. **Trigger keywords**
+   - "something broke", "got an error", "it failed", "not working"
+   - "issue occurred", "test failed", "broken", "failed"
 
-2. **분석 및 보고**
-   - 실패 테스트 케이스 이름
-   - 에러 메시지 및 스택 트레이스
-   - 간결한 형식으로 정리
-
----
-
-### 코드 작성 원칙
-
-<!-- [CUSTOMIZE] 프로젝트의 코딩 컨벤션에 맞게 수정. 아래는 어떤 프로젝트든 유효한 범용 5대 원칙. -->
-
-코드를 짜기 **전에** 이 5대 원칙 모두 의식 — 성급하게 새로 만들고 사용자가 정정하는 왕복 줄이는 데 직결.
-
-#### 1. 기존 코드 참조 (Consistency First)
-
-- **참조 대상**: 프로젝트 내 유사 기능·같은 레이어 코드
-- **새로운 패턴 도입 금지** — 기존 패턴을 먼저 따르고, 3회+ 반복 재정리 필요할 때만 추상화
-- **프레임워크 Core/Base 클래스 패턴 준수** — 프로젝트 `.claude/rules/` 있으면 그 계층 우선
-
-#### 2. 독립성·회귀 방지
-
-- 신규 코드가 **기존 테스트·기능 깨뜨리지 않는지** 변경 범위 확인
-- 사이드 이펙트(공유 상태·전역 변수·파일 lock) 관리
-- 변경 전 `git grep`으로 영향 범위 파악 — 예상 못한 호출처 없나
-
-#### 3. 로케이터·식별자 안정성 (UI 코드 한정)
-
-<!-- [CUSTOMIZE] 모바일 QA / 웹 QA가 아닌 프로젝트는 삭제 가능 -->
-
-- 동적 생성 속성(auto-generated id·timestamp in content-desc) 의존 금지
-- 절대 XPath 지양 — 구조 변경에 취약
-- 텍스트 기반 식별자는 i18n 고려 (다국어 프로젝트)
-- 프로젝트 `.claude/rules/LOCATOR_*` 가이드 있으면 그쪽 우선
-
-#### 4. 플레이키성 리스크 관리
-
-- **`time.sleep` 금지** — 명시적 대기(implicit/explicit wait) + 조건 기반 polling
-- 타임아웃 바운드 없는 대기 금지
-- 스크린샷 기반 assertion에는 허용 오차
-- 디바이스·환경 상태 가정 최소화 (키보드 보임·이전 화면 상태 등)
-
-#### 5. 설계 전 grep 의무 (자기 자산 누락 방지)
-
-신규 기능·패턴 설계 **착수 전**에:
-
-1. 프로젝트 내 유사 구현 grep — 이미 있으면 재사용
-2. 허브(예: `~/PycharmProjects/pay-meta-harness/`) 내 자매 프로젝트 learnings grep — 다른 프로젝트가 해결한 문제 재발명 방지
-3. 프로젝트 CLAUDE.md·rules/*.md 재읽기 — 제약 놓친 것 없는지
-
-인용 근거 0건으로 설계 시작하면 **자기 자산 누락** 경고 신호. 반드시 1건 이상 grep 결과 제시 후 설계 시작.
+2. **Analyze and report**
+   - Names of failing test cases
+   - Error messages and stack traces
+   - Summarize in a concise format
 
 ---
 
-### 규칙 계층 및 우선순위
+### Code Writing Principles
 
-<!-- [CUSTOMIZE] 프로젝트의 규칙 출처와 우선순위 정의 -->
+<!-- [CUSTOMIZE] Adjust to match your project's coding conventions. The 5 principles below are universal and valid for any project. -->
 
-**충돌 시 우선순위:**
-1. **프레임워크 규칙** — 코드 패턴 (위반 불가)
-2. **테스트 설계 철학** — "무엇을 테스트할지" (QA Identity 등)
-3. **학습된 피드백** — 사용자 경험 기반 규칙
-4. **운영 규칙** — 세션 백업, 리포트 분석 등 작업 프로세스
+Be conscious of all 5 principles **before** writing code — directly reduces back-and-forth where Claude rushes to create something and the user has to correct it.
+
+#### 1. Reference Existing Code (Consistency First)
+
+- **Reference targets**: Code with similar functionality or in the same layer within the project
+- **No introducing new patterns** — follow existing patterns first; only abstract when the same pattern repeats 3+ times and needs consolidation
+- **Follow framework Core/Base class patterns** — if the project has `.claude/rules/`, that hierarchy takes precedence
+
+#### 2. Independence and Regression Prevention
+
+- Verify that new code **does not break existing tests or functionality**
+- Manage side effects (shared state, global variables, file locks)
+- Use `git grep` before changes to understand the impact surface — check for unexpected callers
+
+#### 3. Locator and Identifier Stability (UI code only)
+
+<!-- [CUSTOMIZE] Can be removed for non-mobile QA / non-web QA projects -->
+
+- Do not depend on dynamically generated attributes (auto-generated id, timestamps in content-desc)
+- Avoid absolute XPath — fragile to structural changes
+- Consider i18n for text-based identifiers (multilingual projects)
+- If the project has `.claude/rules/LOCATOR_*` guides, those take precedence
+
+#### 4. Flakiness Risk Management
+
+- **No `time.sleep`** — use explicit waits (implicit/explicit wait) + condition-based polling
+- No unbounded waits without a timeout
+- Allow tolerance in screenshot-based assertions
+- Minimize assumptions about device/environment state (keyboard visibility, previous screen state, etc.)
+
+#### 5. Mandatory grep Before Design (Prevent Missing Own Assets)
+
+**Before** designing a new feature or pattern:
+
+1. grep for similar implementations in the project — reuse if already present
+2. grep learnings from sibling projects in the hub (e.g., `{FH_ROOT}/`) — prevent reinventing solutions already solved elsewhere
+3. Re-read the project's CLAUDE.md and rules/*.md — check for overlooked constraints
+
+Starting design with zero cited references is a warning signal for **missing own assets**. Always present at least 1 grep result before beginning design.
+
+---
+
+### Rule Hierarchy and Priority
+
+<!-- [CUSTOMIZE] Define rule sources and priority for your project -->
+
+**Priority when conflicts arise:**
+1. **Framework rules** — code patterns (non-negotiable)
+2. **Test design philosophy** — "what to test" (QA Identity, etc.)
+3. **Learned feedback** — rules based on user experience
+4. **Operational rules** — session backup, report analysis, and other work processes
