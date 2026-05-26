@@ -67,6 +67,12 @@ Meta-layer view (forge-harness):
 
 > For a detailed definition of this concept → `knowledge/shared/harness-core/meta_harness_engineering_definition.md` (accessible after cloning forge-harness)
 
+> **External validation (2026)**: Two independent research findings converge on the same conclusion.
+> - VILA-Lab analysis of Claude Code v2.1.88 (512K lines): [98.4% is harness infrastructure, 1.6% is AI logic](https://arxiv.org/abs/2604.14228) — the deterministic engineering layer surrounding the model is the critical differentiator.
+> - "[Code as Agent Harness](https://arxiv.org/abs/2605.18747)" (arXiv, May 2026, 43 authors): code has evolved from being an LLM output to serving as the foundation for agent infrastructure — the same thesis FH operationalizes.
+>
+> forge-harness is applied meta-harness engineering at exactly the layer these studies identify.
+
 ### Environment Engineering
 
 forge-harness doesn't change the agent — it changes the environment. The MEMORY.md keyword-trigger, mandatory Context Card injection, and PFD domain knowledge pre-loading are practices of Environment Engineering that remove the "orientation tax" agents pay before they can find their direction.
@@ -159,6 +165,8 @@ forge-harness is designed with a large context window in mind. Works correctly i
 | Internal AI API proxy | ⚠️ Conditional | Depends on `max_input_tokens` configuration |
 
 > **If you're getting errors in a Bedrock proxy environment**: Request an AWS quota increase (TPM/RPM) or an increase in LiteLLM `max_input_tokens` from your administrator. The root solution is switching to direct Anthropic API access.
+
+> **git push on personal/external networks**: Direct HTTPS push to github.com works without any workaround. Corporate environments with a SASE or TLS-inspection proxy may need a REST API alternative — check with your network team.
 
 ---
 
@@ -858,6 +866,7 @@ sim-conductor Area B runs periodic internal simulations ahead of any external de
 | No real users | "No actual users" | Non-owner autonomous run confirmed 5/12 |
 | Anthropic ecosystem obsolescence | "Will be absorbed by the official ecosystem" | Domain-specific curation layer operates at a different abstraction than general tools |
 | AI-specific attacks (meta-devil W4) | "API failure · Context Collapse · Prompt Injection · self-verification closure — 4 compounded risks" | steel-quench 4-Wave session (5/19): SessionStart hook + prompt injection sanitizer implemented. Open: heterogeneous model external gate |
+| Harness engineering is unnecessary | "AI can operate without a harness layer" | VILA-Lab (Apr 2026): 98.4% of Claude Code v2.1.88 is harness infrastructure — independent teams building the same system converged on structurally identical harnesses ([2604.14228](https://arxiv.org/abs/2604.14228)) |
 
 **Convergence pattern**: Decreasing S-grade blockers per wave is not attack failure — each wave patches real flaws; subsequent waves find fewer because fewer remain. Run `/steel-quench` to observe this pattern on your own installation.
 
