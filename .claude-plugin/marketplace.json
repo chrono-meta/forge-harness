@@ -1,8 +1,8 @@
 {
   "name": "forge-harness",
   "owner": {
-    "name": "chronology-dev",
-    "email": "chronology-dev@users.noreply.github.com"
+    "name": "chrono-code",
+    "email": "chrono-code@users.noreply.github.com"
   },
   "metadata": {
     "description": "forge-harness — Multi-instance persona orchestration and meta-tooling marketplace for Claude Code. Harness engineering toolkit for teams that want to evolve their AI collaboration practices.",

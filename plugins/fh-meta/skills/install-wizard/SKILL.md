@@ -17,7 +17,7 @@ category: Composability Gate
 > **Quick plugin registration (run in terminal):**
 > ```bash
 > # 1. Add marketplace
-> claude plugin marketplace add https://github.com/chronology-dev/forge-harness.git
+> claude plugin marketplace add https://github.com/chrono-code/forge-harness.git
 >
 > # 2. Install plugin
 > claude plugin install -s user fh-meta@forge-harness
@@ -156,7 +156,7 @@ fi
 ⚠️  FH_DIR not set — install FH first then rerun.
 
   1. Clone FH repo:
-     git clone https://github.com/chronology-dev/forge-harness ~/forge-harness
+     git clone https://github.com/chrono-code/forge-harness ~/forge-harness
 
   2. Set environment variable:
      export FH_DIR=~/forge-harness
@@ -444,7 +444,7 @@ install-wizard — Complete
 💡 If this setup helped, consider contributing to FH.
    Pattern discovered → return with /field-harvest
    New skill proposal → PR:
-     https://github.com/chronology-dev/forge-harness
+     https://github.com/chrono-code/forge-harness
 
 🔀 Don't want to lose your accumulated assets — fork as your own hub:
    Personal skills/rules/notes added directly to FH may be lost on FH updates.

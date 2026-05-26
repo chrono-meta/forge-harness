@@ -170,7 +170,7 @@ forge-harness is designed with a large context window in mind. Works correctly i
 
 ```bash
 # [Terminal] Add marketplace
-claude plugin marketplace add https://github.com/chronology-dev/forge-harness.git
+claude plugin marketplace add https://github.com/chrono-code/forge-harness.git
 
 # [Terminal] Install plugin (user scope — available in all projects)
 claude plugin install -s user fh-meta@forge-harness
@@ -185,7 +185,7 @@ Verify installation: type `/skills` in the CC chat → if `install-wizard` appea
 > **Prerequisites**: A GitHub account and git credentials configured. If `git clone` fails with an authentication error, set up SSH keys or create a personal access token (GitHub → Settings → Developer settings → Personal access tokens) and retry.
 
 ```bash
-git clone https://github.com/chronology-dev/forge-harness.git ~/forge-harness
+git clone https://github.com/chrono-code/forge-harness.git ~/forge-harness
 
 cd ~/forge-harness
 ```
@@ -352,7 +352,7 @@ The two asset paths are **different in nature** (clone path = persistent hub / p
 
 ```bash
 # [Terminal] Register marketplace
-claude plugin marketplace add https://github.com/chronology-dev/forge-harness.git
+claude plugin marketplace add https://github.com/chrono-code/forge-harness.git
 ```
 
 > **Note:** You must append `.git` to the URL. (Git repositories aren't auto-detected without the `.git` suffix)
@@ -420,7 +420,7 @@ claude plugin install -s user deep-insight@<your-team-marketplace>
 
 ```bash
 # 1. Add marketplace (no meta-harness clone)
-claude plugin marketplace add https://github.com/chronology-dev/forge-harness.git
+claude plugin marketplace add https://github.com/chrono-code/forge-harness.git
 
 # 2. Install plugin
 claude plugin install fh-meta@forge-harness
@@ -455,7 +455,7 @@ Mode C doesn't automatically transmit signals to the hub. Hub absorption **depen
 **Mode switching path (Mode C → A)**
 
 ```bash
-git clone https://github.com/chronology-dev/forge-harness.git
+git clone https://github.com/chrono-code/forge-harness.git
 cd forge-harness
 claude   # Active onboarding auto-triggers → Mode A standard entry
 ```
@@ -526,7 +526,7 @@ Only use when the recommended path doesn't work in your environment (e.g., proje
 **Step 1. Clone**
 
 ```bash
-git clone https://github.com/chronology-dev/forge-harness.git ~/forge-harness
+git clone https://github.com/chrono-code/forge-harness.git ~/forge-harness
 ```
 
 **Step 2. Create track directories**
