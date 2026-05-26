@@ -1,7 +1,7 @@
 {
   "name": "fh-meta",
-  "version": "1.0.2",
-  "description": "Hub meta-engineering toolkit for Claude Code — 20 skills + 3 agents. Covers the full hub operations lifecycle: harness diagnostics, external simulation, validation, plugin recommendation, reverse-harvest, onboarding wizard, marketplace readiness gate, decision-maker review, steel-quench all-angle verification, and session self-evolution harvest loop.",
+  "version": "1.1.4",
+  "description": "Hub meta-engineering toolkit for Claude Code — 23 skills + 3 agents. Covers the full hub operations lifecycle: harness diagnostics, external simulation, validation, plugin recommendation, reverse-harvest, onboarding wizard, marketplace readiness gate, decision-maker review, steel-quench all-angle verification, source-grounding-audit phantom-claim detection, self-marketing-lint, Socratic deep-clarify, and session self-evolution harvest loop.",
   "author": {
     "name": "harness-contributor",
     "email": "contributor@example.com"

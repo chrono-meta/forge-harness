@@ -11,14 +11,14 @@
   "plugins": [
     {
       "name": "fh-meta",
-      "version": "1.0.2",
-      "description": "Hub meta-operations toolkit — 20 skills (apex-review · verify-bidirectional · cross-ecosystem-synergy-detection · plugin-recommender · hub-cc-pr-reviewer · context-doctor · sim-conductor · harness-doctor · meta-prompt-builder · field-harvest · install-doctor · install-wizard · asset-placement-gate · marketplace-gate · agent-composer · contention-layer · context-bridge-dispatch · frontier-digest · steel-quench · harvest-loop) + 3 agents (hub-persona-auditor · fact-checker · persona-innovator)",
+      "version": "1.1.4",
+      "description": "Hub meta-operations toolkit — 23 skills (agent-composer · apex-review · asset-placement-gate · contention-layer · context-bridge-dispatch · context-doctor · cross-ecosystem-synergy-detection · deep-clarify · field-harvest · frontier-digest · harness-doctor · harvest-loop · hub-cc-pr-reviewer · install-doctor · install-wizard · marketplace-gate · meta-prompt-builder · plugin-recommender · self-marketing-lint · sim-conductor · source-grounding-audit · steel-quench · verify-bidirectional) + 3 agents (hub-persona-auditor · fact-checker · persona-innovator)",
       "source": "./plugins/fh-meta"
     },
     {
       "name": "fh-commons",
-      "version": "1.0.0",
-      "description": "Project-agnostic utility skills born from the contention layer. Operates at a different layer than fh-meta (harness engineering) — domain-independent utilities that can be transplanted into any project.",
+      "version": "0.1.1",
+      "description": "Project-agnostic utility skills born from the contention layer — 2 skills (convergence-loop · deliberation) + 1 agent (quench-challenger). Operates at a different layer than fh-meta (harness engineering) — domain-independent utilities that can be transplanted into any project.",
       "source": "./plugins/fh-commons"
     }
   ]

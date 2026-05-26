@@ -1,6 +1,6 @@
 ---
 name: self-marketing-lint
-description: Detects self-marketing language (version labels, emphasis words, iteration counts, overstatement declarations) in FH skill, agent, and documentation files and outputs replacement suggestions. Reference standards are external baseline documents. Triggered by "check FH files", "remove marketing language", "description diet", "self-marketing-lint".
+description: Detects self-marketing language (version labels, emphasis words, iteration counts, overstatement declarations) in FH skill, agent, and documentation files and outputs replacement suggestions. Detection criteria are defined inline in this skill. Triggered by "check FH files", "remove marketing language", "description diet", "self-marketing-lint".
 user-invocable: true
 allowed-tools: ["Read", "Grep", "Glob", "Bash"]
 model: sonnet
@@ -8,8 +8,8 @@ model: sonnet
 
 # self-marketing-lint — FH Self-Marketing Language Detection + Replacement Suggestions
 
-> Reference documents: `feedback_description_diet_baseline.md` · `feedback_cold_audit_harness_pattern.md`
-> Criteria are NOT defined inside this skill — external reference is required (prevents self-reference bias).
+> Detection criteria are defined inline in this skill (see "Inline Baseline" below).
+> The skill is self-contained and does not depend on external personal-memory documents.
 
 ## Triggers
 
@@ -18,10 +18,18 @@ model: sonnet
 - "Catch self-marketing language", "run the lint"
 - When surfaced as a HIGH item in harvest-loop (P10 series)
 
-## Detection Patterns (external reference criteria)
+## Detection Patterns (Inline Baseline)
 
-The following is a summary based on `feedback_description_diet_baseline.md` + `feedback_cold_audit_harness_pattern.md`.
-Read both files before execution to apply the latest criteria.
+The following criteria are self-contained inside this skill. No external personal-memory file is required.
+
+### Self-Marketing Anti-Patterns
+
+1. **Self-declarations of quality**: "industry-leading", "world-class", "production-ready", "the world's first" without external evidence
+2. **Round-counters and version brags**: "after 26 iterations", "v0.5 maturity", "22nd naming round", "prototype 9th iteration" — irrelevant to function
+3. **Cushion language**: "perfectly", "easily", "seamlessly", "instantly", "without burden" — content-free intensifiers
+4. **Owner self-reference loops**: "validated by our team", "proven internally" — circular evidence with no external check
+5. **Marketing word stacking**: 3+ adjectives in one sentence
+6. **Spec-only artifacts**: skills/agents missing a Done When section — declaration without observable output
 
 | Pattern type | Examples (detection targets) | Replacement direction |
 |---|---|---|
@@ -49,14 +57,9 @@ find {FH_ROOT}/docs -name "*.md" | sort
 
 Scope: specified files only if target is given / full scan if unspecified.
 
-### Step 2. Load Reference Criteria
+### Step 2. Confirm Inline Baseline
 
-```
-Read: {hub_memory_path}/feedback_description_diet_baseline.md
-Read: {hub_memory_path}/feedback_cold_audit_harness_pattern.md
-```
-
-Confirm latest criteria before proceeding to Step 3.
+Re-read the "Detection Patterns (Inline Baseline)" section above. No external file load is required — the skill is self-contained.
 
 ### Step 3. Pattern Detection
 
@@ -105,7 +108,7 @@ Recommendation: prioritize files with highest detection counts for review
 
 ```
 1. Full scan of target files complete
-2. Reference documents (2 files) Read complete and latest criteria applied
+2. Inline baseline criteria applied (no external file dependency)
 3. Detection results organized and output per file
 4. No automatic edits — user confirmation gate maintained
 ```
