@@ -1,0 +1,15 @@
+# Ignore session logs specific to local development
+tracks/_audit/session_*.md
+
+# Local operational environment (not for public repo)
+.claude/memory/
+.claude/settings.local.json
+.claude/settings.json
+context/
+
+# macOS system files
+.DS_Store
+
+# tracks — local work only (.gitkeep으로 디렉토리 구조만 유지)
+tracks/*
+!tracks/.gitkeep
