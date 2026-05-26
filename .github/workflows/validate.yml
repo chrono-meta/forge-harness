@@ -96,9 +96,9 @@ EOF
         run: |
           echo "=== Checking skill counts ==="
           FH_META_SKILLS=$(find plugins/fh-meta/skills -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
-          FH_META_AGENTS=$(find plugins/fh-meta/agents -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
+          FH_META_AGENTS=$(find plugins/fh-meta/agents -mindepth 1 -maxdepth 1 -type f -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
           FH_COMMONS_SKILLS=$(find plugins/fh-commons/skills -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
-          FH_COMMONS_AGENTS=$(find plugins/fh-commons/agents -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
+          FH_COMMONS_AGENTS=$(find plugins/fh-commons/agents -mindepth 1 -maxdepth 1 -type f -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
           echo "fh-meta: ${FH_META_SKILLS} skills, ${FH_META_AGENTS} agents"
           echo "fh-commons: ${FH_COMMONS_SKILLS} skills, ${FH_COMMONS_AGENTS} agents"
 
