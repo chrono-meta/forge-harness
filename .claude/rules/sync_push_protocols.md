@@ -48,6 +48,8 @@ Update the track mapping table in CLAUDE.md each time a project is added.
 
 **Underscore prefix convention**: `tracks/_audit/` · `tracks/_mcp/` etc. are for hub operations/meta work only. Consider promoting to parent directory when meta tracks accumulate to 3+.
 
+**Two-layer storage principle**: `tracks/` = detailed work history (local, machine-dependent). For critical cross-session state — pending codes, DOIs, active action items — also write to `~/.claude/projects/.../memory/` (durable, survives re-clone or machine change).
+
 ---
 
 ## Knowledge Push Protocol
