@@ -810,46 +810,55 @@ Internal only = owner environment internal loop = self-reference risk
 > - **cascade β** (user other than owner running autonomously): validated by an external user on 5/12 — first autonomous run by a non-owner achieved
 > - **External review of agent deliverables**: PR #280 merged by external reviewer (5/15) → v1.0 release gate condition fulfilled.
 
-### Why devil is not easy with meta-harness — multi-layer defense structure
+### Steel-quench convergence — multi-layer defense structure
 
-A devil-advocate encountering meta-harness for the first time typically attacks from angles like "self-referential closed system," "single bus factor," or "no real users." However, these attacks structurally lose force as the Wave deepens. The reason is simple — **meta-harness already has circuits handling these attacks before the devil arrives.**
+steel-quench sessions on this harness consistently show a pattern: Wave 1 surfaces S-grade blockers, Wave 2 defends or patches them, and Wave 3 terminates without new S-grade findings. This section documents the structural design that produces that convergence, along with supporting evidence.
 
-#### Multi-layer defense structure (4-Layer Defense)
+#### Observed evidence
+
+| Milestone | Date | Verification type |
+|---|---|---|
+| cascade α: owner autonomous run | prior to 5/12 | Internal session logs |
+| cascade β: non-owner autonomous run | 5/12 | External user — first non-owner autonomous execution |
+| Agent deliverable external review | 5/15 | PR #280 merged by external reviewer |
+| Wave 4 (meta-devil) convergence | 5/19 | steel-quench 4-Wave session log |
+
+#### 4-Layer Defense structure
 
 | Layer | Name | Role |
 |:---:|---|---|
-| **L1** | Internal self-diagnosis | harness-doctor + context-doctor + sim-conductor Area B — periodically detects and handles internal weaknesses first (a structure that transplants N-Version Programming from software engineering — multi-version cross-validation — into AI orchestration; useful for explaining the engineering basis of Three-Doctor Loop to external audiences) |
+| **L1** | Internal self-diagnosis | harness-doctor + context-doctor + sim-conductor Area B — periodic internal weakness detection. Structural analogue of N-Version Programming (multi-version cross-validation) applied to AI orchestration. |
 
-> **Self-Evaluation Bias**: When the same model evaluates its own output, confirmation bias occurs. Three-Doctor Loop structurally resolves this issue with isolated third-person evaluation. (Anthropic official validation 2025)
-| **L2** | External verification loop | Real user feedback + manager approval record + PR external review — a living evidence record the devil cannot see |
-| **L3** | Quenching circuit | steel-quench (full-spectrum devil attack → Wave convergence) — the same attack angles are already self-executed and defended before the devil attacks |
-| **L4** | Meta-aware adversary principle | As Wave N deepens, new S-grade blockers decrease → convergence automated — not a failure of the attacks but evidence the system is getting stronger |
+> **Self-Evaluation Bias**: When the same model evaluates its own output, confirmation bias occurs. Three-Doctor Loop addresses this with isolated third-person evaluation roles. (Pattern documented in Anthropic multi-agent research, 2025)
+| **L2** | External verification loop | Real user feedback + external PR review — evidence generated outside the owner environment |
+| **L3** | Quenching circuit | steel-quench pre-runs the same attack angles internally. Flaws surfaced here are patched before external devil sessions begin. |
+| **L4** | Meta-aware adversary principle | As Wave N deepens, remaining attackable S-grade surface shrinks because prior waves have already consumed it — convergence is structural, not coincidental |
 
-#### Structural reasons why devil has a hard time attacking
+#### Why wave convergence happens
 
-**1. Brain in a Vat Paradox**
+**1. Brain in a Vat asymmetry**
 
-The devil attacks from an isolated environment (sub-agent sandbox), seeing only code and documents. But the living evidence of the real system (team collaboration, external contributions, real user data, manager approval records) exists outside that isolated environment. What the devil sees is only a cross-section of the system.
+The devil operates from an isolated sub-agent sandbox, seeing only static code and documents. Living evidence from the operating system — external contributions, real user sessions, approval records — exists outside that boundary. The defender can reach this evidence; the devil cannot. Asymmetric information access, not inherent system strength, explains the divergence in Wave 2 defense quality.
 
-**2. Sandboxed Adversary**
+**2. Sandboxed Adversary structure**
 
-The devil itself runs under the control of a larger meta-environment (meta-harness orchestrator). The attack of "self-referential closed system" ironically gets caught in a larger self-referential structure — the devil is itself one of the agents dispatched by meta-harness.
+The devil runs as an agent dispatched by the same meta-harness it is attacking. Its "self-referential closed system" attack must contend with the fact that it is itself one component in the orchestration it is evaluating. This does not invalidate the attack, but it structurally limits the depth of the closed-loop claim.
 
-**3. Self-Renewal Circuit**
+**3. Pre-patching via simulation**
 
-sim-conductor Area B periodically discovers and handles internal weaknesses first. By the time the devil arrives, a substantial portion of discoverable S-grade flaws have already been patched. The simulation acts not just as cleaning but as a vaccine.
+sim-conductor Area B runs periodic internal simulations ahead of any external devil session. Flaws discovered by simulation are patched immediately. When the devil arrives, the surface area of discoverable S-grade findings is already reduced — not by defense arguments, but by prior implementation fixes.
 
-#### Evidence status (last updated: 2026-05-19)
+#### Evidence against common attack vectors
 
-| Attack angle | Devil's claim | Invalidated by evidence |
+| Attack angle | Devil's claim | Counter-evidence |
 |---|---|---|
-| Self-referential closed system | "Only internal loops" | sim-conductor isolated environment + external user verification loop active |
-| Single bus factor | "Stops without the owner" | PR #280 merged by external reviewer (5/15) — external review and approval validated |
-| No real users | "No actual users" | Validated by an external user 5/12 — first autonomous run by a non-owner achieved |
-| Anthropic ecosystem obsolescence | "Will be absorbed by the official ecosystem" | Domain-specific curation layer differentiation — context enhancement that general tools cannot replace |
-| AI-specific attacks (meta-devil W4) | "API failure · Context Collapse · Prompt Injection · self-verification closure — 4 compounded risks" | steel-quench 4-Wave quenching (5/19) — SessionStart hook (determinism circuit) + prompt injection sanitizer (PR #54) immediately implemented. Remaining: heterogeneous model external gate |
+| Self-referential closed system | "Only internal loops" | sim-conductor isolated environment + external user verification (5/12, 5/15) |
+| Single bus factor | "Stops without the owner" | PR #280 merged by external reviewer (5/15) without owner involvement |
+| No real users | "No actual users" | Non-owner autonomous run confirmed 5/12 |
+| Anthropic ecosystem obsolescence | "Will be absorbed by the official ecosystem" | Domain-specific curation layer operates at a different abstraction than general tools |
+| AI-specific attacks (meta-devil W4) | "API failure · Context Collapse · Prompt Injection · self-verification closure — 4 compounded risks" | steel-quench 4-Wave session (5/19): SessionStart hook + prompt injection sanitizer implemented. Open: heterogeneous model external gate |
 
-**Conclusion**: The decrease in new S-grade blockers the devil can raise as Wave N deepens is not a failure of attacks. It is a signal that the system is genuinely becoming more robust.
+**Convergence pattern**: Decreasing S-grade blockers per wave is not attack failure — each wave patches real flaws; subsequent waves find fewer because fewer remain. Run `/steel-quench` to observe this pattern on your own installation.
 
 ---
 
