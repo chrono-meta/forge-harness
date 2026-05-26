@@ -1,0 +1,13 @@
+# context-doctor: configured 2026-05-10
+
+# Git internals
+.git/
+
+# 로컬 전용 디렉토리 (gitignore 대상과 일치)
+context/
+tracks/
+.claude/memory/
+
+# 임시·로그
+*.log
+*.tmp

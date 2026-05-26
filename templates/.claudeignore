@@ -1,0 +1,68 @@
+# === pay-meta-harness 표준 .claudeignore ===
+# Claude Code context 차단 패턴 (.gitignore 동일 syntax)
+# 효과: per-session token cost 20-40% 절감 (대형 프로젝트 기준)
+# 사용법: 본 파일을 프로젝트 루트에 `.claudeignore`로 복사 + 필요 시 커스터마이즈
+# 신설: 2026-05-07
+
+# === 의존성 ===
+node_modules/
+vendor/
+__pycache__/
+.venv/
+venv/
+.tox/
+
+# === 빌드 산출물 ===
+dist/
+build/
+out/
+.next/
+.nuxt/
+.turbo/
+.cache/
+target/
+*.pyc
+*.class
+
+# === Lock 파일 ===
+*.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+poetry.lock
+Cargo.lock
+
+# === 압축·미니파이·소스맵 ===
+*.min.js
+*.min.css
+*.map
+
+# === 로그·임시 ===
+*.log
+tmp/
+.tmp/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# === 비밀·환경 변수 (보안) ===
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+secrets/
+credentials/
+
+# === IDE ===
+.idea/
+.vscode/
+*.iml
+
+# === Claude Code 자체 캐시 ===
+.claude/cache/
+.claude/local/
+
+# === Git ===
+.git/
