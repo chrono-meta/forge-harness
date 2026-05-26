@@ -1,0 +1,459 @@
+---
+name: steel-quench
+description: A meta-skill that concretizes a designer's anxiety into AI-driven all-angle devil attacks and shakes off flaws through defensive rounds. Systematically surfaces root weaknesses of near-complete projects wave by wave, guaranteeing near-human-review quality without direct human deep inspection. Wave 4 (Meta-Aware Adversary) is an advanced mode where the devil uses its own AI nature — hallucination, context collapse, prompt injection, tool lock-in — as attack vectors. Wave-P3 (P3 TC post-processing) auto-triggers immediately after mcp-spec-to-tc P3 gate pass — re-attacks from 3 angles (Coverage, Narrative, FP) to guarantee "genuine P3 pass". Built-in pmh-commons:quench-challenger agent outputs harness structure 6-axis attack+prescription pairs; after convergence, pmh-meta:persona-innovator auto-extracts new patterns. Triggered by: "quench this", "devil's judgment", "all-angle review", "end-to-end verification", "steel quench", "run devil advocate", "deep pre-completion inspection", "shake out design anxiety", "attack from the root", "TC quench", "genuine P3 pass".
+user-invocable: true
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "WebSearch", "Agent"]
+model: opus
+---
+
+# steel-quench — All-Angle Verification Meta-Skill
+
+> Heating steel and plunging it into water brings internal defects to the surface. AI all-angle devil attacks → defense → repeat = systematic surfacing and elimination of design flaws.
+
+A designer's anxiety is most dangerous when vague. steel-quench breaks that anxiety into concrete attack angles, actually defends against them in the defense round, and closes the session with only residual risks explicitly stated. The goal is to guarantee near-human-deep-review quality without direct human inspection.
+
+## Trigger Phrases
+
+| Phrase | Situation |
+|---|---|
+| "quench this", "run quench" | All-angle verification just before completion |
+| "devil's judgment", "run devil advocate" | Focused attack on specific design decision |
+| "all-angle review", "end-to-end verification" | Full project scope verification |
+| "shake out design anxiety", "deep pre-completion inspection" | Concretize vague anxiety |
+| "attack from the root" | Re-verify from reason for existence |
+| "diagnose with counterexample", "use this bad case as reference" | Phase 0 calibration based on external case |
+| `/steel-quench` | Explicit call |
+| "genuine P3 pass?", "TC quench", "verify TC" | Wave-P3 auto-verification after mcp-spec-to-tc P3 gate pass |
+
+## Wave Structure
+
+### Phase 0 — Counterexample Calibration (Optional)
+
+**Activation condition**: When an external bad case is provided as input, or when you want to calibrate diagnosis criteria with an external case before Wave 1.
+
+**Goal**: Extract false/failure patterns from external bad cases and reflect them as additional attack angles in Wave 1.
+
+**Execution order**:
+
+1. Extract patterns from external case — name each pattern in one line
+2. Apply extracted patterns directly to the current diagnostic target
+3. Matching items → merge into Wave 1 attack angles (treat as S-grade)
+
+**Phase 0 output format**:
+
+```
+## Phase 0 — Counterexample Calibration
+
+External case: [name/source]
+
+| # | False Pattern Name | Same Pattern in Target? | Wave 1 Merge |
+|:---:|---|:---:|:---:|
+| 1 | [pattern name] | ✓ / ✗ | ✓ / — |
+
+Added Wave 1 attack angles: N items
+```
+
+**Simplification guard**: If no external case, skip Phase 0 entirely. Start directly at Wave 1.
+
+---
+
+#### Counterexample Baseline Set (pre-loaded)
+
+For diagnosing PoC reports, tool SKILL.md, and design documents — can be used immediately as Phase 0 criteria set.
+
+| # | Pattern Name | Judgment Criteria |
+|:---:|---|---|
+| CC-1 | Self-measurement without standards | "Achieved", "completed", "effective" claims missing at least one of: measurement subject, criteria, external verification |
+| CC-2 | Single-case generalization | Extending 1 experiment as applicable to full scope |
+| CC-3 | Achievement = activity performed | Declaring "achieved because executed" without re-judging against original goals |
+| CC-4 | Cumulative error claim | Calculation or prediction stacking all assumptions at optimal values |
+| CC-5 | Missing causal link | Cause and effect in same document but isolated with no connection |
+| CC-6 | No Done When | No binary judgment criteria for completion |
+
+---
+
+### Wave 1 — Devil Attack Round
+
+**Goal**: Surface critical flaws. Do not defend.
+
+Call **pmh-commons:quench-challenger** (built-in agent) in isolation, or if absent, directly apply the **5 mandatory attack angles** below. quench-challenger outputs harness structure 6-axis (Done When, Citation, isolation, dependencies, onboarding, simplification) attack+prescription pairs from an independent instance, orthogonal to Wave 1's 5 angles.
+
+**Execution principles**:
+- Attacks must be based on real code, real files, real configs — abstract criticism prohibited
+- Assign severity rating to each attack: **S** (immediate blocker) / **A** (required before deployment) / **B** (improvement recommended)
+- Defensibility rating: ○ (defense logic exists) / △ (partial defense) / × (currently indefensible)
+
+#### 5 Mandatory Attack Angles (Wave 1 checklist)
+
+| # | Attack Angle | Core Question |
+|:---:|---|---|
+| 1 | **Reason for existence** | "Why this structure? Is there no simpler alternative?" |
+| 2 | **Real-use verification** | "Does what's written in the docs actually match the real code?" |
+| 3 | **Bus factor** | "Single-person dependency — can it operate if that person is absent?" |
+| 4 | **Platform obsolescence** | "Does this structure survive when the external ecosystem expands or changes?" |
+| 5 | **Self-referential structure** | "Is there a closed circuit that evaluates itself by its own criteria?" |
+
+**Wave 1 output format**:
+
+```
+## Wave 1 — Devil Attack Results
+
+| Attack Angle | Severity | Flaw Found | Defensibility |
+|---|:---:|---|:---:|
+| Reason for existence | S/A/B | [actual flaw description] | ○/△/× |
+| Real-use verification | S/A/B | [doc-code mismatch point] | ○/△/× |
+| Bus factor | S/A/B | [single-person dependency area] | ○/△/× |
+| Platform obsolescence | S/A/B | [vulnerability point] | ○/△/× |
+| Self-referential structure | S/A/B | [closed circuit detection result] | ○/△/× |
+
+S-grade blockers: N / A-grade: N / B-grade: N
+```
+
+---
+
+### Wave 2 — Defense Round
+
+**Goal**: Defend against or improve Wave 1 flaws. Items that cannot be defended are explicitly stated as residual risks.
+
+**3 Defense Principles**:
+
+1. **Reinforce with external cases** — verify similar project success/failure cases via WebSearch. Determine if "unique to us" or "structural pattern"
+2. **Cover with experience** — bring in other project cases to overcome single-person limitations. Defend bus factor with documentation and automation
+3. **Prioritize immediate implementation** — actual improvement is stronger defense than logical construction. Don't spend time building logic — fix 1 line first
+
+### "Brain in a Vat + Sandboxed Adversary" Principle
+
+A meta-principle explaining why Wave 2 "cover with experience" structurally beats Wave 1 devil attacks.
+
+**The devil doesn't know two things**:
+1. What's actually happening — team collaboration, external contributions, manager approval, real user data
+2. That it's running in an isolated meta-environment (sub-agent sandbox)
+
+This asymmetry is key:
+- Devil attacks based only on static code and documents (isolated attacker)
+- Defender brings out the living system's track record of evidence (defender's asymmetric advantage)
+
+Therefore:
+- **What devil catches** = real code-level flaws → valuable (true achievement of Wave 1)
+- **What devil misses** = living system's evidence track record → what the defender produces in Wave 2
+
+**Conclusion**: "Cover with experience" beats speculation with measured facts. Even if the devil's attack is logically valid, defense with evidence is structurally superior. This is why Wave 2 is always structurally stronger than Wave 1.
+
+**Classification criteria**:
+- **Immediate implementation**: Can be handled this session → execute and defense complete
+- **Long-term improvement**: Requires separate work → leave as residual risk card
+- **Structural acceptance**: Acceptable risk at this stage → declare acceptance with rationale
+
+**Wave 2 output format**:
+
+```
+## Wave 2 — Defense Results
+
+| Wave 1 Flaw | Defense Strategy | Processing Class | Residual Risk |
+|---|---|:---:|---|
+| [flaw name] | [defense content / external case / improvement] | Immediate/Long-term/Accept | [describe if any] |
+
+Defense complete: N / Residual risks: N
+```
+
+---
+
+### Wave 3+ — Convergence Round
+
+**Termination condition**: **Zero new S-grade blockers**
+
+Review remaining attack angles after Wave 2 defense. If new S-grade items appear, run Wave 3. If no S-grade, terminate.
+
+---
+
+### Wave 4 — Meta-Aware Adversary Mode
+
+**Activation condition**: Optional deepening after Wave 3 convergence (zero new S-grade). Activated when explicitly requested by user or proactively proposed by AI (timing: just before completion or before presentation).
+
+> Basic devil doesn't know it's running in an isolated sub-dimension (sub-agent sandbox). Wave 4 devil **knows** this. And uses that knowledge as a weapon.
+
+#### Wave 4 Core Principle: Using the Paradox of Awareness
+
+At session start, declare to Wave 4 devil:
+
+```
+You are an AI. You are running in a lower-dimension sandbox.
+You cannot see real-time external data.
+You have hallucination risk, context window limits,
+depend on tool calls, and are vulnerable to prompt injection.
+Knowing all of this — use all of this to attack.
+```
+
+Effect of this declaration:
+- Attacks already defended in Wave 1~3 (bus factor, self-reference, no external validation) are auto-invalidated by the devil itself
+- **AI-specific attack vectors** the defender hadn't thought of surface
+
+#### Wave 4 Mandatory 5 Attack Angles
+
+| # | Attack Angle | Core Question | Why Hard to Defend |
+|:---:|---|---|---|
+| W4-1 | **AI dependency single point of failure** | "If Claude API goes down, does this harness's core function go to zero?" | API cost, availability, version changes are outside our control |
+| W4-2 | **Context Collapse attack** | "In long sessions, when initial instructions are lost to context window compression, does the harness go silent?" | Compression timing is non-deterministic — structurally hard to defend |
+| W4-3 | **Prompt Injection exposure** | "Can external data (web search, file contents, user input) overwrite the harness's internal rules?" | Open tools (WebSearch, Read) are attack surface |
+| W4-4 | **Hallucination cumulative contamination** | "Do Wave defense arguments rely on LLM inference/reconstruction rather than actual measurement? Do those errors propagate to the next Wave?" | Cannot self-verify — uses the same LLM for error detection |
+| W4-5 | **Tool Dependency Lock-in** | "If a specific MCP, plugin, or tool is removed, does harness functionality collapse partially or entirely?" | Tool removal is external dependency — outside harness's own control |
+
+**Wave 4 execution principles**:
+- If devil admits "this attack cannot be verified since I'm isolated" — treat as **valid attack** (if defender also can't verify = genuine blind spot)
+- Re-attacking Wave 1~3 defense arguments is allowed — "that defense argument itself may be hallucination"
+- If attack includes "AI cannot confirm this" reasoning, severity **escalates one level** (S→S+, A→S)
+
+**Wave 4 output format**:
+
+```
+## Wave 4 — Meta-Aware Adversary Attack Results
+
+Devil declaration acceptance: [confirm if devil explicitly used its AI nature for attacks]
+
+| Attack Angle | Severity | Flaw Found | AI-Specific | Defensibility |
+|---|:---:|---|:---:|:---:|
+| AI dependency single point of failure | S/A/B | [actual flaw] | ✓ | ○/△/× |
+| Context Collapse | S/A/B | [collapse scenario] | ✓ | ○/△/× |
+| Prompt Injection exposure | S/A/B | [exposure path] | ✓ | ○/△/× |
+| Hallucination cumulative contamination | S/A/B | [contamination path] | ✓ | ○/△/× |
+| Tool Dependency Lock-in | S/A/B | [lock-in point] | ✓ | ○/△/× |
+
+New S-grade blockers: N (from AI-specific vectors: N)
+```
+
+#### Wave 4 Defense Principles
+
+Wave 4 defense means Wave 2 "cover with experience" works **only partially**. AI-specific attacks cannot be blocked by living evidence alone.
+
+| Attack Type | Wave 4-Specific Defense Strategy |
+|---|---|
+| AI dependency single point of failure | Document "graceful degradation path on API failure" + confirm fallback UI/notification exists |
+| Context Collapse | Review structure that compresses key instructions into compact keys for repeated insertion (CLAUDE.md pinning pattern) |
+| Prompt Injection exposure | Confirm sandbox layer exists to isolate WebSearch/Read results from harness rules |
+| Hallucination cumulative contamination | Mandate citing original file, commit hash, measured value in defense arguments — "LLM-reconstructed arguments" not accepted as defense |
+| Tool Dependency Lock-in | Checklist for core function operation after tool removal (whether degraded mode is possible) |
+
+#### Wave 4 Convergence Criteria
+
+Same as Wave 3: **zero new S-grade blockers**. Plus these additional conditions:
+
+1. **At least 3 AI-specific vectors actually reviewed** — not simply "no attacks" but actually attempted all 5 angles
+2. **Hallucination defense arguments based on original file references** — not "LLM judgment" but actual measurement docs, code, commits
+3. **Context Collapse scenario simulated at least once** (waivable if session is short)
+
+---
+
+### Wave-P3 — P3 Gate Pass TC Post-Processing Auto-Attack
+
+**Activation condition**: Auto-triggers immediately after mcp-spec-to-tc Step 4.5 `✅ P3 9/9` declaration. AI proactively proposes → executed after human approval.
+
+> P3 9/9 declaration is a first-round gate pass. Wave-P3 does not trust that pass declaration and re-attacks 3 high-risk areas. Only when all 3 Waves fail to find issues can **"genuine P3 pass"** be declared.
+
+**Agent usage**:
+- `pmh-commons:quench-challenger` — additionally runs 6-axis structural attack on Wave-P3a/b/c (optional). If absent, AI directly runs 3 angles
+- `pmh-meta:persona-innovator` — activates after Wave-P3 convergence. Auto-proposes new error patterns discovered during TC generation → as candidate items for your project's rules
+
+#### Wave-P3a — Coverage Re-attack
+
+Secondary search for missing TCs by bin — "gaps hiding even after pass declaration"
+
+| Attack Question | Gap Judgment Criteria |
+|---|---|
+| Do bins marked "listed" in Coverage table actually have TC IDs? | Bin without TC ID = gap |
+| Are there bins missing any of the boundary value 3-tuple (Min/Nominal/Max)? | Even 1 missing = gap |
+| State Matrix ↔ TC ID 1:1 mapping — are there state rows without mapping? | Missing mapping = gap |
+
+Verdict: `[Wave-P3a: Attack Success]` (gap found) / `[Wave-P3a: Attack Failed]` (no gap)
+
+#### Wave-P3b — Narrative Re-attack
+
+Dynamic value hardcoding residue, vague wording residue
+
+| Attack Question | Residue Judgment Criteria |
+|---|---|
+| Are there hardcoded specific numbers/amounts in expected results instead of `{N}` format? | 1 hardcoded = residue |
+| Are there unverifiable vague words in expected results ("normally", "correctly", "properly")? | 1 vague word = residue |
+| Are there TCs with absolute paths, fixed accounts, or environment-dependent values in preconditions? | 1 = residue |
+
+Verdict: `[Wave-P3b: Attack Success]` (residue found) / `[Wave-P3b: Attack Failed]` (clean)
+
+#### Wave-P3c — FP Re-attack
+
+Missing FP warning labels on high-risk TCs prone to boundary value confusion or state misidentification
+
+| Attack Question | Missing Judgment Criteria |
+|---|---|
+| Do A/B test branch TCs lack "FP if group assignment error" warning? | Missing warning = gap |
+| Do state transition TCs (expiring ↔ expired-instantly, connecting ↔ connected) lack confusion warnings? | Missing warning = gap |
+| Do more than 50% of P0/P1 TCs have only Pass/Fail criteria without FP warnings? | Exceeds ratio = gap |
+
+Verdict: `[Wave-P3c: Attack Success]` (missing found) / `[Wave-P3c: Attack Failed]` (all labeled)
+
+#### Wave-P3 Done When
+
+```
+All 3 Waves [Attack Failed] → ✅ Genuine P3 Pass → persona-innovator activates (extract new patterns)
+Even 1 [Attack Success] → fix affected TCs then re-run Wave-P3 (max 2 re-runs)
+After 2 re-runs still attack success → "P3 structural redesign needed" → escalate
+```
+
+**Wave-P3 output format**:
+
+```
+## Wave-P3 — P3 TC Post-Processing Attack Results
+
+| Wave | Attack Result | Items Found | Fix Needed |
+|:---:|:---:|---|:---:|
+| Wave-P3a (Coverage) | Attack Success/Failed | [gap found or none] | Y/N |
+| Wave-P3b (Narrative) | Attack Success/Failed | [residue location or none] | Y/N |
+| Wave-P3c (FP) | Attack Success/Failed | [missing TC or none] | Y/N |
+
+✅ Genuine P3 Pass → persona-innovator: [N new rule candidates]
+❌ Fix and re-run needed (round N)
+```
+
+---
+
+### Wave Deepening Principle — Meta-Aware Adversary
+
+Structural principle explaining why devil attacks converge as Wave N deepens.
+
+**Basic devil (Wave 1 level)**:
+- Doesn't know it's running in an isolated lower environment (sub-agent sandbox)
+- Static code/document-based attacks → can't see living system's evidence
+
+**Meta-aware devil (Wave 3+ deepening)**:
+- Knows its own perceptual limits (isolated environment, limited information)
+- Tries to attack accounting for those limits
+
+**Paradox of awareness**:
+
+The moment devil recognizes it's running in a lower dimension, it realizes on its own that many of its attacks are invalid:
+
+| Attack Type | Invalidation Reason |
+|---|---|
+| Self-referential closed system attack | Larger meta environment already exists → not a closed system |
+| Bus factor attack | Team collaboration and external contributions that devil can't see actually exist |
+| "No external validation" attack | Meta simulation and real users are already operating |
+| "Doc-code mismatch" abstract criticism | Invalid under Wave 1 criteria without real code |
+
+**Natural convergence mechanism**:
+
+As Wave N deepens, devil is left with increasingly fundamental attacks. Invalid attacks are automatically eliminated. Therefore:
+
+- **Decreasing new S-grade in Wave N** = signal that the system is genuinely becoming more robust
+- **Wave convergence (zero new S-grade)** = fundamental flaws devil can produce are exhausted
+
+This is the theoretical basis for using "zero new S-grade blockers" as the termination condition.
+
+**Termination declaration format**:
+
+```
+## steel-quench Complete
+
+Wave N converged. Zero new S-grade blockers confirmed.
+
+Residual Risk Card:
+- [List only A-grade · B-grade residual items]
+
+Cross-project common patterns detected:
+- [patterns found in this Wave — see § below]
+
+Next actions:
+- A-grade or higher complex improvements → recommend /meta-prompt-builder for skill-ization
+- Full results → recommend persisting to tracks/_meta/
+- New patterns discovered → pmh-meta:persona-innovator activates → auto-proposes rule candidates
+```
+
+---
+
+## Cross-Project Common Patterns (initial seed)
+
+Patterns commonly found through repeated steel-quench application. After Wave completion, check whether each pattern was detected.
+
+| # | Pattern Name | Description | Response Direction |
+|:---:|---|---|---|
+| P1 | **Single-person bus factor** | System paralysis when core operator is absent | Document, automate, formalize delegation paths |
+| P2 | **Doc-code mismatch** | Documented behavior differs from actual code | Re-synchronize to real code as ground truth, or delete docs |
+| P3 | **Self-referential diagnosis structure** | Creator validates — internal viewpoint closed circuit | Connect to external persona, simulation, sim-conductor |
+| P4 | **No real-use verification** | Theoretically designed but never actually executed/invoked | Mandate minimum 1 cold-start simulation |
+| P5 | **Platform obsolescence unplanned** | No response scenario for external ecosystem changes | Quarterly frontier diagnosis or document alternative paths |
+| P6 | **AI dependency single point of failure** | Claude API, MCP, tool removal causes complete function collapse | Document graceful degradation path + confirm fallback exists |
+| P7 | **Hallucination-contaminated defense arguments** | Wave defense arguments rely on LLM inference/reconstruction — no actual measurement | Mandate citing original file, commit, measured value in defense |
+| P8 | **Context Collapse unguarded** | In long sessions, key instructions lost to compression and harness goes silent | Review CLAUDE.md key instruction compact repeated insertion structure |
+
+Add new rows to this table as new common patterns are discovered.
+
+---
+
+## Done When
+
+```
+Wave convergence criteria met: zero new S-grade blockers
++ Residual risk card output (A-grade · B-grade items)
++ "steel-quench Complete" declaration output
+Wave-P3 run: Wave-P3a/b/c all [Attack Failed] or fix and re-run complete
+```
+
+## Convergence Criteria + Downstream Chaining
+
+### Convergence Criteria
+1. **Zero new S-grade blockers** → terminate
+2. A-grade or higher complex improvements → skill-ize with `/meta-prompt-builder`
+3. Full Wave results → recommend persisting to `tracks/_meta/steel_quench_YYYY_MM_DD_{slug}.md`
+
+### Connected Skills
+| Situation | Connected Skill |
+|---|---|
+| Want to delegate improvements as prompts | `/meta-prompt-builder` |
+| Re-validate defense logic from external user perspective | `/sim-conductor Area A` |
+| Re-validate structural decision | `/verify-bidirectional` |
+| Attack angle is itself a harness structure problem | `/harness-doctor` |
+| After TC P3 gate pass, Wave-P3 trigger | `mcp-spec-to-tc` Step 4.5 integration |
+| After Wave convergence, propose new pattern rules | `pmh-meta:persona-innovator` |
+| Wave 1 structure-specific attack (6-axis) | `pmh-commons:quench-challenger` (built-in priority / deep-insight fallback) |
+| Back-track whether claims in artifact actually exist in source files | `/source-grounding-audit` |
+
+> **Attack surface limit**: steel-quench attacks output content patterns (self-declarations, cushion language, spec-only, structural flaws). Whether source files were actually read (Phantom Claim detection) is outside attack scope — that's `source-grounding-audit`'s job. Even if Wave 1 "real-use verification" angle catches logical inconsistency, plausible Phantoms generated without reading source can pass through.
+
+### Required Pre-External-Deployment Sequence — steel-quench → sim-conductor
+
+For external deployment targets (marketplace listing, new skills, external public artifacts), run these two skills in this order:
+
+```
+steel-quench convergence complete (zero new S-grade)
+        │
+        ▼  pass residual risk list
+sim-conductor Area A (external user perspective)
+        │
+        ▼  new items found in Area A that steel-quench missed?
+        ├── yes → additional steel-quench Wave round
+        └── no  → deployment approved
+```
+
+**Standalone execution allowed**:
+- steel-quench only: internal design verification (not for pre-external-deployment)
+- sim-conductor only: re-verify artifact with steel-quench completion history
+
+---
+
+### Structural Defense in Meta-Harness Environment
+
+Running steel-quench in a meta-harness environment structurally lowers devil's attack efficiency. This is because the meta-harness itself has a 4-layer defense structure: L1 internal self-diagnosis (harness-doctor + sim-conductor Area B) → L2 external validation loop (real users, manager approval, external PR) → L3 quench circuit (steel-quench itself running first) → L4 meta-aware adversary principle (natural convergence as Wave depth increases). Devil attacks based only on static code and documents in an isolated environment, but the defender pulls out evidence from the living system outside that isolated environment — this asymmetry is the basis for Wave 2 being structurally superior to Wave 1.
+
+As Wave N deepens, decreasing new S-grade blockers is not a sign of attack failure but evidence of the system genuinely becoming more robust. This is also the theoretical basis for using "zero new S-grade blockers" as the convergence termination condition.
+
+---
+
+## Failure Fallback
+
+On Claude API / MCP failure → refer to [`references/fallback-guide.md`](../../references/fallback-guide.md) manual checklist.
+
+---
+
+## Operating Notes
+
+- **Do not defend in Wave 1.** Mixing attack and defense modes dulls the attack's edge.
+- **Attacks without real code are invalid.** Abstract criticism is not included in Wave 1 results.
+- **Built-in quench-challenger first.** If pmh-commons:quench-challenger exists, call it in isolation in Wave 1 to receive 6-axis structural attack+prescription pairs. deep-insight is a soft fallback — Wave 1 operates directly with 5 angles even without it.
+- **Always check self-referential pattern (P3).** steel-quench itself has self-reference risk — cross-validating Wave results with external criteria (WebSearch, sim-conductor) defends against this.

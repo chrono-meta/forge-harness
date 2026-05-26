@@ -1,0 +1,20 @@
+{
+  "name": "pmh-commons",
+  "version": "0.1.1",
+  "description": "경합 레이어에서 탄생한 공용 유틸리티 스킬 묶음 — 2 skills + 1 agent. 도메인 무관·크로스 프로젝트 이식 가능. convergence-loop(N라운드 수렴 게이트 강화) + deliberation(Innovator→Devil→Mediator 다관점 합성) + quench-challenger(Devil+Innovator+Prescriber 합성 담금질 전용 에이전트).",
+  "author": {
+    "name": "harness-contributor",
+    "email": "contributor@example.com"
+  },
+  "keywords": [
+    "commons",
+    "convergence-loop",
+    "gate-reinforcement",
+    "multi-round-validation",
+    "deliberation",
+    "multi-perspective-synthesis",
+    "forge-skill",
+    "domain-agnostic",
+    "cross-project"
+  ]
+}

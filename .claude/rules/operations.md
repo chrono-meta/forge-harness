@@ -1,0 +1,45 @@
+---
+description: Defines sub-agent operating rules, weekly improvement cycle Phase 1.5~2, and the 3-phase maturity roadmap (Phase I~III).
+---
+
+# Operations Reference
+
+## Sub-agent Operations (optional)
+
+Custom sub-agents can be defined in hub or project `.claude/agents/*.md` (Claude Code standard).
+
+**Invocation rules:**
+- Prompts must be **self-contained** — sub-agents do not see main conversation context
+- Immediately after invocation, append to `knowledge/shared/learnings/subagent_invocations_log.yaml` (8 fields · outcome 4 categories: `accepted`/`partial`/`rejected`/`sustained`)
+- `sustained` (decided not to invoke) also recorded — negative sample for preventing over-engineering
+
+**Shared repository caution:** For personal agents in team shared repos, add `.claude/agents/` to `.git/info/exclude` to keep local-only. `.gitignore` is committed to the repo — do not use it.
+
+**Promotion gate (after 2+ week pilot):**
+- `accepted ≥ 60%` → maintain + strengthen description
+- `rejected ≥ 40%` → redefine scope or deprecate
+
+---
+
+## Weekly Improvement Cycle
+
+The hub audits and improves itself weekly.
+
+**Phase 1.5 (manual + scanner):**
+1. `./tracks/_audit/_scanner.sh "7 days ago"` — commit/tag/stale file/sub-agent invocation log/self-asset reference audit aggregation
+2. Copy `_template_weekly.md` → `weekly_audit_YYYY-MM-DD.md`
+3. Propose 3-tier improvements (🟥mandatory/🟧strong/🟩recommended)
+
+**Phase 2 (skill-ized):** `/audit-learnings` skill automates the above procedure (manual ~10 min → auto ~3 min target). Scanner invocation, prediction vs measurement comparison, repetitive pattern detection, promotion/deprecation candidate proposal automated.
+
+**Session start auto-detection (L1):** When Claude Code session starts in hub cwd, check mtime of recent `weekly_audit_*.md` file → propose audit if 7+ days elapsed.
+
+**Phase 2~4 roadmap:** See `knowledge/shared/harness-core/hub_compounding_loop.md`.
+
+---
+
+## 3-Phase Maturity Roadmap
+
+The hub's long-term evolution path is managed as a 3-stage model: **Phase I (entering maturity) → Phase II (frontier following) → Phase III (frontier leading)**. Phase transition gates have the simplification principle ("A good harness gets simpler over time") as a common condition.
+
+**Detailed frame:** See `knowledge/shared/harness-core/hub_maturity_roadmap.md` (Phase I 5-criteria gate · Phase II (b) cadence · Phase III 6 indicators + operating guide for writing).

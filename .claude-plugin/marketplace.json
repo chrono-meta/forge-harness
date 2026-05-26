@@ -1,0 +1,25 @@
+{
+  "name": "forge-harness",
+  "owner": {
+    "name": "harness-contributor",
+    "email": "contributor@example.com"
+  },
+  "metadata": {
+    "description": "forge-harness — Multi-instance persona orchestration and meta-tooling marketplace for Claude Code. Harness engineering toolkit for teams that want to evolve their AI collaboration practices.",
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "fh-meta",
+      "version": "1.0.2",
+      "description": "Hub meta-operations toolkit — 20 skills (apex-review · verify-bidirectional · cross-ecosystem-synergy-detection · plugin-recommender · hub-cc-pr-reviewer · context-doctor · sim-conductor · harness-doctor · meta-prompt-builder · field-harvest · install-doctor · install-wizard · asset-placement-gate · marketplace-gate · agent-composer · contention-layer · context-bridge-dispatch · frontier-digest · steel-quench · harvest-loop) + 3 agents (hub-persona-auditor · fact-checker · persona-innovator)",
+      "source": "./plugins/fh-meta"
+    },
+    {
+      "name": "fh-commons",
+      "version": "1.0.0",
+      "description": "Project-agnostic utility skills born from the contention layer. Operates at a different layer than fh-meta (harness engineering) — domain-independent utilities that can be transplanted into any project.",
+      "source": "./plugins/fh-commons"
+    }
+  ]
+}
