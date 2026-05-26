@@ -74,6 +74,22 @@ Meta-layer view (forge-harness):
 >
 > forge-harness is applied meta-harness engineering at exactly the layer these studies identify.
 
+#### FH vs. automated harness tools
+
+The Stanford Meta-Harness paper inspired [harness-evolver](https://github.com/raphaelchristi/harness-evolver) (MIT, 2026) — a fully automated 7-stage harness CODE optimizer requiring LangSmith + Python. forge-harness independently converged on the same loop architecture, but from the opposite direction:
+
+| Axis | harness-evolver (automated) | forge-harness (human-in-the-loop) |
+|---|---|---|
+| **Optimization target** | Harness code (prompts, routing, retrieval) | Harness knowledge (context, patterns, expertise) |
+| **Evolution mechanism** | Fully automated — winners auto-merge to git | Human-approved — every stage requires explicit confirmation |
+| **Infrastructure** | LangSmith + Python 3.10+ required | CLAUDE.md + skills only — zero additional infrastructure |
+| **Scope** | Single-harness optimization | Multi-project federation (N projects, shared skill bus) |
+| **Knowledge layer** | No persistent curation | `tracks/` + `knowledge/` cumulative files grow over time |
+
+**When to use FH**: You want accumulated domain knowledge, multi-project coordination, and human judgment at architectural gates — and prefer zero additional infrastructure. **When harness-evolver fits better**: You want fully automated harness CODE search at benchmark scale and have LangSmith already set up.
+
+These are complementary, not competing. FH's human-in-the-loop approval gates + multi-project knowledge layer address exactly the gaps harness-evolver leaves open.
+
 ### Environment Engineering
 
 forge-harness doesn't change the agent — it changes the environment. The MEMORY.md keyword-trigger, mandatory Context Card injection, and PFD domain knowledge pre-loading are practices of Environment Engineering that remove the "orientation tax" agents pay before they can find their direction.
