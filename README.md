@@ -401,18 +401,17 @@ After installing, type `/skills` or `/agents` in the **Claude Code chat window**
 
 #### External persona layer synergy install (optional, no MCP required)
 
-A validated combination you can add immediately without any MCP setup. Adding the following after installing `fh-meta` immediately expands persona agent capabilities.
-
-| Plugin | Provided assets | fh-meta synergy |
-|---|---|---|
-| **deep-insight** `@<your-team-marketplace>` | 6 persona agents (newcomer · power-user · pm · qa · devil-advocate · synthesizer) | Automatically runs sim-conductor Area A scenarios · supplements hub-persona-auditor |
+`sim-conductor` and `hub-persona-auditor` work standalone out of the box. If you have a **persona agent plugin** in your own marketplace (6-role sets like newcomer · power-user · pm · qa · devil-advocate · synthesizer are a common pattern), adding it after `fh-meta` immediately expands simulation depth:
 
 ```bash
-claude plugin marketplace add <your-team-marketplace-url>
-claude plugin install -s user deep-insight@<your-team-marketplace>
+# Replace with your own marketplace URL and persona plugin name
+claude plugin marketplace add <your-marketplace-url>
+claude plugin install -s user <your-persona-plugin>@<your-marketplace>
 ```
 
-> `sim-conductor` and `hub-persona-auditor` work without `deep-insight`, but the 3 Area A external user simulation types (persona-newcomer · power-user · devil-advocate) automatically integrate when `deep-insight` is installed.
+When installed, `sim-conductor` Area A automatically integrates the persona agents for multi-role external user simulation. Without a persona plugin, sim-conductor still runs — Area A defaults to a single-perspective simulation.
+
+> **Building your own persona plugin**: The 6-role pattern (newcomer · power-user · pm · qa · devil-advocate · synthesizer) is a validated composition. See `plugins/fh-meta/skills/sim-conductor/SKILL.md §Area A` for the integration contract.
 
 #### Mode C user guide (plugin only, without cloning meta-harness)
 
@@ -522,7 +521,7 @@ After this, when you run `claude` in that project, CC recognizes the FH skill li
 This harness aims for a **federated ecosystem** where multiple marketplaces coexist, rather than a single monolithic marketplace.
 
 *   **Meta marketplace (current):** `forge-harness` serves as a "meta marketplace" focused on operating and improving the overall system.
-*   **Specialized marketplaces (roadmap):** Just as a plugin like `<your-mcp-plugin>` might specialize in "internal infrastructure integration," each "field" project can also develop its own unique skill set and become an independent "specialized marketplace."
+*   **Specialized marketplaces (roadmap):** Just as a domain-specific plugin might specialize in "internal infrastructure integration" or "QA automation," each "field" project can develop its own unique skill set and become an independent "specialized marketplace."
 *   **Synergy (current):** The `cross-ecosystem-synergy-detection` skill detects synergies among skills that come from multiple distributed marketplaces and are installed together, maximizing the value of the entire ecosystem.
 
 ---
