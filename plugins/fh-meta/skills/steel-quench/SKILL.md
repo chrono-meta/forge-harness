@@ -106,6 +106,13 @@ Call **fh-commons:quench-challenger** (built-in agent) in isolation, or if absen
 | Self-referential structure | S/A/B | [closed circuit detection result] | ○/△/× |
 
 S-grade blockers: N / A-grade: N / B-grade: N
+
+Optional numeric score (0.0–1.0):  ← v1.2: harness-evolver LLM-as-judge pattern
+  overall_score: {score}
+  [0.0–0.3] S-grade present → immediate blocker, do not proceed
+  [0.4–0.6] A-grade dominant → address before deployment
+  [0.7–1.0] B-grade or clean → proceed with monitoring
+  Scoring rationale: {one-line basis — weighted by S×3 + A×1, normalized to scale}
 ```
 
 ---
