@@ -93,7 +93,12 @@ Search in priority order based on extracted keywords.
 
 4. **[Priority 2] Organization's Internal GHE (Tier 1·3)**: Search internal GHE with keywords like `claude-plugin`, `gemini-plugin` + user keywords / API search. Replace with your organization's internal GHE orgs.
 
-4. **[Priority 3] External Open-Source Ecosystem**: Google web search / WebFetch — "best github actions for X", "claude plugin for Y", etc. Simplification guard: defer external install if internal assets suffice.
+4. **[Priority 3] External Open-Source Ecosystem**: WebSearch / WebFetch — "best github actions for X", "claude plugin for Y", etc. Simplification guard: defer external install if internal assets suffice.
+
+   **Verified external search targets (as of 2026-05):**
+   - [`anthropics/claude-plugins-official`](https://github.com/anthropics/claude-plugins-official) — Anthropic-curated official plugin directory. Search here first for any task domain.
+   - [`Chat2AnyLLM/awesome-claude-plugins`](https://github.com/Chat2AnyLLM/awesome-claude-plugins) — Community aggregator: 75+ marketplaces, 1,196+ plugins catalogued (2026-05-25). Use for broad discovery.
+   - [`anthropics/claude-code/plugins/`](https://github.com/anthropics/claude-code/tree/main/plugins) — Anthropic first-party plugins bundled with Claude Code (e.g., `code-review` with 5 parallel Sonnet agents).
 
 ### Step 3: Candidate Plugin Analysis and Ranking
 
