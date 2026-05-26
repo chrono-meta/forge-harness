@@ -67,9 +67,10 @@ Meta-layer view (forge-harness):
 
 > For a detailed definition of this concept → `knowledge/shared/harness-core/meta_harness_engineering_definition.md` (accessible after cloning forge-harness)
 
-> **External validation (2026)**: Two independent research findings converge on the same conclusion.
+> **External validation (2026)**: Three independent research findings converge on the same conclusion.
 > - VILA-Lab analysis of Claude Code v2.1.88 (512K lines): [98.4% is harness infrastructure, 1.6% is AI logic](https://arxiv.org/abs/2604.14228) — the deterministic engineering layer surrounding the model is the critical differentiator.
 > - "[Code as Agent Harness](https://arxiv.org/abs/2605.18747)" (arXiv, May 2026, 43 authors): code has evolved from being an LLM output to serving as the foundation for agent infrastructure — the same thesis FH operationalizes.
+> - Stanford IRIS Lab: "[Meta-Harness: End-to-End Optimization of Model Harnesses](https://arxiv.org/abs/2603.28052)" (Lee, Nair, Zhang, Khattab, Finn, Mar 2026) — outer-loop system that searches over harness code; +7.7pts classification at 4x fewer tokens. Formalizes harness engineering as a first-class optimization problem.
 >
 > forge-harness is applied meta-harness engineering at exactly the layer these studies identify.
 
