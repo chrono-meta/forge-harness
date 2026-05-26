@@ -4,7 +4,7 @@ authors: ["권성진 (Kwon Sungjin)"]
 date: 2026-05-26
 version: v0.5
 target: arXiv cs.SE / cs.AI
-zenodo_doi: [pending]
+zenodo_doi: 10.5281/zenodo.20397566
 repo: https://github.com/chrono-code/forge-harness
 ---
 
