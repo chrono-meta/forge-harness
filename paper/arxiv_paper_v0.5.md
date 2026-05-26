@@ -63,7 +63,7 @@ software engineering
 Creative Commons Attribution 4.0 International  ← 그대로 유지
 ```
 
-### Related works (arXiv, "is related to")
+### Related works (Scheme: arXiv / Relation: references)
 ```
 2604.14228
 2605.18747
