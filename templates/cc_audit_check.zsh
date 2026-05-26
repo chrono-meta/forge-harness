@@ -43,15 +43,15 @@ _fh_audit_check() {
   local now
   now=$(date +%s)
 
-  # ① weekly_audit — 7-day threshold (when CC_HUB_DIR is set)
-  if [[ -n "${CC_HUB_DIR}" && -d "${CC_HUB_DIR}/tracks/_audit" ]]; then
+  # ① weekly_harvest — 7-day threshold (when CC_HUB_DIR is set)
+  if [[ -n "${CC_HUB_DIR}" && -d "${CC_HUB_DIR}/tracks/_meta" ]]; then
     local aud
-    aud=$(ls -t "${CC_HUB_DIR}/tracks/_audit"/weekly_audit_*.md 2>/dev/null | head -1)
+    aud=$(ls -t "${CC_HUB_DIR}/tracks/_meta"/harvest_*.md 2>/dev/null | head -1)
     if [[ -n "$aud" ]]; then
       local d=$(( (now - $(_fh_mtime "$aud")) / 86400 ))
-      (( d >= 7 )) && warns+=("weekly_audit ${d}d elapsed → run /audit-learnings in your CC hub cwd")
+      (( d >= 7 )) && warns+=("weekly_harvest ${d}d elapsed → run /harvest-loop in your CC hub cwd")
     else
-      warns+=("No weekly_audit history found → run /audit-learnings in your CC hub cwd")
+      warns+=("No harvest history found → run /harvest-loop in your CC hub cwd")
     fi
   fi
 
@@ -61,7 +61,7 @@ _fh_audit_check() {
     fd=$(ls -t "${CC_HUB_DIR}/knowledge/shared/harness-core"/harness_frontier_diagnosis_*.md 2>/dev/null | head -1)
     if [[ -n "$fd" ]]; then
       local d=$(( (now - $(_fh_mtime "$fd")) / 86400 ))
-      (( d >= 90 )) && warns+=("frontier_diagnosis ${d}d elapsed → run /frontier-status-summary in your CC hub cwd")
+      (( d >= 90 )) && warns+=("frontier_diagnosis ${d}d elapsed → run /frontier-digest in your CC hub cwd")
     fi
   fi
 

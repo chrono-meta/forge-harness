@@ -1,6 +1,6 @@
 ---
 name: steel-quench
-description: A meta-skill that concretizes a designer's anxiety into AI-driven all-angle devil attacks and shakes off flaws through defensive rounds. Systematically surfaces root weaknesses of near-complete projects wave by wave, guaranteeing near-human-review quality without direct human deep inspection. Wave 4 (Meta-Aware Adversary) is an advanced mode where the devil uses its own AI nature — hallucination, context collapse, prompt injection, tool lock-in — as attack vectors. Wave-P3 (P3 TC post-processing) auto-triggers immediately after mcp-spec-to-tc P3 gate pass — re-attacks from 3 angles (Coverage, Narrative, FP) to guarantee "genuine P3 pass". Built-in fh-commons:quench-challenger agent outputs harness structure 6-axis attack+prescription pairs; after convergence, fh-meta:persona-innovator auto-extracts new patterns. Triggered by: "quench this", "devil's judgment", "all-angle review", "end-to-end verification", "steel quench", "run devil advocate", "deep pre-completion inspection", "shake out design anxiety", "attack from the root", "TC quench", "genuine P3 pass".
+description: A meta-skill that concretizes a designer's anxiety into AI-driven all-angle devil attacks and shakes off flaws through defensive rounds. Systematically surfaces root weaknesses of near-complete projects wave by wave, guaranteeing near-human-review quality without direct human deep inspection. Wave 4 (Meta-Aware Adversary) is an advanced mode where the devil uses its own AI nature — hallucination, context collapse, prompt injection, tool lock-in — as attack vectors. Built-in fh-commons:quench-challenger agent outputs harness structure 6-axis attack+prescription pairs; after convergence, fh-meta:persona-innovator auto-extracts new patterns. Triggered by: "quench this", "devil's judgment", "all-angle review", "end-to-end verification", "steel quench", "run devil advocate", "deep pre-completion inspection", "shake out design anxiety", "attack from the root".
 user-invocable: true
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "WebSearch", "Agent"]
 model: opus
@@ -23,7 +23,6 @@ A designer's anxiety is most dangerous when vague. steel-quench breaks that anxi
 | "attack from the root" | Re-verify from reason for existence |
 | "diagnose with counterexample", "use this bad case as reference" | Phase 0 calibration based on external case |
 | `/steel-quench` | Explicit call |
-| "genuine P3 pass?", "TC quench", "verify TC" | Wave-P3 auto-verification after mcp-spec-to-tc P3 gate pass |
 
 ## Wave Structure
 
@@ -243,74 +242,9 @@ Same as Wave 3: **zero new S-grade blockers**. Plus these additional conditions:
 
 ---
 
-### Wave-P3 — P3 Gate Pass TC Post-Processing Auto-Attack
+### Wave-P3 — Reserved (Domain Gate Integration Slot)
 
-**Activation condition**: Auto-triggers immediately after mcp-spec-to-tc Step 4.5 `✅ P3 9/9` declaration. AI proactively proposes → executed after human approval.
-
-> P3 9/9 declaration is a first-round gate pass. Wave-P3 does not trust that pass declaration and re-attacks 3 high-risk areas. Only when all 3 Waves fail to find issues can **"genuine P3 pass"** be declared.
-
-**Agent usage**:
-- `fh-commons:quench-challenger` — additionally runs 6-axis structural attack on Wave-P3a/b/c (optional). If absent, AI directly runs 3 angles
-- `fh-meta:persona-innovator` — activates after Wave-P3 convergence. Auto-proposes new error patterns discovered during TC generation → as candidate items for your project's rules
-
-#### Wave-P3a — Coverage Re-attack
-
-Secondary search for missing TCs by bin — "gaps hiding even after pass declaration"
-
-| Attack Question | Gap Judgment Criteria |
-|---|---|
-| Do bins marked "listed" in Coverage table actually have TC IDs? | Bin without TC ID = gap |
-| Are there bins missing any of the boundary value 3-tuple (Min/Nominal/Max)? | Even 1 missing = gap |
-| State Matrix ↔ TC ID 1:1 mapping — are there state rows without mapping? | Missing mapping = gap |
-
-Verdict: `[Wave-P3a: Attack Success]` (gap found) / `[Wave-P3a: Attack Failed]` (no gap)
-
-#### Wave-P3b — Narrative Re-attack
-
-Dynamic value hardcoding residue, vague wording residue
-
-| Attack Question | Residue Judgment Criteria |
-|---|---|
-| Are there hardcoded specific numbers/amounts in expected results instead of `{N}` format? | 1 hardcoded = residue |
-| Are there unverifiable vague words in expected results ("normally", "correctly", "properly")? | 1 vague word = residue |
-| Are there TCs with absolute paths, fixed accounts, or environment-dependent values in preconditions? | 1 = residue |
-
-Verdict: `[Wave-P3b: Attack Success]` (residue found) / `[Wave-P3b: Attack Failed]` (clean)
-
-#### Wave-P3c — FP Re-attack
-
-Missing FP warning labels on high-risk TCs prone to boundary value confusion or state misidentification
-
-| Attack Question | Missing Judgment Criteria |
-|---|---|
-| Do A/B test branch TCs lack "FP if group assignment error" warning? | Missing warning = gap |
-| Do state transition TCs (expiring ↔ expired-instantly, connecting ↔ connected) lack confusion warnings? | Missing warning = gap |
-| Do more than 50% of P0/P1 TCs have only Pass/Fail criteria without FP warnings? | Exceeds ratio = gap |
-
-Verdict: `[Wave-P3c: Attack Success]` (missing found) / `[Wave-P3c: Attack Failed]` (all labeled)
-
-#### Wave-P3 Done When
-
-```
-All 3 Waves [Attack Failed] → ✅ Genuine P3 Pass → persona-innovator activates (extract new patterns)
-Even 1 [Attack Success] → fix affected TCs then re-run Wave-P3 (max 2 re-runs)
-After 2 re-runs still attack success → "P3 structural redesign needed" → escalate
-```
-
-**Wave-P3 output format**:
-
-```
-## Wave-P3 — P3 TC Post-Processing Attack Results
-
-| Wave | Attack Result | Items Found | Fix Needed |
-|:---:|:---:|---|:---:|
-| Wave-P3a (Coverage) | Attack Success/Failed | [gap found or none] | Y/N |
-| Wave-P3b (Narrative) | Attack Success/Failed | [residue location or none] | Y/N |
-| Wave-P3c (FP) | Attack Success/Failed | [missing TC or none] | Y/N |
-
-✅ Genuine P3 Pass → persona-innovator: [N new rule candidates]
-❌ Fix and re-run needed (round N)
-```
+> **Reserved for future integration with a domain-specific P3 (post-generation) verification gate.** In forge-harness alone, no such gate exists yet — the slot is documented here so that downstream domain plugins (e.g., a TC-generation toolchain) can plug a gate-pass post-attack into steel-quench without redesign. Until a concrete gate is wired in, Wave 1~4 above are the canonical attack waves.
 
 ---
 
@@ -392,7 +326,6 @@ Add new rows to this table as new common patterns are discovered.
 Wave convergence criteria met: zero new S-grade blockers
 + Residual risk card output (A-grade · B-grade items)
 + "steel-quench Complete" declaration output
-Wave-P3 run: Wave-P3a/b/c all [Attack Failed] or fix and re-run complete
 ```
 
 ## Convergence Criteria + Downstream Chaining
@@ -409,7 +342,6 @@ Wave-P3 run: Wave-P3a/b/c all [Attack Failed] or fix and re-run complete
 | Re-validate defense logic from external user perspective | `/sim-conductor Area A` |
 | Re-validate structural decision | `/verify-bidirectional` |
 | Attack angle is itself a harness structure problem | `/harness-doctor` |
-| After TC P3 gate pass, Wave-P3 trigger | `mcp-spec-to-tc` Step 4.5 integration |
 | After Wave convergence, propose new pattern rules | `fh-meta:persona-innovator` |
 | Wave 1 structure-specific attack (6-axis) | `fh-commons:quench-challenger` (built-in priority / deep-insight fallback) |
 | Back-track whether claims in artifact actually exist in source files | `/source-grounding-audit` |

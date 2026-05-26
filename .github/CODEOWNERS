@@ -1,27 +1,25 @@
-# pay-meta-harness CODEOWNERS
+# forge-harness CODEOWNERS
 #
-# 메타하네스 = 참고 자산 정체성 유지 의무 (chrono-meta 5/8 16번째 명명).
-# §2.19 원천-감시자 본가 + ② 메타감시 무결성 보장 — 핵심 영역 변경 시 owner review 의무.
-#
-# 문법: https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+# Core areas require owner review to preserve meta-harness integrity.
+# Syntax: https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
 
-# Default owner — 전체 영역 chrono-meta
+# Default owner
 * @chrono-meta
 
-# Critical assets — explicit ownership for clarity
+# Critical assets
 /CLAUDE.md @chrono-meta
 /CATALOG.md @chrono-meta
 /README.md @chrono-meta
 /marketplace.json @chrono-meta
 
-# Templates (다른 사용자 install 환경 시드 / 모드 A·B·C 본질 전파)
+# Templates (seed for other users' install environments)
 /templates/ @chrono-meta
 
-# Plugins (hub-meta-tools 등 메타하네스 본진)
+# Plugins (meta-harness core)
 /plugins/ @chrono-meta
 
-# Shared knowledge (cross-project synergy 시드)
+# Shared knowledge (cross-project synergy seeds)
 /knowledge/shared/ @chrono-meta
 
-# Self (CODEOWNERS 자체 변경도 owner review 의무)
+# Self (CODEOWNERS changes also require owner review)
 /.github/CODEOWNERS @chrono-meta

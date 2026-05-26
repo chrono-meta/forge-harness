@@ -5,7 +5,7 @@ user-invocable: true
 allowed-tools: ["Read", "Write", "Bash", "Agent"]
 model: sonnet
 origin: contention-layer
-contention-parents: [mcp-spec-to-tc P3 gate, harvest-loop]
+contention-parents: [harvest-loop]
 ---
 
 # convergence-loop — Universal Convergence Loop Gate Reinforcement
@@ -14,20 +14,19 @@ contention-parents: [mcp-spec-to-tc P3 gate, harvest-loop]
 
 ## Origin
 
-Extracted after the same pattern appeared in two separate places (2026-05-23):
-- `mcp-spec-to-tc` Step 4.5 P3 gate: round 1 ✅, then additional FAILs found in rounds 2~3 → convergence loop internalized as 3 rounds
+Extracted from a recurring "single-pass gate is hard to trust" pattern observed across multiple hub workflows. The canonical reference is:
 - `harvest-loop` Step H1~H5: pattern extraction → attack → synthesis → the repeating structure must run until convergence
 
-When the same structure appears twice, it is a skill.
+When the same structure recurs across gates, it is a skill.
 
 ## Applicable Targets
 
 | Applicable Gate | Example |
 |---|---|
-| TC quality gate | mcp-spec-to-tc P3 9/9 + Wave-P3 |
 | Skill diagnostic gate | harness-doctor + apex-review |
 | Session harvest loop | harvest-loop Step H1~H5 |
 | External asset audit | steel-quench Wave 1~N |
+| Domain-specific quality gate | Plug in any project-defined FAIL→FIX checkpoint |
 | Any FAIL→FIX repeating structure | User-defined gate |
 
 ---
@@ -130,7 +129,6 @@ Max rounds: N | Actual convergence round: M
 
 | Situation | Related Skill |
 |---|---|
-| Applied to TC P3 gate | `mcp-spec-to-tc` Step 4.5 (built-in implementation) |
 | Applied to skill diagnostic gate | `harness-doctor` → convergence-loop wrapper |
 | Applied to quench wave | `steel-quench` Wave 3+ convergence criteria (same principle) |
 | Applied to session harvest loop | `harvest-loop` Step H1~H5 |

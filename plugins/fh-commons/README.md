@@ -19,7 +19,7 @@ When the `contention-layer` skill harvests contentions and generates new skill c
 
 | Skill | Description | Contention Parent |
 |---|---|---|
-| `convergence-loop` | General-purpose gate reinforcement that replaces single-pass structures with a convergence loop of up to N rounds | mcp-spec-to-tc P3 gate + harvest-loop (same pattern independently discovered twice) |
+| `convergence-loop` | General-purpose gate reinforcement that replaces single-pass structures with a convergence loop of up to N rounds | harvest-loop (recurring single-pass-distrust pattern across hub gates) |
 | `deliberation` | Innovator → Devil-Advocate → Mediator 3-layer multi-perspective synthesis. Generates conditional verdicts without binary win/loss | Migrated from fh-meta (2026-05-23 — domain-agnostic general decision structure) |
 
 ## The `origin` Field

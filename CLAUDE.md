@@ -70,7 +70,7 @@ The forge-harness hub has a dual identity: **(a) a seed for others** + **(b) you
 **Principle (`feedback_no_personal_commit_to_shared_repo`): AI does not commit directly to shared repositories.**
 
 - **Interpretation:** AI is not allowed to independently commit and push code. However, **AI may propose a Pull Request by preparing all change drafts and requesting final approval from the human (user)**.
-- **Implementation:** Skills such as `audit-learnings` follow this principle — they generate skill drafts, prepare commits automatically, and propose PR creation. However, the final decision to submit a PR must always require the user's explicit approval (`y`). This ensures Human-in-the-loop while maximizing AI contribution.
+- **Implementation:** Skills such as `harvest-loop` follow this principle — they generate skill drafts, prepare commits automatically, and propose PR creation. However, the final decision to submit a PR must always require the user's explicit approval (`y`). This ensures Human-in-the-loop while maximizing AI contribution.
 
 ## Active Onboarding Protocol (User Greeting → AI Initiative)
 
@@ -171,7 +171,7 @@ Before entering plugin-recommender, establish the project foundation:
 | 2 | `cross-ecosystem-synergy-detection` | Cascades after candidates are found | Synergy rating table (★~★★★) |
 | 3 | `.claudeignore` standard proposal | On new project mapping (if not handled in Step 3-0) | `cp templates/.claudeignore <project>/.claudeignore` one-line recommendation |
 | 4 | Model switching guidance | After analyzing task nature | `/model opusplan` or appropriate model recommendation |
-| 5 | `verify-bidirectional` · `audit-learnings` | Emerge naturally during work | Round accumulation + audit automation |
+| 5 | `verify-bidirectional` · `harvest-loop` | Emerge naturally during work | Round accumulation + audit automation |
 
 #### Step 4 — User Approval → Actual Setup
 - Plugin install (`claude plugin install ...`)
@@ -234,12 +234,12 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 |---|---|
 | "plugin", "what tool should I use", "install", "recommend" (tool exploration) | `/plugin-recommender` |
 | "context is getting long", "token limit", "/clear", "slow", "context" (burden) | `/context-doctor` |
-| "wrap up this week", "review", "audit", "weekly", "retrospective" | `/audit-learnings` |
+| "wrap up this week", "review", "audit", "weekly", "retrospective" | `/harvest-loop` |
 | "pull this into FH", "reverse-harvest", "worth keeping", "harvest pattern", "field pattern" | `/field-harvest` |
 | "harness is complex", "too many skills", "check structure", "harness" | `/harness-doctor` |
 | "review this PR", "check diff", "code review" | `/hub-cc-pr-reviewer` |
 | "are these in sync", "synergy", "can these integrate", "any overlap" | `/cross-ecosystem-synergy-detection` |
-| "latest trends", "frontier", "external resources" | `/frontier-status-summary` |
+| "latest trends", "frontier", "external resources" | `/frontier-digest` |
 | "orchestrate agents", "parallel dispatch", "combine skills", "multiple agents" | `/agent-composer` |
 | "run a simulation", "external user perspective", "internal audit", "quality check" | `/sim-conductor` |
 | "first install", "FH setup", "wizard", "install-wizard" | `/install-wizard` |

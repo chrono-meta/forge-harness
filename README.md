@@ -20,7 +20,7 @@ an acceleration hub to **customize Claude Code for your team, accumulate know-ho
 | Current situation | Stage | Jump to |
 |---|---|---|
 | Want to set up Claude Code properly from scratch | **Start** | [Get started in 2 minutes](#get-started-in-2-minutes-recommended--semi-automated-claude-mapping) |
-| Already using it, want to use it better | **Optimize** | [Already using it](#already-using-it----20-asset-activation-check-17-skills--3-agents) |
+| Already using it, want to use it better | **Optimize** | [Already using it](#already-using-it----29-asset-activation-check-25-skills--4-agents) |
 | Want to spread it to the team or contribute skills back | **Advance** | [Operating model Phase 3](#operating-model----3-phase-essence-invocation-flow) |
 
 ---
@@ -220,9 +220,9 @@ See `CLAUDE.md > Auto Project Mapping Protocol` for detailed detection and mappi
 
 ---
 
-## Already using it — 20 asset activation check (17 skills + 3 agents)
+## Already using it — 29 asset activation check (25 skills + 4 agents)
 
-Check which of the following 20 (17 skills + 3 agents) are **regularly activating** for you.
+Check which of the following 29 (23 fh-meta skills + 2 fh-commons skills + 3 fh-meta agents + 1 fh-commons agent) are **regularly activating** for you. The table below lists the assets bundled with forge-harness plugins (fh-meta + fh-commons). `.claude/agents/` adds `plan` and a local `quench-challenger` mirror, available to FH itself when working in the FH cwd.
 
 | Asset | Role | Natural language trigger examples | Active |
 |---|---|---|:---:|
@@ -248,12 +248,18 @@ Check which of the following 20 (17 skills + 3 agents) are **regularly activatin
 | `hub-persona-auditor` | Pre-publish audit of external assets | "Take a look before external release", "How will this look to others?" | □ |
 | `fact-checker` | Asset deduplication check | "Isn't there something similar already?", "Check for duplicates" | □ |
 | `persona-innovator` | Naming gap detection + ideation algorithm | "Any new ideas?", "What would be a good name for this?" | □ |
+| `contention-layer` | Treat conflicts between skills/agents as harvest signals → propose new skills | "These two skills conflict", "They clash when used together", "Contention layer", "Harvest the conflict" | □ |
+| `context-bridge-dispatch` | Inject session context cards into parallel agent dispatch prompts before fan-out | "Brief the agents first", "Bridge the context", "Parallel dispatch context" | □ |
+| `frontier-digest` | Collect frontier signals (HN, arXiv, etc.) and synthesize PMH/FH-relevant insights | "AI trend digest", "Frontier digest", "What's new this week" | □ |
+| `harvest-loop` | End-of-session learning → reverse-evolution pipeline (field-harvest → contention → personas → synth → doctor → verify) | "Harvest the session", "Reverse-absorb learnings", "Run the pipeline" | □ |
+| `self-marketing-lint` | Detect and remove self-marketing language, owner self-reference, version/round bragging in skill descriptions | "Lint self-marketing", "Description diet", "Strip the marketing tone" | □ |
+| `convergence-loop` *(fh-commons)* | Replace single-pass gates with N-round convergence loops; only declare "truly passed" after convergence | "How many rounds do we need", "Suspicious of single-pass", "Convergence loop" | □ |
 
 | Check count | Diagnosis |
 |:---:|---|
-| **16-20** | Advanced stage — focus on `agent-composer` + `sim-conductor` + `steel-quench` + synergy cascade (chained verification) |
-| **4-12** | Activation stage — gradually activate unchecked assets |
-| **0-3** | Early stage — go back to the self-diagnosis above and follow the standard entry |
+| **22-29** | Advanced stage — focus on `agent-composer` + `sim-conductor` + `steel-quench` + synergy cascade (chained verification) |
+| **8-21** | Activation stage — gradually activate unchecked assets |
+| **0-7** | Early stage — go back to the self-diagnosis above and follow the standard entry |
 
 ---
 
@@ -379,8 +385,8 @@ After installing, type `/skills` or `/agents` in the **Claude Code chat window**
 
 | Plugin | Nature | skills | agents |
 |---|---|---|---|
-| **fh-meta** (v1.1.0) | Hub meta operation tool bundle — 22 skills (agent-composer · apex-review · verify-bidirectional · cross-ecosystem-synergy-detection · plugin-recommender · hub-cc-pr-reviewer · context-doctor · sim-conductor · steel-quench · source-grounding-audit · harness-doctor · deep-clarify · install-doctor · install-wizard · asset-placement-gate · field-harvest · marketplace-gate · meta-prompt-builder · contention-layer · context-bridge-dispatch · frontier-digest · harvest-loop) + 4 agents (hub-persona-auditor · fact-checker · persona-innovator · plan). **Verification pair**: steel-quench (output pattern attack) + source-grounding-audit (input source tracing) | 22 | 4 |
-| **fh-commons** (v0.1.1) | Domain-agnostic general utilities — 2 skills (convergence-loop · deliberation) | 2 | 0 |
+| **fh-meta** (v1.1.4) | Hub meta operation tool bundle — 23 skills (agent-composer · apex-review · asset-placement-gate · contention-layer · context-bridge-dispatch · context-doctor · cross-ecosystem-synergy-detection · deep-clarify · field-harvest · frontier-digest · harness-doctor · harvest-loop · hub-cc-pr-reviewer · install-doctor · install-wizard · marketplace-gate · meta-prompt-builder · plugin-recommender · self-marketing-lint · sim-conductor · source-grounding-audit · steel-quench · verify-bidirectional) + 3 agents (hub-persona-auditor · fact-checker · persona-innovator). **Verification pair**: steel-quench (output pattern attack) + source-grounding-audit (input source tracing) | 23 | 3 |
+| **fh-commons** (v0.1.1) | Domain-agnostic general utilities — 2 skills (convergence-loop · deliberation) + 1 agent (quench-challenger) | 2 | 1 |
 
 > **Asset count SoT**: `plugins/fh-meta/.claude-plugin/plugin.json` is the canonical source. If the numbers above don't match, use plugin.json as the reference.
 
@@ -476,7 +482,7 @@ cp <harness-root>/.claude/agents/fact-checker.md <your-project>/.claude/agents/
 | Skill access | All plugin skills | Agent only |
 | Best when | You want skills too | You only need 1-2 agents |
 
-FH has 4 agents in `.claude/agents/`: `fact-checker` · `hub-persona-auditor` · `persona-innovator` · `plan`
+FH has 5 agents in `.claude/agents/`: `fact-checker` · `hub-persona-auditor` · `persona-innovator` · `plan` · `quench-challenger`
 
 | Agent | Role | Tool restrictions |
 |---|---|---|
@@ -484,6 +490,7 @@ FH has 4 agents in `.claude/agents/`: `fact-checker` · `hub-persona-auditor` ·
 | `fact-checker` | Asset deduplication and staleness check | Read·Grep·Glob |
 | `hub-persona-auditor` | 3+ persona audit of externally published assets | Read·Grep·Glob |
 | `persona-innovator` | Naming exploration + frame proposals | Read·Grep·Glob·WebSearch·WebFetch |
+| `quench-challenger` | Steel-quench adversary — pressure-tests near-final artifacts | Read·Grep·Glob |
 
 #### Connecting FH context to existing project CC (cross-context)
 
@@ -629,7 +636,7 @@ Auto-checked items:
 
 | Item | Threshold | Condition |
 |---|---|---|
-| weekly_audit | 7 days | `CC_HUB_DIR` set + `tracks/_audit/` exists |
+| weekly_harvest | 7 days | `CC_HUB_DIR` set + recent `tracks/_meta/harvest_*.md` present |
 | frontier_diagnosis | 90 days | `CC_HUB_DIR` set + `knowledge/shared/harness-core/` exists |
 | FH internal sim (sim Area B) | 30 days | `FH_DIR` set + `tracks/_meta/` exists |
 | Custom sentinel | Default 90 days | File in `CC_SENTINELS_DIR` + `CC_SENTINEL_{NAME}_DAYS` |
@@ -660,7 +667,7 @@ When a user greets or starts from the meta-harness cwd, this AI proactively prop
 After initial setup, the user works directly from **the field project cwd**. The meta-harness is **not directly invoked**, but performs lateral optimization in its mapped state:
 - `.claudeignore` standard applied (blocks unnecessary files from context → token savings)
 - Model switching (`/model opusplan` — Opus reasoning / Sonnet code)
-- fh-meta 17 skills naturally activate (description triggering — a mechanism where Claude automatically invokes a skill when keywords in the skill description match the conversation context)
+- fh-meta 23 skills naturally activate (description triggering — a mechanism where Claude automatically invokes a skill when keywords in the skill description match the conversation context)
 - Optional persona layer plugin usage (e.g., `deep-insight`)
 
 ### Phase 3 — Threshold return (autonomous reverse proposals)
