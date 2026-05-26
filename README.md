@@ -185,9 +185,9 @@ Verify installation: type `/skills` in the CC chat → if `install-wizard` appea
 > **Prerequisites**: A GitHub account and git credentials configured. If `git clone` fails with an authentication error, set up SSH keys or create a personal access token (GitHub → Settings → Developer settings → Personal access tokens) and retry.
 
 ```bash
-git clone https://github.com/chronology-dev/forge-harness.git ~/PycharmProjects/forge-harness
+git clone https://github.com/chronology-dev/forge-harness.git ~/forge-harness
 
-cd ~/PycharmProjects/forge-harness
+cd ~/forge-harness
 ```
 
 ### Step 2. Say something to Claude
@@ -205,8 +205,8 @@ claude
 > ```
 
 > ❌ **Failure symptoms & fixes**:
-> - **Only a generic response like "Hello! How can I help you today?"** → Run `pwd` to confirm you're in the `forge-harness` root. If not, run `cd ~/PycharmProjects/forge-harness` then `claude` again.
-> - **"CLAUDE.md not found" error** → Verify the clone went to the right path: `ls ~/PycharmProjects/forge-harness/CLAUDE.md`
+> - **Only a generic response like "Hello! How can I help you today?"** → Run `pwd` to confirm you're in the `forge-harness` root. If not, run `cd ~/forge-harness` then `claude` again.
+> - **"CLAUDE.md not found" error** → Verify the clone went to the right path: `ls ~/forge-harness/CLAUDE.md`
 > - **Clone fails with authentication error** → SSH key or personal access token setup required (see Step 1 prerequisites above)
 
 Once open, just talk to Claude:
@@ -254,6 +254,7 @@ Check which of the following 29 (23 fh-meta skills + 2 fh-commons skills + 3 fh-
 | `harvest-loop` | End-of-session learning → reverse-evolution pipeline (field-harvest → contention → personas → synth → doctor → verify) | "Harvest the session", "Reverse-absorb learnings", "Run the pipeline" | □ |
 | `self-marketing-lint` | Detect and remove self-marketing language, owner self-reference, version/round bragging in skill descriptions | "Lint self-marketing", "Description diet", "Strip the marketing tone" | □ |
 | `convergence-loop` *(fh-commons)* | Replace single-pass gates with N-round convergence loops; only declare "truly passed" after convergence | "How many rounds do we need", "Suspicious of single-pass", "Convergence loop" | □ |
+| `quench-challenger` *(fh-commons)* | Steel-quench adversary — pressure-tests near-final artifacts from devil + innovator + prescriber angles | "Challenge this with a devil", "Adversarial review", "Quench challenger" | □ |
 
 | Check count | Diagnosis |
 |:---:|---|
@@ -425,7 +426,7 @@ claude plugin marketplace add https://github.com/chronology-dev/forge-harness.gi
 claude plugin install fh-meta@forge-harness
 
 # 3. Invoke Claude Code from your project cwd (no meta-harness cwd entry)
-cd ~/PycharmProjects/{your-project}
+cd ~/projects/{your-project}
 claude
 ```
 
@@ -525,20 +526,20 @@ Only use when the recommended path doesn't work in your environment (e.g., proje
 **Step 1. Clone**
 
 ```bash
-git clone https://github.com/chronology-dev/forge-harness.git ~/PycharmProjects/forge-harness
+git clone https://github.com/chronology-dev/forge-harness.git ~/forge-harness
 ```
 
 **Step 2. Create track directories**
 
 ```bash
 # Track name = project name
-mkdir -p ~/PycharmProjects/forge-harness/tracks/my-project/learnings
+mkdir -p ~/forge-harness/tracks/my-project/learnings
 ```
 
 **Step 3. Copy CLAUDE.md to your project**
 
 ```bash
-cp ~/PycharmProjects/forge-harness/templates/CLAUDE.md ~/my-project/CLAUDE.md
+cp ~/forge-harness/templates/CLAUDE.md ~/my-project/CLAUDE.md
 ```
 
 In the copied CLAUDE.md, replace `{project_name}` with **the track name you created in Step 2**.
@@ -546,7 +547,7 @@ In the copied CLAUDE.md, replace `{project_name}` with **the track name you crea
 **(Optional) Copy session rules**
 
 ```bash
-cp -r ~/PycharmProjects/forge-harness/templates/.claude/ ~/my-project/.claude/
+cp -r ~/forge-harness/templates/.claude/ ~/my-project/.claude/
 ```
 
 Customize sections marked with `[CUSTOMIZE]` comments to fit your project.
@@ -585,7 +586,7 @@ Specifies patterns that Claude Code should not read as context, using the same s
 
 ```bash
 # Copy the meta-harness standard template to your project root
-cp ~/PycharmProjects/forge-harness/templates/.claudeignore <project>/.claudeignore
+cp ~/forge-harness/templates/.claudeignore <project>/.claudeignore
 ```
 
 Default blocked targets: `node_modules/` · `dist/` · `.next/` · `*.lock` · `*.min.js` · `.env` · `.idea/` · `secrets/` · etc. Per-project customization recommended.
@@ -704,7 +705,7 @@ This is because the command tower structure (cc hub) + agent-composer (compositi
 
 **How to enter** (terminal, v2.1.139+):
 ```bash
-cd ~/PycharmProjects/forge-harness   # or your cc hub cwd
+cd ~/forge-harness   # or your cc hub cwd
 claude agents                         # Enter Agent View dashboard
 ```
 
@@ -869,7 +870,7 @@ The biggest pitfall in AI tool quality verification is **the creator doing the t
 `sim-conductor` solves this structural limitation.
 
 ```
-Development environment (~/PycharmProjects/forge-harness/)
+Development environment (~/forge-harness/)
          ↕ Physical isolation
 Isolated environment (~/sim/observer/)   ← New user reproduction space
 ```
