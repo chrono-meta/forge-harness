@@ -421,8 +421,18 @@ Do not scan session files one by one sequentially.
 Format: `- ✅ {item title} — {one-line completion method}`  
 harvest-loop Step 0-b uses this file as its source — relying on LLM memory after compression causes omissions.
 
-**Card update obligation** (required after harvest-loop completes): Update `reference_next_session_starter.md`.  
-① Step 0-b cross-check generates removal list → ② Remove completed items → ③ Add new priorities → ④ Overwrite → ⑤ Output "BEFORE N items → AFTER M items" diff.  
+**Session close chaining (automatic sequence — not skippable)**:
+```
+Closing phrase detected ("wrap up", "done", "good work", "end session", etc.)
+  → ① Check git diff
+  → ② If diff exists, run harvest-loop
+  → ③ Card update — independent obligation regardless of whether harvest-loop ran
+  → ④ Check unpushed commits → propose "push?"
+```
+Card update is NOT a sub-step of harvest-loop — even if harvest-loop is skipped, card update must run.
+
+**Card update obligation** (independent obligation — regardless of harvest-loop completion): Update `reference_next_session_starter.md`.  
+① Step 0-b cross-check generates removal list → ② Remove completed items → ③ Add new priorities → ④ Fix stale paths/versions → ⑤ Overwrite → ⑥ Output "BEFORE N items → AFTER M items" diff.  
 "Delta update" not "snapshot" — completed items remaining in next session card is a bug.
 
 ## Session Sync / Knowledge Push Protocol
