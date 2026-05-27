@@ -47,6 +47,9 @@ Time: ~3 min (50% reduction vs full). Skip Steps 3/3.5/4 — creative synthesis 
 Step 0 (Regression Guard) + Step 1 (field-harvest) + Step 2 (contention-layer) + Step 5 (verify-bidirectional) complete
 + harvested pattern summary 1~3 lines output
 + "run full harvest-loop?" proposed (if patterns found)
++ [Card update prohibited] Do NOT update reference_next_session_starter.md in lightweight mode alone
+  → Card update must run with full harvest-loop Step 0-b proof gate
+  → Lightweight mode only + session end = card update missing = bug
 ```
 
 ---
@@ -75,6 +78,23 @@ Conditions for running mid-session harvest-loop without waiting for session end.
 
 ```
 Session end
+    │
+    ▼
+[Step 0-a] SKILL.md change detection → auto-quench
+    │  git diff --name-only HEAD | grep "SKILL.md"
+    │  → 1+ SKILL.md changes detected: run quench-challenger automatically (S/A/B severity)
+    │  → No changes: proceed to Step 0-b immediately
+    │  S-tier 1+: require prescription applied before commit (hard gate)
+    │  A-tier and below: output prescription list, proceed to Step 0-b (soft gate)
+    │
+    ▼
+[Step 0-b] Card cross-check — reconstruct completed items (no memory dependency)
+    │  Read reference_next_session_starter.md
+    │  + Read tracks/_meta/fh_completed_{today}.md (if real-time log exists)
+    │  + Scan git log --since=today 00:00 --oneline
+    │  → Generate removal candidate list from 3-source cross-check
+    │  → Output "N items scheduled for removal"
+    │  (Even if context is compressed, accurate reconstruction via source rebuild)
     │
     ▼
 [Step 0] Regression Guard  ← v1.2: harness-evolver Learn-stage pattern
@@ -440,14 +460,23 @@ synthesizer: [HIGH N / MED N / rejected N]
 → Y: Create PR / draft skill file
 → N: Persist to tracks/_meta/fh_signal_YYYY_MM_DD_{slug}.md
 
-### [Required final step] Session card update
+### [Required final step] Session card update (proof gate)
 
 Immediately after harvest-loop completes:
 
-1. Read `memory/reference_next_session_starter.md`
-2. Remove completed items from this session
+1. Read `memory/reference_next_session_starter.md` → **record BEFORE item count**
+2. Apply removal list from Step 0-b (no LLM memory — source-based reconstruction)
 3. Add new priorities
 4. Write (overwrite) + git commit
+5. **Output "BEFORE N items → AFTER M items (removed N-M: [item name list])" diff — required**
+
+If no diff (N=M): warn "Step 0-b cross-check re-verification needed — possible completed item omission"
+
+**When fh_completed file is absent (2-source mode)**:
+- Source: starter card + git log only
+- Items confirmed by git log alone → "confirmed removal"
+- Card item name ↔ commit message mismatch → "removal candidate (uncertain)" + output "real-time log missing — manual check needed: [item list]"
+- Exact match required for item name matching — no LLM semantic judgment for "confirmed" status
 
 Leaving completed items in the card until the next session is a bug.
 ```
@@ -476,6 +505,8 @@ All stages Step 0 → 1 → 2 → 3 (parallel) → 3.5 → 3.75 → 4 → 5 comp
   → 6-1: SKILL.md STALE candidate list output + merge candidates included if any
   → 6-2: Memory self-correction — INDEX-ORPHAN/FILE-ORPHAN/MEM-STALE detection results output
 + [Required] reference_next_session_starter.md delta update complete
-  → ① Read existing card → ② Remove completed items → ③ Add new priorities → ④ Write overwrite
-  → "delta update" not "snapshot" — completed items remaining in next session card is a bug
+  → Step 0-b based reconstruction (no LLM memory — git log + fh_completed source-based)
+  → BEFORE N items → AFTER M items diff output required (proof gate)
+  → No diff (N=M) = warning output + Step 0-b re-check obligation
+  → Completed items remaining = bug (Done When not met)
 ```
