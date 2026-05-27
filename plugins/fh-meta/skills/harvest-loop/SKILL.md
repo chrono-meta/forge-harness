@@ -332,7 +332,7 @@ done
 |---|---|---|
 | **INDEX-ORPHAN** | Linked in MEMORY.md but file missing | Remove that line from MEMORY.md immediately (auto-allowed) |
 | **FILE-ORPHAN** | File exists but not registered in MEMORY.md | Confirm with user: "add to index or delete?" |
-| **MEM-STALE** | 30+ day git no-modify + no recent mention in session card or session files | Confirm with user: "archive or delete?" |
+| **MEM-STALE** | (auto) 30+ day git no-modify → candidate output / (manual) recent mention in session card or session files is user-confirmed | Confirm with user: "archive or delete?" |
 | **PROJECT type priority** | memory file with `type: project` | Suggest moving to CLOSED section if completed/ended |
 | **Normal** | None of the above | Keep |
 
