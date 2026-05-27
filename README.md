@@ -118,9 +118,9 @@ Three things this hub solves:
 
 ---
 
-## Real-world case — CaseCraft TC quality hardening
+## Real-world case — AI TC generation prompt hardening
 
-> **Context**: AI-generated test cases were being merged without quality validation. Prompts contained cushion language, phantom claims, and no priority guardrails.
+> **Context**: An AI-powered test case generation tool was merging TC outputs without quality validation. Prompts contained cushion language, phantom claims, and no priority guardrails.
 
 **Applied**: `steel-quench` (W1–W8 adversarial hardening) + `source-grounding-audit` (phantom claim detection)
 
