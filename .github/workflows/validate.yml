@@ -31,66 +31,12 @@ jobs:
       - name: Validate plugin.json required fields
         run: |
           echo "=== Validating plugin.json files ==="
-          for f in plugins/*/.claude-plugin/plugin.json; do
-            echo "Checking $f..."
-            python3 - <<'EOF'
-import json, sys
-
-path = "$f"
-with open(path) as fp:
-    p = json.load(fp)
-
-required = ["name", "version", "description", "author", "engines"]
-missing = [k for k in required if k not in p]
-if missing:
-    print(f"FAIL {path}: missing fields {missing}")
-    sys.exit(1)
-
-author_fields = ["name", "email"]
-for af in author_fields:
-    if af not in p.get("author", {}):
-        print(f"FAIL {path}: author.{af} missing")
-        sys.exit(1)
-
-if "claudeCode" not in p.get("engines", {}):
-    print(f"FAIL {path}: engines.claudeCode missing")
-    sys.exit(1)
-
-placeholder_markers = ["contributor@example.com", "harness-contributor"]
-for m in placeholder_markers:
-    if m in json.dumps(p):
-        print(f"FAIL {path}: placeholder value '{m}' still present")
-        sys.exit(1)
-
-print(f"PASS {path}")
-EOF
-          done
+          python3 .github/scripts/validate_plugins.py
 
       - name: Validate marketplace.json structure
         run: |
           echo "=== Validating marketplace.json ==="
-          python3 - <<'EOF'
-import json, sys
-
-with open(".claude-plugin/marketplace.json") as fp:
-    m = json.load(fp)
-
-assert "name" in m, "marketplace.json missing 'name'"
-assert "owner" in m, "marketplace.json missing 'owner'"
-assert "plugins" in m, "marketplace.json missing 'plugins'"
-
-for p in m["plugins"]:
-    assert "name" in p and "version" in p and "source" in p, f"plugin entry incomplete: {p}"
-
-placeholder_markers = ["contributor@example.com", "harness-contributor"]
-raw = json.dumps(m)
-for marker in placeholder_markers:
-    if marker in raw:
-        print(f"FAIL marketplace.json: placeholder '{marker}' still present")
-        sys.exit(1)
-
-print("PASS marketplace.json")
-EOF
+          python3 .github/scripts/validate_marketplace.py
 
       - name: Check skill count consistency
         run: |
@@ -102,12 +48,7 @@ EOF
           echo "fh-meta: ${FH_META_SKILLS} skills, ${FH_META_AGENTS} agents"
           echo "fh-commons: ${FH_COMMONS_SKILLS} skills, ${FH_COMMONS_AGENTS} agents"
 
-          DESCRIPTION=$(python3 -c "
-import json
-with open('plugins/fh-meta/.claude-plugin/plugin.json') as f:
-    p = json.load(f)
-print(p['description'])
-")
+          DESCRIPTION=$(python3 -c "import json; p=json.load(open('plugins/fh-meta/.claude-plugin/plugin.json')); print(p['description'])")
           echo "fh-meta description: $DESCRIPTION"
 
           # Verify counts appear in description
