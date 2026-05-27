@@ -478,6 +478,15 @@ If no diff (N=M): warn "Step 0-b cross-check re-verification needed — possible
 - Card item name ↔ commit message mismatch → "removal candidate (uncertain)" + output "real-time log missing — manual check needed: [item list]"
 - Exact match required for item name matching — no LLM semantic judgment for "confirmed" status
 
+**Natural-language close judgment (4th source — conversation context)**:
+Even without git log match, items with the following patterns explicitly stated in this session are treated as "natural-language closed" and removed immediately:
+- "not possible / confirmed impossible" (endorsement not possible, cannot proceed, etc.)
+- "no response + N weeks elapsed" → abandoned
+- "mutual citation confirmed" · "merged" · "cancelled" · "no longer needed"
+- User directly says "stop monitoring" · "close this" · "remove it"
+
+Natural-language closed items → remove from card immediately (leave only "✅ closed" one-liner in reference table). Do not re-mention.
+
 Leaving completed items in the card until the next session is a bug.
 ```
 
