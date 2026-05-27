@@ -280,7 +280,9 @@ Check: If A references B, does B also back-reference A? Are there any one-way br
 
 > **Source**: hermes-agent curator.py pattern (Nous Research) — structure where an independent fork instance reviews/integrates/patches skills, adapted to FH context.
 
-**Scan target**: `plugins/*/skills/*/SKILL.md` all files
+**Scan target**: `plugins/*/skills/*/SKILL.md` all files + `memory/` files
+
+#### 6-1. SKILL.md Lifecycle
 
 ```bash
 # Detect skills unused for 30+ days (based on git log)
@@ -299,7 +301,47 @@ done
 | **Merge candidate** | Two skills with ≥70% functional overlap (reuse harness-doctor overlap judgment) | Suggest merge draft (no auto-execution) |
 | **Normal** | None of the above | Keep skill |
 
-**Curator safety principles**:
+#### 6-2. Memory Self-Correction
+
+**Scan target**: Full `memory/` directory (MEMORY.md index + individual memory files)
+
+**Purpose**: Prevent accumulated stale memory from contaminating the next session's context.
+
+```bash
+# MEMORY.md index vs actual files consistency check
+grep -oP '\[.*?\]\(\K[^)]+' memory/MEMORY.md | while read f; do
+  [ -f "memory/$f" ] || echo "[INDEX-ORPHAN] memory/$f — in index but file missing"
+done
+
+# Detect orphan files not in index
+find memory -name "*.md" ! -name "MEMORY.md" | while read f; do
+  fname=$(basename "$f")
+  grep -q "$fname" memory/MEMORY.md || echo "[FILE-ORPHAN] $f — file exists but not indexed"
+done
+
+# Detect memory files unmodified for 30+ days
+git log --since="30 days ago" --name-only --pretty=format: -- memory/ \
+  | sort -u > /tmp/recently_touched_mem.txt
+
+find memory -name "*.md" ! -name "MEMORY.md" | while read f; do
+  grep -qxF "$f" /tmp/recently_touched_mem.txt || echo "[MEM-STALE candidate] $f"
+done
+```
+
+| Status | Judgment criteria | Action |
+|---|---|---|
+| **INDEX-ORPHAN** | Linked in MEMORY.md but file missing | Remove that line from MEMORY.md immediately (auto-allowed) |
+| **FILE-ORPHAN** | File exists but not registered in MEMORY.md | Confirm with user: "add to index or delete?" |
+| **MEM-STALE** | 30+ day git no-modify + no recent mention in session card or session files | Confirm with user: "archive or delete?" |
+| **PROJECT type priority** | memory file with `type: project` | Suggest moving to CLOSED section if completed/ended |
+| **Normal** | None of the above | Keep |
+
+**Memory curator safety principles**:
+- Only INDEX-ORPHAN removal (MEMORY.md edit) is auto-allowed — everything else requires user approval
+- `type: reference` items with 🔑 keywords are excluded from STALE detection (active-load targets)
+- Actual file deletion is absolutely prohibited without explicit approval
+
+**Common curator safety principles**:
 - Only suggest touching agent-generated skills (protect core skills written directly by humans)
 - Skills with `pinned: true` are automatically excluded from STALE/merge suggestion targets
 - Actual deletion/modification only after explicit user approval
@@ -431,7 +473,8 @@ All stages Step 0 → 1 → 2 → 3 (parallel) → 3.5 → 3.75 → 4 → 5 comp
 + Final proposal list output (sorted by HIGH/MED criteria)
 + User Y/N approval gate complete
 + (If Y selected) Step 6 Curator lifecycle review complete
-  → STALE candidate list output + merge candidates included if any
+  → 6-1: SKILL.md STALE candidate list output + merge candidates included if any
+  → 6-2: Memory self-correction — INDEX-ORPHAN/FILE-ORPHAN/MEM-STALE detection results output
 + [Required] reference_next_session_starter.md delta update complete
   → ① Read existing card → ② Remove completed items → ③ Add new priorities → ④ Write overwrite
   → "delta update" not "snapshot" — completed items remaining in next session card is a bug
