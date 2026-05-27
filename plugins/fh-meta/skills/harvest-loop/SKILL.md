@@ -397,6 +397,17 @@ synthesizer: [HIGH N / MED N / rejected N]
 
 → Y: Create PR / draft skill file
 → N: Persist to tracks/_meta/fh_signal_YYYY_MM_DD_{slug}.md
+
+### [Required final step] Session card update
+
+Immediately after harvest-loop completes:
+
+1. Read `memory/reference_next_session_starter.md`
+2. Remove completed items from this session
+3. Add new priorities
+4. Write (overwrite) + git commit
+
+Leaving completed items in the card until the next session is a bug.
 ```
 
 ---
@@ -421,4 +432,7 @@ All stages Step 0 → 1 → 2 → 3 (parallel) → 3.5 → 3.75 → 4 → 5 comp
 + User Y/N approval gate complete
 + (If Y selected) Step 6 Curator lifecycle review complete
   → STALE candidate list output + merge candidates included if any
++ [Required] reference_next_session_starter.md delta update complete
+  → ① Read existing card → ② Remove completed items → ③ Add new priorities → ④ Write overwrite
+  → "delta update" not "snapshot" — completed items remaining in next session card is a bug
 ```
