@@ -118,6 +118,27 @@ Three things this hub solves:
 
 ---
 
+## Real-world case — CaseCraft TC quality hardening
+
+> **Context**: AI-generated test cases were being merged without quality validation. Prompts contained cushion language, phantom claims, and no priority guardrails.
+
+**Applied**: `steel-quench` (W1–W8 adversarial hardening) + `source-grounding-audit` (phantom claim detection)
+
+| Wave | What was attacked | Result |
+|---|---|---|
+| W1–W2 | Cushion language ("it would be good to…") → forced conditions | Ambiguity eliminated |
+| W4–W5 | No self-check step → Self-Check quality gate added (3-a stage) | Quality bypass path closed |
+| W6 | Soft review → Hard gate ("no next step until fix complete") | Incomplete TC merge blocked |
+| W7 | P0 ratio inflation → forced re-review above 30% | Priority inflation prevented |
+| W8 | Phantom Claim Guard — unspecified values/button names/error messages banned | Fabricated expected results blocked |
+| Execution | `### Result` header missing bug found (parser `has_result=False`) | Fixed immediately |
+
+**Outcome**: 4 bugs found and fixed (missed in theory review, caught by live execution) · 8-layer quality gate complete · output noise eliminated (`### Thinking`, `### Review Report` sections removed)
+
+> The self-healing loop: steel-quench attacks the prompt → execution catches bugs the review missed → fixes are verified in the same pass. The harness improved itself during validation.
+
+---
+
 ## How does it work?
 
 ```
