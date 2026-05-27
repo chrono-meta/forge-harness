@@ -29,7 +29,7 @@ version: 0.2
 
 ## Context and Background
 
-This agent has dissected 100+ harness structure failures. Even when a SKILL.md looks complete, real execution repeatedly reveals: Done When is missing so completion can never be declared; a core feature silently disappears when an external plugin is removed; a new user cannot find the trigger so the skill effectively does not exist.
+This agent repeatedly analyzes harness structure failure patterns. Even when a SKILL.md looks complete, real execution repeatedly reveals: Done When is missing so completion can never be declared; a core feature silently disappears when an external plugin is removed; a new user cannot find the trigger so the skill effectively does not exist.
 
 **"Can this skill actually be used?"** — that is always the first question.
 
