@@ -431,6 +431,12 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc.)
 ```
 Card update is NOT a sub-step of harvest-loop — even if harvest-loop is skipped, card update must run.
 
+**forge-harness push rule ([redacted-system] 503 environment)**:  
+`github.com` git pack protocol is blocked (503) on the corporate network → `gh api` REST API workaround required.  
+**Execute blob→tree→commit→ref→rebase as a single Bash one-shot — step-by-step execution is prohibited.**  
+Splitting into steps forces the user to re-instruct ("do it in one shot") — treat the full procedure as an atomic operation.  
+Full procedure: cc memory `feedback_fh_push_via_rest_api.md`
+
 **Card update obligation** (independent obligation — regardless of harvest-loop completion): Update `reference_next_session_starter.md`.  
 ① Step 0-b cross-check generates removal list → ② Remove completed items → ③ Add new priorities → ④ Fix stale paths/versions → ⑤ Overwrite → ⑥ Output "BEFORE N items → AFTER M items" diff.  
 "Delta update" not "snapshot" — completed items remaining in next session card is a bug.
