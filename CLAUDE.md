@@ -415,6 +415,16 @@ When searching for past work, **read CATALOG.md first**. Use tags and summaries 
 Do not scan session files one by one sequentially.
 
 
+## Session Wrap-up — Card Update Protocol
+
+**Real-time completion tracking (card bug prevention)**: When any S-tier/A-tier/backlog item is completed during a session, **immediately** (before context compression) append to `tracks/_meta/fh_completed_{YYYY-MM-DD}.md`.  
+Format: `- ✅ {item title} — {one-line completion method}`  
+harvest-loop Step 0-b uses this file as its source — relying on LLM memory after compression causes omissions.
+
+**Card update obligation** (required after harvest-loop completes): Update `reference_next_session_starter.md`.  
+① Step 0-b cross-check generates removal list → ② Remove completed items → ③ Add new priorities → ④ Overwrite → ⑤ Output "BEFORE N items → AFTER M items" diff.  
+"Delta update" not "snapshot" — completed items remaining in next session card is a bug.
+
 ## Session Sync / Knowledge Push Protocol
 
 > Detailed procedure: `.claude/rules/sync_push_protocols.md`
