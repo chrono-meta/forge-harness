@@ -95,7 +95,7 @@ If a problem is found, proactively surface **1 concern** then confirm whether to
 |---|---|
 | Area B frequency guard | Previous run within 7 days + S-tier unresolved |
 | Unresolved M-tier | New simulation requested without processing previous M-tier |
-| steel-quench not run | Area A requested immediately before external publish + no steel-quench history → say "recommend steel-quench first" then confirm |
+| steel-quench not run | Area A requested immediately before external publish + no steel-quench history → **mandatory gate: run steel-quench first, Area A does not proceed until steel-quench completes** |
 | Self-recursive path | sim-conductor attempting to auto-PR its own M-tier |
 | Goal-method alignment | Requested Area doesn't match actual problem |
 | D/E --target missing | Area D(code)/E runs without `--target` file or file doesn't exist |
@@ -302,6 +302,8 @@ Convergence within an AI-AI loop is **provisional convergence**. It must pass th
 
 **This skill's Done When = "completion report format output complete"**. Actual M-tier resolution and PR merge are in the user's or follow-up work domain and are not included in this skill's completion criteria. Ending without Step 3 report output = Fail.
 
+**→ Mandatory prerequisite for Area A (external publish context): `steel-quench` must have run in the same session before Area A is marked complete.** If not, Area A completion is invalid — restart with steel-quench first.
+
 **External validation path**: harvest-loop Step 3.75 Critic isolated Agent can independently judge against the above criteria (`skill_quality_rubric.md` verifiable criteria). Automatically linked when subsequent steel-quench runs.
 
 **Rationale**: AI-AI loops based on the same LLM share cognitive blind spots. The human gate is not a simple approval process — it is a **structural bias-blocking mechanism**.
@@ -344,7 +346,7 @@ sim-conductor (simulation/ideation) · harness-doctor (structure) · context-doc
 | Structural problem found in simulation results | `/harness-doctor` |
 | Token waste pattern found in simulation results | `/context-doctor` |
 | All three skills mentioned simultaneously | Three-Doctor Loop circuit activated — diagnosis→prescription→re-diagnosis cycle |
-| Area A run immediately before external publish | `/steel-quench` recommended first — secure residual risk list before entering (→ `steel-quench external publish pre-requisite sequence`) |
+| Area A run immediately before external publish | `/steel-quench` **required** before Area A proceeds — not recommended, mandatory. Secure residual risk list before entering (→ `steel-quench external publish pre-requisite sequence`) |
 
 ## Path B (External Environment)
 
