@@ -448,7 +448,7 @@ After outputting the fan-in completion report, evaluate the conditions below and
 | ① M-tier > 0 | **Wave next-M** | fact-checker (A) stale validation → hub-cc-pr-reviewer (S) PR plan |
 | ② persona-innovator naming candidates > 0 | **Wave next-I** | Delegate decision to user + asset-placement-gate (S) |
 | ③ External absorption signal High applicability > 0 | **Wave next-E** | persona-innovator Mode E (A) + meta-prompt-builder (S) |
-| ⑤ Design decision conflict or 2+ conflicting suggestions | **Wave next-D** | deliberation (separate FH skill) (S) — 3-layer default / 5-layer jury option |
+| ⑤ Design decision conflict or 2+ conflicting suggestions | **Wave next-D** | deliberation (separate FH skill) (S) — 3-layer default / 5-layer jury option; **after deliberation Done When: fold synthesis verdict back into fan-in result set → re-run Step 4-b state transition with conflict marked resolved** |
 | ④ All of ①②③⑤ are 0 | **End** | Output "backlog only, defer to next session" then complete |
 
 ```
