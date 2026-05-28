@@ -288,6 +288,9 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "where does this go", "asset location", "hub vs project", "placement" | `/asset-placement-gate` |
 | "add to marketplace", "OK to publish", "pre-publish check" | `/marketplace-gate` |
 | "look at this again", "is this right", "counterargument", "re-validate" | `/verify-bidirectional` |
+| "MCP failing", "tool keeps erroring", "circuit-breaker", "same error looping" | `/mcp-circuit-breaker` |
+| "token budget", "how expensive", "estimate tokens", "will this cost a lot" | `/token-budget-gate` |
+| "did my rule change break anything", "regression check", "test harness changes" | `/prompt-regression` |
 | "ready to PR", "about to push", "merge this", "PR 올려줘", FH asset changed in session | 3-axis auto-gate (see above — runs automatically, no proposal needed) |
 
 **Guard**: Do not propose a skill that is already running. One signal = one-line proposal (no pressure).
