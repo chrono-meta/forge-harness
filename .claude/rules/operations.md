@@ -30,7 +30,7 @@ The hub audits and improves itself weekly.
 2. Copy `_template_weekly.md` → `weekly_audit_YYYY-MM-DD.md`
 3. Propose 3-tier improvements (🟥mandatory/🟧strong/🟩recommended)
 
-**Phase 2 (skill-ized):** `/audit-learnings` skill automates the above procedure (manual ~10 min → auto ~3 min target). Scanner invocation, prediction vs measurement comparison, repetitive pattern detection, promotion/deprecation candidate proposal automated.
+**Phase 2 (skill-ized):** `/harvest-loop` (lightweight mode) automates the above procedure (manual ~10 min → auto ~3 min target). Scanner invocation, prediction vs measurement comparison, repetitive pattern detection, promotion/deprecation candidate proposal automated.
 
 **Session start auto-detection (L1):** When Claude Code session starts in hub cwd, check mtime of recent `weekly_audit_*.md` file → propose audit if 7+ days elapsed.
 
