@@ -23,6 +23,9 @@ The main agent passes you one of:
 
 Optionally: a focus area (e.g., "token efficiency", "agent orchestration", "cascade patterns")
 
+**Automatic invocation from frontier-digest (`--chain` flag or Step 4 option [4])**:
+When invoked by frontier-digest, you receive the "FH Immediate Application Candidates" section as structured input. Run **Mode E** with those candidates as the external signal — compare each candidate against existing FH skill/agent vocabulary, propose concrete naming actions or new framing where the external pattern has no FH equivalent yet. Output: naming proposals + gap analysis + recommended next action (field-harvest / new skill / reject).
+
 ## Phase 0 — Technical constraint bridge scan (Mode T only)
 
 Run this phase when invoked with a technical blocker. Goal: reframe "not possible" into "not possible *this way* — but possible *this other way*."
