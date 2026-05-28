@@ -130,6 +130,8 @@ print('OK')
     [ -z "$ref" ] && continue
     echo "$ref" | grep -qE '/\.\.\.|^`\{FH_ROOT\}/\.\.\.' && continue
     path=$(echo "$ref" | sed "s|{FH_ROOT}|.|g" | tr -d '`')
+    # Skip paths that still contain {placeholder} tokens after substitution (template files)
+    echo "$path" | grep -qE '\{[^}]+\}' && continue
     if [ ! -e "$path" ]; then
       echo "  ❌ M-TIER  broken ref: $ref"
       M_TIER=$((M_TIER + 1))
