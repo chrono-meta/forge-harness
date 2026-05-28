@@ -261,3 +261,7 @@ context-doctor (token/context) · harness-doctor (structure) · sim-conductor (s
 **This skill's Done When = "diagnosis report output complete"**. Actual resolution of prescription items is in the user's or follow-up work domain and is not included in this skill's completion criteria.
 
 **External validation path**: harvest-loop Step 3.75 Critic isolated Agent can independently judge against the above criteria (`skill_quality_rubric.md` verifiable criteria). Automatically linked when subsequent steel-quench runs.
+
+**→ Three-Doctor Loop chain (auto-propose after diagnosis):**
+- Prescription modifies SKILL.md / rules / CLAUDE.md → **propose `/harness-doctor`** re-check after fix (structural integrity)
+- Prescription addresses user-facing context (onboarding, README, install guides) → **propose `/sim-conductor Area A`** (external user impact validation)
