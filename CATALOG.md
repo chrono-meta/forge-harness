@@ -8,10 +8,16 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-05-28 | _meta | install-wizard, plugin-autoinstall, deprecated-cleanup, fh-ops, external-validation
+**File:** tracks/_meta/session_2026_05_28_fh-external-ops.md
+FH 외부 운용 첫 실행 — install-wizard 첫 실행(57/100)에서 마찰 포인트 2개 발견 및 즉시 수정. PR #7 (install-wizard plugin 자동 설치) + PR #8 (deprecated refs 정리) 완료.
+- Decision: install-wizard FH plugin MISS → AI가 Bash로 자동 실행 (수동 3-turn 제거) — "빌더가 직접 써봐야 보이는 마찰" 패턴
+- Decision: deprecated 참조는 CHANGELOG 업데이트 시 연결 파일도 동시 업데이트 필요 — 별도 cleanup PR 필요
+
 ### 2026-05-27 | _meta | two-layer-storage, memory-vs-tracks, cross-session-state
 **File:** tracks/_meta/fh_signal_2026_05_27_session-starter.md
-Two-layer storage principle formalized: `tracks/` = local work history (machine-bound), `memory/` = critical cross-session state (durable). Gap detected: reference_next_session_starter.md is tracks-local → survives single machine but lost on re-clone.
-- Decision: Critical state (arXiv codes, active DOIs, action items) must also be written to `~/.claude/projects/.../memory/`
+Two-layer storage principle formalized: `tracks/` = local work history (machine-bound), `memory/` = critical cross-session state (durable, survives re-clone). Gap: session starter files in tracks/ are lost on machine change.
+- Decision: Critical cross-session state must also be written to `~/.claude/projects/.../memory/` — tracks/ alone is insufficient for durability
 
 ### 2026-05-26 | _audit | sister-asset, harness-evolver, meta-harness, stanford, arxiv
 **File:** tracks/_audit/session_2026_05_26_harness_evolver.md
@@ -20,7 +26,7 @@ Sister asset cross-audit — harness-evolver (raphaelchristi) + Meta-Harness (Le
 
 ### 2026-05-26 | _audit | sister-asset, sylph-ai, arxiv, simplification-principle
 **File:** tracks/_audit/session_2026_05_26_sylph_sister.md
-Sister asset cross-audit — "The Last Harness You'll Ever Build" (Sylph.AI, arXiv:2604.21003). Title resonates with FH simplification principle but approach diverges: Sylph = fully automated adversarial agent loops, FH = human-in-the-loop curated knowledge evolution. Issue #137 filed for endorsement contact.
+Sister asset cross-audit — "The Last Harness You'll Ever Build" (Sylph.AI, arXiv:2604.21003). Title resonates with FH simplification principle but approach diverges: Sylph = fully automated adversarial agent loops, FH = human-in-the-loop curated knowledge evolution.
 - Decision: Sylph.AI = automation-maximalist counterpart; FH distinction is human judgment layer
 
 ### 2026-05-26 | _meta | external-network, wave3-validation, sase, install-wizard, frontier-digest
@@ -28,10 +34,10 @@ Sister asset cross-audit — "The Last Harness You'll Ever Build" (Sylph.AI, arX
 Wave 3 meta-validation: confirmed all previously KP-SASE-blocked capabilities work on personal network — install-wizard dry-run, plugin-recommender live GitHub search, frontier-digest fetch, git push. Baseline for external user environment parity.
 - Decision: All core FH capabilities verified functional outside corporate network
 
-### 2026-05-26 | forge-harness | v1.2, zenodo, arxiv, public-release, endorsement
+### 2026-05-26 | forge-harness | v1.2, public-release, harness-evolver-absorb
 **File:** tracks/_meta/reference_next_session_starter.md
-v1.2 release complete (PR #1–#5): harvest-loop Step 0, agent-composer worktree isolation, steel-quench numeric scoring, README positioning. Zenodo DOI issued (10.5281/zenodo.20397566), repo made public (chrono-code/forge-harness), arXiv submission draft ready (submit/7640408, cs.AI, expires 2026-06-09). Endorsement code EGAPMM — 3 contacts active.
-- Decision: Primary arXiv category = cs.AI (not cs.SE — all endorser candidates have cs.AI history, not cs.SE)
+v1.2 release complete (PR #1–#5): harvest-loop Step 0, agent-composer worktree isolation, steel-quench numeric scoring, README positioning. Repo made public.
+- Decision: harness-evolver 3대 혁신 흡수 — regression guard / worktree isolation / numeric scoring
 
 ---
 
