@@ -509,44 +509,32 @@ If latest weekly_audit file exists → propose adding `## Harness Structure Chec
 
 ---
 
-### Step 9. Eval-First Quantitative Gate *(only when assessing skill v1 promotion)*
+### Step 9. Eval-First Quantitative Gate *(skill v1 promotion only)*
 
-> **Execution condition**: When promoting a skill from v0.x to v1, or when explicit quantitative verification of "is this skill useful?" is requested.
-> Not automatically included in regular diagnosis runs (Steps 1~8) — only when explicitly requested or skill promotion issue detected.
+Run only when promoting a skill v0.x → v1, or when explicit quantitative verification is requested. Not part of regular Steps 1~8.
 
-#### Promotion Criteria Quantitative Thresholds
+**Promotion thresholds** (measured over 5 sim-conductor runs):
 
-| Metric | v1 Promotion Criteria | Measurement Method |
+| Metric | v1 criteria | Measurement |
 |---|---|---|
-| **Tool Selection Accuracy** | > 0.90 | 5 sim-conductor runs — ratio of correct skill selections |
-| **Multi-Step Coherence** | > 0.85 | Completion rate of multi-step skill full flow (reaching Done When without early termination or interruption) |
-| **Clarification Rate** | < 0.30 | Ratio of user intervention requests during execution (number of questions / total execution steps) |
-
-#### Measurement Procedure
+| Tool Selection Accuracy | > 0.90 | correct skill selections / total |
+| Multi-Step Coherence | > 0.85 | full Done-When completion rate |
+| Clarification Rate | < 0.30 | user intervention requests / steps |
 
 ```bash
-# 1. Collect sim-conductor execution records (last 5)
 latest_sims=$(find tracks/_meta/ -name "sim_*.md" 2>/dev/null | sort -r | head -5)
-[ -z "$latest_sims" ] && echo "EVAL_SKIP: no sim records — run sim-conductor 5 times then re-measure" && exit 0
-
-# 2. Aggregate skill call accuracy (correct skill selections / total)
-# (Manual review recommended — auto-parsing is for reference only)
-echo "Target sim files:"
-echo "$latest_sims"
-echo "From each sim file, manually check 'correct skill selections' / 'total scenarios' then calculate ratio."
+[ -z "$latest_sims" ] && echo "EVAL_SKIP: run sim-conductor 5 times first" && exit 0
+echo "Target sim files:"; echo "$latest_sims"
+# Manual review — aggregate correct-skill-selections / total per sim file
 ```
 
-#### Below Threshold Handling
-
-| State | Action |
+| Result | Action |
 |---|---|
-| All 3 metrics meet criteria | **v1 Promotion PASS** — record "v1 promotion possible" in harness-doctor prescription report |
-| 1+ metrics below threshold | **v1 Promotion on Hold** — maintain v0.x + mandatory sim-conductor re-run + add below-threshold metric to S-tier |
-| Less than 5 sim records | **Measurement not possible** — "Run sim-conductor 5 times then re-measure" R-tier recommendation |
+| All 3 metrics meet | v1 Promotion **PASS** — record in prescription report |
+| 1+ below threshold | **Hold** — keep v0.x, re-run sim-conductor, add metric to S-tier |
+| < 5 sim records | **Measure later** — R-tier recommendation |
 
-#### Basis
-
-Analysis of 100+ agent deployments in 2026 H1 confirmed "eval-first" approach as the dividing line between success and failure. Without a quantitative gate, v0 → v1 promotion carries high risk of unpredictable behavior in external user environments.
+> *Basis: 2026 H1 analysis of 100+ agent deployments — "eval-first" is the success/failure dividing line. Without quantitative gate, v0 → v1 carries unpredictable external behavior risk.*
 
 ---
 
@@ -613,23 +601,13 @@ On Claude API / MCP failure → refer to [`references/fallback-guide.md`](../../
 
 ## Three-Doctor Loop Integration
 
-### harness-doctor's role in the Three-Doctor Loop
+### Role in the Three-Doctor Loop
 
-```
-harness-doctor   → diagnose current structure  "Is the structure correct? Any drift, complexity, or broken references?"
-context-doctor   → diagnose current context    "Is Context Collapse happening?"
-sim-conductor    → predict future behavior     "What happens when a real person uses this system?"
-```
+harness-doctor = **current structure diagnostician** (CLAUDE.md consistency, skill conflicts, drift). context-doctor handles context collapse, sim-conductor predicts future behavior. Together they form a diagnose→prescribe→re-diagnose closed loop.
 
-harness-doctor is the **current structure diagnostician** among the three skills. It checks whether the structure is correct (CLAUDE.md reference consistency, skill conflicts, drift) and provides prescriptions, then context-doctor (context) and sim-conductor (future behavior) take over to complete the closed loop.
-
----
-
-harness-doctor (structure) · context-doctor (token/context) · sim-conductor (simulation/ideation) — three skills connect in a **diagnose→prescribe→re-diagnose** closed loop.
-
-| Situation | Next Skill |
+| Situation | Next skill |
 |---|---|
-| Structure problem found, also suspect token waste | `/context-doctor` |
-| Validate structure improvements from external user perspective | `/sim-conductor Area A` |
-| L5-B context deviation patterns found | `/sim-conductor Area A` — auto-handoff for external perspective misuse pattern verification |
-| All three skills mentioned | Three-Doctor Loop circuit activated — diagnose→prescribe→re-diagnose cycle |
+| Structure issue + suspected token waste | `/context-doctor` |
+| Validate structure changes from external perspective | `/sim-conductor Area A` |
+| L5-B context deviation patterns | `/sim-conductor Area A` (auto-handoff) |
+| All three mentioned | Full Three-Doctor Loop activated |

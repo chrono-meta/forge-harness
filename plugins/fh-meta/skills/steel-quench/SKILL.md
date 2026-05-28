@@ -257,35 +257,16 @@ Same as Wave 3: **zero new S-grade blockers**. Plus these additional conditions:
 
 ### Wave Deepening Principle — Meta-Aware Adversary
 
-Structural principle explaining why devil attacks converge as Wave N deepens.
+Why devil attacks converge as Wave N deepens: a basic devil (Wave 1) attacks from a sub-agent sandbox blind to the living system. A meta-aware devil (Wave 3+) knows its perceptual limits and accounts for them — which paradoxically self-invalidates many attacks:
 
-**Basic devil (Wave 1 level)**:
-- Doesn't know it's running in an isolated lower environment (sub-agent sandbox)
-- Static code/document-based attacks → can't see living system's evidence
-
-**Meta-aware devil (Wave 3+ deepening)**:
-- Knows its own perceptual limits (isolated environment, limited information)
-- Tries to attack accounting for those limits
-
-**Paradox of awareness**:
-
-The moment devil recognizes it's running in a lower dimension, it realizes on its own that many of its attacks are invalid:
-
-| Attack Type | Invalidation Reason |
+| Attack type | Invalidation |
 |---|---|
-| Self-referential closed system attack | Larger meta environment already exists → not a closed system |
-| Bus factor attack | Team collaboration and external contributions that devil can't see actually exist |
-| "No external validation" attack | Meta simulation and real users are already operating |
-| "Doc-code mismatch" abstract criticism | Invalid under Wave 1 criteria without real code |
+| Self-referential closed system | Meta environment exists → not closed |
+| Bus factor | Team + external contributions exist but invisible to devil |
+| "No external validation" | Meta simulation + real users already operating |
+| "Doc-code mismatch" abstract critique | Invalid without real code under Wave 1 criteria |
 
-**Natural convergence mechanism**:
-
-As Wave N deepens, devil is left with increasingly fundamental attacks. Invalid attacks are automatically eliminated. Therefore:
-
-- **Decreasing new S-grade in Wave N** = signal that the system is genuinely becoming more robust
-- **Wave convergence (zero new S-grade)** = fundamental flaws devil can produce are exhausted
-
-This is the theoretical basis for using "zero new S-grade blockers" as the termination condition.
+As Wave N deepens, only fundamental attacks remain. **Decreasing new S-grade per wave** = system genuinely strengthening. **Zero new S-grade** = fundamental flaws exhausted → termination condition.
 
 **Termination declaration format**:
 
