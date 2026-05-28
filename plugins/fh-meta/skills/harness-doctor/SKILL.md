@@ -550,6 +550,67 @@ Analysis of 100+ agent deployments in 2026 H1 confirmed "eval-first" approach as
 
 ---
 
+### Step 10. Regression Guard *(when SKILL.md / rules / CLAUDE.md modified)*
+
+> **Purpose**: Verify that harness-doctor prescription application (compression · refactoring · cleanup) didn't strip operational content. Closes the loop — diagnosis → prescription → **post-fix verification**.
+
+#### 10-1. When to run
+
+| Trigger | Behavior |
+|---|---|
+| After Step 7 prescription applied to SKILL.md / rules / CLAUDE.md | Auto-run inline |
+| Pre-merge gate (CI/PR check) | `bash templates/regression_guard.sh main` |
+| Compare against arbitrary refs | `bash templates/regression_guard.sh BASE_REF HEAD_REF` |
+| harvest-loop Step 4 (harness-doctor call) | Auto-include if file changes detected |
+
+If no SKILL.md / rules / CLAUDE.md / templates changes detected → skip (regression guard does not apply to README, docs, code-only changes).
+
+#### 10-2. Verification checks (per changed file)
+
+| # | Check | Tier |
+|:---:|---|:---:|
+| F1 | Frontmatter integrity — `name:` + `description:` present, YAML parses | **M-tier** |
+| F2 | Critical section preservation — `## Execution Steps` · `## Done When` · `## Triggers` · `## Activation Triggers` · `## Trigger Phrases` count not reduced | **M-tier** |
+| F3 | Code block count — ` ``` ` fence count not reduced by 4+ | **S-tier** |
+| F4 | Operational keyword preservation — `M-tier` · `S-tier` · `R-tier` · `PASS` · `BLOCK` · `Wave 0~4` · `Step 0~4` · `fan-in` · `Done When` token counts | **M-tier** if drop ≥50% · **S-tier** if 20~49% |
+| F5 | Cross-reference integrity — `{FH_ROOT}/...` paths resolve to existing files | **M-tier** |
+| F6 | Line reduction percentage | **S-tier** if ≥30% reduction |
+
+#### 10-3. Verdict
+
+| Result | Action | Exit code |
+|---|---|:---:|
+| 0 M-tier, 0 S-tier | ✅ **PASS** — safe to merge | 0 |
+| 0 M-tier, 1+ S-tier | ⚠️ **REVIEW** — verify intent before merge | 1 |
+| 1+ M-tier | ❌ **BLOCK** — revert or fix before merge | 2 |
+
+#### 10-4. Implementation reference
+
+`templates/regression_guard.sh` — standalone bash script. Self-contained, idempotent, exit-code based (CI-friendly). Compares working tree against any git ref or two refs against each other.
+
+```bash
+# Compare working tree vs main
+bash templates/regression_guard.sh
+
+# Compare specific PR branch vs main
+bash templates/regression_guard.sh main origin/feature-branch
+
+# Compare two arbitrary refs
+bash templates/regression_guard.sh v1.0 HEAD
+```
+
+#### 10-5. False positive handling
+
+The guard catches real regressions but also surfaces benign changes (e.g., a keyword renamed, a section heading reworded). For each S-tier:
+
+- Check diff context — is the change intentional and equivalent (e.g., `Done When` → `Done-When` is benign)?
+- If benign → document in PR description ("S-tier expected: X renamed to Y, semantics preserved")
+- If real loss → fix and re-run guard before merge
+
+> The guard is **advisory, not authoritative**. M-tier blocks merge by default but human can override after review (PR description must document the override reason).
+
+---
+
 ## Done When
 
 | Stage | Completion Verdict |
@@ -558,6 +619,7 @@ Analysis of 100+ agent deployments in 2026 H1 confirmed "eval-first" approach as
 | M-tier 0 items confirmed + "Structure healthy" output | ✅ Diagnosis complete (no prescription needed) |
 | Step 8 weekly_audit section addition proposed | ✅ Integration proposal complete (acceptance is user's decision) |
 | Step 9 Eval-First gate verdict output (when requested) | ✅ Promotion verdict complete |
+| Step 10 Regression Guard verdict (PASS/REVIEW/BLOCK) when SKILL.md changes | ✅ Post-fix verification complete |
 
 **This skill Done When = "prescription report output complete"**. Actual resolution of M/S/R items belongs to user or follow-up work and is not included in this skill's completion criteria.
 
