@@ -44,61 +44,37 @@ An **acceleration hub** for teams already using Claude Code. Connect N projects 
 
 ## Going deeper — why a "meta" harness?
 
-Teams that have systematically used AI collaboration tools are already doing **harness engineering**. QA protocols, TC design gates, verification pipelines — any structure designed to make AI behave more consistently is harness engineering.
-
-forge-harness is the **OS one layer above that harness**.
-
-```
-Single-layer view:
-  My project → [harness engineering] → better AI collaboration results
-
-Meta-layer view (forge-harness):
-  harness → [meta harness engineering] → better harness
-      ↑           (forge-harness)              ↓
-      └───────── feedback + evolution loop ─────┘
-```
+Teams that have systematically used AI collaboration tools are already doing **harness engineering** (QA protocols, TC design gates, verification pipelines — any structure that makes AI behave more consistently). forge-harness is the **OS one layer above** — a system that measures, improves, and evolves the harness itself across multiple projects.
 
 | Layer | What it does | Examples |
 |---|---|---|
-| Harness engineering | Installs rules, gates, and context management for a specific project | QA protocols, CLAUDE.md rulesets, TC verification pipelines |
-| **Meta harness engineering** | Builds a system to measure, improve, and evolve the harness itself | FH skill bus, harness-doctor HHS, steel-quench, field-harvest |
+| Harness engineering | Per-project rules, gates, context management | QA protocols, CLAUDE.md rulesets, TC verification pipelines |
+| **Meta harness engineering** | Cross-project system to measure, improve, evolve harnesses | FH skill bus, harness-doctor HHS, steel-quench, field-harvest |
 
-**What the designer of forge-harness does**: Not using a single project harness, but designing and operating a system where the harnesses of multiple projects all grow stronger together. Not writing code directly, but designing the frame of which structures solve which problems.
-
-> For a detailed definition of this concept → `knowledge/shared/harness-core/meta_harness_engineering_definition.md` (accessible after cloning forge-harness)
-
-> **External validation (2026)**: Three independent research findings converge on the same conclusion.
-> - VILA-Lab analysis of Claude Code v2.1.88 (512K lines): [98.4% is harness infrastructure, 1.6% is AI logic](https://arxiv.org/abs/2604.14228) — the deterministic engineering layer surrounding the model is the critical differentiator.
-> - "[Code as Agent Harness](https://arxiv.org/abs/2605.18747)" (arXiv, May 2026, 43 authors): code has evolved from being an LLM output to serving as the foundation for agent infrastructure — the same thesis FH operationalizes.
-> - Stanford IRIS Lab: "[Meta-Harness: End-to-End Optimization of Model Harnesses](https://arxiv.org/abs/2603.28052)" (Lee, Nair, Zhang, Khattab, Finn, Mar 2026) — outer-loop system that searches over harness code; +7.7pts classification at 4x fewer tokens. Formalizes harness engineering as a first-class optimization problem.
+> **External validation (2026)** — three independent research findings converge:
+> - VILA-Lab analysis of Claude Code v2.1.88 (512K lines): [98.4% is harness infrastructure, 1.6% AI logic](https://arxiv.org/abs/2604.14228)
+> - "[Code as Agent Harness](https://arxiv.org/abs/2605.18747)" (arXiv, May 2026, 43 authors) — code as foundation for agent infrastructure
+> - Stanford IRIS Lab: "[Meta-Harness](https://arxiv.org/abs/2603.28052)" (Lee et al., Mar 2026) — outer-loop harness optimization; +7.7pts at 4× fewer tokens
 >
-> forge-harness is applied meta-harness engineering at exactly the layer these studies identify.
+> FH is applied meta-harness engineering at exactly this layer. Detailed concept: `knowledge/shared/harness-core/meta_harness_engineering_definition.md`.
 
 #### FH vs. automated harness tools
 
-The Stanford Meta-Harness paper inspired [harness-evolver](https://github.com/raphaelchristi/harness-evolver) (MIT, 2026) — a fully automated 7-stage harness CODE optimizer requiring LangSmith + Python. forge-harness independently converged on the same loop architecture, but from the opposite direction:
+The Stanford paper inspired [harness-evolver](https://github.com/raphaelchristi/harness-evolver) (MIT, 2026) — a fully automated 7-stage CODE optimizer (LangSmith + Python). FH independently converged on the same loop architecture from the opposite direction:
 
-| Axis | harness-evolver (automated) | forge-harness (human-in-the-loop) |
+| Axis | harness-evolver | forge-harness |
 |---|---|---|
-| **Optimization target** | Harness code (prompts, routing, retrieval) | Harness knowledge (context, patterns, expertise) |
-| **Evolution mechanism** | Fully automated — winners auto-merge to git | Human-approved — every stage requires explicit confirmation |
-| **Infrastructure** | LangSmith + Python 3.10+ required | CLAUDE.md + skills only — zero additional infrastructure |
-| **Scope** | Single-harness optimization | Multi-project federation (N projects, shared skill bus) |
-| **Knowledge layer** | No persistent curation | `tracks/` + `knowledge/` cumulative files grow over time |
+| **Optimization target** | Harness code (prompts, routing) | Harness knowledge (context, patterns, expertise) |
+| **Evolution** | Auto-merge winners to git | Human-approved at every stage |
+| **Infrastructure** | LangSmith + Python 3.10+ | CLAUDE.md + skills only, zero extra |
+| **Scope** | Single-harness optimization | Multi-project federation, shared skill bus |
+| **Knowledge layer** | No persistent curation | `tracks/` + `knowledge/` grow over time |
 
-**When to use FH**: You want accumulated domain knowledge, multi-project coordination, and human judgment at architectural gates — and prefer zero additional infrastructure. **When harness-evolver fits better**: You want fully automated harness CODE search at benchmark scale and have LangSmith already set up.
-
-These are complementary, not competing. FH's human-in-the-loop approval gates + multi-project knowledge layer address exactly the gaps harness-evolver leaves open.
+**Use FH** for accumulated domain knowledge, multi-project coordination, human-judgment gates, and zero infrastructure. **Use harness-evolver** for fully automated CODE search at benchmark scale on existing LangSmith. They're complementary — FH's approval gates + knowledge layer fill exactly the gaps automated CODE search leaves open.
 
 ### Environment Engineering
 
-forge-harness doesn't change the agent — it changes the environment. The MEMORY.md keyword-trigger, mandatory Context Card injection, and PFD domain knowledge pre-loading are practices of Environment Engineering that remove the "orientation tax" agents pay before they can find their direction.
-
-| Mechanism | Cost it eliminates |
-|---|---|
-| MEMORY.md keyword-trigger load | Attention waste from loading all knowledge even when unnecessary |
-| Mandatory Context Card injection | Orientation cost of agents reconstructing session context from scratch |
-| PFD domain knowledge pre-loading | First-round waste of agents exploring the codebase and domain |
+FH doesn't change the agent — it changes the environment. Three mechanisms remove the "orientation tax" agents pay before they can find their direction: **MEMORY.md keyword-trigger** (skip loading unused knowledge), **mandatory Context Card injection** (no rebuilding session context from scratch), **PFD domain knowledge pre-loading** (no first-round codebase exploration).
 
 **"Not making the agent smarter, but making the environment easier for the agent to work in."**
 
@@ -383,50 +359,17 @@ Request two agents in a single message to run them in parallel:
 
 ### Plugin install (meta tool bundle — optional path)
 
-Viewed from an **asset dimension**, the hub has two entry paths:
-
-- **[Clone path] Persistent meta hub** = `git clone` path (see `## Get started in 2 minutes` above — `tracks/` + `knowledge/` persistent materials + CLAUDE.md mapping)
-- **[Plugin path] Meta tool bundle** = `claude plugin install` path (this §) — fully activates meta operation tools in the form of Claude Code skills and agents
-
-The two asset paths are **different in nature** (clone path = persistent hub / plugin path = meta tool bundle). Installing both creates synergy.
-
-> **User entry modes** = There are three separate **Mode A/B/C branches** (*"don't block those who come, don't block those who go"* principle) — standard (both clone + plugin) / resident (clone + separate directory work) / **plugin only** (plugin path only / without cloning meta-harness). This § focuses on the plugin path install procedure; for Mode C full onboarding, see `## Mode C user guide` below.
-
-#### Adding the marketplace
-
-> **All commands below are run in the Terminal app. Not in the Claude chat window.**
+The hub has two entry paths: **clone** = persistent hub (`tracks/` + `knowledge/` + CLAUDE.md mapping, see `Get started in 2 minutes`) and **plugin** = meta tool bundle activating skills + agents. Both installed = full synergy. Three user modes (Mode A standard / B resident / C plugin-only) follow *"don't block those who come or go"*; this § covers the plugin path. For Mode C onboarding see `Mode C user guide` below.
 
 ```bash
-# [Terminal] Register marketplace
-claude plugin marketplace add https://github.com/chrono-code/forge-harness.git
+# [Terminal — not in the Claude chat window]
+claude plugin marketplace add https://github.com/chrono-code/forge-harness.git    # .git suffix required
+claude plugin install -s user fh-meta@forge-harness                                # -s user = all projects (recommended)
 ```
 
-> **Note:** You must append `.git` to the URL. (Git repositories aren't auto-detected without the `.git` suffix)
+Verify with `/skills` or `/agents` in the Claude Code chat window. Updates aren't automatic — run `claude plugin update fh-meta@forge-harness` periodically.
 
-#### Installing the plugin
-
-```bash
-# [Terminal] Install plugin
-claude plugin install -s user fh-meta@forge-harness
-```
-
-> **Scope guide**: `-s user` (default) = available in all projects (recommended). `-s project` = current project only. Since fh-meta is a cross-project meta tool, user scope is recommended.
-
-After installing, type `/skills` or `/agents` in the **Claude Code chat window** — if the fh-meta skill list appears, the install was successful.
-
-> **Plugin updates**: New skills and changes are not automatically applied. Run the following periodically (in terminal):
-> ```bash
-> claude plugin update fh-meta@forge-harness
-> ```
-
-> **Mode C (plugin only) user note — legitimate path + honest limitations**
->
-> The `fh-meta` plugin is the **"active component" that automates the meta hub system**. **Mode C — installing only the plugin without cloning the meta-harness — is also a legitimate path** (*"don't block those who come, don't block those who go"* principle), but skills that depend on meta-harness assets will partially activate.
->
-> *   **Asset-dependent skills (partially activate in Mode C):** `verify-bidirectional` (depends on `knowledge/`) · `apex-review` (missing hub-accumulated baseline)
-> *   **Asset-independent skills (fully activate in Mode C):** `cross-ecosystem-synergy-detection` · `plugin-recommender` (fh-meta) · `deliberation` · `convergence-loop` (fh-commons) — though hub-accumulated knowledge cross-reference will be missing, leaving only your own project history available
->
-> **For full synergy** = Follow the `## Get started in 2 minutes` guide for Mode A standard (both A+B). **For Mode C full onboarding** = See `## Mode C user guide` below.
+> **Mode C (plugin-only)** is legitimate but partial: `verify-bidirectional`, `apex-review` activate without their `knowledge/` baseline; `cross-ecosystem-synergy-detection`, `plugin-recommender`, `deliberation`, `convergence-loop` work fully. For full synergy use Mode A; full Mode C onboarding below.
 
 #### Plugin catalog
 
@@ -437,79 +380,38 @@ After installing, type `/skills` or `/agents` in the **Claude Code chat window**
 
 > **Asset count SoT**: `plugins/fh-meta/.claude-plugin/plugin.json` is the canonical source. If the numbers above don't match, use plugin.json as the reference.
 
-#### External persona layer synergy install (optional, no MCP required)
+#### External persona layer synergy (optional)
 
-`sim-conductor` and `hub-persona-auditor` work standalone out of the box. If you have a **persona agent plugin** in your own marketplace (6-role sets like newcomer · power-user · pm · qa · devil-advocate · synthesizer are a common pattern), adding it after `fh-meta` immediately expands simulation depth:
+`sim-conductor` and `hub-persona-auditor` work standalone. Adding a persona agent plugin (validated 6-role pattern: newcomer · power-user · pm · qa · devil-advocate · synthesizer) expands `sim-conductor` Area A from single-perspective to multi-role simulation. Integration contract: `plugins/fh-meta/skills/sim-conductor/SKILL.md §Area A`.
 
 ```bash
-# Replace with your own marketplace URL and persona plugin name
 claude plugin marketplace add <your-marketplace-url>
 claude plugin install -s user <your-persona-plugin>@<your-marketplace>
 ```
 
-When installed, `sim-conductor` Area A automatically integrates the persona agents for multi-role external user simulation. Without a persona plugin, sim-conductor still runs — Area A defaults to a single-perspective simulation.
+#### Mode C user guide (plugin only — no clone)
 
-> **Building your own persona plugin**: The 6-role pattern (newcomer · power-user · pm · qa · devil-advocate · synthesizer) is a validated composition. See `plugins/fh-meta/skills/sim-conductor/SKILL.md §Area A` for the integration contract.
-
-#### Mode C user guide (plugin only, without cloning meta-harness)
-
-*"Don't block those who come, don't block those who go"* — meta-harness supports free user entry and exit, and must support any mode. This § is the full onboarding channel for Mode C users.
-
-**Users Mode C suits**
-
-- Users who don't need the meta-harness native assets (`tracks/` · `knowledge/`) and just want to **use plugins and skills**
-- Users who accumulate their own project history on their side and use the meta-harness directory only as a **reference asset**
-- Users adopting skills that work without hub mapping (`cross-ecosystem-synergy-detection` · `plugin-recommender` (fh-meta) · `deliberation` · `convergence-loop` (fh-commons)) into their own projects
-
-**Install procedure (Mode C only)**
+Use Mode C if you only want plugin skills and prefer to keep your own project history on your side (FH stays as a reference asset).
 
 ```bash
-# 1. Add marketplace (no meta-harness clone)
 claude plugin marketplace add https://github.com/chrono-code/forge-harness.git
-
-# 2. Install plugin
 claude plugin install fh-meta@forge-harness
-
-# 3. Invoke Claude Code from your project cwd (no meta-harness cwd entry)
-cd ~/projects/{your-project}
-claude
+cd ~/projects/{your-project} && claude   # no FH cwd entry
 ```
 
-**Limitations (honest disclosure)**
+**Limitations** (Mode A vs Mode C):
 
-| Area | Mode A (standard) | Mode C (plugin only) |
+| Skill / area | Mode A | Mode C |
 |---|:---:|:---:|
-| `verify-bidirectional` | ✅ Full activation | ⚠️ Partial activation (no `knowledge/`) |
-| `cross-ecosystem-synergy-detection` | ✅ Hub-accumulated cross-ref | ⚠️ Your project only |
-| `plugin-recommender` | ✅ Hub baseline grep | ⚠️ Your project baseline only |
-| `apex-review` | ✅ Hub-accumulated baseline applied | ⚠️ Your project baseline only |
-| `deliberation` *(fh-commons)* | ✅ Hub-accumulated argument cross-ref | ⚠️ Your project context only |
-| Meta/hub seed accumulation | ✅ `knowledge/shared/` | ❌ Accumulated in your project only |
+| `verify-bidirectional` · `apex-review` | ✅ hub baseline | ⚠️ no `knowledge/` |
+| `cross-ecosystem-synergy-detection` · `plugin-recommender` · `deliberation` | ✅ hub cross-ref | ⚠️ your project only |
+| Meta/hub seed accumulation | ✅ `knowledge/shared/` | ❌ your project only |
 
-**History accumulation location**: Accumulated in your project only — user work does not accumulate in the meta-harness directory itself. Meta-harness maintains its identity as a **reference asset**.
+**Hub contribution channels** (no automatic signals in Mode C): GitHub Issue · External PR (fork + review) · community channels · Feature Request.
 
-**Indirect contribution channels (4 types)**
-
-Mode C doesn't automatically transmit signals to the hub. Hub absorption **depends on user initiative**:
-
-1. **GitHub Issue** — file an issue in the `forge-harness` repo
-2. **External PR** — fork and submit a PR (CODEOWNERS alignment + hub review)
-3. **Community channels** — discussion forums or communication channels relevant to your org
-4. **Feature Request** — explicit request (user → maintainer → hub)
-
-**Mode switching path (Mode C → A)**
-
-```bash
-git clone https://github.com/chrono-code/forge-harness.git
-cd forge-harness
-claude   # Active onboarding auto-triggers → Mode A standard entry
-```
-
-Existing plugin install stays as-is (duplicate install check triggers automatically in active onboarding Step 1-b).
+**Upgrade to Mode A**: `git clone https://github.com/chrono-code/forge-harness.git && cd forge-harness && claude` — existing plugin install is preserved (duplicate-check in active onboarding Step 1-b). Full mode reference: `CLAUDE.md > Meta-harness usage modes`.
 
 ---
-
-> **3-mode comparison summary** = `CLAUDE.md > Meta-harness usage modes (3 branches)` reference
 
 #### Mode D — Agent file copy only (without plugin install)
 
@@ -566,137 +468,39 @@ This harness aims for a **federated ecosystem** where multiple marketplaces coex
 
 ### Manual path (when auto-mapping doesn't fit)
 
-Only use when the recommended path doesn't work in your environment (e.g., projects scattered across multiple roots, monorepos, special structures).
-
-**Step 1. Clone**
+Use when the recommended path doesn't work (projects across multiple roots, monorepos, special structures):
 
 ```bash
 git clone https://github.com/chrono-code/forge-harness.git ~/forge-harness
+mkdir -p ~/forge-harness/tracks/my-project/learnings              # track name = project name
+cp ~/forge-harness/templates/CLAUDE.md ~/my-project/CLAUDE.md     # then replace {project_name} with the track name
+cp -r ~/forge-harness/templates/.claude/ ~/my-project/.claude/    # (optional) session rules — customize [CUSTOMIZE] markers
 ```
-
-**Step 2. Create track directories**
-
-```bash
-# Track name = project name
-mkdir -p ~/forge-harness/tracks/my-project/learnings
-```
-
-**Step 3. Copy CLAUDE.md to your project**
-
-```bash
-cp ~/forge-harness/templates/CLAUDE.md ~/my-project/CLAUDE.md
-```
-
-In the copied CLAUDE.md, replace `{project_name}` with **the track name you created in Step 2**.
-
-**(Optional) Copy session rules**
-
-```bash
-cp -r ~/forge-harness/templates/.claude/ ~/my-project/.claude/
-```
-
-Customize sections marked with `[CUSTOMIZE]` comments to fit your project.
 
 ---
 
 ### Token cost optimization
 
-Two paths to reduce cost and token usage when working with Claude Code. Immediately applicable in a meta-harness install environment.
+**FH native overhead** — measured: new install standalone = ~29K tokens (14.5% of 200K, safe). Existing team harness + FH = +48% relative; offset by the four optimizations below. Top 2 heaviest files are `.claude/rules/*.md` (~20K) and `CLAUDE.md` (~8.7K). `context-doctor` diagnoses and recommends keyword-trigger deferral for infrequently-used rules (saves 5–8K).
 
-#### FH native token overhead — measured
+**Progressive Disclosure**: FH uses keyword-trigger deferred loading so only context-relevant skills enter attention. The `🔑` keyword pattern in `MEMORY.md` implements this; `.claude/rules` files can be configured the same way.
 
-| Case | Overhead | Conclusion |
-|---|:---:|---|
-| **New install (FH standalone)** | ~29K tokens · 14.5% of 200K | ✅ Safe |
-| **Existing team harness + adding FH** | Relative +48% increase | ⚠️ Resolved by applying optimizations below |
+**1. `.claudeignore` standard** — `.gitignore`-syntax patterns Claude Code skips. Copy `templates/.claudeignore` to your project root. Defaults: `node_modules/` · `dist/` · `.next/` · `*.lock` · `*.min.js` · `.env` · `.idea/` · `secrets/`.
 
-**Top 2 heavy files**: `.claude/rules/*.md` (~20K tokens) · `CLAUDE.md` (~8.7K tokens)
+**2. Model switching** — `/model sonnet` (coding) · `/model opus` (reasoning) · `/model opusplan` (auto hybrid: Opus reasoning + Sonnet code). Combined with .claudeignore: multiplicative cost reduction.
 
-**Optimization**: Switching infrequently-used `.claude/rules` files to a keyword-trigger approach can save 5~8K tokens. The `context-doctor` skill can automatically diagnose this.
+**3. Agent view parallel execution** — Single-session sequential accumulates full context per task; Agent View dispatches each task to a separate focused context, cutting overall cost. `context-bridge-dispatch` skill auto-injects a session context card (say "run in parallel"). 2+ independent tasks → parallel by default; 5–6× acceleration.
 
-**Progressive Disclosure — deferred skill loading**
-
-As skills grow, loading all skills at once causes attention fragmentation. FH uses keyword-trigger-based deferred loading to control "which skills are shown when."
-
-| Approach | Behavior |
-|---|---|
-| Full upfront load | Full skill list always occupies context → attention scattered |
-| Keyword-trigger deferred load | Only skills matching conversation context are loaded → focused context |
-
-The `🔑` keyword pattern in `MEMORY.md` is the implementation of this mechanism. `.claude/rules` files can be configured the same way — load only when needed.
-
-**1. `.claudeignore` standard — context blocking**
-
-Specifies patterns that Claude Code should not read as context, using the same syntax as `.gitignore`. **Token cost savings** occur depending on project scale and structure.
+**4. Automated periodic audits** — terminal-start zshrc hook warns when audit thresholds are exceeded:
 
 ```bash
-# Copy the meta-harness standard template to your project root
-cp ~/forge-harness/templates/.claudeignore <project>/.claudeignore
-```
-
-Default blocked targets: `node_modules/` · `dist/` · `.next/` · `*.lock` · `*.min.js` · `.env` · `.idea/` · `secrets/` · etc. Per-project customization recommended.
-
-**2. Model switching — Sonnet for coding / Opus for reasoning**
-
-Use Claude Code's built-in `/model` slash command to switch models mid-session. **opusplan hybrid** recommended — Opus for planning/reasoning, Sonnet for code generation, automatically.
-
-```
-# Manual switch
-/model sonnet      # coding
-/model opus        # reasoning/analysis
-
-# Auto hybrid
-/model opusplan    # planning/reasoning = Opus / code = Sonnet
-```
-
-> **Synergy ★★★**: Combining both paths produces **dual cost optimization** (reading fewer files + using the right model = multiplicative cost reduction).
-
-**3. Agent view parallel execution — eliminating redundant rework cost**
-
-In a normal single session, processing multiple tasks sequentially accumulates full context for each task. Agent view parallel dispatch is different:
-
-| Approach | Token structure |
-|---|---|
-| Single session sequential | Task N × full accumulated context → cost spikes |
-| Agent view parallel dispatch | Each agent works in a separate context with focus → overall cost reduced |
-
-**Context Bridge supplement**: A session context card is automatically injected to prevent parallel agents from redundantly re-executing already completed work. See `context-bridge-dispatch` skill — automatically applied when you say "run in parallel."
-
-> 2+ independent tasks → parallel dispatch via agent view is the default. 5-6x acceleration without wasted rework tokens.
-
-**4. Automated periodic audits (zshrc hook)**
-
-Checks the elapsed days since each audit item each time you open a terminal, and outputs a yellow warning when the threshold is exceeded.
-
-```bash
-# 1. Set path in .zshrc
-export FH_DIR="$HOME/path/to/forge-harness"        # Required
-export CC_HUB_DIR="$HOME/path/to/your-cc-hub"      # If you have a CC hub
-export CC_SENTINELS_DIR="$HOME/.cc_sentinels"       # Project sentinel (optional)
-
-# 2. Source the template
+export FH_DIR="$HOME/path/to/forge-harness"
+export CC_HUB_DIR="$HOME/path/to/your-cc-hub"      # optional
+export CC_SENTINELS_DIR="$HOME/.cc_sentinels"      # optional
 source "$FH_DIR/templates/cc_audit_check.zsh"
 ```
 
-Auto-checked items:
-
-| Item | Threshold | Condition |
-|---|---|---|
-| weekly_harvest | 7 days | `CC_HUB_DIR` set + recent `tracks/_meta/harvest_*.md` present |
-| frontier_diagnosis | 90 days | `CC_HUB_DIR` set + `knowledge/shared/harness-core/` exists |
-| FH internal sim (sim Area B) | 30 days | `FH_DIR` set + `tracks/_meta/` exists |
-| Custom sentinel | Default 90 days | File in `CC_SENTINELS_DIR` + `CC_SENTINEL_{NAME}_DAYS` |
-
-Custom sentinel — example of tracking quarterly project audits:
-
-```bash
-mkdir -p ~/.cc_sentinels
-touch ~/.cc_sentinels/my_project_pfd          # Record audit completion
-export CC_SENTINEL_MY_PROJECT_PFD_DAYS=90     # 90-day threshold
-# After completing audit: touch ~/.cc_sentinels/my_project_pfd
-```
-
-> Full template: `templates/cc_audit_check.zsh` — works on macOS and Linux. Can also be pasted directly into `.zshrc`.
+Checked items: `weekly_harvest` (7d, `CC_HUB_DIR` + `tracks/_meta/harvest_*.md`) · `frontier_diagnosis` (90d, `knowledge/shared/harness-core/`) · `sim Area B` (30d, `FH_DIR` + `tracks/_meta/`) · custom sentinels (`CC_SENTINEL_{NAME}_DAYS`, e.g. `touch ~/.cc_sentinels/my_project_pfd` + `export CC_SENTINEL_MY_PROJECT_PFD_DAYS=90`). Full template: `templates/cc_audit_check.zsh` (macOS / Linux).
 
 ---
 
@@ -743,43 +547,17 @@ An advanced pattern using the meta-harness cwd as an **agent dispatch command to
 
 **Parallel agent validated**: 1 meta-harness cwd instance → 6 background agents dispatched in parallel (3 field tasks + 3 simulation personas) → completed in ~3 minutes.
 
-#### How to use Agents (parallel execution mode) — the environment where FH shines
+#### How to use Agents (parallel execution mode)
 
-**FH is the ideal environment for `claude agents` (parallel mode running multiple AI agents simultaneously).**
-This is because the command tower structure (cc hub) + agent-composer (composition) + sim-conductor (persona dispatch) + deep-insight (3 agents) are already in place.
+FH is purpose-built for `claude agents` (parallel mode) — the command tower (cc hub) + agent-composer (composition) + sim-conductor (persona dispatch) + optional deep-insight are already wired together.
 
-**How to enter** (terminal, v2.1.139+):
 ```bash
-cd ~/forge-harness   # or your cc hub cwd
-claude agents                         # Enter Agent View dashboard
+cd ~/forge-harness && claude agents      # v2.1.139+ — Agent View dashboard
 ```
 
-Running agents are displayed in the bottom panel of Agent View. Click each one to view individual logs.
+Running agents appear in the bottom panel; click for individual logs. Trigger via natural language: *"Run this in parallel"* · *"Let's go into agents mode"* · *"Run a meta-simulation"*. With 2+ independent tasks, Claude Code auto-distributes via the Agent tool. For complex compositions, run `/agent-composer` first to plan Waves. Each agent has separate context → lower total cost than sequential; `context-bridge-dispatch` injects session cards to prevent rework.
 
-**Trigger via natural language in conversation**:
-```
-"Run this in parallel"
-"Let's go into agents mode"
-"These two tasks are independent so run them at the same time"
-"Let's run a meta-simulation (multi-agent simulation)"
-```
-
-When there are 2 or more independent tasks, Claude Code automatically distributes them using the Agent tool.
-If the composition is complex, run the **`agent-composer` skill** first to plan the Wave before dispatching.
-
-> **Token efficiency**: Since each agent works in a separate context, overall token cost is lower than single-session sequential processing. The `context-bridge-dispatch` skill compensates for context gaps between agents, preventing redundant rework.
-
-**Why FH maximizes this**:
-- Ideation (Layer 2) → dispatch instructions via natural language
-- Claude combines agent-composer · sim-conductor · deep-insight for parallel composition
-- User focuses only on verifying results in Agent View (Layer 5 verification)
-- Result absorption (Layer 6) → automatically returned via field-harvest · apex-review
-
-**Related**:
-- `plugins/fh-meta/skills/agent-composer/SKILL.md` — agent composition layer (Wave design + fan-in)
-- [Claude Code Agents official documentation](https://docs.anthropic.com/en/docs/claude-code/sub-agents)
-
-> "Don't block those who come, don't block those who go" — natural convergence, not forced passage. Deep focus on a single project stays at each field cwd as-is.
+Related: `plugins/fh-meta/skills/agent-composer/SKILL.md` · [Claude Code Agents docs](https://docs.anthropic.com/en/docs/claude-code/sub-agents).
 
 ### Agent View optimized operations guide
 
@@ -836,96 +614,34 @@ Affected hook examples:
 
 Response: If hook-dependent behavior is needed for Agent View-specific tasks, **replace with explicit skills** or verify in standard terminal after completion.
 
-### Dual verification principle (external + internal verification in parallel)
+### Dual verification (external + internal in parallel)
 
-> **Dual verification**: The principle of running an external verification path (real user reactions) and an internal verification path (multi-skill automated chain) simultaneously to eliminate self-reference risk.
+Running a single verification path = self-reference risk. FH runs both in parallel: **external** (real-user install → reactions → timestamp) as the external mirror, and **internal** (`deep-insight` → `cross-ecosystem-synergy-detection` → `verify-bidirectional` → learnings push) as the multi-skill chain. Parallel eliminates the single point of failure.
 
-Running only a single path is a self-reference risk. Run both paths in parallel for independent verification:
-
-| Verification path | Path | Purpose |
-|---|---|---|
-| **External verification** | External install → collect reactions → record timestamp | External mirror — real external user validation |
-| **Internal verification** | `deep-insight` → `cross-ecosystem-synergy-detection` → `verify-bidirectional` → learnings push | Internal multi-skill verification chain |
-
-External only = waiting for external reactions manually + no internal quality supplement
-Internal only = owner environment internal loop = self-reference risk
-**Parallel** = external mirror + internal multi-verification running simultaneously → eliminates single point of failure
-
-> **External validation status** (last updated: 2026-05-15):
-> - **cascade α** (internal users including owner running autonomously): achieved
-> - **cascade β** (user other than owner running autonomously): validated by an external user on 5/12 — first autonomous run by a non-owner achieved
-> - **External review of agent deliverables**: PR #280 merged by external reviewer (5/15) → v1.0 release gate condition fulfilled.
+> **External validation status** (2026-05-15): cascade α (owner autonomous) ✅ · cascade β (non-owner autonomous run 5/12) ✅ · external review of agent deliverables — PR #280 merged 5/15 by external reviewer (v1.0 release gate fulfilled).
 
 ### Steel-quench convergence — multi-layer defense structure
 
-steel-quench sessions on this harness consistently show a pattern: Wave 1 surfaces S-grade blockers, Wave 2 defends or patches them, and Wave 3 terminates without new S-grade findings. This section documents the structural design that produces that convergence, along with supporting evidence.
+steel-quench sessions on this harness consistently converge: Wave 1 surfaces S-grade blockers, Wave 2 patches them, Wave 3 terminates without new findings. Each wave patches real flaws; subsequent waves find fewer because fewer remain. Run `/steel-quench` to observe this on your own installation.
 
-#### Observed evidence
+**4-Layer Defense**:
 
-| Milestone | Date | Verification type |
-|---|---|---|
-| cascade α: owner autonomous run | prior to 5/12 | Internal session logs |
-| cascade β: non-owner autonomous run | 5/12 | External user — first non-owner autonomous execution |
-| Agent deliverable external review | 5/15 | PR #280 merged by external reviewer |
-| Wave 4 (meta-devil) convergence | 5/19 | steel-quench 4-Wave session log |
+| Layer | Mechanism |
+|:---:|---|
+| **L1** Internal self-diagnosis | harness-doctor + context-doctor + sim-conductor Area B — isolated third-person evaluation roles address self-evaluation bias (Anthropic multi-agent research, 2025) |
+| **L2** External verification | Real user feedback + external PR review — evidence generated outside owner environment |
+| **L3** Quenching circuit | steel-quench pre-runs attack angles internally; flaws patched before external devil sessions |
+| **L4** Meta-aware adversary | Remaining attack surface shrinks per wave; convergence is structural, not coincidental |
 
-#### 4-Layer Defense structure
+**Why it converges**: (1) Devil sees only static artifacts; living evidence (PRs, user sessions) sits outside its sandbox — defender can reach it, devil cannot. (2) The devil is itself an agent in the system it's evaluating, structurally limiting closed-loop attacks. (3) sim-conductor Area B pre-patches flaws via internal simulation, reducing discoverable S-grade surface before external devils run.
 
-| Layer | Name | Role |
-|:---:|---|---|
-| **L1** | Internal self-diagnosis | harness-doctor + context-doctor + sim-conductor Area B — periodic internal weakness detection. Structural analogue of N-Version Programming (multi-version cross-validation) applied to AI orchestration. |
-
-> **Self-Evaluation Bias**: When the same model evaluates its own output, confirmation bias occurs. Three-Doctor Loop addresses this with isolated third-person evaluation roles. (Pattern documented in Anthropic multi-agent research, 2025)
-| **L2** | External verification loop | Real user feedback + external PR review — evidence generated outside the owner environment |
-| **L3** | Quenching circuit | steel-quench pre-runs the same attack angles internally. Flaws surfaced here are patched before external devil sessions begin. |
-| **L4** | Meta-aware adversary principle | As Wave N deepens, remaining attackable S-grade surface shrinks because prior waves have already consumed it — convergence is structural, not coincidental |
-
-#### Why wave convergence happens
-
-**1. Brain in a Vat asymmetry**
-
-The devil operates from an isolated sub-agent sandbox, seeing only static code and documents. Living evidence from the operating system — external contributions, real user sessions, approval records — exists outside that boundary. The defender can reach this evidence; the devil cannot. Asymmetric information access, not inherent system strength, explains the divergence in Wave 2 defense quality.
-
-**2. Sandboxed Adversary structure**
-
-The devil runs as an agent dispatched by the same meta-harness it is attacking. Its "self-referential closed system" attack must contend with the fact that it is itself one component in the orchestration it is evaluating. This does not invalidate the attack, but it structurally limits the depth of the closed-loop claim.
-
-**3. Pre-patching via simulation**
-
-sim-conductor Area B runs periodic internal simulations ahead of any external devil session. Flaws discovered by simulation are patched immediately. When the devil arrives, the surface area of discoverable S-grade findings is already reduced — not by defense arguments, but by prior implementation fixes.
-
-#### Evidence against common attack vectors
-
-| Attack angle | Devil's claim | Counter-evidence |
-|---|---|---|
-| Self-referential closed system | "Only internal loops" | sim-conductor isolated environment + external user verification (5/12, 5/15) |
-| Single bus factor | "Stops without the owner" | PR #280 merged by external reviewer (5/15) without owner involvement |
-| No real users | "No actual users" | Non-owner autonomous run confirmed 5/12 |
-| Anthropic ecosystem obsolescence | "Will be absorbed by the official ecosystem" | Domain-specific curation layer operates at a different abstraction than general tools |
-| AI-specific attacks (meta-devil W4) | "API failure · Context Collapse · Prompt Injection · self-verification closure — 4 compounded risks" | steel-quench 4-Wave session (5/19): SessionStart hook + prompt injection sanitizer implemented. Open: heterogeneous model external gate |
-| Harness engineering is unnecessary | "AI can operate without a harness layer" | VILA-Lab (Apr 2026): 98.4% of Claude Code v2.1.88 is harness infrastructure — independent teams building the same system converged on structurally identical harnesses ([2604.14228](https://arxiv.org/abs/2604.14228)) |
-
-**Convergence pattern**: Decreasing S-grade blockers per wave is not attack failure — each wave patches real flaws; subsequent waves find fewer because fewer remain. Run `/steel-quench` to observe this pattern on your own installation.
+**Validated against common attacks**: self-referential closure (sim-conductor isolation + external verification), single bus factor (PR #280 merged 5/15 by external reviewer without owner), no real users (non-owner autonomous run 5/12), Anthropic obsolescence (domain curation operates at different abstraction), AI-specific compound risks (steel-quench W4 5/19: SessionStart hook + prompt injection sanitizer), harness unnecessary (VILA-Lab: [98.4% of Claude Code is harness infrastructure](https://arxiv.org/abs/2604.14228)).
 
 ---
 
-### Why isolation — the structural limitation of self-inspection
+### Why isolation — structural limitation of self-inspection
 
-The biggest pitfall in AI tool quality verification is **the creator doing the testing**. The creator already knows the internal structure and cannot reproduce the confusion points that new users encounter.
-
-`sim-conductor` solves this structural limitation.
-
-```
-Development environment (~/forge-harness/)
-         ↕ Physical isolation
-Isolated environment (~/sim/observer/)   ← New user reproduction space
-```
-
-- **Physical isolation**: Starts from zero development context. Internal knowledge the creator has is blocked.
-- **3 personas**: newcomer (new user) · power-user (advanced user) · devil-advocate (critical reviewer) — each reproduces different confusion points.
-- **Self-reference awareness**: devil-advocate also captures that the simulation itself is an internal consistency check. This meta-awareness clarifies the necessity of an external mirror (actual external user validation).
-
-Evidence: PR #18 cleaned up descriptions, but the same vocabulary recontaminated plugin.json. Self-inspection was cleaning, not vaccination. Simulation automatically surfaced 6 ship-blockers + 14 improvements (first run 2026-05-09).
+Creators can't reproduce the confusion points new users encounter — they already know the internal structure. `sim-conductor` solves this with physical isolation (`~/sim/observer/` blocks dev context) and 3 personas (newcomer · power-user · devil-advocate) that surface different confusion patterns. Evidence: PR #18 cleaned descriptions but the same vocabulary recontaminated `plugin.json` — self-inspection was cleaning, not vaccination. Simulation surfaced 6 ship-blockers + 14 improvements on first run (2026-05-09).
 
 ---
 
@@ -988,14 +704,13 @@ forge-harness/
 
 | Term | One-line definition |
 |---|---|
-| **Meta-harness** | A persistent hub that connects the work, learnings, and patterns of N projects in a Claude Code environment for mutual reinforcement |
-| **Meta hub** | The role of connecting and coordinating all field projects from the meta-harness cwd — the hub centers on common standards and return, while each project is an execution site |
-| **Launch pad effect** | Using meta-harness as a launch pad rather than a final destination — even a brief stopover produces setup, pattern-sharing, and speed-improvement effects. The user-perspective expression of **Transit Acceleration Value** |
-| **Transit Acceleration Value** | The core value of meta-harness — passing through itself accelerates the starting line. Acceleration effect occurs the moment of passing, with no obligation to absorb or settle (Transit Acceleration Value). **Launch pad effect** is the field-observation result of this principle |
-| **Shared skill pool** | Eliminating the cost of each team and harness individually reinventing the same skills and agents — meta-harness provides a common pool and each project uses it |
-| **persona-innovator** | Naming gap detection + ideation algorithm + technology bridge exploration agent — discovers unnamed patterns in existing assets, scans external frontier signals, and proposes technical constraint workaround paths (Mode I/E/F/T) |
-| **sim-conductor** | **[Three-Doctor Loop — future behavior prediction role]** Meta-simulation automation orchestrator — answers the question "What happens when real people use this system?" Unlike harness-doctor (current skeleton diagnosis) and context-doctor (current context diagnosis), **predicts future behavior that hasn't happened yet** via personas. Pre-runs the experience of specific users (new team members, external installers, critical reviewers) encountering the system for the first time, in a physically isolated environment (`~/sim/`). Autonomously completes Area A (external user) · B (internal audit) · C (innovator scan) · D (deliverable verification) · E (output quality review), processes M-tier PRs automatically. **Validated**: external user autonomous run 5/12 → cascade β achieved (first autonomous run by non-owner) |
-| **context-doctor** | Token efficiency diagnosis skill — auto-generates `.claudeignore`, detects large file bursts, guides `/clear` timing |
-| **hub-persona-auditor** | Pre-publication audit agent for externally published assets — simulates 3+ virtual reader personas · 4-axis review (empathy/doubt/resistance/supplement) · 3-tier revision proposals. Internal notes, code, and PR reviews are not targets |
-| **fact-checker** | Duplicate and stale fact checking agent — verifies existing assets via grep before recommending new assets + detects memory, document date, and counter errors |
-| **External user** | Anyone outside the hub — a non-owner user from another team in your organization or an entirely external user. Skill operation scope differs depending on available infrastructure |
+| **Meta-harness** | A persistent hub connecting work, learnings, and patterns of N Claude Code projects for mutual reinforcement |
+| **Meta hub** | Coordinator role of the meta-harness cwd — common standards + return center; each project is an execution site |
+| **Launch pad effect / Transit Acceleration Value** | Meta-harness as launch pad, not destination — passing through accelerates the starting line; no obligation to absorb or settle |
+| **Shared skill pool** | Common skill/agent pool eliminating reinvention cost across teams and projects |
+| **sim-conductor** | Three-Doctor Loop — future behavior predictor. Persona-driven meta-simulation (Areas A/B/C/D/E) in isolated `~/sim/` env. Cascade β validated 5/12 (first non-owner autonomous run) |
+| **context-doctor** | Token efficiency — auto-generates `.claudeignore`, detects large-file bursts, guides `/clear` timing |
+| **persona-innovator** | Naming gap detection + ideation + tech-bridge exploration (Mode I/E/F/T) |
+| **hub-persona-auditor** | Pre-publication 4-axis (empathy/doubt/resistance/supplement) audit for externally-published assets across 3+ personas |
+| **fact-checker** | Pre-recommendation duplicate/stale check via grep — also catches memory/document date/counter errors |
+| **External user** | Anyone outside the hub (other-team or external); skill scope varies by available infrastructure |
