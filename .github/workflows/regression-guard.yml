@@ -1,0 +1,42 @@
+name: Regression Guard (Axis 1)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'plugins/*/skills/*/SKILL.md'
+      - '.claude/rules/*.md'
+      - 'CLAUDE.md'
+      - 'templates/*.md'
+      - 'templates/regression_guard.sh'
+
+jobs:
+  regression-guard:
+    name: Axis 1 — Backward Regression Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history required for git merge-base
+
+      - name: Run regression_guard (--pr mode)
+        id: guard
+        run: |
+          set +e
+          bash templates/regression_guard.sh --pr "${{ github.head_ref }}"
+          EXIT=$?
+          echo "exit_code=$EXIT" >> "$GITHUB_OUTPUT"
+          set -e
+          exit 0  # capture exit code; handle below
+
+      - name: Evaluate result
+        run: |
+          EXIT="${{ steps.guard.outputs.exit_code }}"
+          if [ "$EXIT" = "2" ]; then
+            echo "::error::Regression Guard BLOCK — M-tier issues found. Fix before merge."
+            exit 2
+          elif [ "$EXIT" = "1" ]; then
+            echo "::warning::Regression Guard S-tier warnings present. Review intent before merge."
+          else
+            echo "Regression Guard PASS"
+          fi

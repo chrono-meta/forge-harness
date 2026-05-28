@@ -5,17 +5,41 @@
 #   bash templates/regression_guard.sh [BASE_REF]
 #   bash templates/regression_guard.sh main                    # compare working tree vs main
 #   bash templates/regression_guard.sh origin/main HEAD        # compare HEAD vs origin/main
+#   bash templates/regression_guard.sh --pr BRANCH             # PR mode: auto merge-base (recommended)
 #
 # Exit codes: 0=PASS / 1=S-tier warnings / 2=M-tier block / 3=usage error
+#
+# PR mode rationale: using 'main' as BASE_REF for a PR branch includes changes from OTHER
+# merged PRs as false positives. --pr computes the fork-point (merge-base) automatically,
+# so only THIS branch's own changes are evaluated.
 #
 # Called by:
 #   - harness-doctor Step 10 (Regression Guard)
 #   - harvest-loop Step 4 (harness-doctor invocation)
+#   - CLAUDE.md §3-axis auto-gate (Axis 1) — use --pr mode for PRs
 #   - manual pre-merge gate
 
 set -u
-BASE_REF="${1:-main}"
-HEAD_REF="${2:-}"   # empty = working tree
+
+# --pr mode: compute merge-base automatically
+if [ "${1:-}" = "--pr" ]; then
+  if [ -z "${2:-}" ]; then
+    echo "Usage: regression_guard.sh --pr BRANCH" >&2
+    exit 3
+  fi
+  PR_BRANCH="$2"
+  BASE_BRANCH="${3:-main}"
+  BASE_REF=$(git merge-base "$BASE_BRANCH" "$PR_BRANCH" 2>/dev/null)
+  if [ -z "$BASE_REF" ]; then
+    echo "ERROR: cannot compute merge-base for $PR_BRANCH vs $BASE_BRANCH" >&2
+    exit 3
+  fi
+  HEAD_REF="$PR_BRANCH"
+  echo "PR MODE: merge-base=$(git rev-parse --short "$BASE_REF") branch=$PR_BRANCH"
+else
+  BASE_REF="${1:-main}"
+  HEAD_REF="${2:-}"   # empty = working tree
+fi
 
 # Discover changed files
 if [ -z "$HEAD_REF" ]; then
