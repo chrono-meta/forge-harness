@@ -244,6 +244,8 @@ All 5 Steps completed
 + External verification path: harvest-loop Step 3.75 Critic isolation Agent can independently judge based on above criteria (skill_quality_rubric.md verifiable criteria)
 ```
 
+**→ Mandatory when PR contains SKILL.md / rules / templates changes: `bash templates/regression_guard.sh`** — run Axis 1 (backward check) before merge recommendation is issued. If regression_guard exits with M-tier block, merge recommendation must change to ❌ regardless of other checks.
+
 ## References
 
 - Rule body: `memory feedback_command_tower_gate.md` (hub gate accumulated naming baseline) + `memory feedback_qasp_to_hub_sync_protocol.md` (Option C Hybrid sync policy)

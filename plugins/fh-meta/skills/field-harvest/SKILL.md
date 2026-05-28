@@ -225,6 +225,8 @@ All stages Step 0~4 complete
 + When 0 candidates, "no absorption candidates" reported then exit
 ```
 
+**→ Mandatory next: `contention-layer`** — run immediately after Step 3 candidate list is confirmed, before Step 4 PR creation. New patterns must be checked for collision with existing skill role clusters before registration. Skip only when 0 candidates found.
+
 ## Linked Skills
 
 | Situation | Linked skill |
