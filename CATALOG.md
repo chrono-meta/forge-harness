@@ -8,6 +8,12 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-05-29 | fh-meta | prompt-regression, regression-detection, harness-quality
+**File:** plugins/fh-meta/skills/prompt-regression/SKILL.md
+New skill: detects harness behavioral regressions after CLAUDE.md / rule / skill edits by running standard probe suite and comparing against baselines.
+- Decision: placed in fh-meta (harness-specific behavioral testing, not general-purpose)
+- Chain: FAIL verdict → harness-doctor → verify-bidirectional
+
 ### 2026-05-28 | _meta | install-wizard, plugin-autoinstall, deprecated-cleanup, fh-ops, external-validation
 **File:** tracks/_meta/session_2026_05_28_fh-external-ops.md
 First external run of FH — install-wizard (score 57/100) revealed 2 friction points, both fixed immediately. PR #7 (plugin auto-install) + PR #8 (deprecated refs cleanup) merged.
