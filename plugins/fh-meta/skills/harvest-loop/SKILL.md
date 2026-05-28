@@ -327,6 +327,16 @@ done
 
 **Purpose**: Prevent accumulated stale memory from contaminating the next session's context.
 
+**Theoretical basis — Agent Aging 4 Mechanisms** (arXiv:2605.26302, AgingBench):
+| Aging type | Definition | 6-2 defense |
+|---|---|---|
+| **Compression aging** | Information loss during history compression | harvest-loop Step 0-a/b real-time recording obligation before compression |
+| **Interference aging** | New knowledge interferes with/corrupts existing knowledge | FILE-ORPHAN detection — check if unregistered memory conflicts with existing |
+| **Revision aging** | Stale facts after updates create inconsistency | MEM-STALE detection — verify factual coherence of 30d+ unmodified files |
+| **Maintenance aging** | Side effects from routine maintenance (cleanup/archival) | Curator safety principles — no auto-delete, user approval required, reference exemption |
+
+> **Key insight**: "Behavioral tests can PASS while factual precision decays" — memory may appear valid on the surface while internal facts are stale. This is why proactive MEM-STALE detection exists.
+
 ```bash
 # MEMORY.md index vs actual files consistency check
 grep -oP '\[.*?\]\(\K[^)]+' memory/MEMORY.md | while read f; do
