@@ -235,7 +235,7 @@ No user request is needed — this is a mandatory autonomous step, not a proposa
 FH asset modified
     │
     ▼
-Axis 1 — Backward   : bash templates/regression_guard.sh main
+Axis 1 — Backward   : bash templates/regression_guard.sh --pr {BRANCH}
     │
     ▼
 Axis 2 — Adversarial: /steel-quench  (trigger phrases, step conflicts, design attack surface)
