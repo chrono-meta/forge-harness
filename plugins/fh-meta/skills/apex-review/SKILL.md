@@ -140,9 +140,12 @@ Gate result: {Passed / Conditionally passed / Rejected}
 Choose your next step:
   A. Revise and re-review
   B. Proceed to sim-conductor in current state (deep validation)
+     ← strongly recommended when verdict is "Conditionally passed"
   C. Use HTML deck only (as reference)
   D. Exit
 ```
+
+> **"Conditionally passed" → option B is the default path**: Conditions listed by personas remain unresolved until sim-conductor Area E runs devil/newcomer/power-user validation against them. Choosing C or D without sim-conductor leaves those conditions unverified — present B as the default choice and require explicit opt-out.
 
 ---
 
@@ -176,3 +179,5 @@ All steps 0–4 completed
 + Gate verdict (Passed / Conditionally passed / Rejected) stated
 + User next step selection (A/B/C/D) confirmed
 ```
+
+**→ Mandatory next (Conditionally passed verdict): `/sim-conductor Area E`** — run against `apex_review_deck_YYYYMMDD.html` before the proposal is considered ready for submission. Skipping sim-conductor on a conditional pass means unresolved persona conditions go unverified; present option B as default and require the user to explicitly choose A/C/D to override.
