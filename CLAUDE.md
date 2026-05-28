@@ -72,6 +72,12 @@ The forge-harness hub has a dual identity: **(a) a seed for others** + **(b) you
 - **Interpretation:** AI is not allowed to independently commit and push code. However, **AI may propose a Pull Request by preparing all change drafts and requesting final approval from the human (user)**.
 - **Implementation:** Skills such as `harvest-loop` follow this principle — they generate skill drafts, prepare commits automatically, and propose PR creation. However, the final decision to submit a PR must always require the user's explicit approval (`y`). This ensures Human-in-the-loop while maximizing AI contribution.
 
+**PR Creation Principle:**
+- AI may commit and push automatically (when changes are approved)
+- **PR creation requires explicit user request** ("create PR", "PR 올려줘", "pull request")
+- **Reason:** Prevents PR fragmentation — logical units should be grouped into meaningful PRs, not atomized per commit
+- Default workflow: commit → push → wait for explicit PR request
+
 ## Active Onboarding Protocol (User Greeting → AI Initiative)
 
 When a user gives a **greeting or session-start** utterance in a forge-harness install environment, the AI enters active initiative mode. This directly implements the mission: *"Easy and effortless — faster development, less setup friction, more automation, fewer tokens wasted."*
