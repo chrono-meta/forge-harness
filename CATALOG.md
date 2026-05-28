@@ -52,19 +52,21 @@ Hub long-term evolution path frame. Phase I (entering maturity) → Phase II (fr
 
 ### 2026-05-08 | fh-meta v0.5.0 | six-skills-operation, path-b-generalization, command-tower-gate, mode-c-user, beta-release
 **File:** plugins/fh-meta/.claude-plugin/plugin.json + .claude-plugin/marketplace.json
-Hub meta operations tool bundle — 6 skills operation. audit-learnings path B generalization + verify-bidirectional path B generalization + frontier-status-summary path B generalization + cross-ecosystem-synergy-detection + plugin-recommender + **hub-cc-pr-reviewer** command tower gate operations rule automation (new). 2 agents (hub-persona-auditor + fact-checker). Beta operation — harness core principle *"beta + public release = practical capability obligation"* followed.
+Hub meta operations tool bundle — 6 skills operation. harvest-loop path B generalization + verify-bidirectional path B generalization + frontier-digest path B generalization + cross-ecosystem-synergy-detection + plugin-recommender + **hub-cc-pr-reviewer** command tower gate operations rule automation (new). 2 agents (hub-persona-auditor + fact-checker). Beta operation — harness core principle *"beta + public release = practical capability obligation"* followed.
 - Decision: hub-cc-pr-reviewer skill newly created — command tower gate operations rule automation + PR lifecycle 4-run accumulated + explicit decision trigger
 - Decision: plugin level v0.4.3 → v0.5.0 promoted — 6 skills operation baseline + path B generalization baseline followed
-- Decision: 3 skills path B generalization — audit-learnings + verify-bidirectional + frontier-status-summary / external user environment adaptation path enhanced
+- Decision: 3 skills path B generalization — harvest-loop + verify-bidirectional + frontier-digest / external user environment adaptation path enhanced
+- Note: audit-learnings deprecated from plugin (2026-05-xx) → transferred to hub-internal deprecated/; replaced by harvest-loop
+- Note: frontier-status-summary deprecated (2026-05-xx) → replaced by frontier-digest
 
 ---
 
 ## Skills
 
-### 2026-05-08 | fh-meta | audit-learnings, weekly-audit, real-time-pattern-catch, hub-cwd-only, phase-2-plus
-**File:** plugins/fh-meta/skills/audit-learnings/SKILL.md
-Hub weekly audit automation — `/audit-learnings [period]` runs scanner + drafts weekly_audit + detects repetitive patterns + searches existing matches first + proposes promotion/deprecation candidates + proposes Git commit/PR (user approval gate). Hub cwd only (Phase 2 · activated 2026-04-27 / Phase 2+ · PR automation 2026-05-06).
-- Decision: v0.2 official release — Phase 2+ PR automation baseline aligned
+### 2026-05-08 | fh-meta | harvest-loop, weekly-audit, self-evolution-pipeline, session-harvest, phase-2-plus
+**File:** plugins/fh-meta/skills/harvest-loop/SKILL.md
+Self-evolution pipeline — field-harvest → contention-layer → devil/innovator parallel → synthesizer → Critic Agent → harness-doctor → verify-bidirectional → curator (8 steps). Lightweight mode for weekly audit. Replaces deprecated audit-learnings.
+- Decision: harvest-loop = audit-learnings successor + full self-evolution pipeline integrated
 
 ### 2026-05-08 | fh-meta | verify-bidirectional, layer-5-cross-verification, conscious-self-activation, diff-gate
 **File:** plugins/fh-meta/skills/verify-bidirectional/SKILL.md
