@@ -112,7 +112,7 @@ grep -c "^##" CLAUDE.md 2>/dev/null
 
 #### 3-4. Periodic Skill Activity Check *(when tracks/_audit/ exists)*
 
-> Verify that periodic skills (audit-learnings · sim-conductor) are actually running. Prevents "assumed to be running" drift.
+> Verify that periodic skills (harvest-loop · sim-conductor) are actually running. Prevents "assumed to be running" drift.
 
 ```bash
 # Check date of last weekly_audit file
@@ -483,9 +483,9 @@ M-tier 0 items → output "Structure healthy. Maintaining simplification trend."
 
 ---
 
-### Step 8. audit-learnings Integration *(when tracks/_audit/ exists)*
+### Step 8. harvest-loop Integration *(when tracks/_audit/ exists)*
 
-> **Bidirectional integration**: audit-learnings Step 1.4 lightweight trigger (CLAUDE.md 160+ lines / FH 400+ lines / .claudeignore MISSING) → calls harness-doctor full diagnosis. Reverse direction is this Step 8 — recording harness-doctor diagnosis results in weekly_audit.
+> **Bidirectional integration**: harvest-loop lightweight trigger (CLAUDE.md 160+ lines / FH 400+ lines / .claudeignore MISSING) → calls harness-doctor full diagnosis. Reverse direction is this Step 8 — recording harness-doctor diagnosis results in weekly_audit.
 
 When 1+ M-tier items found:
 
@@ -573,7 +573,7 @@ Analysis of 100+ agent deployments in 2026 H1 confirmed "eval-first" approach as
 | Environment | Behavior |
 |---|---|
 | Meta-harness mode A | Steps 1~8 full / includes L4 connection diagnosis + L5 pattern analysis |
-| Plugin only (mode C) | Steps 1~7 / skip L4·L5 / skip audit-learnings integration |
+| Plugin only (mode C) | Steps 1~7 / skip L4·L5 / skip harvest-loop integration |
 | External general environment | L1~L3 diagnosis + M/S/R prescription only |
 | L5 pattern analysis | Mode A (FH/meta-hub cwd) exclusive — skip in mode B·C·external general environment |
 
@@ -603,7 +603,7 @@ This skill can be triggered when expressing Claude Code configuration or structu
 | "skill isn't triggering" | Skill activity check | L5-A |
 
 > No auto-firing — only executes when user explicitly invokes.
-> Maintain scope separation from context-doctor (token efficiency) and audit-learnings (weekly patterns).
+> Maintain scope separation from context-doctor (token efficiency) and harvest-loop (weekly patterns).
 
 ## Failure Fallback
 
