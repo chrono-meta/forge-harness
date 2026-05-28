@@ -324,15 +324,19 @@ Wave convergence criteria met: zero new S-grade blockers
 3. Full Wave results → recommend persisting to `tracks/_meta/steel_quench_YYYY_MM_DD_{slug}.md`
 
 ### Connected Skills
-| Situation | Connected Skill |
-|---|---|
-| Want to delegate improvements as prompts | `/meta-prompt-builder` |
-| Re-validate defense logic from external user perspective | `/sim-conductor Area A` |
-| Re-validate structural decision | `/verify-bidirectional` |
-| Attack angle is itself a harness structure problem | `/harness-doctor` |
-| After Wave convergence, propose new pattern rules | `fh-meta:persona-innovator` |
-| Wave 1 structure-specific attack (6-axis) | `fh-commons:quench-challenger` (built-in priority / deep-insight fallback) |
-| Back-track whether claims in artifact actually exist in source files | `/source-grounding-audit` |
+| Situation | Connected Skill | Mandatory? |
+|---|---|:---:|
+| Want to delegate improvements as prompts | `/meta-prompt-builder` | optional |
+| **External publish context: re-validate from external user perspective** | **`/sim-conductor Area A`** | **mandatory** |
+| Re-validate structural decision | `/verify-bidirectional` | optional |
+| Attack angle is itself a harness structure problem | `/harness-doctor` | optional |
+| After Wave convergence, propose new pattern rules | `fh-meta:persona-innovator` | optional |
+| Wave 1 structure-specific attack (6-axis) | `fh-commons:quench-challenger` (built-in priority / deep-insight fallback) | optional |
+| Back-track whether claims in artifact actually exist in source files | `/source-grounding-audit` | optional |
+
+**→ steel-quench ↔ sim-conductor bidirectional gate:**
+- steel-quench → sim-conductor: After Wave convergence in external-publish context, sim-conductor Area A is the **mandatory next step** (validates residual risks from an actual external user's perspective)
+- sim-conductor → steel-quench: sim-conductor Area A requires steel-quench to have run first (prerequisite defined in sim-conductor Done When)
 
 > **Attack surface limit**: steel-quench attacks output content patterns (self-declarations, cushion language, spec-only, structural flaws). Whether source files were actually read (Phantom Claim detection) is outside attack scope — that's `source-grounding-audit`'s job. Even if Wave 1 "real-use verification" angle catches logical inconsistency, plausible Phantoms generated without reading source can pass through.
 

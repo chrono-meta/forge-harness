@@ -635,6 +635,11 @@ For shared utility, see `templates/regression_guard.sh` — extract the `count_b
 
 **External validation path**: harvest-loop Step 3.75 Critic isolated Agent can independently judge based on above criteria (`skill_quality_rubric.md` verifiable criteria). Auto-connects when subsequent quench is run.
 
+**→ Three-Doctor Loop chain (auto-propose after prescription report):**
+- M-tier found AND token/context waste patterns detected → **propose `/context-doctor`** (current context axis)
+- M-tier found AND changes affect user-facing behavior (README, skill descriptions, onboarding) → **propose `/sim-conductor Area A`** (future behavior axis)
+- Both conditions → propose full Three-Doctor Loop in sequence: context-doctor → sim-conductor Area A
+
 ---
 
 ## External User Environment Adaptation
