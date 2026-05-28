@@ -1,0 +1,196 @@
+---
+name: mcp-circuit-breaker
+description: Detects MCP tool failure patterns and trips a circuit breaker to stop cascading retries. Proposes fallback alternatives and resets when the tool recovers. Triggers on "MCP failing", "tool keeps erroring", "circuit-breaker", repeated tool call failures.
+user-invocable: true
+allowed-tools: ["Read", "Bash", "Write"]
+model: sonnet
+complexity_routing:
+  base: sonnet
+  high: opus
+  escalate_when:
+    - multi_server_failure
+    - unknown_mcp_server
+---
+
+# mcp-circuit-breaker — MCP Tool Failure Guard
+
+MCP tools can fail silently or return partial results, leading to cascading retry loops that waste tokens and degrade session quality. This skill detects failure patterns, trips a circuit breaker to halt retries, proposes alternatives, and resets when the tool recovers.
+
+> **Scope distinction**
+> - Claude Code native retry: low-level transport retries (transparent, fast)
+> - mcp-circuit-breaker: **session-level guard** — detects repeated semantic failures, intervenes before token waste compounds
+
+---
+
+## Triggers
+
+- `/mcp-circuit-breaker`
+- "MCP failing", "MCP keeps erroring", "tool isn't working", "circuit-breaker"
+- "same error keeps happening", "tool call looping", "MCP timeout"
+- Automatic: when the same MCP tool name appears in 3+ consecutive failed calls within a session
+
+---
+
+## Circuit States
+
+```
+CLOSED   → Normal operation (tool calls pass through)
+OPEN     → Circuit tripped (calls blocked, alternatives proposed)
+HALF-OPEN → Recovery probe (1 test call allowed, resets if success)
+```
+
+Default thresholds:
+- **Trip threshold**: 3 consecutive failures of the same tool
+- **Half-open probe**: after 60s cooldown (or explicit user command)
+- **Reset**: 1 successful call in HALF-OPEN state → back to CLOSED
+
+---
+
+## Execution Steps
+
+### Step 1. Detect Failure Pattern
+
+Identify the failing tool and failure mode:
+
+```bash
+# Check MCP server config
+cat .claude/settings.json 2>/dev/null | grep -A5 '"mcpServers"' || echo "No MCP config found"
+```
+
+Classify failure type:
+
+| Type | Symptom | Likely Cause |
+|---|---|---|
+| `TIMEOUT` | Tool call hangs >30s | Server overload / network |
+| `AUTH` | 401 / 403 response | Credentials expired or missing |
+| `NOT_FOUND` | 404 / tool not available | Server down / tool removed |
+| `MALFORMED` | Parse error on response | Schema mismatch / API change |
+| `RATE_LIMIT` | 429 / quota exceeded | Too many calls |
+
+If failure type cannot be determined: classify as `UNKNOWN`.
+
+---
+
+### Step 2. Trip Decision
+
+Count consecutive failures of the identified tool in the current session context.
+
+| Count | Action |
+|---|---|
+| 1 | Log warning. Continue — *"MCP tool {name} failed once. Monitoring."* |
+| 2 | Escalate warning. Suggest checking server status. |
+| 3+ | **TRIP CIRCUIT** → output circuit open notice, block further calls to this tool |
+
+Circuit open notice format:
+```
+⚡ CIRCUIT OPEN — {tool-name}
+Failure type: {TYPE}  |  Consecutive failures: {N}
+Further calls to this tool are blocked until circuit resets.
+```
+
+---
+
+### Step 3. Log Circuit State
+
+Write state to session-local file (in-memory is insufficient — logs survive /clear):
+
+```bash
+mkdir -p .claude/mcp_circuit/
+# Append to circuit log
+```
+
+Log entry format:
+```yaml
+- tool: {tool-name}
+  state: OPEN
+  failure_type: {TYPE}
+  failure_count: {N}
+  tripped_at: {ISO-8601}
+  reset_at: null
+```
+
+---
+
+### Step 4. Propose Alternatives
+
+Present 3 fallback options ranked by effort:
+
+| Priority | Alternative | When to Use |
+|---|---|---|
+| **1 — Substitute tool** | Use a different MCP tool or built-in tool that covers the same task | Tool-specific failure (NOT_FOUND, AUTH) |
+| **2 — Degrade gracefully** | Skip the MCP step, note the gap, continue with available information | TIMEOUT / RATE_LIMIT |
+| **3 — Pause and retry** | Wait for server recovery (HALF-OPEN probe after cooldown) | Transient failure (TIMEOUT, RATE_LIMIT) |
+
+Output format:
+```
+## Fallback Options for {tool-name}
+
+Option 1 — Substitute: Use {alternative-tool} instead
+  → Command: [specific invocation]
+  → Gap: [what's different vs. original tool]
+
+Option 2 — Degrade: Skip this step, continue without {capability}
+  → Impact: [what is missing from the output]
+
+Option 3 — Retry after cooldown (60s)
+  → Run: /mcp-circuit-breaker reset {tool-name}
+```
+
+---
+
+### Step 5. Recovery Probe (HALF-OPEN)
+
+When user requests reset or after cooldown:
+
+```
+Sending HALF-OPEN probe to {tool-name}...
+```
+
+- 1 minimal test call is allowed through
+- If success: circuit → CLOSED, log updated
+- If fail: circuit remains OPEN, cooldown resets
+
+Reset log entry:
+```yaml
+  state: CLOSED
+  reset_at: {ISO-8601}
+  reset_method: probe_success | user_forced
+```
+
+---
+
+### Step 6. Report
+
+At session end or on demand:
+
+```
+## MCP Circuit Breaker Report
+
+| Tool | State | Failures | Tripped | Reset |
+|---|---|---|---|---|
+| {tool} | OPEN | 4 | 14:23 | — |
+| {tool} | CLOSED | 1 | 14:10 | 14:15 (probe) |
+
+Recommendations:
+- {tool}: AUTH failure → refresh credentials in .claude/settings.json
+```
+
+---
+
+## Done When
+
+- Failure pattern classified (type + count)
+- Circuit state logged (OPEN / HALF-OPEN / CLOSED)
+- At least 3 fallback alternatives proposed when circuit is OPEN
+- Recovery probe offered with reset path
+
+---
+
+## Chains
+
+**Upstream** (can trigger this skill):
+- Automatically activates on 3+ consecutive MCP failures during any task
+
+**Downstream** (after circuit open):
+- No mandatory chain — fallback options are presented, user decides
+- Optional: `context-doctor` if MCP failure is due to large context degrading tool calls
