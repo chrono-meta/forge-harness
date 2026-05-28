@@ -46,7 +46,7 @@ List discovered repos to user and ask to select target. If 0 repos found, prompt
 ## Step 1. Recent Commit Scan
 
 ```bash
-cd <field_path>
+cd "$FIELD_PATH"
 git log --oneline --since="<N> days ago" --no-merges
 ```
 
@@ -111,20 +111,20 @@ If 0 candidates, report "no absorption candidates — schedule next monitoring" 
 ## Step 4. PR Creation (upon user approval)
 
 ```bash
-cd <FH_ROOT>
-git checkout -b harvest/<field-project>-<YYYYMMDD>
+cd "$FH_ROOT"
+git checkout -b harvest/"$FIELD_PROJECT"-"$YYYYMMDD"
 
 # Apply approved patterns
 # - Update skill SKILL.md
 # - Update .claude/rules/
 # - Update templates/
 
-git add <changed files>
-git commit -m "harvest(<field>): <pattern summary> — <field commit hash> absorbed"
-git push origin harvest/<field-project>-<YYYYMMDD>
+git add -A   # stage approved pattern files
+git commit -m "harvest($FIELD_PROJECT): $PATTERN_SUMMARY — $FIELD_COMMIT_HASH absorbed"
+git push origin harvest/"$FIELD_PROJECT"-"$YYYYMMDD"
 
 gh pr create \
-  --title "harvest: <field project> pattern absorption (<date>)" \
+  --title "harvest: $FIELD_PROJECT pattern absorption ($DATE)" \
   --body "..."
 ```
 

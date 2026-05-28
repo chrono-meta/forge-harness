@@ -46,8 +46,8 @@ When a PR is submitted, checks consistency against the user environment's baseli
 ### Step 1. PR Diff Read
 
 ```bash
-gh pr diff <PR#>                                                    # Read changes directly
-gh pr view <PR#> --json files,additions,deletions,baseRefName,headRefName,title,body  # Metadata
+gh pr diff "$PR_NUMBER"                                             # Read changes directly
+gh pr view "$PR_NUMBER" --json files,additions,deletions,baseRefName,headRefName,title,body  # Metadata
 ```
 
 If this cc authored the change, `gh pr diff` can be skipped (directly state changed areas in PR body).
@@ -81,7 +81,7 @@ Self-catch areas 0 items = skip this entire catch matrix (no token-filling / fol
 ### Step 4. Review Comment Attachment
 
 ```bash
-gh pr comment <PR#> --body "$(cat <<'EOF'
+gh pr comment "$PR_NUMBER" --body "$(cat <<'EOF'
 ## Hub CC Review (Hub Gate — Accumulated Operation Proof)
 
 ### Baseline Consistency Check 8-Matrix
@@ -109,7 +109,7 @@ EOF
 
 ```bash
 # Execute after user decision (this skill does NOT execute)
-gh pr merge <PR#> --squash --admin --delete-branch
+gh pr merge "$PR_NUMBER" --squash --admin --delete-branch
 ```
 
 ## Sister Asset Utilization Path (cross-ecosystem-synergy-detection v0.2 baseline consistency)

@@ -251,10 +251,12 @@ r_count: N
 
 ```bash
 cd "$HARNESS_ROOT"
-git checkout -b fix/sim-[YYYYMMDD]-m-tier
+git checkout -b fix/sim-"$(date +%Y%m%d)"-m-tier
 # Process M-tier items (fix descriptions, correct mismatches, etc.)
-git commit + push
-gh pr create (GH_HOST= your GHE host or github.com)
+git add -A && git commit -m "fix(sim): M-tier items from sim-conductor run"
+git push origin fix/sim-"$(date +%Y%m%d)"-m-tier
+# GH_HOST=your-ghe-host  # set if using GHE instead of github.com
+gh pr create --title "fix(sim): M-tier items" --body "..."
 ```
 
 PR body includes simulation report summary + processed item checklist.
