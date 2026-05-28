@@ -8,6 +8,11 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-05-29 | harness-core | return-path-gate, skill-chain, conditional-pass, closed-loop
+**File:** knowledge/shared/harness-core/return_path_gate.md
+Pattern: downstream skill returns structured verdict (PASS/CONDITIONAL_PASS/FAIL/ESCALATE) back to caller, which gates next step on it. Verified in apex-review→sim-conductor and agent-composer↔deliberation.
+- Decision: promoted to knowledge/shared/ — same pattern appeared independently in 2 skill pairs
+
 ### 2026-05-29 | fh-commons | token-budget-gate, token-estimation, cost-guard, multi-agent
 **File:** plugins/fh-commons/skills/token-budget-gate/SKILL.md
 New skill: pre-task token cost estimation with Green/Yellow/Orange/Red gate verdict. Post-task calibration loop improves future estimates. Auto-proposed before agent-composer, sim-conductor, steel-quench, harvest-loop.
