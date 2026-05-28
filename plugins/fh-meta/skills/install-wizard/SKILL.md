@@ -14,12 +14,12 @@ category: Composability Gate
 > This skill is available **after the fh-meta plugin is registered in Claude Code**.
 > If you type `/install-wizard` and CC doesn't respond, the plugin hasn't been registered yet.
 >
-> **Quick plugin registration (run in terminal):**
-> ```bash
-> # 1. Add marketplace
-> claude plugin marketplace add https://github.com/chrono-code/forge-harness.git
+> **When running Claude Code from the FH directory**: the AI detects the MISS automatically
+> and installs the plugin via Bash — no manual input needed. Just say "install the plugin."
 >
-> # 2. Install plugin
+> **Manual fallback (if needed):**
+> ```bash
+> claude plugin marketplace add https://github.com/chrono-code/forge-harness.git
 > claude plugin install -s user fh-meta@forge-harness
 > ```
 > After install, if `install-wizard` appears in `/skills` list in CC chat, you're ready.
@@ -324,7 +324,7 @@ install-wizard — Diagnosis Results ({score}/100)
 
   [1] Install local_fh_context.md — FH skill auto-recognition
   [2] Add zshrc hook — periodic audit notification on terminal start
-  [3] Run weekly_audit immediately — call /audit-learnings
+  [3] Run weekly_audit immediately — call /harvest-loop (lightweight mode)
   [4] Initialize ~/.cc_sentinels/ — project audit tracking
   [5] Install fh-meta plugin — activate all FH skills (if FH plugin MISS)
       AI executes automatically via Bash — no manual terminal input needed:
@@ -453,7 +453,7 @@ mkdir -p ~/.cc_sentinels
 touch ~/.cc_sentinels/$(basename "$(pwd)")_wizard_done
 
 # Weekly audit schedule in CC (CronCreate — valid for this session)
-# → auto-call /audit-learnings every Monday at 9:03
+# → auto-call /harvest-loop (lightweight mode) every Monday at 9:03
 ```
 
 ### Step 5. Completion Report + Contribution Guidance
@@ -466,7 +466,7 @@ install-wizard — Complete
   From now on:
   · Periodic audit auto-check on terminal start
   · Yellow warning output when weekly_audit exceeds 7 days
-  · Auto /audit-learnings at 9am Monday when CC is open
+  · Auto /harvest-loop (lightweight) at 9am Monday when CC is open
 
   Next step skills:
   · Not sure which plugin you need → /plugin-recommender
