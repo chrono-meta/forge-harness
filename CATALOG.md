@@ -8,6 +8,12 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-05-29 | fh-commons | token-budget-gate, token-estimation, cost-guard, multi-agent
+**File:** plugins/fh-commons/skills/token-budget-gate/SKILL.md
+New skill: pre-task token cost estimation with Green/Yellow/Orange/Red gate verdict. Post-task calibration loop improves future estimates. Auto-proposed before agent-composer, sim-conductor, steel-quench, harvest-loop.
+- Decision: placed in fh-commons (project-agnostic, useful before any expensive multi-agent task)
+- Thresholds: <10K green / 10-30K yellow / 30-60K orange / >60K red (user-configurable)
+
 ### 2026-05-29 | fh-commons | mcp-circuit-breaker, mcp-reliability, tool-failure, fallback
 **File:** plugins/fh-commons/skills/mcp-circuit-breaker/SKILL.md
 New skill: detects MCP tool failure patterns (3 consecutive fails = trip), blocks further calls, proposes 3-tier fallbacks, and resets via HALF-OPEN probe after cooldown.
