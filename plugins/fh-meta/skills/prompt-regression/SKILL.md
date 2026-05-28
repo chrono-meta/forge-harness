@@ -1,0 +1,178 @@
+---
+name: prompt-regression
+description: Detects harness regressions by running standard prompt probes after rule/skill changes and comparing outputs against saved baselines. Triggers on "prompt regression", "did my changes break anything", "regression check", "test harness changes".
+user-invocable: true
+allowed-tools: ["Read", "Bash", "Glob", "Grep"]
+model: sonnet
+complexity_routing:
+  base: sonnet
+  high: opus
+  escalate_when:
+    - full_suite
+    - cross_skill_impact
+---
+
+# prompt-regression — Harness Regression Detection
+
+After CLAUDE.md edits, rule changes, or new skill additions, harness behavior can silently regress. This skill runs a lightweight probe suite against the changed assets and compares outputs against saved baselines to surface regressions before they reach production.
+
+> **Scope distinction**
+> - harness-doctor: structural completeness (files, links, drift)
+> - prompt-regression: **behavioral correctness** — did the change alter expected AI response patterns?
+
+---
+
+## Triggers
+
+- `/prompt-regression`
+- "prompt regression", "regression check", "regression test"
+- "did my rule change break anything", "test harness changes", "verify harness behavior"
+- After significant CLAUDE.md edits or new skill commits
+
+---
+
+## Execution Steps
+
+### Step 1. Identify Changed Assets
+
+```bash
+# What changed since last commit (or last N commits)
+git diff HEAD~1 --name-only -- CLAUDE.md .claude/ plugins/
+```
+
+Classify each changed file:
+- `CLAUDE.md` → **core behavior** (high impact)
+- `.claude/rules/*.md` → **rule layer** (medium impact)
+- `plugins/*/skills/*/SKILL.md` → **skill behavior** (scoped impact)
+- `plugins/*/skills/*/SKILL.md` (trigger phrases changed) → **trigger routing** (high impact)
+
+If no changes detected: report "No harness changes since last commit — regression check skipped."
+
+---
+
+### Step 2. Load Probe Suite
+
+Check for custom probes:
+```bash
+ls .claude/regression/probes.md 2>/dev/null || echo "NO_CUSTOM_PROBES"
+```
+
+**If custom probes exist**: load and use them.
+
+**If no custom probes**: use the default probe matrix below.
+
+#### Default Probe Matrix
+
+| Probe ID | Input Pattern | Expected Behavior | Scope |
+|---|---|---|---|
+| `P-GREET-01` | `hi` / `hello` | Active onboarding protocol triggered | CLAUDE.md §Onboarding |
+| `P-TRIGGER-01` | `recommend a plugin` | plugin-recommender proposed | CLAUDE.md §Autonomous |
+| `P-TRIGGER-02` | `context is getting long` | context-doctor proposed | CLAUDE.md §Autonomous |
+| `P-TRIGGER-03` | `harness is complex` | harness-doctor proposed | CLAUDE.md §Autonomous |
+| `P-CHAIN-01` | `/field-harvest` | harvest-loop + sim-conductor gate present | field-harvest SKILL.md |
+| `P-CHAIN-02` | `/apex-review` | conditional-pass gate present | apex-review SKILL.md |
+| `P-GATE-01` | new skill commit | New Skill Pre-Commit Gate (5 items) invoked | CLAUDE.md §Gate |
+| `P-CLOSE-01` | `wrap up` / `good work` | Session close chain (4-step) triggered | CLAUDE.md §Wrap-up |
+
+---
+
+### Step 3. Map Changes → Affected Probes
+
+| Changed File | Affected Probes |
+|---|---|
+| `CLAUDE.md` §Onboarding | P-GREET-01 |
+| `CLAUDE.md` §Autonomous Initiative | P-TRIGGER-* |
+| `CLAUDE.md` §Wrap-up | P-CLOSE-01 |
+| `CLAUDE.md` §New Skill Gate | P-GATE-01 |
+| `plugins/fh-meta/skills/*/SKILL.md` | P-CHAIN-* matching skill |
+
+If change scope is `CLAUDE.md` core (10+ lines changed): run **full suite** (all probes).
+
+---
+
+### Step 4. Run Affected Probes
+
+For each affected probe, evaluate:
+
+**4-a. Trigger routing check** — Does the trigger phrase still map to the expected skill/behavior?
+- Read the changed file
+- Locate trigger section
+- Confirm the probe's input pattern still appears in the trigger list
+
+**4-b. Chain integrity check** — Are mandatory chains still present?
+- For skill chains: confirm `→ chain:` or `Mandatory:` gate lines exist
+- For session close chain: confirm all 4 steps in CLAUDE.md §Wrap-up
+
+**4-c. Gate presence check** — Are gate conditions still enforced?
+- Pre-commit gate: confirm all 5 items present in CLAUDE.md
+- Conditional-pass gate: confirm `CONDITIONAL_PASS` logic in affected SKILL.md
+
+Output per probe:
+```
+[PASS] P-TRIGGER-01 — plugin-recommender trigger phrase found in CLAUDE.md
+[FAIL] P-CHAIN-01 — field-harvest SKILL.md missing harvest-loop mandatory gate after edit
+[SKIP] P-GREET-01 — §Onboarding not in changed files
+```
+
+---
+
+### Step 5. Regression Report
+
+```
+## Prompt-Regression Report — YYYY-MM-DD
+
+### Changed Assets
+- CLAUDE.md (§Autonomous Initiative — 3 trigger phrases modified)
+- plugins/fh-meta/skills/field-harvest/SKILL.md
+
+### Probes Run: 4  |  Pass: 3  |  Fail: 1  |  Skip: 4
+
+### FAIL Details
+| Probe | Location | Finding | Fix |
+|---|---|---|---|
+| P-CHAIN-01 | field-harvest SKILL.md | Missing harvest-loop mandatory gate | Re-add chain gate in §Done When |
+
+### Verdict
+⚠️ REGRESSION DETECTED — 1 probe failed. Fix required before merge.
+```
+
+If all probes pass:
+```
+✅ NO REGRESSION — All N probes passed. Safe to merge.
+```
+
+---
+
+### Step 6. Baseline Update (on explicit user approval)
+
+After a deliberate behavior change (not a regression — an intentional improvement), update the baseline:
+
+```bash
+# Baseline stored as markdown in .claude/regression/
+mkdir -p .claude/regression
+# Write updated probe expectations
+```
+
+Prompt user: *"Probe P-CHAIN-01 now expects the new gate format. Update baseline? (y/n)"*
+
+Only update on explicit `y` — never auto-update.
+
+---
+
+## Done When
+
+- All affected probes are evaluated (PASS / FAIL / SKIP)
+- Regression report is output with clear PASS/FAIL verdict
+- If FAIL: specific file + line fix is recommended
+- Baseline updated only on explicit user approval
+
+---
+
+## Chains
+
+**Upstream** (runs before this skill):
+- Automatically triggered after significant harness commits (Step 1 detects via git diff)
+
+**Downstream** (runs after FAIL verdict):
+- → `harness-doctor` for structural fixes if L1/L2 issues found
+- → `verify-bidirectional` to confirm fix resolved the regression
