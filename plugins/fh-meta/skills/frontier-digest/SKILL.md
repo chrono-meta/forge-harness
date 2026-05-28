@@ -173,11 +173,14 @@ Immediately after Step 3 output, if **"FH Immediate Application Candidates"** ha
 ```
 💡 Improvement candidate found — would you like to connect to:
 
-  [1] /field-harvest  — absorb above candidates into FH skills/plugins
-  [2] /meta-prompt-builder  — write immediate candidates as skill prompts
-  [3] Save fh_signal  — record signal to tracks/_meta/fh_signal_{today}.md
-  [4] Skip (insights only for now)
+  [1] /field-harvest       — absorb above candidates into FH skills/plugins
+  [2] /meta-prompt-builder — write immediate candidates as skill prompts
+  [3] Save fh_signal       — record signal to tracks/_meta/fh_signal_{today}.md
+  [4] persona-innovator    — run innovator agent against candidates (naming/framing proposals + gap analysis)
+  [5] Skip (insights only for now)
 ```
+
+**→ When to use [4] persona-innovator**: Frontier candidates contain new architectural patterns, naming opportunities, or design frames not yet in FH vocabulary. persona-innovator compares the external signal against existing FH assets and proposes concrete naming/framing actions. Runs as Mode E (external scan) with the frontier candidates as input context.
 
 If user selects [3], create signal file in this format:
 
@@ -213,7 +216,8 @@ If keywords related to user projects appear in collected data:
 
 When running `/frontier-digest --chain`:
 1. Auto-save immediate application candidates as fh_signal file (with `--save`)
-2. Auto-propose `field-harvest` skill (with user approval gate)
+2. Auto-invoke `persona-innovator` Mode E with candidates as input — extracts naming/framing proposals (no user prompt needed)
+3. Auto-propose `field-harvest` skill with persona-innovator output as context (with user approval gate)
 
 ---
 
@@ -240,10 +244,13 @@ To save key permanently (~/.cc_secrets pattern):
 |---|---|
 | Step 3 synthesis result printed in conversation | ✅ Basic execution complete |
 | With `--save` flag: `✅ Saved: {path}` confirmed | ✅ Save complete |
-| With `--chain` flag: field-harvest handoff proposed | ✅ Chaining complete |
+| With `--chain` flag: persona-innovator Mode E invoked + field-harvest proposed | ✅ Chaining complete |
 | All curl failures → fallback to WebSearch synthesis output | ✅ Fallback complete |
 
 **Incomplete**: Exiting without collection + synthesis output = Fail. `--save` invoked but no file = Fail.
+
+**→ Auto-propose chain when 1+ Immediate Application Candidates found (without --chain flag):**
+Present Step 4 menu options [1]–[5]. Do not skip to [5] silently — surface the chain options even for basic runs.
 
 ---
 
