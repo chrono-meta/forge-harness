@@ -2,6 +2,7 @@
 .claude/memory/
 .claude/settings.local.json
 .claude/settings.json
+.claude/scheduled_tasks.lock
 context/
 
 # macOS system files

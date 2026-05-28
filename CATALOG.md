@@ -7,17 +7,31 @@ AI reads this file first when searching past work. Open individual files for det
 ## Sessions
 
 <!-- Add entries in reverse date order (newest at top) -->
-<!--
-### YYYY-MM-DD | {project} | tag1, tag2, tag3
-**File:** tracks/{project}/session_YYYY_MM_DD_{slug}.md
-Summary (within 3 lines).
-- Decision: key decision
--->
 
-### YYYY-MM-DD | your-project | example, pattern, architecture
-**File:** tracks/your-project/session_YYYY_MM_DD_example.md
-Example session entry. Replace with your own project sessions as you work.
-- Decision: example decision recorded here
+### 2026-05-27 | _meta | two-layer-storage, memory-vs-tracks, cross-session-state
+**File:** tracks/_meta/fh_signal_2026_05_27_session-starter.md
+Two-layer storage principle formalized: `tracks/` = local work history (machine-bound), `memory/` = critical cross-session state (durable). Gap detected: reference_next_session_starter.md is tracks-local → survives single machine but lost on re-clone.
+- Decision: Critical state (arXiv codes, active DOIs, action items) must also be written to `~/.claude/projects/.../memory/`
+
+### 2026-05-26 | _audit | sister-asset, harness-evolver, meta-harness, stanford, arxiv
+**File:** tracks/_audit/session_2026_05_26_harness_evolver.md
+Sister asset cross-audit — harness-evolver (raphaelchristi) + Meta-Harness (Lee et al., arXiv:2603.28052, Stanford IRIS Lab). Independent architectural convergence confirmed: outer-loop field observation → adversarial critique → synthesis → integration → verification. Cross-reference links proposed; Issue #26 filed.
+- Decision: harness-evolver = direct complement (automation-first) vs FH (knowledge-accumulation-first) — mutual citation proposed
+
+### 2026-05-26 | _audit | sister-asset, sylph-ai, arxiv, simplification-principle
+**File:** tracks/_audit/session_2026_05_26_sylph_sister.md
+Sister asset cross-audit — "The Last Harness You'll Ever Build" (Sylph.AI, arXiv:2604.21003). Title resonates with FH simplification principle but approach diverges: Sylph = fully automated adversarial agent loops, FH = human-in-the-loop curated knowledge evolution. Issue #137 filed for endorsement contact.
+- Decision: Sylph.AI = automation-maximalist counterpart; FH distinction is human judgment layer
+
+### 2026-05-26 | _meta | external-network, wave3-validation, sase, install-wizard, frontier-digest
+**File:** tracks/_meta/external_network_verification_2026_05_26.md
+Wave 3 meta-validation: confirmed all previously KP-SASE-blocked capabilities work on personal network — install-wizard dry-run, plugin-recommender live GitHub search, frontier-digest fetch, git push. Baseline for external user environment parity.
+- Decision: All core FH capabilities verified functional outside corporate network
+
+### 2026-05-26 | forge-harness | v1.2, zenodo, arxiv, public-release, endorsement
+**File:** tracks/_meta/reference_next_session_starter.md
+v1.2 release complete (PR #1–#5): harvest-loop Step 0, agent-composer worktree isolation, steel-quench numeric scoring, README positioning. Zenodo DOI issued (10.5281/zenodo.20397566), repo made public (chrono-code/forge-harness), arXiv submission draft ready (submit/7640408, cs.AI, expires 2026-06-09). Endorsement code EGAPMM — 3 contacts active.
+- Decision: Primary arXiv category = cs.AI (not cs.SE — all endorser candidates have cs.AI history, not cs.SE)
 
 ---
 
