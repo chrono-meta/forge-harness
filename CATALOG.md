@@ -13,6 +13,11 @@ AI reads this file first when searching past work. Open individual files for det
 Pattern: downstream skill returns structured verdict (PASS/CONDITIONAL_PASS/FAIL/ESCALATE) back to caller, which gates next step on it. Verified in apex-review→sim-conductor and agent-composer↔deliberation.
 - Decision: promoted to knowledge/shared/ — same pattern appeared independently in 2 skill pairs
 
+### 2026-05-29 | harness-core | meta-harness-engineering, definition, frontier, academic-convergence
+**File:** knowledge/shared/harness-core/meta_harness_engineering_definition.md
+Formal definition of meta harness engineering + FH positioning vs. academic convergence (arXiv 2605.18747 "Code as Agent Harness", arXiv 2604.14228 98.4% finding). Maps FH 6-axis to 3-layer taxonomy; distinguishes human-in-loop (FH) vs automation-first vs automation-maximalist approaches.
+- Decision: FH differentiator = human judgment gate on all PRs, not automation maximization
+
 ### 2026-05-29 | fh-commons | token-budget-gate, token-estimation, cost-guard, multi-agent
 **File:** plugins/fh-commons/skills/token-budget-gate/SKILL.md
 New skill: pre-task token cost estimation with Green/Yellow/Orange/Red gate verdict. Post-task calibration loop improves future estimates. Auto-proposed before agent-composer, sim-conductor, steel-quench, harvest-loop.
