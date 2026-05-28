@@ -264,6 +264,8 @@ All Steps 0~3 completed (Steps 4~5 added if 5-layer selected)
 + User's final decision confirmed (deliberation output must never be auto-executed)
 ```
 
+**→ When invoked from agent-composer Wave next-D: synthesis verdict is the fan-in input for Wave continuation** — return the Mediator verdict + Conditions to agent-composer so the conflict is marked resolved in the fan-in result set. After this, agent-composer re-runs Step 4-b state transition evaluation with the conflict cleared; subsequent Waves (next-M / next-E / end) proceed based on the updated result.
+
 ## Simplification Guard
 
 - Simple information queries → deliberation is unnecessary. Respond directly.
