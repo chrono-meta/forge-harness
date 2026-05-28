@@ -326,13 +326,18 @@ install-wizard — Diagnosis Results ({score}/100)
   [2] Add zshrc hook — periodic audit notification on terminal start
   [3] Run weekly_audit immediately — call /audit-learnings
   [4] Initialize ~/.cc_sentinels/ — project audit tracking
-  [5] Add MCP plugin — activate integrations (if MCP plugin MISS)
+  [5] Install fh-meta plugin — activate all FH skills (if FH plugin MISS)
+      AI executes automatically via Bash — no manual terminal input needed:
+        claude plugin marketplace add https://github.com/chrono-code/forge-harness.git
+        claude plugin install -s user fh-meta@forge-harness
+      CC restart required after completion for skills to appear in /skills list
+  [6] Add MCP plugin — activate integrations (if MCP plugin MISS)
       Run: claude mcp add <your-mcp-plugin> -- npx -y <your-mcp-plugin>
       CC restart required after completion
-  [6] Install deep-insight plugin — activate sim-conductor multi-persona simulation (if deep-insight MISS)
+  [7] Install deep-insight plugin — activate sim-conductor multi-persona simulation (if deep-insight MISS)
       Settings → Plugins → Add → {deep-insight plugin path}
       Without install, /sim-conductor persona branching disabled (single-point simulation only)
-  [7] Create fh.jsonc — org/network/Git environment context file (if fh.jsonc MISS)
+  [8] Create fh.jsonc — org/network/Git environment context file (if fh.jsonc MISS)
       Copy: {FH_DIR}/templates/fh.jsonc → .claude/rules/fh.jsonc
       Then manually update with actual values for org name, Jira URL, environment status, etc.
       Effect: Each skill references common environment context → eliminate individual setting duplication
@@ -381,6 +386,35 @@ Execution priority:
 1. FAIL items (immediate effect)
 2. MISS items (configuration supplementation)
 3. Optimization items (optional)
+
+#### FH Plugin Auto-Install Execution Block
+
+When FH plugin is MISS, execute the following via Bash (no manual input required):
+
+```bash
+# Step A: register marketplace (idempotent — "already on disk" is OK)
+claude plugin marketplace add https://github.com/chrono-code/forge-harness.git 2>&1
+
+# Step B: install plugin
+claude plugin install -s user fh-meta@forge-harness 2>&1
+```
+
+**Error handling:**
+
+| Output | Meaning | Action |
+|---|---|---|
+| `✔ Marketplace ... already on disk` | Already registered | Continue to Step B |
+| `✔ Successfully installed` | Done | Report success, remind CC restart |
+| `Plugin "fh-meta" not found` | Marketplace cache stale | Run `claude plugin marketplace update forge-harness` then retry Step B |
+| Any other error | Unknown failure | Report error verbatim, ask user to retry manually |
+
+**Output format on success:**
+```
+▶ [5] Install fh-meta plugin
+  ✅ Marketplace: forge-harness registered
+  ✅ Plugin: fh-meta@forge-harness installed (scope: user)
+  ⚠️  CC restart needed — skills will appear in /skills after restart
+```
 
 **agent-composer mapping update** (when skills were added via cross-install):
 
