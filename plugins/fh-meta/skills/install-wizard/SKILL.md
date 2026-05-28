@@ -529,25 +529,18 @@ ls ~/.cc_sentinels/${PROJECT_NAME}_wizard_done 2>/dev/null && echo "Inspection m
 
 ## Per-Cluster Deferred Loading (Progressive Disclosure)
 
-At session start, don't load all skills at once.
-Only fully activate the cluster matching the utterance keyword — prevents attention fragmentation + improves skill selection accuracy.
+Only activate the cluster matching the utterance — loading all skills degrades selection quality.
 
-| Cluster | Trigger keywords | Included skills |
+| Cluster | Trigger keywords | Skills |
 |---|---|---|
-| **A — Harvest/Evolution** | harvest, session wrap-up, pattern discovery, reverse absorption, fh evolution, learning absorption | field-harvest, harvest-loop, contention-layer, verify-bidirectional |
-| **B — Diagnosis/Treatment (doctor)** | diagnose, health, check, inspect, harness check, token waste, structural diagnosis, install conflict, overlap, doctor | harness-doctor, context-doctor, sim-conductor, install-doctor, install-wizard |
-| **C — Compose/Generate (composer)** | agent composition, parallel processing, compose prompt, which agent, context card | agent-composer, meta-prompt-builder, context-bridge-dispatch |
-| **D — Audit/Review (reviewer)** | review, audit, PR review, steel quench, adversarial review, exhaustive verification, remove marketing language, inclusion criteria, asset placement | hub-cc-pr-reviewer, steel-quench, apex-review, self-marketing-lint, marketplace-gate, asset-placement-gate |
-| **E — Explore/Frontier (scout)** | trends, latest developments, plugin recommendation, tool recommendation, find synergies, frontier | frontier-digest, plugin-recommender, cross-ecosystem-synergy-detection |
-| **F — Common (always-on)** | (always active — no trigger needed) | convergence-loop (fh-commons), deliberation (fh-commons) |
+| **A — Harvest/Evolution** | harvest · session wrap-up · pattern · reverse absorption · fh evolution | field-harvest · harvest-loop · contention-layer · verify-bidirectional |
+| **B — Diagnosis (doctor)** | diagnose · health · check · inspect · token waste · install conflict · doctor | harness-doctor · context-doctor · sim-conductor · install-doctor · install-wizard |
+| **C — Compose (composer)** | agent composition · parallel · compose prompt · context card | agent-composer · meta-prompt-builder · context-bridge-dispatch |
+| **D — Audit/Review** | review · audit · PR review · steel quench · adversarial · marketing · placement | hub-cc-pr-reviewer · steel-quench · apex-review · self-marketing-lint · marketplace-gate · asset-placement-gate |
+| **E — Explore/Frontier** | trends · plugin recommendation · synergy · frontier | frontier-digest · plugin-recommender · cross-ecosystem-synergy-detection |
+| **F — Common (always-on)** | — | convergence-loop · deliberation (fh-commons) |
 
-**Rationale**: Loading all skills at once causes the agent to consider unnecessary skills, degrading selection quality.
-Cluster deferred loading maintains context density while enabling accurate skill activation for the situation.
-
-**Activation rules**:
-- Single cluster clearly matched → activate only that cluster
-- 2+ clusters triggered simultaneously → activate all matched clusters
-- Match unclear → activate Cluster B (diagnosis) by default, then delegate to agent-composer
+Rules: single match → that cluster only · multi-match → all matched · unclear → default B + delegate to agent-composer.
 
 ---
 
