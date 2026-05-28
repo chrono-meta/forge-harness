@@ -80,7 +80,7 @@ When files exceeding 500 lines are found:
 - 3+ files over 500 lines exist and `.claudeignore` was absent
 - User mentions "read it all at once" / "re-read the whole thing every time"
 
-When burst pattern is detected → **trigger audit-learnings integration in Step 4**.
+When burst pattern is detected → **trigger harvest-loop integration in Step 4**.
 
 ### Step 3. `/clear` + Model Switching Timing Guide
 
@@ -106,7 +106,7 @@ Check session state with the user, then prescribe according to context:
 
 > Models are tools for allocating the right expertise to complexity. Opus for simple tasks = wasted expertise; Haiku for design decisions = insufficient expertise. Switch models when task nature changes.
 
-### Step 4. audit-learnings Integration (burst pattern recording)
+### Step 4. harvest-loop Integration (burst pattern recording)
 
 When burst pattern is detected (if `tracks/_audit/` exists):
 
@@ -169,7 +169,7 @@ CC Context Audit Results
 
 | Environment | Behavior |
 |---|---|
-| Meta-harness cloned (Mode A) | Perform full Steps 1–5 / integrate with audit-learnings files |
+| Meta-harness cloned (Mode A) | Perform full Steps 1–5 / integrate with harvest-loop files |
 | Plugin only (Mode C) | Perform Steps 1–3 / Step 4 output only (no file writes) |
 | External general environment | Focus on `.claudeignore` generation + large file guidance |
 

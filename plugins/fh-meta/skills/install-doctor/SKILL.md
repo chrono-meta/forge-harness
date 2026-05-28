@@ -82,7 +82,7 @@ grep -i -n "pr\|pull request\|audit\|review\|weekly" CLAUDE.md 2>/dev/null | hea
 
 Judgment:
 - Existing PR convention present → possible priority conflict with `hub-cc-pr-reviewer` ⚠️
-- Existing weekly audit present → possible format conflict with `audit-learnings` ⚠️
+- Existing weekly audit present → possible format conflict with `harvest-loop` ⚠️
 
 ### 2-2. Skill Trigger Conflicts
 
@@ -125,7 +125,7 @@ find . -maxdepth 3 \( -name "*audit*" -o -name "*weekly*" -o -name "*retrospect*
   -not -path "./.git/*" -not -path "./node_modules/*" | head -10
 ```
 
-If existing retrospective/audit files exist → `audit-learnings` will create files in separate format → dual management ⚠️
+If existing retrospective/audit files exist → `harvest-loop` will create files in separate format → dual management ⚠️
 
 ### 2-6. MCP HTTP Transport Security Check
 

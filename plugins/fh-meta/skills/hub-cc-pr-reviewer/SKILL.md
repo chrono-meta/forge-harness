@@ -215,7 +215,7 @@ When deep-insight + this skill simultaneously trigger → delegate priority deci
 ### Cascade Value Areas (Synergy ★★★)
 
 - persona-be / persona-fe → plugin-recommender (Spring / Storybook recommendation cascade)
-- audit-learnings → domain persona post-processing (★★ / format conflict catch mandatory)
+- harvest-loop → domain persona post-processing (★★ / format conflict catch mandatory)
 - deep-insight multi-perspective review → this skill **sequential** activation (not simultaneous / avoid token cost)
 
 ## User Approval Gate
@@ -248,5 +248,5 @@ All 5 Steps completed
 
 - Rule body: `memory feedback_command_tower_gate.md` (hub gate accumulated naming baseline) + `memory feedback_qasp_to_hub_sync_protocol.md` (Option C Hybrid sync policy)
 - Consistency rules: `feedback_simplification_evidence` · `feedback_markdown_edit_discipline` · `feedback_skill_frontmatter_description_plain_text` · `feedback_bidirectional_self_validation` · `feedback_reference_own_hub_assets_first`
-- Sister skills: `cross-ecosystem-synergy-detection` (sister asset cluster baseline) · `verify-bidirectional` (bidirectional self-validation automation / self-catch auxiliary axis) · `audit-learnings` (weekly audit automation / operation proof accumulation cross-link)
+- Sister skills: `cross-ecosystem-synergy-detection` (sister asset cluster baseline) · `verify-bidirectional` (bidirectional self-validation automation / self-catch auxiliary axis) · `harvest-loop` (weekly audit automation / operation proof accumulation cross-link)
 - Autonomous commit proposal §2.19 baseline: `memory feedback_autonomous_commit_proposal.md` (① development source automation + PR proposal under human approval)

@@ -28,7 +28,7 @@ version: 0.1
 
 ## Category 2 — Forge-Harness Meta Skills (already installed / use fully)
 
-- **fh-meta 5 skills**: `audit-learnings` · `verify-bidirectional` · `frontier-status-summary` · `cross-ecosystem-synergy-detection` · `plugin-recommender`
+- **fh-meta 5 skills**: `harvest-loop` · `verify-bidirectional` · `frontier-digest` · `cross-ecosystem-synergy-detection` · `plugin-recommender`
 - **`hub-persona-auditor`** + **`fact-checker`** agents
 - **Active onboarding protocol** (forge-harness `CLAUDE.md`) — greeting/start trigger → 5-skill cascade
 
@@ -60,7 +60,7 @@ version: 0.1
 
 | Domain | ★★★ Immediate | ★★ Gradual | ★ Follow-up evaluation |
 |---|---|---|---|
-| **QA automation** (test prep automation) | `.claudeignore` · active onboarding · `verify-bidirectional` | `audit-learnings` | domain-specific test plugins |
+| **QA automation** (test prep automation) | `.claudeignore` · active onboarding · `verify-bidirectional` | `harvest-loop` | domain-specific test plugins |
 | **Technical writing / docs QA** | `.claudeignore` · active onboarding · `<your-wiki-mcp>` · `verify-bidirectional` | `<your-messaging-mcp>` | NLP plugin |
 | **Virtual full-stack** (React + Spring Boot) | `.claudeignore` (node_modules·target big effect) · active onboarding · `/model opus` for reasoning | `verify-bidirectional` | ESLint MCP · TS LSP |
 
@@ -73,7 +73,7 @@ version: 0.1
 
 | Domain area | Differentiated tool |
 |---|---|
-| QA domain | `verify-bidirectional` · `audit-learnings` |
+| QA domain | `verify-bidirectional` · `harvest-loop` |
 | Frontend/full-stack | `/model opus` (coding/reasoning split) |
 | Wiki/documentation | `<your-wiki-mcp>` (publish · update · sync) |
 | Collaboration notifications | `<your-messaging-mcp>` |
