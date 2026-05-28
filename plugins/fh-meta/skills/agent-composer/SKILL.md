@@ -670,39 +670,16 @@ Rules:
 
 ## Execution Tier
 
-Select the execution tier based on token cost and task scale. FH users can set and limit this directly.
+Select tier by token cost and task scale. FH default = **standard**.
 
-| Tier | Name | Agent scope | Tokens | Effect vs. no FH |
-|:---:|---|---|:---:|---|
-| **Small** | light | No agents — direct MD file Read/Edit | ~5K | Parallel composition + context alignment — fewer errors vs direct execution |
-| **Medium** | standard | Single FH internal skill dispatch (context-doctor/harness-doctor, etc.) | ~15K | **Optimal for most tasks** — 80% effect, 25% tokens. Includes gap detection and recording automation |
-| **Large** | full | Cross-plugin synergy + multiple parallel dispatches (includes cross-ecosystem-synergy-detection) | ~30K | Suitable for complex refactoring/cross-project work. Deeper pattern harvest than standard |
-| **Full deploy** | max | Non-plugin context (LOCAL_SKILL_REGISTRY) + external git pull/clone + full synergy recalculation | ~60K+ | Full harness evolution cycle — new skill germination/self-diagnosis closed loop. For session-end rounds and major architecture decisions only |
+| Tier | Tokens | Scope | Behavior |
+|:---:|:---:|---|---|
+| **light** | ~5K | No agents — direct MD Read/Edit | Wave 0 + Wave 1 single → output → end |
+| **standard** | ~15K | Single FH skill dispatch (context-doctor/harness-doctor, etc.) — 80% effect at 25% tokens | Wave 0 + Wave 1 multi → fan-in → one proactive suggestion |
+| **full** | ~30K | Cross-plugin synergy + parallel dispatch (includes cross-ecosystem-synergy-detection) | + Wave N state transition → conditional lightweight harvest |
+| **max** | ~60K+ | LOCAL_SKILL_REGISTRY + external git + full synergy recalc — session-end/architecture decisions only | + Three-Doctor Loop → full harvest-loop → next Wave follow-up |
 
-**FH default = standard**: Best cost-effectiveness tier. Adds composition/recording/suggestion to existing flow without new agents.
-
-### Tier Configuration (FH users)
-
-```
-# Add to CLAUDE.md or .claude/settings.json
-EXECUTION_TIER: standard   # light / standard / full / max
-```
-
-Temporary change within session: say "use light mode this time" or "run at max" to change for that session only.
-
-### Default Value
-
-The main development environment runs at **max** by default — no restrictions.
-FH default: **standard**.
-
-### Tier Behavior Summary
-
-```
-Small:      Wave 0 + Wave 1 single → output result → end
-Medium:     Wave 0 + Wave 1 multi → fan-in → Step 6 one proactive suggestion
-Large:      Medium + Wave N (state transition) → conditional lightweight harvest → Step 6
-Full deploy: Large + Three-Doctor Loop → full harvest-loop → synergy detection → next Wave follow-up
-```
+Configure via `EXECUTION_TIER: standard` in CLAUDE.md or `.claude/settings.json`. Temporary override: say "use light mode this time" / "run at max" for the current session only. Main dev env default = max (no restrictions).
 
 ---
 
@@ -735,24 +712,18 @@ All stages Step 0~6 complete
 
 ## Agent Composition Layer Identity
 
-> **Architecture basis**: Anthropic official experiment — single agent ($9, failed) vs. multi-agent harness ($200, perfect operation). The additional cost is justified by the quality gap.
-> Source: Anthropic Engineering Blog — "Harness Design for Long-Running Application Development" (Prithvi Rajasekaran)
-> URL: https://www.anthropic.com/engineering/harness-design-long-running-apps
+agent-composer is the FH **coordinator** above specialist agents (sim-conductor/field-harvest/harness-doctor, etc.) — it decides "which agent combination is optimal for this task." FH = composition layer (this) + specialist agent pool.
 
-agent-composer is the concrete implementation of the FH **agent composition layer**.
-It coordinates above specialist agents (sim-conductor/field-harvest/harness-doctor, etc.) and serves as the coordinator role that decides "which agent combination is optimal for this task."
+> Architecture basis: Anthropic [Harness Design for Long-Running Apps](https://www.anthropic.com/engineering/harness-design-long-running-apps) — single agent ($9, fails) vs. multi-agent harness ($200, perfect). Cost gap justified by quality gap.
 
-> **FH = agent composition layer (coordinator) + specialist agent pool**
+### Automation Layer Division
 
-### Automation Layer Division Principle
+The skill implements *"humans provide direction/insight, systems handle execution/recording"*:
 
-agent-composer is the interface that realizes the "humans provide direction/insight, systems handle execution/recording" division principle.
-
-| Human domain (no automation) | System domain (automation target) |
+| Human domain | System domain |
 |---|---|
-| What to build (direction) | Which agents to use and how |
-| Why this direction (insight) | Where to record results |
-| Final adoption decision | Pipeline combination/ordering decisions |
-| Naming/framing | Quality gate execution + result aggregation |
+| What to build, why (direction + insight) | Which agents and how (composition + ordering) |
+| Final adoption decision | Pipeline execution + result aggregation |
+| Naming/framing | Recording + quality gates |
 
 If something unclear is in the human domain, ask. If it's in the system domain, infer and proceed.
