@@ -134,7 +134,7 @@ This skill's essence = user ↔ this harness AI bidirectional self-validation. T
 
 ### Activation Triggers (autonomous mode)
 
-- **Natural cadence**: weekly_audit 7-day cycle (when `audit-learnings` skill runs) → AI runs autonomous baseline grep
+- **Natural cadence**: weekly_audit 7-day cycle (when `harvest-loop` skill runs) → AI runs autonomous baseline grep
 - **External asset persona audit time**: After updating externally-published asset, call `hub-persona-auditor` agent → mandatory processing on REVISE verdict
 - **User explicitly grants autonomy**: "let's go in order" / "go ahead" patterns → AI granted autonomous execution permission
 
@@ -216,7 +216,7 @@ This skill's core essence = "channel for updating baseline when user refinement 
 
 - **External users can use their own model cross-check channel** (e.g., other LLM API, other in-house model)
 - **Accumulated validation history** = accumulates from origin for the original developer / external users start their own count from 0
-- **Autonomous activation baseline examples** (audit-learnings + hub-persona-auditor) = origin environment baseline / external users can also trigger autonomous activation on their own natural cadence
+- **Autonomous activation baseline examples** (harvest-loop + hub-persona-auditor) = origin environment baseline / external users can also trigger autonomous activation on their own natural cadence
 - External users also follow same user approval gate (Human-in-the-loop principle baseline)
 
 ## Done When
