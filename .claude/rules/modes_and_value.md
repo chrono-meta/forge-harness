@@ -44,9 +44,9 @@ The forge-harness is not a simple plugin marketplace — it is an **integrated e
 |---|---|
 | `plugin-recommender` | Tier 1·2·3 classification + organization GHE + token check |
 | `cross-ecosystem-synergy-detection` | GHE cluster + Tier classification baseline |
-| `audit-learnings` | Weekly audit automation + Phase 2+ PR auto-proposal |
+| `harvest-loop` | Weekly audit + self-evolution pipeline + Phase 2+ PR auto-proposal |
 | `verify-bidirectional` | Bidirectional self-verification + user-AI baseline update circuit |
-| `frontier-status-summary` | External-facing asset cross-ref + per-audience guide |
+| `frontier-digest` | External-facing asset cross-ref + frontier trend + per-audience guide |
 | `hub-cc-pr-reviewer` | PR diff → baseline coherence check → review comment auto-generation |
 | `context-doctor` | `.claudeignore` auto-generation + large file detection + `/clear` timing guidance |
 | `harness-doctor` | Harness structure L1~L4 diagnosis + M/S/R prescription |
@@ -61,7 +61,7 @@ The forge-harness is not a simple plugin marketplace — it is an **integrated e
     ↓ results accumulated
 [Layer 1] memory system auto-persist → next session immediate awareness
     ↓ weekly reflection
-[Layer 2] audit-learnings → pattern formalization → memory update
+[Layer 2] harvest-loop → pattern formalization → memory update
     ↓ precision counter-argument
 [Layer 2] verify-bidirectional → baseline update channel
 ```
@@ -77,8 +77,8 @@ The forge-harness is not a simple plugin marketplace — it is an **integrated e
 | "recommend a plugin", "what should I install" | Tool discovery | `plugin-recommender` |
 | "can I use what's in another project?", "what's available?" | Ecosystem synergy discovery | `cross-ecosystem-synergy-detection` |
 | "manage my context", "want to save tokens" | Context optimization | `context-doctor` |
-| "wrap up this week's work", "want to reflect" | Weekly audit | `audit-learnings` |
+| "wrap up this week's work", "want to reflect" | Weekly audit | `harvest-loop` |
 | "review my PR", "please review" | PR audit | `hub-cc-pr-reviewer` |
 | "check harness structure", "confirm everything's running well" | Structure diagnosis | `harness-doctor` |
-| "what are the latest AI tools?", "tell me about frontier trends" | External asset discovery | `frontier-status-summary` |
+| "what are the latest AI tools?", "tell me about frontier trends" | External asset discovery | `frontier-digest` |
 | "want to share this pattern", "can I post this here?" | Pattern harvesting | `field-harvest` |
