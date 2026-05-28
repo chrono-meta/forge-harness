@@ -518,7 +518,7 @@ Run only when promoting a skill v0.x → v1, or when explicit quantitative verif
 | Metric | v1 criteria | Measurement |
 |---|---|---|
 | Tool Selection Accuracy | > 0.90 | correct skill selections / total |
-| Multi-Step Coherence | > 0.85 | full Done-When completion rate |
+| Multi-Step Coherence | > 0.85 | full Done When completion rate |
 | Clarification Rate | < 0.30 | user intervention requests / steps |
 
 ```bash
