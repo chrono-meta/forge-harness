@@ -10,9 +10,9 @@ AI reads this file first when searching past work. Open individual files for det
 
 ### 2026-05-28 | _meta | install-wizard, plugin-autoinstall, deprecated-cleanup, fh-ops, external-validation
 **File:** tracks/_meta/session_2026_05_28_fh-external-ops.md
-FH 외부 운용 첫 실행 — install-wizard 첫 실행(57/100)에서 마찰 포인트 2개 발견 및 즉시 수정. PR #7 (install-wizard plugin 자동 설치) + PR #8 (deprecated refs 정리) 완료.
-- Decision: install-wizard FH plugin MISS → AI가 Bash로 자동 실행 (수동 3-turn 제거) — "빌더가 직접 써봐야 보이는 마찰" 패턴
-- Decision: deprecated 참조는 CHANGELOG 업데이트 시 연결 파일도 동시 업데이트 필요 — 별도 cleanup PR 필요
+First external run of FH — install-wizard (score 57/100) revealed 2 friction points, both fixed immediately. PR #7 (plugin auto-install) + PR #8 (deprecated refs cleanup) merged.
+- Decision: install-wizard FH plugin MISS → AI auto-runs via Bash (eliminates 3-turn manual flow) — "friction only visible when the builder actually uses it" pattern
+- Decision: deprecated refs must be updated alongside CHANGELOG — separate cleanup PR required
 
 ### 2026-05-27 | _meta | two-layer-storage, memory-vs-tracks, cross-session-state
 **File:** tracks/_meta/fh_signal_2026_05_27_session-starter.md
