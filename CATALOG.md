@@ -8,6 +8,12 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-05-29 | fh-commons | mcp-circuit-breaker, mcp-reliability, tool-failure, fallback
+**File:** plugins/fh-commons/skills/mcp-circuit-breaker/SKILL.md
+New skill: detects MCP tool failure patterns (3 consecutive fails = trip), blocks further calls, proposes 3-tier fallbacks, and resets via HALF-OPEN probe after cooldown.
+- Decision: placed in fh-commons (project-agnostic MCP guard, useful in any Claude Code project)
+- Circuit states: CLOSED → OPEN → HALF-OPEN → CLOSED
+
 ### 2026-05-29 | fh-meta | prompt-regression, regression-detection, harness-quality
 **File:** plugins/fh-meta/skills/prompt-regression/SKILL.md
 New skill: detects harness behavioral regressions after CLAUDE.md / rule / skill edits by running standard probe suite and comparing against baselines.
