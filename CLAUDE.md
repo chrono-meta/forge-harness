@@ -225,6 +225,47 @@ Skills without a Done When definition automatically qualify as harness-doctor L2
 
 ---
 
+## FH Improvement 3-Axis Auto-Gate (Self-Verification Orchestrator)
+
+**Whenever the AI modifies FH assets** (SKILL.md · `.claude/rules/*.md` · `templates/` · `CLAUDE.md`),
+the 3-axis verification chain runs **automatically** before the changes are presented as PR-ready.
+No user request is needed — this is a mandatory autonomous step, not a proposal.
+
+```
+FH asset modified
+    │
+    ▼
+Axis 1 — Backward   : bash templates/regression_guard.sh main
+    │
+    ▼
+Axis 2 — Adversarial: /steel-quench  (trigger phrases, step conflicts, design attack surface)
+    │
+    ▼
+Axis 3 — Forward    : /source-grounding-audit  (phantom refs, broken paths, stale citations)
+    │
+    ▼
+All 3 PASS → present as PR-ready
+Any FAIL  → fix inline, re-run failed axis, then proceed
+```
+
+**Why automatic (not proposal)**: Each axis catches a different class of defect. Asking the user to trigger each one separately means defects slip through between requests — as happened before PR #16. The orchestrator closes that gap by chaining all three without prompting.
+
+**Scope**: Active from the moment any FH file is modified in the current session — not deferred to the next session.
+
+**Lightweight exception** (Axis 1 only, skip Axes 2–3): Sessions where **zero SKILL.md / rules / templates files changed** (e.g., CATALOG.md entry, tracks/ update). Judgment is file-based, not subjective.
+
+**Unavailable axis**: If steel-quench or source-grounding-audit are not installed, note `Axis N: skipped (skill unavailable)` and proceed. Axis 1 PASS alone is sufficient to unblock a PR when Axes 2–3 are unavailable.
+
+**Axis ownership** (each skill is already complete — orchestrator only coordinates):
+
+| Axis | Skill | What it catches |
+|---|---|---|
+| Backward | `regression_guard.sh` | Critical section loss, broken refs, syntax errors, line reduction |
+| Adversarial | `steel-quench` | Trigger phrase collisions, design attack surface, over-engineered steps |
+| Forward | `source-grounding-audit` | Phantom references, paths that don't exist, stale external links |
+
+---
+
 ## Autonomous Initiative Layer — Context-Triggered Skill Proposals (Active Throughout Session)
 
 At any point during a session, when the following signals are detected, propose the relevant skill in one line.
@@ -247,6 +288,7 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "where does this go", "asset location", "hub vs project", "placement" | `/asset-placement-gate` |
 | "add to marketplace", "OK to publish", "pre-publish check" | `/marketplace-gate` |
 | "look at this again", "is this right", "counterargument", "re-validate" | `/verify-bidirectional` |
+| "ready to PR", "about to push", "merge this", "PR 올려줘", FH asset changed in session | 3-axis auto-gate (see above — runs automatically, no proposal needed) |
 
 **Guard**: Do not propose a skill that is already running. One signal = one-line proposal (no pressure).
 For per-skill utterance patterns, see the relevant `SKILL.md §Trigger Phrases` section.
