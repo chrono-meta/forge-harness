@@ -136,6 +136,36 @@ print('OK')
     fi
   done < <(echo "$after_content" | grep -oE '`\{FH_ROOT\}/[^`]+`' | sort -u)
 
+  # F7. Bash block syntax regression — per-block bash -n
+  # bash -n stops at first error per file; split each ```bash block into its own file
+  # so multiple errors are countable. Catches: new error added to a previously-clean block,
+  # or a new bad block introduced.
+  count_bad_blocks() {
+    local content="$1"
+    local tmpdir; tmpdir=$(mktemp -d)
+    echo "$content" | awk -v d="$tmpdir" '
+      /^```bash$/ { in_b=1; n++; out=d"/blk_"n".sh"; next }
+      /^```$/ && in_b { in_b=0; next }
+      in_b { print > out }
+    '
+    local bad=0
+    for blk in "$tmpdir"/blk_*.sh; do
+      [ -e "$blk" ] && [ -s "$blk" ] || continue
+      bash -n "$blk" 2>/dev/null || bad=$((bad + 1))
+    done
+    rm -rf "$tmpdir"
+    echo "$bad"
+  }
+  before_bash_err=$(count_bad_blocks "$before_content")
+  after_bash_err=$(count_bad_blocks "$after_content")
+  if [ "$after_bash_err" -gt "$before_bash_err" ]; then
+    diff=$((after_bash_err - before_bash_err))
+    echo "  ❌ M-TIER  bash blocks with syntax errors increased ($before_bash_err → $after_bash_err, +$diff)"
+    M_TIER=$((M_TIER + 1))
+  elif [ "$before_bash_err" -gt 0 ] && [ "$after_bash_err" = "$before_bash_err" ]; then
+    echo "  ℹ️  pre-existing bash syntax errors: $before_bash_err block(s) (no change — separate fix)"
+  fi
+
   # F6. Line reduction percentage
   before_lines=$(read_before "$f" | wc -l | tr -d ' ')
   after_lines=$(read_after "$f" | wc -l | tr -d ' ')

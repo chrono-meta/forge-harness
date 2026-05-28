@@ -92,7 +92,8 @@ Criteria:
 ls .claude/rules/*.md 2>/dev/null
 
 # Check if each rules file is referenced in CLAUDE.md
-for f in .claude/rules/*.md 2>/dev/null; do
+# find handles empty-glob portably across bash and zsh (zsh nomatch + bash literal-glob)
+find .claude/rules -maxdepth 1 -name '*.md' 2>/dev/null | while read -r f; do
   fname=$(basename "$f")
   grep -l "$fname" CLAUDE.md 2>/dev/null \
     && echo "REFERENCED: $fname" \
@@ -575,6 +576,7 @@ If no SKILL.md / rules / CLAUDE.md / templates changes detected → skip (regres
 | F4 | Operational keyword preservation — `M-tier` · `S-tier` · `R-tier` · `PASS` · `BLOCK` · `Wave 0~4` · `Step 0~4` · `fan-in` · `Done When` token counts | **M-tier** if drop ≥50% · **S-tier** if 20~49% |
 | F5 | Cross-reference integrity — `{FH_ROOT}/...` paths resolve to existing files | **M-tier** |
 | F6 | Line reduction percentage | **S-tier** if ≥30% reduction |
+| F7 | Bash block syntax — per-block `bash -n` parse, count of bad blocks compared | **M-tier** if net increase |
 
 #### 10-3. Verdict
 
@@ -608,6 +610,23 @@ The guard catches real regressions but also surfaces benign changes (e.g., a key
 - If real loss → fix and re-run guard before merge
 
 > The guard is **advisory, not authoritative**. M-tier blocks merge by default but human can override after review (PR description must document the override reason).
+
+#### 10-6. Cross-skill capability — syntax validation reuse
+
+F7 (per-block `bash -n` parse) is a general-purpose syntax verification capability. Other skills can invoke the same logic for different purposes:
+
+| Skill | How it uses syntax verification | Verification axis |
+|---|---|---|
+| **harness-doctor Step 10** (this) | Regression detection — new syntax errors introduced by change | *Backward*: did we break what worked? |
+| **steel-quench** | Attack vector — "this SKILL.md claims bash will run but contains syntax errors" → S-grade blocker | *Adversarial*: is this design actually robust? |
+| **source-grounding-audit** | Claim verification — code shown in docs that doesn't parse is a phantom claim (fabricated example) | *Forward*: does what we claim match what runs? |
+
+These three axes are complementary, not overlapping:
+- regression_guard catches *new* breakage (compare BEFORE vs AFTER)
+- steel-quench catches *design* breakage (does the artifact survive attack?)
+- source-grounding-audit catches *phantom* breakage (is the cited code real?)
+
+For shared utility, see `templates/regression_guard.sh` — extract the `count_bad_blocks` function or invoke the script with the appropriate ref pair.
 
 ---
 
