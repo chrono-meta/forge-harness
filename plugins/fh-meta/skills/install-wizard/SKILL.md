@@ -140,7 +140,7 @@ print('plugins:', list(p.keys()) if isinstance(p,dict) else p)
 python3 -c "import json,os; d=json.load(open(os.path.expanduser('~/.claude.json'))); print('MCP:', list(d.get('mcpServers',{}).keys()))" 2>/dev/null || echo "MCP config not found"
 
 # zshrc hook status
-grep -q "_cc_audit_check" ~/.zshrc 2>/dev/null && echo "zshrc hook: present" || echo "zshrc hook: absent"
+grep -q "cc_audit_check.zsh" ~/.zshrc 2>/dev/null && echo "zshrc hook: present" || echo "zshrc hook: absent"
 
 # Framework detection (Streamlit) — must be specified in requirements.txt or pyproject.toml
 STREAMLIT_PROJECT=false
@@ -293,10 +293,10 @@ Auto-check the following items based on detected environment. Each item classifi
 |---|---|---|
 | `.claudeignore` | Existence | `ls .claudeignore` |
 | `local_fh_context.md` | Existence in `.claude/rules/` | `ls .claude/rules/local_fh_context.md` |
-| `zshrc hook` | Contains `_cc_audit_check` | `grep _cc_audit_check ~/.zshrc` |
+| `zshrc hook` | Contains `cc_audit_check.zsh` source line | `grep cc_audit_check.zsh ~/.zshrc` |
 | `weekly_audit` latest | Within 7 days | CC_HUB_DIR/tracks/_audit/ mtime |
 | `sentinel` setup | `~/.cc_sentinels/` exists | `ls ~/.cc_sentinels/` |
-| FH plugin install | settings.json plugins | grep forge-harness |
+| FH plugin install | `installed_plugins.json` has `fh-meta` entry | `python3 -c "import json,os; d=json.load(open(os.path.expanduser('~/.claude/plugins/installed_plugins.json'))); print([k for k in d.get('plugins',{}) if 'fh-meta' in k])"` |
 | `.git/info/exclude` | Personal files excluded | grep local_fh_context .git/info/exclude |
 | MCP plugin | ~/.claude.json mcpServers contains entry | `python3 -c "import json,os; d=json.load(open(os.path.expanduser('~/.claude.json'))); print(list(d.get('mcpServers',{}).keys()))"` |
 | `deep-insight plugin` | settings.json plugins contains deep-insight | `grep -r "deep-insight" .claude/settings.json 2>/dev/null` |
@@ -439,7 +439,7 @@ After executing approved items, install automatic maintenance structure:
 
 ```bash
 # zshrc hook (if not installed — preview then confirm, idempotent)
-if ! grep -q "_cc_audit_check" ~/.zshrc 2>/dev/null; then
+if ! grep -q "cc_audit_check.zsh" ~/.zshrc 2>/dev/null; then
   cat >> ~/.zshrc << 'EOF'
 export FH_DIR="{FH_DIR}"
 export CC_HUB_DIR="{CC_HUB_DIR}"
