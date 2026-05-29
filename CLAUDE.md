@@ -231,21 +231,28 @@ Skills without a Done When definition automatically qualify as harness-doctor L2
 
 ---
 
-## FH Improvement 3-Axis Auto-Gate (Self-Verification Orchestrator)
+## FH Improvement 4-Axis Auto-Gate (Self-Verification Orchestrator)
 
 **Whenever the AI modifies FH assets** (SKILL.md · `.claude/rules/*.md` · `templates/` · `CLAUDE.md`),
-the 3-axis verification chain runs **automatically before the first commit** of that session.
+the 4-axis verification chain runs **automatically before the first commit** of that session.
 No user request is needed — this is a mandatory autonomous step, not a proposal.
 
-**Commit gate**: `git commit` on FH asset changes is blocked until all 3 axes PASS.
+**Commit gate**: `git commit` on FH asset changes is hard-blocked by a git pre-commit hook
+(`templates/.git-hooks/pre-commit`) until all required axes PASS.
 "Present as PR-ready" and "commit" are both gated — committing first, verifying later is not permitted.
+
+**Hook installation** (one-time, from repo root):
+```bash
+git config core.hooksPath templates/.git-hooks
+chmod +x templates/.git-hooks/pre-commit
+```
 
 ```
 FH asset modified
     │
     ▼
 Axis 1 — Backward   : bash templates/regression_guard.sh --pr {BRANCH}
-    │
+    │                   (hook runs this directly)
     ▼
 Axis 2 — Adversarial: /steel-quench  (trigger phrases, step conflicts, design attack surface)
     │
@@ -253,18 +260,24 @@ Axis 2 — Adversarial: /steel-quench  (trigger phrases, step conflicts, design 
 Axis 3 — Forward    : /source-grounding-audit  (phantom refs, broken paths, stale citations)
     │
     ▼
+                    ← After Axes 2+3 both PASS, AI creates marker:
+                      tracks/_meta/.axes_23_passed_{branch}_{date}.marker
+                      (hook checks for this file — blocks commit if absent)
+    ▼
 Axis 4 — Record     : /edit-manifest RECORD  (log predicted impact for each change — enables future verify)
-    │
+    │                   (hook verifies today's date entry exists in edit_manifest.yaml)
     ▼
 All 4 PASS → git commit allowed → present as PR-ready
 Any FAIL  → fix inline, re-run failed axis, then proceed
 ```
 
-**Why automatic (not proposal)**: Each axis catches a different class of defect. Asking the user to trigger each one separately means defects slip through between requests — as happened before PR #16. The orchestrator closes that gap by chaining all three without prompting.
+**Why automatic (not proposal)**: Each axis catches a different class of defect. Asking the user to trigger each one separately means defects slip through between requests — as happened before PR #16. The orchestrator closes that gap by chaining all four without prompting.
+
+**Why a git hook (not just a rule)**: Prompt-level CLAUDE.md rules are advisory — they can be bypassed by a distracted session. The git pre-commit hook is a hard gate: it physically blocks `git commit` until the marker and manifest entry exist. Enforcement moves from the AI layer to the VCS layer.
 
 **Scope**: Active from the moment any FH file is modified in the current session — not deferred to the next session.
 
-**Lightweight exception** (Axis 1 + 4 only, skip Axes 2–3): Sessions where **zero SKILL.md / rules / templates files changed** (e.g., CATALOG.md entry, tracks/ update). Judgment is file-based, not subjective.
+**Lightweight exception** (Axis 1 + 4 only, skip Axes 2–3): Sessions where **zero SKILL.md / rules / templates files changed** (e.g., CATALOG.md entry, tracks/ update). The hook detects this automatically — no Axes 2+3 marker required for light-only commits. Judgment is file-based, not subjective.
 
 **Unavailable axis**: If steel-quench or source-grounding-audit are not installed, note `Axis N: skipped (skill unavailable)` and proceed. Axis 1 PASS alone is sufficient to unblock a PR when Axes 2–3 are unavailable. Axis 4 (edit-manifest): if the skill is not installed, substitute a manual one-line prediction appended to `tracks/_meta/edit_manifest.yaml` — the record is what matters, not the skill.
 
@@ -304,7 +317,7 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "MCP failing", "tool keeps erroring", "circuit-breaker", "same error looping" | `/mcp-circuit-breaker` |
 | "token budget", "how expensive", "estimate tokens", "will this cost a lot" | `/token-budget-gate` |
 | "did my rule change break anything", "regression check", "test harness changes" | `/prompt-regression` |
-| "ready to PR", "about to push", "merge this", "PR 올려줘", FH asset changed in session | 3-axis auto-gate (see above — runs automatically, no proposal needed) |
+| "ready to PR", "about to push", "merge this", "PR 올려줘", FH asset changed in session | 4-axis auto-gate (see above — runs automatically, no proposal needed) |
 
 **Guard**: Do not propose a skill that is already running. One signal = one-line proposal (no pressure).
 For per-skill utterance patterns, see the relevant `SKILL.md §Trigger Phrases` section.
