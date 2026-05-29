@@ -138,6 +138,6 @@ Step 1~5 complete
 
 ## References
 
-- Theoretical basis: *Scaling the Harness in Agentic AI* (arXiv:2605.26112) §3.2 "stale-but-confident" failure mode
+- Theoretical basis: *Scaling the Harness in Agentic AI* (arXiv:2605.26112) §Memory Problems — "stale-but-confident" failure mode
 - Integrates with: `harvest-loop` Step 0-c · `context-doctor` (context layer hygiene)
 - Memory format: `~/.claude/projects/*/memory/MEMORY.md`

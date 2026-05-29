@@ -18,6 +18,12 @@ model: sonnet
 FH's regression_guard.sh catches backward regressions. edit-manifest closes the forward
 loop: did the edit actually improve what it claimed to improve?
 
+**Boundary vs. verify-bidirectional**: verify-bidirectional is *reactive* — it updates the
+baseline when the user raises a counter-argument to an AI recommendation. edit-manifest is
+*predictive* — it records a forward prediction at edit time and verifies it against outcomes
+later, with no user counter-argument required. Different axes: one responds to challenge,
+the other tests a self-declared hypothesis.
+
 ## Manifest File Location
 
 ```
@@ -47,8 +53,13 @@ edit history and negative-feedback buffer.
 ### Automatic — Record Phase (on every FH asset edit)
 
 Whenever the **3-axis auto-gate** in CLAUDE.md fires (any SKILL.md / rules / CLAUDE.md edit),
-append a manifest entry **before** committing. The 3-axis auto-gate orchestrator calls this
-skill's Record step as Step 0 of its flow.
+append a manifest entry **before** committing.
+
+> **Wiring note**: This Record step is invoked manually or via harvest-loop until the
+> CLAUDE.md 3-axis auto-gate is explicitly extended to call it. The auto-gate currently
+> chains regression_guard → steel-quench → source-grounding-audit; adding edit-manifest
+> Record as a pre-step is a proposed extension, not yet wired. Do not assume automatic
+> invocation — call it explicitly after an FH asset edit.
 
 ### Automatic — Verify Phase (harvest-loop Step 0-c)
 
@@ -106,9 +117,15 @@ For each pending entry, check the evidence source specified in `predicted_measur
 | Evidence Source | Check Method |
 |---|---|
 | Session utterance patterns | Grep `tracks/_meta/` for trigger phrases |
-| Skill invocation count | Read `knowledge/shared/learnings/subagent_invocations_log.yaml` |
+| Skill invocation count | Read `knowledge/shared/learnings/subagent_invocations_log.yaml` (create if absent) |
 | User friction signals | Grep `tracks/_meta/fh_signal_*.md` for related friction |
 | Git commit frequency | `git log --oneline --since={date} -- {file}` |
+
+> **Circularity guard**: edit-manifest is invoked *by* harvest-loop (Step 0-c). To avoid a
+> circular evidence loop, edit-manifest must NOT use harvest-loop's own synthesis outputs
+> (proposal lists, curator decisions) as verification evidence. Evidence sources are limited
+> to primary signals — raw utterance logs, invocation counts, git history, friction signals —
+> that exist independently of any harvest-loop run.
 
 **Step V3 — Apply Validation Gate**
 
