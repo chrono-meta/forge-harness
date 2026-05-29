@@ -97,6 +97,15 @@ Session end
     │  (Even if context is compressed, accurate reconstruction via source rebuild)
     │
     ▼
+[Step 0-c] Edit Manifest Verification + Memory Hygiene  ← v1.3: AHE+SkillOpt pattern
+    │  edit-manifest VERIFY mode: check all pending predictions in edit_manifest.yaml
+    │  → Verified (accepted): no action / Falsified (rejected): propose revert
+    │  → Output: "edit-manifest: N verified / N rejected / N pending"
+    │  memory-hygiene scan: check staleness of memory/*.md entries
+    │  → Skip if memory_hygiene_*.md mtime < 7 days (cadence guard)
+    │  → Output: "memory-hygiene: N stale / N fresh" (or "all fresh" → skip)
+    │
+    ▼
 [Step 0] Regression Guard  ← v1.2: harness-evolver Learn-stage pattern
     │  Before extracting new patterns, check: does anything from this session
     │  conflict with or regress an already-validated skill?
@@ -511,11 +520,14 @@ Leaving completed items in the card until the next session is a bug.
 | Validate candidates from external user perspective | `fh-meta:hub-persona-auditor` |
 | Review before sharing with team | `/apex-review` |
 | When self-marketing pattern discovered as HIGH P10 | `/self-marketing-lint` auto-propose |
+| Edit predictions to verify / rejected-edits buffer | `fh-meta:edit-manifest` (Step 0-c) |
+| Stale memory entries to re-verify | `fh-meta:memory-hygiene` (Step 0-c) |
 
 ## Done When
 
 ```
-All stages Step 0 → 1 → 2 → 3 (parallel) → 3.5 → 3.75 → 4 → 5 complete
+All stages Step 0-c → 0 → 1 → 2 → 3 (parallel) → 3.5 → 3.75 → 4 → 5 complete
++ Step 0-c: edit-manifest pending entries verified + memory-hygiene scan run
 + synthesizer grade readjustment complete (rejected candidates separated)
 + Step 3.75 Critic verdict complete (PASS/CONDITIONAL PASS/FAIL stated)
 + Final proposal list output (sorted by HIGH/MED criteria)

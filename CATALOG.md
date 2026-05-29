@@ -8,6 +8,16 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-05-30 | fh-meta | edit-manifest, predict-verify, validation-gate, skill-evolution, SkillOpt, AHE
+**File:** plugins/fh-meta/skills/edit-manifest/SKILL.md
+New skill: predict-verify loop for harness edits. Every SKILL.md/rules/CLAUDE.md edit records a falsifiable prediction; next session verifies against actual outcomes. Validation gate (SkillOpt pattern) accepts only edits with measurable improvement; rejected edits retained as negative-feedback buffer. Integrated as harvest-loop Step 0-c.
+- Decision: based on AHE (arXiv:2604.25850) change manifest + SkillOpt (arXiv:2605.23904) selection-split gate
+
+### 2026-05-30 | fh-meta | memory-hygiene, stale-memory, staleness-detection, verification
+**File:** plugins/fh-meta/skills/memory-hygiene/SKILL.md
+New skill: detects "stale-but-confident" memory entries (facts verified once but silently drifted). Classifies by type (project 14d / reference 30d / feedback 90d / user 180d), re-verifies live via gh CLI or WebFetch (FH online advantage), proposes archival. Integrated as harvest-loop Step 0-c.
+- Decision: based on Scaling the Harness (arXiv:2605.26112) §3.2 stale-but-confident failure mode
+
 ### 2026-05-29 | harness-core | return-path-gate, skill-chain, conditional-pass, closed-loop
 **File:** knowledge/shared/harness-core/return_path_gate.md
 Pattern: downstream skill returns structured verdict (PASS/CONDITIONAL_PASS/FAIL/ESCALATE) back to caller, which gates next step on it. Verified in apex-review→sim-conductor and agent-composer↔deliberation.
