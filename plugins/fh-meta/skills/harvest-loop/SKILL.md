@@ -80,12 +80,14 @@ Conditions for running mid-session harvest-loop without waiting for session end.
 Session end
     │
     ▼
-[Step 0-a] SKILL.md change detection → auto-quench
-    │  git diff --name-only HEAD | grep "SKILL.md"
-    │  → 1+ SKILL.md changes detected: run quench-challenger automatically (S/A/B severity)
+[Step 0-a] FH asset change detection → auto-quench
+    │  git diff --name-only HEAD | grep -E "SKILL\.md|\.claude/rules/|templates/|CLAUDE\.md"
+    │  → 1+ FH asset changes detected: run full 3-axis gate (CLAUDE.md §FH Improvement 3-Axis Auto-Gate)
+    │    Scope: SKILL.md · rules/*.md · templates/ · CLAUDE.md (not CATALOG.md or tracks/)
     │  → No changes: proceed to Step 0-b immediately
     │  S-tier 1+: require prescription applied before commit (hard gate)
     │  A-tier and below: output prescription list, proceed to Step 0-b (soft gate)
+    │  Note: quench-challenger alone is insufficient — full 3-axis (regression+steel-quench+source-grounding) required
     │
     ▼
 [Step 0-b] Card cross-check — reconstruct completed items (no memory dependency)

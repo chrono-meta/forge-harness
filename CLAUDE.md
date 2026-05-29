@@ -234,8 +234,11 @@ Skills without a Done When definition automatically qualify as harness-doctor L2
 ## FH Improvement 3-Axis Auto-Gate (Self-Verification Orchestrator)
 
 **Whenever the AI modifies FH assets** (SKILL.md · `.claude/rules/*.md` · `templates/` · `CLAUDE.md`),
-the 3-axis verification chain runs **automatically** before the changes are presented as PR-ready.
+the 3-axis verification chain runs **automatically before the first commit** of that session.
 No user request is needed — this is a mandatory autonomous step, not a proposal.
+
+**Commit gate**: `git commit` on FH asset changes is blocked until all 3 axes PASS.
+"Present as PR-ready" and "commit" are both gated — committing first, verifying later is not permitted.
 
 ```
 FH asset modified
@@ -250,7 +253,10 @@ Axis 2 — Adversarial: /steel-quench  (trigger phrases, step conflicts, design 
 Axis 3 — Forward    : /source-grounding-audit  (phantom refs, broken paths, stale citations)
     │
     ▼
-All 3 PASS → present as PR-ready
+Axis 4 — Record     : /edit-manifest RECORD  (log predicted impact for each change — enables future verify)
+    │
+    ▼
+All 4 PASS → git commit allowed → present as PR-ready
 Any FAIL  → fix inline, re-run failed axis, then proceed
 ```
 
@@ -258,9 +264,9 @@ Any FAIL  → fix inline, re-run failed axis, then proceed
 
 **Scope**: Active from the moment any FH file is modified in the current session — not deferred to the next session.
 
-**Lightweight exception** (Axis 1 only, skip Axes 2–3): Sessions where **zero SKILL.md / rules / templates files changed** (e.g., CATALOG.md entry, tracks/ update). Judgment is file-based, not subjective.
+**Lightweight exception** (Axis 1 + 4 only, skip Axes 2–3): Sessions where **zero SKILL.md / rules / templates files changed** (e.g., CATALOG.md entry, tracks/ update). Judgment is file-based, not subjective.
 
-**Unavailable axis**: If steel-quench or source-grounding-audit are not installed, note `Axis N: skipped (skill unavailable)` and proceed. Axis 1 PASS alone is sufficient to unblock a PR when Axes 2–3 are unavailable.
+**Unavailable axis**: If steel-quench or source-grounding-audit are not installed, note `Axis N: skipped (skill unavailable)` and proceed. Axis 1 PASS alone is sufficient to unblock a PR when Axes 2–3 are unavailable. Axis 4 (edit-manifest): if the skill is not installed, substitute a manual one-line prediction appended to `tracks/_meta/edit_manifest.yaml` — the record is what matters, not the skill.
 
 **Axis ownership** (each skill is already complete — orchestrator only coordinates):
 
@@ -269,6 +275,7 @@ Any FAIL  → fix inline, re-run failed axis, then proceed
 | Backward | `regression_guard.sh` | Critical section loss, broken refs, syntax errors, line reduction |
 | Adversarial | `steel-quench` | Trigger phrase collisions, design attack surface, over-engineered steps |
 | Forward | `source-grounding-audit` | Phantom references, paths that don't exist, stale external links |
+| Record | `edit-manifest` RECORD | Logs predicted impact — closes the predict-verify loop for future harvest-loop |
 
 ---
 
