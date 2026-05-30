@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+# FH 4-Axis Gate Pre-Commit Hook
+#
+# Blocks git commit when FH assets are staged unless all required axes have passed.
+# Full gate (all 4 axes): SKILL.md · .claude/rules/ · templates/ · CLAUDE.md
+# Lightweight gate (Axis 1+4 only): CATALOG.md · tracks/ changes only
+#
+# Install (one-time, from repo root):
+#   git config core.hooksPath templates/.git-hooks
+#   chmod +x templates/.git-hooks/pre-commit
+
+set -uo pipefail
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+TODAY=$(date +%Y-%m-%d)
+BRANCH_SLUG="${BRANCH//\//_}"
+FAILED=0
+
+# ── Classify staged changes ──────────────────────────────────────────────────
+HEAVY=$(git diff --cached --name-only 2>/dev/null \
+  | grep -E "(SKILL\.md|\.claude/rules/|templates/|CLAUDE\.md)" || true)
+LIGHT=$(git diff --cached --name-only 2>/dev/null \
+  | grep -E "(CATALOG\.md|^tracks/)" || true)
+
+if [ -z "$HEAVY" ] && [ -z "$LIGHT" ]; then
+  exit 0  # No FH assets staged
+fi
+
+if [ -n "$HEAVY" ]; then
+  GATE_MODE="full"
+else
+  GATE_MODE="lightweight"
+fi
+
+echo ""
+echo "══════════════════════════════════════════════"
+echo " FH 4-Axis Gate — ${GATE_MODE} mode"
+echo "══════════════════════════════════════════════"
+if [ -n "$HEAVY" ]; then
+  echo " Heavy assets staged:"
+  echo "$HEAVY" | sed 's/^/   /'
+fi
+if [ -n "$LIGHT" ]; then
+  echo " Light assets staged:"
+  echo "$LIGHT" | sed 's/^/   /'
+fi
+echo ""
+
+# ── Axis 1 — Regression Guard (always required) ──────────────────────────────
+echo "[Axis 1] Regression Guard..."
+GUARD="$REPO_ROOT/templates/regression_guard.sh"
+if [ ! -f "$GUARD" ]; then
+  echo "  ⚠️  SKIP — templates/regression_guard.sh not found"
+else
+  if bash "$GUARD" --pr "$BRANCH" 2>&1; then
+    echo "  ✅ PASS"
+  else
+    echo "  ❌ FAIL — fix regression issues before committing"
+    FAILED=1
+  fi
+fi
+
+# ── Axes 2+3 — steel-quench + source-grounding-audit (full gate only) ─────────
+if [ "$GATE_MODE" = "full" ]; then
+  echo "[Axis 2+3] Adversarial + Source-Grounding..."
+  MARKER_DIR="$REPO_ROOT/tracks/_meta"
+  MARKER="$MARKER_DIR/.axes_23_passed_${BRANCH_SLUG}_${TODAY}.marker"
+
+  if [ -f "$MARKER" ]; then
+    echo "  ✅ PASS (marker confirmed: .axes_23_passed_${BRANCH_SLUG}_${TODAY}.marker)"
+  else
+    echo "  ❌ NOT CONFIRMED"
+    echo ""
+    echo "  Run /steel-quench and /source-grounding-audit in your Claude session."
+    echo "  After both PASS, Claude creates the marker automatically. Or manually:"
+    echo ""
+    echo "    mkdir -p \"$MARKER_DIR\""
+    echo "    touch \"$MARKER\""
+    echo ""
+    FAILED=1
+  fi
+else
+  echo "[Axis 2+3] SKIP (lightweight mode — CATALOG.md / tracks/ only)"
+fi
+
+# ── Axis 4 — Edit Manifest entry (always required) ────────────────────────────
+echo "[Axis 4] Edit Manifest..."
+MANIFEST="$REPO_ROOT/tracks/_meta/edit_manifest.yaml"
+if [ ! -f "$MANIFEST" ]; then
+  echo "  ❌ FAIL — tracks/_meta/edit_manifest.yaml not found"
+  echo "  Run /edit-manifest RECORD or create the file manually."
+  FAILED=1
+elif grep -q "date: $TODAY" "$MANIFEST" 2>/dev/null; then
+  echo "  ✅ PASS (entry for $TODAY found in edit_manifest.yaml)"
+else
+  echo "  ❌ FAIL — no entry dated $TODAY in edit_manifest.yaml"
+  echo "  Run /edit-manifest RECORD to log predicted impact for today's changes."
+  FAILED=1
+fi
+
+# ── Verdict ───────────────────────────────────────────────────────────────────
+echo ""
+echo "══════════════════════════════════════════════"
+if [ "$FAILED" -eq 1 ]; then
+  echo " 🚫 BLOCKED — resolve failing axes, then retry"
+  echo " See CLAUDE.md §FH Improvement 4-Axis Auto-Gate"
+  echo "══════════════════════════════════════════════"
+  echo ""
+  exit 1
+fi
+
+echo " ✅ ALL AXES PASSED — commit allowed"
+echo "══════════════════════════════════════════════"
+echo ""
+exit 0
