@@ -19,6 +19,7 @@ Activates on the following types of phrasing.
 1. **Direct recommendation request**: "Recommend a plugin", "What plugin should I use?", "Find a useful tool"
 2. **Task-based implicit request**: "I want to handle Jira tickets", "I need to visualize DB data", "I want to auto-generate API docs"
 3. **Environment setup questions**: "How do I integrate with Confluence?", "Set up plugins needed for a new project"
+4. **Chained from sim-conductor** (persona/simulation amplification): "Find a persona/simulation validation plugin", "Install stronger personas for the review". When invoked this way, scope the search to persona/simulation/review-oriented plugins (e.g., deep-insight) and **return control to sim-conductor after install** so the simulation can re-run with the installed personas — see `## Return Path` §.
 
 ## Processing Steps (Step 0 Pre-check + 5-Step)
 
@@ -266,6 +267,22 @@ The core 5-step procedure (goal analysis → multi-layer search → candidate an
 - **Sister asset clusters** (Step 2 [Priority 1.5]) = original developer's own environment / external users should map their own sister assets
 - **Core 5-step of this skill** (goal analysis + multi-layer search + candidate analysis + recommendation + install) = cross-applicable to all user environments / original developer examples are for reference
 - **catalog `recommended_plugins.md`** = original developer environment accumulated operation baseline / external users should create their own catalog or use this as reference baseline
+
+## Return Path (when chained from sim-conductor)
+
+When invoked as sim-conductor's **③ external-fetch branch** (Activation Trigger 4), this skill hands control back after install so the simulation can run with the new personas.
+
+```
+sim-conductor needs persona X (no installed/built-in match)
+  → plugin-recommender: scope search to persona/simulation/review plugins (e.g., deep-insight)
+  → recommend → install (user approval)
+  → RETURN to sim-conductor: report "[plugin] installed, personas [list] now available"
+  → sim-conductor re-runs the Area with persona X
+```
+
+**Done When (chained mode)**: install complete **AND** control returned to sim-conductor with the available-persona list. Ending at install without the return handoff = incomplete chain.
+
+**Simplification guard**: If a suitable persona is already installed or a built-in role brief covers the need, do not search/install — report the existing match and return immediately. The cheapest persona is the one already present.
 
 ## Done When
 
