@@ -89,6 +89,20 @@ cd ~/projects/forge-harness
 git add -A && git commit -m "message"
 ```
 
+### 4-Axis Gate (one-time setup per clone)
+
+```bash
+# Activate the pre-commit hook — run once after cloning
+git config core.hooksPath templates/.git-hooks
+chmod +x templates/.git-hooks/pre-commit
+```
+
+After running `/steel-quench` and `/source-grounding-audit` in your session, Claude creates the Axes 2+3 pass marker automatically. If it doesn't (e.g., session interrupted), create it manually:
+
+```bash
+touch "tracks/_meta/.axes_23_passed_$(git rev-parse --abbrev-ref HEAD | tr '/' '_')_$(date +%Y-%m-%d).marker"
+```
+
 ---
 
 ## 7. Weekly improvement cycle
