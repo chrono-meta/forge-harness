@@ -299,7 +299,7 @@ Include a 1-line audit log in the composition plan output when routing is decide
 
 ### Default Architecture — Base (Sonnet) + Amplified (Opus Orchestrator)
 
-Two operating modes. **Base is the default** — no model upgrade required.
+This is the **global orchestrator/executor** default, orthogonal to the per-skill `complexity_routing` above (which escalates individual skills). Two operating modes. **Base is the default** — no model upgrade required.
 
 | Mode | Orchestrator | Executor | When |
 |---|---|---|---|
