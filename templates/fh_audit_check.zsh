@@ -14,7 +14,7 @@
 #
 #   2. Load the function using one of:
 #
-#      a) source "$FH_DIR/templates/cc_audit_check.zsh"    # source file directly
+#      a) source "$FH_DIR/templates/fh_audit_check.zsh"    # source file directly
 #      b) Paste the contents of this file into .zshrc       # standalone
 #
 # ── Auto-run (opt-in) ─────────────────────────────────────
