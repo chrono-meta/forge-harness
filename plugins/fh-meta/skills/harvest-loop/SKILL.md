@@ -1,6 +1,6 @@
 ---
 name: harvest-loop
-description: A self-evolution pipeline that runs automatically after field sessions end. field-harvest (pattern extraction) → contention-layer (collision signals) → [persona-devil-advocate + persona-innovator parallel] → synthesizer (devil/innovator collision harvest) → Critic isolated Agent (SAGE automated critique) → harness-doctor (health check) → verify-bidirectional (consistency validation) → curator (skill lifecycle management) — 8 steps. Session learnings are automatically absorbed back into the FH ecosystem so the harness evolves on its own. In the main development environment, runs automatically at session end. For external FH users, proposes execution first. Triggered by "session harvest", "learning absorption", "fh evolution", "harvest-loop", or "run the pipeline".
+description: A self-evolution pipeline that runs automatically after field sessions end. field-harvest (pattern extraction) → contention-layer (collision signals) → [Agent(subagent_type="challenger") + persona-innovator parallel] → synthesizer (challenger/innovator collision harvest) → Critic isolated Agent (SAGE automated critique) → harness-doctor (health check) → verify-bidirectional (consistency validation) → curator (skill lifecycle management) — 8 steps. Session learnings are automatically absorbed back into the FH ecosystem so the harness evolves on its own. In the main development environment, runs automatically at session end. For external FH users, proposes execution first. Triggered by "session harvest", "learning absorption", "fh evolution", "harvest-loop", or "run the pipeline".
 user-invocable: true
 allowed-tools: ["Read", "Write", "Bash", "Grep", "Glob", "Agent"]
 model: opus
@@ -128,9 +128,11 @@ Session end
     │  → Collision = new skill candidate signal
     │
     ▼ (Step 3 parallel)
-[Step 3a] persona-devil-advocate          [Step 3b] persona-innovator
+[Step 3a] Agent(subagent_type="challenger")   [Step 3b] persona-innovator
     │  Attack existing related skills              │  Formally propose new skill/PFD candidates
     │  (does new discovery expose weakness?)       │  (based on contention results)
+    │  Artifact type: SKILL · Attack angles: U1-U5 + S1-S5
+    │  Location citation required on every attack
     │                                              │
     └──────────────────┬─────────────────────────┘
                        ▼
@@ -208,7 +210,7 @@ Compare each candidate pattern from field-harvest output against existing FH ski
 
 ### Step 3 — Parallel devil + innovator
 
-**3a. devil-advocate attack angles**:
+**3a. challenger attack angles**:
 - "Does this new discovery overturn the premise of existing skill X?"
 - "Doesn't the existing skill already handle this case?"
 - "Does adding this make FH more complex or simpler?"
