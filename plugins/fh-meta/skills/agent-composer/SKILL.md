@@ -297,6 +297,26 @@ Include a 1-line audit log in the composition plan output when routing is decide
 [Model routing] harness-doctor: cold_start detected → opus escalation
 ```
 
+### Default Architecture — Base (Sonnet) + Amplified (Opus Orchestrator)
+
+Two operating modes. **Base is the default** — no model upgrade required.
+
+| Mode | Orchestrator | Executor | When |
+|---|---|---|---|
+| **Base** | sonnet | sonnet | Default — all tasks, no special trigger |
+| **Amplified** | opus | sonnet | `EXECUTION_TIER: full/max` · plan mode active · `cross_project` + `high_stakes` both detected |
+
+**Base**: Sonnet handles both composition and execution. Covers 80%+ of daily harness tasks at zero cost overhead.
+
+**Amplified**: Opus takes the Brain role (goal parsing, Wave construction, gate decisions); Sonnet handles the Hands role (Agent dispatch, file reads, output). Matches Brain/Hands decoupling — Brain escalates to Opus, Hands stay on Sonnet.
+
+Audit log when amplified:
+```
+[Model routing] orchestrator: opus (amplified — EXECUTION_TIER: full), executors: sonnet
+```
+
+**Simplification guard**: Single-Wave, single-project tasks → Sonnet sufficient. Do not escalate.
+
 ---
 
 ## Step 2.7 — Destructive Action Gate
@@ -687,7 +707,18 @@ Configure via `EXECUTION_TIER: standard` in CLAUDE.md or `.claude/settings.json`
 
 - Single-agent tasks → guide user to call that skill directly (skip agent-composer)
 - Risk of two agents editing the same file in the same Wave → recommend Wave separation
-- Fan-out exceeds 10 → confirm "is this scale appropriate?" before proceeding (Opus 4.8 Dynamic Workflow validated 16 parallel agents as practical; prior threshold of 5 was pre-2026 conservative)
+
+### Fan-out Scale Tiers
+
+| Tier | Count | Behavior |
+|---|---|---|
+| **Small** | 2–5 | Standard — dispatch immediately |
+| **Medium** | 6–16 | Confirm scale before dispatch (Opus 4.8 Dynamic Workflow validated this range as practical) |
+| **Large** | 17+ | Worktree isolation mandatory + explicit user approval required |
+
+- Fan-out ≤ 5 → proceed immediately
+- Fan-out 6–16 → confirm "is this scale appropriate?" before dispatching
+- Fan-out 17+ → gate: "This is Large-tier fan-out. Worktree isolation will be applied. Proceed?"
 
 ## Invocation Triggers
 
