@@ -8,7 +8,7 @@ model: opus
 
 # sim-conductor — Meta-Simulation Automation Orchestrator
 
-> Places deep-insight personas (fe-marketplace) in an isolated environment to validate AI tools from the external user's perspective, classifies findings into M/S/R tiers, and completes the pipeline through to PR automatically.
+> Derives task-appropriate personas, dispatches them as parallel agents to validate AI tools from multiple external perspectives, classifies findings into M/S/R tiers, and completes the pipeline through to PR automatically. Personas are sourced installed-first → built-in fallback → external install (chain to plugin-recommender), and scale from 3 to 16 by task complexity.
 
 ## Core Principle — Beyond Self-Inspection
 
@@ -110,11 +110,57 @@ Concern format: `"One thing to check before [Area X]: [concern]. Proceed?"`
 
 Target: skill descriptions, README external user entry points, CHEATSHEET first section.
 
-**A-1. Description friendliness** (Agent: deep-insight persona-newcomer) — Is it understandable without internal terminology? Is the first line the essence? Check for embedded names/revisions/emphasis words. Findings = [issue, location, fix suggestion] format.
+#### Task-Adaptive Persona Selection
 
-**A-2. Install conflicts** (Agent: deep-insight persona-power-user) — fh-meta additional install scenario. Identify conflict/duplication/silent overwrite points. Findings = [conflict type, location, mitigation suggestion] format.
+sim-conductor does **not** run a fixed persona set. It analyzes the current task, decides **which perspectives this specific work needs**, then sources those personas. The set is task-derived, not preset.
 
-**A-3. Critical audit** (Agent: deep-insight persona-devil-advocate) — "Does the meta-harness actually do what it claims?" Three lenses: self-marketing vocabulary, naming-substance mismatch, unsubstantiated claims. Findings = [claim, evidence status, verdict (aligned/misaligned/exaggerated)] format.
+**Step 1 — Derive needed perspectives from the task.** Ask: who would catch the failures that matter *here*? A CLI tool needs a newcomer + power-user; a safety classifier needs a domain-expert + adversarial red-teamer; a pricing change needs a skeptic + finance-minded reviewer. Output a list of *required perspectives*, sized to task complexity (3 minimum recommended, up to 16 for major reviews).
+
+**Step 2 — Source each persona, in this priority order:**
+
+```
+① Installed first — scan installed plugins + .claude/agents/ for a matching persona/agent
+     (deep-insight personas, hub-persona-auditor, persona-innovator, quench-challenger, etc.)
+② Built-in fallback — if no installed match, inject the role as a prompt directive
+     into a general-purpose Agent (logical isolation, Path B — works with zero plugins)
+③ External fetch — if neither covers a needed perspective (or none installed at all),
+     chain to /plugin-recommender: search marketplaces → recommend → install (user approval)
+     → return here → run the now-available persona
+```
+
+> **Newly-installed plugins activate as proper agents from the *next* session.** Within the same session as install, the plugin's agents are not yet registered as `subagent_type`s — dispatch them via ② (inject their role definition into a general-purpose Agent) until the session restarts.
+
+**Built-in fallback role examples** (the ② tier — prompt directives, no plugin needed):
+
+| Persona role | Perspective | Focus |
+|---|---|---|
+| Newcomer | First-time user, zero development context | Clarity, terminology, onboarding friction |
+| Power-user | Advanced user seeking edge cases | Undocumented behavior, performance bottlenecks, limits |
+| Devil-advocate | Adversarial critic | Claim-evidence gaps, self-marketing, naming-substance mismatch |
+| Domain-expert | Subject-matter expert from adjacent field | Technical depth, accuracy, completeness |
+| Skeptic | Pragmatic outsider | ROI, complexity justification, "why not just X?" |
+
+Derive task-specific personas (e.g., "security auditor", "non-native-English reader", "mobile-first user") when the task needs perspectives beyond these five.
+
+#### Scale (sized to task, not fixed)
+
+| Scale | Count | When |
+|---|---|---|
+| **Minimum** | 3 | Routine Area A — pick the 3 most task-relevant perspectives |
+| **Extended** | 4–8 | High-stakes publish / external release |
+| **Full** | Up to 16 parallel | Pre-major-version / architecture review (Opus 4.8 Dynamic Workflow validated) |
+
+All personas run as **parallel general-purpose Agents** (or installed agents) — no sequential bottleneck. Use `agent-composer` Medium/Large tier fan-out rules for Extended/Full scale.
+
+**Simplification guard**: For routine internal audits, ② built-in fallback at Minimum scale is sufficient — do not trigger ③ external fetch. Chain to plugin-recommender only when a needed perspective has no installed or built-in match, or stakes are high (pre-publish / marketplace listing).
+
+**A-1. Description friendliness** (Agent w/ Newcomer brief) — Is it understandable without internal terminology? Is the first line the essence? Check for embedded names/revisions/emphasis words. Findings = [issue, location, fix suggestion] format.
+
+**A-2. Install conflicts** (Agent w/ Power-user brief) — fh-meta additional install scenario. Identify conflict/duplication/silent overwrite points. Findings = [conflict type, location, mitigation suggestion] format.
+
+**A-3. Critical audit** (Agent w/ Devil-advocate brief) — "Does the meta-harness actually do what it claims?" Three lenses: self-marketing vocabulary, naming-substance mismatch, unsubstantiated claims. Findings = [claim, evidence status, verdict (aligned/misaligned/exaggerated)] format.
+
+For Extended/Full scale: add Domain-expert, Skeptic, and any task-derived personas as additional parallel Agents.
 
 > ⚠️ **Human review gate**: Area A results must be reviewed directly by the owner before entering the AI-AI loop (sim-conductor→hub-cc-pr-reviewer). Final decision authority on S-tier judgments rests with the human.
 
@@ -130,11 +176,11 @@ Target: all fh-meta assets (skills + agents + plugin.json).
 > 3. **steel-quench skill integration**: Route devil attack → defense results directly into SKILL.md. Can hand off to steel-quench after Area B ends.
 > 4. **Dual validation principle**: Internal validation (Area B) alone is insufficient — self-reference risk is minimized when combined with external install reaction collection.
 
-**3-persona sequential**:
+**3-step sequential** (Area A results feed into each step as context):
 
 1. **hub-persona-auditor** (Agent) — treats README/CHEATSHEET as "briefing for external audience." 3+ persona simulation → 4-axis review → 3-tier suggestions
 2. **persona-innovator** (Agent, Mode I) — naming gap detection + structural gap identification. Output 3-5 naming candidates
-3. **deep-insight persona-devil-advocate** (Agent) — provides previous two persona results as additional input, reviews with "what was missed?" lens. Focus on self-rationalization patterns and structural blind spots
+3. **Devil-advocate** (Agent w/ devil-advocate brief) — takes previous two results as input, reviews with "what was missed?" lens. Focus on self-rationalization patterns and structural blind spots
 
 > ⚠️ **Human review gate**: Owner final confirmation required before Area B result convergence judgment. AI-AI loop internal convergence is treated as "provisional convergence" only.
 
@@ -155,11 +201,11 @@ Runs independently. Skip if included in Area B.
 
 **Purpose**: Pre-PR discovery of bugs/biases/edge cases. **Validation**: UXW v6.1 `prompts/qa.py` → V-1/V-2 discovered pre-PR.
 
-**D-1. Edge cases/counterexamples** (Agent: persona-devil-advocate) — unintended failure edge cases, missing counterexamples, boundary conditions, rule conflicts. Findings = [location, edge case, reproduction scenario, fix suggestion] format.
+**D-1. Edge cases/counterexamples** (Agent w/ Devil-advocate brief) — unintended failure edge cases, missing counterexamples, boundary conditions, rule conflicts. Findings = [location, edge case, reproduction scenario, fix suggestion] format.
 
-**D-2. First-impression interpretation errors** (Agent: persona-newcomer) — rules/expressions prone to misinterpretation, implicit assumptions, unclear priorities. Findings = [location, misinterpretation risk, clarification suggestion] format.
+**D-2. First-impression interpretation errors** (Agent w/ Newcomer brief) — rules/expressions prone to misinterpretation, implicit assumptions, unclear priorities. Findings = [location, misinterpretation risk, clarification suggestion] format.
 
-**D-3. Performance/quality trade-offs** (Agent: persona-power-user) — unnecessary complex logic, cost (token/time/error rate) bottlenecks, precision-recall trade-offs. Findings = [location, trade-off, improvement direction] format.
+**D-3. Performance/quality trade-offs** (Agent w/ Power-user brief) — unnecessary complex logic, cost (token/time/error rate) bottlenecks, precision-recall trade-offs. Findings = [location, trade-off, improvement direction] format.
 
 **Output**: M/S/R classification → M-tier items that can be fixed immediately are directly patched in the relevant file and committed.
 
@@ -197,9 +243,9 @@ Provide only one memory file to the consumer agent. Check: ① When should it be
 
 **Target**: Result file specified with `--target` (xlsx/json/reports, etc.). **Purpose**: Structured persona analysis of false positive/negative patterns → fed back into code/prompt. **Validation**: UXW v6.1 internal insurance Figma 994 items → 3 types of over-detection patterns → CRITICAL RULE 4 added.
 
-**E-1. Domain expert objection** (Agent: persona-devil-advocate) — clearly wrong judgment (false positive) patterns, judgments that should have been caught but weren't (false negative) patterns, risk priority. Findings = [judgment type, pattern, root cause, fix direction] format.
+**E-1. Domain expert objection** (Agent w/ Devil-advocate brief) — clearly wrong judgment (false positive) patterns, judgments that should have been caught but weren't (false negative) patterns, risk priority. Findings = [judgment type, pattern, root cause, fix direction] format.
 
-**E-2. Practitioner confusion** (Agent: persona-newcomer) — confusing items, fix suggestions that are awkward than the original, sections where classification criteria consistency breaks. Findings = [item, confusion cause, improvement direction] format.
+**E-2. Practitioner confusion** (Agent w/ Newcomer brief) — confusing items, fix suggestions that are awkward than the original, sections where classification criteria consistency breaks. Findings = [item, confusion cause, improvement direction] format.
 
 **E-3. Pattern structuring** (direct execution) — integrate E-1/E-2 results → group false positives by same cause and assign pattern name → pinpoint fix location → M/S/R classification.
 
