@@ -687,7 +687,7 @@ Configure via `EXECUTION_TIER: standard` in CLAUDE.md or `.claude/settings.json`
 
 - Single-agent tasks → guide user to call that skill directly (skip agent-composer)
 - Risk of two agents editing the same file in the same Wave → recommend Wave separation
-- Fan-out exceeds 5 → confirm "is this scale appropriate?" before proceeding
+- Fan-out exceeds 10 → confirm "is this scale appropriate?" before proceeding (Opus 4.8 Dynamic Workflow validated 16 parallel agents as practical; prior threshold of 5 was pre-2026 conservative)
 
 ## Invocation Triggers
 
