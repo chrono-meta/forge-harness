@@ -8,7 +8,7 @@ model: opus
 
 # sim-conductor — Meta-Simulation Automation Orchestrator
 
-> Places deep-insight personas (fe-marketplace) in an isolated environment to validate AI tools from the external user's perspective, classifies findings into M/S/R tiers, and completes the pipeline through to PR automatically.
+> Dispatches a pool of built-in FH personas as parallel agents to validate AI tools from multiple external perspectives, classifies findings into M/S/R tiers, and completes the pipeline through to PR automatically. Scales from 3 (default) to 16 personas — no external plugin required.
 
 ## Core Principle — Beyond Self-Inspection
 
@@ -110,11 +110,33 @@ Concern format: `"One thing to check before [Area X]: [concern]. Proceed?"`
 
 Target: skill descriptions, README external user entry points, CHEATSHEET first section.
 
-**A-1. Description friendliness** (Agent: deep-insight persona-newcomer) — Is it understandable without internal terminology? Is the first line the essence? Check for embedded names/revisions/emphasis words. Findings = [issue, location, fix suggestion] format.
+#### Built-in FH Persona Pool (no external plugin required)
 
-**A-2. Install conflicts** (Agent: deep-insight persona-power-user) — fh-meta additional install scenario. Identify conflict/duplication/silent overwrite points. Findings = [conflict type, location, mitigation suggestion] format.
+| Persona | Role | Focus |
+|---|---|---|
+| `persona-newcomer` | First-time user, zero development context | Clarity, terminology, onboarding friction |
+| `persona-power-user` | Advanced user seeking edge cases | Undocumented behavior, performance bottlenecks, limits |
+| `persona-devil-advocate` | Adversarial critic | Claim-evidence gaps, self-marketing, naming-substance mismatch |
+| `persona-domain-expert` | Subject-matter expert from adjacent field | Technical depth, accuracy, completeness |
+| `persona-skeptic` | Pragmatic outsider | ROI, complexity justification, "why not just X?" |
 
-**A-3. Critical audit** (Agent: deep-insight persona-devil-advocate) — "Does the meta-harness actually do what it claims?" Three lenses: self-marketing vocabulary, naming-substance mismatch, unsubstantiated claims. Findings = [claim, evidence status, verdict (aligned/misaligned/exaggerated)] format.
+#### Scale Options
+
+| Scale | Count | When |
+|---|---|---|
+| **Default** | 3 (newcomer + power-user + devil-advocate) | Standard Area A |
+| **Extended** | 4–8 (+ domain-expert, skeptic, custom) | High-stakes publish / external release |
+| **Full** | Up to 16 parallel | Pre-major-version / architecture review (Opus 4.8 Dynamic Workflow validated) |
+
+All personas run as **parallel agents** — no sequential bottleneck. Use `agent-composer` Medium/Large tier fan-out rules for Extended/Full scale.
+
+**A-1. Description friendliness** (Agent: persona-newcomer) — Is it understandable without internal terminology? Is the first line the essence? Check for embedded names/revisions/emphasis words. Findings = [issue, location, fix suggestion] format.
+
+**A-2. Install conflicts** (Agent: persona-power-user) — fh-meta additional install scenario. Identify conflict/duplication/silent overwrite points. Findings = [conflict type, location, mitigation suggestion] format.
+
+**A-3. Critical audit** (Agent: persona-devil-advocate) — "Does the meta-harness actually do what it claims?" Three lenses: self-marketing vocabulary, naming-substance mismatch, unsubstantiated claims. Findings = [claim, evidence status, verdict (aligned/misaligned/exaggerated)] format.
+
+For Extended/Full scale: add persona-domain-expert (A-4) and persona-skeptic (A-5) as additional parallel agents.
 
 > ⚠️ **Human review gate**: Area A results must be reviewed directly by the owner before entering the AI-AI loop (sim-conductor→hub-cc-pr-reviewer). Final decision authority on S-tier judgments rests with the human.
 
@@ -130,11 +152,11 @@ Target: all fh-meta assets (skills + agents + plugin.json).
 > 3. **steel-quench skill integration**: Route devil attack → defense results directly into SKILL.md. Can hand off to steel-quench after Area B ends.
 > 4. **Dual validation principle**: Internal validation (Area B) alone is insufficient — self-reference risk is minimized when combined with external install reaction collection.
 
-**3-persona sequential**:
+**3-step sequential** (Area A results feed into each step as context):
 
 1. **hub-persona-auditor** (Agent) — treats README/CHEATSHEET as "briefing for external audience." 3+ persona simulation → 4-axis review → 3-tier suggestions
 2. **persona-innovator** (Agent, Mode I) — naming gap detection + structural gap identification. Output 3-5 naming candidates
-3. **deep-insight persona-devil-advocate** (Agent) — provides previous two persona results as additional input, reviews with "what was missed?" lens. Focus on self-rationalization patterns and structural blind spots
+3. **persona-devil-advocate** (Agent) — takes previous two results as input, reviews with "what was missed?" lens. Focus on self-rationalization patterns and structural blind spots
 
 > ⚠️ **Human review gate**: Owner final confirmation required before Area B result convergence judgment. AI-AI loop internal convergence is treated as "provisional convergence" only.
 
