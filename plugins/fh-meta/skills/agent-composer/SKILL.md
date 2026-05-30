@@ -727,3 +727,19 @@ The skill implements *"humans provide direction/insight, systems handle executio
 | Naming/framing | Recording + quality gates |
 
 If something unclear is in the human domain, ask. If it's in the system domain, infer and proceed.
+
+### Brain/Hands Decoupling (Anthropic Independent Convergence)
+
+**Pattern**: Clear separation of composition (Brain) vs execution (Hands) — agent-composer is Brain-only.
+
+- **Brain**: Goal parsing → skill mapping → Wave construction → gate decisions
+- **Hands**: Agent tool dispatch → parallel execution → result collection → fan-in report
+
+**Rationale**: Anthropic "Scaling Managed Agents" — Brain/Hands separation improves scalability, debugging, and maintainability.
+
+### Curator Role (hermes-agent Convergence)
+
+agent-composer also acts as Curator — surveys existing agents/skills/assets and proposes optimal combinations.
+
+- **Curator mode**: Detects agent state (stale, pinned, deprecated) + proposes merge candidates for duplicate agents
+- **External positioning**: Independent convergence with hermes-agent (Nous Research) curator.py pattern
