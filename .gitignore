@@ -5,6 +5,9 @@
 .claude/scheduled_tasks.lock
 context/
 
+# Paper — PDF regenerated from HTML; canonical version on Zenodo/arXiv
+paper/*.pdf
+
 # macOS system files
 .DS_Store
 

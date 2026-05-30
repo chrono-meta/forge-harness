@@ -140,7 +140,7 @@ print('plugins:', list(p.keys()) if isinstance(p,dict) else p)
 python3 -c "import json,os; d=json.load(open(os.path.expanduser('~/.claude.json'))); print('MCP:', list(d.get('mcpServers',{}).keys()))" 2>/dev/null || echo "MCP config not found"
 
 # zshrc hook status
-grep -q "cc_audit_check.zsh" ~/.zshrc 2>/dev/null && echo "zshrc hook: present" || echo "zshrc hook: absent"
+grep -q "fh_audit_check.zsh" ~/.zshrc 2>/dev/null && echo "zshrc hook: present" || echo "zshrc hook: absent"
 
 # Framework detection (Streamlit) — must be specified in requirements.txt or pyproject.toml
 STREAMLIT_PROJECT=false
@@ -293,7 +293,7 @@ Auto-check the following items based on detected environment. Each item classifi
 |---|---|---|
 | `.claudeignore` | Existence | `ls .claudeignore` |
 | `local_fh_context.md` | Existence in `.claude/rules/` | `ls .claude/rules/local_fh_context.md` |
-| `zshrc hook` | Contains `cc_audit_check.zsh` source line | `grep cc_audit_check.zsh ~/.zshrc` |
+| `zshrc hook` | Contains `fh_audit_check.zsh` source line | `grep fh_audit_check.zsh ~/.zshrc` |
 | `weekly_audit` latest | Within 7 days | CC_HUB_DIR/tracks/_audit/ mtime |
 | `sentinel` setup | `~/.cc_sentinels/` exists | `ls ~/.cc_sentinels/` |
 | FH plugin install | `installed_plugins.json` has `fh-meta` entry | `python3 -c "import json,os; d=json.load(open(os.path.expanduser('~/.claude/plugins/installed_plugins.json'))); print([k for k in d.get('plugins',{}) if 'fh-meta' in k])"` |
@@ -439,12 +439,12 @@ After executing approved items, install automatic maintenance structure:
 
 ```bash
 # zshrc hook (if not installed — preview then confirm, idempotent)
-if ! grep -q "cc_audit_check.zsh" ~/.zshrc 2>/dev/null; then
+if ! grep -q "fh_audit_check.zsh" ~/.zshrc 2>/dev/null; then
   cat >> ~/.zshrc << 'EOF'
 export FH_DIR="{FH_DIR}"
 export CC_HUB_DIR="{CC_HUB_DIR}"
 export CC_SENTINELS_DIR="$HOME/.cc_sentinels"
-source "$FH_DIR/templates/cc_audit_check.zsh"
+source "$FH_DIR/templates/fh_audit_check.zsh"
 EOF
 fi
 

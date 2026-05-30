@@ -1,6 +1,6 @@
 ---
 name: steel-quench
-description: A meta-skill that concretizes a designer's anxiety into AI-driven all-angle devil attacks and shakes off flaws through defensive rounds. Systematically surfaces root weaknesses of near-complete projects wave by wave, guaranteeing near-human-review quality without direct human deep inspection. Wave 4 (Meta-Aware Adversary) is an advanced mode where the devil uses its own AI nature — hallucination, context collapse, prompt injection, tool lock-in — as attack vectors. Built-in fh-commons:quench-challenger agent outputs harness structure 6-axis attack+prescription pairs; after convergence, fh-meta:persona-innovator auto-extracts new patterns. Triggered by: "quench this", "devil's judgment", "all-angle review", "end-to-end verification", "steel quench", "run devil advocate", "deep pre-completion inspection", "shake out design anxiety", "attack from the root".
+description: A meta-skill that concretizes a designer's anxiety into AI-driven all-angle devil attacks and shakes off flaws through defensive rounds. Systematically surfaces root weaknesses of near-complete projects wave by wave, guaranteeing near-human-review quality without direct human deep inspection. Wave 4 (Meta-Aware Adversary) is an advanced mode where the devil uses its own AI nature — hallucination, context collapse, prompt injection, tool lock-in — as attack vectors. Built-in fh-commons:quench-challenger agent outputs harness structure 6-axis attack+prescription pairs; after convergence, fh-meta:persona-innovator auto-extracts new patterns. Triggered by: "quench this", "devil's judgment", "all-angle review", "end-to-end verification", "steel quench", "deep pre-completion inspection", "shake out design anxiety", "attack from the root".
 user-invocable: true
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "WebSearch", "Agent"]
 model: opus
@@ -17,7 +17,7 @@ A designer's anxiety is most dangerous when vague. steel-quench breaks that anxi
 | Phrase | Situation |
 |---|---|
 | "quench this", "run quench" | All-angle verification just before completion |
-| "devil's judgment", "run devil advocate" | Focused attack on specific design decision |
+| "devil's judgment" | Focused attack on specific design decision |
 | "all-angle review", "end-to-end verification" | Full project scope verification |
 | "shake out design anxiety", "deep pre-completion inspection" | Concretize vague anxiety |
 | "attack from the root" | Re-verify from reason for existence |

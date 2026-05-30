@@ -497,10 +497,10 @@ cp -r ~/forge-harness/templates/.claude/ ~/my-project/.claude/    # (optional) s
 export FH_DIR="$HOME/path/to/forge-harness"
 export CC_HUB_DIR="$HOME/path/to/your-cc-hub"      # optional
 export CC_SENTINELS_DIR="$HOME/.cc_sentinels"      # optional
-source "$FH_DIR/templates/cc_audit_check.zsh"
+source "$FH_DIR/templates/fh_audit_check.zsh"
 ```
 
-Checked items: `weekly_harvest` (7d, `CC_HUB_DIR` + `tracks/_meta/harvest_*.md`) · `frontier_diagnosis` (90d, `knowledge/shared/harness-core/`) · `sim Area B` (30d, `FH_DIR` + `tracks/_meta/`) · custom sentinels (`CC_SENTINEL_{NAME}_DAYS`, e.g. `touch ~/.cc_sentinels/my_project_pfd` + `export CC_SENTINEL_MY_PROJECT_PFD_DAYS=90`). Full template: `templates/cc_audit_check.zsh` (macOS / Linux).
+Checked items: `weekly_harvest` (7d, `CC_HUB_DIR` + `tracks/_meta/harvest_*.md`) · `frontier_diagnosis` (90d, `knowledge/shared/harness-core/`) · `sim Area B` (30d, `FH_DIR` + `tracks/_meta/`) · custom sentinels (`CC_SENTINEL_{NAME}_DAYS`, e.g. `touch ~/.cc_sentinels/my_project_pfd` + `export CC_SENTINEL_MY_PROJECT_PFD_DAYS=90`). Full template: `templates/fh_audit_check.zsh` (macOS / Linux).
 
 ---
 

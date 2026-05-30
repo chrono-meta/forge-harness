@@ -389,7 +389,7 @@ README + install-wizard:
 - 13 skills system (install-wizard joined)
 - install-wizard v0.1 — onboarding wizard (environment detection → gap diagnosis → per-item approval → execution → acceleration baseline setting)
 - CONTRIBUTING.md added — external contributor PR guide
-- templates/cc_audit_check.zsh — recurring audit zshrc hook general template
+- templates/fh_audit_check.zsh — recurring audit zshrc hook general template
 
 ### [1.0-rc3] — 2026-05-13
 
