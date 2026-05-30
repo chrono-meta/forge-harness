@@ -20,7 +20,7 @@ Development environment (harness root)
 Isolated environment (~/sim/observer/)   ← new user reproduction space (zero development context)
 ```
 
-The devil-advocate persona captures that self-inspection is cleaning, not a vaccine — clarifying the need for a real external mirror (direct external user validation). In Path B (environments without `~/sim/`), logical isolation (agent prompt directives) substitutes, and only Area B is recommended.
+The challenger persona captures that self-inspection is cleaning, not a vaccine — clarifying the need for a real external mirror (direct external user validation). In Path B (environments without `~/sim/`), logical isolation (agent prompt directives) substitutes, and only Area B is recommended.
 
 Runs autonomously through to PR or report commit. User involvement = 1 trigger + 1 PR review.
 
@@ -158,7 +158,7 @@ All personas run as **parallel general-purpose Agents** (or installed agents) �
 
 **A-2. Install conflicts** (Agent w/ Power-user brief) — fh-meta additional install scenario. Identify conflict/duplication/silent overwrite points. Findings = [conflict type, location, mitigation suggestion] format.
 
-**A-3. Critical audit** (Agent w/ Devil-advocate brief) — "Does the meta-harness actually do what it claims?" Three lenses: self-marketing vocabulary, naming-substance mismatch, unsubstantiated claims. Findings = [claim, evidence status, verdict (aligned/misaligned/exaggerated)] format.
+**A-3. Critical audit** (Agent, subagent_type="challenger", artifact_type="SKILL") — "Does the meta-harness actually do what it claims?" Angles: U3 (evidence grounding), U5 (phantom detection), S2 (trigger reachability). Findings = [claim, evidence status, verdict (aligned/misaligned/exaggerated)] format.
 
 For Extended/Full scale: add Domain-expert, Skeptic, and any task-derived personas as additional parallel Agents.
 
@@ -180,7 +180,7 @@ Target: all fh-meta assets (skills + agents + plugin.json).
 
 1. **hub-persona-auditor** (Agent) — treats README/CHEATSHEET as "briefing for external audience." 3+ persona simulation → 4-axis review → 3-tier suggestions
 2. **persona-innovator** (Agent, Mode I) — naming gap detection + structural gap identification. Output 3-5 naming candidates
-3. **Devil-advocate** (Agent w/ devil-advocate brief) — takes previous two results as input, reviews with "what was missed?" lens. Focus on self-rationalization patterns and structural blind spots
+3. **challenger** (Agent, subagent_type="challenger", artifact_type="SKILL") — takes previous two results as input, reviews with "what was missed?" lens. Angles: U2 (self-referential closure), D3 (simplification test), U5 (phantom detection). Focus on self-rationalization patterns and structural blind spots
 
 > ⚠️ **Human review gate**: Owner final confirmation required before Area B result convergence judgment. AI-AI loop internal convergence is treated as "provisional convergence" only.
 
@@ -201,7 +201,7 @@ Runs independently. Skip if included in Area B.
 
 **Purpose**: Pre-PR discovery of bugs/biases/edge cases. **Validation**: UXW v6.1 `prompts/qa.py` → V-1/V-2 discovered pre-PR.
 
-**D-1. Edge cases/counterexamples** (Agent w/ Devil-advocate brief) — unintended failure edge cases, missing counterexamples, boundary conditions, rule conflicts. Findings = [location, edge case, reproduction scenario, fix suggestion] format.
+**D-1. Edge cases/counterexamples** (Agent, subagent_type="challenger", artifact_type="Code") — unintended failure edge cases, missing counterexamples, boundary conditions, rule conflicts. Angles: C1 (edge cases), C2 (implicit assumptions), C3 (security surface). Findings = [location, edge case, reproduction scenario, fix suggestion] format.
 
 **D-2. First-impression interpretation errors** (Agent w/ Newcomer brief) — rules/expressions prone to misinterpretation, implicit assumptions, unclear priorities. Findings = [location, misinterpretation risk, clarification suggestion] format.
 
@@ -243,7 +243,7 @@ Provide only one memory file to the consumer agent. Check: ① When should it be
 
 **Target**: Result file specified with `--target` (xlsx/json/reports, etc.). **Purpose**: Structured persona analysis of false positive/negative patterns → fed back into code/prompt. **Validation**: UXW v6.1 internal insurance Figma 994 items → 3 types of over-detection patterns → CRITICAL RULE 4 added.
 
-**E-1. Domain expert objection** (Agent w/ Devil-advocate brief) — clearly wrong judgment (false positive) patterns, judgments that should have been caught but weren't (false negative) patterns, risk priority. Findings = [judgment type, pattern, root cause, fix direction] format.
+**E-1. Domain expert objection** (Agent, subagent_type="challenger", artifact_type="Design") — clearly wrong judgment (false positive) patterns, judgments that should have been caught but weren't (false negative) patterns, risk priority. Angles: U3 (evidence grounding), D4 (failure mode coverage). Findings = [judgment type, pattern, root cause, fix direction] format.
 
 **E-2. Practitioner confusion** (Agent w/ Newcomer brief) — confusing items, fix suggestions that are awkward than the original, sections where classification criteria consistency breaks. Findings = [item, confusion cause, improvement direction] format.
 
@@ -380,7 +380,7 @@ Specifically, sim-conductor pre-runs the experience of a specific persona (new t
 
 - "Where does an external developer get stuck when reading the install guide?"
 - "At which step does an outside developer fail when running a skill for the first time?"
-- "What claims does a devil-advocate raise objections to when reading the README?"
+- "What claims does a challenger raise objections to when reading the README?"
 
 When these predictions are correct, blocking points can be removed before actual external users arrive.
 **Validation**: An external user's autonomous run confirmed cascade β achievement (first autonomous run by non-owner confirmed).
