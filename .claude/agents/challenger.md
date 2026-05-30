@@ -139,7 +139,7 @@ Residual risks: [list]
 
 ## Integration Hooks
 
-**steel-quench Wave 1**: challenger replaces or supplements the devil agent. Output feeds directly into Wave 2 defense round. All S-grade attacks become Wave 2 mandatory defense targets.
+**steel-quench Wave 1** *(planned)*: challenger is designed to replace or supplement the devil agent. When wired, S-grade output feeds into Wave 2 defense round. Currently steel-quench calls `fh-commons:quench-challenger` for Wave 1 — explicit challenger wiring is a future integration step.
 
 **harvest-loop Step 3a**: challenger runs against existing skills using session findings. S-grade attacks on existing skills → HIGH synthesizer grade. LOW-confidence attacks on new proposals → MED grade (defer pending verification).
 
