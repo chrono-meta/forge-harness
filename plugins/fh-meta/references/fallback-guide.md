@@ -80,7 +80,7 @@ echo "FH_DIR=${FH_DIR:-not set}"
 ls .claudeignore 2>/dev/null || echo "MISSING: .claudeignore"
 
 # Check zshrc hook
-grep -q "_cc_audit_check" ~/.zshrc && echo "Hook present" || echo "Hook absent"
+grep -q "_fh_audit_check" ~/.zshrc && echo "Hook present" || echo "Hook absent"
 
 # Check FH plugin installation
 cat .claude/settings.json 2>/dev/null | grep forge-harness \

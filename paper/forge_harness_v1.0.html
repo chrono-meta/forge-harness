@@ -6,7 +6,7 @@
 <title>forge-harness v1.0: Engineering Methods for Robust AI Collaboration Harnesses</title>
 <style>
   @page { margin: 2cm; }
-  body { font-family: "Times New Roman", Times, serif; font-size: 11pt; max-width: 820px; margin: 36px auto; padding: 0 28px; line-height: 1.55; color: #111; text-align: justify; background: #fff; box-shadow: 0 1px 6px rgba(0,0,0,0.10); }
+  body { font-family: "Times New Roman", Times, serif; font-size: 11pt; max-width: 820px; margin: 36px auto; padding: 0 28px; line-height: 1.55; color: #111; text-align: justify; hyphens: auto; -webkit-hyphens: auto; background: #fff; box-shadow: 0 1px 6px rgba(0,0,0,0.10); }
   h1 { font-size: 16pt; text-align: center; margin-bottom: 4px; font-weight: bold; letter-spacing: 0.01em; }
   .author { text-align: center; font-size: 10.5pt; margin: 6px 0 2px; color: #222; }
   .affil { text-align: center; font-size: 9.5pt; color: #555; margin: 0; font-style: italic; }
@@ -17,6 +17,7 @@
   .abstract { margin: 18px 36px; border-left: 3px solid #ccc; padding-left: 14px; }
   .abstract-title { font-weight: bold; }
   pre { background: #f8f8f8; padding: 10px 14px; font-size: 8.5pt; font-family: "Courier New", monospace; white-space: pre; overflow-x: auto; border: 1px solid #ddd; border-left: 3px solid #999; margin: 10px 0; line-height: 1.4; }
+  code { font-family: "Courier New", monospace; font-size: 9.5pt; }
   table { border-collapse: collapse; width: 100%; font-size: 9.5pt; margin: 14px 0; }
   th { background: #f0f0f0; border: 1px solid #bbb; padding: 5px 9px; text-align: left; font-weight: bold; }
   td { border: 1px solid #bbb; padding: 5px 9px; vertical-align: top; }
@@ -29,6 +30,7 @@
   a { color: #1155cc; }
   hr.section-rule { border: none; border-top: 1px solid #ccc; margin: 18px 0 10px; }
   .page-header { font-size: 8pt; color: #888; text-align: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 6px; letter-spacing: 0.04em; }
+  @media print { body { box-shadow: none; margin: 0; padding: 0 28px; max-width: 100%; } }
 </style>
 </head>
 <body>
@@ -301,7 +303,7 @@
 <p>HIGH-grade patterns (4/5) resulted in immediate skill upgrades. The one MED-grade pattern (PR #3) produced a harness change without generating a reusable skill candidate, consistent with the synthesizer gate's "no devil validation → MED" classification.</p>
 
 <h3>4.4 sim-conductor Results</h3>
-<p>sim-conductor Area A was applied before cascade deployment (Section 4.5). The simulation identified two vocabulary barriers: (1) the skill trigger /steel-quench was reachable by the author's vocabulary but not by the natural phrasing "adversarial review" or "devil's advocate check" used by simulated external users; (2) harvest-loop was not triggered by "session cleanup" or "wrap up" phrasing common among non-author practitioners.</p>
+<p>sim-conductor Area A was applied before cascade deployment (Section 4.5). The simulation identified two vocabulary barriers: (1) the skill trigger /steel-quench was reachable by the author's vocabulary but not by the natural phrasing "adversarial review" or "adversarial audit" used by simulated external users; (2) harvest-loop was not triggered by "session cleanup" or "wrap up" phrasing common among non-author practitioners.</p>
 <p>Both barriers were resolved by expanding trigger phrase lists before cascade deployment. Post-fix simulation: 26/26 skills (100%) reachable via natural vocabulary across 4 simulated external user profiles.</p>
 
 <h3>4.5 External Validation and Cascade Deployment</h3>
