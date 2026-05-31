@@ -7,16 +7,30 @@ tags: [multi-model, sidecar, token-economy, model-access, adversarial, validated
 
 # Multi-Model Sidecar Strategy
 
-## Thesis grounding — two shells, different layers
+## Thesis grounding — hierarchy of differentiation
 
-FH's paper thesis: **the harness (specialized shell) is the durable layer; the model (core) converges across providers.** This means a well-built harness outlasts any particular model version.
+FH's paper thesis: **the harness (specialized shell) is the durable layer; the model (core) converges across providers.**
 
-The sidecar pattern lives one layer below this thesis. It is important not to conflate the two:
+Empirical observation from sidecar experiments (Gemini CLI + Codex CLI, same prompt):
+- **Process differs** — each model approaches the problem differently, highlights different angles.
+- **Results converge** — the substantive findings overlap significantly.
+
+This convergence is precisely what the thesis predicts. And it establishes a clear hierarchy:
+
+| Level | What varies | Degree of differentiation |
+|---|---|---|
+| Model A vs Model B | Process differs, results converge | Small |
+| Sidecar multi-model | Process diversity, intermediate-step enrichment | Medium — useful as a process tool |
+| **Harness structure (present vs absent)** | Accumulated memory, verification loops, skill methodology | **Large — the real differentiator** |
+
+**The sidecar pattern is a process tool, not a structural differentiator.** The gap between Gemini's angles and Codex's angles is real but modest. The gap between a harness-structured workflow and an unstructured one dwarfs it.
+
+Two shells — do not conflate:
 
 | Shell | What it is | Layer |
 |---|---|---|
 | **Harness shell** (FH, forge-harness) | Methodology, rules, memory, skills — *specialization* accumulated over time | Durable orchestration layer — thesis subject |
-| **Router shell** (Copilot CLI, Gemini CLI, Codex CLI) | Thin routing / access tool that selects and forwards to a model | Delivery / access mechanism — *not* a harness |
+| **Router shell** (Copilot CLI, Gemini CLI, Codex CLI) | Thin routing / access tool that selects and forwards to a model | Delivery / access mechanism — not a harness |
 
 FH is the orchestrator. A router shell (or direct model CLI) is one kind of sidecar. Calling Copilot CLI "the harness" is a category error.
 
@@ -31,7 +45,7 @@ FH is the orchestrator. A router shell (or direct model CLI) is one kind of side
 | Sidecar | Invocation | Model access |
 |---|---|---|
 | **Gemini CLI** | `echo "prompt" \| gemini` | Gemini family |
-| **OpenAI / Codex CLI** | `codex "prompt"` or `openai …` | GPT-4o, Codex family |
+| **Codex CLI** | `npx @openai/codex exec "prompt"` | GPT-4o / Codex family (non-interactive exec mode) |
 | **Copilot CLI** (`gh copilot`) | `gh copilot suggest "prompt"` | Copilot model catalog: Codex · Gemini · Claude Opus |
 
 ---
