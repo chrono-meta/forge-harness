@@ -1,0 +1,18 @@
+# Exclude FH internal files from npm package — only ship the gate binary + contract
+tracks/
+knowledge/shared/harness-core/v2_paper_draft.md
+knowledge/shared/harness-core/v2_paper_framework.md
+knowledge/shared/harness-core/hub_compounding_loop.md
+knowledge/shared/harness-core/hub_maturity_roadmap.md
+knowledge/shared/harness-core/harness_frontier_diagnosis*.md
+knowledge/shared/dialogue/
+knowledge/shared/learnings/
+knowledge/domain/
+plugins/
+templates/
+.claude/
+scripts/frontier_digest_daily.sh
+scripts/validate_yaml.sh
+scripts/com.forge-harness.frontier-digest.plist
+CHEATSHEET.md
+CATALOG.md

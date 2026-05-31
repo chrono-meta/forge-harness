@@ -1,0 +1,40 @@
+{
+  "name": "@chrono-meta/fh-gate",
+  "version": "1.0.0",
+  "description": "FH governance gate — runs structured AI code review via claude --print and returns machine-parseable verdicts (PASS/PENDING/BLOCKED/ESCALATE).",
+  "license": "MIT",
+  "keywords": [
+    "ai-governance",
+    "code-review",
+    "claude",
+    "claude-code",
+    "ci",
+    "harness"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chrono-meta/forge-harness.git"
+  },
+  "bin": {
+    "fh-gate": "./scripts/fh-gate.sh"
+  },
+  "scripts": {
+    "prepare": "chmod +x scripts/fh-gate.sh"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "peerDependencies": {
+    "@anthropic-ai/claude-code": "*"
+  },
+  "peerDependenciesMeta": {
+    "@anthropic-ai/claude-code": {
+      "optional": false
+    }
+  },
+  "files": [
+    "scripts/fh-gate.sh",
+    "knowledge/shared/harness-core/fh_integration_contract.md",
+    "README.md"
+  ]
+}
