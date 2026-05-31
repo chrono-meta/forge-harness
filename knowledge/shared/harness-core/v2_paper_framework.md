@@ -338,7 +338,7 @@ Cross-team confirmed:           1 finding found by both Claude + Gemini (#2 Step
 | Governance catches what CI misses on AI-generated code | arity.ts DONE→PENDING flip, 2 A-grade findings | ✅ Collected |
 | Delta is attributable to methodology, not model | Same model generated code + same model reviewed with governance | ✅ Causal attribution |
 | Governance dividend propagates across ecosystem | 4 A-grade findings across 3 external projects, 3 issues submitted | ✅ Collected |
-| Governance quality is tier-independent at S-grade level | Exp 3: S=3 for Haiku/Sonnet/Opus on same artifact; tier affects B-grade depth, not critical-defect detection | ✅ Confirmed (S-grade tier-independence) |
+| Coverage ceiling tier-independent; path length tier-dependent | Exp 3: S=3 for all tiers (same ceiling). Opus uniquely raises meta-level critique without prompting — shorter autonomous path. Harness determines destination; tier determines journey. | ✅ Confirmed |
 | Multi-team coverage gain exceeds Claude-side token cost | Exp 5 N=5: C1 57% avg → C3 100%, Claude quota unchanged C2→C3; Gemini adds avg 4 unique findings/artifact | ✅ Measured (N=5, replicated) |
 | External CLI tokens bill to separate quotas → Claude-side cost sublinear in team count (H3) | Exp 5: C2→C3 Claude delta = 0 tokens; Gemini billed to Gemini quota | ✅ Validated empirically |
 | CLI availability ≠ headless operability (Codex: present but TTY-required) | Exp 5 C4: `npx @openai/codex --version` succeeds, headless exec fails | ✅ Observed (practical finding) |
