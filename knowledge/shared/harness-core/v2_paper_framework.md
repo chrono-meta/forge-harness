@@ -152,6 +152,36 @@ Citation candidate: `github.com/sst/opencode` + any OpenCode technical report or
 
 ---
 
+## Cross-Ecosystem Synergy — Experiment 4 (In Progress)
+
+**Question**: Does FH governance produce actionable findings when applied to external AI agent ecosystems? Does the governance dividend propagate beyond FH's own codebase?
+
+**Design**:
+- Target systems: OpenCode (coding agent), Hermes (orchestration framework), OpenHuman (memory/desktop)
+- Method: FH governance pass (steel-quench + pipeline-conductor) + Gemini sidecar adversarial review
+- Output: findings submitted as GitHub issues to the respective projects
+
+**Evidence collected** (2026-05-31):
+
+| Target | Method | Findings | Submitted |
+|---|---|---|---|
+| OpenCode `arity.ts` | FH steel-quench + pipeline-conductor | 2 A-grade (short-token overflow, executor gap) | [#30057](https://github.com/anomalyco/opencode/issues/30057) |
+| Hermes `opencode` skill | Gemini-0.41.2 sidecar | 2 A-grade (pre-exec validation, secret ingestion), 1 B-grade | [#35709](https://github.com/NousResearch/hermes-agent/issues/35709) |
+| OpenHuman Memory Tree | FH source-grounding analysis | Structural gap (stale-but-confident failure mode) | [#3069](https://github.com/tinyhumansai/openhuman/issues/3069) |
+
+**Claim supported**: FH governance methodology is portable — it produces actionable findings on external projects (not just FH itself) without requiring runtime integration. The governance dividend propagates through the ecosystem via issue submissions, not code changes.
+
+**v2 paper contribution**: This is "governance reach" — the methodology layer extending its quality gate beyond the host project's boundary. The N-fold synergy is not just FH+OpenCode but FH as a hub that improves any connected project's quality floor.
+
+**Paper section**: Add to Section 7 (Ecosystem Positioning) as §7.3 "Governance Reach — Cross-Project Issue Evidence".
+
+**Related systems to cite**:
+- OpenCode (`github.com/anomalyco/opencode`) — coding agent (Experiment 2 target + Experiment 4 target)
+- Hermes Agent (`github.com/NousResearch/hermes-agent`) — orchestration framework (Experiment 4)
+- OpenHuman (`github.com/tinyhumansai/openhuman`) — memory layer (Experiment 4)
+
+---
+
 ## Key Claims Table
 
 | Claim | Evidence | Status |
@@ -160,6 +190,7 @@ Citation candidate: `github.com/sst/opencode` + any OpenCode technical report or
 | Harness is activation condition (not model) | Cross-wave consistency with varying models | ✅ Collected |
 | Governance catches what CI misses on AI-generated code | arity.ts DONE→PENDING flip, 2 A-grade findings | ✅ Collected |
 | Delta is attributable to methodology, not model | Same model generated code + same model reviewed with governance | ✅ Causal attribution |
+| Governance dividend propagates across ecosystem | 4 A-grade findings across 3 external projects, 3 issues submitted | ✅ Collected |
 | Governance quality is tier-independent | Not yet tested | ❌ Pending |
 | Integration contract enables cross-system governance | Specification written, not yet implemented as binary | △ Spec only |
 
@@ -170,10 +201,10 @@ Citation candidate: `github.com/sst/opencode` + any OpenCode technical report or
 | Axis | v1.0 | v2 |
 |---|---|---|
 | Claim | Harness is a durable layer worth building | Harness governance catches what automation misses (empirically) |
-| Evidence | Architectural argument + design principles | 3 controlled experiments |
-| Target | FH itself (self-referential) | OpenCode (external, AI-generated code) |
-| Contribution | Framework + 30 skills + compounding loop | Governance dividend measurement + integration contract |
-| Citation novelty | Self-standing | Cites OpenCode + multi-model sidecar literature |
+| Evidence | Architectural argument + design principles | 4 experiments (3 controlled + 1 cross-ecosystem) |
+| Target | FH itself (self-referential) | OpenCode + Hermes + OpenHuman (external) |
+| Contribution | Framework + 30 skills + compounding loop | Governance dividend measurement + integration contract + ecosystem reach |
+| Citation novelty | Self-standing | Cites OpenCode, Hermes, OpenHuman + multi-model sidecar literature |
 
 ---
 
@@ -199,3 +230,13 @@ Citation candidate: `github.com/sst/opencode` + any OpenCode technical report or
 - `fh_opencode_governance_wrapper.md` — Experiment 2 usage guide
 - `fh_integration_contract.md` — bridge layer spec (Section 6 source)
 - `tracks/_meta/fh_opencode_governance_experiment_2026_05_31.md` — Experiment 2 raw data
+
+**External systems (Experiment 4 targets — to cite in v2)**:
+- OpenCode: `github.com/anomalyco/opencode` — coding agent, Experiment 2+4 target
+- Hermes Agent: `github.com/NousResearch/hermes-agent` — orchestration framework, Experiment 4
+- OpenHuman: `github.com/tinyhumansai/openhuman` — memory/desktop layer, Experiment 4
+
+**Filed issues (governance reach evidence)**:
+- OpenCode #30057 — arity.ts short-token overflow + executor gap
+- Hermes #35709 — opencode skill governance gaps (2 A-grade)
+- OpenHuman #3069 — Memory Tree stale-but-confident failure mode
