@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch(*)",
+      "WebFetch(*)",
+      "Read(**)",
+      "Bash(find *)",
+      "Bash(ls *)",
+      "Bash(mkdir*)",
+      "Bash(date*)",
+      "Bash(grep *)"
+    ]
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "command": "bash -c 'f=\".claude/goal-quench.active\"; [ -f \"$f\" ] && echo \"\\n[goal-quench] /goal finished. Running quality verification...\" && cp \"$f\" \".claude/goal-quench.pending\" && rm -f \"$f\" || true'"
+      }
+    ]
+  }
+}

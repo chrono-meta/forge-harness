@@ -1,6 +1,7 @@
 ---
 name: steel-quench
-description: A meta-skill that concretizes a designer's anxiety into AI-driven all-angle devil attacks and shakes off flaws through defensive rounds. Systematically surfaces root weaknesses of near-complete projects wave by wave, guaranteeing near-human-review quality without direct human deep inspection. Wave 4 (Meta-Aware Adversary) is an advanced mode where the devil uses its own AI nature — hallucination, context collapse, prompt injection, tool lock-in — as attack vectors. Built-in fh-commons:quench-challenger agent outputs harness structure 6-axis attack+prescription pairs; after convergence, fh-meta:persona-innovator auto-extracts new patterns. Triggered by: "quench this", "devil's judgment", "all-angle review", "end-to-end verification", "steel quench", "deep pre-completion inspection", "shake out design anxiety", "attack from the root".
+description: >-
+  A meta-skill that concretizes a designer's anxiety into AI-driven all-angle devil attacks and shakes off flaws through defensive rounds. Systematically surfaces root weaknesses of near-complete projects wave by wave, guaranteeing near-human-review quality without direct human deep inspection. Wave 4 (Meta-Aware Adversary) is an advanced mode where the devil uses its own AI nature — hallucination, context collapse, prompt injection, tool lock-in — as attack vectors. Built-in fh-commons:quench-challenger agent outputs harness structure 6-axis attack+prescription pairs; after convergence, fh-meta:persona-innovator auto-extracts new patterns. Triggered by: "quench this", "devil's judgment", "all-angle review", "end-to-end verification", "steel quench", "deep pre-completion inspection", "shake out design anxiety", "attack from the root".
 user-invocable: true
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "WebSearch", "Agent"]
 model: opus
@@ -255,6 +256,42 @@ Same as Wave 3: **zero new S-grade blockers**. Plus these additional conditions:
 
 ---
 
+### Wave 5 — Multi-Model Sidecar Challenger (Optional)
+
+**When to activate**: After Wave 1~4 convergence, when the user wants adversarial diversity from a different model's blind-spot profile. Optional — activate explicitly with `--sidecar` flag or "run sidecar wave".
+
+**Rationale**: Single-model attacks converge on the same blind spots. A sidecar model (Gemini, Codex) attacks from a structurally different perspective — empirically validated to surface non-overlapping issues on the same artifact (see `knowledge/shared/harness-core/multi_model_sidecar_strategy.md`). Results converge in substance; process diverges in angle.
+
+**Execution**:
+
+```bash
+# Gemini sidecar (pipe)
+SIDECAR_RESULT=$(echo "You are an adversarial reviewer of a software design skill.
+Identify the 3 most critical gaps in this Done When criteria in 3 bullet points:
+$(tail -40 {SKILL_PATH})" | gemini 2>/dev/null)
+
+# Codex sidecar (exec mode)
+SIDECAR_RESULT=$(npx @openai/codex exec "You are an adversarial reviewer.
+Identify the 3 most critical gaps in this Done When criteria in 3 bullet points:
+$(tail -40 {SKILL_PATH})" 2>/dev/null)
+```
+
+**Output format** — fold sidecar result into standard Wave format:
+
+```
+## Wave 5 — Multi-Model Sidecar Results
+Model: [gemini | codex]
+
+[sidecar output — bullet points, preserved verbatim]
+
+Cross-wave delta: [issues Wave 5 raised that Wave 1~4 missed]
+Verdict: PASS (zero new S-grade) | CONDITIONAL_PASS (new A/B-grade) | ESCALATE (new S-grade — re-open Wave 1)
+```
+
+**Termination**: If Wave 5 raises zero new S-grade → sidecar convergence confirmed. If new S-grade → treat as Wave 1 reopener.
+
+---
+
 ### Wave Deepening Principle — Meta-Aware Adversary
 
 Why devil attacks converge as Wave N deepens: a basic devil (Wave 1) attacks from a sub-agent sandbox blind to the living system. A meta-aware devil (Wave 3+) knows its perceptual limits and accounts for them — which paradoxically self-invalidates many attacks:
@@ -315,6 +352,8 @@ Wave convergence criteria met: zero new S-grade blockers
 + Residual risk card output (A-grade · B-grade items)
 + "steel-quench Complete" declaration output
 ```
+
+Verdict: PASS (zero S-grade blockers, convergence reached) | CONDITIONAL_PASS (A-grade or B-grade items remain) | FAIL (S-grade blockers persist, convergence not reached) | ESCALATE (Wave 4 surfaces structural ambiguity requiring human judgment)
 
 ## Convergence Criteria + Downstream Chaining
 

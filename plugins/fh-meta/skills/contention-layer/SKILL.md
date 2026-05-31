@@ -123,3 +123,5 @@ All steps 1–4 completed
 + If new skill candidate exists: SKILL.md skeleton generated + user confirmation gate complete
 + If no new skill candidate: "Exclude / recommend improving existing skill" stated and exit
 ```
+
+Verdict: PASS (Harvest Gate Pass — new skill skeleton generated or no candidates confirmed) | CONDITIONAL_PASS (candidates found, user confirmation pending) | FAIL (Harvest Gate Fail — collision unresolvable, no new skill justified) | ESCALATE (role boundary ambiguous, requires human judgment)

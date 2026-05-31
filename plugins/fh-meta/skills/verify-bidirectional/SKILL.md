@@ -229,6 +229,8 @@ Steps 1~6 all executed
 + External validation path: harvest-loop Step 3.75 Critic isolated Agent can independently judge based on above criteria (skill_quality_rubric.md verifiable criteria)
 ```
 
+Verdict: PASS (Step 4.5 diff gate confirmed, baseline updated) | CONDITIONAL_PASS (update applied, external validation still pending) | FAIL (counter-argument confirmed — AI recommendation was wrong, baseline requires redesign) | ESCALATE (counter-argument ambiguous, human judgment required)
+
 ## References
 
 - Rule body: `memory feedback_bidirectional_self_validation.md`
