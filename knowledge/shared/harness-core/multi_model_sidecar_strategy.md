@@ -36,27 +36,56 @@ FH is the orchestrator. A router shell (or direct model CLI) is one kind of side
 
 ---
 
+## Native cross-CLI portability (validated)
+
+FH's SKILL.md format is shared across all three major AI CLIs. FH skills load natively in each environment without conversion or adaptation:
+
+| CLI | Load mechanism | Status |
+|---|---|---|
+| **Claude Code** | `.claude/plugins/` native | ✅ Primary environment |
+| **Codex CLI** | `SKILL.md` plugin (`fh-meta@forge-harness`) | ✅ Validated |
+| **Gemini CLI** | `gemini skills install <path> --consent` | ✅ Validated |
+
+This means FH is not just model-agnostic in theory — the methodology layer physically runs in all three CLI environments without modification. This is the empirical foundation for the cross-CLI portability claim.
+
+## Orchestrator–sidecar model strategy
+
+Use the strongest available model as orchestrator; delegate subsidiary tasks to lighter sidecar models for token economy:
+
+| Role | Model selection | Rationale |
+|---|---|---|
+| **Orchestrator** | Strongest available (CC=Opus, Gemini=Pro, Codex=GPT-5.5) | Design, judgment, synthesis |
+| **Sidecar** | Lighter versions (Gemini Flash, GPT-4o-mini, etc.) | Repetitive verification, adversarial passes, token-efficient delegation |
+
+This combination can be freely mixed across CLIs — e.g., Gemini Pro orchestrating with Claude Haiku as sidecar, or CC Opus orchestrating with Gemini Flash. FH methodology works regardless of which combination is chosen.
+
 ## The capability
 
-**Any FH user can delegate tasks to other models as sidecars** from within a Claude Code session. The host orchestrator is always Claude Code + FH. The sidecar is invoked via `Bash` tool — no special integration required.
+**Any FH user can delegate tasks to other models as sidecars** from within a session. The host orchestrator is always the primary CLI + FH. The sidecar is invoked via `Bash` tool — no special integration required.
 
 ### Available sidecar paths (use whichever your environment allows)
 
 | Sidecar | Invocation | Model access |
 |---|---|---|
-| **Gemini CLI** | `echo "prompt" \| gemini` | Gemini family |
-| **Codex CLI** | `npx @openai/codex exec "prompt"` | GPT-4o / Codex family (non-interactive exec mode) |
+| **Gemini CLI** | `echo "prompt" \| gemini` or `gemini -p "prompt"` | Gemini family (default: current model) |
+| **Codex CLI** | `npx @openai/codex exec "prompt"` | GPT-4o / GPT-5.5 (non-interactive exec mode) |
 | **Copilot CLI** (`gh copilot`) | `gh copilot suggest "prompt"` | Copilot model catalog: Codex · Gemini · Claude Opus |
 
 ---
 
 ## Empirical validation
 
-Validated in two environments:
+Validated across three environments:
 
 1. **Corporate network** — Copilot CLI sidecar (CC standalone = Sonnet-only on restricted network). Copilot CLI's model catalog provided access to Codex, Gemini, and Claude Opus.
 
-2. **Direct CLI** — `echo "prompt" | gemini` called via `Bash` inside a Claude Code session. Response received in < 5 s. Output integrated into FH orchestration flow. Verified: adversarial review of `return-path-gate` SKILL.md Done When criteria produced 3 actionable issues.
+2. **Direct Gemini CLI sidecar** — `echo "prompt" | gemini` inside a Claude Code session. Response in < 5 s. Adversarial review of `return-path-gate` SKILL.md Done When: 3 actionable issues. Adversarial review of `pipeline-conductor` Done When: 3 structural gaps (Amnesia Loophole, Activity vs Integrity gap, Escalation Paradox).
+
+3. **Direct Codex CLI sidecar** — `npx @openai/codex exec "prompt"` inside a Claude Code session. Same target as #2: 3 non-overlapping issues (scope definition gap, return-path-gate skip justification absent, report persistence not blocking completion).
+
+4. **Gemini native skill load** — `gemini skills install <fh-skill-path> --consent`. steel-quench, sim-conductor, harvest-loop loaded and listed as Enabled in `gemini skills list`. FH SKILL.md format is natively compatible with Gemini CLI's skill system.
+
+**Cross-wave delta (Gemini vs Codex, same prompt)**: Process angles differ; substantive findings converge on "completion criteria check activity not integrity." This validates the thesis: results converge, process diverges — sidecar diversity adds marginal process enrichment, not structural differentiation.
 
 ```bash
 # Minimal sidecar call pattern (validated)
