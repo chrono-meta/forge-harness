@@ -54,6 +54,8 @@ Agents in this registry belong to the **Automation layer**. Skills (in `plugins/
 
 > **Codex-compatible beta**: The Methodology layer (`tracks/`, `knowledge/`, skill documentation) is designated Codex-compatible beta. Gemini, Codex, and other AI users can apply FH methodology without the Automation layer — manual invocation replaces hook/agent dispatch.
 
+> **Multi-model sidecar**: Claude Code's sidecar feature allows FH skills to invoke Gemini CLI or Codex CLI as external processes via the `Bash` tool. The orchestrator remains Claude Code; sidecar models act as specialized delegates — e.g., Gemini as a second adversarial challenger in `steel-quench`, or Codex for syntax-heavy validation in `source-grounding-audit`. Sidecar calls are Bash tool invocations, not agent dispatches — they bypass this registry and are coordinated inline by the skill.
+
 ---
 
 ## Invocation patterns

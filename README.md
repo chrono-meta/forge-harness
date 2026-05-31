@@ -161,7 +161,9 @@ forge-harness is structured as two distinct layers with different portability pr
 
 **Automation layer** is what makes the methodology frictionless when running Claude Code: agents dispatch automatically, hooks fire at session boundaries, and slash commands invoke skills without manual prompting.
 
-> **Codex-compatible beta**: The Methodology layer is designated Codex-compatible beta. Gemini, Codex, and other AI users can apply FH methodology manually — the tracks/ and knowledge/ structure, sync protocols, and skill documentation all translate. Automation layer features (agents, hooks) require Claude Code.
+> **Codex-compatible beta**: The Methodology layer is designated Codex-compatible beta. Gemini, Codex, and other AI users can apply FH methodology manually — the tracks/ and knowledge/ structure, sync protocols, and skill documentation all translate. Automation layer features (agents, hooks) require Claude Code as host.
+
+> **Multi-model via sidecar**: Claude Code's sidecar feature lets FH skills invoke Gemini CLI or Codex CLI as external processes from within a session. This means the Automation layer can orchestrate multi-model validation — for example, routing a steel-quench adversarial pass to Gemini as a second challenger, or delegating a specific sub-task to Codex. The host is always Claude Code; the sidecar models are called via `Bash` tool.
 
 For runtime agent specs, see `AGENTS.md`. For session rules and orchestration protocol, see `CLAUDE.md`.
 
