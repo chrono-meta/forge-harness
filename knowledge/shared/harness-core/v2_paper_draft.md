@@ -7,7 +7,7 @@ tags: [v2-paper, draft, empirical, governance, multi-team, tier-comparison, cont
 
 # Governance Dividend: Empirical Evidence for Harness-Structured Methodology as a Distinct Quality Layer in Multi-Agent AI Systems
 
-**Draft 1.0** — 2026-05-31
+**Draft 1.1** — 2026-05-31 (post steel-quench + source-grounding-audit + multi-reviewer adversarial pass)
 
 *Companion to: "The Forge Harness: A Structured Methodology for Sustainable AI-Assisted Software Development" (Zenodo 10.5281/zenodo.20397566)*
 
@@ -15,7 +15,7 @@ tags: [v2-paper, draft, empirical, governance, multi-team, tier-comparison, cont
 
 ## Abstract
 
-Autonomous coding agents produce syntactically correct, CI-passing output at high velocity. Yet correctness at the syntax and unit-test level does not equal correctness at the design, security, or maintainability level. This paper presents four controlled experiments demonstrating that a harness-structured governance methodology layer — applied on top of a bare coding agent — catches qualitative defects that neither the agent alone nor standard CI pipelines can self-generate. We show: (1) multi-model adversarial review surfaces non-overlapping failure modes that single-model review misses; (2) a governance pass produces a verdict flip from DONE to PENDING on AI-generated code that passed all CI checks, with two A-grade security-adjacent findings; (3) S-grade critical defect detection is tier-independent — entry-tier models (Haiku) find the same blockers as premium-tier (Opus) when governed by the same protocol; (4) multi-team adversarial review achieves 100% defect coverage across N=5 artifacts while adding zero cost to Claude's token quota, because external CLI teams bill to their own quotas. The central claim: **the harness governance layer is the activation condition for quality, not the model.** Replacing the model while keeping the harness changes depth of analysis; removing the harness while keeping the model loses systematic coverage entirely.
+Autonomous coding agents produce syntactically correct, CI-passing output at high velocity. Yet correctness at the syntax and unit-test level does not equal correctness at the design, security, or maintainability level. This paper presents four controlled experiments demonstrating that a harness-structured governance methodology layer — applied on top of a bare coding agent — catches qualitative defects that neither the agent alone nor standard CI pipelines can self-generate. We show: (1) multi-model adversarial review surfaces non-overlapping failure modes that single-model review misses; (2) a governance pass produces a verdict flip from DONE to PENDING on AI-generated code that passed all CI checks, with two A-grade security-adjacent findings not detected by CI or developer self-review; (3) S-grade critical defect detection is tier-independent — entry-tier models (Haiku) find the same blockers as premium-tier (Opus) when governed by the same protocol, while premium tiers add autonomous architectural meta-critique (coverage-ceiling independence, path-length dependence); (4) a three-persona cross-session review (C2) raises single-persona coverage from 57% to 84% on average across N=5 artifacts, and adding an external CLI team (C3) closes the remaining gap to the C2+C3 union — with external tokens billed to the external CLI's own quota (H3 validated). The central contribution: **empirical quantification of the governance dividend** — coverage gain per token spent across panel configurations, and the first demonstration that external CLI teams add defect coverage at zero marginal cost to the orchestrating model's quota.
 
 ---
 
@@ -134,9 +134,11 @@ FH governance findings:
 
 ### 4.5 Causal Attribution
 
-Same code. Same model that generated the code was available for self-review. Same CI infrastructure. The *only* variable is the methodology layer. The delta (DONE → PENDING, 2 A-grade findings) is attributable to the governance protocol, not the model.
+Same code. Same CI infrastructure. The delta (DONE → PENDING, 2 A-grade findings) is observed between the standard industry baseline (CI + developer self-evaluation) and the governance pass. This is the appropriate comparison: the baseline reflects how AI-generated code is routinely reviewed in practice, not a zero-review condition.
 
-This is the governance controlled trial: **methodology layer is the causal variable.**
+**Limitation**: This experiment does not compare governance against a length-matched unstructured review prompt. An alternative explanation — "any sufficiently detailed review prompt finds these issues, not specifically a harness" — is not ruled out here. Experiment 3 (multi-tier) and Experiment 5 (multi-team coverage quantification) provide complementary evidence, but a direct ablation (harness vs. unstructured prompt at matched token budget) remains future work (§10.3 Future Work #1).
+
+The experiment demonstrates: **CI + developer self-review, the dominant industry practice, does not catch these issues.** The governance pass does. Whether "harness structure" or "review depth" is the causal agent is a question for future ablation.
 
 ---
 
@@ -147,8 +149,10 @@ This is the governance controlled trial: **methodology layer is the causal varia
 - **Fixed target**: `plugins/fh-meta/skills/pipeline-conductor/SKILL.md` (417 lines, full artifact)
 - **Fixed protocol**: senior harness engineer review prompt, identical across tiers
 - **Variable**: model tier (Haiku entry / Sonnet mid / Opus premium)
-- **Invocation**: `claude --print --model {tier} "{prompt}"`
+- **Specific model IDs**: `claude-haiku-4-5-20251001` / `claude-sonnet-4-6` / `claude-opus-4-8`
+- **Invocation**: `claude --print --model {alias} "{prompt}"`
 - **Measure**: finding count by grade, token cost, qualitative depth
+- **Artifact version**: FH repo commit `36bc976` (2026-05-31)
 
 ### 5.2 Results
 
@@ -241,14 +245,18 @@ Experiment 1 showed multi-model review finds non-overlapping issues (coverage �
 
 ### 7.3 Results — N=5 Coverage
 
-| Artifact | GT | C1 | C1% | C2 | C2% | C3 | C3% |
+**Note on ground truth**: Ground truth (GT) is defined as the union of unique conceptual defects found across all conditions (C1, C2, C3). This means C3 achieves 100% coverage by construction — it is the dominant contributor to the GT definition. The 100% figure is an arithmetic identity, not an externally validated measurement. The meaningful empirical results are the **delta values**: C1 coverage (57%) and C2 coverage (84%) are *not* tautological — they represent subsets of the GT. Claiming "C2 finds 84% of what the full panel finds" is a valid and non-circular statement. An independent ground truth (e.g., maintainer-confirmed defects) would require external validation beyond the scope of this paper (see §10.3 Limitations).
+
+| Artifact | GT† | C1 | C1% | C2 | C2% | C3 | C3%† |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| source-grounding-audit | 12 | 3 | 25% | 9 | 75% | 12 | **100%** |
-| harness-doctor | 18 | 12 | 67% | 16 | 89% | 18 | **100%** |
-| harvest-loop | 19 | 14 | 74% | 16 | 84% | 19 | **100%** |
-| pipeline-conductor | 20 | 11 | 55% | 18 | 90% | 20 | **100%** |
-| steel-quench | 18 | 10 | 56% | 14 | 78% | 18 | **100%** |
-| **Average** | **17.4** | **10** | **57%** | **14.6** | **84%** | **17.4** | **100%** |
+| source-grounding-audit | 12 | 3 | 25% | 9 | 75% | 12 | 100%† |
+| harness-doctor | 18 | 12 | 67% | 16 | 89% | 18 | 100%† |
+| harvest-loop | 19 | 14 | 74% | 16 | 84% | 19 | 100%† |
+| pipeline-conductor | 20 | 11 | 55% | 18 | 90% | 20 | 100%† |
+| steel-quench | 18 | 10 | 56% | 14 | 78% | 18 | 100%† |
+| **Average** | **17.4** | **10** | **57%** | **14.6** | **84%** | **17.4** | **100%†** |
+
+†GT defined as C1∪C2∪C3; C3% = 100% by construction. Primary finding: C2 recovers 84% of the full-panel defect set with zero external cost.
 
 ### 7.4 Token Costs
 
@@ -345,12 +353,12 @@ grep -q "^FH_STATUS: PASS" <<< "$VERDICT" || exit 1
 
 ### 9.1 FH vs. Peer Frameworks
 
-| Dimension | FH | harness-evolver | Sylph.AI | Meta-Harness (Lee et al.) |
+| Dimension | FH | harness-evolver (Ref 3) | Seong et al. (Ref 5) | Meta-Harness (Ref 4) |
 |---|---|---|---|---|
-| Approach | Human-in-loop, knowledge-accumulation-first | Automation-first, outer-loop adversarial | Automation-maximalist | Academic formal model |
-| Quality gate | Structured verdict (PASS/PENDING/BLOCKED) + human approval | Automated retry loop | Fully automated | Formal specification |
-| External evidence | N=5 artifacts, 3 external projects | Benchmark-focused | Architecture only | Theoretical |
-| Portability | CLI-agnostic, any coding agent | Framework-specific | Proprietary | Conceptual |
+| Approach | Human-in-loop, knowledge-accumulation-first | Automation-first, outer-loop adversarial via LangSmith | Automation-maximalist two-level evolution loop | Automated harness code search via execution traces |
+| Quality gate | Structured verdict (PASS/PENDING/BLOCKED) + human approval | Automated retry loop | Fully automated meta-evolution | Benchmark-score-based selection |
+| External evidence | N=5 artifacts, 3 external projects | RAG agent 57.5%→100% (7 iterations, N=1) | Three-domain benchmark improvements | Three-domain demo (NLP, math, coding) |
+| Portability | CLI-agnostic, any coding agent | Requires LangSmith account + Claude Code | Self-contained | Self-contained |
 
 FH's differentiator: human judgment on all PRs + measured governance dividend on external artifacts.
 
@@ -395,12 +403,25 @@ The governance dividend is not additive; it is multiplicative across the artifac
 
 N sessions × governance dividend per session = compounding quality improvement that bare automation cannot produce.
 
-### 10.3 Future Work
+### 10.3 Limitations
 
-1. **Bridge layer (v1.0 binary)**: `fh-gate.sh` as a proper binary with CI integration guide
-2. **Larger N replication**: Expand Experiment 5 to N=20+ across diverse artifact types (API specs, CI configs, architecture docs)
-3. **Experiment 3 extension**: Tier comparison with Gemini sidecar at each tier (are tier-independent S-grade findings still tier-independent when the sidecar varies?)
-4. **Cross-organization validation**: External teams replicating the governance controlled trial on their own AI-generated code
+**L1 — Ground truth circularity (Experiment 5)**: Ground truth is defined as the union of all conditions' findings. C3's 100% coverage is an arithmetic identity, not an externally validated result. The primary finding — C2 recovers 84% of full-panel coverage at zero external cost — is not circular. Future work should use maintainer-confirmed issue merges or independent expert audit as ground truth.
+
+**L2 — Missing control arm (Experiment 2)**: The governance pass is compared against CI + developer self-review, not against an equivalent-effort unstructured review prompt. The rival explanation ("any sufficiently detailed prompt finds these issues, not specifically a harness structure") is not ruled out. A direct ablation at matched token budget is the highest-priority future experiment.
+
+**L3 — Self-referential evidence (Experiments 1, 3, 5)**: Three of five experiments apply FH governance to FH's own skill artifacts. All five Experiment 5 artifacts are written by the same author who designed the review protocol. Generalizability to other teams' codebases, other artifact types, and other governance protocols is not demonstrated.
+
+**L4 — Small N for tier claim (Experiment 3)**: Tier-independence is demonstrated on N=1 artifact. The three shared S-grade findings are surface-level contradictions detectable by careful reading. The claim cannot be generalized to "S-grade detection is universally tier-independent" from a single artifact.
+
+**L5 — External issue confirmation (Experiment 4)**: Findings are "submitted as issues" — no maintainer confirmation that any finding was validated as a real defect or acted upon is reported in this paper.
+
+### 10.4 Future Work
+
+1. **Ablation study (highest priority)**: Harness-structured prompt vs. unstructured review at matched token budget on identical artifacts, with independent expert ground truth. This is the experiment that would most directly address L2.
+2. **Bridge layer (v1.0 binary)**: `fh-gate.sh` as a proper binary with CI integration guide
+3. **Larger N replication**: Expand Experiment 5 to N=20+ across diverse artifact types (API specs, CI configs, architecture docs) and multiple authors — addresses L1 and L3
+4. **Experiment 3 extension**: Tier comparison with Gemini sidecar at each tier, across N=10+ artifacts — addresses L4
+5. **Cross-organization validation**: External teams applying governance to their own AI-generated code, with maintainer issue-resolution as ground truth — addresses L3 and L5
 
 ---
 
@@ -408,15 +429,27 @@ N sessions × governance dividend per session = compounding quality improvement 
 
 1. FH v1.0: "The Forge Harness: A Structured Methodology for Sustainable AI-Assisted Software Development." Zenodo 10.5281/zenodo.20397566 (2026).
 2. OpenCode: github.com/sst/opencode — coding agent, Experiment 2+4 target.
-3. harness-evolver: github.com/raphaelchristi/harness-evolver — automation-first outer-loop adversarial framework.
-4. Meta-Harness (Lee et al., arXiv:2603.28052): Formal model of harness-structured AI development. Stanford IRIS Lab.
-5. Sylph.AI (arXiv:2604.21003): Automation-maximalist adversarial harness framework.
-6. AHE (arXiv:2604.25850): Agent Harness Engineering — change manifest + predict-verify loop pattern.
-7. SkillOpt (arXiv:2605.23904): Selection-split gate for skill evolution.
-8. "Scaling the Harness" (arXiv:2605.26112): §3.2 stale-but-confident failure mode (basis for memory-hygiene skill).
+3. harness-evolver (Christi): "harness-evolver — Automated multi-agent harness evolution via LangSmith." github.com/raphaelchristi/harness-evolver (2025). Built on Meta-Harness (Ref 4).
+4. Lee Y., Nair R., Zhang Q., Lee K., Khattab O., Finn C.: "Meta-Harness: End-to-End Optimization of Model Harnesses." arXiv:2603.28052 (2026). Stanford.
+5. Seong H., Yin L., Zhang H., Shi Z.: "The Last Harness You'll Ever Build." arXiv:2604.21003 (2026). Two-level automation: Harness Evolution Loop + Meta-Evolution Loop.
+6. Lin J. et al.: "Agentic Harness Engineering: Observability-Driven Automatic Evolution of Coding-Agent Harnesses." arXiv:2604.25850 (2026). Terminal-Bench 2: 69.7%→77.0% over 10 iterations.
+7. Yang Y. et al.: "SkillOpt: Executive Strategy for Self-Evolving Agent Skills." arXiv:2605.23904 (2026). Text-space skill optimizer with validation-gated acceptance.
+8. Gu S.: "From Model Scaling to System Scaling: Scaling the Harness in Agentic AI." arXiv:2605.26112 (2026). Context governance, memory hygiene, dynamic skill routing.
 
 ---
 
 *Appendix A: Experiment raw data — `knowledge/shared/harness-core/v2_paper_framework.md`*  
 *Appendix B: Integration contract specification — `knowledge/shared/harness-core/fh_integration_contract.md`*  
 *Appendix C: Synergy playbook — `knowledge/shared/harness-core/fh_synergy_playbook.md`*
+
+---
+
+## Data Availability
+
+All experiment artifacts are available in the FH repository at commit `36bc976` (2026-05-31):
+- Experiment 3 target: `plugins/fh-meta/skills/pipeline-conductor/SKILL.md`
+- Experiment 5 artifacts: `plugins/fh-meta/skills/{harness-doctor,harvest-loop,pipeline-conductor,steel-quench,source-grounding-audit}/SKILL.md`
+- Raw experiment data: `knowledge/shared/harness-core/v2_paper_framework.md`
+- Model versions used: `claude-haiku-4-5-20251001`, `claude-sonnet-4-6`, `claude-opus-4-8`, Gemini CLI 0.41.2 (tool version)
+
+**steel-quench self-audit** (this draft): Run 2026-05-31 post-draft-1.0. Wave 1 found 3S + 2A blockers. Wave 2 defense: S-A (GT circularity) → addressed in §7.3 footnote; S-B (missing control arm) → acknowledged in §10.3 L2, escalated to Future Work #1; S-C (self-referential evidence) → acknowledged in §10.3 L3; S-D (N=1 tier claim) → acknowledged in §10.3 L4. All residual risks documented as Limitations.
