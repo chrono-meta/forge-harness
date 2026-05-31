@@ -8,6 +8,11 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-05-31 | v2-paper, opencode, governance, controlled-experiment | steel-quench, pipeline-conductor, synergy
+**File:** tracks/_meta/fh_opencode_governance_experiment_2026_05_31.md
+FH governance (steel-quench + pipeline-conductor --quick) applied to OpenCode's AI-generated `arity.ts`. Baseline: CI green, DONE. FH governance: PENDING — 2 A-grade findings (short-token overflow in permission allowlist, npx/opencode missing from arity table) + 1 B-grade. Delta not attributable to model — attributable to methodology layer. v2 paper prototype: controlled experiment evidence for N-fold synergy claim.
+- Decision: governance layer catches issues CI misses; arity.ts short-token overflow is permission-critical and untested
+
 ### 2026-05-30 | fh-meta | edit-manifest, predict-verify, validation-gate, skill-evolution, SkillOpt, AHE
 **File:** plugins/fh-meta/skills/edit-manifest/SKILL.md
 New skill: predict-verify loop for harness edits. Every SKILL.md/rules/CLAUDE.md edit records a falsifiable prediction; next session verifies against actual outcomes. Validation gate (SkillOpt pattern) accepts only edits with measurable improvement; rejected edits retained as negative-feedback buffer. Integrated as harvest-loop Step 0-c.
