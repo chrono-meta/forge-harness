@@ -44,6 +44,12 @@ Add to `.gitignore`:
 **Hook failure fallback**: The Stop hook may fire silently without triggering verification (hook failure, session reset, or CC version differences). If Phase 3 verification has not run after /goal completes, manually trigger it:
 > `/goal-quench --verify` — skips Phase 1+2, runs pipeline-conductor --quick using current session scope.
 
+**Interrupted /goal recovery**: If /goal is interrupted (error, user abort, CC crash), the Stop hook may not fire — leaving `.claude/goal-quench.active` without a `.pending`. Detect and recover:
+```bash
+[ -f .claude/goal-quench.active ] && ! [ -f .claude/goal-quench.pending ] && echo "Interrupted — run /goal-quench --recover"
+```
+> `/goal-quench --recover` — promotes `.active` → `.pending` and runs Phase 3 verification on partially-completed work.
+
 ---
 
 ## Phase 1 — Pre-run Gate
@@ -66,7 +72,7 @@ Run token-budget-gate against the task description. Map the result to a go/no-go
 | ORANGE (30K–60K) | Confirm before proceeding: "This will be expensive. Reduce scope or continue?" |
 | RED (> 60K) | Block: "Budget too high for a single /goal run. Split into smaller goals first." |
 
-On RED: propose 2–3 smaller sub-goals the user could run sequentially. Do not proceed with a single /goal run.
+On RED: propose 2–3 smaller sub-goals the user could run sequentially. **goal-quench halts and does not write `.active` or inject thresholds. The user may still run `/goal` manually — but goal-quench will not gate or verify a session started without its active file.**
 
 ### Step 3. Write state file
 
@@ -74,11 +80,15 @@ Create `.claude/goal-quench.active`:
 
 ```
 scope: {task description — one line}
+target_files: {comma-separated file paths or directory; "inferred from git diff" if not known}
 budget_estimate: {N} tokens
 budget_verdict: {GREEN/YELLOW/ORANGE/RED}
 pipeline_mode: --quick
 timestamp: {YYYY-MM-DD HH:MM}
+session_pid: {$$}
 ```
+
+`target_files` is the **verification artifact** — what pipeline-conductor --quick will evaluate in Phase 3. Specify files/directories explicitly if known; otherwise write `"inferred from git diff"` and Phase 3 will use `git diff HEAD --name-only` to resolve.
 
 ### Step 4. Inject mid-run budget thresholds
 
@@ -140,30 +150,45 @@ When /goal stops, the Stop hook fires and:
 3. Removes `.active`
 4. Prints: "[goal-quench] /goal finished. Verification pending — starting pipeline-conductor --quick."
 
-On the next Claude response (after /goal), check for `.claude/goal-quench.pending`:
+On the next Claude response (after /goal), check for `.claude/goal-quench.pending` **with a freshness guard** — only act if the timestamp in the file is within the current session (< 4 hours old):
 
 ```bash
-[ -f .claude/goal-quench.pending ] && echo "goal-quench verification pending"
+if [ -f .claude/goal-quench.pending ]; then
+  PENDING_TIME=$(grep "^timestamp:" .claude/goal-quench.pending | cut -d' ' -f2-)
+  # If timestamp is recent (< 4h), trigger verification; else warn and skip
+  echo "goal-quench verification pending (created: $PENDING_TIME)"
+fi
 ```
 
-If found: **automatically run pipeline-conductor --quick** before responding to any other request. This is not optional — pending verification takes priority.
+If found and fresh: **automatically run pipeline-conductor --quick** before responding to any other request. This is not optional — pending verification takes priority.
+
+If found but stale (> 4 hours): warn the user — "A stale goal-quench.pending exists from {timestamp}. Run `/goal-quench --verify` to re-evaluate, or delete it to clear." Do not auto-trigger verification on stale state.
 
 ### Verification flow
 
 ```bash
-# Read scope from pending file
+# Read scope and target from pending file
 SCOPE=$(grep "^scope:" .claude/goal-quench.pending | cut -d' ' -f2-)
+TARGET=$(grep "^target_files:" .claude/goal-quench.pending | cut -d' ' -f2-)
+
+# Resolve artifact: explicit target or git diff
+if [ "$TARGET" = "inferred from git diff" ] || [ -z "$TARGET" ]; then
+  TARGET=$(git diff HEAD --name-only 2>/dev/null | tr '\n' ',')
+fi
 ```
 
-Run `pipeline-conductor --quick` on the scope. Gate on result:
+Run `pipeline-conductor --quick` on `$TARGET` (the artifact changed during this /goal session). Gate on result:
 
-| pipeline-conductor verdict | goal-quench action |
-|---|---|
-| `CLEAN (--quick)` | Internal iteration safe. Output: "Quality gate passed (--quick). Safe for local iteration and internal commits. Run pipeline-conductor --full before external release or PR." Log actual vs estimated tokens. |
-| `PENDING` | Proceed with caution. Output pending items. Recommend: "Resolve before any external release." |
-| `BLOCKED` | Block commit. Output blocking items. Ask: "Fix and re-run /goal, or accept partial completion?" |
+| pipeline-conductor verdict | goal-quench action | Delete `.pending`? |
+|---|---|---|
+| `CLEAN (--quick)` | Output: "Quality gate passed (--quick). Safe for local iteration and internal commits. Run pipeline-conductor --full before external release or PR." Log tokens. | **Yes — immediately** |
+| `PENDING` | Proceed with caution. Output pending items. Recommend: "Resolve before any external release." | **Yes — immediately** |
+| `BLOCKED` | Block commit. Output blocking items. Ask: "Fix and re-run /goal, or accept partial completion?" | **Only after user acknowledges** |
+| `ESCALATE` | Surface to user for decision. Do not auto-delete — preserve state until user explicitly decides. | **Only after user decision** |
 
-After verification (any verdict): delete `.claude/goal-quench.pending`. Record actual token usage in `tracks/_meta/goal_quench_{YYYY-MM-DD}.md` for calibration.
+**Deletion rule**: On BLOCKED or ESCALATE, `.pending` must survive until the user makes an explicit decision. Deleting before that decision loses the recovery anchor.
+
+Record actual token usage in `tracks/_meta/goal_quench_{YYYY-MM-DD}.md` for calibration (regardless of verdict).
 
 ---
 
