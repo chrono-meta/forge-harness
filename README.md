@@ -148,6 +148,25 @@ Project B (the execution site)
 
 ---
 
+## Architecture — 2-layer design
+
+forge-harness is structured as two distinct layers with different portability profiles:
+
+| Layer | Contents | AI compatibility |
+|---|---|---|
+| **Methodology layer** (model-agnostic) | `tracks/`, `knowledge/`, `SKILL.md` documents, session protocols | Any AI model |
+| **Automation layer** (Claude-native) | `.claude/agents/`, hooks, slash commands, `CLAUDE.md` rules | Claude Code only |
+
+**Methodology layer** is the portable core: the pattern of connecting projects to a persistent hub, accumulating learnings in `tracks/`, and curating cross-project knowledge in `knowledge/shared/` works regardless of which AI you use. SKILL.md files document the methodology in plain language.
+
+**Automation layer** is what makes the methodology frictionless when running Claude Code: agents dispatch automatically, hooks fire at session boundaries, and slash commands invoke skills without manual prompting.
+
+> **Codex-compatible beta**: The Methodology layer is designated Codex-compatible beta. Gemini, Codex, and other AI users can apply FH methodology manually — the tracks/ and knowledge/ structure, sync protocols, and skill documentation all translate. Automation layer features (agents, hooks) require Claude Code.
+
+For runtime agent specs, see `AGENTS.md`. For session rules and orchestration protocol, see `CLAUDE.md`.
+
+---
+
 ## Finding your entry path — 1-minute self-diagnosis
 
 Count how many of the following apply to you.
