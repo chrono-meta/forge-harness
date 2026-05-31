@@ -63,6 +63,25 @@ Collect: task description, target files or directories, expected output.
 
 ### Step 2. token-budget-gate estimate
 
+**Invocation contract**:
+```
+Input:  task description (one paragraph), target file count (approximate)
+Trigger phrase: "estimate token budget for: {task description}"
+Expected output fields:
+  - estimated_tokens: N
+  - verdict: GREEN | YELLOW | ORANGE | RED
+  - reasoning: one-line basis for estimate
+```
+
+If `token-budget-gate` skill is not installed, use this fallback estimator:
+```
+< 5 files changed, no new architecture  → GREEN  (< 10K)
+5–20 files or new module/feature        → YELLOW (10K–30K)
+20+ files or cross-system refactor      → ORANGE (30K–60K)
+Full-project migration or rewrite       → RED    (> 60K)
+```
+Note the fallback in `.active` as `budget_source: fallback-heuristic` instead of `budget_source: token-budget-gate`.
+
 Run token-budget-gate against the task description. Map the result to a go/no-go decision:
 
 | token-budget-gate verdict | goal-quench action |
@@ -82,6 +101,7 @@ Create `.claude/goal-quench.active`:
 scope: {task description — one line}
 target_files: {comma-separated file paths or directory; "inferred from git diff" if not known}
 budget_estimate: {N} tokens
+budget_source: token-budget-gate | fallback-heuristic
 budget_verdict: {GREEN/YELLOW/ORANGE/RED}
 pipeline_mode: --quick
 timestamp: {YYYY-MM-DD HH:MM}
@@ -220,12 +240,25 @@ After each goal-quench run, append to `tracks/_meta/goal_quench_{YYYY-MM-DD}.md`
 - date: YYYY-MM-DD
   task: {one-line description}
   estimated_tokens: N
+  budget_source: token-budget-gate | fallback-heuristic
+  actual_tokens: N  # estimated from turn count × avg tokens/turn; or "unknown" if not tracked
+  estimation_error: over | under | accurate  # compared actual vs estimated
   budget_verdict: GREEN/YELLOW/ORANGE/RED
-  pipeline_verdict: CLEAN/PENDING/BLOCKED
+  pipeline_verdict: CLEAN/PENDING/BLOCKED/ESCALATE
   threshold_triggered: none/50/70/85/95
+  notes: {optional — why estimate was off, what scope changed}
 ```
 
-This data calibrates future token-budget-gate estimates for /goal-type tasks. Target: 10 runs before treating estimates as reliable.
+**`actual_tokens` collection**: Claude cannot read session token counts directly. Estimate by:
+1. CC session summary (if available in `~/.claude/projects/*/conversation*.jsonl`)
+2. Turn count × estimated tokens/turn (rough: ~2K for short turns, ~8K for long file edits)
+3. User-reported from CC token display (preferred if visible)
+
+Write `"unknown"` if no estimate is possible. After 10 runs, compute mean estimation error — calibrate the fallback heuristic tiers if systematic over/under is detected.
+
+`pipeline_verdict` enum includes `ESCALATE` — record it when Phase 3 required user decision before proceeding.
+
+This data calibrates future estimates. Target: 10 runs before treating estimates as reliable. Runs with `budget_source: fallback-heuristic` calibrate the fallback tiers; runs with `token-budget-gate` calibrate the skill itself.
 
 ---
 
