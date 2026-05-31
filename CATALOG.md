@@ -8,6 +8,11 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-05-31 | opencode, governance, usage-guide, synergy | pipeline-conductor, steel-quench, v2-paper
+**File:** knowledge/shared/harness-core/fh_opencode_governance_wrapper.md
+Step-by-step usage guide for FH + OpenCode governance integration. 3-step protocol (diff capture → steel-quench → pipeline-conductor). No API adapter required. Includes empirical baseline from arity.ts trial: CI=DONE, FH governance=PENDING, 2 A-grade security-adjacent findings caught. Stop hook automation pattern included.
+- Decision: governance wrapper documented as protocol (not API) — FH reads files OpenCode writes
+
 ### 2026-05-31 | v2-paper, opencode, governance, controlled-experiment | steel-quench, pipeline-conductor, synergy
 **File:** tracks/_meta/fh_opencode_governance_experiment_2026_05_31.md
 FH governance (steel-quench + pipeline-conductor --quick) applied to OpenCode's AI-generated `arity.ts`. Baseline: CI green, DONE. FH governance: PENDING — 2 A-grade findings (short-token overflow in permission allowlist, npx/opencode missing from arity table) + 1 B-grade. Delta not attributable to model — attributable to methodology layer. v2 paper prototype: controlled experiment evidence for N-fold synergy claim.
