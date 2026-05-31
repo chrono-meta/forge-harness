@@ -116,6 +116,23 @@ Optional numeric score (0.0–1.0):  ← v1.2: harness-evolver LLM-as-judge patt
   Scoring rationale: {one-line basis — weighted by S×3 + A×1, normalized to scale}
 ```
 
+**S-grade Immediate Human Gate** — if Wave 1 output contains 1+ S-grade blocker, pause before Wave 2 and surface:
+
+```
+⚠️  Wave 1 found N S-grade blocker(s):
+  - [blocker 1 — one-line summary]
+  - [blocker 2 — one-line summary]
+
+Options:
+  (a) Proceed to Wave 2 defense — AI attempts to resolve these
+  (b) Human review first — inspect blockers directly, then decide
+  (c) Abort — address blockers manually before re-running quench
+
+Waiting for input. (Default: a — proceed to Wave 2)
+```
+
+Rationale: S-grade items that enter Wave 2 unreviewed can be defended with plausible-sounding but unverifiable arguments (hallucination-contaminated defense, pattern P7). The human gate at the S-grade threshold surfaces this risk before the AI-AI loop runs. If the user selects (a), Wave 2 proceeds normally — the gate is a decision point, not a blocker.
+
 ---
 
 ### Wave 2 — Defense Round
@@ -258,29 +275,67 @@ Same as Wave 3: **zero new S-grade blockers**. Plus these additional conditions:
 
 ### Wave 5 — Multi-Model Sidecar Challenger (Optional)
 
-**When to activate**: After Wave 1~4 convergence, when the user wants adversarial diversity from a different model's blind-spot profile. Optional — activate explicitly with `--sidecar` flag or "run sidecar wave".
+**When to activate**: After Wave 1~4 convergence, when the user wants adversarial diversity from a different model's blind-spot profile. Optional — activate explicitly with `--sidecar` flag or "run sidecar wave". Auto-proposed when A-grade items remain after Wave 3 convergence.
 
-**Rationale**: Single-model attacks converge on the same blind spots. A sidecar model (Gemini, Codex) attacks from a structurally different perspective — empirically validated to surface non-overlapping issues on the same artifact (see `knowledge/shared/harness-core/multi_model_sidecar_strategy.md`). Results converge in substance; process diverges in angle.
+**Rationale**: Single-model attacks converge on the same blind spots. A sidecar model (Gemini, Codex, Copilot CLI) attacks from a structurally different perspective — empirically validated to surface non-overlapping issues on the same artifact (see `knowledge/shared/harness-core/multi_model_sidecar_strategy.md`). Results converge in substance; process diverges in angle.
 
-**Execution**:
+**Step 0 — Sidecar Environment Detection** (run before execution, once per session):
 
 ```bash
-# Gemini sidecar (pipe)
+# Detect available sidecar CLIs — run at Wave 5 entry
+SIDECARS=()
+command -v gemini          &>/dev/null && SIDECARS+=("gemini")
+command -v gh              &>/dev/null && gh copilot --version &>/dev/null 2>&1 && SIDECARS+=("gh-copilot")
+command -v ollama          &>/dev/null && SIDECARS+=("ollama")
+npx @openai/codex --version &>/dev/null 2>&1 && SIDECARS+=("codex")
+
+if [ ${#SIDECARS[@]} -eq 0 ]; then
+  echo "Wave 5: no sidecar CLI found — using cross-session Claude isolation (Path B)"
+  SIDECAR_MODE="cross-session"
+else
+  echo "Wave 5: available sidecars — ${SIDECARS[*]}"
+  SIDECAR_MODE="${SIDECARS[0]}"  # prefer first found
+fi
+```
+
+**Execution — by detected mode**:
+
+```bash
+# Path A: External sidecar (gemini / gh copilot / ollama / codex)
+# gemini
 SIDECAR_RESULT=$(echo "You are an adversarial reviewer of a software design skill.
 Identify the 3 most critical gaps in this Done When criteria in 3 bullet points:
 $(tail -40 {SKILL_PATH})" | gemini 2>/dev/null)
 
-# Codex sidecar (exec mode)
+# gh copilot (GitHub Copilot CLI — corporate environments)
+SIDECAR_RESULT=$(echo "You are an adversarial reviewer.
+Identify the 3 most critical gaps in this Done When criteria in 3 bullet points:
+$(tail -40 {SKILL_PATH})" | gh copilot suggest -t shell 2>/dev/null)
+
+# codex
 SIDECAR_RESULT=$(npx @openai/codex exec "You are an adversarial reviewer.
 Identify the 3 most critical gaps in this Done When criteria in 3 bullet points:
 $(tail -40 {SKILL_PATH})" 2>/dev/null)
+
+# Path B: Cross-session Claude isolation (fallback when no external CLI available)
+# Spawns a fresh claude process with zero conversation history — eliminates
+# same-session confirmation bias without requiring a different model.
+SIDECAR_RESULT=$(claude --print "You are an adversarial reviewer with no prior context.
+Artifact to review (last 40 lines):
+$(tail -40 {SKILL_PATH})
+Identify the 3 most critical gaps in the Done When criteria. Return bullet points only." \
+  2>/dev/null)
+# Note: --print flag may vary by claude CLI version; use -p as fallback.
 ```
+
+**Auto-propose condition**: If Wave 3 convergence is reached but A-grade items remain, AI proposes: `"Wave 3 converged with A-grade residuals. Want to run Wave 5 sidecar for a second opinion? (--sidecar)"`
 
 **Output format** — fold sidecar result into standard Wave format:
 
 ```
 ## Wave 5 — Multi-Model Sidecar Results
-Model: [gemini | codex]
+Mode: [gemini | gh-copilot | ollama | codex | cross-session-claude]
+Sidecar detected: [CLI name or "none — cross-session fallback used"]
 
 [sidecar output — bullet points, preserved verbatim]
 
