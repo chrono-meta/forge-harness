@@ -1,11 +1,11 @@
 ---
 name: reference-next-session-starter
-description: Next session context — 2026-05-31. v2 논문 draft 1.1 완성. arXiv v1.0 번호 대기 중.
+description: Next session context — 2026-05-31. v2 논문 draft 1.3 완성. fh-gate v1.0 바이너리 완성. npm publish 대기.
 date: 2026-05-31
-tags: [session-starter, v2-paper, arxiv, awesome-lists, ablation, multi-team, tier-comparison]
+tags: [session-starter, v2-paper, arxiv, awesome-lists, ablation, fh-gate, npm-publish]
 ---
 
-# Next Session Starter — 2026-05-31 (세션 3 마감)
+# Next Session Starter — 2026-05-31 (세션 4 마감)
 
 ## 현재 상태
 
@@ -19,6 +19,14 @@ tags: [session-starter, v2-paper, arxiv, awesome-lists, ablation, multi-team, ti
 ---
 
 ## ⭐ 다음 세션 최우선
+
+### 0. npm publish @chrono-meta/fh-gate (새 최우선)
+
+1. npmjs.com에서 `@chrono-meta` org 생성 (GitHub org 변환과 무관 — 독립적)
+2. `npm login && npm publish --access public`
+3. 확인: `npx @chrono-meta/fh-gate "src/foo.ts" quick ci`
+
+**GitHub org 변환**: arXiv v1+v2 링크 고정 후 여유있게. 지금 불필요.
 
 ### 1. arXiv v1.0 번호 수신 → v2 arXiv 제출 → Awesome Lists PR (순서)
 
@@ -54,7 +62,19 @@ gh issue view 3069 --repo tinyhumansai/openhuman
 
 ---
 
-## 이번 세션 완료 ✅ (2026-05-31 세션 3)
+## 이번 세션 완료 ✅ (2026-05-31 세션 4)
+
+| 항목 | 결과 |
+|---|---|
+| **PR #45 main 머지** | worktree-witty-juggling-crab → main squash 머지 완료 |
+| **v2 논문 draft 1.2** | §1 steel-quench — S1(novelty) + A2/A3/A5 전부 즉각 수정 |
+| **v2 논문 draft 1.3** | B4(tier-snapshot) L4 확장 — 전 등급 소진, steel-quench Complete |
+| **fh-gate.sh v1.0 바이너리** | claude --print 실행 + exit code 0/1/2/3/10/11 + governance log |
+| **npm 패키지 @chrono-meta/fh-gate@1.0.0** | package.json + .npmignore + 72KB 4파일 구성 완료 |
+| **자기심사 테스트** | fh-gate가 자기 자신 리뷰 → A-grade 발견(audit trail 소실) → 수정 → 거버넌스 루프 완결 |
+| **방향 전환 인식** | "하네스를 만드는 것" → "하네스를 제공하는 것" (governance API 방향) |
+
+## 이전 세션 완료 ✅ (2026-05-31 세션 3)
 
 | 항목 | 결과 |
 |---|---|
@@ -77,9 +97,10 @@ gh issue view 3069 --repo tinyhumansai/openhuman
 | **v2 arXiv 제출** | draft 1.1 준비 완료, v1.0 번호 수신 후 |
 | **Awesome Lists PR** | v1+v2 묶어서, 번호 수신 후 |
 | **Ablation study** | 미실행 — 다음 세션 최우선 실험 |
-| **Worktree → main 머지** | `witty-juggling-crab` PR 미생성 |
+| **Worktree → main 머지** | PR #45 머지 완료 ✅ |
 | **GitHub 이슈 응답** | 3개 오픈 — 유지관리자 확인 대기 |
-| **bridge layer v1.0** | `fh-gate.sh` binary 미구현 |
+| **fh-gate npm publish** | `@chrono-meta/fh-gate@1.0.0` — npmjs.com org 생성 후 publish 대기 |
+| **GitHub org 변환** | arXiv 링크 고정 후 여유있게 |
 
 ---
 
