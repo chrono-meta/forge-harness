@@ -53,10 +53,15 @@ GUARD="$REPO_ROOT/templates/regression_guard.sh"
 if [ ! -f "$GUARD" ]; then
   echo "  ⚠️  SKIP — templates/regression_guard.sh not found"
 else
-  if bash "$GUARD" --pr "$BRANCH" 2>&1; then
+  GUARD_EXIT=0
+  bash "$GUARD" --pr "$BRANCH" 2>&1 || GUARD_EXIT=$?
+  if [ "$GUARD_EXIT" -eq 0 ]; then
     echo "  ✅ PASS"
+  elif [ "$GUARD_EXIT" -eq 1 ]; then
+    echo "  ⚠️  S-tier warnings present — review before merge (commit allowed)"
+    # Exit 1 = S-tier: guard itself says "merge allowed but verify intent" — not a commit blocker
   else
-    echo "  ❌ FAIL — fix regression issues before committing"
+    echo "  ❌ FAIL — M-tier blockers or usage error (exit $GUARD_EXIT)"
     FAILED=1
   fi
 fi
