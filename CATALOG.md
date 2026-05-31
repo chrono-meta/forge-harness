@@ -8,6 +8,16 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-05-31 | v2-paper, experimental-design, controlled-trial, orchestrator-swap | opencode, governance, ecosystem
+**File:** knowledge/shared/harness-core/v2_paper_framework.md
+Independent v2 paper framework (not a version update). 3 experiments: (1) multi-model orchestrator swap — Gemini+Codex find non-overlapping gaps, each catches what the other misses; (2) governance controlled trial — arity.ts CI=DONE→FH=PENDING, 2 A-grade findings, causal delta = methodology layer; (3) tier comparison (pending). Paper structure, key claims table, timeline, differentiation from v1.0.
+- Decision: v2 is independent paper — 3 novel empirical contributions, cites OpenCode as experimental target
+
+### 2026-05-31 | integration-contract, bridge-layer, governance-interface | opencode, hermes, openhuman, v2-paper
+**File:** knowledge/shared/harness-core/fh_integration_contract.md
+Formal v0.1 specification for how callers (OpenCode, Hermes, OpenHuman, CI) invoke FH governance gates and receive structured verdicts. Defines: input format (newline-separated files), FH_STATUS+verdict format, findings in YAML block, parse recipe. Includes caller-specific guidance + Stop hook pattern + record spec. Gemini adversarial review found 2 A-grade issues (space-separated paths, non-parseable multi-line fields) — both fixed in v0.1. Also includes `scripts/fh-gate.sh` prompt-generator wrapper.
+- Decision: findings use YAML block (not flat key-value) to prevent delimiter ambiguity; FH_STATUS mandatory for fail-safe parsing
+
 ### 2026-05-31 | opencode, governance, usage-guide, synergy | pipeline-conductor, steel-quench, v2-paper
 **File:** knowledge/shared/harness-core/fh_opencode_governance_wrapper.md
 Step-by-step usage guide for FH + OpenCode governance integration. 3-step protocol (diff capture → steel-quench → pipeline-conductor). No API adapter required. Includes empirical baseline from arity.ts trial: CI=DONE, FH governance=PENDING, 2 A-grade security-adjacent findings caught. Stop hook automation pattern included.
