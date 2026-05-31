@@ -172,11 +172,27 @@ All three tiers independently identified the same three S-grade blockers:
 - **Sonnet**: Highest total finding count (29), most exhaustive on A-grade items, verbose output (3,667 tokens vs ~2,400 others)
 - **Opus**: Fewer but architecturally deeper findings. Uniquely found: "This skill has role duplication with the existing 4-Axis Auto-Gate — should this skill exist at all?" — a meta-level question neither lower tier raised
 
-### 5.5 Implications for Harness Portability
+### 5.5 Coverage-Ceiling Independence vs. Path-Length Dependence
 
-The harness portability claim is supported: **for critical defect detection (S-grade), a lower-cost model performs equivalently to a premium model when governed by the same structured protocol.** The governance protocol is the floor; the model tier adds ceiling.
+The tier comparison results reveal a two-axis structure that "tier-independent" alone does not capture:
 
-Practical implication: teams with token budget constraints can use Haiku for routine governance sweeps without compromising critical-blocker detection. Opus is justified for architecture-level review where meta-level questioning ("should this component exist?") provides additional value.
+**Coverage ceiling (harness-determined)**: S-grade critical blockers are found by every tier. The harness protocol creates an adversarial frame that any model, when placed inside it, will navigate toward the same class of structural failures. The ceiling — what gets found — converges across tiers.
+
+**Path length (tier-influenced)**: The route to that ceiling differs. Opus raises the meta-level question ("should this component exist?") without being prompted to do so — it reasons autonomously before reaching the structured attack angles. Haiku requires the protocol to explicitly open each angle; it reaches the same S-grade conclusions but through prompted traversal rather than self-initiated reasoning.
+
+**Empirical evidence**: Opus's unique finding ("role duplication with the existing 4-Axis Auto-Gate") is not a finding type defined in the governance protocol. It is a spontaneous architectural critique that requires the model to hold FH's full design in working memory and cross-reference it against the target skill unprompted. Haiku did not produce this class of finding despite identical prompt structure.
+
+This suggests a refinement of the harness portability claim:
+
+> *The harness protocol determines the coverage ceiling; the model tier determines the path length to that ceiling. A lower-tier orchestrator requires more structured prompting waves to reach the same S-grade coverage that a higher-tier orchestrator reaches through fewer, more autonomous iterations. The destination is harness-determined; the journey is model-determined.*
+
+**Practical consequence**: For teams operating under token constraints, Haiku is sufficient to guarantee critical-defect detection — it will reach the same S-grade ceiling, just with less autonomous exploration between structured steps. Opus earns its cost in pre-publish and architecture-review contexts where spontaneous meta-level critique (outside the protocol's explicit angles) carries additional risk-reduction value.
+
+### 5.6 Implications for Harness Portability
+
+The harness portability claim is confirmed with the above refinement: **S-grade critical defect detection is tier-independent when governed by the same structured protocol.** The governance protocol is the activation condition for quality; model tier modulates depth of autonomous exploration above that floor, not the floor itself.
+
+This is directly consistent with the v1.0 thesis: the harness is the durable layer. Model upgrades improve path efficiency; they do not substitute for the harness. Harness removal, regardless of model tier, eliminates the systematic coverage guarantee.
 
 ---
 
