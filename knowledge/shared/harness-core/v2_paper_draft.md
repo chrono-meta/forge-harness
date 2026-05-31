@@ -7,7 +7,7 @@ tags: [v2-paper, draft, empirical, governance, multi-team, tier-comparison, cont
 
 # Governance Dividend: Empirical Evidence for Harness-Structured Methodology as a Distinct Quality Layer in Multi-Agent AI Systems
 
-**Draft 1.2** — 2026-05-31 (post §1 steel-quench: novelty positioning + self-referential disclosure + causality caveat)
+**Draft 1.3** — 2026-05-31 (post §1 full steel-quench: novelty positioning + self-referential disclosure + causality caveat + B4 tier-snapshot L4 closure)
 
 *Companion to: "The Forge Harness: A Structured Methodology for Sustainable AI-Assisted Software Development" (Zenodo 10.5281/zenodo.20397566)*
 
@@ -37,7 +37,7 @@ This paper makes four empirical contributions beyond the v1.0 architectural argu
 
 1. **Experiment 1** (§3): Multi-model orchestrator swap evidence — different models find non-overlapping failure modes on the same artifact. Harness is the activation condition; model is the lens.
 2. **Experiment 2** (§4): Governance controlled trial on OpenCode's `arity.ts` — CI-passing, developer-approved code receives PENDING verdict with 2 A-grade security-adjacent findings under FH governance.
-3. **Experiment 3** (§5): Tier comparison — S-grade critical defect detection is tier-independent across Haiku, Sonnet, and Opus on the same target; premium tiers add autonomous architectural meta-critique not elicited by the protocol structure alone.
+3. **Experiment 3** (§5): Tier comparison — S-grade critical defect detection is tier-independent across Haiku-4.5, Sonnet-4.6, and Opus-4.8 on the same target; premium tiers add autonomous architectural meta-critique not elicited by the protocol structure alone. This result is a snapshot of the May 2026 capability gap between tiers; see §10.3 L4 for temporal validity constraints.
 4. **Experiments 4+5** (§6, §7): Cross-ecosystem governance reach (3 external projects, 4 A-grade findings submitted as issues) and multi-team token-coverage tradeoff (N=5 FH-internal artifacts, C2 three-persona cross-session panel raises coverage from 57% to 84%; adding an external CLI team closes to the C2+C3 union at zero marginal Claude quota cost).
 
 **Novelty positioning.** Prior SE literature (Fagan 1976 and subsequent empirical work) establishes that structured review catches defects that automated testing misses. Our contribution does not restate this baseline. Our empirical claims are LLM-native and quantitative: (a) the *governance protocol* — not the model tier — is the primary determinant of critical-defect coverage ceiling (§5); (b) a three-session independent panel raises coverage by 27 percentage points over single-session review at negligible marginal cost (§7); (c) external CLI teams extend defect coverage at zero cost to the orchestrating model's token quota, a billing-architecture fact specific to multi-CLI LLM pipelines (§7 H3). None of these relationships are derivable from pre-LLM review literature, because they depend on properties — same-session confirmation bias, cross-model distribution independence, and multi-CLI quota isolation — that are specific to the multi-agent LLM execution context. The rival explanation ("longer or more structured prompt alone improves output, independent of harness structure") is acknowledged as a limitation; §10.3 and §10.4 document the ablation study needed to isolate the protocol-structure effect.
@@ -413,7 +413,7 @@ N sessions × governance dividend per session = compounding quality improvement 
 
 **L3 — Self-referential evidence (Experiments 1, 3, 5)**: Three of five experiments apply FH governance to FH's own skill artifacts. All five Experiment 5 artifacts are written by the same author who designed the review protocol. Generalizability to other teams' codebases, other artifact types, and other governance protocols is not demonstrated.
 
-**L4 — Small N for tier claim (Experiment 3)**: Tier-independence is demonstrated on N=1 artifact. The three shared S-grade findings are surface-level contradictions detectable by careful reading. The claim cannot be generalized to "S-grade detection is universally tier-independent" from a single artifact.
+**L4 — Small N and temporal validity for tier claim (Experiment 3)**: Tier-independence is demonstrated on N=1 artifact. The three shared S-grade findings are surface-level contradictions detectable by careful reading. The claim cannot be generalized to "S-grade detection is universally tier-independent" from a single artifact. Additionally, this result is a snapshot of the capability gap between Haiku-4.5, Sonnet-4.6, and Opus-4.8 at the time of writing (May 2026). If entry-tier models improve substantially in subsequent generations, the tier-independence finding may cease to hold — the result may describe a current capability floor rather than a structural property of the protocol.
 
 **L5 — External issue confirmation (Experiment 4)**: Findings are "submitted as issues" — no maintainer confirmation that any finding was validated as a real defect or acted upon is reported in this paper.
 
