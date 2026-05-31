@@ -46,7 +46,16 @@ FH_DRY_RUN="${FH_DRY_RUN:-0}"
 FH_MODEL="${FH_MODEL:-claude-sonnet-4-6}"
 FH_TIMEOUT="${FH_TIMEOUT:-120}"
 FH_VERBOSE="${FH_VERBOSE:-0}"
-FH_RECORD_BASE="${FH_RECORD_BASE:-${FH_ROOT}/tracks/_meta}"
+
+# Smart record base: FH repo → tracks/_meta/; standalone npm install → ~/.fh/logs/
+if [[ -z "${FH_RECORD_BASE:-}" ]]; then
+  if [[ -d "${FH_ROOT}/tracks/_meta" ]]; then
+    FH_RECORD_BASE="${FH_ROOT}/tracks/_meta"
+  else
+    FH_RECORD_BASE="${HOME}/.fh/logs"
+    mkdir -p "$FH_RECORD_BASE"
+  fi
+fi
 
 # --- Validation ---
 if [[ "$GATE_LEVEL" != "quick" && "$GATE_LEVEL" != "full" ]]; then
