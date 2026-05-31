@@ -618,6 +618,144 @@ For shared utility, see `templates/regression_guard.sh` — extract the `count_b
 
 ---
 
+### Step 11. PR Change Consistency Check *(triggered on "PR 올려줘" / "PR check" / branch with FH asset changes)*
+
+> **Purpose**: Before a PR is pushed, verify that all files related to the change are consistent. Root cause of today's class of bug: a skill is added but README table is missed, an org is renamed but stale references survive in other files. This step closes the propagation gap.
+
+#### 11-1. Detect changed files vs main
+
+```bash
+changed=$(git diff main..HEAD --name-only 2>/dev/null)
+[ -z "$changed" ] && changed=$(git diff --cached --name-only 2>/dev/null)
+[ -z "$changed" ] && echo "PR_CHECK: no changes detected vs main — skip" && return 0
+echo "=== Changed files ($(echo "$changed" | wc -l | tr -d ' ') total) ==="
+echo "$changed"
+```
+
+#### 11-2. Category-based consistency checks
+
+**A. SKILL.md changes → per-plugin count drift + README table + CATALOG entry**
+
+> **Ground truth** (verified 2026-05-31): there is **no `skills` array** in any manifest. Claude Code auto-discovers skills from `plugins/{plugin}/skills/*/`. Do NOT look for a skills array — it does not exist. The drift surfaces are: (1) the skill **count embedded in descriptions** as `"N skills"` (`plugins/{p}/.claude-plugin/plugin.json` + root `.claude-plugin/marketplace.json`), and (2) the **README skill table** + **CATALOG entries** (human-maintained). Save the script below as a file and run it — inline heredocs in some shells corrupt multi-line Python.
+
+```bash
+skills_changed=$(echo "$changed" | grep "skills/.*/SKILL\.md" || true)
+if [ -n "$skills_changed" ]; then
+  cat > /tmp/_fh_count.py <<'PYEOF'
+import json, glob, os, re
+def claimed_count(desc):
+    m = re.search(r'(\d+)\s*skills', desc)
+    return int(m.group(1)) if m else None
+# per-plugin plugin.json description count vs actual dirs
+for src in sorted(glob.glob('plugins/*')):
+    if not os.path.isdir(os.path.join(src, 'skills')):
+        continue
+    pname = os.path.basename(src)
+    actual = len(glob.glob(os.path.join(src, 'skills', '*/')))
+    pj = os.path.join(src, '.claude-plugin', 'plugin.json')
+    if os.path.exists(pj):
+        c = claimed_count(json.load(open(pj)).get('description', ''))
+        if c is not None and c != actual:
+            print(f"DRIFT: {pname} plugin.json says '{c} skills' but {actual} dirs — update description")
+        elif c is not None:
+            print(f"OK: {pname} plugin.json count {actual} matches description")
+        else:
+            print(f"INFO: {pname} plugin.json description has no 'N skills' count ({actual} dirs)")
+# root marketplace.json per-plugin description count
+mp = '.claude-plugin/marketplace.json'
+if os.path.exists(mp):
+    for p in json.load(open(mp)).get('plugins', []):
+        src = p.get('source', '').lstrip('./')
+        actual = len(glob.glob(os.path.join(src, 'skills', '*/')))
+        c = claimed_count(p.get('description', ''))
+        if c is not None and c != actual:
+            print(f"DRIFT: marketplace.json[{p['name']}] says '{c} skills' but {actual} dirs — update description")
+        elif c is not None:
+            print(f"OK: marketplace.json[{p['name']}] count {actual} matches description")
+PYEOF
+  python3 /tmp/_fh_count.py
+
+  # Per-changed-skill: README + CATALOG presence (human-maintained lists drift most)
+  echo "$skills_changed" | while read sp; do
+    sname=$(basename "$(dirname "$sp")")
+    grep -q "$sname" README.md 2>/dev/null \
+      && echo "OK: $sname in README" \
+      || echo "MISSING: '$sname' not in README.md — add to skill table"
+    grep -q "$sname" CATALOG.md 2>/dev/null \
+      && echo "OK: $sname in CATALOG" \
+      || echo "MISSING: '$sname' not in CATALOG.md — add entry"
+  done
+fi
+```
+
+**B. Agent file changes → README agent count**
+
+```bash
+agents_changed=$(echo "$changed" | grep -E "agents/.*\.md" || true)
+if [ -n "$agents_changed" ]; then
+  actual_agents=$(find .claude/agents plugins/*/agents -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+  readme_agents=$(grep -oE '[0-9]+ (fh-meta \+ [0-9]+ fh-commons )?agents?' README.md 2>/dev/null | head -1 || echo "not found")
+  echo "Agent files: $actual_agents | README mentions: $readme_agents"
+  echo "$agents_changed" | while read ap; do
+    aname=$(basename "$ap" .md)
+    grep -q "$aname" README.md 2>/dev/null \
+      && echo "OK: $aname in README" \
+      || echo "MISSING: '$aname' not in README.md"
+  done
+fi
+```
+
+**C. knowledge/shared/ changes → CATALOG coverage**
+
+```bash
+knowledge_changed=$(echo "$changed" | grep "^knowledge/" || true)
+if [ -n "$knowledge_changed" ]; then
+  echo "$knowledge_changed" | while read kf; do
+    fname=$(basename "$kf" .md)
+    grep -q "$fname" CATALOG.md 2>/dev/null \
+      && echo "OK: $fname in CATALOG" \
+      || echo "MISSING: '$fname' not in CATALOG.md — add entry"
+  done
+fi
+```
+
+**D. README.md changed → stale org/version references**
+
+```bash
+if echo "$changed" | grep -q "^README\.md$"; then
+  grep -n "chrono-code" README.md 2>/dev/null && echo "STALE: 'chrono-code' found — should be 'chrono-meta'" || true
+  actual=$(ls -d plugins/fh-meta/skills/*/ plugins/fh-commons/skills/*/ 2>/dev/null | wc -l | tr -d ' ')
+  readme_count=$(grep -oE '[0-9]+ (fh-meta[^)]+)?skills' README.md 2>/dev/null | head -1 || echo "not found")
+  echo "Actual skills: $actual | README mentions: $readme_count"
+fi
+```
+
+**E. AGENTS.md / CLAUDE.md changed → cross-reference sanity**
+
+```bash
+if echo "$changed" | grep -qE "^AGENTS\.md$|^CLAUDE\.md$"; then
+  # Check AGENTS.md agent count vs actual files
+  if [ -f AGENTS.md ]; then
+    agents_in_file=$(grep -c "^##\? " AGENTS.md 2>/dev/null || echo "?")
+    actual_agents=$(find .claude/agents plugins/*/agents -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+    echo "AGENTS.md sections: $agents_in_file | Actual agent files: $actual_agents"
+  fi
+fi
+```
+
+#### 11-3. Verdict
+
+| State | Action |
+|---|---|
+| All checks OK | ✅ **CONSISTENT** — PR ready |
+| 1+ MISSING/MISMATCH | 🟧 **INCONSISTENT** — fix before push |
+| Count mismatch only | 🟩 **REVIEW** — verify intent |
+
+**Auto-propose** when "PR 올려줘" / "push" / "merge" detected in session (non-blocking one-liner):
+> *"PR 올리기 전에 연관 파일 일관성 체크할까요? (`harness-doctor PR check`)"*
+
+---
+
 ## Done When
 
 | Stage | Completion Verdict |
@@ -627,6 +765,7 @@ For shared utility, see `templates/regression_guard.sh` — extract the `count_b
 | Step 8 weekly_audit section addition proposed | ✅ Integration proposal complete (acceptance is user's decision) |
 | Step 9 Eval-First gate verdict output (when requested) | ✅ Promotion verdict complete |
 | Step 10 Regression Guard verdict (PASS/REVIEW/BLOCK) when SKILL.md changes | ✅ Post-fix verification complete |
+| Step 11 PR consistency check — CONSISTENT/INCONSISTENT/REVIEW verdict output | ✅ PR pre-push verification complete |
 
 **This skill Done When = "prescription report output complete"**. Actual resolution of M/S/R items belongs to user or follow-up work and is not included in this skill's completion criteria.
 
@@ -677,9 +816,12 @@ This skill can be triggered when expressing Claude Code configuration or structu
 | "Claude seems to be ignoring my rules" | Rules file unreferenced or conflicting | L2·L3 |
 | "is this project hub connection set up correctly?" | L4 connection diagnosis | L4 (FH environment) |
 | "skill isn't triggering" | Skill activity check | L5-A |
+| "PR 올려줘", "PR check", "push before review", "변경사항 영향 범위" | PR change consistency check | Step 11 |
+| "README 맞아?", "CATALOG 업데이트 됐어?", "plugin.json 반영됐어?" | PR propagation gap check | Step 11 |
 
 > No auto-firing — only executes when user explicitly invokes.
 > Maintain scope separation from context-doctor (token efficiency) and harvest-loop (weekly patterns).
+> **Step 11 exception**: propose as one-liner (non-blocking) when "PR", "push", "merge" detected in session.
 
 ## Failure Fallback
 
