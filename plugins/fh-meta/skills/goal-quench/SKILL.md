@@ -32,25 +32,16 @@ The evaluator principle: Haiku judges completion (every turn, cheap). pipeline-c
 
 ## One-Time Setup (required)
 
-Add the Stop hook to your project's `.claude/settings.json`:
-
-```json
-{
-  "hooks": {
-    "Stop": [{
-      "command": "bash -c 'f=\".claude/goal-quench.active\"; [ -f \"$f\" ] && echo \"\\n[goal-quench] /goal finished. Verification pending — starting pipeline-conductor --quick.\" && cp \"$f\" \".claude/goal-quench.pending\" && rm -f \"$f\" || true'"
-    }]
-  }
-}
-```
-
-Copy the template: `cp forge-harness/templates/.claude/settings.json .claude/settings.json`
+Copy the hook snippet from `templates/goal-quench-hook-setup.md` and merge into your `.claude/settings.json`.
 
 Add to `.gitignore`:
 ```
 .claude/goal-quench.active
 .claude/goal-quench.pending
 ```
+
+**Hook failure fallback**: The Stop hook may fire silently without triggering verification (hook failure, session reset, or CC version differences). If Phase 3 verification has not run after /goal completes, manually trigger it:
+> `/goal-quench --verify` — skips Phase 1+2, runs pipeline-conductor --quick using current session scope.
 
 ---
 
@@ -129,8 +120,10 @@ goal-quench does not directly control /goal execution. The budget thresholds inj
 - At each threshold (50/70/85/95%), execute the corresponding action
 - Do not wait for goal-quench to intervene — the thresholds are self-enforced
 
+**Threshold enforcement caveat**: Claude cannot reliably read its own real-time token consumption during a /goal session. The 50/70/85/95% thresholds are instructional — Claude approximates consumption based on task complexity and turn count. They are not mechanically enforced. For hard enforcement, see the Anthropic feature request (--budget flag).
+
 **What goal-quench cannot do in v1** (requires native Anthropic support):
-- Hard-enforce token ceiling (--budget flag, not yet available)
+- Hard-enforce token ceiling mid-run (--budget flag, not yet available)
 - Auto-checkpoint commit on sub-goal completion (--checkpoint flag, not yet available)
 - Mid-run Sonnet quality signal (requires structured evaluator hooks)
 
@@ -165,8 +158,8 @@ Run `pipeline-conductor --quick` on the scope. Gate on result:
 
 | pipeline-conductor verdict | goal-quench action |
 |---|---|
-| `CLEAN (--quick)` | Commit approved. Output: "Quality gate passed. Safe to commit." Log actual vs estimated tokens. |
-| `PENDING` | Commit with warning. Output pending items. Recommend: "Resolve before external release." |
+| `CLEAN (--quick)` | Internal iteration safe. Output: "Quality gate passed (--quick). Safe for local iteration and internal commits. Run pipeline-conductor --full before external release or PR." Log actual vs estimated tokens. |
+| `PENDING` | Proceed with caution. Output pending items. Recommend: "Resolve before any external release." |
 | `BLOCKED` | Block commit. Output blocking items. Ask: "Fix and re-run /goal, or accept partial completion?" |
 
 After verification (any verdict): delete `.claude/goal-quench.pending`. Record actual token usage in `tracks/_meta/goal_quench_{YYYY-MM-DD}.md` for calibration.

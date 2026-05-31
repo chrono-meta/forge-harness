@@ -21,6 +21,8 @@ The gap this closes: harvest-loop, steel-quench, source-grounding-audit, and sim
 - "Run quench then grounding then sim", "chain the pipelines"
 - "Full pipeline on this skill", "sweep this asset before release"
 
+> **Disambiguation**: "run the pipeline" alone may trigger harvest-loop (which uses identical phrasing). Prefer "run pipeline-conductor" or "chain all verifications" for unambiguous activation.
+
 ## Modes
 
 | Flag | Steps run | When to use |
@@ -132,7 +134,7 @@ Proceed with the sweep regardless — Step 0.5 is advisory, not a chain blocker.
 
 > Skipped in `--quick` mode.
 
-Check for harvest-loop results from the current session. pipeline-conductor does not invoke harvest-loop directly — harvest-loop's lightweight mode is auto-triggered by agent-composer and has no standalone callable interface. Step 1 reads current session context for patterns and loop integrity signals.
+Check for harvest-loop signals in the current session. pipeline-conductor reads session context for harvest-loop findings rather than invoking harvest-loop directly — invoking harvest-loop mid-sweep would start a new harvest cycle that conflicts with the sweep's own pattern collection. If no harvest-loop run exists in this session, pipeline-conductor can invoke harvest-loop in proposal mode (`/harvest-loop`) as a pre-Step-1 option, but this is not automatic.
 
 **What it checks**: Whether recent session learnings have been absorbed, whether duplicate skill candidates are pending, whether knowledge loop integrity issues exist in the current session.
 

@@ -228,6 +228,8 @@ Step 0 scope determined; SKILL.md files identified
 + Step 4 summary report with CLOSED/OPEN counts output
 ```
 
+> Fix prescriptions are text output only (Write not in allowed-tools). Prescription application is manual and out of scope for this skill. Verification of applied fixes requires re-running `/return-path-gate --skill [name]`.
+
 Verdict: PASS (0 HIGH severity OPEN chains) | CONDITIONAL_PASS (MEDIUM/LOW severity OPEN chains only) | FAIL (1+ HIGH severity OPEN chains found)
 
 ---
