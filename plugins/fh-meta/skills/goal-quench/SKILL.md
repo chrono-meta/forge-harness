@@ -86,9 +86,10 @@ budget_verdict: {GREEN/YELLOW/ORANGE/RED}
 pipeline_mode: --quick
 timestamp: {YYYY-MM-DD HH:MM}
 session_pid: {$$}
+start_commit: {git rev-parse HEAD}
 ```
 
-`target_files` is the **verification artifact** — what pipeline-conductor --quick will evaluate in Phase 3. Specify files/directories explicitly if known; otherwise write `"inferred from git diff"` and Phase 3 will use `git diff HEAD --name-only` to resolve.
+`target_files` is the **verification artifact** — what pipeline-conductor --quick will evaluate in Phase 3. Specify files/directories explicitly if known; otherwise write `"inferred from git diff"` and Phase 3 will resolve using `git diff {start_commit}..HEAD` to capture all changes including interim commits made during the /goal session.
 
 ### Step 4. Inject mid-run budget thresholds
 
@@ -154,9 +155,16 @@ On the next Claude response (after /goal), check for `.claude/goal-quench.pendin
 
 ```bash
 if [ -f .claude/goal-quench.pending ]; then
-  PENDING_TIME=$(grep "^timestamp:" .claude/goal-quench.pending | cut -d' ' -f2-)
-  # If timestamp is recent (< 4h), trigger verification; else warn and skip
-  echo "goal-quench verification pending (created: $PENDING_TIME)"
+  PENDING_TIME=$(grep "^timestamp:" .claude/goal-quench.pending | sed 's/^timestamp: //')
+  NOW=$(date +%s)
+  PENDING_EPOCH=$(date -d "$PENDING_TIME" +%s 2>/dev/null || date -j -f "%Y-%m-%d %H:%M" "$PENDING_TIME" +%s 2>/dev/null)
+  AGE_HOURS=$(( (NOW - PENDING_EPOCH) / 3600 ))
+  if [ "$AGE_HOURS" -lt 4 ]; then
+    echo "goal-quench verification pending (created: $PENDING_TIME — ${AGE_HOURS}h ago)"
+  else
+    echo "STALE: goal-quench.pending is ${AGE_HOURS}h old. Run /goal-quench --verify to re-evaluate or delete to clear."
+    exit 0
+  fi
 fi
 ```
 
@@ -168,13 +176,23 @@ If found but stale (> 4 hours): warn the user — "A stale goal-quench.pending e
 
 ```bash
 # Read scope and target from pending file
-SCOPE=$(grep "^scope:" .claude/goal-quench.pending | cut -d' ' -f2-)
-TARGET=$(grep "^target_files:" .claude/goal-quench.pending | cut -d' ' -f2-)
+SCOPE=$(grep "^scope:" .claude/goal-quench.pending | sed 's/^scope: //')
+TARGET=$(grep "^target_files:" .claude/goal-quench.pending | sed 's/^target_files: //')
 
 # Resolve artifact: explicit target or git diff
+# Use git diff against the commit recorded at Phase 1 start, NOT HEAD,
+# to capture files changed during the entire /goal session including interim commits.
+GOAL_START_COMMIT=$(grep "^start_commit:" .claude/goal-quench.pending | sed 's/^start_commit: //')
 if [ "$TARGET" = "inferred from git diff" ] || [ -z "$TARGET" ]; then
-  TARGET=$(git diff HEAD --name-only 2>/dev/null | tr '\n' ',')
+  if [ -n "$GOAL_START_COMMIT" ]; then
+    TARGET=$(git diff "$GOAL_START_COMMIT"..HEAD --name-only 2>/dev/null | tr '\n' ' ')
+  else
+    # Fallback: staged + unstaged changes (does not capture interim commits)
+    TARGET=$(git status --short 2>/dev/null | awk '{print $2}' | tr '\n' ' ')
+  fi
 fi
+# Guard: reject empty target
+[ -z "$TARGET" ] && echo "ERROR: cannot resolve verification artifact — no files changed or start_commit missing" && exit 1
 ```
 
 Run `pipeline-conductor --quick` on `$TARGET` (the artifact changed during this /goal session). Gate on result:
@@ -187,6 +205,8 @@ Run `pipeline-conductor --quick` on `$TARGET` (the artifact changed during this 
 | `ESCALATE` | Surface to user for decision. Do not auto-delete — preserve state until user explicitly decides. | **Only after user decision** |
 
 **Deletion rule**: On BLOCKED or ESCALATE, `.pending` must survive until the user makes an explicit decision. Deleting before that decision loses the recovery anchor.
+
+**Deadlock prevention**: While `.pending` exists (BLOCKED/ESCALATE), the next-turn verification check runs ONCE per turn only — not on every subsequent turn. After the first verification output, suppress further auto-trigger until the user explicitly acts (fix + re-run, accept, or delete). If the user starts a new `/goal-quench` run while `.pending` exists, warn: "A previous verification is pending. Resolve it first (`/goal-quench --verify`) or clear it (`rm .claude/goal-quench.pending`)." Do not silently overwrite with a new `.active` file.
 
 Record actual token usage in `tracks/_meta/goal_quench_{YYYY-MM-DD}.md` for calibration (regardless of verdict).
 

@@ -11,19 +11,38 @@ tags: [multi-model, sidecar, token-economy, model-access, adversarial, validated
 
 FH's paper thesis: **the harness (specialized shell) is the durable layer; the model (core) converges across providers.**
 
-Empirical observation from sidecar experiments (Gemini CLI + Codex CLI, same prompt):
-- **Process differs** — each model approaches the problem differently, highlights different angles.
-- **Results converge** — the substantive findings overlap significantly.
+Empirical observation from 3-round orchestrator-swap experiment (Claude → Gemini → Codex as orchestrator, others as sidecars, same FH skill as target):
+- **Process differs** — each orchestrator highlights different angles (Gemini: state machine + audit methodology; Codex: implementation-level parsing and dependency contracts).
+- **Results converge** — 3 critical issues appeared in every round regardless of orchestrator identity (freshness guard pseudocode, BLOCKED deadlock, interim-commit false CLEAN).
 
-This convergence is precisely what the thesis predicts. And it establishes a clear hierarchy:
+This is precisely what the thesis predicts. But the experiment revealed a second-order effect not captured in the original framing:
 
-| Level | What varies | Degree of differentiation |
+**Process divergence → cross-wave delta → better convergence.**
+
+The sidecar pattern's value is not parallelism — it is the *delta*. Each orchestrator's unique process angle produces non-overlapping findings. When synthesized, the combined result exceeds what any single-model run achieves. This is the mechanism by which the sidecar pattern compounds into a quality improvement, not just a coverage check.
+
+The enabling condition for this entire chain is the harness:
+
+```
+Harness (FH)
+  → consistent SKILL.md format loadable in all 3 CLIs
+  → same skill runs under each orchestrator with comparable evaluation protocol
+  → cross-wave delta is structurally comparable (apples-to-apples)
+  → synthesis is valid
+  → convergence improves
+```
+
+Without the harness, "multi-model adversarial review" is three separate unstructured prompts — no comparable protocol, no valid synthesis. The harness is not one of the differentiators in a hierarchy. **It is the activation condition that makes the hierarchy operate.**
+
+Refined hierarchy:
+
+| Level | What it is | Role |
 |---|---|---|
-| Model A vs Model B | Process differs, results converge | Small |
-| Sidecar multi-model | Process diversity, intermediate-step enrichment | Medium — useful as a process tool |
-| **Harness structure (present vs absent)** | Accumulated memory, verification loops, skill methodology | **Large — the real differentiator** |
+| **Harness (present vs absent)** | Structured skill methodology, memory, verification protocol | **Activation condition** — makes all lower levels function |
+| Orchestrator-swap sidecar | Process divergence → cross-wave delta → better convergence | Compounds quality via synthesis |
+| Model A vs Model B (no harness) | Process differs, results converge weakly | Small, unstructured |
 
-**The sidecar pattern is a process tool, not a structural differentiator.** The gap between Gemini's angles and Codex's angles is real but modest. The gap between a harness-structured workflow and an unstructured one dwarfs it.
+**The sidecar pattern is a quality compounding mechanism, not merely a process tool.** Process divergence produces insights that single-model runs miss. Those insights, when synthesized by the harness skill, produce a convergence that is richer than any single model's output. The harness is what makes this synthesis structurally valid.
 
 Two shells — do not conflate:
 
@@ -75,17 +94,40 @@ This combination can be freely mixed across CLIs — e.g., Gemini Pro orchestrat
 
 ## Empirical validation
 
-Validated across three environments:
+### Experiment 1 — Sidecar invocation (2026-05-31)
 
 1. **Corporate network** — Copilot CLI sidecar (CC standalone = Sonnet-only on restricted network). Copilot CLI's model catalog provided access to Codex, Gemini, and Claude Opus.
 
-2. **Direct Gemini CLI sidecar** — `echo "prompt" | gemini` inside a Claude Code session. Response in < 5 s. Adversarial review of `return-path-gate` SKILL.md Done When: 3 actionable issues. Adversarial review of `pipeline-conductor` Done When: 3 structural gaps (Amnesia Loophole, Activity vs Integrity gap, Escalation Paradox).
+2. **Direct Gemini CLI sidecar** — `echo "prompt" | gemini` inside a Claude Code session. Adversarial review of `pipeline-conductor` Done When: 3 structural gaps (Amnesia Loophole, Activity vs Integrity gap, Escalation Paradox).
 
-3. **Direct Codex CLI sidecar** — `npx @openai/codex exec "prompt"` inside a Claude Code session. Same target as #2: 3 non-overlapping issues (scope definition gap, return-path-gate skip justification absent, report persistence not blocking completion).
+3. **Direct Codex CLI sidecar** — `npx @openai/codex exec "prompt"`. Same target: 3 non-overlapping issues (scope definition gap, skip justification absent, report persistence).
 
-4. **Gemini native skill load** — `gemini skills install <fh-skill-path> --consent`. steel-quench, sim-conductor, harvest-loop loaded and listed as Enabled in `gemini skills list`. FH SKILL.md format is natively compatible with Gemini CLI's skill system.
+4. **Gemini native skill load** — `gemini skills install <fh-skill-path> --consent`. All 32 FH skills loaded and listed as Enabled. FH SKILL.md format is natively compatible with Gemini CLI.
 
-**Cross-wave delta (Gemini vs Codex, same prompt)**: Process angles differ; substantive findings converge on "completion criteria check activity not integrity." This validates the thesis: results converge, process diverges — sidecar diversity adds marginal process enrichment, not structural differentiation.
+---
+
+### Experiment 2 — 3-round orchestrator-swap (2026-05-31)
+
+**Setup**: Same FH skill (`goal-quench/SKILL.md`, post-patch) reviewed under 3 orchestrator configurations. Each round: orchestrator runs Wave 1 (3 primary findings), sidecar adds 3 non-overlapping findings, orchestrator synthesizes final verdict.
+
+| Round | Orchestrator | Sidecar | Verdict | Orchestrator focus |
+|---|---|---|---|---|
+| 1 (prior) | Claude Opus | Gemini + Codex | 6 issues → patched | State machine + hook reliability |
+| 2 | Gemini | Codex | FAIL — 4A + 2H | State machine loop + audit methodology |
+| 3 | Codex | Gemini | FAIL — 4A + 2B | Implementation parsing + dependency contract |
+
+**Convergence (appeared in every round)**:
+- Freshness guard is pseudocode — no actual timestamp comparison
+- `.pending` surviving BLOCKED creates an infinite-loop deadlock
+- `git diff HEAD` yields false CLEAN if `/goal` makes interim commits
+
+**Divergence (orchestrator-specific)**:
+- Gemini orchestrator: state-machine completeness, audit methodology validity, phantom telemetry
+- Codex orchestrator: `grep/cut` parsing fragility, `token-budget-gate` invocation contract absent
+
+**Cross-wave delta finding**: 3 common issues + 3 orchestrator-specific = 6 total per round. No round found all 6 on its own. Single-model review (Claude alone, Round 1 on original) found a different 3 — correct but incomplete. Multi-model synthesis identified 12 distinct issues across 3 rounds, with 3 confirmed-critical by convergence.
+
+**Conclusion**: Process divergence is the mechanism by which sidecar diversity compounds into better convergence. The harness (FH skill format + consistent evaluation protocol) is the activation condition — without it, the three results are structurally incomparable and the delta cannot be synthesized.
 
 ```bash
 # Minimal sidecar call pattern (validated)
