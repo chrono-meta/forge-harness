@@ -163,7 +163,7 @@ forge-harness is structured as two distinct layers with different portability pr
 
 > **Codex-compatible beta**: The Methodology layer is designated Codex-compatible beta. Gemini, Codex, and other AI users can apply FH methodology manually — the tracks/ and knowledge/ structure, sync protocols, and skill documentation all translate. Automation layer features (agents, hooks) require Claude Code as host.
 
-> **Multi-model via sidecar**: Claude Code's sidecar feature lets FH skills invoke Gemini CLI or Codex CLI as external processes from within a session. This means the Automation layer can orchestrate multi-model validation — for example, routing a steel-quench adversarial pass to Gemini as a second challenger, or delegating a specific sub-task to Codex. The host is always Claude Code; the sidecar models are called via `Bash` tool.
+> **Multi-model via sidecar (validated)**: Any FH user can delegate tasks to other models as sidecars — Gemini CLI, OpenAI/Codex CLI, or Copilot CLI's model catalog (Codex / Gemini / Claude Opus) — called via `Bash` from within a Claude Code session. FH remains the orchestrating harness; the sidecar is a routing/access layer, not a second harness. Use cases: token economy (offload subsidiary tasks), model-access fallback (e.g., when CC standalone is Sonnet-only on a restricted network, a sidecar reaches Opus), adversarial diversity (route a second challenger pass to a different model). Validated empirically with `gemini` CLI and Copilot CLI.
 
 For runtime agent specs, see `AGENTS.md`. For session rules and orchestration protocol, see `CLAUDE.md`.
 
