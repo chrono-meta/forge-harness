@@ -140,11 +140,19 @@ This is **not a prototype** — it is a confirmed, runnable pattern.
 
 ## When to distribute
 
-| Use case | Sidecar role | Example |
-|---|---|---|
-| **Token economy** | Offload subsidiary / verification tasks to a lighter or separately-billed model | Delegate source-grounding-audit claim extraction to Gemini while Opus handles synthesis |
-| **Model-access fallback** | Reach a stronger model when the CC host is downgraded on a restricted network | CC standalone = Sonnet-only → Copilot sidecar reaches Opus |
-| **Adversarial diversity** | Route a second challenger pass to a different model to reduce single-model blind spots | steel-quench primary attack (Claude) + Gemini 2nd-challenger sidecar |
+Three use cases, ordered by primacy under a **full-subscription environment** (Claude Max + Gemini Pro/Advanced + GPT-4o Plus — all strong models available simultaneously):
+
+| Use case | Primacy | Sidecar role | Example |
+|---|---|---|---|
+| **Perspective diversity** | **Primary** — valid regardless of model tier | Each model's process angle produces non-overlapping findings; cross-wave delta improves convergence quality | steel-quench Wave 5: Claude primary → Gemini + Codex sidecars → synthesize delta |
+| **Model-access fallback** | Secondary — situational | Reach a stronger model when the CC host is downgraded on a restricted network | CC standalone = Sonnet-only on corporate net → Copilot sidecar reaches Opus |
+| **Token economy** | Tertiary — relevant when models differ in cost tier | Offload subsidiary tasks to a lighter or separately-billed model | Delegate claim extraction to Gemini Flash while Opus handles synthesis |
+
+**Full-subscription case (validated 2026-05-31)**: When all three providers are at premium tier (Claude Max / Gemini Pro / GPT-4o Plus), token economy is not the primary motivation. The orchestrator-swap experiment showed that even when all models are strong, **process divergence still produces non-overlapping findings** — Gemini focused on state-machine completeness, Codex on implementation parsing fragility. Neither found what the other found. This means perspective diversity is an intrinsic property of model identity, not a function of capability tier.
+
+**Implication**: In a full-subscription environment, sidecar invocation should default to the strongest available sidecar model, not a lightweight one. The goal is maximum perspective divergence, not cost savings.
+
+> **v2 paper candidate**: Does model tier affect the quality of perspective divergence, or is the divergence pattern stable across tiers? The orchestrator-swap experiment used entry/mid-tier sidecars — replicating with all-premium models (Gemini Pro, GPT-4o, Claude Opus) would test whether diversity compounds further or plateaus. This is a natural follow-on experiment for the v2 empirical section.
 
 ---
 
