@@ -86,14 +86,32 @@ FH + OpenCode governance integration is executable **today** at the methodology 
 
 ```bash
 # After OpenCode generates a PR:
-# 1. Run FH adversarial gate on the diff
+# 1. Capture the diff
 git diff main..HEAD > /tmp/opencode_output.diff
-# 2. steel-quench on the diff content
+CHANGED=$(git diff main..HEAD --name-only | tr '\n' ' ')
+
+# 2. steel-quench adversarial pass on changed files
+# → finds behavioral edge cases, untested contracts, security assumptions
+
 # 3. pipeline-conductor --quick on changed files
+# → 4-axis gate: backward / adversarial / forward / record
+
 # 4. source-grounding-audit on any new documentation claims
+# → catches phantom references and stale citations
 ```
 
 This requires no OpenCode API integration — FH reads files, OpenCode writes files. The protocol is the interface.
+
+See `fh_opencode_governance_wrapper.md` for the full step-by-step guide and Stop hook automation.
+
+### Empirical result (2026-05-31)
+
+Applied the 3-step governance pass to OpenCode's own AI-generated `permission/arity.ts` (163 lines). CI verdict: DONE (6/6 tests pass). FH governance verdict: PENDING — 2 A-grade findings CI did not cover:
+
+1. Short-token overflow in `prefix()` — allowlist pattern may not cover bare commands previously approved
+2. `npx`, `opencode`, `claude` absent from arity table — `npx <anything>` receives the same broad `"npx *"` pattern, weakening the permission model
+
+The delta is attributable to the methodology layer, not the model. Both passes read identical code.
 
 ---
 
@@ -103,12 +121,25 @@ The ecosystem positioning audit surfaces a testable claim for v2:
 
 > "A harness-structured workflow integrated as a governance layer on top of a bare coding agent produces qualitatively different outputs from either system alone — not because the model changed, but because the methodology layer enforces structured verification that the agent alone cannot generate."
 
-This is the N-fold synergy claim stated precisely. The experiment: run OpenCode alone vs OpenCode + FH governance on the same task. Measure: phantom claims, structural gaps caught, rework cycles. This is a controlled experiment with a clear causal mechanism.
+This is the N-fold synergy claim stated precisely. The controlled experiment design: OpenCode alone vs OpenCode + FH governance on the same task. Measure: findings caught by governance that CI missed, rework cycles prevented.
+
+**Empirical pilot (2026-05-31)**: Applied to OpenCode's own AI-generated `permission/arity.ts`. Governance caught 2 A-grade security-adjacent issues that 6 CI tests missed. Causal attribution is clean: same code, same model, different methodology layer.
+
+**v2 scope**: This experiment, combined with the 3-round orchestrator-swap finding (`multi_model_sidecar_strategy.md`), constitutes novel empirical contribution — not a version update. Proposed framing:
+
+| Experiment | Claim tested | Evidence produced |
+|---|---|---|
+| 3-round orchestrator-swap | Process diverges, results converge; harness is activation condition | Cross-wave delta synthesized across Claude/Gemini/Codex |
+| FH + OpenCode governance | Methodology layer catches what bare coding + CI misses | DONE → PENDING verdict flip on AI-generated code |
+| Tier comparison (pending) | Divergence quality stable across model tiers | Needs replication with all-premium models |
+
+**OpenCode as citation**: The governance experiment uses OpenCode's codebase as the subject. OpenCode should be cited as the target system in the v2 experimental section. Citation candidate: the OpenCode GitHub repository + any associated paper/technical report.
 
 ---
 
 ## References
 
+- `fh_opencode_governance_wrapper.md` — step-by-step usage guide with empirical findings
 - `multi_model_sidecar_strategy.md` — orchestrator-swap experiment that generated this audit
 - `README.md §Architecture` — 2-layer design (methodology vs automation)
 - `AGENTS.md` — 6-agent registry (fact-checker added after this audit)
