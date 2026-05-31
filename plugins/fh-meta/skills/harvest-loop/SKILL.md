@@ -240,7 +240,36 @@ Cross-synthesize devil (3a) and innovator (3b) results. Prevent attack and propo
 | Attack exists | Proposal rebuts attack | Attack invalidated — proposal valid. Downgrade to **MED** and keep |
 | Attack overturns proposal premise | — | Proposal **rejected** — persist as fh_signal on hold |
 
-**synthesizer output**: Only the final candidate list with readjusted grades passes to Step 3.75.
+**synthesizer output**: Only the final candidate list with readjusted grades passes to Step 3.5-X.
+
+### Step 3.5-X — Synthesizer Cross-Session 2nd Validation (optional, auto-proposed)
+
+**When to run**: After synthesizer produces HIGH-grade candidates. Auto-proposed when 2+ HIGH-grade items exist or when external CLIs are available (detected by same env scan as steel-quench Wave 5).
+
+**Rationale**: The synthesizer is a single-agent judgment that combines devil+innovator findings. It shares the same session context as Steps 3a/3b — the synthesizer can rationalize the same blind spots as the agents it is synthesizing. A cross-session cold-read challenges the synthesis without inheriting the reasoning chain.
+
+**Execution**:
+
+```bash
+# Option A: External CLI team (if available — same detection as steel-quench Wave 5)
+SYNTH_CHALLENGE=$(printf \
+  'You are an adversarial reviewer with zero prior context.\nEvaluate these skill proposals and find flaws in the synthesis logic.\nFlag any HIGH-grade items that are over-promoted.\nFormat: [item · flaw · downgrade-to]\n---\n%s' \
+  "${SYNTHESIZER_OUTPUT}" | gemini 2>/dev/null)
+
+# Option B: Cross-session Claude (fallback)
+SYNTH_CHALLENGE=$(claude --print \
+  "Adversarial reviewer, zero context. Evaluate these skill proposals.
+Flag over-promoted HIGH-grade items. Format: [item · flaw · downgrade-to]
+---
+${SYNTHESIZER_OUTPUT}" 2>/dev/null)
+```
+
+**Outcome**:
+- Items the 2nd validator flags as over-promoted → downgrade from HIGH to MED, proceed with caution
+- Items confirmed across both → HIGH-confirmed → pass to Step 3.75 Critic with elevated confidence
+- Zero new issues → synthesis confirmed, proceed normally
+
+**Token cost note**: External CLI call ~1K–2K tokens (billed to that CLI). Cross-session Claude ~2K–3K. Propose once — user may skip.
 
 ### Step 3.75 — Critic Call (Isolated Agent)
 

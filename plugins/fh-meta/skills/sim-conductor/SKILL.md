@@ -154,6 +154,33 @@ All personas run as **parallel general-purpose Agents** (or installed agents) �
 
 **Simplification guard**: For routine internal audits, ② built-in fallback at Minimum scale is sufficient — do not trigger ③ external fetch. Chain to plugin-recommender only when a needed perspective has no installed or built-in match, or stakes are high (pre-publish / marketplace listing).
 
+#### Multi-Team Mode (when external CLIs available)
+
+When 1+ external CLIs are detected (gemini / gh-copilot / ollama / codex), Area A upgrades from single-Claude persona dispatch to **Multi-Team Panel** — each CLI forms an independent team that runs its own 2–3 personas in parallel.
+
+**Pre-entry user confirmation** (mirrors steel-quench Wave 5 gate):
+
+```
+Area A — Multi-Team Mode available.
+Detected external CLIs: [list or "none"]
+Estimated additional token cost: ~2K–5K per external team (billed to that CLI's quota).
+Run multi-team? (a) Full panel  (b) Claude sub-agents only  (c) Skip to Area B
+```
+
+**Team → Persona mapping** (same as steel-quench Wave 5 Step 0/1):
+
+| Team | CLI | Personas |
+|---|---|---|
+| T0 Claude | Agent sub-agent | hub-persona-auditor · challenger · domain-expert |
+| T1 Gemini | `gemini` pipe | newcomer · power-user · devil |
+| T2 Copilot | `gh copilot suggest` | devil · domain-expert |
+| T3 Ollama | `ollama run` | devil |
+| T4 Codex | `npx @openai/codex exec` | devil · edge-case-hunter |
+
+**Cross-team synthesis**: issues raised by 2+ teams → tier-up (S→S-confirmed, A→A-confirmed). External-only findings (T1~T4 caught, T0 missed) → flag as "Claude blind spot" — surface before PR.
+
+**Path B fallback**: No external CLIs → cross-session `claude --print` as T0 cold-read variant. No change to existing ①②③ persona sourcing.
+
 **A-1. Description friendliness** (Agent w/ Newcomer brief) — Is it understandable without internal terminology? Is the first line the essence? Check for embedded names/revisions/emphasis words. Findings = [issue, location, fix suggestion] format.
 
 **A-2. Install conflicts** (Agent w/ Power-user brief) — fh-meta additional install scenario. Identify conflict/duplication/silent overwrite points. Findings = [conflict type, location, mitigation suggestion] format.

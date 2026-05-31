@@ -186,6 +186,23 @@ Classify Phantom and Partial claims by severity and provide prescriptions.
 S-grade: N / A-grade: N / B-grade: N
 ```
 
+**S-grade Immediate Human Gate** — if 1+ S-grade Phantoms found, pause before Step 4/5 and surface:
+
+```
+⚠️  source-grounding-audit: N S-grade Phantom(s) found:
+  - [claim 1 — one-line summary, location]
+  - [claim 2 — one-line summary, location]
+
+Options:
+  (a) Continue — AI proceeds to Step 4 pattern diagnosis + Step 5 re-audit
+  (b) Human review first — inspect Phantoms directly, then proceed
+  (c) Abort — fix sources manually and re-run audit
+
+Waiting for input. (Default: a)
+```
+
+Rationale: S-grade Phantoms that enter Step 5 re-audit without human review risk LLM reconstruction contamination — the same pattern that originally produced the Phantoms can "verify" its own fixes. Human review at this threshold breaks the loop.
+
 ---
 
 ### Step 4. Source Not-Read Pattern Detection (Meta Diagnosis)

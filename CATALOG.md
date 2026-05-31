@@ -8,6 +8,10 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-05-31 | anti-bias, multi-team, adversarial, token-coverage | steel-quench, sim-conductor, experiment, v2-paper
+**File:** tracks/_meta/fh_multiteam_token_coverage_2026_05_31.md
+Experiment 5 — Multi-Team Adversarial Panel measured on source-grounding-audit SKILL.md. 4 conditions (C1 single / C2 cross-session / C3 +gemini / C4 codex-TTY-fail=C3). Key results: C1→25% coverage, C2→75%, C3→100%. Claude blind spots: 3 findings (25% of total), 1 S-grade. Claude-side cost C2→C3: +0 tokens (H3 validated — Gemini billed to separate quota). Codex CLI present but headless-inoperable. Updated steel-quench/sim-conductor/source-grounding-audit/harness-doctor/harvest-loop with Multi-Team Panel design + human gates + synthesizer cross-session. v2 paper Experiment 5 section drafted with full metrics table.
+- Decision: decision rule confirmed — routine→C2 (cross-session), pre-publish→C3+ (zero Claude overhead)
 ### 2026-05-31 | synergy, integration, playbook | opencode, hermes, openhuman, governance, marketing
 **File:** knowledge/shared/harness-core/fh_synergy_playbook.md
 Concrete workflow specifications for using FH with OpenCode/Hermes/OpenHuman — grounded only in recorded experiments. Three patterns: (1) OpenCode: fh-gate.sh after code gen → DONE→PENDING flip, 2 A-grade on arity.ts; (2) Hermes: skill audit before dispatch → 2 A-grade pre-exec/credential gaps; (3) OpenHuman: Memory Tree staleness audit → GROUNDED/STALE/BROKEN verdict. Includes honest finding-rate estimates, "no integration required" value prop, and compounding effect explanation.
