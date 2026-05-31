@@ -1,6 +1,7 @@
 ---
 name: convergence-loop
-description: A universal gate-reinforcement meta-skill that replaces the "single-pass = done" pattern with a converging loop of up to N rounds. Can be applied to any gate, checkpoint, or verification step. Only declares "truly passed" after FAIL→FIX→re-verify repeats until convergence (all items pass). Escalates to structural redesign if not converged within N rounds. Triggers on: "convergence-loop", "how many rounds do we need", "suspicious of single-pass", "not sure if it really passed", or equivalent phrasing.
+description: >-
+  A universal gate-reinforcement meta-skill that replaces the "single-pass = done" pattern with a converging loop of up to N rounds. Can be applied to any gate, checkpoint, or verification step. Only declares "truly passed" after FAIL→FIX→re-verify repeats until convergence (all items pass). Escalates to structural redesign if not converged within N rounds. Triggers on: "convergence-loop", "how many rounds do we need", "suspicious of single-pass", "not sure if it really passed", or equivalent phrasing.
 user-invocable: true
 allowed-tools: ["Read", "Write", "Bash", "Agent"]
 model: sonnet

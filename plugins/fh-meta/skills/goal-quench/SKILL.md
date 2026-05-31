@@ -1,6 +1,7 @@
 ---
 name: goal-quench
-description: Wraps /goal with a token budget gate (pre-run estimate), mid-run budget thresholds, and an automatic post-run quality verification via pipeline-conductor. Closes the quality gap /goal leaves: Haiku evaluates completion, pipeline-conductor evaluates correctness. Triggered by "goal with quality gate", "safe goal", "goal-quench", or before running /goal on high-stakes tasks.
+description: >-
+  Wraps /goal with a token budget gate (pre-run estimate), mid-run budget thresholds, and an automatic post-run quality verification via pipeline-conductor. Closes the quality gap /goal leaves: Haiku evaluates completion, pipeline-conductor evaluates correctness. Triggered by "goal with quality gate", "safe goal", "goal-quench", or before running /goal on high-stakes tasks.
 user-invocable: true
 allowed-tools: ["Read", "Write", "Bash", "Grep"]
 model: sonnet
