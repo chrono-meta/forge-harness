@@ -20,7 +20,14 @@ tags: [session-starter, v2-paper, arxiv, awesome-lists, ablation, fh-gate, npm-p
 
 ## ⭐ 다음 세션 최우선
 
-### 0. npm publish @chrono-meta/fh-gate (새 최우선)
+### 0-a. README 리뉴얼 (OpenHuman급 퀄리티)
+
+- OpenHuman/Hermes/OpenCode README 수준으로 재구성
+- 이미지 소스: 데스크탑 'fh 이미지' 폴더 기반
+- 구성 요소: hero 이미지 + 아키텍처 다이어그램 + 빠른 시작 + badge
+- fh-gate 바이너리 등장으로 "설치 한 줄" 섹션 추가 가능
+
+### 0-b. npm publish @chrono-meta/fh-gate (새 최우선)
 
 1. npmjs.com에서 `@chrono-meta` org 생성 (GitHub org 변환과 무관 — 독립적)
 2. `npm login && npm publish --access public`
