@@ -8,6 +8,11 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-05-31 | synergy, integration, playbook | opencode, hermes, openhuman, governance, marketing
+**File:** knowledge/shared/harness-core/fh_synergy_playbook.md
+Concrete workflow specifications for using FH with OpenCode/Hermes/OpenHuman — grounded only in recorded experiments. Three patterns: (1) OpenCode: fh-gate.sh after code gen → DONE→PENDING flip, 2 A-grade on arity.ts; (2) Hermes: skill audit before dispatch → 2 A-grade pre-exec/credential gaps; (3) OpenHuman: Memory Tree staleness audit → GROUNDED/STALE/BROKEN verdict. Includes honest finding-rate estimates, "no integration required" value prop, and compounding effect explanation.
+- Decision: no unverified claims — every stated outcome traces to a specific experiment or structural guarantee
+
 ### 2026-05-31 | v2-paper, experimental-design, controlled-trial, orchestrator-swap | opencode, governance, ecosystem
 **File:** knowledge/shared/harness-core/v2_paper_framework.md
 Independent v2 paper framework (not a version update). 3 experiments: (1) multi-model orchestrator swap — Gemini+Codex find non-overlapping gaps, each catches what the other misses; (2) governance controlled trial — arity.ts CI=DONE→FH=PENDING, 2 A-grade findings, causal delta = methodology layer; (3) tier comparison (pending). Paper structure, key claims table, timeline, differentiation from v1.0.
