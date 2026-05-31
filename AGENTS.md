@@ -19,11 +19,12 @@ CLAUDE.md governs *how* the session runs. AGENTS.md defines *what each agent doe
 
 ## Agent Registry
 
-forge-harness ships 5 agents in `.claude/agents/`. Four serve general harness operations; one (`quench-challenger`) is steel-quench-dedicated.
+forge-harness ships 6 agents in `.claude/agents/`. Five serve general harness operations; one (`quench-challenger`) is steel-quench-dedicated.
 
 | Agent | File | Role | Invoked by |
 |---|---|---|---|
 | `challenger` | `.claude/agents/challenger.md` | Frontier-grade adversarial evaluator — adapts attack vectors to artifact type, enforces evidence citation, models its own information asymmetry | `steel-quench`, `harvest-loop`, `sim-conductor`, or direct dispatch |
+| `fact-checker` | `.claude/agents/fact-checker.md` | Pre-recommendation deduplication — greps hub assets for existing skills/agents/patterns before main agent commits to a new recommendation; catches stale facts and duplicate work | Main agent before any new asset creation or recommendation |
 | `hub-persona-auditor` | `.claude/agents/hub-persona-auditor.md` | Pre-publication audit of external-facing assets — 3+ persona simulation, 4-axis review (resonance/confusion/resistance/supplement), 3-tier revision proposals | `hub-cc-pr-reviewer`, `sim-conductor`, or direct dispatch |
 | `quench-challenger` | `.claude/agents/quench-challenger.md` | Steel-quench dedicated adversary — 3-DNA synthesis of Devil + Innovator + Prescriber; every attack paired with a concrete fix direction | `steel-quench` Wave 1 (primary), `install-doctor`, `marketplace-gate` |
 | `persona-innovator` | `.claude/agents/persona-innovator.md` | Naming gap detection + frame proposals + external frontier absorption signals | `sim-conductor` Area A, `harvest-loop`, or direct dispatch |
@@ -34,6 +35,7 @@ forge-harness ships 5 agents in `.claude/agents/`. Four serve general harness op
 | Agent | Allowed tools | Rationale |
 |---|---|---|
 | `challenger` | Read, Grep, Glob, WebSearch, WebFetch | Needs external evidence; no writes |
+| `fact-checker` | Read, Grep, Glob | Deduplication grep only — no modification |
 | `hub-persona-auditor` | Read, Grep, Glob | Audit only — no modification |
 | `quench-challenger` | Read, Grep, Glob | Attack+prescription only — no modification |
 | `persona-innovator` | Read, Grep, Glob, WebSearch, WebFetch | Frontier scanning requires web access |
