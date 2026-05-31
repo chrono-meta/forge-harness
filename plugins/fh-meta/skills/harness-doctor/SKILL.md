@@ -482,6 +482,23 @@ Diagnostic scope: L1 Structural Completeness · L2 Complexity · L3 Drift [· L4
 
 M-tier 0 items → output "Structure healthy. Maintaining simplification trend."
 
+**M-tier Immediate Human Gate** — if 1+ M-tier items found, pause before Step 8 and surface:
+
+```
+⚠️  harness-doctor: N M-tier item(s) require immediate action:
+  - [item 1 — one-line summary]
+  - [item 2 — one-line summary]
+
+Options:
+  (a) Continue — AI proceeds to Step 8 (harvest-loop integration) and outputs full prescription
+  (b) Human review first — inspect M-tier items before prescription is applied
+  (c) Abort — address M-tier manually and re-run harness-doctor
+
+Waiting for input. (Default: a)
+```
+
+Rationale: M-tier items represent structural blockers. When AI proceeds to prescription application without human review, the same compression/refactoring that caused drift can be applied to "fix" it — closing a self-referential loop. The gate is lightweight (one prompt) but breaks the loop structurally.
+
 ---
 
 ### Step 8. harvest-loop Integration *(when tracks/_audit/ exists)*

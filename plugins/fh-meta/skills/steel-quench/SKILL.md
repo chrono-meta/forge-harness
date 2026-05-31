@@ -273,77 +273,182 @@ Same as Wave 3: **zero new S-grade blockers**. Plus these additional conditions:
 
 ---
 
-### Wave 5 — Multi-Model Sidecar Challenger (Optional)
+### Wave 5 — Multi-Team Adversarial Panel (Optional)
 
-**When to activate**: After Wave 1~4 convergence, when the user wants adversarial diversity from a different model's blind-spot profile. Optional — activate explicitly with `--sidecar` flag or "run sidecar wave". Auto-proposed when A-grade items remain after Wave 3 convergence.
+**When to activate**: After Wave 1~4 convergence. Optional — activate with `--sidecar` flag or "run sidecar wave". Auto-proposed when A-grade items remain after Wave 3 convergence.
 
-**Rationale**: Single-model attacks converge on the same blind spots. A sidecar model (Gemini, Codex, Copilot CLI) attacks from a structurally different perspective — empirically validated to surface non-overlapping issues on the same artifact (see `knowledge/shared/harness-core/multi_model_sidecar_strategy.md`). Results converge in substance; process diverges in angle.
+**Core concept**: Each available AI CLI forms an independent **team**. Every team deploys multiple personas against the same artifact in parallel. Cross-team synthesis surfaces Claude blind spots — issues caught by external teams but missed by Wave 1~4. Fallback chain:
 
-**Step 0 — Sidecar Environment Detection** (run before execution, once per session):
+```
+External CLIs available → Multi-Team Panel  (preferred — structural model diversity)
+No external CLIs        → Cross-session Claude isolation  (Path B — zero-history subprocess)
+claude CLI also absent  → Skip Wave 5, note in residual risk card
+```
+
+**Step 0-pre — User Confirmation Gate** (run before team formation):
+
+Detect available CLIs silently, then present a single confirmation prompt before dispatching:
+
+```
+Wave 5 — Multi-Team Panel available.
+Detected external CLIs: [gemini · gh-copilot · ollama | none]
+
+Estimated token cost:
+  External CLIs detected: each team ×2-3 personas → ~2K–5K tokens per team (billed to that CLI's quota, not Claude)
+  Cross-session Claude only: ~3K–6K tokens (Claude quota)
+
+Run Wave 5?
+  (a) Full multi-team panel  — all detected CLIs + Claude  [highest coverage, more tokens]
+  (b) Claude cross-session only  — zero-history subprocess  [moderate coverage, low token cost]
+  (c) Skip Wave 5  [proceed with Wave 1~4 results only]
+```
+
+If no external CLIs detected, collapse (a)/(b) into a single "cross-session or skip" prompt.
+Waiting for input — do not proceed until user selects.
+
+**Step 0 — Team Formation** (run once at Wave 5 entry):
 
 ```bash
-# Detect available sidecar CLIs — run at Wave 5 entry
-SIDECARS=()
-command -v gemini          &>/dev/null && SIDECARS+=("gemini")
-command -v gh              &>/dev/null && gh copilot --version &>/dev/null 2>&1 && SIDECARS+=("gh-copilot")
-command -v ollama          &>/dev/null && SIDECARS+=("ollama")
-npx @openai/codex --version &>/dev/null 2>&1 && SIDECARS+=("codex")
+TEAMS=()
+command -v gemini           &>/dev/null && TEAMS+=("gemini")
+command -v gh               &>/dev/null && gh copilot --version &>/dev/null 2>&1 && TEAMS+=("gh-copilot")
+command -v ollama           &>/dev/null && TEAMS+=("ollama")
+npx @openai/codex --version &>/dev/null 2>&1 && TEAMS+=("codex")
 
-if [ ${#SIDECARS[@]} -eq 0 ]; then
-  echo "Wave 5: no sidecar CLI found — using cross-session Claude isolation (Path B)"
-  SIDECAR_MODE="cross-session"
-else
-  echo "Wave 5: available sidecars — ${SIDECARS[*]}"
-  SIDECAR_MODE="${SIDECARS[0]}"  # prefer first found
+echo "Teams formed: ${#TEAMS[@]} external + 1 Claude-native (T0)"
+echo "External: ${TEAMS[*]:-none → cross-session fallback}"
+```
+
+Default team-persona assignments (adapt based on artifact type):
+
+| Team | CLI | Personas deployed |
+|---|---|---|
+| **T0 Claude** | Agent sub-agent (always present) | challenger · quench-challenger · domain-expert |
+| **T1 Gemini** | `gemini` pipe | devil · newcomer · skeptic |
+| **T2 Copilot** | `gh copilot suggest` | devil · domain-expert |
+| **T3 Ollama** | `ollama run {model}` | devil (first installed model) |
+| **T4 Codex** | `npx @openai/codex exec` | devil · edge-case-hunter |
+
+**Step 1 — Parallel Team Dispatch**
+
+T0 (Claude): dispatched via Agent tool — existing challenger/quench-challenger mechanism.
+
+External teams — all personas within each team run in parallel (`&`), all teams run in parallel with each other:
+
+```bash
+ARTIFACT_TAIL=$(tail -60 "{ARTIFACT_PATH}")
+declare -A TEAM_RESULTS
+
+# ── T1: Gemini ────────────────────────────────────────────
+if [[ " ${TEAMS[*]} " =~ " gemini " ]]; then
+  G_DEVIL=$(printf '[Devil] Adversarial reviewer, no prior context.\nFind 3 critical structural flaws.\nFormat: [issue · location · severity S/A/B]\n---\n%s' \
+    "$ARTIFACT_TAIL" | gemini 2>/dev/null) &
+  G_NEW=$(printf '[Newcomer] First-time user, zero background.\nFind 3 unclear or jargon-heavy points.\nFormat: [issue · location · severity]\n---\n%s' \
+    "$ARTIFACT_TAIL" | gemini 2>/dev/null) &
+  G_SKEP=$(printf '[Skeptic] Pragmatic outsider.\nFind 3 "why not just X?" challenges.\nFormat: [issue · location · severity]\n---\n%s' \
+    "$ARTIFACT_TAIL" | gemini 2>/dev/null) &
+  wait
+  TEAM_RESULTS["gemini"]="$G_DEVIL
+$G_NEW
+$G_SKEP"
+fi
+
+# ── T2: GitHub Copilot ────────────────────────────────────
+if [[ " ${TEAMS[*]} " =~ " gh-copilot " ]]; then
+  GH_D=$(echo "[Devil] Find 3 critical flaws. Format: [issue · location · severity S/A/B]. Artifact: $ARTIFACT_TAIL" \
+    | gh copilot suggest -t shell 2>/dev/null) &
+  GH_E=$(echo "[Domain-expert] Find 3 technical depth gaps. Format: [issue · location · severity]. Artifact: $ARTIFACT_TAIL" \
+    | gh copilot suggest -t shell 2>/dev/null) &
+  wait
+  TEAM_RESULTS["gh-copilot"]="$GH_D
+$GH_E"
+fi
+
+# ── T3: Ollama ────────────────────────────────────────────
+if [[ " ${TEAMS[*]} " =~ " ollama " ]]; then
+  OLLAMA_MODEL=$(ollama list 2>/dev/null | awk 'NR==2{print $1}')
+  O_DEVIL=$(ollama run "$OLLAMA_MODEL" \
+    "[Devil] Find 3 critical structural flaws. Format: [issue · location · severity S/A/B]
+$ARTIFACT_TAIL" 2>/dev/null) &
+  wait
+  TEAM_RESULTS["ollama"]="$O_DEVIL"
+fi
+
+# ── T4: Codex ─────────────────────────────────────────────
+if [[ " ${TEAMS[*]} " =~ " codex " ]]; then
+  C_DEVIL=$(npx @openai/codex exec \
+    "[Devil] Find 3 critical structural flaws. Format: [issue · location · severity S/A/B]
+$ARTIFACT_TAIL" 2>/dev/null) &
+  C_EDGE=$(npx @openai/codex exec \
+    "[Edge-case-hunter] Find 3 failure scenarios not covered. Format: [issue · location · severity]
+$ARTIFACT_TAIL" 2>/dev/null) &
+  wait
+  TEAM_RESULTS["codex"]="$C_DEVIL
+$C_EDGE"
+fi
+
+# ── Path B: Cross-session Claude fallback ─────────────────
+if [ ${#TEAMS[@]} -eq 0 ]; then
+  TEAM_RESULTS["cross-session-claude"]=$(claude --print \
+    "Adversarial reviewer, zero prior context. Find 3 critical structural flaws and 3 edge cases not covered.
+Format: [issue · location · severity S/A/B]
+---
+$ARTIFACT_TAIL" 2>/dev/null || \
+  claude -p \
+    "Adversarial reviewer, zero prior context. Find 3 critical flaws and 3 edge cases.
+Format: [issue · location · severity S/A/B]
+---
+$ARTIFACT_TAIL" 2>/dev/null)
 fi
 ```
 
-**Execution — by detected mode**:
+**Step 2 — Cross-Team Synthesis**
 
-```bash
-# Path A: External sidecar (gemini / gh copilot / ollama / codex)
-# gemini
-SIDECAR_RESULT=$(echo "You are an adversarial reviewer of a software design skill.
-Identify the 3 most critical gaps in this Done When criteria in 3 bullet points:
-$(tail -40 {SKILL_PATH})" | gemini 2>/dev/null)
-
-# gh copilot (GitHub Copilot CLI — corporate environments)
-SIDECAR_RESULT=$(echo "You are an adversarial reviewer.
-Identify the 3 most critical gaps in this Done When criteria in 3 bullet points:
-$(tail -40 {SKILL_PATH})" | gh copilot suggest -t shell 2>/dev/null)
-
-# codex
-SIDECAR_RESULT=$(npx @openai/codex exec "You are an adversarial reviewer.
-Identify the 3 most critical gaps in this Done When criteria in 3 bullet points:
-$(tail -40 {SKILL_PATH})" 2>/dev/null)
-
-# Path B: Cross-session Claude isolation (fallback when no external CLI available)
-# Spawns a fresh claude process with zero conversation history — eliminates
-# same-session confirmation bias without requiring a different model.
-SIDECAR_RESULT=$(claude --print "You are an adversarial reviewer with no prior context.
-Artifact to review (last 40 lines):
-$(tail -40 {SKILL_PATH})
-Identify the 3 most critical gaps in the Done When criteria. Return bullet points only." \
-  2>/dev/null)
-# Note: --print flag may vary by claude CLI version; use -p as fallback.
-```
-
-**Auto-propose condition**: If Wave 3 convergence is reached but A-grade items remain, AI proposes: `"Wave 3 converged with A-grade residuals. Want to run Wave 5 sidecar for a second opinion? (--sidecar)"`
-
-**Output format** — fold sidecar result into standard Wave format:
+After all teams complete, score by issue overlap across teams:
 
 ```
-## Wave 5 — Multi-Model Sidecar Results
-Mode: [gemini | gh-copilot | ollama | codex | cross-session-claude]
-Sidecar detected: [CLI name or "none — cross-session fallback used"]
+Confidence scoring:
+  3+ teams flag same location/issue → escalate to S-grade confirmed  (structural blind spot)
+  2 teams flag same issue           → A-grade  (medium confidence)
+  1 team only                       → B-grade  (single-team observation)
 
-[sidecar output — bullet points, preserved verbatim]
+Claude blind spots (highest value):
+  Issues raised by external teams (T1~T4) but absent from Wave 1~4 (T0) results
+  → flag explicitly as "cross-team delta" — these are what single-model review missed
+```
 
-Cross-wave delta: [issues Wave 5 raised that Wave 1~4 missed]
+**Auto-propose condition**: If Wave 3 convergence is reached but A-grade items remain, AI proposes:
+`"Wave 3 converged with A-grade residuals. Want to run Wave 5 Multi-Team Panel? (--sidecar)"`
+
+**Output format**:
+
+```
+## Wave 5 — Multi-Team Adversarial Panel Results
+Teams active: [T0:claude T1:gemini T2:gh-copilot ...]
+  (or "T0:cross-session-claude" if external CLI fallback)
+
+### Per-Team Findings
+| Team | Persona | Issue | Location | Severity |
+|---|---|---|---|:---:|
+| gemini    | Devil      | [issue] | [loc] | S/A/B |
+| gemini    | Newcomer   | [issue] | [loc] | S/A/B |
+| gh-copilot| Devil      | [issue] | [loc] | S/A/B |
+| claude    | challenger | [issue] | [loc] | S/A/B |
+
+### Cross-Team Synthesis
+| Issue | Teams flagging | Confidence | Grade |
+|---|---|:---:|:---:|
+| [issue] | gemini+codex+claude | HIGH | S-confirmed |
+| [issue] | gemini only         | LOW  | B |
+
+Claude blind spots (external teams found, Wave 1~4 missed):
+- [issue · location · delta-grade]
+
+Cross-wave delta vs Wave 1~4: N new issues (S:N A:N B:N)
 Verdict: PASS (zero new S-grade) | CONDITIONAL_PASS (new A/B-grade) | ESCALATE (new S-grade — re-open Wave 1)
 ```
 
-**Termination**: If Wave 5 raises zero new S-grade → sidecar convergence confirmed. If new S-grade → treat as Wave 1 reopener.
+**Termination**: Zero new S-grade across all teams → panel convergence confirmed. Any new S-grade → Wave 1 reopener.
 
 ---
 
