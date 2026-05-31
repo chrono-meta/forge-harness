@@ -44,6 +44,12 @@ Add to `.gitignore`:
 **Hook failure fallback**: The Stop hook may fire silently without triggering verification (hook failure, session reset, or CC version differences). If Phase 3 verification has not run after /goal completes, manually trigger it:
 > `/goal-quench --verify` — skips Phase 1+2, runs pipeline-conductor --quick using current session scope.
 
+**Interrupted /goal recovery**: If /goal is interrupted (error, user abort, CC crash), the Stop hook may not fire — leaving `.claude/goal-quench.active` without a `.pending`. Detect and recover:
+```bash
+[ -f .claude/goal-quench.active ] && ! [ -f .claude/goal-quench.pending ] && echo "Interrupted — run /goal-quench --recover"
+```
+> `/goal-quench --recover` — promotes `.active` → `.pending` and runs Phase 3 verification on partially-completed work.
+
 ---
 
 ## Phase 1 — Pre-run Gate
@@ -57,6 +63,25 @@ Collect: task description, target files or directories, expected output.
 
 ### Step 2. token-budget-gate estimate
 
+**Invocation contract**:
+```
+Input:  task description (one paragraph), target file count (approximate)
+Trigger phrase: "estimate token budget for: {task description}"
+Expected output fields:
+  - estimated_tokens: N
+  - verdict: GREEN | YELLOW | ORANGE | RED
+  - reasoning: one-line basis for estimate
+```
+
+If `token-budget-gate` skill is not installed, use this fallback estimator:
+```
+< 5 files changed, no new architecture  → GREEN  (< 10K)
+5–20 files or new module/feature        → YELLOW (10K–30K)
+20+ files or cross-system refactor      → ORANGE (30K–60K)
+Full-project migration or rewrite       → RED    (> 60K)
+```
+Note the fallback in `.active` as `budget_source: fallback-heuristic` instead of `budget_source: token-budget-gate`.
+
 Run token-budget-gate against the task description. Map the result to a go/no-go decision:
 
 | token-budget-gate verdict | goal-quench action |
@@ -66,7 +91,7 @@ Run token-budget-gate against the task description. Map the result to a go/no-go
 | ORANGE (30K–60K) | Confirm before proceeding: "This will be expensive. Reduce scope or continue?" |
 | RED (> 60K) | Block: "Budget too high for a single /goal run. Split into smaller goals first." |
 
-On RED: propose 2–3 smaller sub-goals the user could run sequentially. Do not proceed with a single /goal run.
+On RED: propose 2–3 smaller sub-goals the user could run sequentially. **goal-quench halts and does not write `.active` or inject thresholds. The user may still run `/goal` manually — but goal-quench will not gate or verify a session started without its active file.**
 
 ### Step 3. Write state file
 
@@ -74,11 +99,17 @@ Create `.claude/goal-quench.active`:
 
 ```
 scope: {task description — one line}
+target_files: {comma-separated file paths or directory; "inferred from git diff" if not known}
 budget_estimate: {N} tokens
+budget_source: token-budget-gate | fallback-heuristic
 budget_verdict: {GREEN/YELLOW/ORANGE/RED}
 pipeline_mode: --quick
 timestamp: {YYYY-MM-DD HH:MM}
+session_pid: {$$}
+start_commit: {git rev-parse HEAD}
 ```
+
+`target_files` is the **verification artifact** — what pipeline-conductor --quick will evaluate in Phase 3. Specify files/directories explicitly if known; otherwise write `"inferred from git diff"` and Phase 3 will resolve using `git diff {start_commit}..HEAD` to capture all changes including interim commits made during the /goal session.
 
 ### Step 4. Inject mid-run budget thresholds
 
@@ -140,30 +171,64 @@ When /goal stops, the Stop hook fires and:
 3. Removes `.active`
 4. Prints: "[goal-quench] /goal finished. Verification pending — starting pipeline-conductor --quick."
 
-On the next Claude response (after /goal), check for `.claude/goal-quench.pending`:
+On the next Claude response (after /goal), check for `.claude/goal-quench.pending` **with a freshness guard** — only act if the timestamp in the file is within the current session (< 4 hours old):
 
 ```bash
-[ -f .claude/goal-quench.pending ] && echo "goal-quench verification pending"
+if [ -f .claude/goal-quench.pending ]; then
+  PENDING_TIME=$(grep "^timestamp:" .claude/goal-quench.pending | sed 's/^timestamp: //')
+  NOW=$(date +%s)
+  PENDING_EPOCH=$(date -d "$PENDING_TIME" +%s 2>/dev/null || date -j -f "%Y-%m-%d %H:%M" "$PENDING_TIME" +%s 2>/dev/null)
+  AGE_HOURS=$(( (NOW - PENDING_EPOCH) / 3600 ))
+  if [ "$AGE_HOURS" -lt 4 ]; then
+    echo "goal-quench verification pending (created: $PENDING_TIME — ${AGE_HOURS}h ago)"
+  else
+    echo "STALE: goal-quench.pending is ${AGE_HOURS}h old. Run /goal-quench --verify to re-evaluate or delete to clear."
+    exit 0
+  fi
+fi
 ```
 
-If found: **automatically run pipeline-conductor --quick** before responding to any other request. This is not optional — pending verification takes priority.
+If found and fresh: **automatically run pipeline-conductor --quick** before responding to any other request. This is not optional — pending verification takes priority.
+
+If found but stale (> 4 hours): warn the user — "A stale goal-quench.pending exists from {timestamp}. Run `/goal-quench --verify` to re-evaluate, or delete it to clear." Do not auto-trigger verification on stale state.
 
 ### Verification flow
 
 ```bash
-# Read scope from pending file
-SCOPE=$(grep "^scope:" .claude/goal-quench.pending | cut -d' ' -f2-)
+# Read scope and target from pending file
+SCOPE=$(grep "^scope:" .claude/goal-quench.pending | sed 's/^scope: //')
+TARGET=$(grep "^target_files:" .claude/goal-quench.pending | sed 's/^target_files: //')
+
+# Resolve artifact: explicit target or git diff
+# Use git diff against the commit recorded at Phase 1 start, NOT HEAD,
+# to capture files changed during the entire /goal session including interim commits.
+GOAL_START_COMMIT=$(grep "^start_commit:" .claude/goal-quench.pending | sed 's/^start_commit: //')
+if [ "$TARGET" = "inferred from git diff" ] || [ -z "$TARGET" ]; then
+  if [ -n "$GOAL_START_COMMIT" ]; then
+    TARGET=$(git diff "$GOAL_START_COMMIT"..HEAD --name-only 2>/dev/null | tr '\n' ' ')
+  else
+    # Fallback: staged + unstaged changes (does not capture interim commits)
+    TARGET=$(git status --short 2>/dev/null | awk '{print $2}' | tr '\n' ' ')
+  fi
+fi
+# Guard: reject empty target
+[ -z "$TARGET" ] && echo "ERROR: cannot resolve verification artifact — no files changed or start_commit missing" && exit 1
 ```
 
-Run `pipeline-conductor --quick` on the scope. Gate on result:
+Run `pipeline-conductor --quick` on `$TARGET` (the artifact changed during this /goal session). Gate on result:
 
-| pipeline-conductor verdict | goal-quench action |
-|---|---|
-| `CLEAN (--quick)` | Internal iteration safe. Output: "Quality gate passed (--quick). Safe for local iteration and internal commits. Run pipeline-conductor --full before external release or PR." Log actual vs estimated tokens. |
-| `PENDING` | Proceed with caution. Output pending items. Recommend: "Resolve before any external release." |
-| `BLOCKED` | Block commit. Output blocking items. Ask: "Fix and re-run /goal, or accept partial completion?" |
+| pipeline-conductor verdict | goal-quench action | Delete `.pending`? |
+|---|---|---|
+| `CLEAN (--quick)` | Output: "Quality gate passed (--quick). Safe for local iteration and internal commits. Run pipeline-conductor --full before external release or PR." Log tokens. | **Yes — immediately** |
+| `PENDING` | Proceed with caution. Output pending items. Recommend: "Resolve before any external release." | **Yes — immediately** |
+| `BLOCKED` | Block commit. Output blocking items. Ask: "Fix and re-run /goal, or accept partial completion?" | **Only after user acknowledges** |
+| `ESCALATE` | Surface to user for decision. Do not auto-delete — preserve state until user explicitly decides. | **Only after user decision** |
 
-After verification (any verdict): delete `.claude/goal-quench.pending`. Record actual token usage in `tracks/_meta/goal_quench_{YYYY-MM-DD}.md` for calibration.
+**Deletion rule**: On BLOCKED or ESCALATE, `.pending` must survive until the user makes an explicit decision. Deleting before that decision loses the recovery anchor.
+
+**Deadlock prevention**: While `.pending` exists (BLOCKED/ESCALATE), the next-turn verification check runs ONCE per turn only — not on every subsequent turn. After the first verification output, suppress further auto-trigger until the user explicitly acts (fix + re-run, accept, or delete). If the user starts a new `/goal-quench` run while `.pending` exists, warn: "A previous verification is pending. Resolve it first (`/goal-quench --verify`) or clear it (`rm .claude/goal-quench.pending`)." Do not silently overwrite with a new `.active` file.
+
+Record actual token usage in `tracks/_meta/goal_quench_{YYYY-MM-DD}.md` for calibration (regardless of verdict).
 
 ---
 
@@ -175,12 +240,25 @@ After each goal-quench run, append to `tracks/_meta/goal_quench_{YYYY-MM-DD}.md`
 - date: YYYY-MM-DD
   task: {one-line description}
   estimated_tokens: N
+  budget_source: token-budget-gate | fallback-heuristic
+  actual_tokens: N  # estimated from turn count × avg tokens/turn; or "unknown" if not tracked
+  estimation_error: over | under | accurate  # compared actual vs estimated
   budget_verdict: GREEN/YELLOW/ORANGE/RED
-  pipeline_verdict: CLEAN/PENDING/BLOCKED
+  pipeline_verdict: CLEAN/PENDING/BLOCKED/ESCALATE
   threshold_triggered: none/50/70/85/95
+  notes: {optional — why estimate was off, what scope changed}
 ```
 
-This data calibrates future token-budget-gate estimates for /goal-type tasks. Target: 10 runs before treating estimates as reliable.
+**`actual_tokens` collection**: Claude cannot read session token counts directly. Estimate by:
+1. CC session summary (if available in `~/.claude/projects/*/conversation*.jsonl`)
+2. Turn count × estimated tokens/turn (rough: ~2K for short turns, ~8K for long file edits)
+3. User-reported from CC token display (preferred if visible)
+
+Write `"unknown"` if no estimate is possible. After 10 runs, compute mean estimation error — calibrate the fallback heuristic tiers if systematic over/under is detected.
+
+`pipeline_verdict` enum includes `ESCALATE` — record it when Phase 3 required user decision before proceeding.
+
+This data calibrates future estimates. Target: 10 runs before treating estimates as reliable. Runs with `budget_source: fallback-heuristic` calibrate the fallback tiers; runs with `token-budget-gate` calibrate the skill itself.
 
 ---
 
