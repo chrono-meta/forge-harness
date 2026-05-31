@@ -316,6 +316,8 @@ Wave convergence criteria met: zero new S-grade blockers
 + "steel-quench Complete" declaration output
 ```
 
+Verdict: PASS (zero S-grade blockers, convergence reached) | CONDITIONAL_PASS (A-grade or B-grade items remain) | FAIL (S-grade blockers persist, convergence not reached) | ESCALATE (Wave 4 surfaces structural ambiguity requiring human judgment)
+
 ## Convergence Criteria + Downstream Chaining
 
 ### Convergence Criteria
