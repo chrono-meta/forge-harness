@@ -51,6 +51,8 @@ Teams that have systematically used AI collaboration tools are already doing **h
 | Harness engineering | Per-project rules, gates, context management | QA protocols, CLAUDE.md rulesets, TC verification pipelines |
 | **Meta harness engineering** | Cross-project system to measure, improve, evolve harnesses | FH skill bus, harness-doctor HHS, steel-quench, field-harvest |
 
+> **FH v1.0 paper** — published 2026-05-30 on [Zenodo](https://zenodo.org/records/20397566) (DOI: 10.5281/zenodo.20397566) · arXiv submission pending. Documents the 2-layer design, 6-axis framework, 4-agent orchestration, and compounding loop with controlled empirical evidence.
+
 > **External validation (2026)** — three independent research findings converge:
 > - VILA-Lab analysis of Claude Code v2.1.88 (512K lines): [98.4% is harness infrastructure, 1.6% AI logic](https://arxiv.org/abs/2604.14228)
 > - "[Code as Agent Harness](https://arxiv.org/abs/2605.18747)" (arXiv, May 2026, 43 authors) — code as foundation for agent infrastructure
@@ -167,6 +169,22 @@ forge-harness is structured as two distinct layers with different portability pr
 
 For runtime agent specs, see `AGENTS.md`. For session rules and orchestration protocol, see `CLAUDE.md`.
 
+### Governance layer for AI-generated code (empirically validated)
+
+FH can wrap any coding agent (OpenCode, Codex, etc.) as a **post-generation governance layer** — no runtime adapter needed. FH reads files the agent writes; the protocol is the interface.
+
+```bash
+# After a coding agent completes a task:
+./scripts/fh-gate.sh                   # auto-detects changed files from git diff
+# → steel-quench adversarial pass      # behavioral edges, untested contracts, security
+# → pipeline-conductor --quick         # 4-axis: regression / adversarial / grounding / record
+# → FH_STATUS + FH_GATE_VERDICT        # PASS | PENDING | BLOCKED | ESCALATE
+```
+
+**Empirical result (2026-05-31)**: Applied to OpenCode's own AI-generated `permission/arity.ts` (163 lines, 6 tests passing, CI green). Governance verdict: PENDING — 2 A-grade findings CI didn't cover (short-token overflow in allowlist, executor tools absent from arity table). Delta attributable to methodology layer, not the model.
+
+Full specification: `knowledge/shared/harness-core/fh_integration_contract.md` · Usage guide: `knowledge/shared/harness-core/fh_opencode_governance_wrapper.md`
+
 ---
 
 ## Finding your entry path — 1-minute self-diagnosis
@@ -213,7 +231,7 @@ forge-harness is designed with a large context window in mind. Works correctly i
 
 ```bash
 # [Terminal] Add marketplace
-claude plugin marketplace add https://github.com/chrono-code/forge-harness.git
+claude plugin marketplace add https://github.com/chrono-meta/forge-harness.git
 
 # [Terminal] Install plugin (user scope — available in all projects)
 claude plugin install -s user fh-meta@forge-harness
@@ -228,7 +246,7 @@ Verify installation: type `/skills` in the CC chat → if `install-wizard` appea
 > **Prerequisites**: A GitHub account and git credentials configured. If `git clone` fails with an authentication error, set up SSH keys or create a personal access token (GitHub → Settings → Developer settings → Personal access tokens) and retry.
 
 ```bash
-git clone https://github.com/chrono-code/forge-harness.git ~/forge-harness
+git clone https://github.com/chrono-meta/forge-harness.git ~/forge-harness
 
 cd ~/forge-harness
 ```
@@ -263,7 +281,7 @@ See `CLAUDE.md > Auto Project Mapping Protocol` for detailed detection and mappi
 
 ---
 
-## Already using it — 29 asset activation check (25 skills + 4 agents)
+## Already using it — 35 asset activation check (29 fh-meta + 4 fh-commons skills, 6 agents)
 
 Check which of the following 29 (23 fh-meta skills + 2 fh-commons skills + 3 fh-meta agents + 1 fh-commons agent) are **regularly activating** for you. The table below lists the assets bundled with forge-harness plugins (fh-meta + fh-commons). `.claude/agents/` adds `plan` and a local `quench-challenger` mirror, available to FH itself when working in the FH cwd.
 
@@ -296,14 +314,21 @@ Check which of the following 29 (23 fh-meta skills + 2 fh-commons skills + 3 fh-
 | `frontier-digest` | Collect frontier signals (HN, arXiv, etc.) and synthesize PMH/FH-relevant insights | "AI trend digest", "Frontier digest", "What's new this week" | □ |
 | `harvest-loop` | End-of-session learning → reverse-evolution pipeline (field-harvest → contention → personas → synth → doctor → verify) | "Harvest the session", "Reverse-absorb learnings", "Run the pipeline" | □ |
 | `self-marketing-lint` | Detect and remove self-marketing language, owner self-reference, version/round bragging in skill descriptions | "Lint self-marketing", "Description diet", "Strip the marketing tone" | □ |
+| `pipeline-conductor` | 4-axis quality gate (backward / adversarial / forward / record) for FH assets and external code | "Run the quality gate", "4-axis check", "pipeline-conductor before merge" | □ |
+| `goal-quench` | `/goal` wrapper: pre-run token budget gate + mid-run thresholds + post-run pipeline-conductor verification | "Safe goal run", "Goal with budget control", "Run /goal with a quality gate" | □ |
+| `edit-manifest` | Predict-verify loop for harness edits — records falsifiable prediction, verifies outcome next session | "Log this edit", "Predict what this changes", "Manifest before committing" | □ |
+| `memory-hygiene` | Detect stale-but-confident memory entries — re-verify live, classify by staleness, propose archival | "Check stale memory", "Memory drift", "Verify my memory entries" | □ |
+| `prompt-regression` | Detect harness behavioral regressions after CLAUDE.md / rule / skill edits via probe suite | "Did my rule change break anything?", "Regression check", "Test harness changes" | □ |
 | `convergence-loop` *(fh-commons)* | Replace single-pass gates with N-round convergence loops; only declare "truly passed" after convergence | "How many rounds do we need", "Suspicious of single-pass", "Convergence loop" | □ |
+| `token-budget-gate` *(fh-commons)* | Pre-task token cost estimate (GREEN/YELLOW/ORANGE/RED) before expensive multi-agent tasks | "How expensive is this?", "Token budget estimate", "Will this cost a lot" | □ |
+| `mcp-circuit-breaker` *(fh-commons)* | Detects MCP tool failure patterns (3 fails = trip), blocks further calls, proposes fallbacks | "MCP keeps failing", "Tool error loop", "Circuit-breaker" | □ |
 | `quench-challenger` *(fh-commons)* | Steel-quench adversary — pressure-tests near-final artifacts from devil + innovator + prescriber angles | "Challenge this with a devil", "Adversarial review", "Quench challenger" | □ |
 
 | Check count | Diagnosis |
 |:---:|---|
-| **22-29** | Advanced stage — focus on `agent-composer` + `sim-conductor` + `steel-quench` + synergy cascade (chained verification) |
-| **8-21** | Activation stage — gradually activate unchecked assets |
-| **0-7** | Early stage — go back to the self-diagnosis above and follow the standard entry |
+| **28-35** | Advanced stage — focus on `agent-composer` + `sim-conductor` + `steel-quench` + `pipeline-conductor` + governance layer (chained verification) |
+| **10-27** | Activation stage — gradually activate unchecked assets |
+| **0-9** | Early stage — go back to the self-diagnosis above and follow the standard entry |
 
 ---
 
@@ -384,7 +409,7 @@ The hub has two entry paths: **clone** = persistent hub (`tracks/` + `knowledge/
 
 ```bash
 # [Terminal — not in the Claude chat window]
-claude plugin marketplace add https://github.com/chrono-code/forge-harness.git    # .git suffix required
+claude plugin marketplace add https://github.com/chrono-meta/forge-harness.git    # .git suffix required
 claude plugin install -s user fh-meta@forge-harness                                # -s user = all projects (recommended)
 ```
 
@@ -396,8 +421,8 @@ Verify with `/skills` or `/agents` in the Claude Code chat window. Updates aren'
 
 | Plugin | Nature | skills | agents |
 |---|---|---|---|
-| **fh-meta** (v1.1.4) | Hub meta operation tool bundle — 23 skills (agent-composer · apex-review · asset-placement-gate · contention-layer · context-bridge-dispatch · context-doctor · cross-ecosystem-synergy-detection · deep-clarify · field-harvest · frontier-digest · harness-doctor · harvest-loop · hub-cc-pr-reviewer · install-doctor · install-wizard · marketplace-gate · meta-prompt-builder · plugin-recommender · self-marketing-lint · sim-conductor · source-grounding-audit · steel-quench · verify-bidirectional) + 3 agents (hub-persona-auditor · fact-checker · persona-innovator). **Verification pair**: steel-quench (output pattern attack) + source-grounding-audit (input source tracing) | 23 | 3 |
-| **fh-commons** (v0.1.1) | Domain-agnostic general utilities — 2 skills (convergence-loop · deliberation) + 1 agent (quench-challenger) | 2 | 1 |
+| **fh-meta** (v1.2.0) | Hub meta operation tool bundle — 29 skills (agent-composer · apex-review · asset-placement-gate · contention-layer · context-bridge-dispatch · context-doctor · cross-ecosystem-synergy-detection · deep-clarify · edit-manifest · field-harvest · frontier-digest · goal-quench · harness-doctor · harvest-loop · hub-cc-pr-reviewer · install-doctor · install-wizard · marketplace-gate · memory-hygiene · meta-prompt-builder · pipeline-conductor · plugin-recommender · prompt-regression · self-marketing-lint · sim-conductor · source-grounding-audit · steel-quench · verify-bidirectional · and more) + 3 agents (hub-persona-auditor · fact-checker · persona-innovator). **Verification pair**: steel-quench (output pattern attack) + source-grounding-audit (input source tracing) | 29 | 3 |
+| **fh-commons** (v0.2.0) | Domain-agnostic general utilities — 4 skills (convergence-loop · deliberation · mcp-circuit-breaker · token-budget-gate) + 1 agent (quench-challenger) | 4 | 1 |
 
 > **Asset count SoT**: `plugins/fh-meta/.claude-plugin/plugin.json` is the canonical source. If the numbers above don't match, use plugin.json as the reference.
 
@@ -415,7 +440,7 @@ claude plugin install -s user <your-persona-plugin>@<your-marketplace>
 Use Mode C if you only want plugin skills and prefer to keep your own project history on your side (FH stays as a reference asset).
 
 ```bash
-claude plugin marketplace add https://github.com/chrono-code/forge-harness.git
+claude plugin marketplace add https://github.com/chrono-meta/forge-harness.git
 claude plugin install fh-meta@forge-harness
 cd ~/projects/{your-project} && claude   # no FH cwd entry
 ```
@@ -430,7 +455,7 @@ cd ~/projects/{your-project} && claude   # no FH cwd entry
 
 **Hub contribution channels** (no automatic signals in Mode C): GitHub Issue · External PR (fork + review) · community channels · Feature Request.
 
-**Upgrade to Mode A**: `git clone https://github.com/chrono-code/forge-harness.git && cd forge-harness && claude` — existing plugin install is preserved (duplicate-check in active onboarding Step 1-b). Full mode reference: `CLAUDE.md > Meta-harness usage modes`.
+**Upgrade to Mode A**: `git clone https://github.com/chrono-meta/forge-harness.git && cd forge-harness && claude` — existing plugin install is preserved (duplicate-check in active onboarding Step 1-b). Full mode reference: `CLAUDE.md > Meta-harness usage modes`.
 
 ---
 
@@ -492,7 +517,7 @@ This harness aims for a **federated ecosystem** where multiple marketplaces coex
 Use when the recommended path doesn't work (projects across multiple roots, monorepos, special structures):
 
 ```bash
-git clone https://github.com/chrono-code/forge-harness.git ~/forge-harness
+git clone https://github.com/chrono-meta/forge-harness.git ~/forge-harness
 mkdir -p ~/forge-harness/tracks/my-project/learnings              # track name = project name
 cp ~/forge-harness/templates/CLAUDE.md ~/my-project/CLAUDE.md     # then replace {project_name} with the track name
 cp -r ~/forge-harness/templates/.claude/ ~/my-project/.claude/    # (optional) session rules — customize [CUSTOMIZE] markers
