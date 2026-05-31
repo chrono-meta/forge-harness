@@ -634,28 +634,48 @@ echo "$changed"
 
 #### 11-2. Category-based consistency checks
 
-**A. SKILL.md changes → plugin.json count + README table + CATALOG entry**
+**A. SKILL.md changes → per-plugin count drift + README table + CATALOG entry**
+
+> **Ground truth** (verified 2026-05-31): there is **no `skills` array** in any manifest. Claude Code auto-discovers skills from `plugins/{plugin}/skills/*/`. Do NOT look for a skills array — it does not exist. The drift surfaces are: (1) the skill **count embedded in descriptions** as `"N skills"` (`plugins/{p}/.claude-plugin/plugin.json` + root `.claude-plugin/marketplace.json`), and (2) the **README skill table** + **CATALOG entries** (human-maintained). Save the script below as a file and run it — inline heredocs in some shells corrupt multi-line Python.
 
 ```bash
 skills_changed=$(echo "$changed" | grep "skills/.*/SKILL\.md" || true)
 if [ -n "$skills_changed" ]; then
-  # Skill dir count vs plugin.json registered count
-  actual=$(ls -d plugins/fh-meta/skills/*/ plugins/fh-commons/skills/*/ 2>/dev/null | wc -l | tr -d ' ')
-  registered=$(python3 -c "
-import json, glob
-total = 0
-for f in glob.glob('plugins/*/.claude-plugin/marketplace.json') + glob.glob('plugins/*/marketplace.json'):
-    try:
-        d = json.load(open(f))
-        total += len(d.get('skills', []))
-    except: pass
-print(total)
-" 2>/dev/null || echo "N/A")
-  [ "$actual" != "$registered" ] \
-    && echo "MISMATCH: $actual skill dirs but $registered in plugin.json — update plugin.json" \
-    || echo "OK: skill count $actual matches plugin.json"
+  cat > /tmp/_fh_count.py <<'PYEOF'
+import json, glob, os, re
+def claimed_count(desc):
+    m = re.search(r'(\d+)\s*skills', desc)
+    return int(m.group(1)) if m else None
+# per-plugin plugin.json description count vs actual dirs
+for src in sorted(glob.glob('plugins/*')):
+    if not os.path.isdir(os.path.join(src, 'skills')):
+        continue
+    pname = os.path.basename(src)
+    actual = len(glob.glob(os.path.join(src, 'skills', '*/')))
+    pj = os.path.join(src, '.claude-plugin', 'plugin.json')
+    if os.path.exists(pj):
+        c = claimed_count(json.load(open(pj)).get('description', ''))
+        if c is not None and c != actual:
+            print(f"DRIFT: {pname} plugin.json says '{c} skills' but {actual} dirs — update description")
+        elif c is not None:
+            print(f"OK: {pname} plugin.json count {actual} matches description")
+        else:
+            print(f"INFO: {pname} plugin.json description has no 'N skills' count ({actual} dirs)")
+# root marketplace.json per-plugin description count
+mp = '.claude-plugin/marketplace.json'
+if os.path.exists(mp):
+    for p in json.load(open(mp)).get('plugins', []):
+        src = p.get('source', '').lstrip('./')
+        actual = len(glob.glob(os.path.join(src, 'skills', '*/')))
+        c = claimed_count(p.get('description', ''))
+        if c is not None and c != actual:
+            print(f"DRIFT: marketplace.json[{p['name']}] says '{c} skills' but {actual} dirs — update description")
+        elif c is not None:
+            print(f"OK: marketplace.json[{p['name']}] count {actual} matches description")
+PYEOF
+  python3 /tmp/_fh_count.py
 
-  # Per-skill: README + CATALOG
+  # Per-changed-skill: README + CATALOG presence (human-maintained lists drift most)
   echo "$skills_changed" | while read sp; do
     sname=$(basename "$(dirname "$sp")")
     grep -q "$sname" README.md 2>/dev/null \
