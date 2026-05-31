@@ -1,13 +1,13 @@
 {
   "name": "fh-commons",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "engines": {
     "claudeCode": ">=1.0.0"
   },
-  "description": "Cross-project utility skill bundle — 2 skills + 1 agent. Domain-agnostic and portable across projects: convergence-loop (N-round convergence gate reinforcement) + deliberation (Innovator→Devil→Mediator multi-perspective synthesis) + quench-challenger (Devil+Innovator+Prescriber combined steel-quench dedicated agent).",
+  "description": "Cross-project utility skill bundle — 4 skills + 1 agent. Domain-agnostic and portable: convergence-loop, deliberation, mcp-circuit-breaker, token-budget-gate + quench-challenger agent.",
   "author": {
-    "name": "chrono-code",
-    "email": "chrono-code@users.noreply.github.com"
+    "name": "chrono-meta",
+    "email": "chrono-meta@users.noreply.github.com"
   },
   "keywords": [
     "commons",

@@ -225,6 +225,8 @@ All stages Step 0~4 complete
 + When 0 candidates, "no absorption candidates" reported then exit
 ```
 
+Verdict: PASS (harvest candidates output and PR created, or 0 candidates confirmed) | CONDITIONAL_PASS (candidates found, PR pending user approval) | FAIL (contention-layer blocked candidate registration) | ESCALATE (role collision with existing skill requires human decision)
+
 **→ Mandatory next: `contention-layer`** — run immediately after Step 3 candidate list is confirmed, before Step 4 PR creation. New patterns must be checked for collision with existing skill role clusters before registration. Skip only when 0 candidates found.
 
 ## Linked Skills

@@ -181,3 +181,5 @@ All steps 0–4 completed
 ```
 
 **→ Mandatory next (Conditionally passed verdict): `/sim-conductor Area E`** — run against `apex_review_deck_YYYYMMDD.html` before the proposal is considered ready for submission. Skipping sim-conductor on a conditional pass means unresolved persona conditions go unverified; present option B as default and require the user to explicitly choose A/C/D to override.
+
+Wait for sim-conductor Area E verdict before declaring the proposal submission-ready. (Conditionally passed path: proposal is not done until sim-conductor verdict folds back.)

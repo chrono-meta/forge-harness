@@ -291,6 +291,8 @@ Step 1 claim extraction complete
 + "source-grounding-audit Complete" declaration output
 ```
 
+Verdict: PASS (0 Phantom claims) | CONDITIONAL_PASS (LOW-severity Phantoms only, prescriptions noted) | FAIL (1+ HIGH/MEDIUM Phantom — broken path, phantom file, or stale external link) | ESCALATE (scope unclear or claim extraction impossible)
+
 ---
 
 ## Evidence Record

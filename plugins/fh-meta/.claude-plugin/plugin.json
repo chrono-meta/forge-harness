@@ -1,13 +1,13 @@
 {
   "name": "fh-meta",
-  "version": "1.1.4",
+  "version": "1.2.0",
   "engines": {
     "claudeCode": ">=1.0.0"
   },
-  "description": "Hub meta-engineering toolkit for Claude Code — 23 skills + 3 agents. Covers the full hub operations lifecycle: harness diagnostics, external simulation, validation, plugin recommendation, reverse-harvest, onboarding wizard, marketplace readiness gate, decision-maker review, steel-quench all-angle verification, source-grounding-audit phantom-claim detection, self-marketing-lint, Socratic deep-clarify, and session self-evolution harvest loop.",
+  "description": "Hub meta-engineering toolkit — 29 skills + 5 agents. New in 1.2.0: pipeline-conductor (4-pipeline gated sweep), return-path-gate (chain closure audit), goal-quench (Stop hook + quality gate), steel-quench Wave 5 (multi-model sidecar challenger), 2-layer architecture docs, YAML validation script. Validated cross-CLI: Claude Code, Codex, Gemini.",
   "author": {
-    "name": "chrono-code",
-    "email": "chrono-code@users.noreply.github.com"
+    "name": "chrono-meta",
+    "email": "chrono-meta@users.noreply.github.com"
   },
   "keywords": [
     "hub-meta",

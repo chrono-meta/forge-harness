@@ -736,6 +736,7 @@ All stages Step 0~6 complete
 + Wave composition plan finalized + execution complete
 + fan-in loom complete: M-tier 0 AND S-tier < 3 → PASS
   or user has confirmed Wave end
++ When deliberation was invoked: wait for deliberation verdict before closing Wave N+1 conflict resolution; verdict folds back into Step 4-b fan-in result set
 + Auto-recording gate (Step 4-c) complete (lightweight harvest-loop run status confirmed)
 ```
 
