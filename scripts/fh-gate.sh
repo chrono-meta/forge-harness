@@ -63,9 +63,10 @@ if [[ "$GATE_LEVEL" != "quick" && "$GATE_LEVEL" != "full" ]]; then
   exit $EXIT_ARG_ERROR
 fi
 
-# Auto-detect files from git diff
+# Auto-detect files from git diff (B1: configurable base branch)
+FH_BASE_BRANCH="${FH_BASE_BRANCH:-main}"
 if [[ -z "$TARGET_FILES" ]]; then
-  TARGET_FILES=$(git -C "$FH_ROOT" diff main..HEAD --name-only 2>/dev/null | tr '\n' ' ' | xargs || true)
+  TARGET_FILES=$(git -C "$FH_ROOT" diff "${FH_BASE_BRANCH}..HEAD" --name-only 2>/dev/null | tr '\n' ' ' | xargs || true)
   if [[ -z "$TARGET_FILES" ]]; then
     TARGET_FILES=$(git -C "$FH_ROOT" status --short 2>/dev/null | awk '{print $2}' | tr '\n' ' ' | xargs || true)
   fi
@@ -78,14 +79,15 @@ fi
 
 # Security lens auto-detect
 SECURITY_LENS="off"
-if echo "$TARGET_FILES" | grep -qiE "(permission|auth|token|secret|key|cred|security|arity)"; then
+if echo "$TARGET_FILES" | grep -qiE "(permission|auth|token|secret|key|cred|security|vulnerability|csrf|inject|sanitize)"; then
   SECURITY_LENS="on"
 fi
 
 TIMESTAMP=$(date +%Y-%m-%dT%H:%M:%SZ)
 RECORD_PATH="${FH_RECORD_BASE}/governance_log_$(date +%Y-%m-%d).yaml"
-PROMPT_FILE="${_TMPDIR}/fh_gate_prompt_$$.txt"
-OUTPUT_FILE="${_TMPDIR}/fh_gate_output_$$.txt"
+PROMPT_FILE=$(mktemp "${_TMPDIR}/fh_gate_prompt_XXXXXX.txt")
+OUTPUT_FILE=$(mktemp "${_TMPDIR}/fh_gate_output_XXXXXX.txt")
+ERR_FILE=$(mktemp "${_TMPDIR}/fh_gate_err_XXXXXX.txt")
 
 # Pre-compute values that need transformation (bash 3.2 compat — no ${VAR^^})
 GATE_LEVEL_UPPER=$(echo "$GATE_LEVEL" | tr '[:lower:]' '[:upper:]')
@@ -103,7 +105,7 @@ else
   - Axis 4 (Record): calibration log entry"
 fi
 
-cleanup() { rm -f "$PROMPT_FILE" "$OUTPUT_FILE"; }
+cleanup() { rm -f "$PROMPT_FILE" "$OUTPUT_FILE" "$ERR_FILE"; }
 trap cleanup EXIT
 
 # --- Build prompt ---
@@ -174,7 +176,7 @@ if ! command -v claude &>/dev/null; then
 fi
 
 # --- Invoke ---
-echo "→ fh-gate v${VERSION} [${GATE_LEVEL^^}] caller=${FH_CALLER} security=${SECURITY_LENS}" >&2
+echo "→ fh-gate v${VERSION} [${GATE_LEVEL_UPPER}] caller=${FH_CALLER} security=${SECURITY_LENS}" >&2
 echo "  files: ${TARGET_FILES}" >&2
 
 # Use gtimeout (macOS coreutils) if available, fall back to timeout, then bare invoke
@@ -185,17 +187,17 @@ elif command -v timeout &>/dev/null; then
   _TIMEOUT_CMD="timeout ${FH_TIMEOUT}"
 fi
 
-if ! ${_TIMEOUT_CMD} claude --print --model "$FH_MODEL" < "$PROMPT_FILE" > "$OUTPUT_FILE" 2>&1; then
+if ! ${_TIMEOUT_CMD} claude --print --model "$FH_MODEL" < "$PROMPT_FILE" > "$OUTPUT_FILE" 2>"$ERR_FILE"; then
   echo "ERROR: claude --print failed or timed out (${FH_TIMEOUT}s)" >&2
-  [[ "$FH_VERBOSE" == "1" ]] && cat "$OUTPUT_FILE" >&2
+  cat "$ERR_FILE" >&2
   exit $EXIT_HARNESS_ERROR
 fi
 
-[[ "$FH_VERBOSE" == "1" ]] && cat "$OUTPUT_FILE" >&2
+[[ "$FH_VERBOSE" == "1" ]] && cat "$ERR_FILE" >&2
 
-# --- Parse verdict ---
-FH_STATUS=$(grep "^FH_STATUS:" "$OUTPUT_FILE" 2>/dev/null | awk '{print $2}' | tr -d '[:space:]' || true)
-VERDICT=$(grep "^FH_GATE_VERDICT:" "$OUTPUT_FILE" 2>/dev/null | awk '{print $2}' | tr -d '[:space:]' || true)
+# --- Parse verdict (B3: -m 1 prevents concatenation on repeated header lines) ---
+FH_STATUS=$(grep -m 1 "^FH_STATUS:" "$OUTPUT_FILE" 2>/dev/null | awk '{print $2}' | tr -d '[:space:]' || true)
+VERDICT=$(grep -m 1 "^FH_GATE_VERDICT:" "$OUTPUT_FILE" 2>/dev/null | awk '{print $2}' | tr -d '[:space:]' || true)
 
 # Harness failure guard (fail-safe: missing status → BLOCKED)
 if [[ "$FH_STATUS" != "SUCCESS" ]]; then
@@ -206,6 +208,23 @@ fi
 
 # Emit structured output to stdout
 cat "$OUTPUT_FILE"
+
+# B4: Write governance log — structured header only (clean YAML, no raw markdown)
+FINDINGS_A_LOG=$(grep -m 1 "^FH_FINDINGS_A:" "$OUTPUT_FILE" 2>/dev/null | awk '{print $2}' | tr -d '[:space:]' || echo "0")
+FINDINGS_B_LOG=$(grep -m 1 "^FH_FINDINGS_B:" "$OUTPUT_FILE" 2>/dev/null | awk '{print $2}' | tr -d '[:space:]' || echo "0")
+FINDINGS_N_LOG=$(grep -m 1 "^FH_FINDINGS_COUNT:" "$OUTPUT_FILE" 2>/dev/null | awk '{print $2}' | tr -d '[:space:]' || echo "0")
+{
+  printf -- "- timestamp: %s\n" "$TIMESTAMP"
+  printf "  caller: %s\n" "$FH_CALLER"
+  printf "  gate_level: %s\n" "$GATE_LEVEL"
+  printf "  verdict: %s\n" "$VERDICT"
+  printf "  findings_total: %s\n" "$FINDINGS_N_LOG"
+  printf "  findings_a: %s\n" "$FINDINGS_A_LOG"
+  printf "  findings_b: %s\n" "$FINDINGS_B_LOG"
+  printf "  files:\n"
+  echo "$TARGET_FILES" | tr ' ' '\n' | grep -v '^$' | sed 's/^/    - /'
+  printf "\n"
+} >> "$RECORD_PATH" || echo "WARN: governance log write failed: $RECORD_PATH" >&2
 
 # Exit code
 case "$VERDICT" in
