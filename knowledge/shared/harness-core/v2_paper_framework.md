@@ -133,6 +133,11 @@ Citation candidate: `github.com/sst/opencode` + any OpenCode technical report or
    5.1 Setup
    5.2 Results
    5.3 Implications for harness portability
+   5.5 The Cost of Coverage — When Multi-Team Review Pays (Experiment 5)
+       5.5.1 Token-coverage tradeoff protocol (4 panel configurations)
+       5.5.2 Marginal efficiency curve + diminishing-returns point
+       5.5.3 Separate-quota cost locus (H3) — why panel cost is sublinear
+       5.5.4 Decision rule: when each panel size is justified
 
 6. Integration Contract
    6.1 Specification (v0.1): inputs, verdict format, findings schema
@@ -182,6 +187,67 @@ Citation candidate: `github.com/sst/opencode` + any OpenCode technical report or
 
 ---
 
+## Experiment 5 — Multi-Team Token-Coverage Tradeoff (Design + Protocol)
+
+**Question**: Multi-CLI adversarial review increases token cost. Is the marginal coverage gain worth the marginal token cost? Quantify the tradeoff so the cost is justified, not assumed.
+
+**Motivation**: Experiment 1 showed multi-model review finds non-overlapping issues (coverage ↑). But it did not measure the *cost* of that coverage. A claim that "more CLIs = better" is incomplete without the denominator. This experiment supplies the denominator: tokens spent per unique finding.
+
+**Design**:
+
+- Fixed subject: a set of N artifacts (SKILL.md files / AI-generated modules), each with a known ground-truth defect set established by human expert review
+- Conditions (each a "panel configuration"):
+  - **C1 Single (baseline)**: Claude-only, 3 personas (current sim-conductor Minimum)
+  - **C2 Cross-session**: Claude + 1 cross-session Claude cold-read
+  - **C3 Two-team**: Claude + 1 external CLI (gemini), each 2-3 personas
+  - **C4 Full panel**: Claude + 3-4 external CLIs (gemini, gh-copilot, ollama, codex)
+- Measured per condition:
+  - **Token cost** — total tokens consumed (Claude quota + each CLI quota, reported separately and summed)
+  - **Coverage** — unique true defects found / ground-truth defect count
+  - **Precision** — true defects / total flagged (false-positive control)
+  - **Marginal efficiency** — Δ unique defects ÷ Δ tokens vs. the next-cheaper condition
+
+**Metrics table (to populate when run)**:
+
+| Condition | Token cost (Claude) | Token cost (external) | Total tokens | Unique defects | Coverage % | Precision % | Tokens / unique defect |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| C1 Single (baseline) | — | 0 | — | — | — | — | — |
+| C2 Cross-session | — | 0 | — | — | — | — | — |
+| C3 Two-team (+gemini) | — | — | — | — | — | — | — |
+| C4 Full panel | — | — | — | — | — | — | — |
+
+**Central tradeoff quantity** — the claim the paper must defend:
+
+```
+Token cost delta:    +X%   (C4 vs C1 baseline, summed across all quotas)
+Coverage delta:      +Y%   (unique true defects found)
+Justification holds when:  Y > threshold  AND  marginal efficiency stays positive
+                            up to the chosen panel size (diminishing returns point)
+```
+
+**Hypotheses**:
+1. **H1 (coverage)**: Coverage increases monotonically C1 < C2 < C3 < C4, but with diminishing returns — each added team contributes fewer *new* unique defects.
+2. **H2 (cost justification)**: Cross-session (C2) gives most of the bias-reduction benefit at low marginal cost; the jump to external CLIs (C3/C4) is justified only for high-stakes artifacts (pre-publish, security-adjacent).
+3. **H3 (cost locus)**: External CLI tokens are billed to *separate quotas* (gemini/copilot/ollama), so the Claude-side token increase is sublinear in team count — the panel does not multiply Claude cost by team count.
+
+**Why H3 matters for the paper**: The naive objection is "4 CLIs = 4× cost." H3 reframes: orchestration (Claude) cost grows slowly because Claude only dispatches + synthesizes; the heavy adversarial generation is distributed across separate billing quotas. The *effective* Claude-side delta is the synthesis overhead, not 4× the review.
+
+**Expected narrative result** (to confirm empirically):
+> Full panel raised total token cost by ~X% but surfaced ~Y% more unique true defects, with the cross-team-confirmed (3+ teams agree) subset showing the highest precision. The marginal efficiency curve identifies the diminishing-returns point — the recommended default panel size.
+
+**Decision rule the experiment produces** (paper's practical contribution):
+- Routine internal audit → C1 or C2 (cross-session is the cheap bias-breaker)
+- Pre-publish / security-adjacent → C3+ (external diversity justified)
+- Architecture review / major version → C4 (full panel, accept the cost)
+
+**Record target**: `tracks/_meta/fh_multiteam_token_coverage_2026_XX_XX.md` (raw per-condition logs) + this framework §Experiment 5.
+
+**Status**: Protocol designed (2026-05-31). Execution pending — requires running all 4 conditions on the same N-artifact set with token instrumentation.
+
+**Paper section**: New §5.5 "The Cost of Coverage — When Multi-Team Review Pays" (between Experiment 3 tier comparison and Integration Contract). This is the section that converts "multi-CLI feels better" into "multi-CLI costs +X% and returns +Y%, justified above threshold T."
+
+---
+
 ## Key Claims Table
 
 | Claim | Evidence | Status |
@@ -192,6 +258,8 @@ Citation candidate: `github.com/sst/opencode` + any OpenCode technical report or
 | Delta is attributable to methodology, not model | Same model generated code + same model reviewed with governance | ✅ Causal attribution |
 | Governance dividend propagates across ecosystem | 4 A-grade findings across 3 external projects, 3 issues submitted | ✅ Collected |
 | Governance quality is tier-independent | Not yet tested | ❌ Pending |
+| Multi-team coverage gain exceeds token cost above threshold T | Protocol designed (Exp 5) — 4 conditions, tokens/unique-defect metric | △ Protocol ready, execution pending |
+| External CLI tokens bill to separate quotas → Claude-side cost sublinear in team count | Hypothesis H3 (Exp 5) | ❌ Pending measurement |
 | Integration contract enables cross-system governance | Specification written, not yet implemented as binary | △ Spec only |
 
 ---
@@ -217,6 +285,7 @@ Citation candidate: `github.com/sst/opencode` + any OpenCode technical report or
 | arXiv number assigned | ⏳ Waiting | ~2026-06-02 |
 | Awesome Lists PR | ⏳ After arXiv # | ~2026-06-02 |
 | Experiment 3 execution | ❌ Not started | TBD |
+| Experiment 5 execution (token-coverage) | ❌ Protocol ready, not started | TBD |
 | v2 first draft | ❌ Not started | TBD |
 | v2 arXiv submission | ❌ Not started | TBD |
 
