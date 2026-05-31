@@ -341,7 +341,7 @@ declare -A TEAM_RESULTS
 
 # ── T1: Gemini ────────────────────────────────────────────
 if [[ " ${TEAMS[*]} " =~ " gemini " ]]; then
-  G_DEVIL=$(printf '[Devil] Adversarial reviewer, no prior context.\nFind 3 critical structural flaws.\nFormat: [issue · location · severity S/A/B]\n---\n%s' \
+  G_DEVIL=$(printf '[Devil] Adversarial reviewer, no prior context.\nFind 3 critical structural flaws — especially whether Done When criteria are binary and achievable.\nFormat: [issue · location · severity S/A/B]\n---\n%s' \
     "$ARTIFACT_TAIL" | gemini 2>/dev/null) &
   G_NEW=$(printf '[Newcomer] First-time user, zero background.\nFind 3 unclear or jargon-heavy points.\nFormat: [issue · location · severity]\n---\n%s' \
     "$ARTIFACT_TAIL" | gemini 2>/dev/null) &
@@ -380,7 +380,7 @@ if [[ " ${TEAMS[*]} " =~ " codex " ]]; then
     "[Devil] Find 3 critical structural flaws. Format: [issue · location · severity S/A/B]
 $ARTIFACT_TAIL" 2>/dev/null) &
   C_EDGE=$(npx @openai/codex exec \
-    "[Edge-case-hunter] Find 3 failure scenarios not covered. Format: [issue · location · severity]
+    "[Edge-case-hunter] Find 3 edge cases the Done When criteria does NOT cover. Format: [issue · location · severity]
 $ARTIFACT_TAIL" 2>/dev/null) &
   wait
   TEAM_RESULTS["codex"]="$C_DEVIL
