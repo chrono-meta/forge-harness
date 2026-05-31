@@ -9,9 +9,9 @@ tags: [integration-contract, governance, opencode, hermes, openhuman, bridge-lay
 
 ## Status
 
-**v0.1 — Specification only.** No binary or API yet (bridge layer v1.0 target).
-Current form: bash invocation patterns + structured output convention.
-FH reads files; callers write files. The protocol is the interface.
+**v1.0 — Binary available.** `scripts/fh-gate.sh` executes governance review end-to-end via `claude --print`.
+CI-ready: machine-parseable verdict + exit codes (0=PASS / 1=PENDING / 2=BLOCKED / 3=ESCALATE / 10=harness error).
+Backward-compatible: `FH_DRY_RUN=1` restores prompt-only (v0.1) behavior.
 
 ---
 
