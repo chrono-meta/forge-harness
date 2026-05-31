@@ -137,6 +137,16 @@ Residual risks: [list]
 
 ---
 
+## Invocation Modes
+
+| Mode | Command | When to use |
+|---|---|---|
+| **Sub-agent** (default) | Agent tool with `subagent_type="challenger"` | Standard — same session, prompt isolation |
+| **Cross-session CLI** | `claude --print "{prompt}"` | When same-session confirmation bias is a concern; spawns fresh process with zero history |
+| **External sidecar** | `gemini`, `gh copilot`, `ollama` pipe | Wave 5 — when different model blind-spot profile is needed |
+
+Cross-session mode eliminates accumulated session context — use when the main session has handled the artifact extensively and you want a truly cold-read adversary. Output is identical format to sub-agent mode.
+
 ## Integration Hooks
 
 **steel-quench Wave 1** *(planned)*: challenger is designed to replace or supplement the devil agent. When wired, S-grade output feeds into Wave 2 defense round. Currently steel-quench calls `fh-commons:quench-challenger` for Wave 1 — explicit challenger wiring is a future integration step.
