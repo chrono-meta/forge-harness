@@ -6,8 +6,8 @@
   },
   "description": "Cross-project utility skill bundle — 4 skills + 1 agent. Domain-agnostic and portable: convergence-loop, deliberation, mcp-circuit-breaker, token-budget-gate + quench-challenger agent.",
   "author": {
-    "name": "chrono-code",
-    "email": "chrono-code@users.noreply.github.com"
+    "name": "chrono-meta",
+    "email": "chrono-meta@users.noreply.github.com"
   },
   "keywords": [
     "commons",

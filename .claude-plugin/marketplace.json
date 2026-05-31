@@ -1,8 +1,8 @@
 {
   "name": "forge-harness",
   "owner": {
-    "name": "chrono-code",
-    "email": "chrono-code@users.noreply.github.com"
+    "name": "chrono-meta",
+    "email": "chrono-meta@users.noreply.github.com"
   },
   "metadata": {
     "description": "forge-harness — Multi-instance persona orchestration and meta-tooling marketplace for Claude Code. Harness engineering toolkit for teams that want to evolve their AI collaboration practices.",
@@ -11,14 +11,14 @@
   "plugins": [
     {
       "name": "fh-meta",
-      "version": "1.1.4",
-      "description": "Hub meta-operations toolkit — 23 skills (agent-composer · apex-review · asset-placement-gate · contention-layer · context-bridge-dispatch · context-doctor · cross-ecosystem-synergy-detection · deep-clarify · field-harvest · frontier-digest · harness-doctor · harvest-loop · hub-cc-pr-reviewer · install-doctor · install-wizard · marketplace-gate · meta-prompt-builder · plugin-recommender · self-marketing-lint · sim-conductor · source-grounding-audit · steel-quench · verify-bidirectional) + 3 agents (hub-persona-auditor · fact-checker · persona-innovator)",
+      "version": "1.2.0",
+      "description": "Hub meta-operations toolkit — 29 skills + 5 agents. New in 1.2.0: pipeline-conductor, return-path-gate, goal-quench, steel-quench Wave 5 (multi-model sidecar), YAML validation script, 2-layer architecture docs. Validated cross-CLI: Claude Code, Codex, Gemini.",
       "source": "./plugins/fh-meta"
     },
     {
       "name": "fh-commons",
-      "version": "0.1.1",
-      "description": "Project-agnostic utility skills born from the contention layer — 2 skills (convergence-loop · deliberation) + 1 agent (quench-challenger). Operates at a different layer than fh-meta (harness engineering) — domain-independent utilities that can be transplanted into any project.",
+      "version": "0.2.0",
+      "description": "Project-agnostic utility skills — 4 skills (convergence-loop · deliberation · mcp-circuit-breaker · token-budget-gate) + 1 agent (quench-challenger). Domain-independent utilities transplantable into any project.",
       "source": "./plugins/fh-commons"
     }
   ]
