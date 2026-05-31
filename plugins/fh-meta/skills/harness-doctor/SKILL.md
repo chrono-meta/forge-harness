@@ -630,6 +630,8 @@ For shared utility, see `templates/regression_guard.sh` — extract the `count_b
 
 **This skill Done When = "prescription report output complete"**. Actual resolution of M/S/R items belongs to user or follow-up work and is not included in this skill's completion criteria.
 
+Verdict: PASS (M-tier 0 confirmed, "Structure healthy" output) | CONDITIONAL_PASS (S/R-tier items remain, no M-tier blockers) | FAIL (1+ M-tier items found, prescription issued) | ESCALATE (structural ambiguity requiring human judgment before prescription can be issued)
+
 - Actual resolution of M-tier items confirmed by re-run showing M-tier 0
 - Exiting without Step 7 output = Fail
 

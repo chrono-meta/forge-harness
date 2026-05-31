@@ -532,8 +532,10 @@ Leaving completed items in the card until the next session is a bug.
 ```
 All stages Step 0-c → 0 → 1 → 2 → 3 (parallel) → 3.5 → 3.75 → 4 → 5 complete
 + Step 0-c: edit-manifest pending entries verified + memory-hygiene scan run
++ Wait for field-harvest verdict before proceeding to Step 2 (contention-layer)
++ Wait for contention-layer verdict before proceeding to Step 3 parallel dispatch
++ Step 3.75 Critic verdict received (PASS/CONDITIONAL PASS/FAIL stated) before Step 4
 + synthesizer grade readjustment complete (rejected candidates separated)
-+ Step 3.75 Critic verdict complete (PASS/CONDITIONAL PASS/FAIL stated)
 + Final proposal list output (sorted by HIGH/MED criteria)
 + User Y/N approval gate complete
 + (If Y selected) Step 6 Curator lifecycle review complete

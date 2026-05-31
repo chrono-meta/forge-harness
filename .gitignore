@@ -3,6 +3,8 @@
 .claude/settings.local.json
 .claude/settings.json
 .claude/scheduled_tasks.lock
+.claude/goal-quench.active
+.claude/goal-quench.pending
 context/
 
 # Paper — PDF regenerated from HTML; canonical version on Zenodo/arXiv

@@ -350,6 +350,8 @@ Convergence within an AI-AI loop is **provisional convergence**. It must pass th
 
 **This skill's Done When = "completion report format output complete"**. Actual M-tier resolution and PR merge are in the user's or follow-up work domain and are not included in this skill's completion criteria. Ending without Step 3 report output = Fail.
 
+Verdict: PASS (all in-scope areas complete, 0 M-tier findings) | CONDITIONAL_PASS (S/R-tier findings only, or Area B skipped due to cadence) | FAIL (1+ M-tier findings unresolved, or Area A prerequisite not met) | ESCALATE (persona conflict requiring human judgment)
+
 **→ Mandatory prerequisite for Area A (external publish context): `steel-quench` must have run in the same session before Area A is marked complete.** If not, Area A completion is invalid — restart with steel-quench first.
 
 **External validation path**: harvest-loop Step 3.75 Critic isolated Agent can independently judge against the above criteria (`skill_quality_rubric.md` verifiable criteria). Automatically linked when subsequent steel-quench runs.
