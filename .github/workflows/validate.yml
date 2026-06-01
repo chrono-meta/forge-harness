@@ -14,10 +14,10 @@ jobs:
 
       - name: Check for internal vocabulary residue
         run: |
-          echo "=== Scanning for internal vocabulary (fh-meta, fh-commons, [redacted-org], [redacted-system]) ==="
+          echo "=== Scanning for internal vocabulary (fh-meta, fh-commons, [redacted-org], [redacted-system], [redacted-system]) ==="
           FOUND=$(grep -r \
             -e "fh-meta" -e "fh-commons" \
-            -e "[redacted-org]" -e "[redacted-system]" \
+            -e "[redacted-org]" -e "[redacted-system]" -e "[redacted-system]" \
             --include="*.md" --include="*.json" --include="*.zsh" --include="*.sh" \
             --exclude-dir=".git" \
             . 2>/dev/null | grep -v "^Binary" || true)
