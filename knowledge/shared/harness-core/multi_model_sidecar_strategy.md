@@ -101,7 +101,7 @@ This document is the **rationale layer** (why sidecars, when, what value, what b
 |---|---|---|
 | **Gemini CLI** | `echo "prompt" \| gemini` or `gemini -p "prompt"` | Gemini family (default: current model) |
 | **Codex CLI** | `npx @openai/codex exec "prompt"` | GPT-4o / GPT-5.5 (non-interactive exec mode) |
-| **Copilot CLI** (`gh copilot`) | `gh copilot suggest "prompt"` | Copilot model catalog: Codex · Gemini · Claude Opus |
+| **Copilot CLI** (`gh copilot`) | `gh copilot -- -p "prompt" --allow-all-tools` | Copilot model catalog — **plan/region-dependent**: preview plan = claude-haiku-4.5 + gpt-5-mini; enterprise may include GPT-5.5+. Verify: `gh copilot -- -p "list available models"` |
 
 ---
 
