@@ -106,8 +106,8 @@ The following utterance patterns activate this mode automatically:
 - Scan parent directory (`../`) of the forge-harness cwd for:
   - `forge-harness*` (multiple forge-harness clones)
   - `*-meta-harness` or `meta-harness-*` (sibling harness variants)
-  - `*claude-chrono*` (sibling hub assets)
-- Search command: `ls ../ | grep -iE '(forge-harness|meta-harness|claude-chrono|claude-brain)'`
+  - `*-harness` or `*-hub` (sibling hub assets)
+- Search command: `ls ../ | grep -iE '(forge-harness|meta-harness|-harness|-hub)'`
 - **Known non-managed clones** (suppress report if detected):
   - `harness_framework` — reference clone, not managed by forge-harness
 - Report catch results to user + determine branch:
@@ -505,12 +505,6 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc.)
   → ④ Check unpushed commits → propose "push?"
 ```
 Card update is NOT a sub-step of harvest-loop — even if harvest-loop is skipped, card update must run.
-
-**forge-harness push rule (KP-SASE 503 environment)**:  
-`github.com` git pack protocol is blocked (503) on the corporate network → `gh api` REST API workaround required.  
-**Execute blob→tree→commit→ref→rebase as a single Bash one-shot — step-by-step execution is prohibited.**  
-Splitting into steps forces the user to re-instruct ("do it in one shot") — treat the full procedure as an atomic operation.  
-Full procedure: cc memory `feedback_fh_push_via_rest_api.md`
 
 **Card update obligation** (independent obligation — regardless of harvest-loop completion): Update `reference_next_session_starter.md`.  
 ① Step 0-b cross-check generates removal list → ② Remove completed items → ③ Add new priorities → ④ Fix stale paths/versions → ⑤ Overwrite → ⑥ Output "BEFORE N items → AFTER M items" diff.  

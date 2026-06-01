@@ -10,7 +10,7 @@ AI reads this file first when searching past work. Open individual files for det
 
 ### 2026-06-01 | cross-audit, sidecar, sister-asset | pmh, agent-in-agent, multi-model, verification
 **File:** tracks/_audit/session_2026_06_01_pmh_sidecar_verification.md
-PMH(chrono-code) → FH cross-team 검증 요청(Issue #47) 회신. sidecar-orchestrator 환원 관련 gh copilot Critical 중 FH 소관 2건 검증. (1) multi_model_sidecar_strategy.md 완성도 = 부분 수정 필요(ollama·KP-SASE 메시지·경로 어댑터·gh copilot 우선은 환원 측 책임, FH 원문 유지); (2) sidecar 존재 이유 = 검증 완료 — §Mechanism "Not an agent dispatch / stateless"가 agent-in-agent 재귀 공격을 구조적으로 반박 + Experiment 1·2 실증.
+PMH(chrono-code) → FH cross-team 검증 요청(Issue #47) 회신. sidecar-orchestrator 환원 관련 gh copilot Critical 중 FH 소관 2건 검증. (1) multi_model_sidecar_strategy.md 완성도 = 부분 수정 필요(ollama·restricted-network 메시지·경로 어댑터·gh copilot 우선은 환원 측 책임, FH 원문 유지); (2) sidecar 존재 이유 = 검증 완료 — §Mechanism "Not an agent dispatch / stateless"가 agent-in-agent 재귀 공격을 구조적으로 반박 + Experiment 1·2 실증.
 - Decision: FH 원문 유지 + 환원 어댑터는 PMH 보유 (Sister Asset Protocol — clone-and-own 금지)
 - Open: sidecar 문서가 CATALOG 미등록이었던 기록 갭 → 본 커밋으로 보강
 
@@ -104,8 +104,8 @@ Sister asset cross-audit — "The Last Harness You'll Ever Build" (Sylph.AI, arX
 
 ### 2026-05-26 | _meta | external-network, wave3-validation, sase, install-wizard, frontier-digest
 **File:** tracks/_meta/external_network_verification_2026_05_26.md
-Wave 3 meta-validation: confirmed all previously KP-SASE-blocked capabilities work on personal network — install-wizard dry-run, plugin-recommender live GitHub search, frontier-digest fetch, git push. Baseline for external user environment parity.
-- Decision: All core FH capabilities verified functional outside corporate network
+Wave 3 meta-validation: confirmed all previously restricted-network-blocked capabilities work on a standard network — install-wizard dry-run, plugin-recommender live GitHub search, frontier-digest fetch, git push. Baseline for external user environment parity.
+- Decision: All core FH capabilities verified functional on a standard (unrestricted) network
 
 ### 2026-05-26 | forge-harness | v1.2, public-release, harness-evolver-absorb
 **File:** tracks/_meta/reference_next_session_starter.md
