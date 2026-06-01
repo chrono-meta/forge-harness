@@ -3,10 +3,14 @@ name: multi-model-sidecar-strategy
 description: Pattern for invoking other AI models (Gemini, Codex, Copilot CLI) as sidecars from within a Claude Code / FH session via Bash tool. Token economy, model-access fallback, and adversarial diversity use cases.
 date: 2026-05-31
 tags: [multi-model, sidecar, token-economy, model-access, adversarial, internally-validated]
-status: internally-validated (transcript not retained)
+status: mechanism-validated (cross-provider grader confirmed 2026-06-02)
 ---
 
-> **Validation status** (steel-quench 2026-06-01, Issue #47): mechanism is real and runnable — implementation shipped in PR #36/#37. Empirical claims (Experiment 1·2) are an internal same-session self-report; raw sidecar transcripts were not retained and no cross-provider external grader confirmed the finding counts. A cross-session zero-history Claude grader independently converged on the structural findings, but a model-diverse grader (codex) was blocked by network policy. Treat finding counts as indicative, not externally verified. Re-run with retained transcript + cross-provider grader to upgrade to `validated`. Record: `tracks/_meta/steel_quench_2026_06_01_sidecar_existence.md`.
+> **Validation status** (updated 2026-06-02): mechanism validated by cross-provider grader.
+>
+> 2026-06-01 steel-quench (Issue #47): mechanism confirmed runnable — implementation shipped in PR #36/#37. Original empirical claims (Experiment 1·2) were an internal same-session self-report; raw transcripts not retained, codex grader blocked by network policy.
+>
+> 2026-06-02 update: Gemini 0.41.2 cross-provider grader run on `pipeline-conductor/SKILL.md` (retained transcript: `tracks/_meta/grader_gemini_pipeline_conductor_2026_06_02.txt`). Gemini found 3 S-grade findings (interaction deadlock, PR-approval deadlock, cadence-lock deadlock); Claude Sonnet-4.6 previously found 3 different S-grade findings (model conflict, invocation contradiction, self-referential sweep). **Zero overlap across 6 S-grade findings** — validates the non-overlapping failure modes claim and perspective diversity mechanism. Provider-identity diversity is empirically confirmed; specific Experiment 2 finding counts on goal-quench (original target) are not directly re-run. Record: `tracks/_meta/grader_gemini_pipeline_conductor_2026_06_02.txt`.
 
 # Multi-Model Sidecar Strategy
 
