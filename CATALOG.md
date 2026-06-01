@@ -8,10 +8,16 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
-### 2026-05-31 | v2-paper, draft, empirical | governance-dividend, tier-comparison, multi-team, n5-replication
-**File:** knowledge/shared/harness-core/v2_paper_draft.md
-First full draft of v2 paper "Governance Dividend." 4 experiments: (1) multi-model orchestrator swap — non-overlapping failure modes; (2) governance controlled trial — CI-passing arity.ts → PENDING, 2 A-grade; (3) tier comparison — S-grade count identical across Haiku/Sonnet/Opus (3 each); (4) cross-ecosystem reach — 4 A-grade findings across 3 external projects. + Experiment 5 N=5 replication: C1 avg 57% / C2 avg 84% / C3 100%, H3 confirmed across all 5 artifacts.
-- Decision: v2 is an independent paper (not v1 revision) — 4 empirical experiments, external artifacts as targets
+### 2026-06-01 | cross-audit, sidecar, sister-asset | pmh, agent-in-agent, multi-model, verification
+**File:** tracks/_audit/session_2026_06_01_pmh_sidecar_verification.md
+PMH(chrono-code) → FH cross-team 검증 요청(Issue #47) 회신. sidecar-orchestrator 환원 관련 gh copilot Critical 중 FH 소관 2건 검증. (1) multi_model_sidecar_strategy.md 완성도 = 부분 수정 필요(ollama·KP-SASE 메시지·경로 어댑터·gh copilot 우선은 환원 측 책임, FH 원문 유지); (2) sidecar 존재 이유 = 검증 완료 — §Mechanism "Not an agent dispatch / stateless"가 agent-in-agent 재귀 공격을 구조적으로 반박 + Experiment 1·2 실증.
+- Decision: FH 원문 유지 + 환원 어댑터는 PMH 보유 (Sister Asset Protocol — clone-and-own 금지)
+- Open: sidecar 문서가 CATALOG 미등록이었던 기록 갭 → 본 커밋으로 보강
+
+### 2026-05-31 | multi-model, sidecar, adversarial, validated | orchestrator-swap, perspective-diversity, cross-cli
+**File:** knowledge/shared/harness-core/multi_model_sidecar_strategy.md
+외부 모델(Gemini/Codex/Copilot CLI)을 Claude Code/FH 세션 안에서 Bash tool로 sidecar 호출하는 검증된 패턴. Experiment 1(직접 sidecar 호출) + Experiment 2(3-round orchestrator-swap)로 실증 — 각 orchestrator가 비중복 findings 발견, cross-wave delta가 convergence를 개선. perspective diversity(1순위)·model-access fallback(2순위)·token economy(3순위). §Mechanism: agent dispatch 아닌 stateless 서브프로세스.
+- Decision: 하네스가 multi-model synthesis의 activation condition — sidecar는 quality compounding 메커니즘이지 단순 coverage 체크 아님
 
 ### 2026-05-31 | anti-bias, multi-team, adversarial, token-coverage | steel-quench, sim-conductor, experiment, v2-paper
 **File:** tracks/_meta/fh_multiteam_token_coverage_2026_05_31.md
@@ -21,11 +27,6 @@ Experiment 5 — Multi-Team Adversarial Panel measured on source-grounding-audit
 **File:** knowledge/shared/harness-core/fh_synergy_playbook.md
 Concrete workflow specifications for using FH with OpenCode/Hermes/OpenHuman — grounded only in recorded experiments. Three patterns: (1) OpenCode: fh-gate.sh after code gen → DONE→PENDING flip, 2 A-grade on arity.ts; (2) Hermes: skill audit before dispatch → 2 A-grade pre-exec/credential gaps; (3) OpenHuman: Memory Tree staleness audit → GROUNDED/STALE/BROKEN verdict. Includes honest finding-rate estimates, "no integration required" value prop, and compounding effect explanation.
 - Decision: no unverified claims — every stated outcome traces to a specific experiment or structural guarantee
-
-### 2026-05-31 | v2-paper, experimental-design, controlled-trial, orchestrator-swap | opencode, governance, ecosystem
-**File:** knowledge/shared/harness-core/v2_paper_framework.md
-Independent v2 paper framework (not a version update). 3 experiments: (1) multi-model orchestrator swap — Gemini+Codex find non-overlapping gaps, each catches what the other misses; (2) governance controlled trial — arity.ts CI=DONE→FH=PENDING, 2 A-grade findings, causal delta = methodology layer; (3) tier comparison (pending). Paper structure, key claims table, timeline, differentiation from v1.0.
-- Decision: v2 is independent paper — 3 novel empirical contributions, cites OpenCode as experimental target
 
 ### 2026-05-31 | integration-contract, bridge-layer, governance-interface | opencode, hermes, openhuman, v2-paper
 **File:** knowledge/shared/harness-core/fh_integration_contract.md

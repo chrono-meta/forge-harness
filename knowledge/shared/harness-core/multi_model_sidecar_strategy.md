@@ -1,9 +1,12 @@
 ---
 name: multi-model-sidecar-strategy
-description: Validated pattern for invoking other AI models (Gemini, Codex, Copilot CLI) as sidecars from within a Claude Code / FH session via Bash tool. Token economy, model-access fallback, and adversarial diversity use cases.
+description: Pattern for invoking other AI models (Gemini, Codex, Copilot CLI) as sidecars from within a Claude Code / FH session via Bash tool. Token economy, model-access fallback, and adversarial diversity use cases.
 date: 2026-05-31
-tags: [multi-model, sidecar, token-economy, model-access, adversarial, validated]
+tags: [multi-model, sidecar, token-economy, model-access, adversarial, internally-validated]
+status: internally-validated (transcript not retained)
 ---
+
+> **Validation status** (steel-quench 2026-06-01, Issue #47): mechanism is real and runnable — implementation shipped in PR #36/#37. Empirical claims (Experiment 1·2) are an internal same-session self-report; raw sidecar transcripts were not retained and no cross-provider external grader confirmed the finding counts. A cross-session zero-history Claude grader independently converged on the structural findings, but a model-diverse grader (codex) was blocked by network policy. Treat finding counts as indicative, not externally verified. Re-run with retained transcript + cross-provider grader to upgrade to `validated`. Record: `tracks/_meta/steel_quench_2026_06_01_sidecar_existence.md`.
 
 # Multi-Model Sidecar Strategy
 
@@ -77,6 +80,10 @@ Use the strongest available model as orchestrator; delegate subsidiary tasks to 
 | **Sidecar** | Lighter versions (Gemini Flash, GPT-4o-mini, etc.) | Repetitive verification, adversarial passes, token-efficient delegation |
 
 This combination can be freely mixed across CLIs — e.g., Gemini Pro orchestrating with Claude Haiku as sidecar, or CC Opus orchestrating with Gemini Flash. FH methodology works regardless of which combination is chosen.
+
+## Scope vs steel-quench Wave 5
+
+This document is the **rationale layer** (why sidecars, when, what value, what boundaries). `steel-quench/SKILL.md` Wave 5 (Multi-Team Adversarial Panel) is the **implementation layer** — the runnable team-formation + parallel-dispatch + cross-team-synthesis steps. They are not redundant: a skill cites this doc for *why* and *when*; Wave 5 (and any other caller) owns the *how*. If the how appears in two places, Wave 5 is canonical and this doc defers to it.
 
 ## The capability
 
@@ -202,6 +209,7 @@ Suggested integration points:
 - Each sidecar call is independent (no shared context with main session by default).
 - Sidecar model output is **untrusted input** — the orchestrating skill validates before accepting.
 - Cost: sidecar API calls are billed separately (Gemini API key, OpenAI key, Copilot subscription).
+- **Provider identity gates perspective diversity** — the primary use case (diversity) only holds when the sidecar is a *different provider*. Reaching Claude Opus through Copilot CLI from a Claude host is **Claude → Claude**: it serves model-access fallback (secondary use case) but produces **no genuine process divergence** — same pre-training distribution, same blind spots. Do not count a same-provider sidecar as a diversity wave. Diversity requires a cross-provider sidecar (e.g. Claude host → Gemini/Codex).
 
 ---
 
