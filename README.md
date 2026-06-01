@@ -5,7 +5,7 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e.svg" alt="MIT License"></a>
   <img src="https://img.shields.io/badge/version-v1.3-3b82f6.svg" alt="v1.3">
-  <a href="https://zenodo.org/records/20397566"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20397566.svg" alt="DOI 10.5281/zenodo.20397566"></a>
+  <a href="https://zenodo.org/records/20397566"><img src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20397566-blue.svg" alt="DOI 10.5281/zenodo.20397566"></a>
   <img src="https://img.shields.io/badge/Claude_Code-compatible-a855f7.svg" alt="Claude Code compatible">
   <img src="https://img.shields.io/badge/Codex-beta-f59e0b.svg" alt="Codex-compatible beta">
 </p>
