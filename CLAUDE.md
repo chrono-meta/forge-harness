@@ -235,7 +235,7 @@ Skills without a Done When definition automatically qualify as harness-doctor L2
 
 ## FH Improvement 4-Axis Auto-Gate (Self-Verification Orchestrator)
 
-**Whenever the AI modifies FH assets** (SKILL.md · `.claude/rules/*.md` · `templates/` · `CLAUDE.md`),
+**Whenever the AI modifies FH assets** (SKILL.md · `.claude/rules/*.md` · `templates/` · `CLAUDE.md` · substantive `knowledge/` docs — see Substantive carve-out below),
 the 4-axis verification chain runs **automatically before the first commit** of that session.
 No user request is needed — this is a mandatory autonomous step, not a proposal.
 
@@ -280,6 +280,8 @@ Any FAIL  → fix inline, re-run failed axis, then proceed
 **Scope**: Active from the moment any FH file is modified in the current session — not deferred to the next session.
 
 **Lightweight exception** (Axis 1 + 4 only, skip Axes 2–3): Sessions where **zero SKILL.md / rules / templates files changed** (e.g., CATALOG.md entry, tracks/ update). The hook detects this automatically — no Axes 2+3 marker required for light-only commits. Judgment is file-based, not subjective.
+
+**Substantive `knowledge/` carve-out** (Axes 2–3 DO run, despite knowledge/ not being SKILL/rules/templates): a `knowledge/` doc change is **not** light if its diff adds a fenced code block (```` ``` ````) or a citation (`arXiv:` / `DOI` / `http`). Executable patterns and factual claims need phantom-detection + adversarial review *wherever they live* — this closes the gap where a substantive knowledge doc (e.g. an Implementation-Patterns section with runnable commands) slips through as "light." Prose-only knowledge edits (typos, rewording, link fixes) stay light. Detection is mechanical: `git diff` adds a ```` ``` ```` fence or a citation token → run Axes 2–3.
 
 **Unavailable axis**: If steel-quench or source-grounding-audit are not installed, note `Axis N: skipped (skill unavailable)` and proceed. Axis 1 PASS alone is sufficient to unblock a PR when Axes 2–3 are unavailable. Axis 4 (edit-manifest): if the skill is not installed, substitute a manual one-line prediction appended to `tracks/_meta/edit_manifest.yaml` — the record is what matters, not the skill.
 
