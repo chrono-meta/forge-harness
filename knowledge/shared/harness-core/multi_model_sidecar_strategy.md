@@ -70,6 +70,8 @@ FH's SKILL.md format is shared across all three major AI CLIs. FH skills load na
 
 This means FH is not just model-agnostic in theory — the methodology layer physically runs in all three CLI environments without modification. This is the empirical foundation for the cross-CLI portability claim.
 
+> **Load ≠ full parity**: "loads and lists as Enabled" means the SKILL.md *methodology* is readable and runnable as guidance. Skills whose steps dispatch a sub-agent (`Agent` tool, `fh-commons:*` challengers) or depend on slash-commands/hooks are **Claude-native** — on Gemini/Codex they degrade to manual methodology, not automated execution. Cross-CLI portability covers the *methodology layer*; the automation layer (sub-agents, hooks, slash commands) requires Claude Code as host. See `README.md §2-layer architecture`.
+
 ## Orchestrator–sidecar model strategy
 
 Use the strongest available model as orchestrator; delegate subsidiary tasks to lighter sidecar models for token economy:

@@ -448,6 +448,14 @@ source "$FH_DIR/templates/fh_audit_check.zsh"
 EOF
 fi
 
+# 4-axis verification gate — install the FH pre-commit hook on the forge-harness clone (idempotent)
+# Git does NOT set core.hooksPath automatically on clone, so this one-time step is required for the gate to enforce (otherwise it stays advisory).
+if [ -d "$FH_DIR/templates/.git-hooks" ]; then
+  git -C "$FH_DIR" config core.hooksPath templates/.git-hooks
+  chmod +x "$FH_DIR/templates/.git-hooks/pre-commit" 2>/dev/null
+  echo "4-axis pre-commit gate: installed (core.hooksPath -> templates/.git-hooks)"
+fi
+
 # sentinel initialization (per-project independent — prevent conflicts with other projects on same machine)
 mkdir -p ~/.cc_sentinels
 touch ~/.cc_sentinels/$(basename "$(pwd)")_wizard_done
