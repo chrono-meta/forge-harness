@@ -212,7 +212,6 @@ Over time, the governance overhead per PR decreases while baseline code quality 
 - **Sidecar experiment (Experiment 1):** `knowledge/shared/harness-core/multi_model_sidecar_strategy.md`
 - **Integration contract spec:** `knowledge/shared/harness-core/fh_integration_contract.md`
 - **fh-gate.sh:** `scripts/fh-gate.sh`
-- **v2 paper framework (full experimental record):** `knowledge/shared/harness-core/v2_paper_framework.md`
 - **OpenCode issue:** github.com/anomalyco/opencode/issues/30057
 - **Hermes issue:** github.com/NousResearch/hermes-agent/issues/35709
 - **OpenHuman issue:** github.com/tinyhumansai/openhuman/issues/3069
