@@ -215,7 +215,7 @@ Suggested integration points:
 
 ## Implementation Patterns
 
-**Context**: §1–8 establish *why* sidecar distribution works and its validated patterns. This section adds *executable* implementation guidance reverse-harvested from PMH `sidecar-orchestrator` v1 (2026-06-01), generalized for any environment.
+**Context**: §1–8 establish *why* sidecar distribution works and its validated patterns. This section adds *executable* implementation guidance reverse-harvested from PMH `sidecar-orchestrator` v1 (2026-06-01), generalized for any environment. These are **reference** patterns for any caller — they do **not** supersede §Scope vs steel-quench Wave 5: for the steel-quench multi-team case specifically, Wave 5 remains the canonical implementation.
 
 > **CLI-syntax caveat**: Exact sidecar invocation flags differ by CLI and version. The forms below use FH's validated baselines (`gh copilot suggest`, `echo … | gemini`, `npx @openai/codex exec` — see §The capability). Flags such as `--model` are catalog/version-dependent — verify with the CLI's own `--help` before relying on them.
 
@@ -276,9 +276,9 @@ Requires the respective CLI installed and authenticated.
 RESULT=$(sidecar_command 2>&1); EXIT_CODE=$?
 if [[ $EXIT_CODE -ne 0 ]]; then
   echo "⚠️ sidecar failed (exit $EXIT_CODE)"
-  if   [[ "$RESULT" =~ "unknown model"|"invalid model" ]]; then echo "   → model name error — check catalog: gh copilot --help"
-  elif [[ "$RESULT" =~ "503"|"timeout" ]];                 then echo "   → network/API outage — escalate to Priority 2"
-  elif [[ "$RESULT" =~ "rate limit"|"quota exceeded" ]];   then echo "   → rate limited — retry after delay or use Priority 3"
+  if   [[ "$RESULT" =~ (unknown|invalid)\ model ]];      then echo "   → model name error — check catalog: gh copilot --help"
+  elif [[ "$RESULT" =~ (503|timeout) ]];                 then echo "   → network/API outage — escalate to Priority 2"
+  elif [[ "$RESULT" =~ (rate\ limit|quota\ exceeded) ]]; then echo "   → rate limited — retry after delay or use Priority 3"
   else echo "   → unknown failure: $RESULT"; fi
 fi
 ```
