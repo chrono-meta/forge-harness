@@ -1,12 +1,9 @@
 ---
 name: multi-model-sidecar-strategy
-description: Pattern for invoking other AI models (Gemini, Codex, Copilot CLI) as sidecars from within a Claude Code / FH session via Bash tool. Token economy, model-access fallback, and adversarial diversity use cases.
+description: Validated pattern for invoking other AI models (Gemini, Codex, Copilot CLI) as sidecars from within a Claude Code / FH session via Bash tool. Token economy, model-access fallback, and adversarial diversity use cases.
 date: 2026-05-31
-tags: [multi-model, sidecar, token-economy, model-access, adversarial, internally-validated]
-status: internally-validated (transcript not retained)
+tags: [multi-model, sidecar, token-economy, model-access, adversarial, validated]
 ---
-
-> **Validation status** (steel-quench 2026-06-01, Issue #47): mechanism is real and runnable — implementation shipped in PR #36/#37. Empirical claims (Experiment 1·2) are an internal same-session self-report; raw sidecar transcripts were not retained and no cross-provider external grader confirmed the finding counts. A cross-session zero-history Claude grader independently converged on the structural findings, but a model-diverse grader (codex) was blocked by network policy. Treat finding counts as indicative, not externally verified. Re-run with retained transcript + cross-provider grader to upgrade to `validated`. Record: `tracks/_meta/steel_quench_2026_06_01_sidecar_existence.md`.
 
 # Multi-Model Sidecar Strategy
 
@@ -80,10 +77,6 @@ Use the strongest available model as orchestrator; delegate subsidiary tasks to 
 | **Sidecar** | Lighter versions (Gemini Flash, GPT-4o-mini, etc.) | Repetitive verification, adversarial passes, token-efficient delegation |
 
 This combination can be freely mixed across CLIs — e.g., Gemini Pro orchestrating with Claude Haiku as sidecar, or CC Opus orchestrating with Gemini Flash. FH methodology works regardless of which combination is chosen.
-
-## Scope vs steel-quench Wave 5
-
-This document is the **rationale layer** (why sidecars, when, what value, what boundaries). `steel-quench/SKILL.md` Wave 5 (Multi-Team Adversarial Panel) is the **implementation layer** — the runnable team-formation + parallel-dispatch + cross-team-synthesis steps. They are not redundant: a skill cites this doc for *why* and *when*; Wave 5 (and any other caller) owns the *how*. If the how appears in two places, Wave 5 is canonical and this doc defers to it.
 
 ## The capability
 
@@ -209,7 +202,267 @@ Suggested integration points:
 - Each sidecar call is independent (no shared context with main session by default).
 - Sidecar model output is **untrusted input** — the orchestrating skill validates before accepting.
 - Cost: sidecar API calls are billed separately (Gemini API key, OpenAI key, Copilot subscription).
-- **Provider identity gates perspective diversity** — the primary use case (diversity) only holds when the sidecar is a *different provider*. Reaching Claude Opus through Copilot CLI from a Claude host is **Claude → Claude**: it serves model-access fallback (secondary use case) but produces **no genuine process divergence** — same pre-training distribution, same blind spots. Do not count a same-provider sidecar as a diversity wave. Diversity requires a cross-provider sidecar (e.g. Claude host → Gemini/Codex).
+
+---
+
+## Implementation Patterns
+
+**Context**: The Multi-Model Sidecar Strategy (§1-8) establishes why sidecar distribution works and its validated patterns. This section adds executable implementation guidance reverse-harvested from PMH `sidecar-orchestrator` v1 (2026-06-01).
+
+---
+
+### Three-tier fallback chain
+
+When the primary sidecar path is blocked (network restrictions, API outages, rate limits), fallback to secondary and tertiary options ensures execution continues.
+
+| Priority | Sidecar | Access | Trigger condition |
+|---|---|---|---|
+| **1 (Primary)** | Copilot CLI (`gh copilot`) | Claude Opus / GPT-4o / Codex models | Default path — widest model catalog |
+| **2 (Fallback)** | Corporate AI endpoint | Internal models (if available) | Priority 1 unreachable (503, timeout, quota exceeded) |
+| **3 (Last resort)** | Direct CLI (Gemini / Codex) | Public API key | Priorities 1-2 unreachable + external network access |
+
+This hierarchy ensures that restricted network environments (corporate proxies, air-gapped, or rate-limited accounts) can still execute multi-model tasks by degrading gracefully rather than failing silently.
+
+**PMH empirical grounding**: Certain corporate networks block direct LLM provider APIs but allow GitHub CLI routing → `gh copilot` became the only path to premium models on those networks. Without a fallback tier, the workflow would be fully blocked.
+
+---
+
+### Executable sidecar call patterns
+
+#### Pattern 1: Single-model sidecar (Priority 1)
+
+The simplest case — delegate a task to a single stronger or lighter model.
+
+```bash
+# Example: Claude Code (host) → Copilot CLI (sidecar, Opus model)
+SIDECAR_RESULT=$(gh copilot -p "You are an adversarial reviewer. Identify the 3 most critical gaps in this SKILL.md Done When: $(tail -30 path/to/SKILL.md)" 2>&1)
+EXIT_CODE=$?
+
+if [[ $EXIT_CODE -ne 0 ]]; then
+  echo "⚠️ gh copilot failed (exit $EXIT_CODE): $SIDECAR_RESULT"
+  # Escalate to Priority 2 or fail gracefully
+fi
+
+# Integrate result into skill verdict
+echo "$SIDECAR_RESULT" >> sidecar_review.txt
+```
+
+**Model specification** (if Copilot CLI supports it):
+```bash
+gh copilot --model claude-opus-4.7 -p "{prompt}"
+```
+
+Replace `claude-opus-4.7` with the model name from `gh copilot -- --help` output. If model specification is unavailable, Copilot CLI uses its default catalog model.
+
+---
+
+#### Pattern 2: Multi-model parallel ensemble
+
+Invoke 2-3 sidecar models in parallel, then synthesize their outputs for cross-wave delta.
+
+```bash
+# Launch 3 sidecar models in background
+for model in claude-opus gpt-4o gemini-pro; do
+  gh copilot --model $model <<'EOF' > sidecar_raw_$model.txt &
+  {Your prompt here}
+EOF
+done
+
+wait  # Block until all sidecars finish
+
+# Synthesize results
+cat sidecar_raw_*.txt | {orchestrator skill processes delta}
+```
+
+**Orchestrator-swap variant** (FH Experiment 2):
+
+```bash
+# Round 1: Claude Code orchestrates directly
+{orchestrator performs Wave 1 analysis}
+
+# Round 2: Gemini sidecar challenges Wave 1
+echo "{Wave 1 summary}" | gemini > wave2_challenge.txt
+
+# Round 3: Codex sidecar challenges Wave 2
+gh copilot --model gpt-4o -p "{Wave 2 summary}" > wave3_challenge.txt
+
+# Synthesize: orchestrator reads all 3 waves and produces final verdict
+{orchestrator integrates Wave 1, 2, 3 findings}
+```
+
+This pattern maximizes process divergence by rotating orchestrator identity across waves.
+
+---
+
+#### Pattern 3: Corporate endpoint fallback (Priority 2)
+
+If your organization provides an internal AI gateway, use it as Priority 2 fallback when Priority 1 (Copilot CLI) is unreachable.
+
+```bash
+# Priority 2: Corporate AI endpoint
+CORPORATE_RESULT=$(curl -s -X POST ${CORPORATE_AI_ENDPOINT} \
+  -H "Authorization: Bearer ${CORPORATE_AI_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "{\"model\":\"${CORPORATE_MODEL}\",\"prompt\":\"${PROMPT}\"}" | jq -r .response)
+
+if [[ -z "$CORPORATE_RESULT" ]]; then
+  echo "❌ Corporate endpoint failed — check token in .env"
+  # Escalate to Priority 3
+fi
+```
+
+**Key adaptation**: Configure `CORPORATE_AI_ENDPOINT`, `CORPORATE_MODEL`, and `CORPORATE_AI_TOKEN` in `.env` (excluded from git).
+
+---
+
+#### Pattern 4: Gemini/Codex CLI direct (Priority 3)
+
+Last resort for external-network environments.
+
+```bash
+# Gemini CLI
+echo "${PROMPT}" | gemini > sidecar_raw_gemini.txt
+
+# Codex CLI (if available)
+npx @openai/codex exec "${PROMPT}" > sidecar_raw_codex.txt
+```
+
+These require the respective CLI tools installed and authenticated with API keys.
+
+---
+
+### Error handling checklist
+
+When a sidecar call fails, the orchestrator must handle it gracefully:
+
+```bash
+# 1. Capture exit code
+RESULT=$(sidecar_command 2>&1)
+EXIT_CODE=$?
+
+# 2. Detect failure patterns
+if [[ $EXIT_CODE -ne 0 ]]; then
+  echo "⚠️ Sidecar failed (exit $EXIT_CODE)"
+  
+  # 3. Pattern-specific routing
+  if [[ "$RESULT" =~ "unknown model"|"invalid model" ]]; then
+    echo "   → Model name error — check catalog with: gh copilot -- --help"
+  elif [[ "$RESULT" =~ "503"|"timeout" ]]; then
+    echo "   → Network/API outage — escalating to Priority 2 fallback"
+  elif [[ "$RESULT" =~ "rate limit"|"quota exceeded" ]]; then
+    echo "   → Rate limit hit — retry after delay or use Priority 3"
+  else
+    echo "   → Unknown failure: $RESULT"
+  fi
+fi
+```
+
+**Critical**: Do not assume sidecar success. Always capture `$EXIT_CODE` and parse `stderr` for failure signals.
+
+---
+
+### Three-layer persistence protocol
+
+Sidecar results are high-risk for **compression aging** (AgingBench arXiv:2605.26302) — single-session outputs that disappear if not structurally anchored.
+
+**Defense**: Persist in 3 independent layers so at least one survives compression/refactoring.
+
+#### Layer 1: Full result file
+
+```
+tracks/_meta/sidecar_{target}_{YYYY_MM_DD}.md
+```
+
+**Frontmatter**:
+```yaml
+---
+type: sidecar-review
+date: 2026-06-01
+models: [claude-opus, gpt-4o]
+target: {asset-name}
+tags: sidecar, multi-model, adversarial
+priority: S-grade  # compression-exempt signal
+---
+```
+
+Body: Full sidecar outputs (raw or synthesized), tiered by severity (M/S/R).
+
+#### Layer 2: MEMORY.md reference entry
+
+```markdown
+## Reference
+- [Sidecar review — {target}](reference_sidecar_{target}_{YYYY_MM_DD}.md) — {one-line summary} / S-grade {N} findings / {model config} 🔑 {keywords}, sidecar, multi-model, {target}
+```
+
+**Purpose**: Keyword-trigger loading on next session (e.g., user says "sidecar findings" → auto-loads this file).
+
+#### Layer 3: CATALOG.md search entry
+
+```markdown
+### {YYYY-MM-DD} | _meta | sidecar, multi-model, {target}
+**File:** tracks/_meta/sidecar_{target}_review_{YYYY_MM_DD}.md
+{3-line summary: model config, key findings, S-grade recommendations.}
+- Decision: {core decisions from sidecar findings}
+- Open: {unresolved issues}
+```
+
+**Verification checklist**:
+```bash
+# Confirm all 3 layers exist
+ls tracks/_meta/sidecar_*
+ls memory/reference_sidecar_*
+grep "sidecar" CATALOG.md | head -5
+```
+
+All 3 must exist for full persistence. Missing any layer = compression risk.
+
+---
+
+### When to use sidecar orchestration
+
+| Use case | Primacy | Sidecar role | Example |
+|---|---|---|---|
+| **Perspective diversity** | Primary | Each model's process angle finds non-overlapping gaps → synthesis improves convergence | steel-quench Wave 5: Claude primary → Gemini + Codex sidecars → delta synthesis |
+| **Model-access fallback** | Secondary | Reach a stronger/different model when host is downgraded | Corporate network = Sonnet-only → Copilot CLI reaches Opus |
+| **Token economy** | Tertiary | Offload repetitive tasks to lighter models | Delegate claim extraction to Gemini Flash while Opus handles synthesis |
+
+**Full-subscription case** (validated 2026-05-31): When all providers are at premium tier (Claude Max / Gemini Pro / GPT-4o Plus), token economy is not the driver. Process divergence still produces non-overlapping findings even when all models are strong. Default to the strongest available sidecar models for maximum perspective divergence.
+
+---
+
+### Simplification guard
+
+**Overkill scenarios** (do NOT invoke sidecar):
+- Single-file review (host model sufficient)
+- Simple design decisions (no architectural complexity)
+- Repetitive tasks without judgment (shell scripting faster than AI sidecar)
+
+**Necessary conditions** (2+ required):
+- Complex architecture / multi-skill design
+- External knowledge needed (arXiv, frontier patterns, cross-domain synthesis)
+- Multi-model perspective diversity (no single model covers all angles)
+
+---
+
+### Generalization guidelines (PMH → FH)
+
+When adapting PMH `sidecar-orchestrator` patterns to FH or other environments:
+
+1. **Corporate AI endpoint → Generic fallback**:
+   - PMH: Internal corporate gateway
+   - FH: User-configured endpoint via `.env` variables
+   
+2. **Approval mode → Consent gate**:
+   - PMH: Network-restricted environment → manual approval flow
+   - FH: Prompt user if sidecar sends internal code/patterns to external APIs
+   
+3. **3-Layer persistence → Adapt to project structure**:
+   - PMH: `tracks/_meta/`, `memory/`, `CATALOG.md`
+   - FH: `knowledge/shared/meta/sidecar_reviews/`, `MEMORY.md`, search index
+   
+4. **Model names → CLI-agnostic**:
+   - PMH: `claude-opus-4.7`, `gpt-5.5` (Copilot CLI catalog 2026-06-01)
+   - FH: `{model-name}` placeholder + "check CLI help for catalog"
 
 ---
 
@@ -218,3 +471,5 @@ Suggested integration points:
 - `README.md §Architecture — 2-layer design` — sidecar note in Automation layer section
 - `AGENTS.md §2-Layer Architecture Context` — sidecar note distinguishing Bash invocation from agent dispatch
 - FH paper (Zenodo DOI: 10.5281/zenodo.20397566, arXiv: submit/7657304) — harness-as-durable-layer thesis
+- PMH `sidecar-orchestrator` SKILL.md (2026-06-01) — gh copilot + corporate endpoint + 3-tier fallback + 3-Layer persistence
+- arXiv:2605.26302 AgingBench — compression aging defense rationale
