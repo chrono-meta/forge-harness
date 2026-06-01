@@ -163,7 +163,7 @@ FH wraps any coding agent (OpenCode, Codex, etc.) as a **post-generation governa
 
 Full spec: `knowledge/shared/harness-core/fh_integration_contract.md` · Usage: `knowledge/shared/harness-core/fh_opencode_governance_wrapper.md`
 
-> **One-line install (coming soon)**: `npx @chrono-meta/fh-gate "src/foo.ts" quick ci` — npm publish in progress.
+> **One-line install (coming soon)**: `npx @forge-harness/fh-gate "src/foo.ts" quick ci` — npm publish in progress.
 
 ---
 
