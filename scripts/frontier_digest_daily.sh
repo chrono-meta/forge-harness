@@ -5,8 +5,9 @@
 # Required: claude CLI at ~/.local/bin/claude
 # Tool permissions: pre-approved in .claude/settings.json (no interactive prompts needed)
 
-FH_DIR="/Users/USER/PycharmProjects/forge-harness"
-CLAUDE_BIN="/Users/USER/.local/bin/claude"
+# Auto-detect repo root from this script's location (scripts/ → repo root) and the claude CLI.
+FH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CLAUDE_BIN="$(command -v claude || echo "${HOME}/.local/bin/claude")"
 TODAY=$(date +%Y_%m_%d)
 LOG_DIR="${FH_DIR}/tracks/_meta/logs"
 LOG_FILE="${LOG_DIR}/frontier_digest_${TODAY}.log"

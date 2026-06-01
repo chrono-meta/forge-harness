@@ -64,9 +64,9 @@ Apply thresholds from the table above. Output a staleness roster:
 
 ```
 STALE (>threshold):
-  - feedback_fh_push_via_rest_api.md [feedback, 45d] — push procedure may have changed
-  - arxiv-submission-status.md [project, 16d] — status fields need live check
-  - claude-chrono-upstream.md [reference, 32d] — GitHub URL check needed
+  - api-migration-notes.md [feedback, 45d] — procedure may have changed
+  - release-status.md [project, 16d] — status fields need live check
+  - upstream-tracker.md [reference, 32d] — GitHub URL check needed
 
 FRESH (<threshold):
   - user_role.md [user, 3d] — skip

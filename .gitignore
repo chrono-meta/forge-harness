@@ -27,3 +27,6 @@ tracks/**
 !tracks/**/
 !tracks/**/.gitkeep
 .codex/
+
+# Local skill registry — auto-generated per-machine scan (personal paths). Regenerated each session.
+.claude/registry/LOCAL_SKILL_REGISTRY.md
