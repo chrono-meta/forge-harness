@@ -1,5 +1,5 @@
 {
-  "name": "@forge-harness/fh-gate",
+  "name": "@chrono-meta/fh-gate",
   "version": "1.0.0",
   "description": "FH governance gate — runs structured AI code review via claude --print and returns machine-parseable verdicts (PASS/PENDING/BLOCKED/ESCALATE).",
   "license": "MIT",
