@@ -13,10 +13,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/chrono-meta/forge-harness.git"
+    "url": "git+https://github.com/chrono-meta/forge-harness.git"
   },
   "bin": {
-    "fh-gate": "./bin/fh-gate.js"
+    "fh-gate": "bin/fh-gate.js"
   },
   "scripts": {
     "prepare": "chmod +x bin/fh-gate.js scripts/fh-gate.sh"
