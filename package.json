@@ -16,10 +16,10 @@
     "url": "https://github.com/chrono-meta/forge-harness.git"
   },
   "bin": {
-    "fh-gate": "./scripts/fh-gate.sh"
+    "fh-gate": "./bin/fh-gate"
   },
   "scripts": {
-    "prepare": "chmod +x scripts/fh-gate.sh"
+    "prepare": "chmod +x bin/fh-gate scripts/fh-gate.sh"
   },
   "engines": {
     "node": ">=16"
@@ -33,6 +33,7 @@
     }
   },
   "files": [
+    "bin/fh-gate",
     "scripts/fh-gate.sh",
     "knowledge/shared/harness-core/fh_integration_contract.md",
     "README.md"
