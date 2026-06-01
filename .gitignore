@@ -10,9 +10,9 @@ context/
 # Paper — PDF regenerated from HTML; canonical version on Zenodo/arXiv
 paper/*.pdf
 
-# Unpublished paper drafts — local only. Only completed papers go public (in paper/).
-knowledge/shared/harness-core/v2_paper_draft.md
-knowledge/shared/harness-core/v2_paper_framework.md
+# Unpublished paper drafts/frameworks — local only. Only completed papers go public (in paper/).
+knowledge/shared/harness-core/*_paper_draft.md
+knowledge/shared/harness-core/*_paper_framework.md
 
 # macOS system files
 .DS_Store
