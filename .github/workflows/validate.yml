@@ -14,10 +14,10 @@ jobs:
 
       - name: Check for internal vocabulary residue
         run: |
-          echo "=== Scanning for internal vocabulary (pmh-meta, pmh-commons, 카카오, KPAP) ==="
+          echo "=== Scanning for internal vocabulary (pmh-meta, pmh-commons, 카카오, KPAP, KP-SASE) ==="
           FOUND=$(grep -r \
             -e "pmh-meta" -e "pmh-commons" \
-            -e "카카오" -e "KPAP" \
+            -e "카카오" -e "KPAP" -e "KP-SASE" \
             --include="*.md" --include="*.json" --include="*.zsh" --include="*.sh" \
             --exclude-dir=".git" \
             . 2>/dev/null | grep -v "^Binary" || true)

@@ -3,13 +3,14 @@
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <!-- Replace every /path/to/... below with your own absolute paths before installing -->
     <key>Label</key>
     <string>com.forge-harness.frontier-digest</string>
 
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/Users/akaa1941/PycharmProjects/forge-harness/scripts/frontier_digest_daily.sh</string>
+        <string>/path/to/forge-harness/scripts/frontier_digest_daily.sh</string>
     </array>
 
     <!-- Daily at 09:00 — change Hour to adjust -->
@@ -22,9 +23,9 @@
     </dict>
 
     <key>StandardOutPath</key>
-    <string>/Users/akaa1941/PycharmProjects/forge-harness/tracks/_meta/logs/launchd_out.log</string>
+    <string>/path/to/forge-harness/tracks/_meta/logs/launchd_out.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/akaa1941/PycharmProjects/forge-harness/tracks/_meta/logs/launchd_err.log</string>
+    <string>/path/to/forge-harness/tracks/_meta/logs/launchd_err.log</string>
 
     <key>RunAtLoad</key>
     <false/>
@@ -32,9 +33,9 @@
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/Users/akaa1941/.local/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <string>/path/to/home/.local/bin:/usr/local/bin:/usr/bin:/bin</string>
         <key>HOME</key>
-        <string>/Users/akaa1941</string>
+        <string>/path/to/home</string>
     </dict>
 </dict>
 </plist>
