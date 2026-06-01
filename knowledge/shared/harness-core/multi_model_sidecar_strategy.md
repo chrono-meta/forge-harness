@@ -213,8 +213,106 @@ Suggested integration points:
 
 ---
 
+## Implementation Patterns
+
+**Context**: §1–8 establish *why* sidecar distribution works and its validated patterns. This section adds *executable* implementation guidance reverse-harvested from PMH `sidecar-orchestrator` v1 (2026-06-01), generalized for any environment.
+
+> **CLI-syntax caveat**: Exact sidecar invocation flags differ by CLI and version. The forms below use FH's validated baselines (`gh copilot suggest`, `echo … | gemini`, `npx @openai/codex exec` — see §The capability). Flags such as `--model` are catalog/version-dependent — verify with the CLI's own `--help` before relying on them.
+
+### Three-tier fallback chain
+
+When the primary sidecar path is blocked (network restrictions, API outages, rate limits), degrade to secondary/tertiary options so execution continues rather than failing silently.
+
+| Priority | Sidecar | Access | Trigger condition |
+|---|---|---|---|
+| **1 (Primary)** | Copilot CLI (`gh copilot`) | Copilot model catalog | Default — widest catalog |
+| **2 (Fallback)** | Corporate AI endpoint | Internal models (if any) | Priority 1 unreachable (503, timeout, quota) |
+| **3 (Last resort)** | Direct CLI (Gemini / Codex) | Public API key | Priorities 1–2 unreachable + external network OK |
+
+**PMH empirical grounding**: some corporate networks block direct LLM-provider APIs but allow GitHub CLI routing → `gh copilot` was the only path to premium models there. Without a fallback tier the workflow blocks entirely.
+
+### Executable patterns
+
+**Pattern 1 — Single-model sidecar**
+```bash
+SIDECAR_RESULT=$(gh copilot suggest "Adversarial reviewer: 3 most critical gaps in this Done When: $(tail -30 path/to/SKILL.md)" 2>&1)
+EXIT_CODE=$?
+[[ $EXIT_CODE -ne 0 ]] && echo "⚠️ sidecar failed (exit $EXIT_CODE): $SIDECAR_RESULT"   # escalate or fail gracefully
+```
+Model selection, if the CLI exposes it, is catalog-dependent — check `gh copilot --help`.
+
+**Pattern 2 — Cross-provider parallel ensemble** (real diversity comes from *distinct providers*, not one router)
+```bash
+echo "$PROMPT" | gemini          > raw_gemini.txt  2>&1 &
+npx @openai/codex exec "$PROMPT"  > raw_codex.txt   2>&1 &
+gh copilot suggest "$PROMPT"      > raw_copilot.txt 2>&1 &
+wait                                                          # block until all sidecars finish
+# orchestrator synthesizes cross-wave delta from raw_*.txt
+```
+> Routing the *same* provider twice (e.g. Claude → Claude via Copilot) is model-access fallback, **not a diversity wave** — same pre-training, same blind spots (see §Boundaries). For divergence, use genuinely different providers.
+
+**Orchestrator-swap variant** (FH Experiment 2): rotate orchestrator identity across waves — host runs Wave 1, a different-provider sidecar challenges Wave 1, a third challenges Wave 2, then the host synthesizes all three.
+
+**Pattern 3 — Corporate endpoint fallback (Priority 2)**
+```bash
+CORPORATE_RESULT=$(curl -s -X POST "${CORPORATE_AI_ENDPOINT}" \
+  -H "Authorization: Bearer ${CORPORATE_AI_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "{\"model\":\"${CORPORATE_MODEL}\",\"prompt\":\"${PROMPT}\"}" | jq -r .response)
+[[ -z "$CORPORATE_RESULT" ]] && echo "❌ corporate endpoint failed — check token in .env"   # escalate to Priority 3
+```
+Configure `CORPORATE_AI_ENDPOINT` / `CORPORATE_MODEL` / `CORPORATE_AI_TOKEN` in `.env` (git-excluded).
+
+**Pattern 4 — Direct Gemini/Codex CLI (Priority 3)**
+```bash
+echo "${PROMPT}" | gemini         > raw_gemini.txt
+npx @openai/codex exec "${PROMPT}" > raw_codex.txt
+```
+Requires the respective CLI installed and authenticated.
+
+### Error-handling checklist
+
+```bash
+RESULT=$(sidecar_command 2>&1); EXIT_CODE=$?
+if [[ $EXIT_CODE -ne 0 ]]; then
+  echo "⚠️ sidecar failed (exit $EXIT_CODE)"
+  if   [[ "$RESULT" =~ "unknown model"|"invalid model" ]]; then echo "   → model name error — check catalog: gh copilot --help"
+  elif [[ "$RESULT" =~ "503"|"timeout" ]];                 then echo "   → network/API outage — escalate to Priority 2"
+  elif [[ "$RESULT" =~ "rate limit"|"quota exceeded" ]];   then echo "   → rate limited — retry after delay or use Priority 3"
+  else echo "   → unknown failure: $RESULT"; fi
+fi
+```
+**Critical**: never assume sidecar success — always capture `$EXIT_CODE` and parse `stderr` for failure signals.
+
+### Three-layer persistence protocol
+
+Sidecar results are high-risk for **compression aging** (AgingBench, arXiv:2605.26302) — single-session outputs that vanish if not structurally anchored. Persist in 3 independent layers so at least one survives compression/refactoring:
+
+1. **Full result file** — `tracks/_meta/sidecar_{target}_{YYYY_MM_DD}.md` with frontmatter (`type: sidecar-review`, `models`, `target`, `priority`) + tiered findings (M/S/R).
+2. **Memory reference entry** — one keyword-tagged line in the durable memory store (`~/.claude/.../memory/`) so next session auto-loads on keyword trigger.
+3. **CATALOG search entry** — 3-line summary + Decision/Open, pointing at the Layer-1 file.
+
+Missing any layer = compression risk. (Path conventions adapt per project — see Generalization below.)
+
+### When NOT to invoke (simplification guard)
+
+**Skip the sidecar** for: single-file review (host sufficient), simple design decisions (no architectural complexity), repetitive non-judgment tasks (shell faster than an AI sidecar). **Invoke** only when 2+ hold: complex/multi-skill architecture · external knowledge needed (arXiv, frontier, cross-domain) · genuine multi-model perspective diversity required.
+
+> For *when to distribute by value tier* (perspective diversity / model-access / token economy), the canonical guidance is §When to distribute above — not repeated here.
+
+### Generalization guidelines (PMH → FH)
+
+1. **Corporate endpoint → generic fallback**: PMH internal gateway → user-configured `.env` endpoint.
+2. **Approval mode → consent gate**: prompt the user before a sidecar sends internal code/patterns to an external API.
+3. **Persistence paths → project structure**: PMH `tracks/_meta/`·`memory/`·`CATALOG.md` → adapt to the host project's equivalents.
+4. **Model names → CLI-agnostic**: replace pinned names (`claude-opus-4.x`, `gpt-5.x`) with `{model-name}` placeholders + "check CLI help for catalog".
+
+---
+
 ## References
 
 - `README.md §Architecture — 2-layer design` — sidecar note in Automation layer section
 - `AGENTS.md §2-Layer Architecture Context` — sidecar note distinguishing Bash invocation from agent dispatch
 - FH paper (Zenodo DOI: 10.5281/zenodo.20397566, arXiv: submit/7657304) — harness-as-durable-layer thesis
+- PMH `sidecar-orchestrator` SKILL.md (2026-06-01) — gh copilot + corporate endpoint + 3-tier fallback + 3-layer persistence
+- arXiv:2605.26302 AgingBench — compression aging defense rationale
