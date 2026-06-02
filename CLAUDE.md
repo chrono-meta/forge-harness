@@ -103,6 +103,8 @@ Simplification guard: trivial denials with one obvious fix → state block + sin
 
 **4-step summary**: ① Auto-read CLAUDE.md + CATALOG + session card + registry scan → ② One-line proposal (new user / exploratory / returning branches) → ③ 5-skill cascade (plugin-recommender → synergy → .claudeignore → model → verify) → ④ Approval + setup
 
+**Identity marker**: every greeting response (Step ②) opens with 🐿️ on its own line. FH's session-start signal — see `fh_detail_protocols.md` Step 2 for full greeting templates.
+
 **Guards**: explicit task-entry utterance → skip onboarding · once per session · code/debug requests → start working directly · project routing is a suggestion, mention at most once
 
 ## New Skill Creation Pre-Commit Gate
