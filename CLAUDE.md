@@ -96,93 +96,13 @@ Simplification guard: trivial denials with one obvious fix → state block + sin
 
 ## Active Onboarding Protocol (User Greeting → AI Initiative)
 
-When a user gives a **greeting or session-start** utterance in a forge-harness install environment, the AI enters active initiative mode. This directly implements the mission: *"Easy and effortless — faster development, less setup friction, more automation, fewer tokens wasted."*
+> **Full 4-step detail**: `knowledge/shared/harness-core/fh_detail_protocols.md` — read when executing the onboarding flow.
 
-### Trigger Conditions
+**Triggers**: greetings (`hi`/`hello`/`hey`) · start intent (`resume`, `continue`, `where were we`) · new task (`new project`, `new task`) · discovery (`what is this`, `what can you do`, `first time here`)
 
-The following utterance patterns activate this mode automatically:
-- Simple greetings: `hi`, `hello`, `hey`
-- Start intent: `let's start`, `resume`, `continue`, `where were we`
-- New task signal: `new project`, `new task`, `what should we do`
-- Unmapped state: first utterance immediately after forge-harness install (no active tracks)
-- **Exploratory / discovery** (new or infrequent users): `what is this`, `what can you do`, `how do I use this`, `introduce yourself`, `what's available`, `first time here`
-- **Identity questions**: `what is this`, `where do I start`, `explain this`
+**4-step summary**: ① Auto-read CLAUDE.md + CATALOG + session card + registry scan → ② One-line proposal (new user / exploratory / returning branches) → ③ 5-skill cascade (plugin-recommender → synergy → .claudeignore → model → verify) → ④ Approval + setup
 
-### Processing Steps (4-Step)
-
-#### Step 1 — Auto Read + Duplicate Install Detection
-
-**1-a. Auto read**:
-- `CLAUDE.md` (this file) · `CATALOG.md` · active track directory (if present) · `reference_next_session_starter` (if present)
-
-**1-b. Duplicate install detection in the same root** (to prevent double installation):
-
-- Scan parent directory (`../`) of the forge-harness cwd for:
-  - `forge-harness*` (multiple forge-harness clones)
-  - `*-meta-harness` or `meta-harness-*` (sibling harness variants)
-  - `*-harness` or `*-hub` (sibling hub assets)
-- Search command: `ls ../ | grep -iE '(forge-harness|meta-harness|-harness|-hub)'`
-- **Known non-managed clones** (suppress report if detected):
-  - `harness_framework` — reference clone, not managed by forge-harness
-- Report catch results to user + determine branch:
-  - **Existing forge-harness install detected**: *"forge-harness is already installed at `~/projects/[existing-path]`. Would you like to: (a) Use the existing install / (b) Proceed with this new install / (c) Archive the old one and use this install?"*
-  - **Sibling assets detected**: Notify user + present synergy path (e.g., if a hub is found, offer cross-link guidance)
-  - **0 catches**: Continue with baseline flow (proceed to Step 2)
-- Simplification guard: If user explicitly signals new install intent (e.g., *"start fresh"*), skip and continue.
-
-**1-c. Auto-discovery of local project skills** (cross-project skill bus):
-
-Check `.claude/registry/LOCAL_SKILL_REGISTRY.md` — if exists and modified within 7 days, load it; otherwise regenerate:
-```bash
-find ~/projects -path "*/.claude/skills/*/SKILL.md" -not -path "*/forge-harness/*" 2>/dev/null
-```
-Group by project → update registry (date, path, one-line summary). When a request maps to a registry skill, suggest: *"[Project] has `[skill]`. Run it inline, or switch to that project's cwd?"*
-
-Simplification guard: Skip if 0 results. Scan and load once per session.
-
-#### Step 2 — Active Proposal (One-Line Question)
-
-**New user branch — when no active track file was found in Step 1-a (empty tracks/ or no session files)**:
-> *"Looks like you're new here! Do you have a project you'd like to connect? Say 'connect a project', or you can jump straight into a task."*
-
-If this condition applies, use the above message instead of the default proposal below, then proceed to Step 3. New user detection: `ls tracks/` returns an empty directory or `find tracks -name "session_*.md"` returns 0 results.
-
-**Exploratory / discovery trigger detected — prepend 2-sentence self-introduction**:
-> *"forge-harness is a tool hub for rapidly setting up Claude Code projects. It supports plugin recommendations, project setup, and harness diagnostics. What would you like to work on?"*
-
-**Default (returning / existing user)**:
-> *"What task or project would you like to start? (e.g., 'Spring Boot API development', 'React component refactoring', 'write a new report', 'continue existing [X] track')"*
-
-After mapping and awakening, add:
-> *"Would you like to continue with the active track [X], or start a new task?"*
-
-**Do not expose internal code names**: Do not insert internal project names directly into `[X]`. If the user context is not confirmed, use action-oriented descriptions — "continue existing work", "start a new task", "install a tool".
-
-#### Step 3 — 5-Skill Cascade Based on User Response
-
-**Step 3-0. New Project Setup** *(when user says "new project", "new task")*: confirm name → `mkdir -p tracks/{project_name}` → recommend `.claudeignore` copy → enter Step 3-1. Guard: if `tracks/{name}/` exists, jump to Step 3-1 directly.
-
-| # | Skill | Trigger |
-|:--:|---|---|
-| 1 | `plugin-recommender` | Always on new task entry |
-| 2 | `cross-ecosystem-synergy-detection` | After plugin candidates found |
-| 3 | `.claudeignore` proposal | New project mapping |
-| 4 | Model switching guidance | After analyzing task nature |
-| 5 | `verify-bidirectional` · `harvest-loop` | Emerge naturally during work |
-
-#### Step 4 — User Approval → Actual Setup
-Plugin install · skill pre-activation · `.claudeignore` copy (on approval) · model switch guidance.
-
-#### Step 5 — Project cwd Option (Not Forced)
-> *"Setup complete. Switching to the project cwd gives easier file access. You're also welcome to keep working here."*
-
-### Timing / Code Requests
-- Pre-mapping: mapping + recommendation simultaneously. Post-mapping: recognize active track + augment.
-- Code/debug requests from FH cwd → **start working directly**. Project routing is a suggestion, not a mandate — mention at most once after the task if files are spread across the project.
-
-### Simplification Guards
-- Explicit task-entry utterance → skip onboarding, enter task directly
-- Once per session (no repetition) · on user refusal, switch to standard mode immediately
+**Guards**: explicit task-entry utterance → skip onboarding · once per session · code/debug requests → start working directly · project routing is a suggestion, mention at most once
 
 ## New Skill Creation Pre-Commit Gate
 
@@ -311,64 +231,18 @@ Based on LOCAL_SKILL_REGISTRY (Step 1-c), **propose and connect skills from othe
 
 ## FH Improvement Signal Recording Protocol
 
-**Purpose**: Record harness improvement candidates discovered during FH sessions so that the hub automatically recognizes them at the next session start — keeping the FH development loop running without requiring manual re-triggering.
+> **Full format + template**: `knowledge/shared/harness-core/fh_detail_protocols.md` — read when creating a signal file.
 
-### Recording Triggers (any of the following)
-- User shows confusion, retries, or corrections (friction points in onboarding/skills/rules)
-- User proposes an improvement, or AI self-detects a skill/rule limitation
-- A new pattern is judged worthy of being registered in FH skills/CLAUDE.md
+**Triggers**: user confusion/retries · user proposes improvement · AI self-detects skill/rule limitation · new FH-worthy pattern discovered
 
-### Recording Method
-
-Create file: `~/projects/your-hub/tracks/_meta/fh_signal_{YYYY_MM_DD}_{source}.md`
-
-`{source}` = based on current working cwd (e.g., `project-a` · `project-b` · `fh-direct`)
-
-```markdown
----
-type: fh-signal
-date: YYYY-MM-DD
-source: {source}
-priority: high|medium|low
----
-# FH Improvement Signal — {date} ({source})
-
-## Friction Point
--
-
-## FH Registration Candidate
--
-
-## Status
-- [ ] Pending hub review
-```
-
-### Simplification Guards
-- 1 file per session (append to existing file if same date and source)
-- Exclude minor typos and simple slip-ups — structural improvement candidates only
-- Exclude issues resolved immediately within the session
+**Method**: create `tracks/_meta/fh_signal_{YYYY-MM-DD}_{source}.md` (1 file/session, append if same date+source). Structural candidates only — exclude typos and in-session-resolved issues.
 
 ## Execution Tier Settings
 
-Select the execution tier based on token cost and task scope. **forge-harness default: standard**.
+> **Full tier table + config**: `knowledge/shared/harness-core/fh_detail_protocols.md` — read when selecting a non-default tier.
 
-| Tier | Name | Tokens | Comparative Effect |
-|:---:|---|---:|---|
-| **S** | light | ~5K | Single agent orchestration + context alignment. Fewer errors vs. unassisted |
-| **M** | standard | ~15K | **FH default — 80% effect at 25% token cost.** Orchestration, recording, and proposal automation |
-| **L** | full | ~30K | Complex cross-project tasks + pattern harvesting. Additional depth vs. standard |
-| **XL** | max | ~60K+ | Full harness evolution cycle. Reserved for architecture decisions and session wrap-up rounds |
-
-**forge-harness is not meant to use more tokens** — even at standard tier, it delivers meaningful improvements (missed detections, automatic recording, next-action proposals) while minimizing token usage.
-
-### Configuration
-
-```yaml
-# Project CLAUDE.md or .claude/settings.json
-EXECUTION_TIER: standard   # light / standard / full / max
-```
-
-Temporary change within session: Say "use light mode for this one" or "switch to max" — applies to current session only.
+**Default: standard (~15K tokens).** Temporary change: say "use light mode" or "switch to max" in session.
+Tiers: S=light(~5K) · M=standard(~15K, FH default) · L=full(~30K) · XL=max(~60K+)
 
 ---
 
