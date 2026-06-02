@@ -301,7 +301,7 @@ The following require the bridge layer and are out of scope for v0.1:
 
 | Feature | Why deferred |
 |---|---|
-| Binary / installable package | FH is methodology layer; no runtime distribution yet |
+| REST API or webhook | Would require a server process — FH is file-based |
 | REST API or webhook | Would require a server process — FH is file-based |
 | Streaming verdict updates | Requires runtime; methodology layer is synchronous |
 | Multi-file parallel governance | Possible via agent dispatch today; not formalized here |
@@ -316,6 +316,8 @@ The bridge layer (v1.0) will implement these. This contract is the specification
 | Version | Date | Change |
 |---|---|---|
 | v0.1 | 2026-05-31 | Initial specification. Bash invocation patterns + structured verdict format. Empirical basis: arity.ts controlled trial. |
+| v1.0 | 2026-06-01 | Binary available as `@chrono-meta/fh-gate` on npm. JS wrapper + fh-gate.sh CI-ready binary. |
+| v1.1 | 2026-06-03 | Large-scale harness improvements. Banner update. Version alignment. |
 
 ---
 
@@ -323,6 +325,6 @@ The bridge layer (v1.0) will implement these. This contract is the specification
 
 - `fh_opencode_governance_wrapper.md` — step-by-step usage guide (less formal, more tutorial)
 - `fh_ecosystem_positioning.md` — ecosystem context + synergy map + v2 paper connection
-- `tracks/_meta/fh_opencode_governance_experiment_2026_05_31.md` — empirical basis for verdict format
+- `tracks/_meta/` — governance logs written here on each gate run
 - `multi_model_sidecar_strategy.md` — multi-model orchestration (related pattern)
 - FH paper (Zenodo: 10.5281/zenodo.20397566) — harness-as-durable-layer thesis this contract operationalizes
