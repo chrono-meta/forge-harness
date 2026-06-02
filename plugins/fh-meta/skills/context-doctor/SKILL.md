@@ -141,6 +141,13 @@ wc -l memory/MEMORY.md 2>/dev/null
 
 # memory/*.md files exceeding 30K
 find memory -name "*.md" -size +30k 2>/dev/null | xargs wc -l | sort -rn | head -10
+
+# SKILL.md files > 300 lines with no SKILL_detail.md (skill-splitter candidates)
+find plugins -name "SKILL.md" 2>/dev/null | while read f; do
+  lines=$(wc -l < "$f")
+  detail=$(dirname "$f")/SKILL_detail.md
+  [ "$lines" -gt 300 ] && [ ! -f "$detail" ] && echo "[skill-splitter candidate] $f ($lines lines)"
+done
 ```
 
 **Audit thresholds + prescriptions**:
@@ -150,6 +157,7 @@ find memory -name "*.md" -size +30k 2>/dev/null | xargs wc -l | sort -rn | head 
 | CLAUDE.md | Exceeds 300 lines | Section-by-section compression / move completed sections to archive |
 | MEMORY.md | Exceeds 180 lines | Check entry count + move `✅ CLOSED` items to archive section |
 | memory/*.md single file | Exceeds 30K (300 lines) | Suggest splitting accumulated history into separate files |
+| SKILL.md (any) | > 300 lines AND no SKILL_detail.md | Propose `/skill-splitter` — governance-semantic split (not compression); compression removes content, splitting routes it on-demand |
 
 Audit result report format:
 ```
@@ -299,6 +307,7 @@ context-doctor (token/context) · harness-doctor (structure) · sim-conductor (s
 |---|---|
 | Want to also check structure after resolving token waste | `/harness-doctor` |
 | Want to validate prescription results from external user perspective | `/sim-conductor Area A` |
+| SKILL.md diagnosed as over-loaded (> 300 lines, no SKILL_detail.md) | `/skill-splitter` — governance-semantic split |
 | All three skills mentioned simultaneously | Three-Doctor Loop circuit activated — diagnosis→prescription→re-diagnosis cycle
 
 ## Done When
@@ -317,3 +326,4 @@ context-doctor (token/context) · harness-doctor (structure) · sim-conductor (s
 **→ Three-Doctor Loop chain (auto-propose after diagnosis):**
 - Prescription modifies SKILL.md / rules / CLAUDE.md → **propose `/harness-doctor`** re-check after fix (structural integrity)
 - Prescription addresses user-facing context (onboarding, README, install guides) → **propose `/sim-conductor Area A`** (external user impact validation)
+- SKILL.md detected as over-loaded → **auto-propose `/skill-splitter`**: `"I see [skill-name] SKILL.md is [N] lines with no SKILL_detail.md. Want me to run /skill-splitter to do a governance-semantic split?"`
