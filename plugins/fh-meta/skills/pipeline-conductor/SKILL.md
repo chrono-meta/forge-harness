@@ -113,20 +113,33 @@ Proceed? (Y: run / N: cancel)
 
 ---
 
-## Step 0.5. return-path-gate — Pre-flight Chain Audit (optional)
+## Step 0.5. return-path-gate — Pre-flight Chain Audit
 
-> Recommended when scope includes core pipeline skills. Skip if return-path-gate is not installed or scope is a single non-pipeline skill.
+> Skip if return-path-gate is not installed or scope is a single non-pipeline skill.
 
-Run `/return-path-gate --skill [scope]`. If HIGH severity OPEN chains are found in scope:
+Run `/return-path-gate --skill [scope]`.
+
+| return-path-gate result | Step 0.5 verdict | Chain behavior |
+|---|---|---|
+| 0 OPEN chains | `PASS` | Proceed |
+| MEDIUM/LOW severity OPEN chains only | `CONDITIONAL_PASS` | Proceed; capture in Pending |
+| 1+ HIGH severity OPEN chains | `FAIL` | **Halt sweep** — fix chains before running pipeline |
+
+**On FAIL (HIGH severity OPEN chains)**:
 
 ```
 [Step 0.5 — return-path-gate]
-  Verdict: CONDITIONAL_PASS
-  Basis:   HIGH severity OPEN chains detected — sweep may produce unreliable inter-step verdicts
-  Open:    [list of OPEN chains]
+  Verdict: FAIL
+  Basis:   HIGH severity OPEN chain(s) — inter-step verdicts unreliable with broken chains
+  Open:    [list of OPEN chains with severity]
+
+Fix OPEN chains then re-run pipeline-conductor.
+Skip? (S: override gate — records as degraded, disqualifies CLEAN (--full) status)
 ```
 
-Proceed with the sweep regardless — Step 0.5 is advisory, not a chain blocker. OPEN chain findings are captured in the final report's Pending section.
+`S` (skip) is available but must be declared explicitly. Skipping records as `degraded: return-path-gate (user override)` in the final report and the sweep cannot reach `CLEAN (--full)` status regardless of subsequent step verdicts.
+
+**On CONDITIONAL_PASS (MEDIUM/LOW only)**: Capture OPEN chains in Pending. Continue to Step 1.
 
 ---
 
@@ -304,7 +317,7 @@ pipeline-conductor — Sweep Report
   Branch: {branch}
   Date:   {YYYY-MM-DD}
 
-  Step 0.5 — return-path-gate:       {PASS / CONDITIONAL_PASS / SKIPPED}
+  Step 0.5 — return-path-gate:       {PASS / CONDITIONAL_PASS / FAIL / SKIPPED / degraded}
   Step 1   — harvest-loop:           {PASS / CONDITIONAL_PASS / FAIL / ESCALATE / SKIPPED}
   Step 2   — steel-quench:           {verdict}
   Step 3   — source-grounding-audit: {verdict}
@@ -402,7 +415,7 @@ complexity_routing:
 
 ```
 Step 0 scope confirmed and scope translation table applied
-+ Step 0.5 return-path-gate pre-flight completed or explicitly skipped
++ Step 0.5 return-path-gate pre-flight: PASS / CONDITIONAL_PASS / FAIL (halts sweep) / explicitly skipped / degraded (user override)
 + All in-scope steps executed and verdicts emitted
 + Aggregated report output (Step 5 format)
 + Report saved to tracks/_meta/ (or skip warning issued)
