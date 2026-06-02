@@ -1,5 +1,5 @@
 ---
-description: When the user requests "connect a project" or similar, automatically scans parent directories for candidates and handles the full 5-step flow: discovery, filtering, confirmation, mapping, and summary report.
+description: When the user requests "connect a project" or similar, automatically scans parent directories for candidates and handles the 5-step mapping flow (discovery, filtering, confirmation, mapping, summary). Also covers §6 opt-in Full-Harness Mode ("harness-ify this project") — installs project-local harness assets from templates/.
 ---
 
 # Auto Project Mapping Protocol
@@ -61,6 +61,30 @@ Mapping complete: N projects
 - {proj-b}: tracks/proj_b/ created, hub block added to top of existing CLAUDE.md
 - {proj-c}: tracks/proj_c/ created, CLAUDE.md unchanged (user declined block addition)
 ```
+
+## 6. Full-Harness Mode (opt-in) — harness-ify the mapped project
+
+Basic mapping (steps 1–5) registers a project *lightly* (tracks/ + a starter CLAUDE.md + hub link). **Full-Harness Mode adds the project-local harness assets** — identity ① (Control Tower) propagating harness structure to a connected project; the *how* is executed via the Core Axis.
+
+**Scope**: target *mapped* projects only. For FH-self setup / acceleration baseline (zshrc, sentinels, the FH self-gate) use `/install-wizard` — do **not** run §6 on the FH hub itself. **Prerequisite**: the project is already mapped (steps 1–5); §6 is strictly additive.
+
+**Triggers**: "harness-ify this project", "full harness setup", "프로젝트 하네스화", "promote to full harness", or an opt-in prompt offered right after a basic mapping (*"Promote {project} to a full harness now?"*).
+
+**Installs (each item approval-gated · never overwrite — propose skip/merge if it exists · all from `templates/`):**
+
+| # | Item | Source → target | Effect |
+|---|---|---|---|
+| 1 | Session rules | `templates/.claude/rules/session.md` → `{project}/.claude/rules/session.md` | Session-start auto-read, backup, rule hierarchy |
+| 2 | Context filter | `templates/.claudeignore` → `{project}/.claudeignore` | Token footprint control |
+| 3 | Env card | `templates/fh_env_context.jsonc` → `{project}/.claude/rules/fh_env_context.jsonc` | Environment context for sessions |
+
+**Not installed (deliberately)**: the FH 4-axis **pre-commit gate** (`templates/.git-hooks/`) is FH-*internal* infra — it hard-codes hub paths and requires hub markers (`tracks/_meta/.axes_23_passed_*`, `tracks/_meta/edit_manifest.yaml`), so dropping it into a target project would **block that project's commits**, not help. A project-generic regression gate is a future candidate, not shipped today.
+
+**Loop linkage (honest — no autonomous daemon)**: `tracks/{project}/` (created in step 1, basic mapping) is what makes the project's **session-synced** learnings visible to the hub's `harvest-loop` weekly audit — *once the user runs the Session Sync Protocol from that project*. §6 adds project-local harness assets; it does **not** add loop automation inside the project, and the session-start cadence (frontier-digest 7d / harness-doctor 30d) runs in the **hub cwd**, not the project. "Acceleration" = the hub's compounding loop ingests the project on sync — not a process running in the project.
+
+**Report (required)**: list each item as `installed` / `skipped (exists)` / `declined`, then state: *"{project}: mapped (light) → project-local harness installed; learnings feed the hub loop on sync."*
+
+**Guards**: respects all Boundaries below (no overwrite, confirm-first). If the project already has its own `.claude/rules/`, propose side-by-side/merge — never clobber. Hub common principles outrank project rules (scope hierarchy); project-specific rules are preserved.
 
 ## Boundaries and caution
 
