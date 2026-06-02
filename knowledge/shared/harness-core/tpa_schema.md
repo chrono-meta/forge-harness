@@ -80,7 +80,7 @@ Which gates are **mandatory** vs optional for each (artifact_type × risk_level)
 | `config` | external | **MANDATORY** | optional | — |
 | `design_doc` | external | **MANDATORY** | **MANDATORY** if citations | A |
 
-**Enforcement note** (from council finding): "mandatory" means the gate BLOCKS the downstream step if skipped — not advisory. `pipeline-conductor` Step 0.5 and `return-path-gate` should treat mandatory gates as hard blockers, not warnings.
+**Enforcement note**: "mandatory" means the gate BLOCKS the downstream step if skipped — not advisory. `pipeline-conductor` Step 0.5 implements this: HIGH severity OPEN chains from `return-path-gate` = FAIL (halt sweep), not CONDITIONAL_PASS. User override available via `S` but records as `degraded` and disqualifies `CLEAN (--full)`.
 
 ---
 
