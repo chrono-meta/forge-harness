@@ -139,6 +139,8 @@ FAIL routing: First FAIL → 1 re-synthesis allowed. FAIL after re-synthesis →
 
 **6-1 SKILL.md Lifecycle**: 30+ day unused → [STALE] candidate. `pinned: true` → never touch. ≥70% overlap → merge candidate suggestion. **> 300 lines AND no `SKILL_detail.md`** → propose `/skill-splitter` (governance-semantic split — not compression; the grew-through-harvest pattern is a natural split trigger).
 
+**6-1-a Archive-candidate auto-tag**: When 0 invocations in 30 days detected (cross-check `tracks/_meta/skill_usage.md`), auto-append `#archive-candidate` tag to that skill's CATALOG.md entry. No file deletion — tag only. User reviews tagged entries at next session start.
+
 **6-2 Memory Self-Correction**: INDEX-ORPHAN (in MEMORY.md but file missing → auto-remove) · FILE-ORPHAN (file exists, not indexed → confirm with user) · MEM-STALE (30+ day unmodified → confirm with user).
 
 **Memory curator safety**: Only INDEX-ORPHAN removal is auto-allowed. Actual file deletion absolutely prohibited without explicit approval. `type: reference` items with 🔑 keywords excluded from STALE detection.

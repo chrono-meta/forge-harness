@@ -180,7 +180,7 @@ Verdict: PASS (zero S-grade, convergence reached) | CONDITIONAL_PASS (A/B-grade 
 | Attack angle is a harness structure problem | `/harness-doctor` | optional |
 | After Wave convergence, propose new pattern rules | `fh-meta:persona-innovator` | optional |
 | Wave 1 structure-specific attack (6-axis) | `fh-commons:quench-challenger` | priority |
-| Back-trace whether claims exist in source files | `/source-grounding-audit` | optional |
+| Back-trace whether claims exist in source files | `/source-grounding-audit` | **mandatory** when `phantom_risk=true` OR `scope=external` (see tpa_schema.md §Gate Routing Table) |
 
 **steel-quench → sim-conductor gate**: After Wave convergence in external-publish context, `/sim-conductor Area A` is the mandatory next step.
 
