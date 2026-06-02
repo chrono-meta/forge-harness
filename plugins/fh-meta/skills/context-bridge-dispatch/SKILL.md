@@ -53,6 +53,18 @@ Prepend the Context Card to each agent's prompt and dispatch as a single message
 {Agent's original task instruction}
 ```
 
+## Coordination-Overhead Budget
+
+Centralized multi-agent coordination is not free: external reporting cites orchestrator-worker coordination adding ~+285% token overhead (see the digest Provenance), and coordination cost dominates once a wave exceeds ~4 agents. Apply the following before each dispatch wave.
+
+| Rule | Constraint |
+|---|---|
+| **Parallel fan-out cap** | 3–4 agents per dispatch wave. This is the upper bound for the 2+ parallel dispatch in the Simplification Guard — do not flat-fan-out past 4. |
+| **Capability-aware routing** | Route each subtask to the agent whose declared capability fits, reading `.claude/registry/agent_cards.json` as the routing source (`role` + `allowed_tools` + `writes`). Do not dispatch a `writes: false` audit agent (e.g. `fact-checker`, `hub-persona-auditor`) for a task needing edits. |
+| **Escalation** | If a task genuinely needs >4 parallel agents, decompose hierarchically (supervisor → sub-waves) rather than flat fan-out. |
+
+Source: `../../../../knowledge/shared/harness-core/harness_frontier_diagnosis_2026-06-02.md`
+
 ## Step 4. Aggregate Results
 
 After all agents complete, consolidate results in the main session and report to the user.
