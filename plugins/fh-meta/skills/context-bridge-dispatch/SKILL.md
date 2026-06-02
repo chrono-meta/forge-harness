@@ -1,6 +1,6 @@
 ---
 name: context-bridge-dispatch
-description: Injects a session context card into each agent prompt before parallel dispatch, preventing context blindness when agents can only read files but not the live session history.
+description: Injects a session context card into each agent prompt before parallel dispatch, preventing context blindness. For N≥3 agents, uses DACS-inspired Registry mode — each agent receives compressed summaries of all other agents alongside its own full context card.
 user-invocable: true
 allowed-tools: ["Bash", "Read", "Write", "Agent"]
 model: sonnet
@@ -21,6 +21,7 @@ In agent dispatch, sub-agents can read files but do not have access to the live 
 
 ## Context Card Format
 
+**N≤2 (standard)**:
 ```
 [Session Context Card]
 Purpose: {the goal of this session / task}
@@ -28,6 +29,23 @@ Completed: {what has already been decided or implemented — risk of duplication
 This agent's task: {the specific task for this agent}
 Note: {constraints, directions, or history the agent must know before acting}
 ```
+
+**N≥3 (Registry mode — DACS-inspired)**:
+```
+[Session Context Card]
+Purpose: {session goal}
+Completed: {done items + file paths}
+This agent's task: {specific task}
+Note: {constraints}
+
+[Agent Registry]
+Agent-1 ({role}): {≤1 sentence — what it's doing, key files}
+Agent-2 ({role}): {≤1 sentence}
+... (all agents except this one)
+```
+
+Registry entries keep other agents visible (≤200 tokens total) without flooding context.
+Each agent gets its own full card + compressed view of the parallel picture.
 
 ## Step 1. Extract Session Context
 
@@ -42,6 +60,13 @@ For each of the N agents to dispatch:
 - Common Context Card (Step 1 summary)
 - Agent-specific item (`This agent's task` field customized per agent)
 
+**N≥3 — Registry mode**: additionally generate one Registry entry per agent:
+```
+Agent-X ({role}): {what it's doing in ≤1 sentence} | files: {key paths}
+```
+Each agent's card includes the Registry entries for all *other* agents (omit its own).
+Keep total Registry section ≤200 tokens. If an agent's task is simple (read-only lookup), its registry entry can be a single phrase.
+
 ## Step 3. Execute Parallel Dispatch
 
 Prepend the Context Card to each agent's prompt and dispatch as a single message.
@@ -52,6 +77,15 @@ Prepend the Context Card to each agent's prompt and dispatch as a single message
 
 {Agent's original task instruction}
 ```
+
+## Focus Mode (on-demand, N≥3)
+
+When an agent's result is incomplete and it signals it needs another agent's full output:
+1. Orchestrator identifies the target agent (a_i) whose full context is needed
+2. Re-dispatch the requesting agent with: full Context Card of a_i + Registry-compressed entries for all others
+3. Use only when genuinely needed — adds one round-trip latency
+
+Trigger signal from agent: `"Need full context from Agent-X to proceed"` or equivalent explicit statement.
 
 ## Coordination-Overhead Budget
 
@@ -103,11 +137,8 @@ All steps 1–4 completed
 | When agent orchestration itself is complex | `agent-composer` |
 | N≥3 agents / long-running orchestration (context drifts post-dispatch) | See sister asset: DACS (arXiv:2604.07911) — Registry+Focus dynamic isolation |
 
-## Sister Asset
+## Design Basis
 
-**DACS — Dynamic Attentional Context Scoping** (arXiv:2604.07911, Nickson Patel, 2026-04-09)
-Same problem domain (context pollution in multi-agent LLM), different resolution layer.
-- context-bridge-dispatch: pre-dispatch static injection (T=0)
-- DACS: runtime dynamic isolation, agent-triggered (T>0), empirically validated at N=3–10
-
-Cross-audit: `tracks/_audit/session_2026-06-02_dacs-sister.md`
+Registry mode and Focus mode patterns absorbed from **DACS** (arXiv:2604.07911, Nickson Patel, 2026-04-09).
+DACS validated: steering accuracy 98.4% vs 21% baseline at N=10; context efficiency 3.53×.
+Cross-audit + import/propagate analysis: `tracks/_audit/session_2026-06-02_dacs-sister.md`
