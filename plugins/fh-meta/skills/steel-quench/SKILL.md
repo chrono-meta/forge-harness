@@ -1,7 +1,7 @@
 ---
 name: steel-quench
 description: >-
-  A meta-skill that concretizes a designer's anxiety into AI-driven all-angle devil attacks and shakes off flaws through defensive rounds. Systematically surfaces root weaknesses of near-complete projects wave by wave, guaranteeing near-human-review quality without direct human deep inspection. Wave 4 (Meta-Aware Adversary) is an advanced mode where the devil uses its own AI nature — hallucination, context collapse, prompt injection, tool lock-in — as attack vectors. Built-in fh-commons:quench-challenger agent outputs harness structure 6-axis attack+prescription pairs; after convergence, fh-meta:persona-innovator auto-extracts new patterns. Triggered by: "quench this", "devil's judgment", "all-angle review", "end-to-end verification", "steel quench", "deep pre-completion inspection", "shake out design anxiety", "attack from the root".
+  A meta-skill that concretizes a designer's anxiety into AI-driven all-angle challenger attacks (via fh-commons:quench-challenger) and shakes off flaws through defensive rounds. Systematically surfaces root weaknesses of near-complete projects wave by wave, guaranteeing near-human-review quality without direct human deep inspection. Wave 4 (Meta-Aware Adversary) is an advanced mode where the challenger uses its own AI nature — hallucination, context collapse, prompt injection, tool lock-in — as attack vectors. Built-in fh-commons:quench-challenger agent outputs harness structure 6-axis attack+prescription pairs; after convergence, fh-meta:persona-innovator auto-extracts new patterns. Triggered by: "quench this", "devil's judgment", "all-angle review", "end-to-end verification", "steel quench", "deep pre-completion inspection", "shake out design anxiety", "attack from the root".
 user-invocable: true
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "WebSearch", "Agent"]
 model: opus
@@ -9,7 +9,7 @@ model: opus
 
 # steel-quench — All-Angle Verification Meta-Skill
 
-> Heating steel and plunging it into water brings internal defects to the surface. AI all-angle devil attacks → defense → repeat = systematic surfacing and elimination of design flaws.
+> Heating steel and plunging it into water brings internal defects to the surface. quench-challenger attacks → defense → repeat = systematic surfacing and elimination of design flaws.
 
 A designer's anxiety is most dangerous when vague. steel-quench breaks that anxiety into concrete attack angles, defends against them, and closes with residual risks explicitly stated.
 
@@ -18,7 +18,7 @@ A designer's anxiety is most dangerous when vague. steel-quench breaks that anxi
 | Phrase | Situation |
 |---|---|
 | "quench this", "run quench" | All-angle verification just before completion |
-| "devil's judgment" | Focused attack on specific design decision |
+| "devil's judgment" | Focused challenger attack on specific design decision |
 | "all-angle review", "end-to-end verification" | Full project scope verification |
 | "shake out design anxiety", "deep pre-completion inspection" | Concretize vague anxiety |
 | "attack from the root" | Re-verify from reason for existence |
@@ -32,7 +32,7 @@ A designer's anxiety is most dangerous when vague. steel-quench breaks that anxi
 | Wave | Role | Termination |
 |---|---|---|
 | **Phase 0** (optional) | Counterexample calibration — extract patterns from external bad cases, merge into Wave 1 | No external case → skip |
-| **Wave 1** | Devil attack — surface critical flaws, no defense. quench-challenger (6-axis) built-in | — |
+| **Wave 1** | Challenger attack (quench-challenger) — surface critical flaws, no defense | — |
 | **Wave 2** | Defense — defend or state as residual risk | — |
 | **Wave 3+** | Convergence — repeat until zero new S-grade | Zero new S-grade |
 | **Wave 4** (optional) | Meta-Aware Adversary — AI uses its own nature as attack vector | Zero new S-grade + AI-specific criteria |
@@ -110,7 +110,7 @@ Call **fh-commons:quench-challenger** in isolation first (6-axis structural atta
 
 **Classification**: Immediate implementation (this session) / Long-term improvement (residual risk card) / Structural acceptance (declare with rationale).
 
-**"Brain in a Vat + Sandboxed Adversary"**: Devil attacks only static code (isolated). Defender brings living system evidence. This asymmetry makes Wave 2 structurally superior to Wave 1.
+**"Brain in a Vat + Sandboxed Adversary"**: Challenger attacks only static code (isolated). Defender brings living system evidence. This asymmetry makes Wave 2 structurally superior to Wave 1.
 
 > **Detail**: See `SKILL_detail.md §Wave2` — Wave 2 output format, full Brain-in-Vat principle.
 
@@ -118,7 +118,7 @@ Call **fh-commons:quench-challenger** in isolation first (6-axis structural atta
 
 ## Wave 4 — Meta-Aware Adversary (5 Attack Angles)
 
-Devil knows it's running in an isolated sub-agent sandbox and uses that knowledge as a weapon.
+The challenger (quench-challenger in Wave 4 mode) knows it's running in an isolated sub-agent sandbox and uses that knowledge as a weapon.
 
 | # | Attack Angle | Core Question |
 |:---:|---|---|
