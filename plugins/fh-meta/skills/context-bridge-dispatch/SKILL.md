@@ -101,3 +101,13 @@ All steps 1–4 completed
 | Context collapse risk after a long session | `/context-doctor` |
 | Task of promoting field patterns to FH | `/field-harvest` |
 | When agent orchestration itself is complex | `agent-composer` |
+| N≥3 agents / long-running orchestration (context drifts post-dispatch) | See sister asset: DACS (arXiv:2604.07911) — Registry+Focus dynamic isolation |
+
+## Sister Asset
+
+**DACS — Dynamic Attentional Context Scoping** (arXiv:2604.07911, Nickson Patel, 2026-04-09)
+Same problem domain (context pollution in multi-agent LLM), different resolution layer.
+- context-bridge-dispatch: pre-dispatch static injection (T=0)
+- DACS: runtime dynamic isolation, agent-triggered (T>0), empirically validated at N=3–10
+
+Cross-audit: `tracks/_audit/session_2026-06-02_dacs-sister.md`
