@@ -81,9 +81,31 @@ If this is your first time with FH, confirm 3 things before install. All should 
 | **Are you using Claude Code as your primary tool?** | ✅ Using CC daily | FH only works on top of CC. Need to adopt CC first |
 | **Are you running 2+ projects in parallel or have a meta-hub?** | ✅ Multiple projects or team shared environment | FH may not be needed for a single small project |
 | **Do you want to structurally improve AI collaboration quality?** | ✅ Repeatedly performing verification/simulation/diagnosis | If you only want simple coding automation, deeper skills after install-wizard are optional |
+| **Are you developing or researching FH itself?** | ✅ Extending skills, writing papers, running experiments on FH | → **Mode D** — companion-store setup needed (see below) |
 
-Fewer than 2 of 3 → Proceed with install but recommend using only core skills (`context-doctor`, `harness-doctor`) first.  
+Fewer than 2 of 3 (first three) → Proceed with install but recommend using only core skills (`context-doctor`, `harness-doctor`) first.  
 All 3 → Proceed in order: Step 0-B (token injection) → Step 0 (environment card) → Step 0-C (existing harness).
+
+**Mode D detected (FH developer/researcher)**: Guide companion-store setup before Step 1.
+
+```
+You're developing FH itself — you need a private companion store
+alongside the public mirror.
+
+Recommended layout:
+  public:  chrono-meta/forge-harness  (methodology, skills, rules)
+  private: {org}/fh-be                (paper drafts, experiment logs,
+                                       raw signals, handoff files)
+
+Quick setup:
+  gh repo create {org}/fh-be --private
+  git clone https://github.com/{org}/fh-be ~/PycharmProjects/fh-be
+  mkdir -p fh-be/{paper-drafts,paper-signals,digests,handoff}
+
+Key rule: knowledge/shared/ drafts stay local via .gitignore glob.
+Push snapshots to fh-be explicitly — never auto-push.
+handoff/ files bridge cloud session → local without exposing content.
+```
 
 ### Step 0-B. Git Token Pre-injection (when repo creation/fork/push included)
 
@@ -487,6 +509,11 @@ install-wizard — Complete
    Pattern discovered → return with /field-harvest
    New skill proposal → PR:
      https://github.com/chrono-code/forge-harness
+
+🔬 Developing FH itself? Set up a private companion store:
+   gh repo create {org}/fh-be --private   # paper drafts, experiment logs, handoffs
+   → public mirror holds methodology · private store holds research artifacts
+   → field projects (internal harness) can use the same dual-repo pattern
 
 🔀 Don't want to lose your accumulated assets — fork as your own hub:
    Personal skills/rules/notes added directly to FH may be lost on FH updates.
