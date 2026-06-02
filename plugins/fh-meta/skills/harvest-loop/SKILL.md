@@ -117,6 +117,8 @@ Output final proposal list → Y: PR creation / N: persist to tracks/_meta/fh_si
 
 **Step 3.5-X** (optional): Cross-session 2nd validation when 2+ HIGH-grade items exist. External CLI (gemini/codex) or cross-session Claude. Items flagged as over-promoted → downgrade HIGH → MED.
 
+> **Detail**: See `SKILL_detail.md §Step3-5X` — bash execution scripts for external CLI and cross-session Claude fallback — read when running Step 3.5-X validation.
+
 ### Step 3.75 — Critic (Isolated Agent)
 
 > Source: SAGE (arXiv 2603.15255). Isolation = Critic does not inherit synthesizer reasoning chain → resolves Cost of Consensus.
@@ -124,6 +126,8 @@ Output final proposal list → Y: PR creation / N: persist to tracks/_meta/fh_si
 Critic evaluation: Done When logic validation · failure mode exploration (2+ edge cases) · claim vs. implementation alignment · scope appropriateness (Too Narrow / Too Broad).
 
 FAIL routing: First FAIL → 1 re-synthesis allowed. FAIL after re-synthesis → auto-persist as `fh_signal` on hold. Maximum retries: **1**.
+
+> **Detail**: See `SKILL_detail.md §Step3-75` — Critic isolated Agent() call format, evaluation items table, FAIL routing, Post-Core-Skill Critic connection — read when executing Step 3.75.
 
 ### Step 4 — harness-doctor
 `/harness-doctor --scope new-candidates` — Check: Done When exists · ≥70% overlap with existing skills · self-reference structure.
@@ -181,7 +185,14 @@ synthesizer: [HIGH N / MED N / rejected N]
 Read reference_next_session_starter.md → apply Step 0-b removal list → add new priorities
 → output "BEFORE N items → AFTER M items (removed: [list])" — required
 → No diff (N=M) = warning + Step 0-b re-check obligation
+
+**Natural-language close (4th source)**: Even without git log match, items with these patterns stated in session → treated as closed, remove immediately:
+- "not possible / confirmed impossible" · "no response + N weeks elapsed" → abandoned
+- "mutual citation confirmed" · "merged" · "cancelled" · "no longer needed"
+- User says "stop monitoring" · "close this" · "remove it"
 ```
+
+> **Detail**: See `SKILL_detail.md §Output-Detail` — 2-source mode (when fh_completed absent), exact match criteria, natural-language close edge cases — read when reconstructing session card without fh_completed file.
 
 ---
 
