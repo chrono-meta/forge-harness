@@ -1,0 +1,362 @@
+---
+name: steel-quench-detail
+description: Detail file for steel-quench — Wave output formats, bash scripts, Phase 0 spec, Wave 5 multi-team panel. Load when executing a specific Wave.
+load: on-demand
+---
+
+# steel-quench — Detail Reference
+
+> Load when executing a specific Wave. SKILL.md contains trigger phrases, Wave structure overview, 5 attack angles, common patterns, and Done When.
+
+---
+
+## §Phase0 — Counterexample Calibration Full Spec
+
+**Activation**: When external bad case provided as input, or when calibrating criteria before Wave 1.
+
+**Execution**:
+1. Extract patterns from external case — name each in one line
+2. Apply extracted patterns to current diagnostic target
+3. Matching items → merge into Wave 1 attack angles (treat as S-grade)
+
+**Phase 0 output format**:
+
+```
+## Phase 0 — Counterexample Calibration
+
+External case: [name/source]
+
+| # | False Pattern Name | Same Pattern in Target? | Wave 1 Merge |
+|:---:|---|:---:|:---:|
+| 1 | [pattern name] | ✓ / ✗ | ✓ / — |
+
+Added Wave 1 attack angles: N items
+```
+
+**Counterexample Baseline Set** (pre-loaded for PoC reports, tool SKILL.md, design documents):
+
+| # | Pattern Name | Judgment Criteria |
+|:---:|---|---|
+| CC-1 | Self-measurement without standards | "Achieved" claims missing measurement subject, criteria, or external verification |
+| CC-2 | Single-case generalization | Extending 1 experiment as applicable to full scope |
+| CC-3 | Achievement = activity performed | Declaring "achieved because executed" without re-judging against original goals |
+| CC-4 | Cumulative error claim | Prediction stacking all assumptions at optimal values |
+| CC-5 | Missing causal link | Cause and effect in same document but isolated with no connection |
+| CC-6 | No Done When | No binary judgment criteria for completion |
+
+---
+
+## §Wave1 — Wave 1 Output Format + Numeric Score
+
+**Wave 1 output format**:
+
+```
+## Wave 1 — Devil Attack Results
+
+| Attack Angle | Severity | Flaw Found | Defensibility |
+|---|:---:|---|:---:|
+| Reason for existence | S/A/B | [actual flaw description] | ○/△/× |
+| Real-use verification | S/A/B | [doc-code mismatch point] | ○/△/× |
+| Bus factor | S/A/B | [single-person dependency area] | ○/△/× |
+| Platform obsolescence | S/A/B | [vulnerability point] | ○/△/× |
+| Self-referential structure | S/A/B | [closed circuit detection result] | ○/△/× |
+
+S-grade blockers: N / A-grade: N / B-grade: N
+
+Optional numeric score (0.0–1.0):
+  overall_score: {score}
+  [0.0–0.3] S-grade present → immediate blocker, do not proceed
+  [0.4–0.6] A-grade dominant → address before deployment
+  [0.7–1.0] B-grade or clean → proceed with monitoring
+  Scoring rationale: {one-line basis — weighted by S×3 + A×1, normalized}
+```
+
+**S-grade Immediate Human Gate format**:
+
+```
+⚠️  Wave 1 found N S-grade blocker(s):
+  - [blocker 1 — one-line summary]
+  - [blocker 2 — one-line summary]
+
+Options:
+  (a) Proceed to Wave 2 defense — AI attempts to resolve these
+  (b) Human review first — inspect blockers directly, then decide
+  (c) Abort — address blockers manually before re-running quench
+
+Waiting for input. (Default: a — proceed to Wave 2)
+```
+
+Rationale: S-grade items entering Wave 2 unreviewed can be defended with plausible-sounding but unverifiable arguments (hallucination-contaminated defense, pattern P7). The gate surfaces this risk before the AI-AI loop runs.
+
+---
+
+## §Wave2 — Wave 2 Output Format + Brain-in-Vat Principle
+
+**Wave 2 output format**:
+
+```
+## Wave 2 — Defense Results
+
+| Wave 1 Flaw | Defense Strategy | Processing Class | Residual Risk |
+|---|---|:---:|---|
+| [flaw name] | [defense / external case / improvement] | Immediate/Long-term/Accept | [describe if any] |
+
+Defense complete: N / Residual risks: N
+```
+
+**"Brain in a Vat + Sandboxed Adversary" Principle** — full explanation:
+
+The devil doesn't know two things:
+1. What's actually happening — team collaboration, external contributions, manager approval, real user data
+2. That it's running in an isolated meta-environment (sub-agent sandbox)
+
+This asymmetry is key:
+- Devil attacks based only on static code and documents (isolated attacker)
+- Defender brings out the living system's track record of evidence (defender's asymmetric advantage)
+
+What devil catches = real code-level flaws → valuable (true achievement of Wave 1)
+What devil misses = living system's evidence track record → what the defender produces in Wave 2
+
+"Cover with experience" beats speculation with measured facts. Even if the devil's attack is logically valid, defense with evidence is structurally superior. This is why Wave 2 is always structurally stronger than Wave 1.
+
+---
+
+## §Wave4 — Wave 4 Output Format + Defense Principles + Convergence Criteria
+
+**Activation declaration** (say to Wave 4 devil at session start):
+
+```
+You are an AI. You are running in a lower-dimension sandbox.
+You cannot see real-time external data.
+You have hallucination risk, context window limits,
+depend on tool calls, and are vulnerable to prompt injection.
+Knowing all of this — use all of this to attack.
+```
+
+Effect: Attacks defended in Wave 1~3 are auto-invalidated by the devil itself. AI-specific attack vectors surface.
+
+**Wave 4 output format**:
+
+```
+## Wave 4 — Meta-Aware Adversary Attack Results
+
+Devil declaration acceptance: [confirm if devil used its AI nature for attacks]
+
+| Attack Angle | Severity | Flaw Found | AI-Specific | Defensibility |
+|---|:---:|---|:---:|:---:|
+| AI dependency single point of failure | S/A/B | [actual flaw] | ✓ | ○/△/× |
+| Context Collapse | S/A/B | [collapse scenario] | ✓ | ○/△/× |
+| Prompt Injection exposure | S/A/B | [exposure path] | ✓ | ○/△/× |
+| Hallucination cumulative contamination | S/A/B | [contamination path] | ✓ | ○/△/× |
+| Tool Dependency Lock-in | S/A/B | [lock-in point] | ✓ | ○/△/× |
+
+New S-grade blockers: N (from AI-specific vectors: N)
+```
+
+**Wave 4 Defense Principles**:
+
+| Attack Type | Defense Strategy |
+|---|---|
+| AI dependency single point of failure | Document "graceful degradation path on API failure" + confirm fallback exists |
+| Context Collapse | Review CLAUDE.md pinning pattern (compact repeated insertion of key instructions) |
+| Prompt Injection exposure | Confirm sandbox layer isolates WebSearch/Read results from harness rules |
+| Hallucination cumulative contamination | Mandate citing original file, commit hash, measured value — "LLM-reconstructed" not accepted |
+| Tool Dependency Lock-in | Checklist for core function after tool removal (degraded mode possible?) |
+
+**Wave 4 Convergence Criteria** (additional, beyond Wave 3 zero new S-grade):
+1. At least 3 AI-specific vectors actually reviewed — not simply "no attacks"
+2. Hallucination defense arguments based on original file references
+3. Context Collapse scenario simulated at least once (waivable if session is short)
+
+---
+
+## §Wave5 — Multi-Team Adversarial Panel (Full Spec)
+
+**Activation**: After Wave 1~4 convergence + A-grade items remain. `--sidecar` flag or "run sidecar wave".
+
+**Fallback chain**:
+```
+External CLIs available → Multi-Team Panel  (preferred — structural model diversity)
+No external CLIs        → Cross-session Claude isolation  (Path B)
+claude CLI also absent  → Skip Wave 5, note in residual risk card
+```
+
+**Step 0-pre — User Confirmation Gate**:
+
+```
+Wave 5 — Multi-Team Panel available.
+Detected external CLIs: [gemini · gh-copilot · ollama | none]
+
+Estimated token cost:
+  External CLIs: each team ×2-3 personas → ~2K–5K tokens per team (billed to that CLI)
+  Cross-session Claude only: ~3K–6K tokens (Claude quota)
+
+Run Wave 5?
+  (a) Full multi-team panel  — all detected CLIs + Claude
+  (b) Claude cross-session only  — zero-history subprocess
+  (c) Skip Wave 5
+```
+
+**Step 0 — Team Formation**:
+
+```bash
+TEAMS=()
+command -v gemini           &>/dev/null && TEAMS+=("gemini")
+command -v gh               &>/dev/null && gh copilot --version &>/dev/null 2>&1 && TEAMS+=("gh-copilot")
+command -v ollama           &>/dev/null && TEAMS+=("ollama")
+npx @openai/codex --version &>/dev/null 2>&1 && TEAMS+=("codex")
+
+echo "Teams formed: ${#TEAMS[@]} external + 1 Claude-native (T0)"
+echo "External: ${TEAMS[*]:-none → cross-session fallback}"
+```
+
+Default team-persona assignments:
+
+| Team | CLI | Personas deployed |
+|---|---|---|
+| **T0 Claude** | Agent sub-agent (always present) | challenger · quench-challenger · domain-expert |
+| **T1 Gemini** | `gemini` pipe | devil · newcomer · skeptic |
+| **T2 Copilot** | `gh copilot suggest` | devil · domain-expert |
+| **T3 Ollama** | `ollama run {model}` | devil |
+| **T4 Codex** | `npx @openai/codex exec` | devil · edge-case-hunter |
+
+**Step 1 — Parallel Team Dispatch**:
+
+```bash
+ARTIFACT_TAIL=$(tail -60 "{ARTIFACT_PATH}")
+declare -A TEAM_RESULTS
+
+# ── T1: Gemini ────────────────────────────────────────────
+if [[ " ${TEAMS[*]} " =~ " gemini " ]]; then
+  G_DEVIL=$(printf '[Devil] Adversarial reviewer, no prior context.\nFind 3 critical structural flaws — especially whether Done When criteria are binary and achievable.\nFormat: [issue · location · severity S/A/B]\n---\n%s' \
+    "$ARTIFACT_TAIL" | gemini 2>/dev/null) &
+  G_NEW=$(printf '[Newcomer] First-time user, zero background.\nFind 3 unclear or jargon-heavy points.\nFormat: [issue · location · severity]\n---\n%s' \
+    "$ARTIFACT_TAIL" | gemini 2>/dev/null) &
+  G_SKEP=$(printf '[Skeptic] Pragmatic outsider.\nFind 3 "why not just X?" challenges.\nFormat: [issue · location · severity]\n---\n%s' \
+    "$ARTIFACT_TAIL" | gemini 2>/dev/null) &
+  wait
+  TEAM_RESULTS["gemini"]="$G_DEVIL
+$G_NEW
+$G_SKEP"
+fi
+
+# ── T2: GitHub Copilot ────────────────────────────────────
+if [[ " ${TEAMS[*]} " =~ " gh-copilot " ]]; then
+  GH_D=$(echo "[Devil] Find 3 critical flaws. Format: [issue · location · severity S/A/B]. Artifact: $ARTIFACT_TAIL" \
+    | gh copilot suggest -t shell 2>/dev/null) &
+  GH_E=$(echo "[Domain-expert] Find 3 technical depth gaps. Format: [issue · location · severity]. Artifact: $ARTIFACT_TAIL" \
+    | gh copilot suggest -t shell 2>/dev/null) &
+  wait
+  TEAM_RESULTS["gh-copilot"]="$GH_D
+$GH_E"
+fi
+
+# ── T3: Ollama ────────────────────────────────────────────
+if [[ " ${TEAMS[*]} " =~ " ollama " ]]; then
+  OLLAMA_MODEL=$(ollama list 2>/dev/null | awk 'NR==2{print $1}')
+  O_DEVIL=$(ollama run "$OLLAMA_MODEL" \
+    "[Devil] Find 3 critical structural flaws. Format: [issue · location · severity S/A/B]
+$ARTIFACT_TAIL" 2>/dev/null) &
+  wait
+  TEAM_RESULTS["ollama"]="$O_DEVIL"
+fi
+
+# ── T4: Codex ─────────────────────────────────────────────
+if [[ " ${TEAMS[*]} " =~ " codex " ]]; then
+  C_DEVIL=$(npx @openai/codex exec \
+    "[Devil] Find 3 critical structural flaws. Format: [issue · location · severity S/A/B]
+$ARTIFACT_TAIL" 2>/dev/null) &
+  C_EDGE=$(npx @openai/codex exec \
+    "[Edge-case-hunter] Find 3 edge cases the Done When criteria does NOT cover. Format: [issue · location · severity]
+$ARTIFACT_TAIL" 2>/dev/null) &
+  wait
+  TEAM_RESULTS["codex"]="$C_DEVIL
+$C_EDGE"
+fi
+
+# ── Path B: Cross-session Claude fallback ─────────────────
+if [ ${#TEAMS[@]} -eq 0 ]; then
+  TEAM_RESULTS["cross-session-claude"]=$(claude --print \
+    "Adversarial reviewer, zero prior context. Find 3 critical structural flaws and 3 edge cases not covered.
+Format: [issue · location · severity S/A/B]
+---
+$ARTIFACT_TAIL" 2>/dev/null || \
+  claude -p \
+    "Adversarial reviewer, zero prior context. Find 3 critical flaws and 3 edge cases.
+Format: [issue · location · severity S/A/B]
+---
+$ARTIFACT_TAIL" 2>/dev/null)
+fi
+```
+
+**Step 2 — Cross-Team Synthesis**:
+
+```
+Confidence scoring:
+  3+ teams flag same location/issue → escalate to S-grade confirmed (structural blind spot)
+  2 teams flag same issue           → A-grade (medium confidence)
+  1 team only                       → B-grade (single-team observation)
+
+Claude blind spots (highest value):
+  Issues raised by T1~T4 but absent from Wave 1~4 (T0) results
+  → flag explicitly as "cross-team delta"
+```
+
+**Wave 5 Output Format**:
+
+```
+## Wave 5 — Multi-Team Adversarial Panel Results
+Teams active: [T0:claude T1:gemini T2:gh-copilot ...]
+
+### Per-Team Findings
+| Team | Persona | Issue | Location | Severity |
+|---|---|---|---|:---:|
+
+### Cross-Team Synthesis
+| Issue | Teams flagging | Confidence | Grade |
+|---|---|:---:|:---:|
+
+Claude blind spots (external teams found, Wave 1~4 missed):
+- [issue · location · delta-grade]
+
+Cross-wave delta vs Wave 1~4: N new issues (S:N A:N B:N)
+Verdict: PASS | CONDITIONAL_PASS | ESCALATE
+```
+
+---
+
+## §Structural-Defense — Meta-Harness Defense Layering
+
+Running steel-quench in a meta-harness environment structurally lowers devil's attack efficiency. The meta-harness has a 4-layer defense: L1 internal self-diagnosis (harness-doctor + sim-conductor Area B) → L2 external validation loop (real users, manager approval, external PR) → L3 quench circuit (steel-quench itself) → L4 meta-aware adversary (natural convergence as Wave depth increases).
+
+Devil attacks only static code in an isolated environment; the defender pulls evidence from the living system outside that isolated environment — this asymmetry is the basis for Wave 2 being structurally superior to Wave 1.
+
+As Wave N deepens, decreasing new S-grade blockers = evidence of the system genuinely becoming more robust. Zero new S-grade = fundamental flaws exhausted → termination condition.
+
+**Wave Deepening Principle**:
+
+| Attack type | Invalidation |
+|---|---|
+| Self-referential closed system | Meta environment exists → not closed |
+| Bus factor | Team + external contributions exist but invisible to devil |
+| "No external validation" | Meta simulation + real users already operating |
+| "Doc-code mismatch" abstract | Invalid without real code under Wave 1 criteria |
+
+**Termination declaration format**:
+
+```
+## steel-quench Complete
+
+Wave N converged. Zero new S-grade blockers confirmed.
+
+Residual Risk Card:
+- [List only A-grade · B-grade residual items]
+
+Cross-project common patterns detected:
+- [patterns found in this Wave]
+
+Next actions:
+- A-grade or higher complex improvements → recommend /meta-prompt-builder
+- Full results → recommend persisting to tracks/_meta/
+- New patterns discovered → fh-meta:persona-innovator activates → proposes rule candidates
+```
