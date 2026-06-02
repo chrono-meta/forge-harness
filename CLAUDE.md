@@ -23,7 +23,7 @@ The forge-harness hub is not just a repository — it is the **command center fo
 
 | Layer | Role | Representative Assets |
 |---|---|---|
-| **① Control Tower** | Coordinates all projects. Each project is an execution site; this is command HQ. | `CATALOG.md` · `knowledge/shared/harness-core/harness_6axis_framework.md` · `knowledge/shared/harness-core/hub_compounding_loop.md` |
+| **① Control Tower** | Coordinates all connected projects and **drives harness-ification across them** — decides *which* projects to harness and *when*, propagates harness assets to each, and feeds their synced learnings into the hub's compounding loop. The *how* (rules · gates · 6-axis) is executed via the Core Axis. Command HQ, not a passive registry. | `.claude/rules/auto_project_mapping.md` (mapping + **Full-Harness Mode**) · `harvest-loop` (compounding loop) · `templates/` (project-harness bundle) · `CATALOG.md` |
 | **② Frontier → Org Propagation** | Proactively applies global AI/harness frontier thinking and **translates it for your organization**. | `knowledge/shared/harness-core/harness_frontier_diagnosis_*.md` · `knowledge/{your-org}/` |
 | **③ AI Collaboration Guide** | Accumulates and distributes best practices for token efficiency and dialogue methodology — "how to ask, delegate, and record". | `CHEATSHEET.md` · `knowledge/shared/dialogue/ai_dialogue_playbook.md` · `MEMORY.md` keyword-triggered loading |
 | **Core Axis** | **Harness Engineering (How)** — the methodology and practice axis that realizes the three layers above. The 6-axis framework is the operating unit. **A harness is a means, not an end** — "A good harness gets simpler over time. If it's getting more complex, something is wrong." | `harness_6axis_framework.md` · `hub_compounding_loop.md` · `claude_code_runtime_flow.md` · `.claude/agents/` (sub-agents) |
@@ -46,6 +46,8 @@ Four foundational assets for hub operations. **Mandatory pre-reference** before 
 3. Automatically included in the weekly audit scanner (`tracks/*/` glob-based)
 4. Even if a project has its own rules, **hub common principles must not be overridden** (lower in scope hierarchy)
 5. Insert reference links to `ai_dialogue_playbook.md` (principles/intent) + `claude_code_runtime_flow.md` (runtime flow/sub-agents) at the top of each project's CLAUDE.md or session.md (Layer ③ standard compliance)
+
+> **Promotion to full harness**: steps 1–5 register a project *lightly*. To add its project-local harness assets (session rules + context filter + env card), run **Full-Harness Mode** (`.claude/rules/auto_project_mapping.md §6`) — approval-gated, never overwrites. This is identity ① (Control Tower): the hub propagates harness structure to each project and feeds its synced learnings into the compounding loop (the *how* executed via the Core Axis). The FH self-gate is **not** installed into projects (it would block their commits).
 
 ## Harness Drift Prevention Principles
 
@@ -346,6 +348,8 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "orchestrate agents", "parallel dispatch", "combine skills", "multiple agents" | `/agent-composer` |
 | "run a simulation", "external user perspective", "internal audit", "quality check" | `/sim-conductor` |
 | "first install", "FH setup", "wizard", "install-wizard" | `/install-wizard` |
+| "connect a project", "map this project", "link to hub" | `auto_project_mapping.md` (mapping) |
+| "harness-ify this project", "full harness setup", "프로젝트 하네스화", "promote to full harness" | `auto_project_mapping.md §6` (Full-Harness Mode) |
 | "check install", "verify setup", "confirm install", "install-doctor" | `/install-doctor` |
 | "where does this go", "asset location", "hub vs project", "placement" | `/asset-placement-gate` |
 | "add to marketplace", "OK to publish", "pre-publish check" | `/marketplace-gate` |
@@ -506,9 +510,9 @@ Temporary change within session: Say "use light mode for this one" or "switch to
 
 ## Auto Project Mapping Protocol
 
-> Detailed 5-step procedure: `.claude/rules/auto_project_mapping.md`
+> Detailed procedure: `.claude/rules/auto_project_mapping.md` (5-step mapping + §6 Full-Harness Mode)
 
-When the user requests **"connect a project"** · **"link to hub"** · **"map this project"** · **"scan parent directory and connect"**, follow the `auto_project_mapping.md` protocol.
+When the user requests **"connect a project"** · **"link to hub"** · **"map this project"** · **"scan parent directory and connect"**, follow the `auto_project_mapping.md` protocol. When they request **"harness-ify this project"** · **"full harness setup"** · **"프로젝트 하네스화"** (or accept the post-mapping promotion prompt), run **§6 Full-Harness Mode** — installs project-local harness assets (session rules · context filter · env card) from `templates/`, approval-gated and non-overwriting. (The FH self-gate is FH-internal and is not installed into projects.)
 
 ## Searching Past Work
 
