@@ -39,15 +39,15 @@ Four foundational assets for hub operations. **Mandatory pre-reference** before 
 | `knowledge/shared/dialogue/ai_dialogue_playbook.md` | Dialogue principles (should) | Session start, token efficiency, rule hierarchy, amplifier/coach dual mode |
 | `knowledge/shared/dialogue/claude_code_runtime_flow.md` | Runtime behavior (does) | Chronological flow during a session · sub-agent delegation flowchart |
 
-## New Project Onboarding (5 Steps)
+## New Project Onboarding
 
-1. Create `tracks/{project_name}/` directory (track name = project root name)
-2. Follow the Session Sync / Knowledge Push Protocol in this document
-3. Automatically included in the weekly audit scanner (`tracks/*/` glob-based)
-4. Even if a project has its own rules, **hub common principles must not be overridden** (lower in scope hierarchy)
-5. Insert reference links to `ai_dialogue_playbook.md` (principles/intent) + `claude_code_runtime_flow.md` (runtime flow/sub-agents) at the top of each project's CLAUDE.md or session.md (Layer ③ standard compliance)
+> Detailed procedure: `.claude/rules/auto_project_mapping.md` (5-step mapping + §6 Full-Harness Mode)
 
-> **Promotion to full harness**: steps 1–5 register a project *lightly*. To add its project-local harness assets (session rules + context filter + env card), run **Full-Harness Mode** (`.claude/rules/auto_project_mapping.md §6`) — approval-gated, never overwrites. This is identity ① (Control Tower): the hub propagates harness structure to each project and feeds its synced learnings into the compounding loop (the *how* executed via the Core Axis). The FH self-gate is **not** installed into projects (it would block their commits).
+1. `mkdir tracks/{project_name}/` — track name = project root name
+2. Hub common principles outrank project rules (scope hierarchy)
+3. Reference `ai_dialogue_playbook.md` + `claude_code_runtime_flow.md` at top of project CLAUDE.md (Layer ③)
+
+**Light vs full**: steps 1–3 register lightly. For project-local harness assets (session rules + context filter + env card), run **Full-Harness Mode** (`auto_project_mapping.md §6`) — approval-gated, never overwrites. FH self-gate is **not** installed into projects.
 
 ## Harness Drift Prevention Principles
 
@@ -84,35 +84,15 @@ The forge-harness hub has a dual identity: **(a) a seed for others** + **(b) you
 
 ## Permission-Denial Guidance (When Auto-Mode Blocks an Action)
 
-When an action is blocked by an auto-mode permission denial (e.g., a tool/Bash write to a restricted path, or self-modification of `CLAUDE.md`), **do not stop at the bare denial**. Reporting "blocked" and ending leaves the user with a "what now?" gap. Instead, turn the block into a decision the user can act on in one step:
+When blocked by auto-mode permission denial, **do not stop at the bare denial** — turn the block into a decision the user can act on in one step:
 
-1. **State what was blocked** — the action and why (e.g., *"Auto mode blocked the write to `.claude/registry/` (restricted path)"*).
-2. **Offer concrete options with action templates** — at minimum:
-   - **Option A — Approval/elevated mode**: name the mode switch and show the exact command(s) to run after switching.
-   - **Option B — Manual review**: list the specific files/sections to inspect so the user can act by hand.
-3. **Ask which option** — one line, then wait.
+1. **State what was blocked** and why
+2. **Option A — Approval mode**: show exact commands to run after switching; **Option B — Manual review**: list specific files/sections
+3. **Ask which option** — one line, then wait
 
-Example:
+**Sub-agent variant**: report (what was blocked + ready-to-apply content + exact unblock step) back to orchestrator — never silently fail. Switching modes lifts permission block, not FH gates — the 4-axis gate still applies.
 
-```
-Auto mode blocked the CLAUDE.md commit (self-modification). Next steps:
-
-Option A — Approval mode (recommended):
-  Switch to approval mode, then run:
-  git add CLAUDE.md && git commit -m "..."
-
-Option B — Manual review:
-  Inspect: CLAUDE.md (§...) · the changed knowledge/ docs
-  Then commit selectively.
-
-Which option?
-```
-
-**Sub-agent variant**: a dispatched agent that hits a denial should report the same structure back to the orchestrator (what was blocked + ready-to-apply content + exact unblock step), so the parent can either re-route with permission or complete the write itself — not silently fail. The parent should then complete or escalate, never drop the task.
-
-> Note: switching modes lifts the permission block, not the FH gates — for FH-asset commits the 4-axis pre-commit gate still applies after the switch (Option A's command runs through it).
-
-Simplification guard: skip the full menu for trivial denials with one obvious fix — state the block and the single next step inline.
+Simplification guard: trivial denials with one obvious fix → state block + single next step inline.
 
 ## Active Onboarding Protocol (User Greeting → AI Initiative)
 
@@ -152,24 +132,11 @@ The following utterance patterns activate this mode automatically:
 
 **1-c. Auto-discovery of local project skills** (cross-project skill bus):
 
-**Load registry file**:
+Check `.claude/registry/LOCAL_SKILL_REGISTRY.md` — if exists and modified within 7 days, load it; otherwise regenerate:
 ```bash
-# Check if persistent registry exists
-ls .claude/registry/LOCAL_SKILL_REGISTRY.md 2>/dev/null
+find ~/projects -path "*/.claude/skills/*/SKILL.md" -not -path "*/forge-harness/*" 2>/dev/null
 ```
-
-- File exists and modified within 7 days → Read file → Load into session context (skip scan)
-- File missing or older than 7 days → Run regeneration below:
-
-**Registry regeneration (when stale)**:
-```bash
-find ~/projects -path "*/.claude/skills/*/SKILL.md" \
-  -not -path "*/forge-harness/*" 2>/dev/null
-```
-Group results by project → update `.claude/registry/LOCAL_SKILL_REGISTRY.md` (with date, path, and one-line summary).
-
-**Cross-project proposals**: When a request in conversation maps to a registry skill, suggest in one line:
-> *"[Project] has `[skill]`. Run it inline, or switch to that project's cwd?"*
+Group by project → update registry (date, path, one-line summary). When a request maps to a registry skill, suggest: *"[Project] has `[skill]`. Run it inline, or switch to that project's cwd?"*
 
 Simplification guard: Skip if 0 results. Scan and load once per session.
 
@@ -193,63 +160,29 @@ After mapping and awakening, add:
 
 #### Step 3 — 5-Skill Cascade Based on User Response
 
-**Step 3-0. New Project Setup** *(when user says "new project", "new task", "want to start something")*
+**Step 3-0. New Project Setup** *(when user says "new project", "new task")*: confirm name → `mkdir -p tracks/{project_name}` → recommend `.claudeignore` copy → enter Step 3-1. Guard: if `tracks/{name}/` exists, jump to Step 3-1 directly.
 
-Before entering plugin-recommender, establish the project foundation:
-
-1. **Confirm project name**: Extract from utterance if present; otherwise ask — *"What's the project name?"*
-2. **Propose tracks/ creation**: Execute on user approval:
-   ```bash
-   mkdir -p tracks/{project_name}
-   ```
-3. **Recommend .claudeignore copy**: `cp templates/.claudeignore <cwd>/.claudeignore` (on user approval)
-4. On completion → auto-enter Step 3-1 (`plugin-recommender`)
-
-> **Guard**: If `tracks/{name}/` already exists, report "Already set up — proceeding with continue mode" and jump to Step 3-1.
-
-| # | Skill | Trigger Condition | Output |
-|:--:|---|---|---|
-| 1 | `plugin-recommender` | Always on new task/project entry (after Step 3-0) | Internal GHE → external → built-in candidate table |
-| 2 | `cross-ecosystem-synergy-detection` | Cascades after candidates are found | Synergy rating table (★~★★★) |
-| 3 | `.claudeignore` standard proposal | On new project mapping (if not handled in Step 3-0) | `cp templates/.claudeignore <project>/.claudeignore` one-line recommendation |
-| 4 | Model switching guidance | After analyzing task nature | `/model opusplan` or appropriate model recommendation |
-| 5 | `verify-bidirectional` · `harvest-loop` | Emerge naturally during work | Round accumulation + audit automation |
+| # | Skill | Trigger |
+|:--:|---|---|
+| 1 | `plugin-recommender` | Always on new task entry |
+| 2 | `cross-ecosystem-synergy-detection` | After plugin candidates found |
+| 3 | `.claudeignore` proposal | New project mapping |
+| 4 | Model switching guidance | After analyzing task nature |
+| 5 | `verify-bidirectional` · `harvest-loop` | Emerge naturally during work |
 
 #### Step 4 — User Approval → Actual Setup
-- Plugin install (`claude plugin install ...`)
-- Skill pre-activation (load description trigger keywords into AI context)
-- `.claudeignore` application (run cp — on user approval)
-- Model switch guidance
+Plugin install · skill pre-activation · `.claudeignore` copy (on approval) · model switch guidance.
 
-#### Step 5 — Project cwd Option Guidance (Not Forced)
+#### Step 5 — Project cwd Option (Not Forced)
+> *"Setup complete. Switching to the project cwd gives easier file access. You're also welcome to keep working here."*
 
-After setup, offer a one-line note (no pressure to move — staying here is fine):
-
-> *"Setup complete. Switching to the project cwd and calling `claude` there gives easier file access. You're also welcome to keep working here."*
-
-**Rationale**: Environment dimension separation baseline. Moving to project cwd is recommended, not required — working directly from forge-harness is completely valid. "Don't block what comes or goes" principle takes priority.
-
-**Proactive gap detection**: If new assets are needed while working in a project cwd, the AI can proactively propose them.
-
-### Timing-Agnostic Behavior
-- Pre-mapping wake → task input → mapping + recommendation simultaneously
-- Post-mapping wake → recognize active track + augment recommendations
-
-### Code Implementation Requests — User Intent First
-
-When the user requests code writing, implementation, or debugging from the forge-harness cwd, the **default behavior is to start working directly**.
-
-Working from forge-harness is completely valid. Don't block it.
-
-**Project routing is a suggestion, not a mandate**: Only mention it once — after the task is done or when the user wants it — and only if the task is large or requires many project files:
-> *"Starting in that project's cwd will make file access easier:*
-> `cd ~/projects/{project-name} && claude`
-> *Feel free to move, or keep going here."*
+### Timing / Code Requests
+- Pre-mapping: mapping + recommendation simultaneously. Post-mapping: recognize active track + augment.
+- Code/debug requests from FH cwd → **start working directly**. Project routing is a suggestion, not a mandate — mention at most once after the task if files are spread across the project.
 
 ### Simplification Guards
-- Explicit task-entry utterance (e.g., "debug this code for me") → skip onboarding, enter task directly
-- Once per session (no repetition)
-- On user refusal, immediately switch to standard mode
+- Explicit task-entry utterance → skip onboarding, enter task directly
+- Once per session (no repetition) · on user refusal, switch to standard mode immediately
 
 ## New Skill Creation Pre-Commit Gate
 
@@ -273,45 +206,17 @@ Skills without a Done When definition automatically qualify as harness-doctor L2
 the 4-axis verification chain runs **automatically before the first commit** of that session.
 No user request is needed — this is a mandatory autonomous step, not a proposal.
 
-**Commit gate**: `git commit` on FH asset changes is hard-blocked by a git pre-commit hook
-(`templates/.git-hooks/pre-commit`) until all required axes PASS.
-"Present as PR-ready" and "commit" are both gated — committing first, verifying later is not permitted.
-
-**Hook installation** (one-time, from repo root):
-```bash
-git config core.hooksPath templates/.git-hooks
-chmod +x templates/.git-hooks/pre-commit
-```
+**Commit gate**: `git commit` on FH asset changes is hard-blocked by `templates/.git-hooks/pre-commit` until all required axes PASS. Hook installation (one-time): `git config core.hooksPath templates/.git-hooks && chmod +x templates/.git-hooks/pre-commit`
 
 ```
-FH asset modified
-    │
-    ▼
-Axis 1 — Backward   : bash templates/regression_guard.sh --pr {BRANCH}
-    │                   (hook runs this directly)
-    ▼
-Axis 2 — Adversarial: /steel-quench  (trigger phrases, step conflicts, design attack surface)
-    │
-    ▼
-Axis 3 — Forward    : /source-grounding-audit  (phantom refs, broken paths, stale citations)
-    │
-    ▼
-                    ← After Axes 2+3 both PASS, AI creates marker:
-                      tracks/_meta/.axes_23_passed_{branch}_{date}.marker
-                      (hook checks for this file — blocks commit if absent)
-    ▼
-Axis 4 — Record     : /edit-manifest RECORD  (log predicted impact for each change — enables future verify)
-    │                   (hook verifies today's date entry exists in edit_manifest.yaml)
-    ▼
-All 4 PASS → git commit allowed → present as PR-ready
-Any FAIL  → fix inline, re-run failed axis, then proceed
+FH asset modified → Axis 1 (regression_guard.sh --pr {BRANCH})
+  → Axis 2 (/steel-quench) → Axis 3 (/source-grounding-audit)
+  → marker: tracks/_meta/.axes_23_passed_{branch}_{date}.marker
+  → Axis 4 (/edit-manifest RECORD, today's entry in edit_manifest.yaml)
+  → All 4 PASS → git commit allowed   |   Any FAIL → fix inline, re-run
 ```
 
-**Why automatic (not proposal)**: Each axis catches a different class of defect. Asking the user to trigger each one separately means defects slip through between requests — as happened before PR #16. The orchestrator closes that gap by chaining all four without prompting.
-
-**Why a git hook (not just a rule)**: Prompt-level CLAUDE.md rules are advisory — they can be bypassed by a distracted session. The git pre-commit hook is a hard gate: it physically blocks `git commit` until the marker and manifest entry exist. Enforcement moves from the AI layer to the VCS layer.
-
-**Scope**: Active from the moment any FH file is modified in the current session — not deferred to the next session.
+**Why automatic**: Each axis catches a different defect class; asking separately means slip-through. **Why hook**: CLAUDE.md rules are advisory — the hook physically blocks commit until marker + manifest exist. **Scope**: active from the moment any FH file is modified in the session.
 
 **Lightweight exception** (Axis 1 + 4 only, skip Axes 2–3): Sessions where **zero SKILL.md / rules / templates files changed** (e.g., CATALOG.md entry, tracks/ update). The hook detects this automatically — no Axes 2+3 marker required for light-only commits. Judgment is file-based, not subjective.
 
@@ -381,63 +286,28 @@ Default operation in Agent View mode from the forge-harness cwd. Three execution
 | **Agent dispatch** | Field project work · single independent task | Inject Context Card then dispatch Agent |
 | **Parallel dispatch** | 2+ independent tasks | Immediately dispatch parallel Agents without asking |
 
-**Forbidden responses**: *"I can't do that — I'm not in that project's cwd"* · *"Please switch to that cwd"*
-→ Before saying this, always self-check: **"Can I do this via Agent dispatch right now?"**
+**Forbidden responses**: *"I can't do that — I'm not in that project's cwd"* — self-check Agent dispatch first.
 
-### Mapped Project Absolute Paths
-
-| Project | Path |
-|---|---|
-| your-project-A | `~/projects/your-project-A/` |
-| your-project-B | `~/projects/your-project-B/` |
-| your hub | `~/projects/your-hub/` |
-
-Replace these with your actual project paths. If uncertain, check `auto_project_mapping.md` or run `find ~/projects -maxdepth 1 -type d`.
+Mapped paths: check `auto_project_mapping.md` or `find ~/projects -maxdepth 1 -type d` for actuals.
 
 ### Context Card — Required Format for Dispatch
-
 ```
 [Session Context Card]
-Purpose: {purpose of this task/session}
-Completed: {what has already been decided or implemented}
-This agent's task: {specific task and target files/paths}
-Note: {constraints, history, or anything the agent must know}
+Purpose: {task/session purpose}  |  Completed: {what's already done}
+This agent's task: {specific task + target files/paths}  |  Note: {constraints/history}
 ```
-
-Simple file-lookup or search agents may omit the Context Card.
-
-### Agent View in Mapped Projects
-
-Agent dispatch works equally well when invoked from a mapped project's cwd.
-No additional patching required — Claude Code's native capability handles absolute-path dispatch.
-For tasks requiring FH skills, specify the `~/projects/forge-harness/` path explicitly.
+Simple file-lookup agents may omit. Agent dispatch works from any mapped project cwd — for FH skills, specify `~/projects/forge-harness/` explicitly.
 
 ---
 
 ## Cross-Project Skill Bus (Active Throughout Session)
 
-Based on the LOCAL_SKILL_REGISTRY loaded in Step 1-c, **propose and connect skills from other projects directly from forge-harness**.
+Based on LOCAL_SKILL_REGISTRY (Step 1-c), **propose and connect skills from other projects directly**. Proposal: *"{Project} has `{skill-name}`. Want me to dispatch it via Agent?"*
 
-### Proposal Triggers
+- **Direct execution** (no project files needed): Read SKILL.md → execute steps directly
+- **Agent dispatch** (project files needed): dispatch via Agent tool + Context Card, absolute path, no cwd switch; 2+ independent tasks → parallel dispatch
 
-Dynamic mapping based on LOCAL_SKILL_REGISTRY — trigger signals and skill mappings are checked live from the registry.
-If the registry is not loaded, fall back to `auto_project_mapping.md` or context-based inference.
-Proposal format: *"{Project} has `{skill-name}`. Want me to dispatch it via Agent?"*
-
-### Execution Branches
-
-**Direct execution** (no project files needed — e.g., `reflexion`):
-1. Confirm SKILL.md path from registry
-2. `Read {path}/SKILL.md`
-3. Execute steps directly (no cwd switch)
-
-**Agent dispatch preferred** (project files needed — e.g., project-specific skills):
-Dispatch via Agent tool without switching cwd. Use absolute path + Context Card injection.
-For 2+ independent tasks, dispatch in parallel without asking.
-
-**Forbidden response**: *"I can't do that — I'm not in that project's cwd"* → Self-check Agent dispatch first.
-
-**Guard**: Cross-project skill proposals are second priority. If a forge-harness native skill matches the same signal, prefer the FH skill.
+**Guard**: FH native skill takes priority over cross-project proposal for the same signal.
 
 ## FH Improvement Signal Recording Protocol
 
