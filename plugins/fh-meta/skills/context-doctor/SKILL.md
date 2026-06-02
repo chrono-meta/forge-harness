@@ -186,7 +186,7 @@ When auditing CLAUDE.md / MEMORY.md in Step 5, check tier placement too: a criti
 
 ## Compression Pass
 
-Optional step, run when context is large (e.g. after Step 5 flags a bloated file, or an L3 doc is long but must be loaded). This goes **beyond** `.claudeignore` — `.claudeignore` blocks files from loading; compression shrinks content that does need to load. LLMLingua-style compression has shown ~100K→20K token reductions with minimal loss on long retrieved context (see `../../../../knowledge/shared/harness-core/harness_frontier_diagnosis_2026-06-02.md`).
+Optional step, run when context is large (e.g. after Step 5 flags a bloated file, or an L3 doc is long but must be loaded). This goes **beyond** `.claudeignore` — `.claudeignore` blocks files from loading; compression shrinks content that does need to load. LLMLingua-style compression is reported to reach ~100K→20K token reductions with minimal loss on long retrieved context (see `../../../../knowledge/shared/harness-core/harness_frontier_diagnosis_2026-06-02.md` Provenance).
 
 Advisory and tool-agnostic — recommend (and, where a doc is being authored/edited in-session, apply) these reductions:
 

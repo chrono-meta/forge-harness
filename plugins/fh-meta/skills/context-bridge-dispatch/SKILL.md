@@ -55,7 +55,7 @@ Prepend the Context Card to each agent's prompt and dispatch as a single message
 
 ## Coordination-Overhead Budget
 
-Centralized multi-agent coordination is not free: production data shows orchestrator-worker coordination adds ~+285% token overhead, and coordination cost dominates once a wave exceeds ~4 agents. Apply the following before each dispatch wave.
+Centralized multi-agent coordination is not free: external reporting cites orchestrator-worker coordination adding ~+285% token overhead (see the digest Provenance), and coordination cost dominates once a wave exceeds ~4 agents. Apply the following before each dispatch wave.
 
 | Rule | Constraint |
 |---|---|

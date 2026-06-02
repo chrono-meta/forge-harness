@@ -108,6 +108,8 @@ Which option?
 
 **Sub-agent variant**: a dispatched agent that hits a denial should report the same structure back to the orchestrator (what was blocked + ready-to-apply content + exact unblock step), so the parent can either re-route with permission or complete the write itself — not silently fail. The parent should then complete or escalate, never drop the task.
 
+> Note: switching modes lifts the permission block, not the FH gates — for FH-asset commits the 4-axis pre-commit gate still applies after the switch (Option A's command runs through it).
+
 Simplification guard: skip the full menu for trivial denials with one obvious fix — state the block and the single next step inline.
 
 ## Active Onboarding Protocol (User Greeting → AI Initiative)

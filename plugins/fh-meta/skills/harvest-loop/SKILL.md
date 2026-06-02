@@ -496,7 +496,7 @@ And update the `Last used` date for those skills in the Leaderboard table.
 
 > Frontier basis: [`harness_frontier_diagnosis_2026-06-02.md`](../../../../knowledge/shared/harness-core/harness_frontier_diagnosis_2026-06-02.md) §Frontier Highlights 3 (AHE — *agents cannot reliably improve a black-box harness*; the evolution loop's decisions must be observable and verifiable).
 
-FH already has a predict-verify loop (Step 0-c edit-manifest RECORD logs predicted impact). This hook makes the loop **auditable** rather than just recorded: every evolution decision this pipeline makes must leave a 3-part trace, reusing existing infra (`edit_manifest.yaml` + `tracks/_meta/`) — no new files.
+FH already defines a predict-verify loop (Step 0-c edit-manifest RECORD logs predicted impact). This hook makes the loop **auditable** rather than just recorded: every evolution decision this pipeline makes must leave a 3-part trace, reusing the existing target path (`tracks/_meta/edit_manifest.yaml`) — no new infra to design. If `edit_manifest.yaml` is absent, the first RECORD bootstraps it (CLAUDE.md Axis-4 provides a one-line manual-substitute fallback when the edit-manifest skill is not installed).
 
 | Trace part | Where it lives | When written |
 |---|---|---|

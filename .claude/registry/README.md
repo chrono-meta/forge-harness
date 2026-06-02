@@ -10,8 +10,9 @@ counterpart for tooling — capability discovery, dispatch routing, and count-dr
 
 Inspired by the **A2A "Agent Card"** pattern (the 2026 standard for agent capability discovery):
 each card declares an agent's `id`, `file`, `role`, `allowed_tools`, `invoked_by`, and a `writes`
-flag. `agent_count` is asserted at the top level and **must equal the number of `.md` files in
-`.claude/agents/`** — a mismatch is itself a State-Degradation signal (see `harness-doctor`).
+flag. `agent_count` is asserted at the top level and **should equal the number of `.md` files in
+`.claude/agents/`** — re-checked on every agent add/remove by `harness-doctor` Step 11-2-B, which
+compares `agent_count` against the live file count; a mismatch is a State-Degradation signal.
 
 ### Regeneration
 
