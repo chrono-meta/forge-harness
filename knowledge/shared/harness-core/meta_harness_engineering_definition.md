@@ -74,7 +74,8 @@ Three contemporary approaches to harness engineering, compared:
 
 FH's position: **human judgment is not a cost to minimize — it is the quality gate that prevents harness drift**. Automation handles pattern detection, drafting, and proposal; humans decide what enters the harness.
 
-> Principle: "A good harness gets simpler over time. If it's getting more complex, something is wrong."
+> **Principle (field harness)**: "A good harness gets simpler over time. If it's getting more complex, something is wrong."
+> **Principle (meta-harness)**: Optimize, not necessarily simplify — complexity is justified when it earns its scope. Red flags: orphaned skills, redundant overlap, decorative structure (complexity that exists but doesn't change behavior).
 
 ---
 
