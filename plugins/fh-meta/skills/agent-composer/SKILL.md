@@ -206,11 +206,52 @@ If 🚨 items exist, insert before the standard Y/E/N in Step 3:
 
 ## Step 3. Approval → Execution
 
-- **Y**: Execute immediately. Parallel agents dispatched simultaneously in a single message.
+- **Y**: Execute immediately. Generate Context Cards (Step 3-a), then dispatch parallel agents in a single message.
 - **E**: User modifies plan then re-confirms.
 - **N**: Cancel.
 
 > **Detail**: See `SKILL_detail.md §Worktree-Isolation` — Step 3.1 parallel proposal mode with git worktree isolation — read when 2+ agents write to overlapping files.
+
+### Step 3-a. Context Card Injection (required for 2+ parallel agents)
+
+Sub-agents are spawned in isolation — they cannot see the live conversation. Inject a Context Card into each agent prompt before dispatch to prevent context blindness (duplicate work, stale direction, missing constraints).
+
+**N≤2 (standard)**:
+```
+[Session Context Card]
+Purpose: {session goal}
+Completed: {done items + file paths — agent must know to avoid duplication}
+This agent's task: {specific task for this agent}
+Note: {constraints / history the agent must know}
+```
+
+**N≥3 (Registry mode — DACS-inspired, arXiv:2604.07911)**:
+```
+[Session Context Card]
+Purpose: {session goal}
+Completed: {done items + file paths}
+This agent's task: {specific task}
+Note: {constraints}
+
+[Agent Registry]
+Agent-1 ({role}): {≤1 sentence — what it's doing, key files}
+Agent-2 ({role}): {≤1 sentence}
+... (all agents except this one)
+```
+Total Registry ≤200 tokens. Each agent receives its own full card + compressed view of all other agents.
+
+**Coordination-overhead budget** (apply before each Wave):
+
+| Rule | Constraint |
+|---|---|
+| **Per-wave fan-out cap** | ≤4 agents per dispatch wave. Above 4: decompose hierarchically (supervisor → sub-waves), not flat fan-out |
+| **Capability-aware routing** | Match each subtask to agent's `role` + `allowed_tools` + `writes`. Never dispatch a `writes: false` audit agent (e.g., fact-checker, hub-persona-auditor) for a task requiring edits |
+
+Rationale: orchestrator-worker coordination adds ~+285% token overhead at N≥5 flat fan-out (DACS, arXiv:2604.07911). Sub-waves amortize this.
+
+**Focus Mode** (N≥3, on-demand only): When an agent signals `"Need full context from Agent-X to proceed"` → re-dispatch that agent with Agent-X's full Context Card + Registry-compressed view of others. Use only when genuinely needed — adds one round-trip.
+
+**Omit card**: Simple read-only lookup agents with no context dependency may skip injection.
 
 ---
 
@@ -357,8 +398,8 @@ Configure via `EXECUTION_TIER: standard` in CLAUDE.md. Temporary override: "use 
 
 | Tier | Count | Behavior |
 |---|---|---|
-| **Small** | 2–5 | Dispatch immediately |
-| **Medium** | 6–16 | Confirm scale before dispatch |
+| **Small** | 2–4 | Dispatch immediately (within per-wave cap) |
+| **Medium** | 5–16 | Decompose into sub-waves of ≤4; confirm scale before dispatch |
 | **Large** | 17+ | Worktree isolation mandatory + explicit user approval required |
 
 ---
