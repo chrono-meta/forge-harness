@@ -378,7 +378,7 @@ cd ~/projects/{your-project} && claude
 | `cross-ecosystem-synergy-detection` · `plugin-recommender` | ✅ hub cross-ref | ⚠️ your project only |
 | Meta/hub seed accumulation | ✅ `knowledge/shared/` | ❌ |
 
-#### Mode D — agent file copy only
+#### Minimal entry — agent file copy only
 
 The lightest entry. Copy a single agent file to use immediately:
 
