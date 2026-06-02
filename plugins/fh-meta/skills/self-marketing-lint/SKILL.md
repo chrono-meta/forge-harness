@@ -1,9 +1,16 @@
 ---
 name: self-marketing-lint
-description: Detects self-marketing language (version labels, emphasis words, iteration counts, overstatement declarations) in FH skill, agent, and documentation files and outputs replacement suggestions. Detection criteria are defined inline in this skill. Triggered by "check FH files", "remove marketing language", "description diet", "self-marketing-lint".
-user-invocable: true
-allowed-tools: ["Read", "Grep", "Glob", "Bash"]
+description: >-
+  DEPRECATED — merged into harness-doctor --lint mode (2026-06-02).
+  Language pattern detection (self-marketing, cushion words, version labels) is now Step 3-L of harness-doctor.
+  Use /harness-doctor --lint instead.
+user-invocable: false
+allowed-tools: []
 model: sonnet
+deprecated: true
+deprecated_reason: absorbed into harness-doctor Step 3-L (--lint mode)
+deprecated_date: 2026-06-02
+successor: harness-doctor
 ---
 
 # self-marketing-lint — FH Self-Marketing Language Detection + Replacement Suggestions

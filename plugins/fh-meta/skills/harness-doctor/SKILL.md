@@ -1,6 +1,6 @@
 ---
 name: harness-doctor
-description: Scans a project's harness structure (.claude/ directory, CLAUDE.md, rules, agents) to diagnose complexity, drift, missing files, and broken references, then suggests improvements. Triggered by "harness check", "structure diagnosis", "CLAUDE.md audit".
+description: Scans a project's harness structure (.claude/ directory, CLAUDE.md, rules, agents) to diagnose complexity, drift, missing files, and broken references, then suggests improvements. `--lint` flag adds language-pattern scan (self-marketing, cushion words, version brags). Triggered by "harness check", "structure diagnosis", "CLAUDE.md audit".
 user-invocable: true
 allowed-tools: ["Read", "Bash", "Glob", "Grep"]
 model: sonnet
@@ -52,6 +52,52 @@ Check current cwd harness file structure and determine if FH environment (tracks
 | Rules files unreferenced in CLAUDE.md | R-tier |
 | weekly_audit 14~30 days elapsed | S-tier |
 | weekly_audit 30+ days elapsed | M-tier |
+
+### Step 3-L. Language Lint (`--lint` mode only)
+
+> Activate with `/harness-doctor --lint` or when harvest-loop surfaces a P10-series signal. Skipped in standard runs.
+
+Grep-based scan of SKILL.md, agent `.md`, and doc files for self-marketing language patterns. Outputs replacement suggestions — no automatic edits.
+
+**Detection patterns**:
+
+| Pattern | Examples | Replacement direction |
+|---|---|---|
+| Self-declarations of quality | "industry-leading", "the world's first", "core skill", "best" | Delete — no external evidence |
+| Version / iteration labels | "v0.3", "22nd naming round", "26th iteration", "(added 2026-05-24)" | Remove (git history manages versioning) |
+| Cushion language | "easily", "instantly", "seamlessly", "without burden", "fully automated" | Replace with behavior-based description |
+| Owner self-reference loops | "validated by our team", "proven internally" | Delete or replace with external evidence |
+| Marketing word stacking | 3+ adjectives in one sentence | Reduce to functional description |
+| Spec-only artifacts | SKILL.md or agent file missing `Done When` section | Add observable output criteria |
+
+**Scan targets**:
+```bash
+find {FH_ROOT}/plugins -name "SKILL.md" | sort
+find {FH_ROOT}/.claude/agents -name "*.md" | sort
+find {FH_ROOT}/docs -name "*.md" 2>/dev/null | sort
+```
+
+**Detection commands**:
+```bash
+# version / iteration labels
+grep -n "v[0-9]\+\.[0-9]\|[0-9]\+th\|[0-9]\+th iteration\|prototype [0-9]\+" {file}
+# cushion language
+grep -n "fully\|instantly\|full coverage\|automatically\|conveniently\|easily\|without burden\|seamlessly" {file}
+# self-declaration patterns
+grep -n "core skill\|world's first\|best\|most\|top\|industry-leading" {file}
+```
+
+**Output format** (per file):
+```
+File: {path}
+  L{N}: "{original text}"
+  → Suggested: "{replacement}" (reason: {pattern type})
+  → Or: remove (reason: {pattern type})
+```
+
+**Lint findings** feed into Step 7 report as a separate "Language Quality" section — not mixed into structural M/S/R tiers. Lint findings are advisory: HIGH (spec-only = missing Done When, treat as S-tier) / LOW (language patterns, R-tier).
+
+---
 
 ### Step 4. L3 — Drift Diagnosis
 
@@ -128,7 +174,12 @@ Signal in 2+ classes → escalate one tier.
 - Context appropriateness (L5-B): [suspected misuse or "no issues"]
 - Effect metrics (L5-C): E1=[result] / E3=[result] / E5=[result]
 
-Diagnostic scope: L1~L3 [· L4 · L5 (FH only)]
+---
+## Language Quality (`--lint` mode only)
+- HIGH (spec-only — missing Done When): [list or "none"]
+- LOW (language patterns): [file: L{N}: "{text}" → {suggestion}]
+
+Diagnostic scope: L1~L3 [· L4 · L5 (FH only)] [· --lint]
 ```
 
 M-tier 0 → output "Structure healthy. Maintaining simplification trend."
@@ -209,6 +260,7 @@ Verdict: PASS (M-tier 0, "Structure healthy") | CONDITIONAL_PASS (S/R remain, no
 ## Trigger Phrases
 
 - `/harness-doctor` · "harness diagnosis" · "harness structure check" · "CLAUDE.md audit"
+- `/harness-doctor --lint` · "check FH files for marketing language" · "description diet" · "remove marketing language" (→ Step 3-L)
 - "my Claude settings seem off" · "something that used to work doesn't anymore" · "skill isn't triggering"
 - "PR 올려줘" · "PR check" · "변경사항 영향 범위" (→ Step 11)
 
