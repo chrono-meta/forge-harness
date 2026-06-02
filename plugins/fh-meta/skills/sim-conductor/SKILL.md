@@ -22,7 +22,7 @@ Isolated environment (~/sim/observer/)   ← new user reproduction space (zero d
 
 The challenger persona captures that self-inspection is cleaning, not a vaccine — clarifying the need for a real external mirror (direct external user validation). In Path B (environments without `~/sim/`), logical isolation (agent prompt directives) substitutes, and only Area B is recommended.
 
-Runs autonomously through to PR or report commit. User involvement = 1 trigger + 1 PR review.
+Runs autonomously through to commit. PR creation requires explicit user request (CLAUDE.md PR principle). User involvement = 1 trigger + 1 explicit PR request.
 
 ## Invocation Triggers
 
@@ -290,7 +290,7 @@ Provide only one memory file to the consumer agent. Check: ① When should it be
 
 **Early Convergence Detection**: When 2+ Areas independently classify the same item as M-tier, trigger immediate fix without waiting for all Areas to complete. Cross-area agreement is a confidence signal — remaining analysis is confirmatory, not decision-making. Pattern: dispatch Areas in parallel → on first M-tier cross-area match → fix immediately → resume remaining Areas for S/R coverage only.
 
-**Multi-CLI mapping (optional)**: Each Area Agent dispatch can be routed to a different CLI backend (Codex, Gemini, Claude). This stacks execution-layer isolation (already default) with model-layer diversity — cross-area convergence then equals cross-model convergence per §3.2b confidence estimator. Default: all Areas → Claude Code (single-CLI users). See paper §10.4 Future Work #7 for empirical validation plan.
+**Multi-CLI mapping (design direction — not yet implemented)**: Mapping each Area Agent dispatch to a different CLI backend (Codex, Gemini, Claude) would stack execution-layer isolation with model-layer diversity. Default and current implementation: all Areas → Claude Code. Empirical validation pending — see paper §10.4 Future Work #7.
 
 **Self-marketing auto-lint**: Auto-flag the following vocabulary in results — "full-fledged", "decisive", "precision", "innovative", "groundbreaking", revision numbering (`Nth revision`), version history with embedded names.
 
