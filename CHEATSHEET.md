@@ -266,6 +266,40 @@ Example: /goal weekly audit complete — pattern scan → through PR
 
 > `/goal` operates independently from CLAUDE.md. Suitable for per-session temporary goals.
 
+### Lever 6 — Wrap-then-Compact (session state preservation)
+
+Standard `/compact` lets the auto-algorithm decide what to preserve. **Wrap-then-Compact** gives you the control: you curate the summary → that summary *becomes* the compact basis.
+
+> Use when you want to **preserve state** (vs. `/clear` which resets). Both free up context — the difference is what survives.
+
+**Pattern** (CC subscription only — Bedrock/API throws 400 without warning, as of 2026-06):
+
+| Step | Action |
+|---|---|
+| 1. Notice context approaching limit (~80%+) | CC UI shows the context meter |
+| 2. Ask Claude to write a session wrap-up | `"정리해줘"` / `"wrap up — completed, modified files, pending tasks"` |
+| 3. Run `/compact` | Claude's structured wrap-up strongly influences the compact output — tends to become the cold-start primer |
+| 4. Next session resumes with full context | Pending tasks + key decisions + file paths explicitly preserved |
+
+**Why it's better than blind `/compact`**:
+
+| | Blind `/compact` | Wrap-then-Compact |
+|---|---|---|
+| Summary basis | Auto-algorithm selects snippets | Human-curated — you control what's preserved |
+| Pending tasks | May be lost or fragmented | Explicitly listed before compact |
+| Key decisions | Summarized generically | Preserved with rationale |
+| Cold-start quality | Varies | Consistent — the wrap IS the summary |
+
+**Ideal wrap includes** (tell Claude to include all of these):
+- ✅ Completed items (with commit hashes)
+- ✅ Modified files + key changes
+- ✅ Pending tasks (explicit list)
+- ✅ Next session entry point
+
+> **CC subscription only**: Bedrock/API has no context meter warning — it fails silently with a 400 error. This pattern is CC subscription-specific.
+
+> **context-doctor integration**: saying `"context is getting full"` or `"slow"` → context-doctor will propose this pattern automatically.
+
 ---
 
 ## 11. New technology introduction pipeline

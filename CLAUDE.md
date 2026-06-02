@@ -183,6 +183,11 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "MCP failing", "tool keeps erroring", "circuit-breaker", "same error looping" | `/mcp-circuit-breaker` |
 | "token budget", "how expensive", "estimate tokens", "will this cost a lot" | `/token-budget-gate` |
 | "did my rule change break anything", "regression check", "test harness changes" | `/prompt-regression` |
+| "SKILL.md too large", "split this skill", "skill is bloated", "skill file too long" | `/skill-splitter` |
+| "review for the team", "CTO review", "decision-maker", "share with leadership", "approval deck" | `/apex-review` |
+| "run full pipeline", "verify everything", "end-to-end sweep", "chain all verifications" | `/pipeline-conductor` |
+| "help me write a prompt", "build a prompt", "improve this prompt", "prompt template" | `/meta-prompt-builder` |
+| "memory feels bloated", "clean up memory", "memory too large", "memory hygiene" | `/memory-hygiene` |
 | "ready to PR", "about to push", "merge this", "PR 올려줘", FH asset changed in session | 4-axis auto-gate (see above — runs automatically, no proposal needed) |
 
 **Guard**: Do not propose a skill that is already running. One signal = one-line proposal (no pressure).
