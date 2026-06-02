@@ -454,6 +454,21 @@ Aggregate E1~E6 results into a harness health index (6 points max):
 
 ---
 
+## Harness-Defect Taxonomy (frontier cross-check)
+
+> A cross-cutting lens over the L1~L5 findings, not a new L-level. 2026 industry reporting frames "Harness Engineering" as the 4th paradigm and traces ~65% of enterprise AI failures to three harness-defect classes (not model capability). Mapping FH's structural signals onto this taxonomy gives an external cross-check; each detected signal folds into the same M/S/R report (Step 7).
+> Frontier basis: [`harness_frontier_diagnosis_2026-06-02.md`](../../../../knowledge/shared/harness-core/harness_frontier_diagnosis_2026-06-02.md) §Frontier Highlights.
+
+| Defect class | Definition | Detectable signals in an FH repo | Tier |
+|---|---|---|:---:|
+| **Context Drift** | Active context diverges from intent over a long session (stale rules, accumulated cruft, lost task framing). | Stale paths in CLAUDE.md (reuse L3-1 BROKEN refs) · `.claude/rules/` files unmodified 90+ days (L3-2) · CLAUDE.md over line threshold (L2-1). | S |
+| **Schema Misalignment** | Tool/agent input-output contracts don't match what callers send (arity/shape mismatch, undocumented contracts). | Agent file count vs README/AGENTS.md mention drift (Step 11-B/E) · plugin.json/marketplace.json `"N skills"` count vs actual dirs (Step 11-A) · SKILL.md missing `Done When` (undocumented completion contract). | M |
+| **State Degradation** | Persisted state (tracks/, memory, registries) decays: count drift, stale paths, orphaned entries. | tracks/ with no sync in 30+ days (L4-1) · phantom `knowledge/` refs not in CATALOG (Step 11-C) · INACTIVE_90D skills with no call record (L5-A). | M |
+
+Cross-check rule: a signal that fires under two or more classes (e.g. a stale CLAUDE.md path that is also a phantom knowledge ref) escalates one tier. Report defect-class hits inline with their originating L-level finding — do not duplicate the underlying check.
+
+---
+
 ### Step 7. M/S/R Prescription Report Output
 
 Classify and output diagnostic results in 3 tiers (including L5 results):
@@ -523,6 +538,7 @@ If latest weekly_audit file exists → propose adding `## Harness Structure Chec
 - [ ] Check suspected misuse patterns (L5-B)
 - [ ] Review effect metrics E1·E3·E5 (L5-C)
 - [ ] Check hook divergence (L3-4) — create alternative plan for hooks not firing in Agent View
+- [ ] Harness-defect taxonomy cross-check — Context Drift · Schema Misalignment · State Degradation
 ```
 
 ---
