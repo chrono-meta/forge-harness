@@ -8,6 +8,12 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-02 | frontier-digest, identity, propagation | harness-engineering, a2a, mcp, observability, context
+**File:** knowledge/shared/harness-core/harness_frontier_diagnosis_2026-06-02.md
+Frontier digest anchored on FH's 3-layer identity + Core Axis (WebSearch engine; curl blocked, no API key). 2026-06 signal: "Harness Engineering" named 4th AI-engineering paradigm (65% of AI failures = harness defects); A2A Agent Cards + MCP registry standardize agent discovery; AHE thesis — observability is the self-improvement bottleneck.
+- Decision: 6 strengthening candidates mapped per identity (agent-card registry + dispatch overhead budget → ①; harness-defect taxonomy + observability/eval hooks → ②; L1/L2/L3 context hierarchy + compression pass → ③)
+- Open: candidates are proposals only — none implemented yet. Raw signal + processing checklist held in private store (fh-be), not this public repo.
+
 ### 2026-06-01 | cross-audit, sidecar, sister-asset | pmh, agent-in-agent, multi-model, verification
 **File:** tracks/_audit/session_2026_06_01_pmh_sidecar_verification.md
 PMH(chrono-code) → FH cross-team 검증 요청(Issue #47) 회신. sidecar-orchestrator 환원 관련 gh copilot Critical 중 FH 소관 2건 검증. (1) multi_model_sidecar_strategy.md 완성도 = 부분 수정 필요(ollama·restricted-network 메시지·경로 어댑터·gh copilot 우선은 환원 측 책임, FH 원문 유지); (2) sidecar 존재 이유 = 검증 완료 — §Mechanism "Not an agent dispatch / stateless"가 agent-in-agent 재귀 공격을 구조적으로 반박 + Experiment 1·2 실증.
