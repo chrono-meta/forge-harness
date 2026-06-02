@@ -8,6 +8,12 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-02 | _audit | sister-asset, token-efficiency, compression, headroom
+**File:** tracks/_audit/session_2026_06_02_headroom_context_doctor.md
+Cross-audited Headroom (ex-Netflix OSS token-compression proxy, 60–95% reduction) against context-doctor's Compression Pass per sister_asset_protocol. Same goal, different layer: Headroom is the runtime executor FH lacks; context-doctor is the judgment Headroom lacks — they compose.
+- Decision: import redundancy-category targeting heuristic (MCP outputs ~70% → logs ~90% → DB → file trees) into context-doctor + name Headroom as the production-proven local option; no clone-and-own (reference + record only)
+- Open: actual proxy/agent-wrap routing is a local runtime setup (outside the FH repo); v0.22 maturity — pilot first
+
 ### 2026-06-02 | frontier-digest, identity, propagation | harness-engineering, a2a, mcp, observability, context
 **File:** knowledge/shared/harness-core/harness_frontier_diagnosis_2026-06-02.md
 Frontier digest anchored on FH's 3-layer identity + Core Axis (WebSearch engine; curl blocked, no API key). 2026-06 signal: "Harness Engineering" named 4th AI-engineering paradigm (65% of AI failures = harness defects); A2A Agent Cards + MCP registry standardize agent discovery; AHE thesis — observability is the self-improvement bottleneck.
