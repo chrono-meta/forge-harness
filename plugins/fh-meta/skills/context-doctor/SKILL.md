@@ -165,6 +165,38 @@ CC Context Audit Results
 
 > Skip Step 5 when not in a hub environment.
 
+## Context Hierarchy (L1/L2/L3)
+
+Information buried in the middle of a long context window suffers measurable accuracy loss — the "lost in the middle" effect, ~10–30% degradation for mid-context information (see `../../../../knowledge/shared/harness-core/harness_frontier_diagnosis_2026-06-02.md`). The remedy is two-fold: tier the context, and place the most important instructions at the **start and end**, never buried in the middle.
+
+**Three tiers — keep each within its band**:
+
+| Tier | What lives here | Rough budget | FH example |
+|---|---|---|---|
+| **L1 — always-on** | System / critical instructions that must hold every turn | ~2–5K tokens | `CLAUDE.md` core rules, active session.md header |
+| **L2 — session summary** | Current task state, decisions made this session | ~5–20K tokens | active track session file, `reference_next_session_starter.md` |
+| **L3 — on-demand** | Reference material retrieved only when needed | unbounded, loaded then dropped | `knowledge/` docs, large source files via Read offset/limit |
+
+**Placement norm** (applies to CLAUDE.md, prompts, and dispatched Context Cards):
+- Put the load-bearing rule or task goal in the **first lines and restate it in the last lines**.
+- Do not park a critical constraint in the middle of a long document — it is the most likely place to be missed.
+- Promote frequently-needed L3 docs to L2 summaries; demote stale L1/L2 content to L3 (load on demand) rather than keeping it always-on.
+
+When auditing CLAUDE.md / MEMORY.md in Step 5, check tier placement too: a critical rule sitting mid-file is a placement defect even if the file is within its line budget.
+
+## Compression Pass
+
+Optional step, run when context is large (e.g. after Step 5 flags a bloated file, or an L3 doc is long but must be loaded). This goes **beyond** `.claudeignore` — `.claudeignore` blocks files from loading; compression shrinks content that does need to load. LLMLingua-style compression has shown ~100K→20K token reductions with minimal loss on long retrieved context (see `../../../../knowledge/shared/harness-core/harness_frontier_diagnosis_2026-06-02.md`).
+
+Advisory and tool-agnostic — recommend (and, where a doc is being authored/edited in-session, apply) these reductions:
+
+- Strip boilerplate: repeated headers/footers, navigation, license blocks, generated banners.
+- Collapse repeated or near-duplicate sections into a single canonical statement plus a pointer.
+- Summarize long retrieved docs to the task-relevant slice before pinning them into context; keep the full doc as an L3 file to re-read only if needed.
+- Prefer Read offset/limit over full-file reads for large files (ties back to Step 2).
+
+Keep it reversible: compress the *working copy* in context, not the source of truth on disk, unless the user is explicitly editing that file.
+
 ## External User Environment Adaptation
 
 | Environment | Behavior |

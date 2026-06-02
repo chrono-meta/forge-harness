@@ -492,6 +492,24 @@ And update the `Last used` date for those skills in the Leaderboard table.
 
 ---
 
+## Observability Hook (glass-box self-improvement)
+
+> Frontier basis: [`harness_frontier_diagnosis_2026-06-02.md`](../../../../knowledge/shared/harness-core/harness_frontier_diagnosis_2026-06-02.md) §Frontier Highlights 3 (AHE — *agents cannot reliably improve a black-box harness*; the evolution loop's decisions must be observable and verifiable).
+
+FH already has a predict-verify loop (Step 0-c edit-manifest RECORD logs predicted impact). This hook makes the loop **auditable** rather than just recorded: every evolution decision this pipeline makes must leave a 3-part trace, reusing existing infra (`edit_manifest.yaml` + `tracks/_meta/`) — no new files.
+
+| Trace part | Where it lives | When written |
+|---|---|---|
+| **(a) what changed** | `edit_manifest.yaml` entry (file + diff summary) | Step 4-axis RECORD / on accepting a proposal (Y gate) |
+| **(b) predicted effect** | same entry's `predicted_impact` + `predicted_measurable_by` | same moment — a decision with no prediction is blind |
+| **(c) verify checkpoint** | same entry's `validation_status` (accepted/rejected) flipped at next Step 0-c VERIFY | next harvest-loop, when `predicted_measurable_by` date passes |
+
+**Decision-log obligation**: when the Y gate accepts a proposal (skill draft / enhancement / `escalate_when` change from Step 6-b), append the (a)+(b) pair to `edit_manifest.yaml` in the same step — do not defer. A proposal accepted without a recorded prediction is a black-box edit and must be flagged, not silently applied.
+
+**Glass-box Done When**: harvest-loop should be able to answer "for each change this loop made, what did we predict and did it hold?" purely from `edit_manifest.yaml` — with zero reliance on session memory. If any accepted change has no matching entry (predicted vs observed unrecoverable), that is the observability gap harness-doctor flags (see harness-doctor L5-A / State-Degradation).
+
+---
+
 ## Output Format
 
 ```

@@ -435,6 +435,22 @@ if [ -n "$last_audit" ]; then
 else
   echo "E6_WARN: no cold audit history (30-day SLA recommended)"
 fi
+
+# E7: Evolution-loop blindness — recent SKILL/rules/CLAUDE edits with no edit_manifest prediction
+# (glass-box check — a self-improving loop running without recorded predict-verify is operating blind)
+manifest=tracks/_meta/edit_manifest.yaml
+recent_asset_edits=$(git log --since="14 days ago" --name-only --pretty=format: 2>/dev/null \
+  | grep -E "SKILL\.md|\.claude/rules/|^CLAUDE\.md" | sort -u | wc -l | tr -d ' ')
+if [ ! -f "$manifest" ]; then
+  [ "$recent_asset_edits" -gt 0 ] \
+    && echo "E7_WARN: ${recent_asset_edits} asset edit(s) in 14d but no edit_manifest.yaml — evolution loop is black-box (no predict-verify record)" \
+    || echo "E7: no recent asset edits (no blindness risk)"
+else
+  manifest_recent=$(grep -c "$(date +%Y-%m)" "$manifest" 2>/dev/null || echo 0)
+  [ "$recent_asset_edits" -gt 0 ] && [ "$manifest_recent" -eq 0 ] \
+    && echo "E7_WARN: asset edits exist but no manifest entry this month — predictions unrecorded (loop running blind)" \
+    || echo "E7_OK: edit_manifest.yaml present with recent entries (predict-verify observable)"
+fi
 ```
 
 #### L5-D: Harness Health Score (HHS) — Aggregate Metric
@@ -449,8 +465,11 @@ Aggregate E1~E6 results into a harness health index (6 points max):
 | E4 harvest signals | ≥3 in 30 days | +1 |
 | E5 SKILL.md change | Within 14 days | +1 |
 | E6 cold audit | Within 30 days | +1 |
+| E7 evolution-loop observability | Recent asset edits have edit_manifest predictions (not running blind) | +1 |
 
 **HHS ≥ 4**: Healthy / **HHS 2~3**: Caution / **HHS ≤ 1**: Critical → immediate full harness-doctor re-diagnosis
+
+> E7_WARN is the State-Degradation signal applied to the self-improvement loop: edits exist but predictions are unrecorded, so predicted-vs-observed is unrecoverable → S-tier. Complements (does not duplicate) the Harness-Defect Taxonomy section.
 
 ---
 
