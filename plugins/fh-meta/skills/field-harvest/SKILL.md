@@ -1,25 +1,47 @@
 ---
 name: field-harvest
-description: Scans field project git history to find patterns worth promoting to the meta-harness and proposes a PR. Triggered by "save this pattern", "make this reusable across projects", "can we automate this repetition?", "push this to FH", "reverse absorption", or "harvest pattern".
+description: Scans git history of field projects to detect patterns worth backporting to the meta-harness, and proposes PRs. Also logs session work to knowledge hub when session ends. Triggers on "save this pattern", "use in other projects", "can we automate this?", "push to FH", "reverse absorption", "harvest pattern", "session log", "wrap up", "end session".
 user-invocable: true
-allowed-tools: ["Bash", "Read", "WebFetch"]
+allowed-tools: ["Bash", "view", "edit", "create"]
 model: sonnet
 ---
 
-# field-harvest — Field Pattern Harvest → FH Reverse Absorption Proposal
+# field-harvest — Field Pattern Harvest → FH Backport + Session Logger
 
-Scans recent commits from field projects for patterns worth absorbing back into FH. One-click completion through to PR creation upon user approval.
+Dual-mode skill:
+- **Mode A (Pattern Harvest)**: Scans recent commits in field projects to detect patterns worth backporting to FH. One-click flow from detection to PR creation.
+- **Mode B (Session Log)**: Records session work from field projects to knowledge hub when session ends. Auto-generates session markdown file with commits, learnings, and next steps.
 
-## Triggers
+## Invocation
 
-```
-/field-harvest                          # scan all mapped field projects
-/field-harvest <path>                   # specify a particular field project
-/field-harvest --since <N>d             # commits within N days (default 7)
-/field-harvest --watch <path>           # periodic monitoring mode (default 24h interval)
-/field-harvest --watch --interval <h>   # change monitoring interval
-/field-harvest --once                   # check current state and exit (no monitoring)
-```
+Natural language triggers — no CLI flags:
+
+**Mode A (Pattern Harvest)**:
+- "save this pattern", "harvest pattern"
+- "make this reusable across projects", "use in other projects"
+- "can we automate this repetition?"
+- "push this to FH", "reverse absorption"
+
+**Mode B (Session Log)**:
+- "wrap up", "end session", "session log"
+- "log today's work", "record session"
+- "sync to knowledge hub"
+
+**Explicit path**: Mention specific path in natural language (e.g., "harvest patterns from ~/projects/field-app")
+
+## Mode Selection (Step 0-A)
+
+Determine which mode to run based on user context:
+
+| Condition | Mode | Priority |
+|---|---|:---:|
+| User's last message contains: "wrap up", "end session", "session log" | **Mode B (Session Log)** | 1 (highest) |
+| Both Mode A and B applicable | Propose Mode B first, then ask "Also run Mode A pattern harvest?" | 2 |
+| Default or path specified | **Mode A (Pattern Harvest)** | 3 |
+
+**Execution order when both applicable**: Run git scan once, reuse results for both modes to avoid duplicate scans.
+
+---
 
 ## Step 0. Field Project Path Detection
 
@@ -134,20 +156,9 @@ PR body includes:
 - Application location (which skill/rule)
 - Expected cross-project impact
 
-## Step 5. Monitoring Mode (--watch)
+## Step 5. Done (Mode A Complete)
 
-When `--watch` flag is used, background periodic monitoring:
-
-```
-Monitoring: field-harvest active
-   Targets: <project list>
-   Interval: <N> hours
-   Next scan: <time>
-   Will notify immediately when candidate detected.
-```
-
-Utilizes ScheduleWakeup — only works while Claude Code session is active.
-Stops automatically when session ends (re-invoke `--watch` on restart).
+Report harvest candidate list and PR creation status to user.
 
 ## Invocation Triggers
 
@@ -209,20 +220,129 @@ When project paths from the original developer environment are not present:
 
 ## Usage Examples
 
+Natural language invocation:
+- "save this pattern" → Mode A scan + PR proposal
+- "wrap up" → Mode B session log generation
+- "field-harvest ~/projects/my-project" → Mode A with explicit path
+
+---
+
+# Mode B: Session Log → Knowledge Hub Sync
+
+Records session work from field projects to knowledge hub when session ends. Auto-generates session markdown file with commits, learnings, and next steps.
+
+## Step 0-B. Locate Hub Path
+
+Auto-detect knowledge hub location:
+
+```bash
+# Priority 1: Check FH auto_project_mapping.md for hub path
+grep "hub:" .claude/rules/auto_project_mapping.md 2>/dev/null | cut -d: -f2 | xargs
+
+# Priority 2: Standard path
+ls -d ~/forge-harness 2>/dev/null
+
+# Priority 2.5: Auto-discover hub candidates
+find ~ -maxdepth 3 -name "tracks" -type d 2>/dev/null | grep -E "(forge-harness|knowledge|hub)" | head -5
+
+# Priority 3: Ask user
 ```
-/field-harvest                          # full field 7-day scan
-/field-harvest ~/projects/my-project    # specific project 14-day scan + PR proposal
-/field-harvest --watch --interval 12    # auto-monitor every 12 hours
-/field-harvest --once                   # check current state only
+
+Determine track subdirectory: `tracks/field/` (field projects) or `tracks/external/` (external collaborations)
+
+## Step 1-B. Scan Current Session Work
+
+```bash
+cd <field-project-path>
+git log --oneline --since="today" --no-merges --author="$(git config user.name)"
+git status --short  # uncommitted changes
 ```
+
+## Step 2-B. Extract Session Summary
+
+**From git log only** (NO conversation context):
+
+1. **Context**: Infer from first commit message
+2. **Solution**: Aggregate commit messages
+3. **Commits**: List with hashes
+4. **Next Session**: Parse TODO/FIXME from `git grep`
+5. **Key Learnings**: Ask user (optional, 1-2 lines)
+6. **FH Backport Points**: Auto-detect from "pattern"/"reusable" keywords
+
+## Step 3-B. Generate Session Markdown
+
+Template:
+
+```markdown
+# Session YYYY-MM-DD — <Slug>
+
+## Context
+<Initial problem>
+
+## Solution
+<What was implemented>
+
+## Commits
+1. `<hash>` — <message>
+
+## Next Session
+<What's left>
+
+## Key Learnings
+<Patterns discovered>
+
+## FH Backport Points (Optional)
+<If patterns worth meta-skill/rule>
+
+---
+**Tags**: #<project> #<topic>
+```
+
+Filename: `session_YYYY_MM_DD_<slug>.md`
+
+## Step 4-B. Write + Commit to Hub
+
+```bash
+cd <hub-path>
+cat > tracks/<track>/session_$(date +%Y_%m_%d)_<slug>.md <<'EOF'
+<generated-content>
+EOF
+
+git add tracks/<track>/session_$(date +%Y_%m_%d)_<slug>.md
+git commit -m "session: <title> (<project> <date>)"
+git push origin main
+```
+
+## Step 5-B. Confirmation
+
+```
+✅ Session logged to knowledge hub
+📝 tracks/<track>/session_YYYY_MM_DD_<slug>.md
+```
+
+## Auto-Proposal Triggers (Mode B)
+
+When user says: "wrap up", "end session", "session log" → Auto-propose Mode B
+
+---
 
 ## Done When
 
+**Mode A (Pattern Harvest)**:
 ```
 All stages Step 0~4 complete
 + Step 3 harvest candidate list output (N candidates + M field-only)
 + Upon user approval, Step 4 PR creation complete (gh pr create executed)
 + When 0 candidates, "no absorption candidates" reported then exit
+```
+
+**Mode B (Session Log)**:
+```
+All Steps 0-B ~ 5-B executed
++ Session markdown file generated
++ Hub commit created with summary
++ Push to origin/main complete (with user approval)
++ Confirmation output with next session entry points
 ```
 
 Verdict: PASS (harvest candidates output and PR created, or 0 candidates confirmed) | CONDITIONAL_PASS (candidates found, PR pending user approval) | FAIL (contention-layer blocked candidate registration) | ESCALATE (role collision with existing skill requires human decision)
