@@ -137,7 +137,7 @@ FAIL routing: First FAIL → 1 re-synthesis allowed. FAIL after re-synthesis →
 
 ### Step 6 — Curator Lifecycle Review
 
-**6-1 SKILL.md Lifecycle**: 30+ day unused → [STALE] candidate. `pinned: true` → never touch. ≥70% overlap → merge candidate suggestion.
+**6-1 SKILL.md Lifecycle**: 30+ day unused → [STALE] candidate. `pinned: true` → never touch. ≥70% overlap → merge candidate suggestion. **> 300 lines AND no `SKILL_detail.md`** → propose `/skill-splitter` (governance-semantic split — not compression; the grew-through-harvest pattern is a natural split trigger).
 
 **6-2 Memory Self-Correction**: INDEX-ORPHAN (in MEMORY.md but file missing → auto-remove) · FILE-ORPHAN (file exists, not indexed → confirm with user) · MEM-STALE (30+ day unmodified → confirm with user).
 

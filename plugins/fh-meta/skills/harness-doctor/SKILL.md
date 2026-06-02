@@ -48,6 +48,7 @@ Check current cwd harness file structure and determine if FH environment (tracks
 | CLAUDE.md 100~200 lines | S-tier warning |
 | CLAUDE.md 200+ lines | M-tier — separation or reduction needed |
 | 15+ `##` sections in CLAUDE.md | S-tier warning |
+| SKILL.md > 300 lines AND no `SKILL_detail.md` | S-tier — propose `/skill-splitter` (governance-semantic split, not compression) |
 | Rules files unreferenced in CLAUDE.md | R-tier |
 | weekly_audit 14~30 days elapsed | S-tier |
 | weekly_audit 30+ days elapsed | M-tier |
@@ -200,6 +201,7 @@ Verdict: PASS (M-tier 0, "Structure healthy") | CONDITIONAL_PASS (S/R remain, no
 **Three-Doctor Loop chain** (auto-propose after prescription report):
 - M-tier + context/token waste → propose `/context-doctor`
 - M-tier + user-facing behavior changes → propose `/sim-conductor Area A`
+- SKILL.md S-tier (> 300 lines, no SKILL_detail.md) → auto-propose `/skill-splitter`: `"I see [skill] SKILL.md is [N] lines with no SKILL_detail.md. Want me to run /skill-splitter?"`
 - Both → propose full Three-Doctor Loop: context-doctor → sim-conductor Area A
 
 ---

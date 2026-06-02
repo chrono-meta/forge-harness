@@ -86,7 +86,18 @@ When burst pattern is detected → **trigger harvest-loop integration in Step 4*
 
 Check session state with the user, then prescribe according to context:
 
-**`/clear` recommended situations**:
+**Wrap-then-Compact** (when approaching context limit — CC subscription only):
+
+When context is near the limit and you want to *preserve state* rather than reset:
+1. Ask Claude: `"wrap up — completed items, modified files, pending tasks"`
+2. Claude writes a structured summary → that summary anchors the `/compact` output
+3. Run `/compact` — the wrap becomes the cold-start primer for next session
+
+> This is superior to blind `/compact` because you control what's preserved. Bedrock/API has no meter warning — CC subscription only.
+
+→ Full pattern + table: `CHEATSHEET.md §10 Lever 6`
+
+**`/clear` recommended situations** (reset, not preserve):
 ```
 □ Work direction has changed significantly (exploration → implementation, bug fix → refactor, etc.)
 □ Switching to a different track/project
@@ -284,6 +295,7 @@ Also activates when an external user expresses without token/context terminology
 | "Why is Claude so slow?" | Burst pattern or context overload | Step 2 |
 | "Seems like it keeps re-reading the same thing" | Repeated full-read detected | Step 2 (burst pattern) |
 | "Answers get weird as the session gets longer" | Accumulated context noise | Step 3 (/clear recommended) |
+| "Context is getting full", "context meter is high" | Approaching context limit | Step 3 — propose Wrap-then-Compact pattern |
 
 ## Three-Doctor Loop Integration
 
