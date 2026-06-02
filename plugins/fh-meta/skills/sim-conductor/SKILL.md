@@ -1,6 +1,6 @@
 ---
 name: sim-conductor
-description: Autonomously runs external user reaction simulations, internal audits, ideation scans, artifact validation, and quality reviews. Triggered by "run a simulation", "external user perspective", "internal audit", or "quality check".
+description: Autonomously runs external user reaction simulations, internal audits, ideation scans, artifact validation, and quality reviews. Profiles the target artifact first, then derives task-appropriate personas, dispatches them as parallel agents, classifies findings into M/S/R tiers, and completes the pipeline through to commit automatically.
 user-invocable: true
 allowed-tools: ["Read", "Write", "Bash", "Grep", "Glob", "Agent"]
 model: opus
@@ -8,21 +8,8 @@ model: opus
 
 # sim-conductor — Meta-Simulation Automation Orchestrator
 
-> Derives task-appropriate personas, dispatches them as parallel agents to validate AI tools from multiple external perspectives, classifies findings into M/S/R tiers, and completes the pipeline through to PR automatically. Personas are sourced installed-first → built-in fallback → external install (chain to plugin-recommender), and scale from 3 to 16 by task complexity.
-
-## Core Principle — Beyond Self-Inspection
-
-The structural trap in AI tool quality validation: when the builder tests, they are always confined to an internal perspective. sim-conductor addresses this limitation with **physical isolation + AI personas**.
-
-```
-Development environment (harness root)
-         ↕ physical isolation
-Isolated environment (~/sim/observer/)   ← new user reproduction space (zero development context)
-```
-
-The challenger persona captures that self-inspection is cleaning, not a vaccine — clarifying the need for a real external mirror (direct external user validation). In Path B (environments without `~/sim/`), logical isolation (agent prompt directives) substitutes, and only Area B is recommended.
-
-Runs autonomously through to commit. PR creation requires explicit user request (CLAUDE.md PR principle). User involvement = 1 trigger + 1 explicit PR request.
+> Profiles target → derives personas → dispatches parallel agents → M/S/R triage → commit.
+> Personas are sourced installed-first → built-in fallback → external install. Scale: 3 to 16 by task complexity.
 
 ## Invocation Triggers
 
@@ -32,406 +19,344 @@ Runs autonomously through to commit. PR creation requires explicit user request 
 | "Check the harness", "asset audit", "internal audit" | Area B |
 | "Any new ideas?", "ideation scan", "naming candidates" | Area C |
 | "Review this code" (pre-PR), "review this prompt" | Area D (code) |
-| "Check if the session card is correct", "does the skill actually work", "memory cold-start validation" | Area D (session/skill/memory) |
+| "Check if the session card is correct", "does the skill actually work", "memory cold-start validation" | Area D (consumer) |
 | "Is the output good?", "artifact quality review" | Area E |
 
 Proposal format: `"If it's related to [X], should I simulate with /sim-conductor [Area]?"`
 
-### Natural Language Triggers (activates without internal vocabulary)
-
-Also activates when an external user expresses without sim-conductor terminology:
+### Natural Language Triggers
 
 | Example utterance | Intent | Mapped Area |
 |---|---|---|
-| "Validate our system virtually" | Full system simulation request | Area B |
-| "Test it with personas" | Persona-based validation request | Area A |
-| "Run an external user simulation" | External user reaction check | Area A |
-| "Look at it through someone else's eyes", "How would a new team member see this?" | External perspective simulation | Area A |
+| "Validate our system virtually" | Full system simulation | Area B |
+| "Test it with personas", "Run an external user simulation" | External user reaction | Area A |
+| "Look at it through someone else's eyes" | External perspective | Area A |
 | "Validate that this actually works" | Real-usage validation | Area D |
-| "Find problems aggressively" | Devil-style adversarial validation | Area B (devil persona) |
+| "Find problems aggressively" | Adversarial validation | Area B (devil persona) |
 
 ## Triggers
 
 ```
-/sim-conductor                        # default: Area C (Innovator) auto-run
+/sim-conductor                        # default: Area C auto-run
 /sim-conductor A                      # external user simulation
 /sim-conductor B                      # internal meta audit
 /sim-conductor C                      # Innovator scan
 /sim-conductor all                    # full A + B + C
 /sim-conductor A --target <path>      # specific asset target
 /sim-conductor D --target <file>      # code/prompt multi-persona review (pre-PR)
-/sim-conductor D session [--target <file>]   # session start card cold-start validation
-/sim-conductor D skill <name>         # specific skill trigger utterance consumer simulation
+/sim-conductor D session [--target]   # session card cold-start validation
+/sim-conductor D skill <name>         # skill trigger utterance consumer simulation
 /sim-conductor D memory <file>        # memory file cold-start validation
 /sim-conductor E --target <file>      # artifact quality review (post-pipeline)
 ```
 
-**Frequency limits (R1 rule)**:
-- Area A: After asset changes or manual trigger
-- Area B: Maximum once per week (check latest mtime of `tracks/_meta/sim_*_area_B*.md`)
-- Area C/D/E: No limit
+**Frequency limits**: Area A after asset changes or manual trigger · Area B max once/week · Area C/D/E no limit.
+
+---
 
 ## Step 0 — Environment Sync
 
-**Harness root auto-detection**:
-```bash
-HARNESS_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-SIM_CLONE=~/sim/your-hub-sim/forge-harness-via-clone
-[ -d "$SIM_CLONE" ] && (cd "$SIM_CLONE" && git pull origin main) || SIM_CLONE="$HARNESS_ROOT"
+Auto-detect harness root, sync sim clone if present, set `$REPORT_DIR`.
 
-# Report storage path detection
-REPORT_DIR=$(find "$(dirname "$HARNESS_ROOT")" -maxdepth 2 -name "tracks" -type d 2>/dev/null | head -1)
-REPORT_DIR="${REPORT_DIR:-$HARNESS_ROOT/tracks}/_meta"
-mkdir -p "$REPORT_DIR"
+> **Detail**: See `SKILL_detail.md §Step0-Bash` — harness root detection, sim clone sync, report dir creation — read when executing Step 0.
+
+**Area B frequency check**: Previous Area B report within 7 days → stop + report date. No file found → treat as first run.
+
+---
+
+## Step 0.3 — Target Profile Analysis
+
+Runs when Area is unspecified, or when target file is provided before Area selection.
+**Skip** if user provides a complete directive (e.g. `/sim-conductor A --target <file>`).
+
+Read target artifact(s) → classify on 5 dimensions → output recommendation → user confirms or overrides:
+
+| Dimension | Signal → Weight shift |
+|---|---|
+| `artifact_type` | SKILL.md / design-doc → Area B + D-skill↑ · README / CHEATSHEET → Area A↑ · code / config → Area D-code↑ |
+| `audience` | external installer / first-time user → newcomer↑ · internal team only → devil↑ |
+| `claim_density` | 3+ stated benefits or superlatives → devil-advocate↑ |
+| `risk_level` | external publish / marketplace listing → steel-quench prerequisite triggered |
+| `novelty` | first-of-its-kind / no prior session evidence → source-grounding-audit recommended |
+
+```
+Target Profile output:
+  artifact_type: [type]
+  audience: [internal | external | mixed]
+  claim_density: [low | medium | high] ([N] stated claims)
+  risk_level: [low | medium | high]
+
+Recommendation:
+  Areas: [list + rationale]
+  Persona composition: [list + weight]
+  Scale: [Minimum 3 | Extended 4–8 | Full ≤16]
+  Prerequisites: [steel-quench / source-grounding-audit / none]
 ```
 
-**Area B frequency check**: If the previous Area B report is within 7 days → stop execution + report date. If no file found, treat as "first run" and proceed. Mode C environments (no sim/tracks paths) auto-create `$HARNESS_ROOT/tracks/_meta/`.
+#### Persona Discovery (after profile → before dispatch)
 
-## Step 0.5 — Precondition Validation (proactive concern)
+After profiling, sim-conductor determines the needed perspective types, then maps each to the best available agent:
 
-If a problem is found, proactively surface **1 concern** then confirm whether to proceed. If no concern, proceed directly to Step 1.
+```
+For each needed perspective:
+  ① Scan installed plugins + .claude/agents/ → exact match? → use it
+  ② Built-in fallback palette → approximate match? → inject as prompt directive
+  ③ GAP: no ①② match for a high-weight perspective
+       → query /plugin-recommender: "find agents for [perspective] matching [artifact_type] context"
+       → present: name · install command · estimated fit · token cost
+       → user chooses: install now / skip / substitute with ②
+```
+
+Persona Discovery output:
+
+```
+Persona Map:
+  newcomer       → [installed agent name] OR [built-in fallback]
+  devil-advocate → [installed agent name] OR [built-in fallback]
+  [profile-specific role] → ⚠️ GAP — plugin-recommender recommends: [X] (install? y/n)
+```
+
+Gaps on **high-weight personas** (from profile) block dispatch until resolved. Gaps on low-weight personas → auto-fill with built-in fallback, no block.
+
+**Degraded coverage rule**: When user skips a high-weight gap (substitutes with built-in fallback), flag in the Step 3 report under "Persona composition used" as `⚠️ degraded: [perspective]`. Do not silently proceed. Degraded coverage on risk_level=high targets → additionally warn before dispatch.
+
+Overriding a prerequisite recommendation requires explicit "skip [prerequisite]" utterance.
+
+> **Detail**: See `SKILL_detail.md §PersonaDiscovery` — plugin-recommender query format, gap resolution decision tree, persona map examples for each artifact type — read when running Persona Discovery.
+
+> **Detail**: See `SKILL_detail.md §Profile-Examples` — worked profiles for SKILL.md, README, bash script, design doc — read when result is ambiguous or to calibrate weights.
+
+---
+
+## Step 0.5 — Precondition Validation
+
+Proactively surface 1 concern, then confirm whether to proceed. Skip if no concern.
 
 | Check | Concern trigger condition |
 |---|---|
 | Area B frequency guard | Previous run within 7 days + S-tier unresolved |
-| Unresolved M-tier | New simulation requested without processing previous M-tier |
-| steel-quench not run | Area A requested immediately before external publish + no steel-quench history → **mandatory gate: run steel-quench first, Area A does not proceed until steel-quench completes** |
+| Unresolved M-tier | New simulation without processing previous M-tier |
+| steel-quench not run | Area A in external publish context → **mandatory gate: Area A does not proceed until steel-quench completes** |
 | Self-recursive path | sim-conductor attempting to auto-PR its own M-tier |
 | Goal-method alignment | Requested Area doesn't match actual problem |
-| D/E --target missing | Area D(code)/E runs without `--target` file or file doesn't exist |
-| D session target not found | Session start card file not found → prompt path confirmation |
-| E execution timing error | Area E requested before pipeline run (no artifact yet) |
+| D/E --target missing | Area D(code)/E runs without --target file |
+| D session target not found | Session start card file not found → confirm path |
+| E execution timing error | Area E before pipeline run (no artifact yet) |
 
 Concern format: `"One thing to check before [Area X]: [concern]. Proceed?"`
 
-## Step 1 — Area-Specific Simulation Execution
+---
+
+## Step 1 — Area-Specific Simulation
 
 ### Area A — External User Perspective
 
-Target: skill descriptions, README external user entry points, CHEATSHEET first section.
+Target: skill descriptions, README, CHEATSHEET entry points.
 
 #### Task-Adaptive Persona Selection
 
-sim-conductor does **not** run a fixed persona set. It analyzes the current task, decides **which perspectives this specific work needs**, then sources those personas. The set is task-derived, not preset.
-
-**Step 1 — Derive needed perspectives from the task.** Ask: who would catch the failures that matter *here*? A CLI tool needs a newcomer + power-user; a safety classifier needs a domain-expert + adversarial red-teamer; a pricing change needs a skeptic + finance-minded reviewer. Output a list of *required perspectives*, sized to task complexity (3 minimum recommended, up to 16 for major reviews).
-
-**Step 2 — Source each persona, in this priority order:**
+sim-conductor does **not** run a fixed persona set. It derives needed perspectives from the task, then sources each persona in priority order:
 
 ```
 ① Installed first — scan installed plugins + .claude/agents/ for a matching persona/agent
-     (deep-insight personas, hub-persona-auditor, persona-innovator, quench-challenger, etc.)
-② Built-in fallback — if no installed match, inject the role as a prompt directive
-     into a general-purpose Agent (logical isolation, Path B — works with zero plugins)
-③ External fetch — if neither covers a needed perspective (or none installed at all),
-     chain to /plugin-recommender: search marketplaces → recommend → install (user approval)
-     → return here → run the now-available persona
+② Built-in fallback — inject role as prompt directive into general-purpose Agent (Path B)
+③ External fetch — chain to /plugin-recommender when ①② insufficient for high-stakes tasks
 ```
 
-> **Newly-installed plugins activate as proper agents from the *next* session.** Within the same session as install, the plugin's agents are not yet registered as `subagent_type`s — dispatch them via ② (inject their role definition into a general-purpose Agent) until the session restarts.
+Built-in fallback palette (② tier):
 
-**Built-in fallback role examples** (the ② tier — prompt directives, no plugin needed):
-
-| Persona role | Perspective | Focus |
+| Role | Perspective | Focus |
 |---|---|---|
 | Newcomer | First-time user, zero development context | Clarity, terminology, onboarding friction |
-| Power-user | Advanced user seeking edge cases | Undocumented behavior, performance bottlenecks, limits |
-| Devil-advocate | Adversarial critic | Claim-evidence gaps, self-marketing, naming-substance mismatch |
-| Domain-expert | Subject-matter expert from adjacent field | Technical depth, accuracy, completeness |
-| Skeptic | Pragmatic outsider | ROI, complexity justification, "why not just X?" |
+| Power-user | Advanced user, edge cases | Undocumented behavior, limits |
+| Devil-advocate | Adversarial critic | Claim-evidence gaps, naming-substance mismatch |
+| Domain-expert | Adjacent-field subject matter expert | Technical accuracy, completeness |
+| Skeptic | Pragmatic outsider | ROI, "why not just X?" |
 
-Derive task-specific personas (e.g., "security auditor", "non-native-English reader", "mobile-first user") when the task needs perspectives beyond these five.
+Derive task-specific personas (e.g. "security auditor", "non-native reader") when the task profile demands it.
 
-#### Scale (sized to task, not fixed)
+#### Scale
 
 | Scale | Count | When |
 |---|---|---|
-| **Minimum** | 3 | Routine Area A — pick the 3 most task-relevant perspectives |
+| **Minimum** | 3 | Routine Area A — most task-relevant 3 perspectives |
 | **Extended** | 4–8 | High-stakes publish / external release |
-| **Full** | Up to 16 parallel | Pre-major-version / architecture review (Opus 4.8 Dynamic Workflow validated) |
+| **Full** | Up to 16 parallel | Pre-major-version / architecture review |
 
-All personas run as **parallel general-purpose Agents** (or installed agents) — no sequential bottleneck. Use `agent-composer` Medium/Large tier fan-out rules for Extended/Full scale.
+All personas run as **parallel Agents** — no sequential bottleneck. Use agent-composer Medium/Large fan-out for Extended/Full.
 
-**Simplification guard**: For routine internal audits, ② built-in fallback at Minimum scale is sufficient — do not trigger ③ external fetch. Chain to plugin-recommender only when a needed perspective has no installed or built-in match, or stakes are high (pre-publish / marketplace listing).
+**Simplification guard**: Routine internal audits → ② built-in fallback at Minimum scale. Chain to ③ only when a needed perspective has no ①② match, or stakes are high.
 
 #### Multi-Team Mode (when external CLIs available)
 
-When 1+ external CLIs are detected (gemini / gh-copilot / ollama / codex), Area A upgrades from single-Claude persona dispatch to **Multi-Team Panel** — each CLI forms an independent team that runs its own 2–3 personas in parallel.
+When 1+ external CLIs detected, Area A upgrades to Multi-Team Panel: each CLI forms an independent team. Cross-team: 2+ teams flag same issue → tier-up (S→S-confirmed). External-only findings → "Claude blind spot" flag.
 
-**Pre-entry user confirmation** (mirrors steel-quench Wave 5 gate):
+Pre-entry user confirmation required before multi-team execution.
 
-```
-Area A — Multi-Team Mode available.
-Detected external CLIs: [list or "none"]
-Estimated additional token cost: ~2K–5K per external team (billed to that CLI's quota).
-Run multi-team? (a) Full panel  (b) Claude sub-agents only  (c) Skip to Area B
-```
+> **Detail**: See `SKILL_detail.md §MultiTeam` — team formation table (T0–T4), CLI detection bash, confirmation dialog, cross-team synthesis format — read when multi-team mode activates.
 
-**Team → Persona mapping** (same as steel-quench Wave 5 Step 0/1):
+**A-1** (Newcomer Agent) — description friendliness · onboarding friction · terminology clarity
+**A-2** (Power-user Agent) — install conflicts · duplication · silent overwrite
+**A-3** (challenger Agent, artifact_type="SKILL") — claim-evidence gaps · angles U3, U5, S2
 
-| Team | CLI | Personas |
-|---|---|---|
-| T0 Claude | Agent sub-agent | hub-persona-auditor · challenger · domain-expert |
-| T1 Gemini | `gemini` pipe | newcomer · power-user · devil |
-| T2 Copilot | `gh copilot suggest` | devil · domain-expert |
-| T3 Ollama | `ollama run` | devil |
-| T4 Codex | `npx @openai/codex exec` | devil · edge-case-hunter |
+> ⚠️ **Human review gate**: Area A S-tier judgments require owner review before entering AI-AI loop.
 
-**Cross-team synthesis**: issues raised by 2+ teams → tier-up (S→S-confirmed, A→A-confirmed). External-only findings (T1~T4 caught, T0 missed) → flag as "Claude blind spot" — surface before PR.
-
-**Path B fallback**: No external CLIs → cross-session `claude --print` as T0 cold-read variant. No change to existing ①②③ persona sourcing.
-
-**A-1. Description friendliness** (Agent w/ Newcomer brief) — Is it understandable without internal terminology? Is the first line the essence? Check for embedded names/revisions/emphasis words. Findings = [issue, location, fix suggestion] format.
-
-**A-2. Install conflicts** (Agent w/ Power-user brief) — fh-meta additional install scenario. Identify conflict/duplication/silent overwrite points. Findings = [conflict type, location, mitigation suggestion] format.
-
-**A-3. Critical audit** (Agent, subagent_type="challenger", artifact_type="SKILL") — "Does the meta-harness actually do what it claims?" Angles: U3 (evidence grounding), U5 (phantom detection), S2 (trigger reachability). Findings = [claim, evidence status, verdict (aligned/misaligned/exaggerated)] format.
-
-For Extended/Full scale: add Domain-expert, Skeptic, and any task-derived personas as additional parallel Agents.
-
-> ⚠️ **Human review gate**: Area A results must be reviewed directly by the owner before entering the AI-AI loop (sim-conductor→hub-cc-pr-reviewer). Final decision authority on S-tier judgments rests with the human.
+---
 
 ### Area B — Internal Meta Audit
 
 Target: all fh-meta assets (skills + agents + plugin.json).
 
-> **Self-recursive reference caution**: sim-conductor itself is also subject to audit. When M-tier is found, report only — delegate processing to user.
+> **Self-recursive caution**: When M-tier found in sim-conductor itself → report only, delegate to user.
 
-> **External baseline injection method**: Self-inspection is cleaning, not a vaccine. Structural methods to reduce self-reference risk:
-> 1. **Regular devil attacks**: Periodically run a completely external perspective (Wave 1 devil attack → Wave 2 defense). Recommended combination: Area B once/month + devil attack once/quarter.
-> 2. **Direct external user validation**: Actual external user (not the owner) attempts install + invocation → collect reactions (cascade β achievement validated: first autonomous external run confirmed).
-> 3. **steel-quench skill integration**: Route devil attack → defense results directly into SKILL.md. Can hand off to steel-quench after Area B ends.
-> 4. **Dual validation principle**: Internal validation (Area B) alone is insufficient — self-reference risk is minimized when combined with external install reaction collection.
+**Dispatch pattern**: hub-persona-auditor ∥ persona-innovator (parallel) → challenger (after, with both outputs as context)
 
-**3-step sequential** (Area A results feed into each step as context):
+1. **hub-persona-auditor** — README/CHEATSHEET as external briefing, 4-axis review, 3-tier suggestions
+2. **persona-innovator** (Mode I) — naming gaps + structural gaps + 3-5 candidates
+3. **challenger** (artifact_type="SKILL") — receives 1+2 outputs, angles U2, D3, U5 — "what was missed?"
 
-1. **hub-persona-auditor** (Agent) — treats README/CHEATSHEET as "briefing for external audience." 3+ persona simulation → 4-axis review → 3-tier suggestions
-2. **persona-innovator** (Agent, Mode I) — naming gap detection + structural gap identification. Output 3-5 naming candidates
-3. **challenger** (Agent, subagent_type="challenger", artifact_type="SKILL") — takes previous two results as input, reviews with "what was missed?" lens. Angles: U2 (self-referential closure), D3 (simplification test), U5 (phantom detection). Focus on self-rationalization patterns and structural blind spots
+Rationale: 1+2 run without influencing each other; challenger synthesizes both perspectives independently, avoiding Cost of Consensus.
 
-> ⚠️ **Human review gate**: Owner final confirmation required before Area B result convergence judgment. AI-AI loop internal convergence is treated as "provisional convergence" only.
+> **Detail**: See `SKILL_detail.md §AreaB-Baseline` — external baseline injection methods, dual-validation principle, Area B → steel-quench handoff — read when setting up Area B defenses.
+
+> ⚠️ **Human review gate**: Area B convergence is provisional until owner confirms.
+
+---
 
 ### Area C — Innovator Scan
 
 Runs independently. Skip if included in Area B.
 
-**persona-innovator** (Agent, Mode F = Internal + External) — Internal: current harness asset gaps / External: frontier source scan. Output: naming candidates + external absorption signals + top 1 priority action
+**persona-innovator** (Mode F = Internal + External): current harness gaps + frontier scan. Output: naming candidates + absorption signals + top 1 priority action.
+
+---
 
 ### Area D — Artifact Validity Validation
 
 | Mode | Trigger | Core question |
 |---|---|---|
-| **code** | `/sim-conductor D --target <file>` | Is the code/prompt well-built without bugs or bias? |
-| **consumer** | `/sim-conductor D session/skill/memory` | Does the artifact actually work for the intended consumer? |
+| **code** | `/sim-conductor D --target <file>` | Is the code/prompt well-built? |
+| **consumer** | `/sim-conductor D session/skill/memory` | Does the artifact work for the intended consumer? |
 
-#### D-code — Code/Prompt Multi-Persona Review
+#### D-code — Profile-Aware Persona Routing
 
-**Purpose**: Pre-PR discovery of bugs/biases/edge cases. **Validation**: UXW v6.1 `prompts/qa.py` → V-1/V-2 discovered pre-PR.
+Persona composition adapts to `artifact_type` from Step 0.3 profile:
 
-**D-1. Edge cases/counterexamples** (Agent, subagent_type="challenger", artifact_type="Code") — unintended failure edge cases, missing counterexamples, boundary conditions, rule conflicts. Angles: C1 (edge cases), C2 (implicit assumptions), C3 (security surface). Findings = [location, edge case, reproduction scenario, fix suggestion] format.
+| Artifact type | Primary persona | Supporting persona | Focus |
+|---|---|---|---|
+| SKILL.md / design doc | challenger (artifact_type="SKILL") | Newcomer | Governance gaps, behavioral rule coverage |
+| Python / JS / bash code | challenger (artifact_type="Code") | Power-user | Edge cases, performance, security surface |
+| Prompt / config | Newcomer | challenger | Interpretation errors, implicit assumptions |
+| Auth / security-sensitive | challenger + Security-auditor† | Power-user | Attack surface, privilege escalation |
 
-**D-2. First-impression interpretation errors** (Agent w/ Newcomer brief) — rules/expressions prone to misinterpretation, implicit assumptions, unclear priorities. Findings = [location, misinterpretation risk, clarification suggestion] format.
+† Security-auditor = built-in fallback role (② tier) injected as prompt directive.
 
-**D-3. Performance/quality trade-offs** (Agent w/ Power-user brief) — unnecessary complex logic, cost (token/time/error rate) bottlenecks, precision-recall trade-offs. Findings = [location, trade-off, improvement direction] format.
-
-**Output**: M/S/R classification → M-tier items that can be fixed immediately are directly patched in the relevant file and committed.
+All personas run in parallel. Findings = M/S/R → M-tier items fixed immediately.
 
 #### D-consumer — Artifact Consumer Simulation
 
-**Purpose**: Consumer role agent attempts actual use and validates "does it work as intended?" Unlike Area B (read and judge), this **actually attempts the intended use**.
+Consumer agent attempts actual use (not just reads and judges). Grades: F (functional) / P (partial → S-tier) / B (broken → M-tier immediate fix).
 
-**Result grades**: F(Functional, normal) / P(Partial, partially blocked → S-tier) / B(Broken, unusable → M-tier immediate fix)
+> **Detail**: See `SKILL_detail.md §AreaD-Consumer` — D-session 4 questions, D-skill cold-start procedure, D-memory check items, verdict criteria — read when executing D-consumer.
 
-**D-session** — Session start card cold-start validation
-
-Auto-detect target (when `--target` not specified): MEMORY.md → check `reference_next_session_starter.md`, if absent search for latest session-starter in `tracks/_meta/` or `memory/`.
-
-Provide only that file to the consumer agent, no context, and ask:
-1. The most important thing to do today
-2. Current work-in-progress status
-3. Events/deadlines that must not be missed
-4. Parts that are unclear or lack context
-
-**Verdict**: Top priority action matches → F / Context reconstructed but some gaps → P / Wrong top priority or key item missing → B. B/P items are directly fixed in session card and committed.
-
-**D-skill** — Skill trigger utterance consumer simulation
-
-Provide only one SKILL.md to the consumer agent. Assume the first trigger sentence from the triggers section was input and attempt to complete from Step 1. Record where it stalled, why, whether it can complete, and what needs fixing.
-
-**Verdict**: Completes → F / Partial completion → P / Blocked from first step → B
-
-**D-memory** — Memory file cold-start validation
-
-Provide only one memory file to the consumer agent. Check: ① When should it be applied / ② Can current validity be determined from this file alone / ③ Can the behavior guideline be executed from this file alone / ④ Whether stale or contradictory information exists.
-
-**Verdict**: ③ executable + ④ none → F / Some unclear parts → P / Stale/contradiction found → B
+---
 
 ### Area E — Artifact Quality Review
 
-**Target**: Result file specified with `--target` (xlsx/json/reports, etc.). **Purpose**: Structured persona analysis of false positive/negative patterns → fed back into code/prompt. **Validation**: UXW v6.1 internal insurance Figma 994 items → 3 types of over-detection patterns → CRITICAL RULE 4 added.
+Domain-expert objection (E-1) + Practitioner confusion (E-2) in parallel → Pattern structuring (E-3) integrates both.
 
-**E-1. Domain expert objection** (Agent, subagent_type="challenger", artifact_type="Design") — clearly wrong judgment (false positive) patterns, judgments that should have been caught but weren't (false negative) patterns, risk priority. Angles: U3 (evidence grounding), D4 (failure mode coverage). Findings = [judgment type, pattern, root cause, fix direction] format.
+> **Detail**: See `SKILL_detail.md §AreaE-Detail` — E-1/E-2/E-3 execution, finding format, pattern naming procedure — read when executing Area E.
 
-**E-2. Practitioner confusion** (Agent w/ Newcomer brief) — confusing items, fix suggestions that are awkward than the original, sections where classification criteria consistency breaks. Findings = [item, confusion cause, improvement direction] format.
+---
 
-**E-3. Pattern structuring** (direct execution) — integrate E-1/E-2 results → group false positives by same cause and assign pattern name → pinpoint fix location → M/S/R classification.
-
-**Output**: Pattern naming → directly fix target code/prompt → commit.
-
-## Step 2 — Synthesis (Auto-Integration)
+## Step 2 — Synthesis
 
 | Tier | Criteria | Action |
 |---|---|---|
-| **M (Mandatory)** | Blocks external user entry / naming-substance mismatch / security/trust damage | Immediate PR required |
-| **S (Strong)** | Feature degradation / important confusion point / found by 3+ personas | Address within next session |
+| **M (Mandatory)** | Blocks external user entry / naming-substance mismatch / security/trust damage | Immediate fix required |
+| **S (Strong)** | Feature degradation / found by 3+ personas | Address within next session |
 | **R (Recommended)** | Improvement value / found by single persona | Backlog |
 
-**Deduplication**: When multiple personas find the same location, M > S > R priority.
+**Deduplication**: Multiple personas → same location: M > S > R.
 
-**Early Convergence Detection**: When 2+ Areas independently classify the same item as M-tier, trigger immediate fix without waiting for all Areas to complete. Cross-area agreement is a confidence signal — remaining analysis is confirmatory, not decision-making. Pattern: dispatch Areas in parallel → on first M-tier cross-area match → fix immediately → resume remaining Areas for S/R coverage only.
+**Early Convergence Detection**: 2+ Areas independently classify same item as M-tier → immediate fix, remaining Areas continue for S/R coverage only.
 
-**Multi-CLI mapping (design direction — not yet implemented)**: Mapping each Area Agent dispatch to a different CLI backend (Codex, Gemini, Claude) would stack execution-layer isolation with model-layer diversity. Default and current implementation: all Areas → Claude Code. Empirical validation pending — see paper §10.4 Future Work #7.
+---
 
-**Self-marketing auto-lint**: Auto-flag the following vocabulary in results — "full-fledged", "decisive", "precision", "innovative", "groundbreaking", revision numbering (`Nth revision`), version history with embedded names.
-
-## Step 3 — Report Generation
+## Step 3 — Report
 
 File: `$REPORT_DIR/sim_YYYY_MM_DD_area_[X].md`
 
-```markdown
+> **Detail**: See `SKILL_detail.md §Report-Format` — full report template with frontmatter, M/S/R sections, emerging asset candidates — read when writing the report.
+
 ---
-name: [date] Meta-Simulation — Area [X]
-type: simulation-report
-date: YYYY-MM-DD
-areas: [A|B|C|all]
-m_count: N
-s_count: N
-r_count: N
----
-
-## M-tier ([N] items)
-...
-
-## S-tier ([N] items)
-...
-
-## R-tier ([N] items)
-...
-
-## Emerging asset candidates
-...
-```
 
 ## Step 4 — PR or Direct Commit
 
-**1+ M-tier**: Create fh feature branch → process M-tier → create PR.
+1+ M-tier → fix immediately → commit. PR creation requires explicit user request.
+0 M-tier → commit report only + report S/R backlog.
 
-```bash
-cd "$HARNESS_ROOT"
-git checkout -b fix/sim-"$(date +%Y%m%d)"-m-tier
-# Process M-tier items (fix descriptions, correct mismatches, etc.)
-git add -A && git commit -m "fix(sim): M-tier items from sim-conductor run"
-git push origin fix/sim-"$(date +%Y%m%d)"-m-tier
-# GH_HOST=your-ghe-host  # set if using GHE instead of github.com
-gh pr create --title "fix(sim): M-tier items" --body "..."
-```
-
-PR body includes simulation report summary + processed item checklist.
-
-**0 M-tier**: Commit report file only + report S/R backlog summary to user.
-
-## Completion Report Format
-
-```
-sim-conductor [Area X] complete (YYYY-MM-DD)
-
-M: [N] items → PR #{number} created (or "none")
-S: [N] items → next session backlog
-R: [N] items → backlog
-
-Top priority action: [1 item]
-Report: tracks/_meta/sim_YYYY_MM_DD_area_X.md
-```
-
-## Operations Notes
-
-### AI-AI Loop Bias Defense
-
-The triple loop of sim-conductor output → hub-cc-pr-reviewer review → sim-conductor re-entry shares the same LLM cognitive limitations. The blind spots of this loop can only be defended by external review (direct owner judgment or cross-validation with another model). Internal loop convergence is "provisional convergence" and is elevated to final convergence only after passing the human gate.
-
-## Human Gate Principle
-
-Convergence within an AI-AI loop is **provisional convergence**. It must pass through a human gate to be elevated to final convergence.
-
-| Simulation stage | Human gate application condition |
-|---|---|
-| Area A S-tier judgment | Final convergence when user directly reviews and says "convergence approved" |
-| Area B convergence judgment | AI-AI loop internal convergence is provisional — elevated after user confirmation |
-| M-tier auto-PR creation | User gate before PR creation (orchestrator outputs parameters → approval) |
-| Three-Doctor Loop end | User reviews three-skill convergence results and decides next action |
-
-## Done When
-
-| Condition | Completion verdict |
-|---|---|
-| `sim-conductor [Area X] complete` format output | ✅ Simulation complete |
-| 1+ M-tier → PR creation complete or "none" confirmed | ✅ Prescription complete |
-| Report `tracks/_meta/sim_YYYY_MM_DD_*.md` saved | ✅ Persistence complete |
-| 0 M-tier → report committed + S/R backlog reported | ✅ Health check complete |
-
-**This skill's Done When = "completion report format output complete"**. Actual M-tier resolution and PR merge are in the user's or follow-up work domain and are not included in this skill's completion criteria. Ending without Step 3 report output = Fail.
-
-Verdict: PASS (all in-scope areas complete, 0 M-tier findings) | CONDITIONAL_PASS (S/R-tier findings only, or Area B skipped due to cadence) | FAIL (1+ M-tier findings unresolved, or Area A prerequisite not met) | ESCALATE (persona conflict requiring human judgment)
-
-**→ Mandatory prerequisite for Area A (external publish context): `steel-quench` must have run in the same session before Area A is marked complete.** If not, Area A completion is invalid — restart with steel-quench first.
-
-**External validation path**: harvest-loop Step 3.75 Critic isolated Agent can independently judge against the above criteria (`skill_quality_rubric.md` verifiable criteria). Automatically linked when subsequent steel-quench runs.
-
-**Rationale**: AI-AI loops based on the same LLM share cognitive blind spots. The human gate is not a simple approval process — it is a **structural bias-blocking mechanism**.
-
-## Simplification Guard
-
-- Area B attempted 2+ times in one week: First check whether previous S-tier items were resolved
-- New simulation requested without processing M-tier: Warn about unresolved M-tier
-- Request to add new persona: Require 1+ empirical cases not captured by existing 3-persona system
-
-## Three-Doctor Loop Integration
-
-### sim-conductor's Role in Three-Doctor Loop
-
-Three-Doctor Loop is a self-renewal structure where the three skills form a closed loop: **diagnosis → prescription → re-diagnosis**.
-
-```
-harness-doctor   → current skeleton diagnosis   "Is the structure correct?"
-context-doctor   → current context diagnosis    "Is Context Collapse occurring?"
-sim-conductor    → future behavior prediction   "What happens when a real person uses this system?"
-```
-
-**Key distinction**: harness-doctor and context-doctor diagnose the **current state**. sim-conductor predicts the **future that has not yet occurred**.
-
-Specifically, sim-conductor pre-runs the experience of a specific persona (new team member/external installer/critical reviewer) encountering this harness **for the first time**:
-
-- "Where does an external developer get stuck when reading the install guide?"
-- "At which step does an outside developer fail when running a skill for the first time?"
-- "What claims does a challenger raise objections to when reading the README?"
-
-When these predictions are correct, blocking points can be removed before actual external users arrive.
-**Validation**: An external user's autonomous run confirmed cascade β achievement (first autonomous run by non-owner confirmed).
+> **Detail**: See `SKILL_detail.md §PR-Bash` — branch creation bash, commit + push, gh pr create template — read when creating a PR.
 
 ---
 
-sim-conductor (simulation/ideation) · harness-doctor (structure) · context-doctor (token/context) — the three skills form a **diagnosis→prescription→re-diagnosis** closed loop.
+## Human Gate Principle
+
+Convergence within an AI-AI loop is **provisional**. Elevated to final only after human gate.
+
+| Stage | Human gate condition |
+|---|---|
+| Area A S-tier | User reviews + says "convergence approved" |
+| Area B convergence | AI-AI loop is provisional → elevated after user confirmation |
+| M-tier auto-fix | Commit after fix (no PR gate); PR requires explicit user request |
+| Three-Doctor Loop end | User reviews convergence and decides next action |
+
+---
+
+## Done When
+
+| Condition | Verdict |
+|---|---|
+| `sim-conductor [Area X] complete` format output | ✅ Simulation complete |
+| 1+ M-tier → fixed + committed (or "none") | ✅ Prescription complete |
+| Report `tracks/_meta/sim_YYYY_MM_DD_*.md` saved | ✅ Persistence complete |
+| 0 M-tier → report committed + S/R backlog reported | ✅ Health check complete |
+
+Verdicts: PASS · CONDITIONAL_PASS (S/R only, or Area B cadence skip) · FAIL (M-tier unresolved) · ESCALATE (persona conflict requiring human judgment).
+
+**Mandatory for Area A (external publish)**: steel-quench must complete in same session before Area A is marked complete.
+
+---
+
+## Simplification Guard
+
+- Area B 2+ times in one week: check whether previous S-tier resolved first
+- New simulation without processing M-tier: warn about unresolved M-tier
+- Add new persona: require 1+ empirical cases not captured by current palette
+
+---
+
+## Operations Notes
+
+**AI-AI Loop Bias Defense**: sim-conductor → hub-cc-pr-reviewer → sim-conductor loop shares LLM cognitive blind spots. Internal convergence is "provisional convergence" — elevated only by external review or human gate. Area A/B convergence without human gate = incomplete.
+
+---
+
+## Three-Doctor Loop Integration
+
+harness-doctor (structure) · context-doctor (context) · sim-conductor (future behavior) form a closed loop.
 
 | Situation | Next skill |
 |---|---|
-| Structural problem found in simulation results | `/harness-doctor` |
-| Token waste pattern found in simulation results | `/context-doctor` |
-| All three skills mentioned simultaneously | Three-Doctor Loop circuit activated — diagnosis→prescription→re-diagnosis cycle |
-| Area A run immediately before external publish | `/steel-quench` **required** before Area A proceeds — not recommended, mandatory. Secure residual risk list before entering (→ `steel-quench external publish pre-requisite sequence`) |
+| Structural problem in simulation results | `/harness-doctor` |
+| Token waste pattern | `/context-doctor` |
+| All three mentioned simultaneously | Three-Doctor Loop: diagnosis→prescription→re-diagnosis cycle |
+| Area A before external publish | `/steel-quench` **required** first — mandatory gate |
+
+---
 
 ## Path B (External Environment)
 
-When `~/sim/` is absent:
-- Step 0: Fallback to harness root (skip git clone)
-- Apply logical isolation only without physical isolation (specify "without development context" in agent)
-- **Area B only recommended** — Area A/C are technically executable but physical isolation not guaranteed since they directly reference original paths. Control only with logical isolation (prompt directive).
+When `~/sim/` absent: fallback to harness root, logical isolation only.
+
+> **Detail**: See `SKILL_detail.md §PathB-Detail` — git fallback, logical isolation prompt directive, Area restriction rules — read when running in external/restricted environment.
