@@ -7,6 +7,7 @@
   <img src="https://img.shields.io/badge/version-v1.3-3b82f6.svg" alt="v1.3">
   <a href="https://zenodo.org/records/20397566"><img src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20397566-blue.svg" alt="DOI"></a>
   <img src="https://img.shields.io/badge/Claude_Code-compatible-a855f7.svg" alt="Claude Code">
+  <img src="https://img.shields.io/badge/Codex-beta-f59e0b.svg" alt="Codex-compatible beta">
   <a href="https://www.npmjs.com/package/@chrono-meta/fh-gate"><img src="https://img.shields.io/npm/v/@chrono-meta/fh-gate.svg?color=cb3837" alt="npm"></a>
 </p>
 
