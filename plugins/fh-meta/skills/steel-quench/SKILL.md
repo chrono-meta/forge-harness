@@ -43,6 +43,8 @@ A designer's anxiety is most dangerous when vague. steel-quench breaks that anxi
 
 ## Step 0.3 — Artifact Vulnerability Profile
 
+> **Schema**: `knowledge/shared/harness-core/tpa_schema.md` — canonical artifact_type/risk_level/phantom_risk derivation, gate routing, meta-harness broadcast multiplier.
+
 Runs when steel-quench is invoked without a specific wave restriction.
 Skip if user specifies exact waves (e.g. "run Wave 1 and Wave 4 only").
 

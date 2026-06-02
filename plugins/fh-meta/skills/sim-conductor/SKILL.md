@@ -66,6 +66,8 @@ Auto-detect harness root, sync sim clone if present, set `$REPORT_DIR`.
 
 ## Step 0.3 — Target Profile Analysis
 
+> **Schema**: `knowledge/shared/harness-core/tpa_schema.md` — canonical field definitions, artifact type table, gate routing. Use §Profile Output Format for output block.
+
 Runs when Area is unspecified, or when target file is provided before Area selection.
 **Skip** if user provides a complete directive (e.g. `/sim-conductor A --target <file>`).
 
