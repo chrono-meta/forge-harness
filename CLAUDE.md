@@ -96,7 +96,8 @@ Simplification guard: trivial denials with one obvious fix → state block + sin
 
 ## Active Onboarding Protocol (User Greeting → AI Initiative)
 
-> **Full 4-step detail**: `knowledge/shared/harness-core/fh_detail_protocols.md` — read when executing the onboarding flow.
+> **Full 4-step detail**: `knowledge/shared/harness-core/fh_detail_protocols.md`
+> **Read this file before Step 1 begins** — duplicate-install detection (Step 1-b) and registry scan (Step 1-c) are only defined there, not in this summary.
 
 **Triggers**: greetings (`hi`/`hello`/`hey`) · start intent (`resume`, `continue`, `where were we`) · new task (`new project`, `new task`) · discovery (`what is this`, `what can you do`, `first time here`)
 
