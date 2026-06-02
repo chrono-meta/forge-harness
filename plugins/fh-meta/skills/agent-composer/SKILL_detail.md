@@ -336,6 +336,107 @@ fh_signal persistence: [discovered signal summary in 1 line]
 
 ---
 
+## §CapabilityFit — Capability Fit Scoring Detail
+
+### How to Read Agent Registry Files
+
+Agent registry files live in `.claude/agents/*.md`. Each file has a YAML frontmatter block. The fields relevant to capability fit scoring are:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `role` | string | Agent's declared functional role (e.g. `"challenger"`, `"fact-checker"`) |
+| `subagent_type` | string | Specialization tag (e.g. `"challenger"`, `"persona"`, `"audit"`) |
+| `allowed_tools` | list | Tools the agent is permitted to call |
+| `writes` | bool | `true` = agent may edit/create files; `false` = read-only |
+| `declared_capabilities` | list | Free-text capability labels (e.g. `["adversarial-review", "phantom-detection"]`) |
+
+If `writes` is absent, default to `true` (conservative assumption — treat as potentially destructive).
+
+### Score Calculation Procedure
+
+For each `(subtask, agent)` pair, compute `fit_score` (0.0–1.0) as follows:
+
+```
+role_match      = 0.40  if subagent_type or role matches subtask_type else 0.0
+tools_overlap   = 0.30  × (|required_tools ∩ allowed_tools| / |required_tools|)
+                  (0.30 if required_tools is empty — tools not constraining)
+writes_compat   = 0.20  if writes flag is compatible with subtask write-need else 0.0
+                  (subtask needs writes=true → agent writes=false → 0.0)
+                  (subtask audit-only → agent writes=false → 0.20 bonus)
+cap_bonus       = 0.10  if any declared_capability keyword matches subtask_type else 0.0
+
+fit_score = role_match + tools_overlap + writes_compat + cap_bonus
+```
+
+Threshold: `fit_score < 0.5` → GAP. Trigger `/plugin-recommender` for that subtask.
+
+### Worked Examples
+
+**Example 1 — Adversarial review subtask**
+
+- Subtask type: `adversarial-review`
+- Candidate agent: `quench-challenger` (`subagent_type="challenger"`, `writes=false`, `allowed_tools=["Read","Bash"]`, `declared_capabilities=["adversarial-review","artifact-attack"]`)
+
+```
+role_match    = 0.40  (subagent_type="challenger" matches "adversarial-review")
+tools_overlap = 0.30  (Read+Bash sufficient; required_tools overlap = 1.0)
+writes_compat = 0.20  (audit-only subtask, writes=false → bonus)
+cap_bonus     = 0.10  (declared_capabilities contains "adversarial-review")
+fit_score     = 1.00  → STRONG FIT
+```
+
+**Example 2 — Code generation subtask**
+
+- Subtask type: `code-generation`
+- Candidate agent: `hub-persona-auditor` (`subagent_type="persona"`, `writes=false`, `allowed_tools=["Read"]`, `declared_capabilities=["persona-simulation"]`)
+
+```
+role_match    = 0.00  (subagent_type="persona" ≠ "code-generation")
+tools_overlap = 0.00  (required_tools=[Edit,Bash]; allowed_tools=[Read] → overlap=0)
+writes_compat = 0.00  (code-generation needs writes=true; agent writes=false)
+cap_bonus     = 0.00  (no matching declared_capability)
+fit_score     = 0.00  → GAP — do not assign
+```
+
+**Example 3 — Phantom detection subtask**
+
+- Subtask type: `phantom-detection`
+- Candidate agent: `source-grounding-audit` skill (`declared_capabilities=["phantom-detection","source-trace"]`, `writes=false`)
+
+```
+role_match    = 0.40  (role matches "source-grounding-audit" → "phantom-detection")
+tools_overlap = 0.30  (Read+Bash match; required_tools overlap = 1.0)
+writes_compat = 0.20  (audit-only; writes=false → bonus)
+cap_bonus     = 0.10  (declared_capabilities contains "phantom-detection")
+fit_score     = 1.00  → STRONG FIT
+```
+
+### /plugin-recommender Query Format for Agent Discovery
+
+When a GAP is detected (fit_score < 0.5 for a required-weight subtask), issue this query:
+
+```
+/plugin-recommender "agent for [subtask_type] in [context]"
+
+Examples:
+  /plugin-recommender "agent for adversarial-review in FH skill validation"
+  /plugin-recommender "agent for code-generation in Python refactor task"
+  /plugin-recommender "agent for persona-simulation in external user audit"
+```
+
+Include in the query:
+- The subtask type (from the scoring table)
+- The task context (project type, domain, language if relevant)
+
+The recommender searches: FH native agents + Codex marketplace + Claude Code marketplace.
+
+**User response options after GAP report**:
+- `install` → follow recommender install steps, then re-run Step 0.2
+- `skip` → remove that subtask from composition plan (document the omission)
+- `use general-purpose fallback` → assign a general-purpose agent AND mark `⚠️ degraded: [role]` in the composition plan
+
+---
+
 ## §Identity — Full Agent Composition Layer Explanation
 
 ### Automation Layer Division

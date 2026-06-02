@@ -1,6 +1,6 @@
 ---
 name: plugin-recommender
-description: Given a task description, searches internal and external open-source ecosystems to find and recommend suitable plugins with installation guidance. Activates on "recommend a plugin", "what tool should I use?", "is there a plugin for this?", "recommend a tool". Also checks for duplicate installations.
+description: Given a task description, searches internal and external open-source ecosystems (including Codex marketplace and Claude Code marketplace) to find and recommend suitable plugins with installation guidance. Recommendation is quality-validation based (marketplace-listed + performance-validated), not source-origin based. Activates on "recommend a plugin", "what tool should I use?", "is there a plugin for this?", "recommend a tool". Also checks for duplicate installations.
 user-invocable: true
 allowed-tools: ["Grep", "GoogleWebSearch", "Bash"]
 model: sonnet
@@ -10,7 +10,7 @@ model: sonnet
 
 # plugin-recommender
 
-Takes a task description as input, searches internal GHE and external open-source ecosystems, and outputs a list of suitable plugins and install commands. Also reports duplicate installs and potential conflicts.
+Takes a task description as input, searches internal GHE, Claude Code marketplace, Codex marketplace, and external open-source ecosystems, then outputs a ranked list of suitable plugins and install commands. Ranking is quality-validation based — not source-origin based. Also reports duplicate installs and potential conflicts.
 
 ## Activation Triggers
 
@@ -27,42 +27,11 @@ Activates on the following types of phrasing.
 
 Before entering Step 2 multi-layer search, **gh CLI auth status check is mandatory**. Internal GHE + external GitHub auth are separate — if unauthenticated, guide user on how to generate and store tokens.
 
-#### Check Command
-```bash
-gh auth status
-```
+Run `gh auth status`. For full PAT setup commands and host-branching scripts, see `SKILL_detail.md §Discovery-Bash`.
 
-#### Unauthenticated Guidance Path (present to user as-is)
+**External users** (no internal GHE): skip internal GHE auth check — verify `gh auth status` for github.com only, then proceed to Step 1.
 
-**Internal GHE unauthenticated**:
-1. **Generate Personal Access Token**: Go to `https://<your-ghe-url>/settings/tokens` → Generate new token (classic) → scopes: `repo`, `read:org` (minimum)
-2. **Save to gh CLI**:
-   ```bash
-   gh auth login --hostname <your-ghe-url>
-   # Prompt: Select HTTPS → Paste an authentication token → enter token
-   ```
-3. **Verify**: `GH_HOST=<your-ghe-url> gh api /user --jq '.login'`
-
-**External GitHub (`github.com`) unauthenticated**:
-1. **Generate Personal Access Token**: Go to `https://github.com/settings/tokens` → Generate new token (classic) → scopes: `repo`, `read:org`
-2. **Save to gh CLI**: `gh auth login --hostname github.com` (or default `gh auth login`)
-
-#### Search Call Host Branching
-- **Internal GHE search**: `GH_HOST=<your-ghe-url> gh api ...` or `gh search repos --owner <your-ghe-org> ... --hostname <your-ghe-url>`
-- **External GitHub search**: `gh search repos ...` (default host)
-
-#### External Users (outside org) — Step 0 Skip Branch
-
-In environments without access to an internal GHE, **skip the entire Step 0 internal GHE auth check**. Only verify external GitHub auth status then proceed directly to Step 1.
-
-```bash
-# External user Step 0 replacement
-gh auth status  # default host (github.com) only
-# Authenticated → proceed to Step 1 immediately
-# Unauthenticated → guide github.com PAT generation (see "External GitHub unauthenticated" above)
-```
-
-**Internal non-hub users** (internal GHE access, not owner): Run Step 0 as-is — but remap `Step 2 [1.5 priority]` sister asset clusters based on your own org. See `## External User Environment Adaptation Path` for details.
+**Internal non-hub users**: run Step 0 as-is, but remap Step 2 [Priority 1.5] sister asset clusters to your own org. See `## External User Environment Adaptation Path`.
 
 ### Step 1: User Goal Analysis and Core Keyword Extraction
 
@@ -74,7 +43,18 @@ Analyze the user's natural language request to extract core **domain** and **tas
 
 Search in priority order based on extracted keywords.
 
-1. **[Priority 1] Internal Curated List**: `knowledge/shared/plugin-catalog/recommended_plugins.md` — check this first for verified internal/external plugin list + Tier 1·2·3 classification matrix. If user's task domain already appears in catalog, use results immediately.
+#### Tier Classification Table (Quality-Validation Based)
+
+Tier is **independent of platform origin** (Anthropic / OpenAI / community). A well-benchmarked community plugin ranks higher than an official plugin with no performance data.
+
+| Tier | Criteria | Sources |
+|---|---|---|
+| **Tier 1** | Marketplace-listed + performance-validated (benchmark data or production usage evidence) | Anthropic official · Codex marketplace verified · CC marketplace verified · FH community reviewed (steel-quench + sim-conductor validated) |
+| **Tier 2** | Marketplace-listed, no explicit performance data | Any marketplace source (CC marketplace · Codex marketplace · npm · GHE) |
+| **Tier 3** | Not marketplace-listed, source-available (GitHub/npm) | Repo-only agents/plugins |
+| **Tier 4** | Not verified, private/internal | Internal team builds · unreviewed local experiments |
+
+1. **[Priority 1] Internal Curated List**: `knowledge/shared/plugin-catalog/recommended_plugins.md` — check this first for verified internal/external plugin list + Tier 1·2·3·4 classification. If user's task domain already appears in catalog, use results immediately.
 
 2. **[Priority 1.5] Internal GHE Sister Assets (partially completed work — Tier 2)**: Check if user's task domain already exists in internal sister asset clusters. Prioritize direct use or adoption of sister assets if the user's task falls within these cluster domains.
 
@@ -92,14 +72,46 @@ Search in priority order based on extracted keywords.
 
     Activation condition: Automatically entered when Step 2 [Priority 1]~[Priority 2] search yields no suitable plugin.
 
-4. **[Priority 2] Organization's Internal GHE (Tier 1·3)**: Search internal GHE with keywords like `claude-plugin`, `gemini-plugin` + user keywords / API search. Replace with your organization's internal GHE orgs.
+4. **[Priority 2] Organization's Internal GHE (Tier 1–4)**: Search internal GHE with keywords like `claude-plugin`, `gemini-plugin` + user keywords / API search. Replace with your organization's internal GHE orgs.
 
-4. **[Priority 3] External Open-Source Ecosystem**: WebSearch / WebFetch — "best github actions for X", "claude plugin for Y", etc. Simplification guard: defer external install if internal assets suffice.
+5. **[Priority 3] External Open-Source Ecosystem**: WebSearch / WebFetch — "best github actions for X", "claude plugin for Y", etc. Simplification guard: defer external install if internal assets suffice.
 
    **Verified external search targets (as of 2026-05):**
    - [`anthropics/claude-plugins-official`](https://github.com/anthropics/claude-plugins-official) — Anthropic-curated official plugin directory. Search here first for any task domain.
    - [`Chat2AnyLLM/awesome-claude-plugins`](https://github.com/Chat2AnyLLM/awesome-claude-plugins) — Community aggregator: 75+ marketplaces, 1,196+ plugins catalogued (2026-05-25). Use for broad discovery.
    - [`anthropics/claude-code/plugins/`](https://github.com/anthropics/claude-code/tree/main/plugins) — Anthropic first-party plugins bundled with Claude Code (e.g., `code-review` with 5 parallel Sonnet agents).
+
+### Step 2.5: Platform-Aware Discovery
+
+When queried for a specific capability (e.g., "adversarial reviewer for bash code"), search across all platforms before narrowing to candidates.
+
+**Discovery order (stop when sufficient Tier 1 candidates found):**
+
+1. **Installed locally** — `.claude/agents/`, `plugins/` in current cwd
+2. **FH native skills** — always-loaded knowledge in `plugins/fh-meta/` and `plugins/fh-commons/`
+3. **Claude Code marketplace** — `claude mcp search [capability]` or known CC registry (see verified targets above)
+4. **Codex marketplace** — `npx @openai/codex list-agents [capability]` or known Codex registry
+5. **npm ecosystem** — `@chrono-meta/`, `@anthropic/`, and other known-quality scoped packages
+
+**Discovery priority**: installed > FH native > Tier 1 (any platform) > Tier 2 > Tier 3 > Tier 4
+
+**When sim-conductor chains here for persona discovery**: apply the same platform-aware search scoped to persona/simulation/review capability tags. Return discovered agents with their Tier rating so sim-conductor can decide whether to install or use a built-in brief.
+
+For discovery bash commands (`claude mcp search`, `npx @openai/codex list-agents`, npm scoped search), see `SKILL_detail.md §Discovery-Bash`.
+
+### Step 2.6: Quality Validation Signals
+
+Use this table to determine Tier placement when a candidate's tier is ambiguous.
+
+| Quality signal | Weight |
+|---|---|
+| Published benchmark (accuracy/precision, reproducible) | High |
+| Production usage evidence (download count, GitHub stars > 100) | Medium |
+| Marketplace listing (official review process passed) | Medium |
+| FH community reviewed (steel-quench + sim-conductor validated) | High |
+| Author reputation (known team: Anthropic, chrono-meta, etc.) | Low |
+
+**Tier assignment rule**: two or more High-weight signals → Tier 1. One High or two Medium → Tier 2. Listed but no signals → Tier 2. Not listed, source-only → Tier 3. No external presence → Tier 4.
 
 ### Step 3: Candidate Plugin Analysis and Ranking
 
@@ -109,116 +121,25 @@ Analyze each candidate plugin's `README.md` and `plugin.json` to score and rank 
 - **Reliability and recency**: Recent commit date, star/fork count (external), internal usage frequency, etc.
 - **Install convenience**: Does it support `claude plugin install` directly?
 - **Synergy effect**: Call `cross-ecosystem-synergy-detection` to check synergy grade (★~★★★) with other currently installed plugins.
+- **Tier** (from §Tier Classification Table): report each candidate's Tier in the recommendation table.
 
 ### Step 4: Present Recommendation List
 
-Output top 2-3 plugins in the following table format.
+Output top 2-3 plugins in the following table format. Include Tier and Platform so the user can see the quality-validation basis at a glance. For full example outputs, see `SKILL_detail.md §Examples`.
 
-| Rank | Plugin Name | Recommendation Reason | Key Features | Synergy Effect |
-| :--- | :--- | :--- | :--- | :--- |
-| **1** | `jira-automator` | Fully satisfies Jira ticket create/modify/query. Highest internal usage. | Ticket creation, status change, comment addition | ★★★ (auto-links docs when used with `confluence-linker`) |
-| **2** | `agile-sprint-board` | Specialized for Jira-integrated sprint board visualization. | Sprint visualization, burndown chart | ★ (standalone use) |
+| Rank | Plugin Name | Tier | Platform | Recommendation Reason | Key Features | Synergy Effect |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | `[name]` | Tier N | [source] | [reason + evidence] | [features] | [synergy grade] |
 
 ### Step 5: Install and Configuration Support
 
 When user selects desired plugin from recommendation list, help with installation.
 
-**5-0. Pre-install Duplicate Detection (pre-check — mandatory)**
+**5-0. Pre-install Duplicate Detection (pre-check — mandatory)**: check `claude plugin list`, `.claude/settings.json` `enabledPlugins`, and same-name conflict. For full duplicate detection procedure and same-name conflict handling steps, see `SKILL_detail.md §Install-Procedure`.
 
-Before attempting install, check if already active:
+**5-1 through 5-3. Install**: confirm intent → run install command → post-install configuration (API token, MCP connection, verify). Full install commands and configuration guidance at `SKILL_detail.md §Install-Procedure`.
 
-```bash
-claude plugin list
-```
-
-3 things to check:
-- **Manual install status**: If target plugin name exists in `claude plugin list` output → reinstall unnecessary
-- **Repo-level activation status**: If plugin is registered in current cwd's `.claude/settings.json` `enabledPlugins` field → already active
-- **Same-name different-function conflict**: If a skill with the same name but different origin/function is already installed → perform conflict handling below
-
-**Same-name Conflict Handling**:
-
-If same skill name already exists in environment, check separately for conflict rather than simple duplicate:
-
-1. Compare existing install skill's description vs recommended skill's description
-2. **Feature match** → Report "Equivalent feature already installed" + skip reinstall
-3. **Feature mismatch** → Issue conflict warning:
-   ```
-   ⚠️ Name conflict: `<skill-name>` is already installed but has different functionality.
-   
-   Currently installed: <summary of existing skill description>
-   Recommendation target: <summary of new skill description>
-   
-   Options:
-   A. Keep existing (skip install)
-   B. Install with namespace qualifier — e.g., `fh-<skill-name>`
-   C. Remove existing and install new (⚠️ existing skill will be removed)
-   ```
-4. If user selects Option B: Guide adding prefix to `name` field in plugin.json + present modification path
-
-If either condition is met, skip install step → report "Already active — reinstall unnecessary" then proceed to Step 5-3 configuration guidance only.
-
-1. Confirm intent: "Would you like to install the `jira-automator` plugin?"
-2. On agreement, run `claude plugin marketplace add` and `claude plugin install` commands.
-3. Post-install initial configuration guidance:
-    - **API token input**: If plugin uses external service API, guide token generation path (e.g., Jira/Confluence/Slack — specify each service's token generation page URL + environment variable or plugin config storage location)
-    - **MCP connection**: If plugin uses MCP server, guide auto-update of `.mcp.json` or `claude mcp add` command
-    - **Verify**: Confirm install consistency with `claude plugin list` or `/plugin` UI + recommend first-call dry-run
-
-**5-B. External Asset Migration Path *(when non-plugin asset is found)***
-
-Activation condition: Step 3 analysis discovered a promising external asset but it lacks `plugin.json` or `claude plugin install` support — i.e., **install not possible but pattern has value**.
-
-#### 5-B-1. Migration Suitability Assessment
-
-Quick 3-criteria check:
-
-| Criteria | OK | NG |
-|---|---|---|
-| **Single purpose** | Clearly performs 1 task | Complex framework/SDK level |
-| **Dependency complexity** | Standard CLI tools only (bash, gh, grep etc.) | Requires custom runtime/database |
-| **FH gap coverage** | No similar skill currently in FH | Existing skill covers 95%+ |
-
-All 3 OK → Recommend migration. Any NG → Report "Recommend referencing rather than installing" then guide Step 2 [Priority 2.5] contribution path.
-
-#### 5-B-2. SKILL.md Conversion Guide
-
-Present template to user + provide draft filled with external asset analysis results:
-
-```markdown
----
-name: {1-3 words for the external asset's core action}
-description: {one sentence, plain text only — first line is the core spec}
-user-invocable: true
-allowed-tools: ["Read", "Bash", "Grep"]  # only actually needed tools
-model: sonnet
----
-
-# {name} — {one-line description}
-
-## Activation Triggers
-- When user says "{core action}"
-
-## Execution Steps
-
-### Step 1. ...
-### Step 2. ...
-```
-
-Conversion checklist:
-- [ ] description first line = core spec (no marketing language)
-- [ ] allowed-tools = only actually called tools (no over-declaration)
-- [ ] External asset original URL → explicitly stated in `## Source` section (license check mandatory)
-
-#### 5-B-3. Migration Location Guidance
-
-| Purpose | Path | Notes |
-|---|---|---|
-| FH official skill (org-wide distribution) | `plugins/fh-meta/skills/{name}/SKILL.md` | PR mandatory — must pass team review |
-| Local experiment (own environment only) | `.claude/rules/{name}.md` | No plugin install needed |
-| Mode D standalone deployment | `.claude/agents/{name}.md` | Only when operating as agent form |
-
-> FH official skill inclusion criteria: Recommend PR after confirming 2+ actual uses (simplification guard — immediate inclusion after 1 experiment is prohibited).
+**5-B. External Asset Migration Path** (when non-plugin asset found): migration suitability check (3 criteria) → SKILL.md conversion template → location guidance. Full procedure at `SKILL_detail.md §Install-Procedure`.
 
 ---
 
@@ -252,7 +173,7 @@ The core 5-step procedure (goal analysis → multi-layer search → candidate an
 | **Step 0** internal GHE auth check | Check external GitHub auth only (`gh auth status` default host) — auto-skip internal GHE step |
 | **Step 2 [Priority 1.5]** internal sister asset clusters | User's own sister assets (personal/team GitHub org · internal marketplace) — this skill auto-maps user's own sister asset matrix |
 | **Step 2 [Priority 2]** internal GHE org inventory | External GitHub default org inventory (`anthropics` · `oh-my-claudecode` etc. plugin ecosystem marketplace) |
-| **Step 4** Tier 1·2·3 classification matrix | User's own Tier classification — direct task domain match vs partial work vs tools/utilities (user's own priorities) |
+| **Step 2 Tier table** Tier 1·2·3·4 classification | User's own Tier classification — use the quality-validation signals table (§Step 2.6) to assign tiers in your environment |
 
 ### External User Usage Scenarios
 
@@ -288,7 +209,7 @@ sim-conductor needs persona X (no installed/built-in match)
 
 ```
 All Steps 0~5 completed
-+ Recommendation list table output (top 2~3 items, synergy grade included)
++ Recommendation list table output (top 2~3 items, Tier + Platform + synergy grade included)
 + Install completed after user selection (or install skipped / 5-B migration path guided)
 + Duplicate detection results reported
 ```
