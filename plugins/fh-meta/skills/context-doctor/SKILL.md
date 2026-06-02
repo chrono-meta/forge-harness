@@ -197,6 +197,26 @@ Advisory and tool-agnostic — recommend (and, where a doc is being authored/edi
 
 Keep it reversible: compress the *working copy* in context, not the source of truth on disk, unless the user is explicitly editing that file.
 
+### Tooling — Headroom (external option)
+
+The advisory pass above is tool-agnostic, but a concrete, reversible, local-first implementation exists: **Headroom** (`github.com/chopratejas/headroom`, open source, v0.22). It compresses tool outputs, logs, files, and RAG chunks before they reach the LLM — **vendor/coverage-reported** at 60–95% fewer tokens with the same answers ([The Register, 2026-05-31](https://www.theregister.com/ai-ml/2026/05/31/netflix-wiz-creates-app-to-slash-ai-bills-then-open-sources-it/5248702); figures unverified by FH). General token-efficiency basis: `../../../../knowledge/shared/harness-core/harness_frontier_diagnosis_2026-06-02.md`.
+
+**Redundancy-category targeting** (its key insight — import this into the pass): the high-yield targets are *machine-generated, schema-repetitive* payloads, not prose. Prioritize compressing, in order:
+
+1. **MCP tool outputs** — ~70% redundant JSON (most relevant to FH: heavy MCP sessions burn tokens here).
+2. **Logs** — ~90% jettisonable.
+3. **DB dumps / structured query output** — one schema, repeated rows.
+4. **File trees / directory listings** — repeated path metadata.
+
+Plain prose docs compress far less — spend the budget on the four categories above first.
+
+**Integration surfaces** (all local, runtime-side — outside the FH repo, so for the user's local setup, not a hub asset):
+- **Library** — `compress(messages)` inline (Python/TS).
+- **Proxy** — `headroom proxy --port 8787`, zero code change, then point the client at it.
+- **MCP server / agent-wrap** — wrap an MCP server or the agent CLI directly.
+
+Caveats: v0.22 is still early — pilot before relying on it; compression carries a quality/accuracy tradeoff, so its local-first + reversible design (matching the reversibility rule above) is the safeguard. See the repo for exact config — do not assume flags.
+
 ## External User Environment Adaptation
 
 | Environment | Behavior |
