@@ -226,6 +226,8 @@ Only read necessary documents at the necessary time. MEMORY.md keyword trigger m
 ❌ Do not pre-load all knowledge files at session start
 ```
 
+> Tier context as L1 always-on (~2–5K, CLAUDE.md core rules) · L2 session (~5–20K, active track) · L3 on-demand (`knowledge/` docs), and keep critical info at the **start and end** of a document, never the middle — mid-context info loses ~10–30% accuracy ("lost in the middle"). See `knowledge/shared/harness-core/harness_frontier_diagnosis_2026-06-02.md`.
+
 ### Combined effect measurement examples
 
 | Before | After | Savings |

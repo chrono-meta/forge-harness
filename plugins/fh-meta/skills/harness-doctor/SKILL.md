@@ -435,6 +435,22 @@ if [ -n "$last_audit" ]; then
 else
   echo "E6_WARN: no cold audit history (30-day SLA recommended)"
 fi
+
+# E7: Evolution-loop blindness — recent SKILL/rules/CLAUDE edits with no edit_manifest prediction
+# (glass-box check — a self-improving loop running without recorded predict-verify is operating blind)
+manifest=tracks/_meta/edit_manifest.yaml
+recent_asset_edits=$(git log --since="14 days ago" --name-only --pretty=format: 2>/dev/null \
+  | grep -E "SKILL\.md|\.claude/rules/|^CLAUDE\.md" | sort -u | wc -l | tr -d ' ')
+if [ ! -f "$manifest" ]; then
+  [ "$recent_asset_edits" -gt 0 ] \
+    && echo "E7_WARN: ${recent_asset_edits} asset edit(s) in 14d but no edit_manifest.yaml — evolution loop is black-box (no predict-verify record)" \
+    || echo "E7: no recent asset edits (no blindness risk)"
+else
+  manifest_recent=$(grep -c "$(date +%Y-%m)" "$manifest" 2>/dev/null || echo 0)
+  [ "$recent_asset_edits" -gt 0 ] && [ "$manifest_recent" -eq 0 ] \
+    && echo "E7_WARN: asset edits exist but no manifest entry this month — predictions unrecorded (loop running blind)" \
+    || echo "E7_OK: edit_manifest.yaml present with recent entries (predict-verify observable)"
+fi
 ```
 
 #### L5-D: Harness Health Score (HHS) — Aggregate Metric
@@ -449,8 +465,26 @@ Aggregate E1~E6 results into a harness health index (6 points max):
 | E4 harvest signals | ≥3 in 30 days | +1 |
 | E5 SKILL.md change | Within 14 days | +1 |
 | E6 cold audit | Within 30 days | +1 |
+| E7 evolution-loop observability | Recent asset edits have edit_manifest predictions (not running blind) | +1 |
 
 **HHS ≥ 4**: Healthy / **HHS 2~3**: Caution / **HHS ≤ 1**: Critical → immediate full harness-doctor re-diagnosis
+
+> E7_WARN is the State-Degradation signal applied to the self-improvement loop: edits exist but predictions are unrecorded, so predicted-vs-observed is unrecoverable → S-tier. Complements (does not duplicate) the Harness-Defect Taxonomy section. Note: an absent `edit_manifest.yaml` means the loop is not yet bootstrapped — the first Axis-4 RECORD creates it; until then E7_WARN reads as "bootstrap pending," not a hard fault.
+
+---
+
+## Harness-Defect Taxonomy (frontier cross-check)
+
+> A cross-cutting lens over the L1~L5 findings, not a new L-level. 2026 industry reporting frames "Harness Engineering" as the 4th paradigm and reportedly traces ~65% of enterprise AI failures to three harness-defect classes (not model capability; see the digest Provenance). Mapping FH's structural signals onto this taxonomy gives an external cross-check; each detected signal folds into the same M/S/R report (Step 7).
+> Frontier basis: [`harness_frontier_diagnosis_2026-06-02.md`](../../../../knowledge/shared/harness-core/harness_frontier_diagnosis_2026-06-02.md) §Frontier Highlights.
+
+| Defect class | Definition | Detectable signals in an FH repo | Tier |
+|---|---|---|:---:|
+| **Context Drift** | Active context diverges from intent over a long session (stale rules, accumulated cruft, lost task framing). | Stale paths in CLAUDE.md (L3 BROKEN refs) · `.claude/rules/` files unmodified 90+ days (L3 STALE) · CLAUDE.md over line threshold (L2). | S |
+| **Schema Misalignment** | Tool/agent input-output contracts don't match what callers send (arity/shape mismatch, undocumented contracts). | Agent file count vs README/AGENTS.md mention drift (Step 11-B/E) · plugin.json/marketplace.json `"N skills"` count vs actual dirs (Step 11-A) · SKILL.md missing `Done When` (undocumented completion contract). | M |
+| **State Degradation** | Persisted state (tracks/, memory, registries) decays: count drift, stale paths, orphaned entries. | tracks/ with no sync in 30+ days (L4) · phantom `knowledge/` refs not in CATALOG (Step 11-C) · INACTIVE_90D skills with no call record (L5-A). | M |
+
+Cross-check rule: a signal that fires under two or more classes (e.g. a stale CLAUDE.md path that is also a phantom knowledge ref) escalates one tier. Report defect-class hits inline with their originating L-level finding — do not duplicate the underlying check.
 
 ---
 
@@ -523,6 +557,7 @@ If latest weekly_audit file exists → propose adding `## Harness Structure Chec
 - [ ] Check suspected misuse patterns (L5-B)
 - [ ] Review effect metrics E1·E3·E5 (L5-C)
 - [ ] Check hook divergence (L3-4) — create alternative plan for hooks not firing in Agent View
+- [ ] Harness-defect taxonomy cross-check — Context Drift · Schema Misalignment · State Degradation
 ```
 
 ---
@@ -713,6 +748,14 @@ if [ -n "$agents_changed" ]; then
   actual_agents=$(find .claude/agents plugins/*/agents -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
   readme_agents=$(grep -oE '[0-9]+ (fh-meta \+ [0-9]+ fh-commons )?agents?' README.md 2>/dev/null | head -1 || echo "not found")
   echo "Agent files: $actual_agents | README mentions: $readme_agents"
+  # agent_cards.json count-sync (A2A capability registry — scoped to .claude/agents/ only, mirrors AGENTS.md)
+  if [ -f .claude/registry/agent_cards.json ]; then
+    cards_count=$(grep -oE '"agent_count":[[:space:]]*[0-9]+' .claude/registry/agent_cards.json | grep -oE '[0-9]+')
+    canonical_agents=$(find .claude/agents -maxdepth 1 -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+    [ "$cards_count" = "$canonical_agents" ] \
+      && echo "OK: agent_cards.json count ($cards_count) matches .claude/agents/ ($canonical_agents)" \
+      || echo "DRIFT: agent_cards.json says $cards_count but .claude/agents/ has $canonical_agents — regenerate registry"
+  fi
   echo "$agents_changed" | while read ap; do
     aname=$(basename "$ap" .md)
     grep -q "$aname" README.md 2>/dev/null \

@@ -80,6 +80,38 @@ The forge-harness hub has a dual identity: **(a) a seed for others** + **(b) you
 - **Reason:** Prevents PR fragmentation — logical units should be grouped into meaningful PRs, not atomized per commit
 - Default workflow: commit → push → wait for explicit PR request
 
+## Permission-Denial Guidance (When Auto-Mode Blocks an Action)
+
+When an action is blocked by an auto-mode permission denial (e.g., a tool/Bash write to a restricted path, or self-modification of `CLAUDE.md`), **do not stop at the bare denial**. Reporting "blocked" and ending leaves the user with a "what now?" gap. Instead, turn the block into a decision the user can act on in one step:
+
+1. **State what was blocked** — the action and why (e.g., *"Auto mode blocked the write to `.claude/registry/` (restricted path)"*).
+2. **Offer concrete options with action templates** — at minimum:
+   - **Option A — Approval/elevated mode**: name the mode switch and show the exact command(s) to run after switching.
+   - **Option B — Manual review**: list the specific files/sections to inspect so the user can act by hand.
+3. **Ask which option** — one line, then wait.
+
+Example:
+
+```
+Auto mode blocked the CLAUDE.md commit (self-modification). Next steps:
+
+Option A — Approval mode (recommended):
+  Switch to approval mode, then run:
+  git add CLAUDE.md && git commit -m "..."
+
+Option B — Manual review:
+  Inspect: CLAUDE.md (§...) · the changed knowledge/ docs
+  Then commit selectively.
+
+Which option?
+```
+
+**Sub-agent variant**: a dispatched agent that hits a denial should report the same structure back to the orchestrator (what was blocked + ready-to-apply content + exact unblock step), so the parent can either re-route with permission or complete the write itself — not silently fail. The parent should then complete or escalate, never drop the task.
+
+> Note: switching modes lifts the permission block, not the FH gates — for FH-asset commits the 4-axis pre-commit gate still applies after the switch (Option A's command runs through it).
+
+Simplification guard: skip the full menu for trivial denials with one obvious fix — state the block and the single next step inline.
+
 ## Active Onboarding Protocol (User Greeting → AI Initiative)
 
 When a user gives a **greeting or session-start** utterance in a forge-harness install environment, the AI enters active initiative mode. This directly implements the mission: *"Easy and effortless — faster development, less setup friction, more automation, fewer tokens wasted."*
