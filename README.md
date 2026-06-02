@@ -15,16 +15,9 @@
   A persistent knowledge hub that connects all your Claude Code projects —<br>shared skills, accumulated context, and a compounding improvement loop.
 </p>
 
-<br>
-
-<table align="center" width="680">
-  <tr>
-    <td align="center" width="170"><b>🔗 FORK</b><br><sub>Fork the harness<br>for your team</sub></td>
-    <td align="center" width="170"><b>🔧 ADAPT</b><br><sub>Rename, configure,<br>and extend</sub></td>
-    <td align="center" width="170"><b>👥 COLLABORATE</b><br><sub>Multi-project teams.<br>One shared backbone.</sub></td>
-    <td align="center" width="170"><b>🛡️ EMPOWER</b><br><sub>Build, ship, and<br>iterate faster.</sub></td>
-  </tr>
-</table>
+<p align="center">
+  <img src="docs/pillars.svg" alt="FORK · ADAPT · COLLABORATE · EMPOWER" width="680">
+</p>
 
 ---
 
