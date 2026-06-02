@@ -1,5 +1,5 @@
 ---
-description: Defines the 3 harness usage modes (A canonical / B resident / C plugin-only) and the differentiated value automatically received on install (Layer 1 rules + Layer 2 skills).
+description: Defines the 4 harness usage modes (A canonical / B resident / C plugin-only / D developer) and the differentiated value automatically received on install (Layer 1 rules + Layer 2 skills).
 ---
 
 # Harness Usage Modes + Differentiated Value
@@ -8,19 +8,21 @@ description: Defines the 3 harness usage modes (A canonical / B resident / C plu
 
 The forge-harness maintains **a reference asset identity** — user entry and exit are free. The AI guides and supports any mode without refusal.
 
-### 3 Mode branches
+### 4 Mode branches
 
 | Mode | Essence | AI guidance and support obligation | Contribution path |
 |---|---|---|---|
 | **A — Canonical** | Harness cwd setup → hand off to separate project cwd → field agent works | Active onboarding 5-skill cascade + cwd handoff guidance | Direct (bidirectional sync circuit active) |
 | **B — Resident** | Create a **separate project directory** in the harness install environment and work there | Required to guide "separate project directory + proper `.gitignore`" | Indirect (harness itself maintains reference asset identity) |
 | **C — Plugin/skill only** | Install only plugin/skill without cloning harness | Guide user to accumulate history on their own project side. Explicitly state no automatic harness signals expected | Indirect + dependent on user active invocation |
+| **D — Developer/Researcher** | **Using FH while also developing/researching FH itself.** Public mirror (forge-harness) holds methodology; private companion store (e.g. `fh-be`) holds paper drafts, experiment logs, raw signals. | Guide companion-store setup (`fh-be` pattern). Mandatory: `.gitignore` keeps drafts local; `handoff/` enables cloud→local session continuity. | Direct + private (companion store receives snapshots via explicit push) |
 
 ### AI guidance principles
 
 - If user explicitly states a mode, immediately guide that mode. Do not force canonical mode (Mode A).
 - Mode B: **Mandatory check of separate project directory creation + `.gitignore` harness asset isolation**
 - Mode C: Guide history accumulation mechanism on user's project side. Harness side actively absorbs via issue monitoring and PR audit cadence.
+- Mode D: **Mandatory companion-store setup guidance**. Public mirror = methodology only. Private store layout: `paper-drafts/` · `paper-signals/` · `digests/` · `handoff/`. `handoff/` files bridge cloud session → local session without exposing content in public repo. Field projects (e.g. 사내 harness) can use the same dual-repo pattern.
 - In any mode: do not accumulate user personal work in the harness directory itself (protect reference asset identity)
 
 ---
@@ -31,14 +33,15 @@ The forge-harness is not a simple plugin marketplace — it is an **integrated e
 
 ### Layer 1 — Core assets (rules domain / auto-activated on harness install)
 
-| Core asset | Essence | Mode A | Mode B | Mode C |
-|---|---|:---:|:---:|:---:|
-| **Active onboarding protocol** | Greeting trigger → 5-skill auto cascade | ✅ | ✅ | ❌ |
-| **Harness usage mode 3 branches** | User-free mode branching + AI guidance obligation | ✅ | ✅ | ❌ |
-| **Asset synergy branch judgment** | Auto-judgment of meta/hub seed vs field persistent location for new assets | ✅ | ✅ | ❌ |
-| **Memory system auto-operation** | User utterances/insights auto-persisted + keyword trigger auto-load | ✅ | Partial | ❌ |
+| Core asset | Essence | Mode A | Mode B | Mode C | Mode D |
+|---|---|:---:|:---:|:---:|:---:|
+| **Active onboarding protocol** | Greeting trigger → 5-skill auto cascade | ✅ | ✅ | ❌ | ✅ |
+| **Harness usage mode 4 branches** | User-free mode branching + AI guidance obligation | ✅ | ✅ | ❌ | ✅ |
+| **Asset synergy branch judgment** | Auto-judgment of meta/hub seed vs field persistent location for new assets | ✅ | ✅ | ❌ | ✅ |
+| **Memory system auto-operation** | User utterances/insights auto-persisted + keyword trigger auto-load | ✅ | Partial | ❌ | ✅ |
+| **Companion-store routing** | Drafts/signals/handoffs → private store; methodology → public mirror | ❌ | ❌ | ❌ | ✅ |
 
-### Layer 2 — Skills domain (can separate plugin/skill / available in all Modes A·B·C)
+### Layer 2 — Skills domain (can separate plugin/skill / available in all Modes A·B·C·D)
 
 | Skill | Essence |
 |---|---|
