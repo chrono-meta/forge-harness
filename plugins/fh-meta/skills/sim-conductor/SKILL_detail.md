@@ -1,0 +1,337 @@
+---
+name: sim-conductor-detail
+description: Detail reference for sim-conductor — bash scripts, multi-team panel, Area B baseline methods, D-consumer execution, Area E execution, report template, PR bash, Path B. Load when executing a specific step.
+load: on-demand
+---
+
+# sim-conductor — Detail Reference
+
+> Load when executing a specific step. SKILL.md contains triggers, target profile analysis, precondition table, area summaries with persona routing, human gate, and Done When.
+
+---
+
+## §Step0-Bash — Environment Sync Scripts
+
+```bash
+HARNESS_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+SIM_CLONE=~/sim/your-hub-sim/forge-harness-via-clone
+[ -d "$SIM_CLONE" ] && (cd "$SIM_CLONE" && git pull origin main) || SIM_CLONE="$HARNESS_ROOT"
+
+# Report storage path
+REPORT_DIR=$(find "$(dirname "$HARNESS_ROOT")" -maxdepth 2 -name "tracks" -type d 2>/dev/null | head -1)
+REPORT_DIR="${REPORT_DIR:-$HARNESS_ROOT/tracks}/_meta"
+mkdir -p "$REPORT_DIR"
+```
+
+**Area B frequency check bash**:
+```bash
+ls "$REPORT_DIR"/sim_*_area_B*.md 2>/dev/null | sort | tail -1
+# If date within 7 days → output warning + stop
+```
+
+---
+
+## §PersonaDiscovery — Plugin-Recommender Integration
+
+### Query format for plugin-recommender
+
+When a GAP is detected for a high-weight perspective:
+
+```
+/plugin-recommender query:
+  context: "sim-conductor persona gap"
+  needed_perspective: [perspective name, e.g. "security-auditor"]
+  artifact_type: [from profile, e.g. "Python auth code"]
+  audience: [from profile]
+  constraints: "must work as Agent sub-agent dispatch (no interactive CLI)"
+```
+
+plugin-recommender returns: ranked candidates with name · source (FH native / marketplace / external) · install command · token cost estimate · fit rationale.
+
+### Gap resolution decision tree
+
+```
+GAP detected for [perspective X]:
+  Is it high-weight (profile score ≥ 0.7)?
+    YES → present plugin-recommender result → user: install / skip / substitute
+          install: run install cmd → register → continue Step 0.3
+          skip: auto-fill with ② built-in fallback, flag as "degraded coverage"
+          substitute: user names alternative agent → use it
+    NO  → auto-fill with ② built-in fallback, no prompt
+```
+
+### Persona map by artifact type (typical optimal)
+
+| Artifact type | Optimal personas | Likely GAP (not in FH native) |
+|---|---|---|
+| SKILL.md / governance doc | challenger · newcomer · governance-expert | governance-expert → query plugin-recommender |
+| README / marketing copy | newcomer · devil-advocate · domain-expert | domain-expert (field-specific) → query |
+| Python / JS code | challenger/Code · power-user · security-auditor | security-auditor → query if auth/data |
+| Auth / security-sensitive code | security-auditor · challenger/Code · power-user | security-auditor → block if GAP (high-weight) |
+| Design doc + citations | challenger · domain-expert · skeptic | domain-expert (field-specific) → query |
+
+### Degraded coverage flag
+
+When any high-weight persona is substituted with built-in fallback (user chose "skip"):
+```
+⚠️ Degraded coverage: [perspective X] substituted with built-in [fallback name].
+   Risk: [what this perspective would have caught that built-in may miss].
+   Recommendation: install [plugin name] before external publish.
+```
+
+Degraded coverage persists in Step 3 report under "Persona composition used."
+
+---
+
+## §Profile-Examples — Target Profile Worked Examples
+
+### Example 1: SKILL.md (governance doc)
+
+```
+Target Profile:
+  artifact_type: SKILL.md (governance doc)
+  audience: mixed (internal FH users + potential external installers)
+  claim_density: medium (2 stated benefits, 1 "autonomous" claim)
+  risk_level: medium (not yet externally published)
+
+Recommendation:
+  Areas: B (internal meta audit) + D-skill (cold-start validation)
+  Persona composition: challenger (high — claim verification), newcomer (medium — onboarding), governance-expert (medium)
+  Scale: Minimum (3)
+  Prerequisites: none (not yet external publish)
+```
+
+### Example 2: README (pre-publish)
+
+```
+Target Profile:
+  artifact_type: README (external entry point)
+  audience: external installer (first-time user)
+  claim_density: high (5+ capability claims, "automatic", "zero config")
+  risk_level: high (marketplace / external publish imminent)
+
+Recommendation:
+  Areas: A (external user perspective — primary) + C (naming gap scan)
+  Persona composition: newcomer (high), devil-advocate (high — claim density), power-user (medium)
+  Scale: Extended (4–5)
+  Prerequisites: steel-quench REQUIRED before Area A proceeds
+```
+
+### Example 3: Bash script / Python code
+
+```
+Target Profile:
+  artifact_type: bash script (50 lines, 3 external commands)
+  audience: internal developer
+  claim_density: low (technical spec only)
+  risk_level: low (pre-PR, internal)
+
+Recommendation:
+  Areas: D-code (primary)
+  Persona composition: challenger/Code (edge cases, security surface), power-user (performance)
+  Scale: Minimum (2 — third persona adds minimal value for bash)
+  Prerequisites: none
+```
+
+### Example 4: Design doc with arXiv citations
+
+```
+Target Profile:
+  artifact_type: design doc (contains arXiv references + code blocks)
+  audience: internal team
+  claim_density: high (3 arXiv claims, 2 quantitative benchmarks cited)
+  risk_level: medium
+  novelty: high (references recent paper)
+
+Recommendation:
+  Areas: D-code + source-grounding-audit (quantitative claims)
+  Persona composition: challenger (claim-evidence), domain-expert (arXiv validity)
+  Scale: Minimum (3)
+  Prerequisites: source-grounding-audit recommended (novelty + citations)
+```
+
+---
+
+## §MultiTeam — Multi-Team Panel Execution
+
+### Pre-entry confirmation dialog
+
+```
+Area A — Multi-Team Mode available.
+Detected external CLIs: [list or "none"]
+Estimated additional token cost: ~2K–5K per external team (billed to that CLI's quota).
+Run multi-team? (a) Full panel  (b) Claude sub-agents only  (c) Skip to Area B
+```
+
+### Team → Persona mapping
+
+| Team | CLI | Personas | Dispatch method |
+|---|---|---|---|
+| T0 Claude | Agent sub-agent | hub-persona-auditor · challenger · domain-expert | Agent() call |
+| T1 Gemini | `gemini` pipe | newcomer · power-user · devil | `echo PROMPT \| gemini` |
+| T2 Copilot | `gh copilot suggest` | devil · domain-expert | `gh copilot suggest -t shell` |
+| T3 Ollama | `ollama run` | devil | `ollama run llama3 PROMPT` |
+| T4 Codex | `npx @openai/codex exec` | devil · edge-case-hunter | `echo PROMPT \| npx @openai/codex exec -m gpt-5 -` |
+
+### CLI detection bash
+
+```bash
+# Detect available external CLIs
+AVAILABLE_CLIS=""
+command -v gemini   &>/dev/null && AVAILABLE_CLIS="$AVAILABLE_CLIS gemini"
+command -v gh       &>/dev/null && gh copilot --version &>/dev/null && AVAILABLE_CLIS="$AVAILABLE_CLIS copilot"
+command -v ollama   &>/dev/null && AVAILABLE_CLIS="$AVAILABLE_CLIS ollama"
+command -v npx      &>/dev/null && npx @openai/codex --version &>/dev/null 2>&1 && AVAILABLE_CLIS="$AVAILABLE_CLIS codex"
+echo "Available: ${AVAILABLE_CLIS:-none}"
+```
+
+### Cross-team synthesis format
+
+```
+Cross-Team Synthesis:
+| Issue | Teams | Grade |
+|---|---|---|
+| [issue description] | [T0+T1 / T1+T2 / etc.] | S-confirmed / A-confirmed |
+
+Claude blind spots (external-only findings):
+- [T1 found X, T0 missed → Claude blind spot: ...]
+```
+
+**Path B fallback**: No external CLIs → cross-session `claude --print` as T0 cold-read variant.
+
+---
+
+## §AreaB-Baseline — External Baseline Injection Methods
+
+Structural methods to reduce self-reference risk in Area B:
+
+1. **Regular devil attacks**: Area B once/month + devil attack (challenger) once/quarter. Route devil → defense results directly into SKILL.md via steel-quench handoff after Area B ends.
+2. **Direct external user validation**: Non-owner attempts install + invocation → collect reactions. (cascade β validated: first autonomous external run confirmed.)
+3. **steel-quench integration**: After Area B ends, hand off challenger findings to `/steel-quench` for deeper adversarial review + SKILL.md inscription.
+4. **Dual validation principle**: Internal validation (Area B) alone is insufficient — minimized only when combined with external install reaction collection or cross-model validation.
+
+**Dispatch template for Area B parallel**:
+```
+Agent A (hub-persona-auditor): target=[files], task="3+ persona simulation, 4-axis review, 3-tier suggestions"
+Agent B (persona-innovator, Mode I): target=[files], task="naming gaps + structural gaps + 3-5 candidates"
+→ both complete → 
+Agent C (challenger, artifact_type="SKILL"): input=[A output + B output], task="what was missed? angles U2, D3, U5"
+```
+
+---
+
+## §AreaD-Consumer — D-consumer Execution Detail
+
+### D-session — Session Card Cold-Start
+
+Auto-detect target (when `--target` not specified):
+MEMORY.md → check `reference_next_session_starter.md` → if absent: search latest session-starter in `tracks/_meta/` or `memory/`.
+
+Provide only that file to consumer agent (no context). Ask:
+1. The most important thing to do today
+2. Current work-in-progress status
+3. Events/deadlines that must not be missed
+4. Parts that are unclear or lack context
+
+**Verdict**: Top priority matches + context reconstructable → F / Context reconstructed but gaps → P / Wrong top priority or key item missing → B.
+B/P items: fix directly in session card + commit.
+
+### D-skill — Skill Trigger Utterance Consumer Simulation
+
+Provide only one SKILL.md to consumer agent (no context, no SKILL_detail.md).
+Assume first trigger sentence from Trigger Phrases was input → attempt to complete from Step 1.
+Record: where it stalled, why, whether core task completes, what needs fixing.
+
+**Verdict**: Core task completes → F / Partial completion (stalled mid-step) → P / Blocked at Step 1 → B.
+
+### D-memory — Memory File Cold-Start Validation
+
+Provide only one memory file to consumer agent. Check:
+① When should this be applied?
+② Can current validity be determined from this file alone?
+③ Can the behavior guideline be executed from this file alone?
+④ Any stale or contradictory information?
+
+**Verdict**: ③ executable + ④ none → F / Some unclear parts → P / Stale/contradiction found → B.
+
+---
+
+## §AreaE-Detail — Area E Execution
+
+### E-1 — Domain Expert Objection
+
+Agent (subagent_type="challenger", artifact_type="Design"): false positive patterns (clearly wrong judgments) + false negative patterns (should-have-caught-but-didn't). Angles: U3 (evidence grounding), D4 (failure mode coverage).
+
+Findings format: `[judgment type · pattern · root cause · fix direction]`
+
+### E-2 — Practitioner Confusion
+
+Agent (Newcomer brief): confusing items, fix suggestions more awkward than original, classification criteria consistency breaks.
+
+Findings format: `[item · confusion cause · improvement direction]`
+
+### E-3 — Pattern Structuring (direct execution)
+
+Integrate E-1/E-2 → group false positives by root cause → assign pattern name → pinpoint fix location → M/S/R classification → fix target code/prompt → commit.
+
+---
+
+## §Report-Format — Report Template
+
+```markdown
+---
+name: [date] sim-conductor — Area [X]
+type: simulation-report
+date: YYYY-MM-DD
+areas: [A|B|C|D|E|all]
+target_profile: [artifact_type | audience | risk_level]
+m_count: N
+s_count: N
+r_count: N
+---
+
+## Target Profile
+artifact_type: [type] · audience: [internal|external|mixed] · risk_level: [low|medium|high]
+
+## M-tier ([N] items)
+| # | Issue | Location | Prescription |
+...
+
+## S-tier ([N] items)
+| # | Issue | Location | Priority |
+...
+
+## R-tier ([N] items)
+...
+
+## Emerging asset candidates
+...
+
+## Persona composition used
+[list of personas used + which were task-derived vs built-in]
+```
+
+---
+
+## §PR-Bash — PR Creation Scripts
+
+```bash
+cd "$HARNESS_ROOT"
+BRANCH="fix/sim-$(date +%Y%m%d)-m-tier"
+git checkout -b "$BRANCH"
+# [process M-tier items]
+git add -p
+git commit -m "fix(sim-conductor): resolve M-tier findings from simulation YYYY-MM-DD"
+git push -u origin "$BRANCH"
+# PR creation requires explicit user request per CLAUDE.md PR principle
+```
+
+---
+
+## §PathB-Detail — External Environment Fallback
+
+When `~/sim/` is absent:
+- Step 0: `SIM_CLONE="$HARNESS_ROOT"` (skip git clone)
+- Logical isolation only: inject "Treat the following as if you have no prior development context" into each Agent prompt
+- **Area B only recommended**: Area A/C technically executable but physical isolation not guaranteed (direct path references). Logical isolation via prompt directive is the only available control.
+- Area D/E: fully functional (target-file-based, no sim clone needed)
