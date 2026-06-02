@@ -288,6 +288,8 @@ Provide only one memory file to the consumer agent. Check: ① When should it be
 
 **Deduplication**: When multiple personas find the same location, M > S > R priority.
 
+**Early Convergence Detection**: When 2+ Areas independently classify the same item as M-tier, trigger immediate fix without waiting for all Areas to complete. Cross-area agreement is a confidence signal — remaining analysis is confirmatory, not decision-making. Pattern: dispatch Areas in parallel → on first M-tier cross-area match → fix immediately → resume remaining Areas for S/R coverage only.
+
 **Self-marketing auto-lint**: Auto-flag the following vocabulary in results — "full-fledged", "decisive", "precision", "innovative", "groundbreaking", revision numbering (`Nth revision`), version history with embedded names.
 
 ## Step 3 — Report Generation
