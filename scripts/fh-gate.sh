@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# fh-gate.sh — FH governance gate v1.0
+# fh-gate.sh — FH governance gate v1.1
 #
 # Executes governance review end-to-end via claude --print.
 # CI-ready: machine-parseable verdict + exit codes.
@@ -27,7 +27,7 @@
 
 set -euo pipefail
 
-VERSION="1.0.0"
+VERSION="1.1.0"
 FH_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 _TMPDIR="${TMPDIR:-/tmp}"
 
