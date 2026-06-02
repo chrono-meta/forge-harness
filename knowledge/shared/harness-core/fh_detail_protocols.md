@@ -92,7 +92,7 @@ Plugin install · skill pre-activation · `.claudeignore` copy (on approval) · 
 
 ## FH Improvement Signal Recording — Full Format
 
-Create: `~/projects/your-hub/tracks/_meta/fh_signal_{YYYY_MM_DD}_{source}.md`
+Create: `tracks/_meta/fh_signal_{YYYY-MM-DD}_{source}.md` (hub-relative path)
 
 `{source}` = current cwd (e.g., `project-a` · `fh-direct`)
 
