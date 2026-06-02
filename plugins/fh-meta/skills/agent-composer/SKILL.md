@@ -40,6 +40,7 @@ Check `LOCAL_SKILL_REGISTRY.md` for project-local skills; check `.mcp.json` or `
 
 ## Step 0.2 — Capability Fit Analysis
 
+> **Schema**: `knowledge/shared/harness-core/tpa_schema.md` — `artifact_type` enum determines `role_match` lookup domain for scoring.
 > Runs before dispatching agents. **Skip if user specifies exact agents by name.**
 
 For each subtask in the composition plan:

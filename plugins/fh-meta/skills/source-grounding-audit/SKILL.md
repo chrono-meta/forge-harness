@@ -66,6 +66,8 @@ If not provided by user, explicitly confirm: artifact file path, declared source
 
 ### Step 0.5. Claim Distribution Profile
 
+> **Schema**: `knowledge/shared/harness-core/tpa_schema.md` — `phantom_risk` derivation rule, gate trigger conditions, §Gate Routing Table.
+
 Runs after Step 0 (target + source confirmed). Skip if user specifies scope explicitly.
 
 Scan artifact quickly to classify claim distribution:
