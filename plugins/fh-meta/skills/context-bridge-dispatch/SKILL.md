@@ -1,12 +1,31 @@
 ---
 name: context-bridge-dispatch
-description: Injects a session context card into each agent prompt before parallel dispatch, preventing context blindness. For N≥3 agents, uses DACS-inspired Registry mode — each agent receives compressed summaries of all other agents alongside its own full context card.
-user-invocable: true
-allowed-tools: ["Bash", "Read", "Write", "Agent"]
+description: >-
+  DEPRECATED — merged into agent-composer Step 3-a (2026-06-02).
+  Context Card injection (N≤2 standard / N≥3 Registry mode) + coordination-overhead budget + Focus Mode
+  are now part of agent-composer Step 3. Invoke /agent-composer for parallel dispatch.
+user-invocable: false
+allowed-tools: []
 model: sonnet
+deprecated: true
+deprecated_reason: absorbed into agent-composer Step 3-a
+deprecated_date: 2026-06-02
+successor: agent-composer
 ---
 
-# context-bridge-dispatch — Parallel Agent Context Bridge
+# context-bridge-dispatch — DEPRECATED
+
+> **Merged into `agent-composer` Step 3-a (2026-06-02).**
+> Context Card injection, Registry mode, coordination-overhead budget, and Focus Mode are now part of agent-composer Step 3.
+> Use `/agent-composer` for all parallel dispatch with context injection.
+
+## Content preserved at
+
+`plugins/fh-meta/skills/agent-composer/SKILL.md §Step 3-a`
+
+---
+
+# context-bridge-dispatch — Parallel Agent Context Bridge (archived)
 
 In agent dispatch, sub-agents can read files but do not have access to the live conversation context of the main session. This skill generates a session context card before dispatch and injects it into each agent prompt.
 
