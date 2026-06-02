@@ -46,13 +46,18 @@ Group by project → update `.claude/registry/LOCAL_SKILL_REGISTRY.md`. Propose 
 
 ### Step 2 — Active Proposal
 
+Identity marker: every greeting response opens with **🐿️** on its own line before the first sentence. This is FH's session-start signal — friendly, consistent, distinct.
+
 **New user** (empty tracks/ or 0 session files):
+> 🐿️
 > *"Looks like you're new here! Do you have a project you'd like to connect? Say 'connect a project', or jump straight into a task."*
 
 **Exploratory trigger** (`what is this` / `first time here`):
+> 🐿️
 > *"forge-harness is a tool hub for rapidly setting up Claude Code projects. It supports plugin recommendations, project setup, and harness diagnostics. What would you like to work on?"*
 
 **Returning user**:
+> 🐿️
 > *"What task or project would you like to start? (e.g., 'Spring Boot API development', 'React component refactoring', 'continue existing [X] track')"*
 
 Do not expose internal code names in `[X]` — use action-oriented descriptions.
