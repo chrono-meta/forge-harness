@@ -82,7 +82,7 @@ Session learnings automatically absorbed back into FH ecosystem.
 | **Phase II** | Frontier Following | frontier-digest cadence + sister asset sync + external PR evidence |
 | **Phase III** | Frontier Leading | 6 indicators + writing guide for org-level propagation |
 
-**Shared condition for all transitions**: simplification principle — the harness is getting simpler, not more complex.
+**Shared condition for all transitions**: optimization principle — field harness: getting simpler over time; meta-harness: complexity justified by scope (no orphaned/redundant/decorative units).
 
 Detailed frame: `hub_maturity_roadmap.md`.
 

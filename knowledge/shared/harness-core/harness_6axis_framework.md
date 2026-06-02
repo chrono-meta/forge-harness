@@ -2,7 +2,9 @@
 
 > Top-level meta-framework for forge-harness operations. The 6 axes form a decision tree that governs all harness-level work — from initial structure through continuous improvement.
 
-**Core principle**: "A good harness gets simpler over time. If it's getting more complex, something is wrong."
+**Core principle (field harness)**: "A good harness gets simpler over time. If it's getting more complex, something is wrong."
+
+**Meta-harness variant**: A good meta-harness *optimizes* over time — complexity is justified when it earns its scope. Red flags: orphaned skills (never invoked), redundant overlap (two skills doing the same thing), decorative structure (exists but doesn't change behavior). Complexity itself is not the warning signal.
 
 ---
 

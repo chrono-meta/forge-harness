@@ -152,7 +152,7 @@ Phase transitions are **methodology/abstraction level rises**, not **increases i
 - [ ] Files unreferenced 6+ months → move to `archive/` or consolidate
 - [ ] Clean up previous phase temporary outputs made unnecessary by new phase entry
 - [ ] Confirm CLAUDE.md and CATALOG within 200 lines
-- [ ] Re-confirm principle: *"A good harness gets simpler over time — if it's getting more complex, something is wrong"*
+- [ ] Re-confirm optimization principle: field harness → simpler over time; meta-harness → complexity earns its scope (purge orphaned/redundant/decorative units)
 
 ### 6.2 Transition deferred on simplification failure
 
