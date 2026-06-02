@@ -41,6 +41,46 @@ A designer's anxiety is most dangerous when vague. steel-quench breaks that anxi
 
 ---
 
+## Step 0.3 — Artifact Vulnerability Profile
+
+Runs when steel-quench is invoked without a specific wave restriction.
+Skip if user specifies exact waves (e.g. "run Wave 1 and Wave 4 only").
+
+Read target artifact → classify vulnerability surface:
+
+| Dimension | Signal → Wave weight shift |
+|---|---|
+| `artifact_type` | SKILL.md/design-doc → Wave 2 (structural defense) weight↑ · bash/code → Wave 1 (real-code) weight↑ · external publish imminent → Wave 5 (cross-team) weight↑ |
+| `phantom_risk` | citations/arXiv/DOIs/http URLs present → Wave 3 (source-grounding) weight↑ |
+| `claim_density` | 3+ benefit claims → Wave 1 U3 (evidence grounding) angle weight↑ |
+| `novelty` | first-of-its-kind pattern → Wave 4 (convergence) weight↑ |
+| `scope` | internal-only doc → Wave 5 (external CLI) weight=0 (skip) |
+
+Wave selection output:
+```
+Run:  [list of selected waves with rationale]
+Skip: [list of skipped waves with reason]
+External CLIs available: [yes/no → Wave 5 available]
+```
+
+**Degraded coverage rule**: if a high-weight wave or capability is skipped (user choice, unavailable tool, or scope=internal), flag explicitly in the output header — do not silently proceed.
+
+---
+
+## Step 0.4 — Specialized Reviewer Discovery
+
+For the target artifact, scan installed agents for a domain-specific adversarial reviewer:
+
+1. Check `.claude/agents/` for a reviewer matching `artifact_type`
+2. Built-in fallback: `fh-commons:quench-challenger` (general-purpose adversarial review)
+3. GAP for high-risk artifact: query `/plugin-recommender "adversarial reviewer for [artifact_type]"` → user: install / skip / use fallback
+
+**Wave 5 activation rule**: Wave 5 (external CLI team) is only activated when `scope` is not internal-only AND external CLIs are available AND risk_level is high or user explicitly requests it.
+
+> **Detail**: See `SKILL_detail.md §ArtifactProfile` — worked examples (SKILL.md, bash script, README, design doc with citations) showing wave selection and rationale — read when classifying an unfamiliar artifact type.
+
+---
+
 ## Wave 1 — 5 Mandatory Attack Angles
 
 **Execution principles**: Attacks must be based on real code/files/configs — abstract criticism prohibited.

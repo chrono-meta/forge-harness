@@ -58,67 +58,50 @@ When AI generates artifacts without reading the source, those artifacts look lik
 
 ### Step 0. Confirm Audit Target
 
-If not provided by user, explicitly confirm:
+If not provided by user, explicitly confirm: artifact file path, declared source files, and audit scope. Source not declared = S-grade blocker registered immediately.
 
-1. **Artifact file**: Path to audit target file (TC file, analysis report, design document, etc.)
-2. **Declared source files**: List of source file paths that should be the basis for artifact generation
-3. **When source not declared**: Source not declared itself is registered as an S-grade blocker
+> **Detail**: See `SKILL_detail.md §Step0-Detail` — confirmation output format and simplification guard — read when audit target or source list is ambiguous.
 
+---
+
+### Step 0.5. Claim Distribution Profile
+
+Runs after Step 0 (target + source confirmed). Skip if user specifies scope explicitly.
+
+Scan artifact quickly to classify claim distribution:
+
+| Dimension | Signal → Audit depth shift |
+|---|---|
+| `claim_density` | > 10 claims → full Step 1-4 audit; ≤ 3 claims → light (S+A only) |
+| `artifact_type` | SKILL.md/design-doc → prioritize Branch/State-transition claims; code → prioritize Proper-noun/API claims |
+| `risk_level` | external publish / arXiv citations → all claim types, max depth |
+| `source_count` | 0 declared sources → S-grade blocker immediately (skip to Step 3 prescription) |
+| `quantitative_density` | > 3 numerical claims → focus numerical+range types first |
+
+Scope recommendation output:
 ```
-Audit target:
-  Artifact: {file path}
-  Declared source: {file path list or "not declared"}
-  Audit scope: {full / specific section / specific claim type}
+Claim types to prioritize: [list]
+Audit depth: [full | prioritized | light]
+Immediate blockers detected: [yes/no — 0 sources = immediate S-grade]
 ```
 
-**Simplification guard**: If source is clear and audit scope is single section, skip Step 0 output and go straight to Step 1.
+**0-source behavioral rule**: When artifact has 0 declared sources, skip Steps 1-2 entirely and go directly to Step 3 with S-grade blocker: "Source not declared — all claims unverifiable."
 
 ---
 
 ### Step 1. Claim Extraction (Artifact Scan)
 
-Extract claims from the artifact that require source back-tracing.
+Extract claims from the artifact that require source back-tracing. Claim types: Proper nouns (highest), Numerical/range values (highest), Branching conditions (highest), State transitions (high), Preconditions (high), Actors (medium). Exclude generic test methodology descriptions and generic UI patterns.
 
-**Claim types to extract**:
-
-| Type | Examples | Priority |
-|---|---|:---:|
-| **Proper nouns** | API endpoint names, field names, status values, screen names | Highest |
-| **Numerical/range values** | Amounts, time, ratios, counts, thresholds | Highest |
-| **Branching conditions** | if/else branches, exception cases, error codes | Highest |
-| **State transitions** | Conditions for A state → B state, allowed/forbidden combinations | High |
-| **Preconditions** | "only when ~", "when ~ is active" | High |
-| **Actors** | System, user, external API role distinctions | Medium |
-
-**Exclude from extraction** (no source back-tracing needed):
-- General test methodology descriptions ("using boundary value analysis")
-- Generic UI patterns ("click button then verify result")
-
-**Step 1 output format**:
-
-```
-## Step 1 — Claim Extraction Results
-
-| # | Claim | Type | Location (artifact file:line) |
-|:---:|---|:---:|---|
-| 1 | [claim content] | Proper noun/Numerical/Branch | [filename:line N] |
-...
-
-Total {N} extracted (Proper nouns N / Numerical N / Branch N / State transition N / Precondition N / Actor N)
-```
+> **Detail**: See `SKILL_detail.md §Step1-Detail` — full claim types table with examples, exclude list, and Step 1 output format template — read when deciding which claims to include or format the extraction results.
 
 ---
 
 ### Step 2. Source Read + Back-Trace
 
-Back-trace each claim to the declared source files.
+Back-trace each claim to the declared source files using Read + Grep directly — no inference judgment. Partial match is not treated as match.
 
-**Back-tracing principles**:
-- Read source files directly with the Read tool — do not judge from memory or inference
-- Use Grep to confirm exact value, keyword, or pattern match
-- **Partial match is not treated as match** — e.g., if source has "5 minutes" and TC has "300 seconds", treat as requiring separate confirmation
-
-**Back-tracing classification**:
+Back-tracing classification:
 
 | Classification | Criteria | Marking |
 |---|---|:---:|
@@ -127,18 +110,7 @@ Back-trace each claim to the declared source files.
 | **Phantom** | Cannot be found in source | ❌ |
 | **Source-Missing** | Source itself cannot be Read or was not declared | 🔴 |
 
-**Step 2 output format**:
-
-```
-## Step 2 — Source Back-Trace Results
-
-| # | Claim | Back-Trace Result | Source Evidence (file:line) | Notes |
-|:---:|---|:---:|---|---|
-| 1 | [claim] | ✅/⚠️/❌/🔴 | [filename:line N or "none"] | [modifications, etc.] |
-...
-
-Grounded: N / Partial: N / Phantom: N / Source-Missing: N
-```
+> **Detail**: See `SKILL_detail.md §Step2-Detail` — back-tracing execution procedure, classification decision rules, and Step 2 output format template — read when handling edge cases or formatting results.
 
 ---
 
@@ -154,37 +126,9 @@ Classify Phantom and Partial claims by severity and provide prescriptions.
 | **A** (Must fix) | If this claim is wrong, TC cannot execute or runs wrong path | API endpoint names, field names, preconditions |
 | **B** (Improvement recommended) | If this claim is wrong, TC can execute but intent may differ | Descriptive text, non-critical names |
 
-**3 Prescriptions**:
+Prescriptions: (1) Source Re-read — precisely re-read the relevant source section and fix; (2) Request source specification — when source doesn't exist or wasn't declared; (3) Delete/rewrite — delete claims without source grounding and rewrite from source.
 
-1. **Source Re-read**: Precisely Read the relevant section of that source file again → fix the claim
-2. **Request source specification**: When source doesn't exist or wasn't declared → ask user to specify source file
-3. **Delete/rewrite**: TCs/claims without source grounding should be deleted and rewritten based on source
-
-**Step 3 output format**:
-
-```
-## Step 3 — Phantom Classification + Prescription
-
-### S-grade Immediate Blockers
-
-| # | Claim (Phantom) | Prescription | Evidence |
-|:---:|---|---|---|
-| 1 | [claim] | Source Re-read / Request source specification / Delete rewrite | [source file specified or reason for absence] |
-
-### A-grade Must Fix
-
-| # | Claim (Phantom/Partial) | Prescription | Notes |
-|:---:|---|---|---|
-...
-
-### B-grade Improvement Recommended
-
-| # | Claim (Partial) | Prescription | Notes |
-|:---:|---|---|---|
-...
-
-S-grade: N / A-grade: N / B-grade: N
-```
+> **Detail**: See `SKILL_detail.md §Step3-Detail` — prescription procedures and Step 3 output format template — read when writing the classification table or applying a prescription.
 
 **S-grade Immediate Human Gate** — if 1+ S-grade Phantoms found, pause before Step 4/5 and surface:
 
@@ -207,9 +151,7 @@ Rationale: S-grade Phantoms that enter Step 5 re-audit without human review risk
 
 ### Step 4. Source Not-Read Pattern Detection (Meta Diagnosis)
 
-Analyze Phantom distribution to diagnose **structural problems in the artifact generation process**.
-
-Beyond simply "this TC is wrong" — reveal "why were these Phantoms produced".
+Analyze Phantom distribution to diagnose structural problems in the artifact generation process. Reveal "why were these Phantoms produced", not just "this TC is wrong".
 
 **Pattern detection criteria**:
 
@@ -220,57 +162,23 @@ Beyond simply "this TC is wrong" — reveal "why were these Phantoms produced".
 | **Reconstruction modification** | Source value exists but unit/format/range modified in TC | LLM paraphrase process contamination |
 | **Source declaration absent** | Source file not specified when generating artifact | Process design stage problem |
 
-**Step 4 output format**:
-
-```
-## Step 4 — Source Not-Read Pattern Diagnosis
-
-Detected pattern: {pattern name or "none"}
-Evidence: {Phantom/Partial distribution analysis}
-
-Process prescription:
-- [specific process improvement suggestions]
-```
-
 **Simplification guard**: If 0 Phantoms, skip Step 4 entirely. Replace with one line: "Source grounding adequate."
+
+> **Detail**: See `SKILL_detail.md §Step4-Detail` — Step 4 output format template — read when writing the pattern diagnosis section.
 
 ---
 
 ### Step 5. Post-Fix Re-audit (Optional)
 
-Re-run back-trace for S-grade blocker claims after fixes are complete.
+Re-run back-trace for S-grade blocker claims after fixes are complete. Activate when 1+ S-grade blockers exist and fix is immediately possible.
 
-**Activation condition**: 1+ S-grade blockers and fix is immediately possible.
-
-**Done When (re-audit)**:
-```
-Back-trace results for fixed claims all show Grounded (✅) status
-```
+**Done When (re-audit)**: Back-trace results for fixed claims all show Grounded (✅) status.
 
 ---
 
 ## Completion Declaration Format
 
-```
-## source-grounding-audit Complete
-
-Audit scope: {artifact file} / source {N files}
-{N} total claims audited
-
-Result summary:
-  ✅ Grounded: N
-  ⚠️ Partial: N (fix recommended)
-  ❌ Phantom: N (S: N / A: N / B: N)
-  🔴 Source-Missing: N
-
-Process pattern: {detected pattern or "none"}
-
-Next actions:
-  - S-grade Phantom → immediately Source Re-read then fix
-  - Source not-read pattern detected → add source Read prerequisite to artifact generation process
-  - 3+ Phantoms → recommend using with steel-quench Wave 1 "real-use verification" angle
-  - Repeated pattern detected → persist to tracks/_meta/ + propose as rule candidate
-```
+> **Template**: See `SKILL_detail.md §Report-Template` — full completion declaration format — read when producing the final audit summary.
 
 ---
 
@@ -309,12 +217,6 @@ Step 1 claim extraction complete
 ```
 
 Verdict: PASS (0 Phantom claims) | CONDITIONAL_PASS (LOW-severity Phantoms only, prescriptions noted) | FAIL (1+ HIGH/MEDIUM Phantom — broken path, phantom file, or stale external link) | ESCALATE (scope unclear or claim extraction impossible)
-
----
-
-## Evidence Record
-
-- **Verified in practice**: TC generation without reading source files → steel-quench passes → source-grounding-audit back-trace detects numerous Phantoms (notifications vs. push notifications, version names vs. non-enrolled, bottom sheet vs. screen navigation). **Procedure**: Read sources in order then regenerate → replace with source-based TCs. **Recurrence prevention**: Source gate implementation — FileNotFoundError if required source files absent. steel-quench misses this because: outputs look logically sound so pattern attacks cannot identify Phantoms — only source back-tracing can detect them.
 
 ---
 

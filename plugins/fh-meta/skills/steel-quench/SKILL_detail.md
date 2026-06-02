@@ -360,3 +360,94 @@ Next actions:
 - Full results → recommend persisting to tracks/_meta/
 - New patterns discovered → fh-meta:persona-innovator activates → proposes rule candidates
 ```
+
+---
+
+## §ArtifactProfile — Vulnerability Profile Worked Examples
+
+Four reference cases showing how Step 0.3 classifies an artifact and which waves are selected.
+
+---
+
+### Example 1 — SKILL.md (governance / design doc)
+
+**Artifact signals**:
+- `artifact_type`: SKILL.md → Wave 2 weight↑
+- `phantom_risk`: no citations or URLs → Wave 3 weight neutral
+- `claim_density`: 4 benefit claims in description → Wave 1 U3 weight↑
+- `novelty`: established pattern, not first-of-its-kind → Wave 4 weight neutral
+- `scope`: internal FH use only → Wave 5 weight=0
+
+**Wave selection**:
+```
+Run:  Wave 1 (real-code attacks + claim evidence), Wave 2 (structural defense, weight↑)
+Skip: Wave 4 (not novel enough to warrant AI-specific attack), Wave 5 (internal scope — skip)
+External CLIs available: N/A (skipped by scope rule)
+```
+
+**Degraded coverage note**: Wave 5 skipped — internal scope. If artifact is later promoted to external publish, re-run Step 0.3.
+
+---
+
+### Example 2 — bash script (executable code)
+
+**Artifact signals**:
+- `artifact_type`: bash/code → Wave 1 weight↑ (real-code attack most applicable)
+- `phantom_risk`: no citations or URLs → Wave 3 weight neutral
+- `claim_density`: 1 benefit claim → Wave 1 U3 weight neutral
+- `novelty`: standard tooling script → Wave 4 weight neutral
+- `scope`: used internally and in CI pipelines → Wave 5 eligible if risk_level high
+
+**Wave selection**:
+```
+Run:  Wave 1 (weight↑ — concrete code attacks), Wave 2 (defense)
+Skip: Wave 3 (no phantom risk signals), Wave 4 (no novel AI-specific surface)
+      Wave 5 (risk_level=medium, no explicit user request — skip)
+External CLIs available: yes (but not activated)
+```
+
+**Degraded coverage note**: none — all applicable waves run.
+
+---
+
+### Example 3 — README (external publish imminent)
+
+**Artifact signals**:
+- `artifact_type`: README + external publish imminent → Wave 5 weight↑
+- `phantom_risk`: 3 http URLs + 1 badge link → Wave 3 weight↑
+- `claim_density`: 6 benefit/feature claims → Wave 1 U3 weight↑
+- `novelty`: describes a first-of-its-kind integration → Wave 4 weight↑
+- `scope`: public-facing → Wave 5 eligible
+
+**Wave selection**:
+```
+Run:  Wave 1 (weight↑ — claim density), Wave 2 (defense), Wave 3 (phantom_risk: URLs present),
+      Wave 4 (novelty: first-of-its-kind), Wave 5 (scope=public + risk_level=high)
+Skip: Phase 0 (no counterexample provided by user)
+External CLIs available: check at runtime via Step 0-pre bash detection
+```
+
+**Degraded coverage note**: if external CLIs unavailable at runtime, Wave 5 falls back to cross-session Claude (Path B) — note in output header.
+
+---
+
+### Example 4 — Design doc with citations (arXiv + DOI)
+
+**Artifact signals**:
+- `artifact_type`: design-doc → Wave 2 weight↑
+- `phantom_risk`: 2 arXiv citations + 1 DOI → Wave 3 weight↑ (source-grounding audit strongly indicated)
+- `claim_density`: 5 numbered claims backed by citations → Wave 1 U3 weight↑
+- `novelty`: novel architecture proposal → Wave 4 weight↑
+- `scope`: targeting cross-team review in org → Wave 5 eligible
+
+**Wave selection**:
+```
+Run:  Wave 1 (claim density), Wave 2 (structural defense, weight↑),
+      Wave 3 (weight↑ — arXiv/DOI phantom risk; pair with /source-grounding-audit),
+      Wave 4 (novelty: new architecture)
+      Wave 5 (cross-team scope — activate if risk_level=high or user requests)
+Skip: Phase 0 (unless user supplies an external bad-case doc)
+External CLIs available: check at runtime
+```
+
+**Degraded coverage note**: Wave 3 without `/source-grounding-audit` available → flag as "Axis 3 skipped (skill unavailable)" and note in residual risk card.

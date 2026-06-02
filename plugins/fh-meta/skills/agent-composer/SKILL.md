@@ -38,6 +38,38 @@ Check `LOCAL_SKILL_REGISTRY.md` for project-local skills; check `.mcp.json` or `
 
 ---
 
+## Step 0.2 — Capability Fit Analysis
+
+> Runs before dispatching agents. **Skip if user specifies exact agents by name.**
+
+For each subtask in the composition plan:
+
+1. **Read agent registry**: `.claude/agents/*.md` + installed plugin agents  
+   Extract: `role` · `allowed_tools` · `writes` · `declared_capabilities`
+2. **Score capability fit**: `[subtask_type]` × `[agent capabilities]` → `fit_score` (0.0–1.0)
+3. **GAP**: `fit_score < 0.5` for a required-weight subtask  
+   → query `/plugin-recommender`: "agent for [subtask_type] in [context]"  
+   → includes Codex marketplace + Claude Code marketplace (not just FH native)  
+   → user: **install** / **skip** / **use general-purpose fallback**
+
+### Capability Fit Scoring Table
+
+| Subtask type | Strong fit signal | Weak fit signal |
+|---|---|---|
+| Adversarial review | `subagent_type="challenger"`, artifact_type match | general-purpose only |
+| Phantom detection | `source-grounding-audit` | general-purpose only |
+| Persona simulation | `hub-persona-auditor`, deep-insight persona | general-purpose only |
+| Code generation | `writes: true` + code tools | `writes: false` or no code tools |
+| Audit-only | `writes: false` (safe) | `writes: true` (risky for audit) |
+
+**Behavioral rule**: A `writes: false` agent (e.g. fact-checker, hub-persona-auditor) must NOT be assigned a task requiring edits. Capability fit scoring catches this statically before dispatch.
+
+**Behavioral rule**: Degraded composition — when any required-weight role is filled with general-purpose fallback, output `⚠️ degraded: [role]` in the composition plan. Do not silently use general-purpose for a specialized role.
+
+> **Detail**: See `SKILL_detail.md §CapabilityFit` — scoring procedure, agent registry reading, plugin-recommender query format, worked examples — read when executing Step 0.2.
+
+---
+
 ## Step 0-a. Clarification Protocol
 
 > Execution condition: Only when direction or goal is unclear (skip → go directly to Step 0-b if clear)
@@ -71,7 +103,9 @@ This orchestrator does not read files or understand structure directly — **eve
 
 ## Step 1. Agent Mapping
 
-Default composition table by task type:
+Default composition table by task type.
+
+> **Note**: This table lists known installed agents. Capability fit scoring in Step 0.2 overrides static mapping when `agent_cards.json` has more current data.
 
 > **Call method distinction**: `(S)` = Skill tool call / `(A)` = Background dispatch via Agent tool
 
