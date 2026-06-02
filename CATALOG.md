@@ -10,7 +10,7 @@ AI reads this file first when searching past work. Open individual files for det
 
 ### 2026-06-02 | _audit | sister-asset, token-efficiency, compression, headroom
 **File:** tracks/_audit/session_2026_06_02_headroom_context_doctor.md
-Cross-audited Headroom (ex-Netflix OSS token-compression proxy, 60–95% reduction) against context-doctor's Compression Pass per sister_asset_protocol. Same goal, different layer: Headroom is the runtime executor FH lacks; context-doctor is the judgment Headroom lacks — they compose.
+Cross-audited Headroom (Netflix engineer's OSS token-compression tool, vendor-reported 60–95% reduction) against context-doctor's Compression Pass per sister_asset_protocol. Same goal, different layer: Headroom is the runtime executor FH lacks; context-doctor is the judgment Headroom lacks — they compose.
 - Decision: import redundancy-category targeting heuristic (MCP outputs ~70% → logs ~90% → DB → file trees) into context-doctor + name Headroom as the production-proven local option; no clone-and-own (reference + record only)
 - Open: actual proxy/agent-wrap routing is a local runtime setup (outside the FH repo); v0.22 maturity — pilot first
 

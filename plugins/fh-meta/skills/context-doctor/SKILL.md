@@ -197,9 +197,9 @@ Advisory and tool-agnostic — recommend (and, where a doc is being authored/edi
 
 Keep it reversible: compress the *working copy* in context, not the source of truth on disk, unless the user is explicitly editing that file.
 
-### Tooling — Headroom (production-proven external option)
+### Tooling — Headroom (external option)
 
-The advisory pass above is tool-agnostic, but a concrete, reversible, local-first implementation exists: **Headroom** (`github.com/chopratejas/headroom`, open source, v0.22). It compresses tool outputs, logs, files, and RAG chunks before they reach the LLM — externally reported at 60–95% fewer tokens with the same answers (see `../../../../knowledge/shared/harness-core/harness_frontier_diagnosis_2026-06-02.md` Provenance for the token-efficiency basis, and the cross-audit at `../../../../tracks/_audit/session_2026_06_02_headroom_context_doctor.md`).
+The advisory pass above is tool-agnostic, but a concrete, reversible, local-first implementation exists: **Headroom** (`github.com/chopratejas/headroom`, open source, v0.22). It compresses tool outputs, logs, files, and RAG chunks before they reach the LLM — **vendor/coverage-reported** at 60–95% fewer tokens with the same answers ([The Register, 2026-05-31](https://www.theregister.com/ai-ml/2026/05/31/netflix-wiz-creates-app-to-slash-ai-bills-then-open-sources-it/5248702); figures unverified by FH). General token-efficiency basis: `../../../../knowledge/shared/harness-core/harness_frontier_diagnosis_2026-06-02.md`.
 
 **Redundancy-category targeting** (its key insight — import this into the pass): the high-yield targets are *machine-generated, schema-repetitive* payloads, not prose. Prioritize compressing, in order:
 
