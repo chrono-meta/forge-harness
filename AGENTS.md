@@ -30,6 +30,8 @@ forge-harness ships 6 agents in `.claude/agents/`. Five serve general harness op
 | `persona-innovator` | `.claude/agents/persona-innovator.md` | Naming gap detection + frame proposals + external frontier absorption signals | `sim-conductor` Area A, `harvest-loop`, or direct dispatch |
 | `plan` | `.claude/agents/plan.md` | Read-only design agent — analyzes files, maps impact scope, and plans before implementation | Direct dispatch before any Edit/Write session |
 
+> Machine-readable mirror: `.claude/registry/agent_cards.json` (canonical capability cards, count-synced — A2A Agent Card pattern).
+
 ### Tool restrictions per agent
 
 | Agent | Allowed tools | Rationale |
