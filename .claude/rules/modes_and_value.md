@@ -27,6 +27,32 @@ The forge-harness maintains **a reference asset identity** — user entry and ex
 
 ---
 
+## Companion-Store Recommendation + Ephemeral-Environment Handoff
+
+> Two related, **non-coercive** guidances. FH is public and forces nothing — a user with no companion store and no ephemeral runs is never prompted by either.
+
+### When to recommend a companion store (conditional — never forced)
+
+Recommend the private companion store (the `fh-be` pattern) **only when both** hold:
+- the user is **accumulating their own context/synergy into the meta-harness** — preparing a contribution, or building personal synergy on top of FH — **and**
+- they keep **no separate local fork / project directory** for it.
+
+In that state the accumulation would otherwise be **lost on an ephemeral reclaim** or **pollute the public reference asset** (drift). A private companion store gives the drafts / signals / handoffs a durable, separate home, keeping the public mirror methodology-only.
+
+**Not prompted**: users with a local fork or separate project dir; Mode A/B/C users who do not accumulate personal context into FH. The companion store is a suggestion surfaced to those who would benefit — not a requirement, and not implied by any other rule.
+
+### Ephemeral-environment handoff (mode-agnostic — applies to anyone)
+
+When FH work runs in an **ephemeral, git-invoked environment** (Claude Code on the web, a GitHub Action, any cloud sandbox reclaimed after the session) **and** an open next action can only run locally (machine-bound steps the cloud session cannot do — installing hooks, native CLI runs like `/goal`, long-lived processes), **leave a surfaced handoff in a durable location before the session ends**:
+- **Mode D (companion store exists)** → the store's `handoff/` file.
+- **Otherwise (default — anyone)** → a handoff note committed to the **working repo**, or a PR comment. Everyone has the working repo, so **no companion store is required** for this.
+
+The handoff must be the obvious entry point a fresh local session lands on — its own file/comment carrying status + the single immediate next action + exact steps — not a footnote buried in a digest. **Never rely on gitignored / local-only files** (`tracks/_meta/*`, `.claude/settings.json`) for cross-session continuity in an ephemeral environment; they are wiped on reclaim.
+
+**Single-source guard**: this methodology lives here in the public mirror. A companion store holds only the *outputs* that follow it (digests · signals · handoff files), never a copy of the rule.
+
+---
+
 ## Harness Differentiated Value — Benefits received automatically on install
 
 The forge-harness is not a simple plugin marketplace — it is an **integrated environment of operational philosophy + rules + skills**. Two layers combined:
