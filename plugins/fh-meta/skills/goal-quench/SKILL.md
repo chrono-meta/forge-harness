@@ -146,6 +146,8 @@ start_commit: {git rev-parse HEAD}
 
 `target_files` is the **verification artifact** — what pipeline-conductor --quick will evaluate in Phase 3. Specify files/directories explicitly if known; otherwise write `"inferred from git diff"` and Phase 3 will resolve using `git diff {start_commit}..HEAD` to capture all changes including interim commits made during the /goal session.
 
+> **Control flow (core vs pro/max)**: in **core** mode, proceed directly Step 3 → Step 4. In **pro/max** mode, run **Phase 1.5 (orchestration) here — after Step 3, before Step 4** — then return to Step 4 to inject thresholds and hand off. The `composed_plan` field in `.active` stays `n/a` until Phase 1.5 fills it.
+
 ### Step 4. Inject mid-run budget thresholds
 
 Before the user runs /goal, output the following instruction block so Claude carries it into the /goal session:

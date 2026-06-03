@@ -16,7 +16,7 @@ contention-parents: [harvest-loop]
 ## Origin
 
 Extracted from a recurring "single-pass gate is hard to trust" pattern observed across multiple hub workflows. The canonical reference is:
-- `harvest-loop` Step H1~H5: pattern extraction → attack → synthesis → the repeating structure must run until convergence
+- `harvest-loop` extract→attack→synthesize cycle: pattern extraction → attack → synthesis → the repeating structure must run until convergence
 
 When the same structure recurs across gates, it is a skill.
 
@@ -25,7 +25,7 @@ When the same structure recurs across gates, it is a skill.
 | Applicable Gate | Example |
 |---|---|
 | Skill diagnostic gate | harness-doctor + apex-review |
-| Session harvest loop | harvest-loop Step H1~H5 |
+| Session harvest loop | harvest-loop extract→attack→synthesize cycle |
 | External asset audit | steel-quench Wave 1~N |
 | Domain-specific quality gate | Plug in any project-defined FAIL→FIX checkpoint |
 | Any FAIL→FIX repeating structure | User-defined gate |
@@ -132,7 +132,7 @@ Max rounds: N | Actual convergence round: M
 |---|---|
 | Applied to skill diagnostic gate | `harness-doctor` → convergence-loop wrapper |
 | Applied to quench wave | `steel-quench` Wave 3+ convergence criteria (same principle) |
-| Applied to session harvest loop | `harvest-loop` Step H1~H5 |
+| Applied to session harvest loop | `harvest-loop` extract→attack→synthesize cycle |
 | When gate redesign is needed | `meta-prompt-builder` |
 
 ## Done When

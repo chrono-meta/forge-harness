@@ -322,7 +322,7 @@ Auto-check the following items based on detected environment. Each item classifi
 | `.git/info/exclude` | Personal files excluded | grep local_fh_context .git/info/exclude |
 | MCP plugin | ~/.claude.json mcpServers contains entry | `python3 -c "import json,os; d=json.load(open(os.path.expanduser('~/.claude.json'))); print(list(d.get('mcpServers',{}).keys()))"` |
 | `deep-insight plugin` | settings.json plugins contains deep-insight | `grep -r "deep-insight" .claude/settings.json 2>/dev/null` |
-| `fh.jsonc` | `.claude/rules/fh.jsonc` exists | `ls .claude/rules/fh.jsonc` |
+| `fh_env_context.jsonc` | `.claude/rules/fh_env_context.jsonc` exists | `ls .claude/rules/fh_env_context.jsonc` |
 | `Streamlit pattern applied` | (Streamlit projects only) data_editor empty df branch/async wrapper/CSS numeric variables | CC `knowledge/shared/streamlit_patterns.md` Pattern 1-5 check |
 
 **Score calculation**: PASS = 1 point / MISS = 0.5 points / FAIL = 0 points → converted to 100-point scale.
@@ -359,8 +359,8 @@ install-wizard — Diagnosis Results ({score}/100)
   [7] Install deep-insight plugin — activate sim-conductor multi-persona simulation (if deep-insight MISS)
       Settings → Plugins → Add → {deep-insight plugin path}
       Without install, /sim-conductor persona branching disabled (single-point simulation only)
-  [8] Create fh.jsonc — org/network/Git environment context file (if fh.jsonc MISS)
-      Copy: {FH_DIR}/templates/fh.jsonc → .claude/rules/fh.jsonc
+  [8] Create fh_env_context.jsonc — org/network/Git environment context file (if fh_env_context.jsonc MISS)
+      Copy: {FH_DIR}/templates/fh_env_context.jsonc → .claude/rules/fh_env_context.jsonc
       Then manually update with actual values for org name, Jira URL, environment status, etc.
       Effect: Each skill references common environment context → eliminate individual setting duplication
 
