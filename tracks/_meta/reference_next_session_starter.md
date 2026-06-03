@@ -9,7 +9,7 @@ tags: [session-starter, v2-paper, e-baseline, goal-quench, native-validation, np
 
 ## 현재 상태
 
-- **forge-harness** — `chrono-meta/forge-harness` · main `5ba4509` ✅ pushed
+- **forge-harness** — `chrono-meta/forge-harness` · main `3e1b99a` ✅ pushed
 - **스킬**: 22개 fh-meta + 4 fh-commons (PRs #61–#68 모두 머지됨)
 - **논문 v1.0**: Zenodo 10.5281/zenodo.20397566 ✅ · arXiv submit/7657304 **On Hold** (조치 불필요)
 - **npm**: `@chrono-meta/fh-gate@1.1.0` ✅
