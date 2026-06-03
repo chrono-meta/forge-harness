@@ -97,7 +97,7 @@ directly relevant to forge-harness (FH) operations and improvement.
 FH Context:
 - FH = AI collaboration meta-harness (skill · plugin · agent system)
 - Core skills: steel-quench, harness-doctor, sim-conductor,
-               context-bridge-dispatch, apex-review
+               agent-composer, apex-review
 - Areas of interest: multi-agent orchestration, context engineering,
                      self-check gate, frontier cross-diagnosis
 
