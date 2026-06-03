@@ -585,6 +585,22 @@ On Claude API / MCP failure → refer to [`references/fallback-guide.md`](../../
 
 ---
 
+## Done When
+
+```
+☐ Environment detection complete: shell, CC version, OS, project type identified
+☐ Gap diagnosis output: present vs missing items listed
+☐ User approval/decline recorded for each suggested item
+☐ All approved items installed with no failure state
+  (failed installs surfaced to user — not silently skipped)
+☐ Acceleration baseline confirmed: zshrc alias + sentinels active (or user declined)
+☐ Summary output: "N items installed, M items skipped — setup complete"
+```
+
+`--dry-run` mode Done When: gap diagnosis report written, no installation executed.
+
+---
+
 ## Hub Orchestration Hint
 
 After setup, **where you work** significantly affects efficiency:
