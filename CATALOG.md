@@ -8,9 +8,24 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-03 | forge-harness | #goal-quench, #install-wizard, #calibration-schema, #done-when, #skill-evolution
+**File:** plugins/fh-meta/skills/goal-quench/SKILL.md, plugins/fh-meta/skills/install-wizard/SKILL.md
+PR #67: Calibration schema extended with `run_id`, `session_id`, `scope_hint` fields (R10 schema gaps). Phase 1.5 hand-off clarified: "update not re-create" `.active` file to preserve `start_commit`. install-wizard: Done When section added (6-step gate + `--dry-run` variant) — only active skill of 28 missing it (R07 M-tier).
+- Decision: schema fields added prospectively — backfilling retrospective N=10 rows with `mode`/`session_type` is a local fh-be task, not a SKILL.md change
+
+### 2026-06-03 | forge-harness | #catalog, #goal-quench, #skill-evolution
+**File:** CATALOG.md
+PR #66: Added CATALOG entries for PRs #61–64 (goal-quench evolution arc): mode-ladder refactor, micro R-tier cleanup, non-coercive guidance formalization, scope-driven sidecar routing + 4.7× overhead calibration.
+- Decision: tracks/** gitignored by design — calibration YAML records stay local; only CATALOG.md committed
+
+### 2026-06-03 | forge-harness | #goal-quench, #sidecar-routing, #step-d, #deprecated-refs, #return-path
+**File:** plugins/fh-meta/skills/goal-quench/SKILL.md, plugins/fh-meta/skills/install-wizard/SKILL.md, plugins/fh-meta/skills/frontier-digest/SKILL.md, plugins/fh-meta/skills/harvest-loop/SKILL.md
+PR #65: Fixed Step D return-path bug (all 3 sidecar chains were fire-and-forget → added Step 3-c blocking verdict gate). Added `estimation_error_pct` field to calibration schema. Removed 4 deprecated routing refs: `context-bridge-dispatch` (install-wizard Cluster C + frontier-digest core skills list) and `/self-marketing-lint` (harvest-loop P10 → `/harness-doctor --lint`). ESCALATE added to Done When conditions.
+- Decision: Step 3-c gate is blocking (not advisory) — sidecar verdict must resolve before Done When
+
 ### 2026-06-03 | forge-harness | #goal-quench, #sidecar-routing, #token-calibration, #steel-quench, #skill-evolution
 **File:** plugins/fh-meta/skills/goal-quench/SKILL.md
-Added scope-driven sidecar routing (Step D) to goal-quench Phase 1.5: task-type signals auto-route to steel-quench C3 (code review), agent-composer panel (architecture), or sim-conductor+steel-quench Wave 5 (external publish). Formalized session overhead calibration at 4.7× factor (N=10), adding `session_type`, `actual_vs_estimate_ratio`, and `sidecar` fields to the calibration schema. Resolved steel-quench meta-audit S+A+B findings: sub-goal loop rewritten as user-driven queue, pre-flight check added, Opus escalation cost disclosed.
+PR #64: Added scope-driven sidecar routing (Step D) to goal-quench Phase 1.5: task-type signals auto-route to steel-quench C3 (code review), agent-composer panel (architecture), or sim-conductor+steel-quench Wave 5 (external publish). Formalized session overhead calibration at 4.7× factor (N=10), adding `session_type`, `actual_vs_estimate_ratio`, and `sidecar` fields to the calibration schema. Resolved steel-quench meta-audit S+A+B findings: sub-goal loop rewritten as user-driven queue, pre-flight check added, Opus escalation cost disclosed.
 - Decision: overhead multiplier documented as empirical calibration constant; sidecar routing is scope-signal-driven, not mode-locked
 
 ### 2026-06-03 | forge-harness | #goal-quench, #non-coercive, #companion-store, #ephemeral-handoff
