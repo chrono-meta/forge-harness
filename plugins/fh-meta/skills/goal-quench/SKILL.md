@@ -195,6 +195,8 @@ Invoke context-doctor on the target scope before /goal runs. It generates/update
 
 Hand the task description to agent-composer in compose-only mode. It returns a Wave plan: the goal split into independent/sequential sub-tasks with capability-fit scoring (agent-composer Step 0.2). For RED-origin runs this decomposition is the recovery path v1 lacked — each sub-goal is small enough to run under its own budget.
 
+**Sub-goal execution loop**: goal-quench does not run the sub-goals in one mega-`/goal`. Each sub-goal re-enters as its **own core-mode goal-quench run** — Phase 1 budget gate (expected GREEN/YELLOW now that the goal is split) → `/goal` → Phase 3 verify — executed sequentially, committing completed work between sub-goals so a later failure does not lose earlier progress. The outer pro/max run owns the decomposition + the final aggregate Phase 3; the inner runs own each sub-goal's gate. (Parallel sub-goal execution is deferred — sequential is the v2 contract to keep budget accounting and commit boundaries simple.)
+
 goal-quench does **not** re-implement agent-composer's gates — its destructive-action gate (Step 2.7) and per-wave fan-out cap apply as-is.
 
 ### Step C — plugin-recommender + synergy pre-validation · max only

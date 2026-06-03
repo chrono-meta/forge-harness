@@ -197,7 +197,7 @@ fi
 Output detection results as **environment card**. Activate CC pattern reference on Streamlit detection:
 ```
 📌 Streamlit project detected → CC pattern reference activated
-   {CC_HUB_DIR}/knowledge/shared/streamlit_patterns.md loaded
+   {CC_HUB_DIR}/knowledge/shared/streamlit_patterns.md loaded (if present — optional Streamlit pattern pack, not shipped by default)
    Check: data_editor empty df / column nesting / async wrapper / CSS numeric variables
 ```
 
@@ -323,7 +323,7 @@ Auto-check the following items based on detected environment. Each item classifi
 | MCP plugin | ~/.claude.json mcpServers contains entry | `python3 -c "import json,os; d=json.load(open(os.path.expanduser('~/.claude.json'))); print(list(d.get('mcpServers',{}).keys()))"` |
 | `deep-insight plugin` | settings.json plugins contains deep-insight | `grep -r "deep-insight" .claude/settings.json 2>/dev/null` |
 | `fh_env_context.jsonc` | `.claude/rules/fh_env_context.jsonc` exists | `ls .claude/rules/fh_env_context.jsonc` |
-| `Streamlit pattern applied` | (Streamlit projects only) data_editor empty df branch/async wrapper/CSS numeric variables | CC `knowledge/shared/streamlit_patterns.md` Pattern 1-5 check |
+| `Streamlit pattern applied` | (Streamlit projects only, if the pattern pack is present) data_editor empty df branch/async wrapper/CSS numeric variables | CC `knowledge/shared/streamlit_patterns.md` Pattern 1-5 check (skip if file absent) |
 
 **Score calculation**: PASS = 1 point / MISS = 0.5 points / FAIL = 0 points → converted to 100-point scale.
 
