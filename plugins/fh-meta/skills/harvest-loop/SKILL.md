@@ -206,7 +206,7 @@ Read reference_next_session_starter.md → apply Step 0-b removal list → add n
 | Design existing skill enhancement direction | `/meta-prompt-builder` |
 | Validate candidates from external user perspective | `fh-meta:hub-persona-auditor` |
 | Review before sharing with team | `/apex-review` |
-| Self-marketing pattern discovered as HIGH P10 | `/self-marketing-lint` auto-propose |
+| Self-marketing pattern discovered as HIGH P10 | `/harness-doctor --lint` auto-propose |
 | Edit predictions to verify / rejected buffer | `fh-meta:edit-manifest` (Step 0-c) |
 | Stale memory entries to re-verify | `fh-meta:memory-hygiene` (Step 0-c) |
 
