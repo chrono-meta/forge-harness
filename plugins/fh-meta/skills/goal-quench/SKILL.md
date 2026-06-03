@@ -18,8 +18,8 @@ complexity_routing:
 `/goal` runs until Haiku says "done" — but Haiku only checks completion, not quality. Without a budget ceiling, sessions can exhaust tokens silently. goal-quench adds three things that /goal currently lacks:
 
 1. **Pre-run**: token-budget-gate estimate — know the cost before committing
-2. **Mid-run**: budget threshold awareness — intervene before exhaustion
-3. **Post-run**: pipeline-conductor --quick — verify quality before accepting "done"
+2. **Mid-run**: budget threshold awareness — signal before exhaustion (instructional; not mechanically enforced)
+3. **Post-run**: pipeline-conductor — verify quality before accepting "done"
 
 The evaluator principle: Haiku judges completion (every turn, cheap). pipeline-conductor judges quality (once at the end, structured). Separating the two closes the self-evaluation bias that a single evaluator cannot avoid.
 
@@ -45,6 +45,7 @@ Each mode is a **superset** of the one before it — pro does everything core do
 
 **Token-honesty guard** (the paradox this resolves): pro/max ADD orchestration overhead to a skill whose whole purpose is token control. They are justified ONLY when the task is large enough that decomposition/optimization saves more than the overhead costs. Therefore:
 - **Never auto-escalate a GREEN/YELLOW task to pro/max.** If the user explicitly asks for pro/max on a small task, run it but note: "orchestration overhead may exceed savings at this scope."
+- **Model escalation cost**: `complexity_routing` escalates pro/max to Opus (~3× per-token vs Sonnet). Add this to the overhead calculation. A YELLOW task with minor orchestration may cost more in model fees than context-doctor saves. State the trade-off explicitly before proceeding.
 - **RED is no longer a dead-end.** v1 hard-blocked RED ("split manually"). v2 turns RED into the **on-ramp to max** — agent-composer decomposes the over-budget goal into sequential sub-goals automatically.
 
 ---
@@ -92,6 +93,16 @@ Ask:
 
 Collect: task description, target files or directories, expected output.
 
+**Pre-flight check (pro/max mode only)**: before proposing pro/max, verify required chained skills are available:
+```bash
+for skill in context-doctor agent-composer; do
+  [ -f ".claude/plugins/cache/forge-harness/fh-meta/"*"/skills/${skill}/SKILL.md" ] 2>/dev/null \
+  || find ~/.claude/plugins -name "${skill}" -type d 2>/dev/null | grep -q . \
+  || echo "WARNING: ${skill} not found — pro/max mode requires it. Falling back to core."
+done
+```
+If any required skill is missing, **fall back to core and warn**: "Pro/max mode requires `{skill}` — not installed. Running in core mode instead."
+
 ### Step 2. token-budget-gate estimate
 
 **Invocation contract**:
@@ -111,6 +122,8 @@ If `token-budget-gate` skill is not installed, use this fallback estimator:
 20+ files or cross-system refactor      → ORANGE (30K–60K)
 Full-project migration or rewrite       → RED    (> 60K)
 ```
+**Session overhead factor (empirical calibration, N=10, 2026-06-01–06-03)**: The tiers above estimate *task* tokens only. Actual full CC session tokens average 4.7× the task estimate (range: 1.3×–10.5×) for harness-heavy projects (dense CLAUDE.md + multi-rule auto-load). Multiply task estimate by 4× for FH-density projects (rough inference only — not measured for non-FH projects), to get expected session total. This multiplier informs the mode recommendation — it does not change the go/no-go gate thresholds.
+
 Note the fallback in `.active` as `budget_source: fallback-heuristic` instead of `budget_source: token-budget-gate`.
 
 Run token-budget-gate against the task description. Map the result to a go/no-go decision:
@@ -195,7 +208,19 @@ Invoke context-doctor on the target scope before /goal runs. It generates/update
 
 Hand the task description to agent-composer in compose-only mode. It returns a Wave plan: the goal split into independent/sequential sub-tasks with capability-fit scoring (agent-composer Step 0.2). For RED-origin runs this decomposition is the recovery path v1 lacked — each sub-goal is small enough to run under its own budget.
 
-**Sub-goal execution loop**: goal-quench does not run the sub-goals in one mega-`/goal`. Each sub-goal re-enters as its **own core-mode goal-quench run** — Phase 1 budget gate (expected GREEN/YELLOW now that the goal is split) → `/goal` → Phase 3 verify — executed sequentially, committing completed work between sub-goals so a later failure does not lose earlier progress. The outer pro/max run owns the decomposition + the final aggregate Phase 3; the inner runs own each sub-goal's gate. (Parallel sub-goal execution is deferred — sequential is the v2 contract to keep budget accounting and commit boundaries simple.)
+**Sub-goal execution (user-driven, not automatic)**: `/goal` is a user-invoked command — goal-quench cannot programmatically drive a loop over sub-goals. After agent-composer produces the Wave plan, goal-quench writes it to `.claude/goal-quench.queue` and outputs:
+
+> "Sub-goal plan ready. Run each sub-goal in order by invoking `/goal-quench` again with the next sub-goal description. goal-quench will gate each sub-goal independently."
+
+Sub-goal queue format (`.claude/goal-quench.queue`):
+```
+remaining:
+  - sub-goal-1: {description}
+  - sub-goal-2: {description}
+completed: []
+```
+
+Each `/goal-quench` invocation pops the first `remaining` item, runs it as a core-mode run (Phase 1 GREEN/YELLOW expected → /goal → Phase 3 verify → commit), then moves it to `completed`. The outer pro/max run owns the decomposition; each inner invocation owns its sub-goal's gate. When `remaining` is empty, delete `.claude/goal-quench.queue`. (Parallel sub-goal execution is deferred — sequential is the v2 contract.)
 
 goal-quench does **not** re-implement agent-composer's gates — its destructive-action gate (Step 2.7) and per-wave fan-out cap apply as-is.
 
@@ -207,6 +232,30 @@ Triggered only when agent-composer Step 0.2 reports a capability **GAP** (`fit_s
 3. User decides: install / skip / general-purpose fallback (agent-composer's degraded-composition rule applies — `⚠️ degraded: [role]`).
 
 max mode never installs anything silently — discovery and synergy-check are surfaced for approval first.
+
+### Step D — scope-driven sidecar configuration · pro + max
+
+Runs after Step C (or after Step B if no capability gap). Selects an adversarial sidecar based on the task's quality-risk profile — distinct from Step C's capability-gap sidecar, which addresses missing tools. Step D's sidecar addresses **blind-spot risk**: the generator and reviewer sharing the same reasoning distribution.
+
+**Scope → sidecar routing table**:
+
+| Task scope signal | Sidecar | Invocation point |
+|---|---|---|
+| Code quality review / new SKILL.md / governance gate change | `steel-quench` C3 config (Gemini sidecar if available) | Post-/goal, before pipeline-conductor |
+| Architecture design / cross-project dependency | `agent-composer` multi-model panel (if external CLIs available; otherwise single-Claude sub-agent) | Parallel to /goal as separate Agent |
+| External publication / marketplace-gate / skill release | `sim-conductor` + `steel-quench` Wave 5 | Post-/goal quality gate |
+| No signal match (default) | None — pipeline-conductor handles quality alone | — |
+
+Write resolved sidecar to `.active`:
+```
+sidecar: none | steel-quench-c3 | agent-composer-panel | sim-conductor | {cli-name}
+sidecar_rationale: {one-line reason — which scope signal triggered this}
+```
+
+Output to user (one line only):
+> "Sidecar: {config} — {rationale}"
+
+Do not ask for confirmation. The user may override by re-running `/goal-quench --sidecar none`.
 
 ### Hand-off
 
@@ -312,26 +361,39 @@ After each goal-quench run, append to `tracks/_meta/goal_quench_{YYYY-MM-DD}.md`
 - date: YYYY-MM-DD
   task: {one-line description}
   mode: core | pro | max
+  session_type: minor | normal | heavy | continuation  # for within-type comparison
   estimated_tokens: N
   budget_source: token-budget-gate | fallback-heuristic
-  actual_tokens: N  # estimated from turn count × avg tokens/turn; or "unknown" if not tracked
-  estimation_error: over | under | accurate  # compared actual vs estimated
+  actual_tokens: N  # from ~/.claude/projects/*/conversation*.jsonl or user-reported; "unknown" if unavailable
+  estimation_error: over | under | accurate
+  actual_vs_estimate_ratio: N.N  # actual / estimated (e.g., 4.7 means actual was 4.7× estimate)
   budget_verdict: GREEN/YELLOW/ORANGE/RED
   pipeline_verdict: CLEAN/PENDING/BLOCKED/ESCALATE
+  sidecar: none | steel-quench-c3 | agent-composer-panel | sim-conductor | {cli-name}
+  sidecar_findings_count: N  # 0 if sidecar=none
   threshold_triggered: none/50/70/85/95
   notes: {optional — why estimate was off, what scope changed}
 ```
 
-**`actual_tokens` collection**: Claude cannot read session token counts directly. Estimate by:
-1. CC session summary (if available in `~/.claude/projects/*/conversation*.jsonl`)
-2. Turn count × estimated tokens/turn (rough: ~2K for short turns, ~8K for long file edits)
-3. User-reported from CC token display (preferred if visible)
+**`actual_tokens` collection**: Claude cannot read session token counts directly. Preferred method:
+```bash
+python3 -c "
+import json, glob
+f = sorted(glob.glob('~/.claude/projects/*/conversation*.jsonl'.replace('~', __import__('os').path.expanduser('~'))))[-1]
+lines = [json.loads(l) for l in open(f)]
+total = sum(m.get('message',{}).get('usage',{}).get('input_tokens',0) + m.get('message',{}).get('usage',{}).get('output_tokens',0) for m in lines)
+print(f'Session tokens: {total:,}')
+"
+```
+Fallback: turn count × estimated tokens/turn (~2K for short turns, ~8K for long file edits). Write `"unknown"` if no estimate is possible.
 
-Write `"unknown"` if no estimate is possible. After 10 runs, compute mean estimation error — calibrate the fallback heuristic tiers if systematic over/under is detected.
+**Retrospective calibration baseline (N=10, 2026-06-01–06-03, Sonnet)**: mean actual/estimate ratio = 4.7× (range 1.3×–10.5×). Systematic underestimation due to session overhead. Full data: `fh-be/paper-signals/measurement_2026-06-03_goal_quench_calibration.md`.
+
+After 10 additional prospective runs, compute mean estimation error per mode — calibrate the session_overhead_factor if systematic over/under persists.
 
 `pipeline_verdict` enum includes `ESCALATE` — record it when Phase 3 required user decision before proceeding.
 
-This data calibrates future estimates. Target: 10 runs before treating estimates as reliable. Runs with `budget_source: fallback-heuristic` calibrate the fallback tiers; runs with `token-budget-gate` calibrate the skill itself.
+This data calibrates future estimates. Target: 10 prospective runs per mode before treating mode comparison as reliable. Runs with `budget_source: fallback-heuristic` calibrate the fallback tiers; runs with `token-budget-gate` calibrate the skill itself.
 
 ---
 
