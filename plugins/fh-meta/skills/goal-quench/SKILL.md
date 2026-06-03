@@ -275,6 +275,8 @@ goal-quench does not directly control /goal execution. The budget thresholds inj
 
 **Threshold enforcement caveat**: Claude cannot reliably read its own real-time token consumption during a /goal session. The 50/70/85/95% thresholds are instructional — Claude approximates consumption based on task complexity and turn count. They are not mechanically enforced. For hard enforcement, see the Anthropic feature request (--budget flag).
 
+**Queue mode (per-sub-goal threshold scope)**: When running sequential sub-goals from `.claude/goal-quench.queue`, each `/goal-quench` invocation is an independent core-mode run — thresholds are re-injected fresh for each sub-goal's Phase 1 estimate, not inherited from the outer pro/max run. The outer run owns the decomposition plan; each inner invocation owns its sub-goal's budget gate. Concretely: if sub-goal-1 estimate is 12K (YELLOW), thresholds are set against 12K — not against the outer RED estimate that triggered the queue in the first place.
+
 **What goal-quench cannot do in v1** (requires native Anthropic support):
 - Hard-enforce token ceiling mid-run (--budget flag, not yet available)
 - Auto-checkpoint commit on sub-goal completion (--checkpoint flag, not yet available)
