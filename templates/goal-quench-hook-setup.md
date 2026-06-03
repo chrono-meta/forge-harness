@@ -7,7 +7,13 @@ Add the following to your project's `.claude/settings.json` to enable the goal-q
   "hooks": {
     "Stop": [
       {
-        "command": "bash -c 'f=\".claude/goal-quench.active\"; [ -f \"$f\" ] && echo \"\\n[goal-quench] /goal finished. Running quality verification...\" && cp \"$f\" \".claude/goal-quench.pending\" && rm -f \"$f\" || true'"
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'f=\".claude/goal-quench.active\"; [ -f \"$f\" ] && echo \"\\n[goal-quench] /goal finished. Running quality verification...\" && cp \"$f\" \".claude/goal-quench.pending\" && rm -f \"$f\" || true'"
+          }
+        ]
       }
     ]
   }
@@ -37,9 +43,20 @@ If you already have a `settings.json`, merge the `hooks.Stop` array:
   "permissions": { ... your existing permissions ... },
   "hooks": {
     "Stop": [
-      { "command": "... your existing stop hook if any ..." },
       {
-        "command": "bash -c 'f=\".claude/goal-quench.active\"; [ -f \"$f\" ] && echo \"\\n[goal-quench] /goal finished. Running quality verification...\" && cp \"$f\" \".claude/goal-quench.pending\" && rm -f \"$f\" || true'"
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "... your existing stop hook command if any ..." }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'f=\".claude/goal-quench.active\"; [ -f \"$f\" ] && echo \"\\n[goal-quench] /goal finished. Running quality verification...\" && cp \"$f\" \".claude/goal-quench.pending\" && rm -f \"$f\" || true'"
+          }
+        ]
       }
     ]
   }
