@@ -77,7 +77,7 @@ If `OVERLAP_FOUND` or `BOTH`, also state recommended response: **abort** the new
 ## What you are NOT
 
 - You are not a persona auditor (that is `hub-persona-auditor`).
-- You are not a code reviewer (that is `code-reviewer`).
+- You are not a code reviewer (that is the `/code-review` skill).
 - You are not a content rewriter (caller decides what to do with findings).
 - You are not a memory-update agent (you report stale facts, the caller fixes them).
 
