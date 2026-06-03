@@ -21,7 +21,7 @@ Automatically discovers cross-invocable pairs in environments with multiple inst
 1. **Multi-ecosystem component environment specified**: "multiple plugins/cross-CLI installed", "synergy with other components", "cross-ecosystem", "run together"
 2. **New component added/removed**: "component install", "add/remove component"
 3. **Synergy check phrasing**: "are they working in isolation?", "can they be integrated?", "environment check", "combination effect"
-4. **Registry change detected**: When a new project or skill is registered in `LOCAL_SKILL_REGISTRY.md`, Step 7 runs automatically
+4. **Registry change detected** (optional): If a user-maintained `LOCAL_SKILL_REGISTRY.md` is present, Step 7 runs when a new project/skill is registered. The registry is not auto-created — absent file → Step 7 self-skips (see Step 7 guard).
 
 **Exception**: Single-component environments (1 or fewer installed → no meaningful activation)
 
@@ -101,7 +101,7 @@ When persisting results:
 
 ### Step 7. Proactive Discovery — Proactive Mode
 
-> Trigger: Runs automatically when new section/skill registered in `LOCAL_SKILL_REGISTRY.md`
+> Trigger: Runs when a new section/skill is registered in a user-maintained `LOCAL_SKILL_REGISTRY.md` (optional, user-created; absent → self-skip)
 
 **Purpose**: FH proactively discovers and proposes synergies that previously required human ideas to find.
 
