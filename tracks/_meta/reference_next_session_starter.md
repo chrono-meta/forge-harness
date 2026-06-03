@@ -1,6 +1,6 @@
 ---
 name: reference-next-session-starter
-description: Next session context — 2026-06-03 updated. Draft 1.4 complete, E-baseline done (0 SAST findings), goal-quench core/pro/max merged, npm 1.1.0. Active: goal-quench native validation.
+description: Next session context — 2026-06-03 updated (session 2). Stop hook installed (CC new schema), template fixed. Ready: goal-quench native calibration.
 date: 2026-06-03
 tags: [session-starter, v2-paper, e-baseline, goal-quench, native-validation, npm]
 ---
@@ -9,7 +9,7 @@ tags: [session-starter, v2-paper, e-baseline, goal-quench, native-validation, np
 
 ## 현재 상태
 
-- **forge-harness** — `chrono-meta/forge-harness` · main `149f08d` ✅ pushed
+- **forge-harness** — `chrono-meta/forge-harness` · main `879fb52` ✅ (push 필요)
 - **스킬**: 22개 fh-meta + 4 fh-commons (PRs #61–#68 모두 머지됨)
 - **논문 v1.0**: Zenodo 10.5281/zenodo.20397566 ✅ · arXiv submit/7657304 **On Hold** (조치 불필요)
 - **npm**: `@chrono-meta/fh-gate@1.1.0` ✅
@@ -17,22 +17,22 @@ tags: [session-starter, v2-paper, e-baseline, goal-quench, native-validation, np
   - §8 Experiment 6 (E-baseline) 추가 · §5.6 cross-tier N=5 완료 · tier-independence claim 정제
 - **E-baseline**: ✅ complete — Semgrep/ESLint/Ruff 0 findings on 5 artifacts (orthogonality confirmed)
 - **E-ablation 독립세션 replication**: ⚠️ L1 한계 해소 미완료 (별도 API 호출 필요)
+- **goal-quench Stop hook**: ✅ `.claude/settings.json` 설치 완료 (CC new matcher+hooks 포맷)
 
 ---
 
 ## ⭐ 다음 세션 최우선
 
-### 1. ⚡ goal-quench NATIVE 검증 (ACTIVE — 핸드오프 파일)
+### 1. ⚡ goal-quench NATIVE 검증 (CC 재시작 후 즉시)
 
 > 상세: `fh-be/handoff/NEXT_ACTION_2026-06-03_goal-quench-native-validation.md`
 
-- 현재 상태: 설계 검증 + dogfooded proxy N=1만 있음. **실제 `/goal` 파이프라인 0회 실행**
-- 논문 정량 주장(pro/max vs core token savings) 작성 전 native 실행 필수
-- 스텝:
-  1. `plugins/fh-meta/skills/goal-quench/SKILL.md` core/pro/max 래더 확인
-  2. Stop hook 설치: `cp templates/goal-quench-settings-merged.json .claude/settings.json` → CC 재시작
-  3. 실제 태스크로 calibration 시리즈 실행 (목표: 10회)
-  4. `tracks/_meta/goal_quench_<date>.md`에 결과 기록
+- **Stop hook 설치됨** — CC 재시작 후 바로 캘리브레이션 시작 가능
+- 실제 태스크로 calibration 시리즈 실행 (목표: 10회)
+  1. `/goal-quench` → task 설명 입력 → `.active` 파일 생성 확인
+  2. `/goal <조건>` → 완료 시 Stop hook 발동 → `.pending` 생성 확인
+  3. 다음 응답에서 pipeline-conductor --quick 자동 실행 확인
+  4. `tracks/_meta/goal_quench_2026-06-03.md`에 결과 기록
 - 완료 시: `fh-be/paper-signals/measurement_2026-06-03_goal-quench-proxy-N1.md` PROXY → native 업데이트
 
 ### 2. arXiv On Hold 대기
@@ -81,6 +81,7 @@ gh issue view 3069 --repo tinyhumansai/openhuman
 | steel-quench + source-grounding-audit | S×1·A×3·Phantom×1 수정 ✅ |
 | goal-quench proxy N=1 측정 | calibration + cross-mode measurement protocol 기록 (fh-be) ✅ |
 | CLAUDE.md 버그픽스 ×2 | Agent View pre-read 강제 + Agent View 기본값 제거 (`5ba4509`) ✅ |
+| goal-quench Stop hook 설치 | CC new schema (matcher+hooks) 포맷으로 settings.json + template 수정 ✅ |
 
 ---
 
