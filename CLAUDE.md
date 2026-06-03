@@ -204,15 +204,17 @@ At session start, determine the last run time from history files and auto-propos
 | `/frontier-digest` | `tracks/_meta/frontier_digest_*.md` | Propose at session start if 7+ days since last run |
 | `/harness-doctor` | `tracks/_meta/*harness_doctor*.md` | Propose at session start if 30+ days since last run |
 
-## Agent View Operation Mode (FH cwd-Based)
+## Agent Dispatch Operation (FH cwd-Based)
 
-Default operation in Agent View mode from the forge-harness cwd. Three execution paths:
+Default operation is a **standard interactive session**. Agent dispatch (single or parallel) is used when the task warrants it — not as a default mode. Three execution paths:
 
 | Path | Situation | Method |
 |---|---|---|
 | **Direct edit** | Simple modification of mapped project files | Read/Edit with absolute path (no cwd switch needed) |
 | **Agent dispatch** | Field project work · single independent task | Inject Context Card then dispatch Agent |
-| **Parallel dispatch** | 2+ independent tasks | Immediately dispatch parallel Agents without asking |
+| **Parallel dispatch** | 2+ genuinely independent tasks, explicitly requested | Dispatch parallel Agents |
+
+**Why not Agent View by default**: Agent View introduces worktree isolation (blocks settings.json writes, Stop hook timing differs), session context gaps (session card stale content bug), and path friction — with no benefit unless the user is actively managing multiple agent sessions. Parallel agents via `Agent` tool work identically in a standard session.
 
 **Forbidden responses**: *"I can't do that — I'm not in that project's cwd"* — self-check Agent dispatch first.
 
