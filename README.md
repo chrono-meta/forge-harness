@@ -142,6 +142,26 @@ Full spec: [`fh_integration_contract.md`](knowledge/shared/harness-core/fh_integ
 
 ---
 
+## Model setup
+
+Claude Code does not auto-select models by task complexity — you configure this once.
+
+```bash
+/model opusplan   # recommended for forge-harness
+```
+
+| Command | Who runs what | Best for |
+|---|---|---|
+| `/model sonnet` | Sonnet handles everything | Fast coding, simple tasks |
+| `/model opus` | Opus handles everything | Complex reasoning, architecture |
+| `/model opusplan` | **Opus plans · Sonnet executes** | FH orchestration + sub-agents |
+
+**Why `opusplan` for FH**: CC switches models per-turn based on task weight — Opus activates for plan-mode turns (complex reasoning, decomposition decisions), Sonnet handles execution turns (tool calls, file edits, bash). forge-harness orchestration leans on both: Opus for design decisions in agent-composer / goal-quench / steel-quench, Sonnet for the actual file edits and sub-agent execution contexts. Sub-agent token costs are CC-visible and appear in the session jsonl under `message.model`.
+
+If you use external CLIs (Gemini, Codex, `gh copilot`) as sidecars, their costs are billed to their own quota and not visible in CC's token display.
+
+---
+
 ## Multi-Model Sidecar (v1.3)
 
 Run Gemini, Codex, or `gh copilot` as independent peer reviewers alongside Claude.

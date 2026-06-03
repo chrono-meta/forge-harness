@@ -13,6 +13,16 @@ contention-parents: [harvest-loop]
 
 > A single pass declaration is hard to trust. A fix exposes new FAILs, and round 2 catches what round 1 missed. convergence-loop assigns a "truly passed" criterion to any gate.
 
+## Triggers
+
+- `/convergence-loop`
+- "convergence-loop", "how many rounds do we need", "not sure if it really passed"
+- "suspicious of single-pass", "run until it passes", "keep verifying until clean"
+- "single pass isn't enough", "need another round", "the fix might have introduced new issues"
+- Auto-proposed: when the same artifact receives a FAIL verdict 2+ times in the same session (observable: 2nd FAIL on identical scope)
+
+---
+
 ## Origin
 
 Extracted from a recurring "single-pass gate is hard to trust" pattern observed across multiple hub workflows. The canonical reference is:

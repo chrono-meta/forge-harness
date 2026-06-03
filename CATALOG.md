@@ -8,6 +8,20 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-03 | forge-harness | #goal-quench, #native-validation, #calibration, #stop-hook
+**File:** tracks/_meta/goal_quench_2026-06-03.md
+Run #1 native goal-quench validation (core mode): Stop hook `.active` → `.pending` confirmed working. pipeline-conductor --quick CLEAN (Step 3 ESCALATE resolved via option(a) inline fix).
+- Decision: GREEN estimate missed pipeline-conductor overhead (~6K); timestamp field used literal "now" — fixed to `date +"%Y-%m-%d %H:%M"` going forward.
+
+### 2026-06-03 | forge-harness | #context-bridge-dispatch, #done-when, #deprecated, #source-grounding
+**File:** plugins/fh-meta/skills/context-bridge-dispatch/SKILL.md
+Added Done When section (satisfies harness-doctor L2 M-tier for deprecated skill). Replaced informal "completeness gate" term with "L2 M-tier (CLAUDE.md §New Skill Creation Pre-Commit Gate)". All 22 fh-meta SKILL.md files now have Done When.
+- Decision: deprecated skills still require Done When — `deprecated: true` is not an exemption from the pre-commit gate.
+
+### 2026-06-03 | forge-harness | #goal-quench, #calibration, #run2, #catalog
+**File:** CATALOG.md
+Run #2 native goal-quench validation (core mode): added 3 CATALOG entries for today's session work. Established pipeline-conductor overhead correction (~6K) for GREEN-tier estimates.
+
 ### 2026-06-03 | forge-harness | #goal-quench, #install-wizard, #calibration-schema, #done-when, #skill-evolution
 **File:** plugins/fh-meta/skills/goal-quench/SKILL.md, plugins/fh-meta/skills/install-wizard/SKILL.md
 PR #67: Calibration schema extended with `run_id`, `session_id`, `scope_hint` fields (R10 schema gaps). Phase 1.5 hand-off clarified: "update not re-create" `.active` file to preserve `start_commit`. install-wizard: Done When section added (6-step gate + `--dry-run` variant) — only active skill of 28 missing it (R07 M-tier).
