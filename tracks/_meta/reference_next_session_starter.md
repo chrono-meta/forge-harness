@@ -9,7 +9,7 @@ tags: [session-starter, v2-paper, e-baseline, goal-quench, native-validation, np
 
 ## 현재 상태
 
-- **forge-harness** — `chrono-meta/forge-harness` · main `1479bd6` ✅ pushed
+- **forge-harness** — `chrono-meta/forge-harness` · main `5ba4509` ✅ pushed
 - **스킬**: 22개 fh-meta + 4 fh-commons (PRs #61–#68 모두 머지됨)
 - **논문 v1.0**: Zenodo 10.5281/zenodo.20397566 ✅ · arXiv submit/7657304 **On Hold** (조치 불필요)
 - **npm**: `@chrono-meta/fh-gate@1.1.0` ✅
@@ -80,6 +80,7 @@ gh issue view 3069 --repo tinyhumansai/openhuman
 | README 재디자인 + SVG/banner | 519줄→186줄, forge 테마, pillars.svg ✅ |
 | steel-quench + source-grounding-audit | S×1·A×3·Phantom×1 수정 ✅ |
 | goal-quench proxy N=1 측정 | calibration + cross-mode measurement protocol 기록 (fh-be) ✅ |
+| CLAUDE.md 버그픽스 ×2 | Agent View pre-read 강제 + Agent View 기본값 제거 (`5ba4509`) ✅ |
 
 ---
 
