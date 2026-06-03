@@ -259,7 +259,7 @@ Do not ask for confirmation. The user may override by re-running `/goal-quench -
 
 ### Hand-off
 
-After orchestration, record the composed plan (or sub-goal list) into `.claude/goal-quench.active` alongside the budget fields (add a `mode:` and `composed_plan:` line), then proceed to threshold injection (Phase 1 Step 4) and hand off to /goal. Phase 3 verification then runs as in core — `pipeline-conductor --quick` for pro, `--full` for max (max implies external-facing stakes).
+After orchestration, **update** (not re-create) `.claude/goal-quench.active` — add `mode:` and `composed_plan:` lines alongside existing budget fields. Re-creating the file loses the `start_commit` field written in Phase 1 Step 3. Then proceed to threshold injection (Phase 1 Step 4) and hand off to /goal. Phase 3 verification then runs as in core — `pipeline-conductor --quick` for pro, `--full` for max (max implies external-facing stakes).
 
 ---
 
@@ -370,8 +370,11 @@ This gate is **blocking** — Done When cannot be reached until the sidecar verd
 After each goal-quench run, append to `tracks/_meta/goal_quench_{YYYY-MM-DD}.md`:
 
 ```yaml
-- date: YYYY-MM-DD
+- run_id: GQ-{YYYYMMDD}-{N}  # e.g. GQ-20260603-01 — unique per run, links to session JSONL
+  session_id: "{first-8-chars-of-jsonl-filename}"  # for JSONL back-trace
+  date: YYYY-MM-DD
   task: {one-line description}
+  scope_hint: "{N files affected, task type}"  # e.g. "3 new files, signal doc"
   mode: core | pro | max
   session_type: minor | normal | heavy | continuation  # for within-type comparison
   estimated_tokens: N
