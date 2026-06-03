@@ -9,7 +9,7 @@ category: Composability Gate
 
 # marketplace-gate — Marketplace Listing Suitability Gate
 
-Automatically evaluates quality, value, and safety of a repository before listing it in an internal or external marketplace via a 5-point check.
+Evaluates a repository against 5 listing criteria — README completeness, zero-config readiness, maintenance signals, duplication, and public safety — and outputs a listing suitability verdict.
 
 > While `asset-placement-gate` answers "is this asset suitable for FH?",
 > `marketplace-gate` answers "is this repo ready to be listed in a marketplace?"
