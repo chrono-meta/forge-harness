@@ -26,7 +26,7 @@ After CLAUDE.md edits, rule changes, or new skill additions, harness behavior ca
 
 - `/prompt-regression`
 - "prompt regression", "regression check", "regression test"
-- "did my rule change break anything", "test harness changes", "verify harness behavior"
+- "did my rule change break anything", "test harness changes", "verify harness behavior", "make sure my edit didn't change behavior"
 - After significant CLAUDE.md edits or new skill commits
 
 ---
@@ -69,8 +69,8 @@ ls .claude/regression/probes.md 2>/dev/null || echo "NO_CUSTOM_PROBES"
 | `P-TRIGGER-01` | `recommend a plugin` | plugin-recommender proposed | CLAUDE.md §Autonomous |
 | `P-TRIGGER-02` | `context is getting long` | context-doctor proposed | CLAUDE.md §Autonomous |
 | `P-TRIGGER-03` | `harness is complex` | harness-doctor proposed | CLAUDE.md §Autonomous |
-| `P-CHAIN-01` | `/field-harvest` | harvest-loop + sim-conductor gate present | field-harvest SKILL.md |
-| `P-CHAIN-02` | `/apex-review` | conditional-pass gate present | apex-review SKILL.md |
+| `P-CHAIN-01` | `/field-harvest` | harvest-loop close-chain referenced (wrap-up deferred to CLAUDE.md session-close chain — field-harvest has no inline sim-conductor gate) | field-harvest SKILL.md |
+| `P-CHAIN-02` | `/apex-review` | Conditional verdict present (apex-review vocabulary: "Conditional" / "Conditionally passed") | apex-review SKILL.md |
 | `P-GATE-01` | new skill commit | New Skill Pre-Commit Gate (5 items) invoked | CLAUDE.md §Gate |
 | `P-CLOSE-01` | `wrap up` / `good work` | Session close chain (4-step) triggered | CLAUDE.md §Wrap-up |
 
@@ -110,7 +110,7 @@ For each affected probe, evaluate:
 Output per probe:
 ```
 [PASS] P-TRIGGER-01 — plugin-recommender trigger phrase found in CLAUDE.md
-[FAIL] P-CHAIN-01 — field-harvest SKILL.md missing harvest-loop mandatory gate after edit
+[FAIL] P-CHAIN-01 — field-harvest SKILL.md no longer references the harvest-loop close chain after edit
 [SKIP] P-GREET-01 — §Onboarding not in changed files
 ```
 
@@ -130,7 +130,7 @@ Output per probe:
 ### FAIL Details
 | Probe | Location | Finding | Fix |
 |---|---|---|---|
-| P-CHAIN-01 | field-harvest SKILL.md | Missing harvest-loop mandatory gate | Re-add chain gate in §Done When |
+| P-CHAIN-01 | field-harvest SKILL.md | harvest-loop close-chain reference removed by edit | Restore the harvest-loop chain reference |
 
 ### Verdict
 ⚠️ REGRESSION DETECTED — 1 probe failed. Fix required before merge.
