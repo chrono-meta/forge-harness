@@ -8,6 +8,26 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-03 | forge-harness | #goal-quench, #sidecar-routing, #token-calibration, #steel-quench, #skill-evolution
+**File:** plugins/fh-meta/skills/goal-quench/SKILL.md
+Added scope-driven sidecar routing (Step D) to goal-quench Phase 1.5: task-type signals auto-route to steel-quench C3 (code review), agent-composer panel (architecture), or sim-conductor+steel-quench Wave 5 (external publish). Formalized session overhead calibration at 4.7× factor (N=10), adding `session_type`, `actual_vs_estimate_ratio`, and `sidecar` fields to the calibration schema. Resolved steel-quench meta-audit S+A+B findings: sub-goal loop rewritten as user-driven queue, pre-flight check added, Opus escalation cost disclosed.
+- Decision: overhead multiplier documented as empirical calibration constant; sidecar routing is scope-signal-driven, not mode-locked
+
+### 2026-06-03 | forge-harness | #goal-quench, #non-coercive, #companion-store, #ephemeral-handoff
+**File:** .claude/rules/modes_and_value.md
+Formalized two non-coercive guidances: companion-store recommendation conditioned on accumulating context into meta-harness without a local fork; ephemeral-environment handoff rule made mode-agnostic (Mode D → companion-store handoff/, all others → committed note or PR comment in working repo).
+- Decision: single-source preserved — rule lives in public mirror; companion store holds only outputs, never a rule copy
+
+### 2026-06-03 | forge-harness | #goal-quench, #skill-evolution, #meta-audit, #prompt-regression
+**File:** plugins/fh-meta/skills/goal-quench/SKILL.md
+Post-merge micro R-tier cleanup: corrected two prompt-regression probe expectations mis-FAILing correct skills (P-CHAIN-01/02). Made LOCAL_SKILL_REGISTRY trigger in cross-ecosystem-synergy-detection honestly optional. Closes full-harness refactor backlog.
+- Decision: leftover placeholder bash blocks and challenger wiring gap are verified non-defects
+
+### 2026-06-03 | forge-harness | #goal-quench, #skill-evolution, #mode-ladder, #sidecar-routing
+**File:** plugins/fh-meta/skills/goal-quench/SKILL.md
+Evolved goal-quench into a fluid core→pro→max mode ladder. Core: token-budget-gate + pipeline-conductor --quick; pro: +context-doctor +agent-composer; max: +plugin-recommender +cross-ecosystem-synergy-detection. Phase-1 budget verdict auto-recommends mode. Ran full-harness dogfood sweep (33 skills): fixed phantom refs, dead blocks, stale agent forks (4 deleted), trigger collision, and 3 skill-splitter splits.
+- Decision: RED tier reframed as max-mode decomposition on-ramp, not hard block
+
 ### 2026-06-02 | _audit | sister-asset, token-efficiency, compression, headroom
 **File:** tracks/_audit/session_2026_06_02_headroom_context_doctor.md
 Cross-audited Headroom (Netflix engineer's OSS token-compression tool, vendor-reported 60–95% reduction) against context-doctor's Compression Pass per sister_asset_protocol. Same goal, different layer: Headroom is the runtime executor FH lacks; context-doctor is the judgment Headroom lacks — they compose.
