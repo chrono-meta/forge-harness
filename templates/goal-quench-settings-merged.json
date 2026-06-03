@@ -17,7 +17,13 @@
   "hooks": {
     "Stop": [
       {
-        "command": "bash -c 'f=\".claude/goal-quench.active\"; [ -f \"$f\" ] && echo \"\\n[goal-quench] /goal finished. Running quality verification...\" && cp \"$f\" \".claude/goal-quench.pending\" && rm -f \"$f\" || true'"
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'f=\".claude/goal-quench.active\"; [ -f \"$f\" ] && echo \"\\n[goal-quench] /goal finished. Running quality verification...\" && cp \"$f\" \".claude/goal-quench.pending\" && rm -f \"$f\" || true'"
+          }
+        ]
       }
     ]
   }
