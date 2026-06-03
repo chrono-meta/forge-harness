@@ -351,6 +351,18 @@ Run `pipeline-conductor --quick` on `$TARGET` (the artifact changed during this 
 
 Record actual token usage in `tracks/_meta/goal_quench_{YYYY-MM-DD}.md` for calibration (regardless of verdict).
 
+### Step 3-c — Sidecar verdict gate (pro + max, when sidecar ≠ none)
+
+After pipeline-conductor completes, read `sidecar:` from `.pending`. If non-none, gate on the sidecar's verdict before advancing to Done When:
+
+| Sidecar | Wait for | Failure action |
+|---|---|---|
+| `steel-quench-c3` | Wave 2 convergence: PASS or CONDITIONAL_PASS | FAIL → reopen Phase 2, surface blocking findings to user |
+| `agent-composer-panel` | Panel findings file written + incorporated into pipeline-conductor context | Not yet written → re-run pipeline-conductor with panel findings |
+| `sim-conductor` + `steel-quench-w5` | Both: sim-conductor Area A PASS **and** steel-quench W5 convergence PASS | Either FAIL → block Done When; surface failing verdict |
+
+This gate is **blocking** — Done When cannot be reached until the sidecar verdict is resolved. Record `sidecar_findings_count` in the calibration record before closing.
+
 ---
 
 ## Calibration Record
@@ -366,6 +378,7 @@ After each goal-quench run, append to `tracks/_meta/goal_quench_{YYYY-MM-DD}.md`
   budget_source: token-budget-gate | fallback-heuristic
   actual_tokens: N  # from ~/.claude/projects/*/conversation*.jsonl or user-reported; "unknown" if unavailable
   estimation_error: over | under | accurate
+  estimation_error_pct: "N%"  # e.g. "717%" — magnitude of under/over; omit if accurate
   actual_vs_estimate_ratio: N.N  # actual / estimated (e.g., 4.7 means actual was 4.7× estimate)
   budget_verdict: GREEN/YELLOW/ORANGE/RED
   pipeline_verdict: CLEAN/PENDING/BLOCKED/ESCALATE
@@ -430,7 +443,8 @@ Phase 1: token-budget-gate verdict output + mode resolved (core default, or pro/
   max additionally: GAP-triggered plugin-recommender + cross-ecosystem-synergy-detection pre-validation
 + Phase 3 (on next response after /goal): .pending file detected + pipeline-conductor run
   (--quick for core/pro, --full for max)
-+ Verification verdict output (CLEAN/PENDING/BLOCKED)
++ Verification verdict output (CLEAN/PENDING/BLOCKED/ESCALATE)
++ If sidecar invoked (pro/max Step D): Step 3-c sidecar verdict resolved (PASS/CONDITIONAL_PASS) before closing
 + .pending file deleted + calibration record appended
 ```
 

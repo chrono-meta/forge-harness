@@ -570,8 +570,8 @@ Only activate the cluster matching the utterance — loading all skills degrades
 |---|---|---|
 | **A — Harvest/Evolution** | harvest · session wrap-up · pattern · reverse absorption · fh evolution | field-harvest · harvest-loop · contention-layer · verify-bidirectional |
 | **B — Diagnosis (doctor)** | diagnose · health · check · inspect · token waste · install conflict · doctor | harness-doctor · context-doctor · sim-conductor · install-doctor · install-wizard |
-| **C — Compose (composer)** | agent composition · parallel · compose prompt · context card | agent-composer · meta-prompt-builder · context-bridge-dispatch |
-| **D — Audit/Review** | review · audit · PR review · steel quench · adversarial · marketing · placement | hub-cc-pr-reviewer · steel-quench · apex-review · self-marketing-lint · marketplace-gate · asset-placement-gate |
+| **C — Compose (composer)** | agent composition · parallel · compose prompt · context card | agent-composer · meta-prompt-builder |
+| **D — Audit/Review** | review · audit · PR review · steel quench · adversarial · lint · placement | hub-cc-pr-reviewer · steel-quench · apex-review · harness-doctor (--lint) · marketplace-gate · asset-placement-gate |
 | **E — Explore/Frontier** | trends · plugin recommendation · synergy · frontier | frontier-digest · plugin-recommender · cross-ecosystem-synergy-detection |
 | **F — Common (always-on)** | — | convergence-loop · deliberation (fh-commons) |
 
