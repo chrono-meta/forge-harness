@@ -372,7 +372,7 @@ Execute after Wave 4 PASS + Step 4-c recording complete.
 | No frontier-digest today + large session | `frontier-digest` |
 | None | "ready for next session" |
 
-**Anti-redundancy guard**: if this composition was invoked **by** goal-quench (detect `.claude/goal-quench.active` present with `mode: full|max`), suppress any suggestion that points back to `/goal-quench` — goal-quench is already the caller, so re-suggesting it is a redundant, confusing loop. Return control to goal-quench instead. See Cross-reference below.
+**Anti-redundancy guard**: if this composition was invoked **by** goal-quench (detect `.claude/goal-quench.active` present with `mode: pro|max`), suppress any suggestion that points back to `/goal-quench` — goal-quench is already the caller, so re-suggesting it is a redundant, confusing loop. Return control to goal-quench instead. See Cross-reference below.
 
 > **Detail**: See `SKILL_detail.md §Round-Wrap` — 6-1 completion summary format, 6-2 next round suggestions format, 6-3 fh_signal persistence format.
 
@@ -439,11 +439,11 @@ If unclear item is in human domain → ask. System domain → infer and proceed.
 
 ## Cross-reference — goal-quench (upstream caller)
 
-`goal-quench`'s **full / max** modes invoke agent-composer for goal decomposition (goal-quench Phase 1.5 Step B). The relationship is one-directional and the entry points differ by intent:
+`goal-quench`'s **pro / max** modes invoke agent-composer for goal decomposition (goal-quench Phase 1.5 Step B). The relationship is one-directional and the entry points differ by intent:
 
 | User intent | Entry point | agent-composer's role |
 |---|---|---|
 | "Compose/dispatch agents for this work" | `/agent-composer` directly | Primary — composes and runs the Wave plan |
-| "Run a large/budget-gated `/goal` safely" | `/goal-quench --full` / `--max` | Sub-step — receives the task in compose-only mode, returns a sub-goal Wave plan, hands control back to goal-quench |
+| "Run a large/budget-gated `/goal` safely" | `/goal-quench --pro` / `--max` | Sub-step — receives the task in compose-only mode, returns a sub-goal Wave plan, hands control back to goal-quench |
 
 **Routing note**: when a user frames a large or token-sensitive `/goal` run, prefer `/goal-quench` as the entry point — it wraps this skill with budget + quality gates that a bare agent-composer run does not provide. agent-composer does **not** re-invoke goal-quench (that is the caller); the Step 6 anti-redundancy guard enforces this.
