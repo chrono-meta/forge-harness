@@ -11,6 +11,10 @@ complexity_routing:
     - pro_mode       # orchestration: context-doctor + agent-composer decomposition
     - max_mode       # + external discovery: plugin-recommender + synergy pre-validation
   high: opus
+  # NOTE: CC switches models per-turn by task weight, not per-skill invocation.
+  # With `/model opusplan`: Opus activates on plan-mode turns (reasoning, decomposition);
+  # Sonnet handles execution turns (tool calls, edits). Both appear in session jsonl.
+  # Without opusplan: all turns use the session model regardless of mode.
 ---
 
 # goal-quench — /goal with Token Budget + Quality Gate
@@ -43,9 +47,18 @@ Each mode is a **superset** of the one before it — pro does everything core do
 - Explicit flag: `/goal-quench --core` (default) · `--pro` · `--max`
 - Auto: Phase 1's budget verdict proposes the mode (see Phase 1 Step 2). The user can always override **down** to core.
 
-**Token-honesty guard** (the paradox this resolves): pro/max ADD orchestration overhead to a skill whose whole purpose is token control. They are justified ONLY when the task is large enough that decomposition/optimization saves more than the overhead costs. Therefore:
-- **Never auto-escalate a GREEN/YELLOW task to pro/max.** If the user explicitly asks for pro/max on a small task, run it but note: "orchestration overhead may exceed savings at this scope."
-- **Model escalation cost**: `complexity_routing` escalates pro/max to Opus (~3× per-token vs Sonnet). Add this to the overhead calculation. A YELLOW task with minor orchestration may cost more in model fees than context-doctor saves. State the trade-off explicitly before proceeding.
+**Token-honesty guard** (what empirical calibration showed): The cost structure of pro/max depends on which sidecar pattern is in use:
+
+| Sidecar type | Who uses it | Cost visibility | Estimation |
+|---|---|---|---|
+| External CLI (Gemini, Codex, Copilot) | Multi-LLM environment | **Not visible in CC** | Low — external billing only |
+| CC sub-agent (isolated context, steel-quench pattern) | CC-only environment | **Visible in CC** | Estimable: Sonnet × sub-agent scope |
+
+For **CC-only users**, pro/max sidecars run as isolated sub-agents (Sonnet for execution), with the orchestrator running at Opus (`complexity_routing`). Both are CC-visible. Cost estimate: `(Opus orchestrator turns × ~3×) + (Sonnet sub-agent tokens)`. The sub-agent context isolation means sidecar work does not load the main context — the context-preservation property holds regardless of sidecar type.
+
+Therefore:
+- **Never auto-escalate a GREEN/YELLOW task to pro/max.** For external CLI users, sidecar costs are untracked and invisible in CC's budget display. For CC sub-agent users, the overhead is estimable but still real — orchestrator Opus × 3 applies. Note the appropriate caveat when disclosing cost.
+- **Model escalation cost**: With `/model opusplan`, Opus activates on plan-mode turns (reasoning, decomposition decisions) and Sonnet handles execution turns — both CC-visible in session jsonl under `message.model`. External CLI sidecar fees are additional and invisible to CC; state both when present.
 - **RED is no longer a dead-end.** v1 hard-blocked RED ("split manually"). v2 turns RED into the **on-ramp to max** — agent-composer decomposes the over-budget goal into sequential sub-goals automatically.
 
 ---
@@ -388,6 +401,10 @@ After each goal-quench run, append to `tracks/_meta/goal_quench_{YYYY-MM-DD}.md`
   budget_verdict: GREEN/YELLOW/ORANGE/RED
   pipeline_verdict: CLEAN/PENDING/BLOCKED/ESCALATE
   sidecar: none | steel-quench-c3 | agent-composer-panel | sim-conductor | {cli-name}
+  sidecar_type: none | cc-subagent | external-cli  # cc-subagent = isolated Sonnet context; external-cli = untracked
+  sidecar_model: none | sonnet | {model-name}  # standard baseline: sonnet; external CLIs vary by tier
+  orchestrator_tokens: N | unknown  # Opus orchestrator CC tokens (pro/max only; visible in CC)
+  sidecar_tokens: N | unknown  # Sonnet sub-agent CC tokens if cc-subagent; "untracked" if external-cli
   sidecar_findings_count: N  # 0 if sidecar=none
   threshold_triggered: none/50/70/85/95
   notes: {optional — why estimate was off, what scope changed}
@@ -420,7 +437,7 @@ This data calibrates future estimates. Target: 10 prospective runs per mode befo
 - Do not activate goal-quench for exploratory or single-turn tasks — only for /goal sessions.
 - If the user runs /goal without going through goal-quench setup, propose retroactively: "Run /goal-quench --verify to quality-check the output."
 - `--verify` mode: skip Phase 1+2, go directly to Phase 3 verification using current session scope.
-- **core is the default and the floor** — never auto-escalate a GREEN/YELLOW task to pro/max. Orchestration overhead must be justified by task size (ORANGE/RED) or an explicit user flag.
+- **core is the default and the floor** — never auto-escalate a GREEN/YELLOW task to pro/max. Sidecar CLI costs (external, untracked in CC) apply in pro/max — auto-escalation requires ORANGE/RED budget or explicit user flag.
 - **pro/max are supersets of core, not replacements** — a user who wants only the v1 safety belt stays in core and sees no orchestration.
 - **Post-optimization step-down**: if a pro/max run's re-estimated budget drops to GREEN/YELLOW after context-doctor trims (Phase 1.5 Step A), offer to drop back to core — don't run orchestration the trimmed scope no longer needs.
 - Phase 1.5 does not re-implement the gates of the skills it chains (agent-composer's destructive/fan-out gates, plugin-recommender's install approval) — it defers to them.

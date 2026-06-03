@@ -24,3 +24,7 @@ successor: agent-composer
 `plugins/fh-meta/skills/agent-composer/SKILL.md §Step 3-a`
 
 > **Detail**: See `SKILL_detail.md §Archive` — full original content preserved — read only for historical reference.
+
+## Done When
+
+Deprecated — no active execution path. Done When: skill is never directly invoked; all dispatch routes through `/agent-composer` Step 3-a (the successor). This entry satisfies the harness-doctor L2 M-tier requirement for missing Done When (CLAUDE.md §New Skill Creation Pre-Commit Gate).
