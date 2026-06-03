@@ -201,6 +201,8 @@ When own PRS + this skill both activate simultaneously:
 
 ## Persona Synergy Catch (Scenario 2 adherence)
 
+> **Applies only if the `deep-insight` plugin is installed** (it is an optional external plugin, not bundled with FH). If deep-insight is absent, this simultaneous-activation risk cannot arise — skip this entire section. No fallback is needed because there is no collision to resolve.
+
 ### deep-insight Multi-Perspective Review ↔ This Skill Simultaneous Activation Risk
 
 Scenario 2 persona-newcomer catch — when this skill also activates during deep-insight multi-perspective review, risk of token cost/time explosion. Two skills unaware of each other / cross-ref absent area.

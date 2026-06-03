@@ -3,7 +3,7 @@ name: pipeline-conductor
 description: Chains the four core FH verification pipelines (harvest-loop → steel-quench → source-grounding-audit → sim-conductor) into a single gated sweep. Accepts a scope (single skill, specific asset, full harness) and aggregates results into one structured report. Supports --quick mode (steps 2+3 only) and --full mode (all four steps). Triggered by "run the full pipeline", "chain all verifications", "end-to-end sweep", "pipeline-conductor", or "verify everything".
 user-invocable: true
 allowed-tools: ["Read", "Write", "Bash", "Grep", "Glob", "Agent"]
-model: opus
+model: sonnet
 ---
 
 # pipeline-conductor — Chained Verification Sweep

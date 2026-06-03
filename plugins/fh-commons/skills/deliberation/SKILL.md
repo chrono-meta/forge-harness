@@ -181,6 +181,8 @@ Output format:
 
 Runs only when 5-layer is selected. **Parallel** dispatch of 2~3 selected deep-insight personas via the `Agent` tool.
 
+> **Fallback (if deep-insight is not installed)**: dispatch the jury from real fh-meta agents instead — `persona-innovator` and `hub-persona-auditor` (and `fh-commons:quench-challenger` for an adversarial juror). Same parallel-Agent dispatch, juror cap, and output format apply. The 5-layer jury is guaranteed to run without deep-insight installed — mirroring the Step 1/Step 2 fallbacks.
+
 Juror count limit: **maximum 3**. If 4 or more are selected, output `[WARN: jury overload — noise risk]` and defer to the user.
 
 Instruction per juror:
