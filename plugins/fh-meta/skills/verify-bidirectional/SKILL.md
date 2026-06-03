@@ -226,7 +226,7 @@ Steps 1~6 all executed
 + fact-checker self-catch mark output
 + Step 4.5 diff gate user confirmation complete (y/N response received)
 + Update trigger count updated
-+ External validation path: harvest-loop Step 3.75 Critic isolated Agent can independently judge based on above criteria (skill_quality_rubric.md verifiable criteria)
++ External validation path: harvest-loop's Critic isolation pass (SAGE automated critique) can independently judge based on above criteria (skill_quality_rubric.md verifiable criteria)
 ```
 
 Verdict: PASS (Step 4.5 diff gate confirmed, baseline updated) | CONDITIONAL_PASS (update applied, external validation still pending) | FAIL (counter-argument confirmed — AI recommendation was wrong, baseline requires redesign) | ESCALATE (counter-argument ambiguous, human judgment required)

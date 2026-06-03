@@ -286,7 +286,7 @@ cd <hub-path>
 git add tracks/<track>/session_$(date +%Y_%m_%d)_<slug>.md
 git commit -m "session: <title> (<project> <date>)
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
 > **Push policy**: commit only. Push requires explicit user approval ("push해줘", "push it"). Do not auto-push — consistent with FH PR principle.
