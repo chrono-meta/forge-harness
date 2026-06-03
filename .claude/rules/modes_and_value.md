@@ -15,14 +15,14 @@ The forge-harness maintains **a reference asset identity** — user entry and ex
 | **A — Canonical** | Harness cwd setup → hand off to separate project cwd → field agent works | Active onboarding 5-skill cascade + cwd handoff guidance | Direct (bidirectional sync circuit active) |
 | **B — Resident** | Create a **separate project directory** in the harness install environment and work there | Required to guide "separate project directory + proper `.gitignore`" | Indirect (harness itself maintains reference asset identity) |
 | **C — Plugin/skill only** | Install only plugin/skill without cloning harness | Guide user to accumulate history on their own project side. Explicitly state no automatic harness signals expected | Indirect + dependent on user active invocation |
-| **D — Developer/Researcher** | **Using FH while also developing/researching FH itself.** Public mirror (forge-harness) holds methodology; private companion store (e.g. `fh-be`) holds paper drafts, experiment logs, raw signals. | Guide companion-store setup (`fh-be` pattern). Mandatory: `.gitignore` keeps drafts local; `handoff/` enables cloud→local session continuity. | Direct + private (companion store receives snapshots via explicit push) |
+| **D — Developer/Researcher** | **Using FH while also developing/researching FH itself.** Public mirror (forge-harness) holds methodology; private companion store (e.g. `fh-be`) holds paper drafts, experiment logs, raw signals, and a mirror of gitignored local session data. | Guide companion-store setup (`fh-be` pattern). Mandatory: `.gitignore` keeps drafts local; `handoff/` enables cloud→local session continuity; `scripts/sync-to-be.sh` (CC Stop hook, 5-min throttle) auto-syncs `tracks/_meta/` → `tracks-meta/`. | Direct + private (gitignored local files auto-synced to companion store via Stop hook; explicit push for paper-drafts/signals) |
 
 ### AI guidance principles
 
 - If user explicitly states a mode, immediately guide that mode. Do not force canonical mode (Mode A).
 - Mode B: **Mandatory check of separate project directory creation + `.gitignore` harness asset isolation**
 - Mode C: Guide history accumulation mechanism on user's project side. Harness side actively absorbs via issue monitoring and PR audit cadence.
-- Mode D: **Mandatory companion-store setup guidance**. Public mirror = methodology only. Private store layout: `paper-drafts/` · `paper-signals/` · `digests/` · `handoff/`. `handoff/` files bridge cloud session → local session without exposing content in public repo. Field projects (e.g. 사내 harness) can use the same dual-repo pattern.
+- Mode D: **Mandatory companion-store setup guidance**. Public mirror = methodology only. Private store layout: `paper-drafts/` · `paper-signals/` · `digests/` · `handoff/` · `tracks-meta/`. `handoff/` files bridge cloud session → local session. `tracks-meta/` receives gitignored local session data (`tracks/_meta/`) via `scripts/sync-to-be.sh` — installed as a CC Stop hook (5-min throttle) so sync is automatic after setup. Field projects (e.g. 사내 harness) can use the same dual-repo pattern.
 - In any mode: do not accumulate user personal work in the harness directory itself (protect reference asset identity)
 
 ---
@@ -47,7 +47,7 @@ When FH work runs in an **ephemeral, git-invoked environment** (Claude Code on t
 - **Mode D (companion store exists)** → the store's `handoff/` file.
 - **Otherwise (default — anyone)** → a handoff note committed to the **working repo**, or a PR comment. Everyone has the working repo, so **no companion store is required** for this.
 
-The handoff must be the obvious entry point a fresh local session lands on — its own file/comment carrying status + the single immediate next action + exact steps — not a footnote buried in a digest. **Never rely on gitignored / local-only files** (`tracks/_meta/*`, `.claude/settings.json`) for cross-session continuity in an ephemeral environment; they are wiped on reclaim.
+The handoff must be the obvious entry point a fresh local session lands on — its own file/comment carrying status + the single immediate next action + exact steps — not a footnote buried in a digest. **Never rely on gitignored / local-only files** (`.claude/settings.json`, and `tracks/_meta/*` unless you are Mode D with sync confirmed) for cross-session continuity in an ephemeral environment; they are wiped on reclaim. Mode D exception: `tracks/_meta/` is auto-synced to `fh-be/tracks-meta/` via Stop hook — durable for local-to-local continuity, but the sync hook itself does not run in cloud/ephemeral environments, so `handoff/` remains the correct channel there.
 
 **Single-source guard**: this methodology lives here in the public mirror. A companion store holds only the *outputs* that follow it (digests · signals · handoff files), never a copy of the rule.
 
