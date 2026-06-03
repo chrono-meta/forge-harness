@@ -111,6 +111,8 @@ If `token-budget-gate` skill is not installed, use this fallback estimator:
 20+ files or cross-system refactor      → ORANGE (30K–60K)
 Full-project migration or rewrite       → RED    (> 60K)
 ```
+**Session overhead factor (empirical calibration, N=10, 2026-06-01–06-03)**: The tiers above estimate *task* tokens only. Actual full CC session tokens average 4.7× the task estimate (range: 1.3×–10.5×) for harness-heavy projects (dense CLAUDE.md + multi-rule auto-load). Multiply task estimate by 4× for FH-density projects, 2× for lighter projects, to get expected session total. This multiplier informs the mode recommendation — it does not change the go/no-go gate thresholds.
+
 Note the fallback in `.active` as `budget_source: fallback-heuristic` instead of `budget_source: token-budget-gate`.
 
 Run token-budget-gate against the task description. Map the result to a go/no-go decision:
@@ -207,6 +209,30 @@ Triggered only when agent-composer Step 0.2 reports a capability **GAP** (`fit_s
 3. User decides: install / skip / general-purpose fallback (agent-composer's degraded-composition rule applies — `⚠️ degraded: [role]`).
 
 max mode never installs anything silently — discovery and synergy-check are surfaced for approval first.
+
+### Step D — scope-driven sidecar configuration · pro + max
+
+Runs after Step C (or after Step B if no capability gap). Selects an adversarial sidecar based on the task's quality-risk profile — distinct from Step C's capability-gap sidecar, which addresses missing tools. Step D's sidecar addresses **blind-spot risk**: the generator and reviewer sharing the same reasoning distribution.
+
+**Scope → sidecar routing table**:
+
+| Task scope signal | Sidecar | Invocation point |
+|---|---|---|
+| Code quality review / new SKILL.md / governance gate change | `steel-quench` C3 config (Gemini sidecar if available) | Post-/goal, before pipeline-conductor |
+| Architecture design / cross-project dependency | `agent-composer` multi-model panel | Parallel to /goal as separate Agent |
+| External publication / marketplace-gate / skill release | `sim-conductor` + `steel-quench` Wave 5 | Post-/goal quality gate |
+| No signal match (default) | None — pipeline-conductor handles quality alone | — |
+
+Write resolved sidecar to `.active`:
+```
+sidecar: none | steel-quench-c3 | agent-composer-panel | sim-conductor | {cli-name}
+sidecar_rationale: {one-line reason — which scope signal triggered this}
+```
+
+Output to user (one line only):
+> "Sidecar: {config} — {rationale}"
+
+Do not ask for confirmation. The user may override by re-running `/goal-quench --sidecar none`.
 
 ### Hand-off
 
@@ -312,26 +338,39 @@ After each goal-quench run, append to `tracks/_meta/goal_quench_{YYYY-MM-DD}.md`
 - date: YYYY-MM-DD
   task: {one-line description}
   mode: core | pro | max
+  session_type: minor | normal | heavy | continuation  # for within-type comparison
   estimated_tokens: N
   budget_source: token-budget-gate | fallback-heuristic
-  actual_tokens: N  # estimated from turn count × avg tokens/turn; or "unknown" if not tracked
-  estimation_error: over | under | accurate  # compared actual vs estimated
+  actual_tokens: N  # from ~/.claude/projects/*/conversation*.jsonl or user-reported; "unknown" if unavailable
+  estimation_error: over | under | accurate
+  actual_vs_estimate_ratio: N.N  # actual / estimated (e.g., 4.7 means actual was 4.7× estimate)
   budget_verdict: GREEN/YELLOW/ORANGE/RED
   pipeline_verdict: CLEAN/PENDING/BLOCKED/ESCALATE
+  sidecar: none | steel-quench-c3 | agent-composer-panel | sim-conductor | {cli-name}
+  sidecar_findings_count: N  # 0 if sidecar=none
   threshold_triggered: none/50/70/85/95
   notes: {optional — why estimate was off, what scope changed}
 ```
 
-**`actual_tokens` collection**: Claude cannot read session token counts directly. Estimate by:
-1. CC session summary (if available in `~/.claude/projects/*/conversation*.jsonl`)
-2. Turn count × estimated tokens/turn (rough: ~2K for short turns, ~8K for long file edits)
-3. User-reported from CC token display (preferred if visible)
+**`actual_tokens` collection**: Claude cannot read session token counts directly. Preferred method:
+```bash
+python3 -c "
+import json, glob
+f = sorted(glob.glob('~/.claude/projects/*/conversation*.jsonl'.replace('~', __import__('os').path.expanduser('~'))))[-1]
+lines = [json.loads(l) for l in open(f)]
+total = sum(m.get('message',{}).get('usage',{}).get('input_tokens',0) + m.get('message',{}).get('usage',{}).get('output_tokens',0) for m in lines)
+print(f'Session tokens: {total:,}')
+"
+```
+Fallback: turn count × estimated tokens/turn (~2K for short turns, ~8K for long file edits). Write `"unknown"` if no estimate is possible.
 
-Write `"unknown"` if no estimate is possible. After 10 runs, compute mean estimation error — calibrate the fallback heuristic tiers if systematic over/under is detected.
+**Retrospective calibration baseline (N=10, 2026-06-01–06-03, Sonnet)**: mean actual/estimate ratio = 4.7× (range 1.3×–10.5×). Systematic underestimation due to session overhead. Full data: `fh-be/paper-signals/measurement_2026-06-03_goal_quench_calibration.md`.
+
+After 10 additional prospective runs, compute mean estimation error per mode — calibrate the session_overhead_factor if systematic over/under persists.
 
 `pipeline_verdict` enum includes `ESCALATE` — record it when Phase 3 required user decision before proceeding.
 
-This data calibrates future estimates. Target: 10 runs before treating estimates as reliable. Runs with `budget_source: fallback-heuristic` calibrate the fallback tiers; runs with `token-budget-gate` calibrate the skill itself.
+This data calibrates future estimates. Target: 10 prospective runs per mode before treating mode comparison as reliable. Runs with `budget_source: fallback-heuristic` calibrate the fallback tiers; runs with `token-budget-gate` calibrate the skill itself.
 
 ---
 
