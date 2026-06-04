@@ -66,3 +66,12 @@ Skills used: harness-doctor, context-doctor, steel-quench, ...
 | 2026-05-26 | harness-doctor, context-doctor, sim-conductor, source-grounding-audit, steel-quench, agent-composer, harvest-loop, deep-clarify(new), plan(new) |
 | 2026-05-25 | harvest-loop, field-harvest, harness-doctor, verify-bidirectional |
 | 2026-05-22 | steel-quench, sim-conductor, source-grounding-audit(new) |
+
+---
+
+<!-- hub-link footer (issue #69 item6) — generic, no operator-specific paths.
+     Resolve {FH_ROOT} to your own forge-harness install path. -->
+> **Source of truth**: this leaderboard is a *local* template. Skill definitions live in
+> `{FH_ROOT}/plugins/{plugin}/skills/{skill-name}/SKILL.md`; session logs that feed it are written
+> by `field-harvest` Mode B to `{FH_ROOT}/tracks/{project}/`. Update this file after each
+> `harvest-loop` run — see `{FH_ROOT}/CLAUDE.md` Session Sync Protocol.
