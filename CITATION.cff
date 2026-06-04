@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use forge-harness, please cite it as below."
+title: forge-harness
+type: software
+license: MIT
+url: "https://github.com/chrono-meta/forge-harness"
+repository-code: "https://github.com/chrono-meta/forge-harness"
+authors:
+  - family-names: Kwon
+    given-names: Sungjin
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.20397566
+    description: "Zenodo archive (v1.0) — permanent record"
+# preferred-citation: Zenodo technical note for now.
+# TODO: when the arXiv version goes live (currently On Hold), swap preferred-citation
+#       to the arXiv article (keep the Zenodo DOI above as the permanent archive id).
+preferred-citation:
+  type: report
+  title: "forge-harness: Engineering Methods for Robust AI Collaboration Harnesses"
+  authors:
+    - family-names: Kwon
+      given-names: Sungjin
+  year: 2026
+  month: 5
+  date-released: "2026-05-30"
+  version: "1.0"
+  doi: 10.5281/zenodo.20397566
+  url: "https://zenodo.org/records/20397566"
