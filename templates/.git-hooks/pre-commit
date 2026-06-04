@@ -102,7 +102,9 @@ if [ ! -f "$GUARD" ]; then
   echo "  ⚠️  SKIP — templates/regression_guard.sh not found"
 else
   GUARD_EXIT=0
-  bash "$GUARD" --pr "$BRANCH" 2>&1 || GUARD_EXIT=$?
+  # Pre-commit must evaluate the STAGED index, not --pr merge-base: on a direct-to-main
+  # workflow merge-base(main,main)=HEAD makes staged changes invisible (fh_signal 2026-06-04).
+  bash "$GUARD" --staged 2>&1 || GUARD_EXIT=$?
   if [ "$GUARD_EXIT" -eq 0 ]; then
     echo "  ✅ PASS"
   elif [ "$GUARD_EXIT" -eq 1 ]; then

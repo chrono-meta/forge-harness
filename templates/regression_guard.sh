@@ -6,6 +6,7 @@
 #   bash templates/regression_guard.sh main                    # compare working tree vs main
 #   bash templates/regression_guard.sh origin/main HEAD        # compare HEAD vs origin/main
 #   bash templates/regression_guard.sh --pr BRANCH             # PR mode: auto merge-base (recommended)
+#   bash templates/regression_guard.sh --staged                # pre-commit: staged index vs HEAD
 #
 # Exit codes: 0=PASS / 1=S-tier warnings / 2=M-tier block / 3=usage error
 #
@@ -20,6 +21,8 @@
 #   - manual pre-merge gate
 
 set -u
+
+STAGED_MODE=0
 
 # --pr mode: compute merge-base automatically
 if [ "${1:-}" = "--pr" ]; then
@@ -36,13 +39,24 @@ if [ "${1:-}" = "--pr" ]; then
   fi
   HEAD_REF="$PR_BRANCH"
   echo "PR MODE: merge-base=$(git rev-parse --short "$BASE_REF") branch=$PR_BRANCH"
+elif [ "${1:-}" = "--staged" ]; then
+  # Pre-commit context: evaluate the staged index against HEAD. On a direct-to-main
+  # workflow, --pr's merge-base(main,main)=HEAD yields an empty diff, so staged changes
+  # — exactly what a pre-commit hook must check — are invisible. --staged compares the
+  # index (what is about to be committed) against HEAD instead.
+  STAGED_MODE=1
+  BASE_REF="HEAD"
+  HEAD_REF=""
+  echo "STAGED MODE: index vs HEAD"
 else
   BASE_REF="${1:-main}"
   HEAD_REF="${2:-}"   # empty = working tree
 fi
 
 # Discover changed files
-if [ -z "$HEAD_REF" ]; then
+if [ "$STAGED_MODE" -eq 1 ]; then
+  CHANGED=$(git diff --cached --name-only -- 'plugins/*/skills/*/SKILL.md' '.claude/rules/*.md' 'CLAUDE.md' 'templates/*.md' 2>/dev/null)
+elif [ -z "$HEAD_REF" ]; then
   CHANGED=$(git diff --name-only "$BASE_REF" -- 'plugins/*/skills/*/SKILL.md' '.claude/rules/*.md' 'CLAUDE.md' 'templates/*.md' 2>/dev/null)
 else
   CHANGED=$(git diff --name-only "$BASE_REF" "$HEAD_REF" -- 'plugins/*/skills/*/SKILL.md' '.claude/rules/*.md' 'CLAUDE.md' 'templates/*.md' 2>/dev/null)
@@ -61,7 +75,8 @@ echo "----"
 
 read_before() { git show "$BASE_REF:$1" 2>/dev/null; }
 read_after() {
-  if [ -z "$HEAD_REF" ]; then cat "$1" 2>/dev/null
+  if [ "$STAGED_MODE" -eq 1 ]; then git show ":$1" 2>/dev/null   # staged blob from the index
+  elif [ -z "$HEAD_REF" ]; then cat "$1" 2>/dev/null
   else git show "$HEAD_REF:$1" 2>/dev/null; fi
 }
 # Clean integer count — grep -c outputs "0" + exit 1 when no match, which collides with `|| echo 0`
