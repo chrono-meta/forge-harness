@@ -78,6 +78,8 @@ Therefore:
 
 ## One-Time Setup (required)
 
+### Claude Code Runtime
+
 Copy the hook snippet from `templates/goal-quench-hook-setup.md` and merge into your `.claude/settings.json`.
 
 Add to `.gitignore`:
@@ -94,6 +96,28 @@ Add to `.gitignore`:
 [ -f .claude/goal-quench.active ] && ! [ -f .claude/goal-quench.pending ] && echo "Interrupted — run /goal-quench --recover"
 ```
 > `/goal-quench --recover` — promotes `.active` → `.pending` and runs Phase 3 verification on partially-completed work.
+
+### Codex Runtime
+
+Codex has its own goal/session capability. Do not replace it with goal-quench state files. In Codex-primary sessions:
+
+1. Use Codex's native goal/session feature for goal control.
+2. Use `fh-run` for any FH skill/agent sub-step that would otherwise require Claude Code `Agent(...)`.
+3. After the Codex goal completes, run FH governance on changed files:
+
+```bash
+FH_BACKEND=codex npx @chrono-meta/fh-gate "{changed-files}" quick codex-goal
+```
+
+For non-interactive one-shot runs only, `fh-goal` can run a backend task and then invoke `fh-gate` automatically:
+
+```bash
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-goal \
+  --prompt "{task}" \
+  --gate quick
+```
+
+`fh-goal` is not a Codex goal replacement; it is a post-run governance wrapper.
 
 ---
 
@@ -301,6 +325,8 @@ These gaps are the basis for the Anthropic feature request (see `knowledge/share
 
 ## Phase 3 — Post-run Verification
 
+### Claude Code path
+
 When /goal stops, the Stop hook fires and:
 1. Detects `.claude/goal-quench.active`
 2. Copies it to `.claude/goal-quench.pending`
@@ -327,6 +353,16 @@ fi
 If found and fresh: **automatically run pipeline-conductor** before responding to any other request — `--quick` for core/pro, `--full` for max (the `mode:` field in `.pending` selects which). This is not optional — pending verification takes priority.
 
 If found but stale (> 4 hours): warn the user — "A stale goal-quench.pending exists from {timestamp}. Run `/goal-quench --verify` to re-evaluate, or delete it to clear." Do not auto-trigger verification on stale state.
+
+### Codex path
+
+No Stop hook is required. After the Codex goal/session completes, resolve changed files with git and run:
+
+```bash
+FH_BACKEND=codex npx @chrono-meta/fh-gate "{changed-files}" quick codex-goal
+```
+
+For high-stakes or external-facing work, use `full` instead of `quick`. Treat `BLOCKED` or `ESCALATE` the same as the Claude path: fix and re-run the gate, or surface the decision to the user.
 
 ### Verification flow
 

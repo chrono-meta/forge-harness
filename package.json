@@ -1,13 +1,15 @@
 {
   "name": "@chrono-meta/fh-gate",
-  "version": "1.1.0",
-  "description": "FH governance gate — runs structured AI code review via claude --print and returns machine-parseable verdicts (PASS/PENDING/BLOCKED/ESCALATE).",
+  "version": "1.2.0",
+  "description": "FH runtime adapters — run FH governance, skills, and agents via Claude or Codex with machine-parseable gates.",
   "license": "MIT",
   "keywords": [
     "ai-governance",
     "code-review",
     "claude",
     "claude-code",
+    "codex",
+    "openai-codex",
     "ci",
     "harness"
   ],
@@ -16,25 +18,48 @@
     "url": "git+https://github.com/chrono-meta/forge-harness.git"
   },
   "bin": {
-    "fh-gate": "bin/fh-gate.js"
+    "fh-gate": "bin/fh-gate.js",
+    "fh-run": "bin/fh-run.js",
+    "fh-goal": "bin/fh-goal.js"
   },
   "scripts": {
-    "prepare": "chmod +x bin/fh-gate.js scripts/fh-gate.sh"
+    "prepare": "chmod +x bin/fh-gate.js bin/fh-run.js bin/fh-goal.js scripts/fh-gate.sh scripts/fh-run.sh scripts/fh-goal.sh"
   },
   "engines": {
     "node": ">=16"
   },
   "peerDependencies": {
-    "@anthropic-ai/claude-code": "*"
+    "@anthropic-ai/claude-code": "*",
+    "@openai/codex": "*"
   },
   "peerDependenciesMeta": {
     "@anthropic-ai/claude-code": {
-      "optional": false
+      "optional": true
+    },
+    "@openai/codex": {
+      "optional": true
     }
   },
   "files": [
+    ".claude/agents/challenger.md",
+    "AGENTS.md",
+    "CATALOG.md",
+    "CHEATSHEET.md",
+    "CLAUDE.md",
+    "CONTRIBUTING.md",
     "bin/fh-gate.js",
+    "bin/fh-run.js",
+    "bin/fh-goal.js",
+    "docs/banner.png",
+    "docs/codex-compat.md",
+    "docs/pillars.svg",
     "scripts/fh-gate.sh",
+    "scripts/fh-run.sh",
+    "scripts/fh-goal.sh",
+    "plugins/fh-meta/skills",
+    "plugins/fh-meta/agents",
+    "plugins/fh-commons/skills",
+    "plugins/fh-commons/agents",
     "knowledge/shared/harness-core/fh_integration_contract.md",
     "README.md"
   ]

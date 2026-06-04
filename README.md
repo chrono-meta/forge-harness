@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e.svg" alt="MIT License"></a>
-  <img src="https://img.shields.io/badge/version-v1.3-3b82f6.svg" alt="v1.3">
+  <img src="https://img.shields.io/badge/fh--gate-v1.2.0-3b82f6.svg" alt="fh-gate v1.2.0">
   <a href="https://zenodo.org/records/20397566"><img src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20397566-blue.svg" alt="DOI"></a>
   <img src="https://img.shields.io/badge/Claude_Code-compatible-a855f7.svg" alt="Claude Code">
   <img src="https://img.shields.io/badge/Codex-beta-f59e0b.svg" alt="Codex-compatible beta">
@@ -56,6 +56,7 @@ claude
 
 **Plugin only (no clone):**
 ```bash
+claude plugin marketplace add https://github.com/chrono-meta/forge-harness.git  # once
 claude plugin install -s user fh-meta@forge-harness
 cd ~/projects/{your-project} && claude
 ```
@@ -89,18 +90,36 @@ Project B  ──→  connect hub in CLAUDE.md
 FH wraps any coding agent (OpenCode, Codex, etc.) as a **post-generation governance gate**.
 
 ```bash
-npx @chrono-meta/fh-gate                    # auto-detects changed files
-npx @chrono-meta/fh-gate "src/foo.ts" full  # explicit file + full pass
+npx --package @chrono-meta/fh-gate fh-gate                    # default: Claude backend
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-gate   # Codex backend
+FH_BACKEND=auto npx --package @chrono-meta/fh-gate fh-gate "src/foo.ts" full
 # → FH_GATE_VERDICT: PASS | PENDING | BLOCKED | ESCALATE
 ```
 
-**Empirical result (2026-05-31)**: Applied to OpenCode's AI-generated `permission/arity.ts` (163 lines, CI green). Verdict: PENDING — 2 A-grade findings CI didn't catch (short-token overflow in allowlist, executor tools absent from arity table).
+`fh-gate` uses the same FH governance prompt for both runtimes. `FH_BACKEND=claude` runs `claude --print`; `FH_BACKEND=codex` runs `codex exec`; `FH_BACKEND=auto` prefers Codex when both CLIs are present.
+
+For direct skill or agent execution outside Claude Code, use `fh-run`:
+
+```bash
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run --skill source-grounding-audit --file docs/foo.md
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run --agent fh-commons:quench-challenger --file plugins/fh-meta/skills/foo/SKILL.md
+```
+
+For Codex-primary work, keep using Codex's native goal/session features when available. `fh-goal` is only a portable wrapper for one-off non-interactive runs that should be followed by FH governance:
+
+```bash
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-goal --prompt "Implement X and update tests" --gate quick
+```
+
+The broader FH automation layer still depends on Claude Code for sub-agents, hooks, and slash commands. The portable path is shared documents plus runtime adapters, not separate Codex and Claude forks.
+
+**Empirical result (2026-05-31)**: Applied to OpenCode's AI-generated `permission/arity.ts` (163 lines, CI green). Current gate semantics classify this as BLOCKED: 2 A-grade findings CI didn't catch (short-token overflow in allowlist, executor tools absent from arity table).
 
 Full spec: [`fh_integration_contract.md`](knowledge/shared/harness-core/fh_integration_contract.md)
 
 ---
 
-## 34 skills, 5 agents
+## 35 skill files, 5 agents
 
 <details>
 <summary>Full asset activation check</summary>
@@ -130,7 +149,7 @@ Full spec: [`fh_integration_contract.md`](knowledge/shared/harness-core/fh_integ
 | `token-budget-gate` *(fh-commons)* | Pre-task token cost estimate | "How expensive is this?" |
 | `mcp-circuit-breaker` *(fh-commons)* | MCP tool failure pattern detection | "MCP keeps failing" |
 | `quench-challenger` *(fh-commons)* | Adversarial pressure-test agent | "Challenge this with a devil" |
-| *(+ 11 more)* | marketplace-gate · contention-layer · edit-manifest · fact-checker · goal-quench · hub-persona-auditor · install-doctor · memory-hygiene · persona-innovator · prompt-regression · skill-splitter | |
+| *(+ additional assets)* | marketplace-gate · contention-layer · edit-manifest · fact-checker · goal-quench · hub-persona-auditor · install-doctor · memory-hygiene · persona-innovator · prompt-regression · public-surface-audit · skill-splitter | |
 
 | Active count | Diagnosis |
 |:---:|---|
@@ -195,7 +214,7 @@ Claude-side token cost: **zero increase** C2→C3.
 > Documents 2-layer design, 6-axis framework, 4-agent orchestration, and compounding loop with empirical evidence.
 
 External convergence:
-- VILA-Lab: [Claude Code v2.1.88 — 98.4% is harness infrastructure](https://arxiv.org/abs/2604.14228)
+- ["Dive into Claude Code: The Design Space of Today's and Future AI Agent Systems"](https://arxiv.org/abs/2604.14228) — arXiv April 2026
 - ["Code as Agent Harness"](https://arxiv.org/abs/2605.18747) — arXiv May 2026
 - Stanford IRIS Lab: ["Meta-Harness"](https://arxiv.org/abs/2603.28052) — +7.7pts at 4× fewer tokens
 

@@ -79,6 +79,16 @@ For the target artifact, scan installed agents for a domain-specific adversarial
 2. Built-in fallback: `fh-commons:quench-challenger` (general-purpose adversarial review)
 3. GAP for high-risk artifact: query `/plugin-recommender "adversarial reviewer for [artifact_type]"` → user: install / skip / use fallback
 
+**Runtime adapter note**: In Claude Code, invoke the fallback as an isolated `Agent(subagent_type="fh-commons:quench-challenger")`. In Codex-primary or other non-Claude runtimes, use the FH adapter instead:
+
+```bash
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run \
+  --agent fh-commons:quench-challenger \
+  --file {target-artifact}
+```
+
+Treat the adapter output as the isolated challenger result for Wave 1. This preserves the same workflow without depending on Claude Code's Agent tool.
+
 **Wave 5 activation rule**: Wave 5 (external CLI team) is only activated when `scope` is not internal-only AND external CLIs are available AND risk_level is high or user explicitly requests it.
 
 > **Detail**: See `SKILL_detail.md §ArtifactProfile` — worked examples (SKILL.md, bash script, README, design doc with citations) showing wave selection and rationale — read when classifying an unfamiliar artifact type.
@@ -90,6 +100,8 @@ For the target artifact, scan installed agents for a domain-specific adversarial
 **Execution principles**: Attacks must be based on real code/files/configs — abstract criticism prohibited.
 Assign severity: **S** (immediate blocker) / **A** (required before deployment) / **B** (improvement recommended).
 Call **fh-commons:quench-challenger** in isolation first (6-axis structural attack); apply 5 angles in parallel.
+
+Isolation can be achieved by Claude Code `Agent(...)` or by `fh-run --agent fh-commons:quench-challenger` under Codex. Do not run the challenger inline in the same reasoning pass when the attack result gates the defense.
 
 | # | Attack Angle | Core Question |
 |:---:|---|---|

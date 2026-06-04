@@ -2,7 +2,7 @@
 
 > Status: **beta**. This document is beta-removal condition #2 (see `AGENTS.md` → Codex Compatibility → Beta removal conditions). It lists what works, what breaks, and what to expect when applying forge-harness (FH) methodology through OpenAI Codex (`codex exec`) instead of Claude Code.
 
-FH is a 2-layer system: a **methodology layer** (`tracks/`, `knowledge/`, `SKILL.md` docs) that is model-agnostic, and an **automation layer** (Claude Code hooks, `.claude/agents/`, `/model`, settings.json) that is Claude-native. Codex users run the methodology layer by reading `SKILL.md` files directly; the automation layer requires manual substitution or does not apply.
+FH is a 2-layer system: a **methodology layer** (`tracks/`, `knowledge/`, `SKILL.md` docs) that is model-agnostic, and an **automation layer** (Claude Code hooks, `.claude/agents/`, `/model`, settings.json) that is Claude-native. Codex users run the methodology layer by reading `SKILL.md` files directly; automation steps either run through runtime adapters (`fh-gate`, `fh-run`) or require manual substitution.
 
 ## Validated invocation pattern
 
@@ -16,6 +16,64 @@ cat plugins/fh-meta/skills/<skill>/SKILL.md path/to/artifact \
 - `npx @openai/codex` (interactive) requires a TTY and is **not** suitable for piped skill application.
 - Inside a git repository (e.g. a clone of this repo) no extra flag is needed. **Outside** a git repo (e.g. running from `/tmp`), add `--skip-git-repo-check`.
 - `codex exec` has its own file-read tools, so a skill that back-traces claims to source files (e.g. `source-grounding-audit`) can verify paths itself — it produced real `file:line` citations in validation.
+
+## Runtime adapters
+
+### `fh-gate`
+
+`fh-gate` supports both Claude and Codex backends with the same governance prompt and verdict parser:
+
+```bash
+# Default, backward-compatible Claude path
+npx --package @chrono-meta/fh-gate fh-gate "src/foo.ts" quick ci
+
+# Codex as the primary reviewer
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-gate "src/foo.ts" quick ci
+
+# Prefer Codex if installed, otherwise fall back to Claude
+FH_BACKEND=auto npx --package @chrono-meta/fh-gate fh-gate "src/foo.ts" quick ci
+```
+
+Backend defaults:
+
+| `FH_BACKEND` | Command | Default model |
+|---|---|---|
+| `claude` | `claude --print --model "$FH_MODEL"` | `claude-sonnet-4-6` |
+| `codex` | `codex exec -m "$FH_MODEL" -` | `gpt-5.5` |
+| `auto` | `codex` if present, otherwise `claude` | backend default |
+
+### `fh-run`
+
+`fh-run` bridges skill and agent execution that previously assumed Claude Code slash commands or `Agent(...)` dispatch:
+
+```bash
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run \
+  --skill source-grounding-audit \
+  --file docs/foo.md
+
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run \
+  --agent fh-commons:quench-challenger \
+  --file plugins/fh-meta/skills/foo/SKILL.md
+```
+
+Resolution order:
+
+| Unit type | Lookup |
+|---|---|
+| `--skill name` | `plugins/fh-meta/skills/name/SKILL.md`, then `plugins/fh-commons/skills/name/SKILL.md` |
+| `--agent name` | `.claude/agents/name.md`, then `plugins/fh-meta/agents/name.md`, then `plugins/fh-commons/agents/name.md` |
+| `--agent plugin:name` | `plugins/plugin/agents/name.md` first |
+| `--unit path` | explicit file path |
+
+### `fh-goal`
+
+Codex has native goal/session features. Use those directly when they fit. `fh-goal` is not a replacement for Codex goal; it is a non-interactive wrapper for "run backend task, then run FH governance on changed files":
+
+```bash
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-goal \
+  --prompt "Implement X and update tests" \
+  --gate quick
+```
 
 ## Author-run M1 validations (2026-06-04)
 
@@ -34,10 +92,10 @@ Both ran end-to-end with no Claude-native dependency. The M1 tier claim holds fo
 When `codex exec` runs **inside this repo**, FH's Claude-native git/Stop/PostToolUse hooks attempt to fire and emit `hook: Stop Failed` / `hook: PostToolUse Failed` lines interleaved with output. These are **harmless to the skill result** — the skill's verdict is produced correctly — but they are visible noise. Running from a directory **without** FH's `.claude/settings.json` (the normal Codex-user case) avoids them entirely. Filter with `grep -vE "^hook:"` if needed.
 
 ### 2. M2 skills need manual agent substitution
-M2 skills (`steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop`) have a core workflow that runs under Codex, but any step that dispatches `Agent(subagent_type=...)` or a slash command must be replaced by a direct `codex exec` call reading the sub-agent's `SKILL.md`/agent `.md` — same workflow, different runtime (the "M2 adaptation pattern" in `AGENTS.md`). Example: `steel-quench` Waves 1–3 run; the `quench-challenger` agent step is manual.
+M2 skills (`steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop`) have a core workflow that runs under Codex, but any step that dispatches `Agent(subagent_type=...)` or a slash command must be replaced by `fh-run` or a direct `codex exec` call reading the sub-agent's `SKILL.md`/agent `.md` — same workflow, different runtime (the "M2 adaptation pattern" in `AGENTS.md`). Example: `steel-quench` Waves 1–3 run; the `quench-challenger` agent step becomes `fh-run --agent fh-commons:quench-challenger`.
 
-### 3. M3 skills do not run under Codex
-M3 skills (`goal-quench` Phase-3 Stop hook, `hub-cc-pr-reviewer` CC session context, `install-wizard` settings.json write) require Claude-Code-native runtime and are **methodology reference only** under Codex. Read them for the approach; do not expect them to execute.
+### 3. M3 skills do not run automatically under Codex
+M3 skills (`goal-quench` Phase-3 Stop hook, `hub-cc-pr-reviewer` CC session context, `install-wizard` settings.json write) require Claude-Code-native runtime and are **methodology reference only** under Codex unless a dedicated adapter exists. Use Codex's native goal/session features for goal control, and use `fh-gate` after completion for FH quality gating.
 
 ### 4. No token accounting
 Codex token usage is billed in the Codex CLI quota and is **not** recorded in any FH session log or orchestrator measurement. Cross-family runs (Gemini/Codex) are invisible to FH's token-budget tooling by construction.
@@ -50,8 +108,8 @@ The sibling pattern for Gemini is `gemini -p "$(cat <skill+artifact>)"`. Outside
 | Tier | Under Codex | Action |
 |---|---|---|
 | **M1** | Runs fully | `cat SKILL.md artifact \| codex exec -m gpt-5.5 -` |
-| **M2** | Core runs; agent/slash steps manual | Substitute each dispatch with a direct `codex exec` on the sub-agent's `.md` |
-| **M3** | Does not run | Read as methodology reference only |
+| **M2** | Core runs; agent/slash steps via adapter | Substitute each dispatch with `fh-run` or a direct `codex exec` on the sub-agent's `.md` |
+| **M3** | Does not run automatically | Use native Codex session features where available; otherwise read as methodology reference or use a dedicated adapter |
 
 ## Beta removal — remaining (external-blocked)
 
