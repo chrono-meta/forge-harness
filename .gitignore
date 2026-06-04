@@ -8,6 +8,10 @@
 .claude/be_last_sync
 .claude/worktrees/
 .claude-octopus/
+
+# Hub-owner local operations — operator-specific wiring (companion-store route, Gap 1).
+# Auto-loaded locally, never public. Backed up to fh-be/hub-owner/ via sync-to-be.sh.
+CLAUDE.local.md
 context/
 
 # Paper — PDF regenerated from HTML; canonical version on Zenodo/arXiv

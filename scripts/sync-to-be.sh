@@ -37,9 +37,22 @@ sync_dir() {
   [ "$n" -eq 0 ] || log "$n file(s) synced → $dst"
 }
 
-sync_dir "$FH/tracks/_meta"  "$BE/tracks-meta"
-sync_dir "$FH/tracks/_audit" "$BE/tracks-audit"
-sync_dir "$MEM"              "$BE/memory"
+# sync_file SRC DSTDIR — append-only rsync of a single file; skips silently if SRC missing.
+sync_file() {
+  local src="$1" dstdir="$2"
+  [ -f "$src" ] || { log "skip (no file): $src"; return 0; }
+  mkdir -p "$dstdir"
+  local out n
+  out=$(rsync -a --itemize-changes "$src" "$dstdir/") || true
+  n=$(printf '%s\n' "$out" | grep -c '^[>c]' || true)
+  TOTAL=$((TOTAL + n))
+  [ "$n" -eq 0 ] || log "synced $(basename "$src") → $dstdir"
+}
+
+sync_dir  "$FH/tracks/_meta"   "$BE/tracks-meta"
+sync_dir  "$FH/tracks/_audit"  "$BE/tracks-audit"
+sync_dir  "$MEM"               "$BE/memory"
+sync_file "$FH/CLAUDE.local.md" "$BE/hub-owner"
 
 cd "$BE"
 
@@ -65,7 +78,7 @@ if [ "$TOTAL" -eq 0 ]; then
 fi
 
 # Commit in fh-be
-git add tracks-meta/ tracks-audit/ memory/ 2>/dev/null || git add -A
+git add tracks-meta/ tracks-audit/ memory/ hub-owner/ 2>/dev/null || git add -A
 if git diff --cached --quiet; then
   log "nothing new to commit in fh-be"
   maybe_push

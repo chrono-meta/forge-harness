@@ -291,7 +291,7 @@ harvest-loop Step 0-b uses this file as its source — relying on LLM memory aft
 Closing phrase detected ("wrap up", "done", "good work", "end session", etc.)
   → ① Check git diff + unpushed commits (status snapshot)
   → ② If FH assets changed: harvest-loop
-  → ③ fh-be sync — scripts/sync-to-be.sh (rsync fallback if throttled)
+  → ③ Sync local/gitignored session state to your durable companion store, if you keep one
   → ④ Memory hygiene — update stale entries + record new session findings
   → ⑤ Card update ← ABSOLUTE LAST: must capture ①–④ outcomes
   → ⑥ Commit card + push
@@ -306,12 +306,7 @@ Never skip ⑤ because "the card was just updated" — check for delta first.
 
 Card update is NOT a sub-step of harvest-loop — even if harvest-loop is skipped, card update must run.
 
-**Agent View pre-read (mandatory when session ran in Agent View / worktree / background job)**: Before writing the card, read fh-be handoff files to recover sub-agent completions that may not be in main session context:
-```
-ls fh-be/handoff/session_card_delta_{YYYY-MM-DD}.md   → read if exists
-ls fh-be/handoff/NEXT_ACTION_{YYYY-MM-DD}_*.md        → read all, note ACTIVE items
-```
-Skipping this step in Agent View is the root cause of "card created with stale content" bugs — the main context does not automatically see worktree-completed items.
+**Agent View pre-read (mandatory when session ran in Agent View / worktree / background job)**: Before writing the card, read your companion store's handoff files (if you keep one) to recover sub-agent completions that may not be in main session context. Skipping this step in Agent View is the root cause of "card created with stale content" bugs — the main context does not automatically see worktree-completed items.
 
 **Card update obligation** (independent obligation — regardless of harvest-loop completion): Update `reference_next_session_starter.md`.  
 ① **Agent View pre-read** (see above) → ② Step 0-b cross-check generates removal list → ③ Remove completed items → ④ Add new priorities → ⑤ Fix stale paths/versions → ⑥ Overwrite → ⑦ Output "BEFORE N items → AFTER M items" diff.  
