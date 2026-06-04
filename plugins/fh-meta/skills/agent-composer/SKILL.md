@@ -212,6 +212,18 @@ If 🚨 items exist, insert before the standard Y/E/N in Step 3:
 
 > **Detail**: See `SKILL_detail.md §Worktree-Isolation` — Step 3.1 parallel proposal mode with git worktree isolation — read when 2+ agents write to overlapping files.
 
+### Step 3-runtime. Dispatch Runtime Selection
+
+Use the runtime available in the current session:
+
+| Runtime | Dispatch mechanism |
+|---|---|
+| Claude Code | `Agent(...)` for agents, slash/skill invocation for skills |
+| Codex-primary | `FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run --agent {agent}` or `--skill {skill}` |
+| Generic shell | `FH_BACKEND=auto npx --package @chrono-meta/fh-gate fh-run ...` |
+
+When using `fh-run`, pass each agent's Context Card through `--prompt` and pass target files with repeated `--file` arguments. The fan-in obligation is unchanged: collect each adapter output, then synthesize one integrated report before proceeding to the next wave.
+
 ### Step 3-a. Context Card Injection (required for 2+ parallel agents)
 
 Sub-agents are spawned in isolation — they cannot see the live conversation. Inject a Context Card into each agent prompt before dispatch to prevent context blindness (duplicate work, stale direction, missing constraints).

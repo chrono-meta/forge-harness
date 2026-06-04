@@ -9,7 +9,7 @@ tags: [integration-contract, governance, opencode, hermes, openhuman, bridge-lay
 
 ## Status
 
-**v1.0 — Binary available.** `scripts/fh-gate.sh` executes governance review end-to-end via `claude --print`.
+**v1.2 — Binary available.** `scripts/fh-gate.sh` executes governance review end-to-end via a selectable backend: `claude --print` or `codex exec`.
 CI-ready: machine-parseable verdict + exit codes (0=PASS / 1=PENDING / 2=BLOCKED / 3=ESCALATE / 10=harness error).
 Backward-compatible: `FH_DRY_RUN=1` restores prompt-only (v0.1) behavior.
 
@@ -45,9 +45,11 @@ Caller reads verdict, decides: merge / hold / escalate
 
 | Input | Form | Description |
 |---|---|---|
-| `FH_DIFF_PATH` | file path | Pre-generated diff file (skips Step 1 if provided) |
+| `FH_DIFF_PATH` | file path | Pre-generated diff file included as additional caller context |
 | `FH_TASK_DESCRIPTION` | string | What the caller was trying to accomplish (context for adversarial pass) |
 | `FH_SECURITY_LENS` | `on` or `off` (default `off`) | Force security-adjacent focus in steel-quench |
+| `FH_BACKEND` | `claude`, `codex`, or `auto` (default `claude`) | Runtime backend. `auto` prefers Codex if installed, otherwise Claude |
+| `FH_MODEL` | model id | Overrides backend default (`claude-sonnet-4-6` for Claude, `gpt-5.5` for Codex) |
 
 ### Capture pattern (caller's responsibility)
 
@@ -158,7 +160,7 @@ Steps:
 
 set -euo pipefail
 
-FH_TARGET_FILES="${1:-$(git diff main..HEAD --name-only | tr '\n' ' ')}"
+FH_TARGET_FILES="${FH_TARGET_FILES:-${1:-$(git diff main..HEAD --name-only)}}"
 FH_GATE_LEVEL="${2:-quick}"
 FH_CALLER="${3:-unknown}"
 
@@ -176,6 +178,30 @@ EOF
 
 Usage: `./scripts/fh-gate.sh "src/permission/arity.ts" quick opencode`
 
+### Pattern 2-b — Binary wrapper with runtime backend
+
+```bash
+# Claude backend, backward-compatible default
+npx --package @chrono-meta/fh-gate fh-gate "src/permission/arity.ts" quick ci
+
+# Codex backend as primary reviewer
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-gate "src/permission/arity.ts" quick ci
+
+# Portable wrapper: prefer Codex when installed, otherwise Claude
+FH_BACKEND=auto npx --package @chrono-meta/fh-gate fh-gate "src/permission/arity.ts" quick ci
+```
+
+All backends must produce the same `FH_STATUS` / `FH_GATE_VERDICT` header. Missing or malformed output is a harness failure and must be treated as blocked by the caller.
+
+### Pattern 2-c — Direct skill or agent run
+
+```bash
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run --skill source-grounding-audit --file docs/foo.md
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run --agent fh-commons:quench-challenger --file plugins/fh-meta/skills/foo/SKILL.md
+```
+
+Use `fh-run` when a FH workflow references a Claude Code slash command or `Agent(...)` dispatch and the current orchestrator is Codex.
+
 ### Pattern 3 — Stop hook (automated post-session)
 
 Add to project's `.claude/settings.json`:
@@ -187,7 +213,7 @@ Add to project's `.claude/settings.json`:
       "matcher": "",
       "hooks": [{
         "type": "command",
-        "command": "bash ~/projects/forge-harness/scripts/fh-gate.sh \"$(git diff main..HEAD --name-only | tr '\\n' ' ')\" quick auto >> /tmp/fh-governance-queue.txt"
+        "command": "FH_BACKEND=auto FH_TARGET_FILES=\"$(git diff main..HEAD --name-only)\" bash ~/projects/forge-harness/scripts/fh-gate.sh \"\" quick stop-hook >> /tmp/fh-governance-queue.txt"
       }]
     }]
   }
@@ -206,7 +232,7 @@ OpenCode generates code fast. FH governance runs after generation, before review
 
 ```bash
 # After opencode run completes:
-FH_TARGET_FILES=$(git diff main..HEAD --name-only | tr '\n' ' ')
+FH_TARGET_FILES=$(git diff main..HEAD --name-only)
 FH_SECURITY_LENS=on  # OpenCode touches broad surfaces; security lens default on
 FH_GATE_LEVEL=quick
 ```
@@ -257,51 +283,41 @@ jobs:
       - uses: actions/checkout@v4
       - name: FH governance gate
         run: |
-          CHANGED=$(git diff origin/main..HEAD --name-only | tr '\n' ' ')
-          bash scripts/fh-gate.sh "$CHANGED" quick ci
+          FH_TARGET_FILES="$(git diff origin/main..HEAD --name-only)" \
+            bash scripts/fh-gate.sh "" quick ci
 ```
 
 ---
 
 ## Record Specification
 
-Every governance pass writes a record entry:
+Every binary governance pass writes a compact record entry for calibration and audit indexing. The complete findings block remains in stdout and should be captured by the caller or CI artifact when full detail is required.
 
 ```yaml
 # tracks/_meta/governance_log_YYYY-MM-DD.yaml
 - timestamp: 2026-05-31T12:00:00Z
   caller: opencode
+  backend: codex
+  model: gpt-5.5
   gate_level: quick
-  target_files:
+  verdict: BLOCKED
+  findings_total: 3
+  findings_a: 2
+  findings_b: 1
+  files:
     - packages/opencode/src/permission/arity.ts
-  verdict: PENDING
-  findings:
-    - grade: A
-      location: "prefix() lines 1-9"
-      title: "Short-token overflow"
-    - grade: A
-      location: "ARITY table lines 24-161"
-      title: "npx/opencode/claude absent"
-    - grade: B
-      location: "ARITY table + generation comment"
-      title: "No maintenance protocol"
-  calibration:
-    predicted_findings: 2
-    actual_findings: 3
-    delta: +1
 ```
 
-Record path is included in every verdict output as `FH_RECORD_PATH`. This feeds `harvest-loop` calibration.
+Record path is included in every verdict output as `FH_RECORD_PATH`. This feeds `harvest-loop` calibration; full finding text should be retained from stdout when needed.
 
 ---
 
-## What This Contract Does NOT Specify (Bridge Layer v1.0)
+## What This Contract Does NOT Specify (Bridge Layer)
 
-The following require the bridge layer and are out of scope for v0.1:
+The following require a bridge/runtime layer beyond the file-based gate:
 
 | Feature | Why deferred |
 |---|---|
-| REST API or webhook | Would require a server process — FH is file-based |
 | REST API or webhook | Would require a server process — FH is file-based |
 | Streaming verdict updates | Requires runtime; methodology layer is synchronous |
 | Multi-file parallel governance | Possible via agent dispatch today; not formalized here |
@@ -318,6 +334,7 @@ The bridge layer (v1.0) will implement these. This contract is the specification
 | v0.1 | 2026-05-31 | Initial specification. Bash invocation patterns + structured verdict format. Empirical basis: arity.ts controlled trial. |
 | v1.0 | 2026-06-01 | Binary available as `@chrono-meta/fh-gate` on npm. JS wrapper + fh-gate.sh CI-ready binary. |
 | v1.1 | 2026-06-03 | Large-scale harness improvements. Banner update. Version alignment. |
+| v1.2 | 2026-06-04 | Selectable Claude/Codex backend, `fh-run`/`fh-goal` runtime adapters, newline-preserving `FH_TARGET_FILES`, and implemented task/diff/security-lens inputs. |
 
 ---
 

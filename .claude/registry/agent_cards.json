@@ -1,9 +1,9 @@
 {
   "version": "1.0",
   "generated": "2026-06-02",
-  "source": "derived from AGENTS.md (Agent Registry + Tool restrictions tables) and .claude/agents/*.md frontmatter",
-  "convention": "A2A Agent Card pattern — machine-readable capability discovery, count-synced to .claude/agents/",
-  "agent_count": 6,
+  "source": "derived from AGENTS.md (Agent Registry + Tool restrictions tables) and tracked agent files",
+  "convention": "A2A Agent Card pattern — machine-readable capability discovery, count-synced to .claude/agents/ plus plugin agents/",
+  "agent_count": 5,
   "agents": [
     {
       "id": "challenger",
@@ -15,7 +15,7 @@
     },
     {
       "id": "fact-checker",
-      "file": ".claude/agents/fact-checker.md",
+      "file": "plugins/fh-meta/agents/fact-checker.md",
       "role": "Pre-recommendation deduplication — greps hub assets for existing skills/agents/patterns before a new recommendation; catches stale facts and duplicate work",
       "allowed_tools": ["Read", "Grep", "Glob"],
       "invoked_by": ["main-agent-before-new-asset"],
@@ -23,7 +23,7 @@
     },
     {
       "id": "hub-persona-auditor",
-      "file": ".claude/agents/hub-persona-auditor.md",
+      "file": "plugins/fh-meta/agents/hub-persona-auditor.md",
       "role": "Pre-publication audit of external-facing assets — 3+ persona simulation, 4-axis review (resonance/confusion/resistance/supplement), 3-tier revision proposals",
       "allowed_tools": ["Read", "Grep", "Glob"],
       "invoked_by": ["hub-cc-pr-reviewer", "sim-conductor", "direct"],
@@ -31,23 +31,15 @@
     },
     {
       "id": "persona-innovator",
-      "file": ".claude/agents/persona-innovator.md",
+      "file": "plugins/fh-meta/agents/persona-innovator.md",
       "role": "Naming gap detection + frame proposals + external frontier absorption signals",
       "allowed_tools": ["Read", "Grep", "Glob", "WebSearch", "WebFetch"],
       "invoked_by": ["sim-conductor", "harvest-loop", "direct"],
       "writes": false
     },
     {
-      "id": "plan",
-      "file": ".claude/agents/plan.md",
-      "role": "Read-only design agent — analyzes files, maps impact scope, and plans before implementation",
-      "allowed_tools": ["Read", "Bash", "Glob", "Grep"],
-      "invoked_by": ["direct-before-edit-write"],
-      "writes": false
-    },
-    {
       "id": "quench-challenger",
-      "file": ".claude/agents/quench-challenger.md",
+      "file": "plugins/fh-commons/agents/quench-challenger.md",
       "role": "Steel-quench dedicated adversary — 3-DNA synthesis of Devil + Innovator + Prescriber; every attack paired with a concrete fix direction",
       "allowed_tools": ["Read", "Grep", "Glob"],
       "invoked_by": ["steel-quench", "install-doctor", "marketplace-gate"],

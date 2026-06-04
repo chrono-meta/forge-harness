@@ -394,10 +394,10 @@ if [ -n "$agents_changed" ]; then
   echo "Agent files: $actual_agents | README mentions: $readme_agents"
   if [ -f .claude/registry/agent_cards.json ]; then
     cards_count=$(grep -oE '"agent_count":[[:space:]]*[0-9]+' .claude/registry/agent_cards.json | grep -oE '[0-9]+')
-    canonical_agents=$(find .claude/agents -maxdepth 1 -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+    canonical_agents=$(find .claude/agents plugins/fh-meta/agents plugins/fh-commons/agents -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
     [ "$cards_count" = "$canonical_agents" ] \
-      && echo "OK: agent_cards.json count ($cards_count) matches .claude/agents/" \
-      || echo "DRIFT: agent_cards.json says $cards_count but .claude/agents/ has $canonical_agents — regenerate registry"
+      && echo "OK: agent_cards.json count ($cards_count) matches tracked agent files" \
+      || echo "DRIFT: agent_cards.json says $cards_count but tracked agent files total $canonical_agents — regenerate registry"
   fi
 fi
 ```

@@ -19,18 +19,17 @@ CLAUDE.md governs *how* the session runs. AGENTS.md defines *what each agent doe
 
 ## Agent Registry
 
-forge-harness ships 6 agents in `.claude/agents/`. Five serve general harness operations; one (`quench-challenger`) is steel-quench-dedicated.
+forge-harness ships 5 tracked agents across `.claude/agents/` and plugin `agents/` directories. Four serve general harness operations; one (`quench-challenger`) is steel-quench-dedicated.
 
 | Agent | File | Role | Invoked by |
 |---|---|---|---|
 | `challenger` | `.claude/agents/challenger.md` | Frontier-grade adversarial evaluator — adapts attack vectors to artifact type, enforces evidence citation, models its own information asymmetry | `steel-quench`, `harvest-loop`, `sim-conductor`, or direct dispatch |
-| `fact-checker` | `.claude/agents/fact-checker.md` | Pre-recommendation deduplication — greps hub assets for existing skills/agents/patterns before main agent commits to a new recommendation; catches stale facts and duplicate work | Main agent before any new asset creation or recommendation |
-| `hub-persona-auditor` | `.claude/agents/hub-persona-auditor.md` | Pre-publication audit of external-facing assets — 3+ persona simulation, 4-axis review (resonance/confusion/resistance/supplement), 3-tier revision proposals | `hub-cc-pr-reviewer`, `sim-conductor`, or direct dispatch |
-| `quench-challenger` | `.claude/agents/quench-challenger.md` | Steel-quench dedicated adversary — 3-DNA synthesis of Devil + Innovator + Prescriber; every attack paired with a concrete fix direction | `steel-quench` Wave 1 (primary), `install-doctor`, `marketplace-gate` |
-| `persona-innovator` | `.claude/agents/persona-innovator.md` | Naming gap detection + frame proposals + external frontier absorption signals | `sim-conductor` Area A, `harvest-loop`, or direct dispatch |
-| `plan` | `.claude/agents/plan.md` | Read-only design agent — analyzes files, maps impact scope, and plans before implementation | Direct dispatch before any Edit/Write session |
+| `fact-checker` | `plugins/fh-meta/agents/fact-checker.md` | Pre-recommendation deduplication — greps hub assets for existing skills/agents/patterns before main agent commits to a new recommendation; catches stale facts and duplicate work | Main agent before any new asset creation or recommendation |
+| `hub-persona-auditor` | `plugins/fh-meta/agents/hub-persona-auditor.md` | Pre-publication audit of external-facing assets — 3+ persona simulation, 4-axis review (resonance/confusion/resistance/supplement), 3-tier revision proposals | `hub-cc-pr-reviewer`, `sim-conductor`, or direct dispatch |
+| `quench-challenger` | `plugins/fh-commons/agents/quench-challenger.md` | Steel-quench dedicated adversary — 3-DNA synthesis of Devil + Innovator + Prescriber; every attack paired with a concrete fix direction | `steel-quench` Wave 1 (primary), `install-doctor`, `marketplace-gate` |
+| `persona-innovator` | `plugins/fh-meta/agents/persona-innovator.md` | Naming gap detection + frame proposals + external frontier absorption signals | `sim-conductor` Area A, `harvest-loop`, or direct dispatch |
 
-> Machine-readable mirror: `.claude/registry/agent_cards.json` (canonical capability cards, count-synced — A2A Agent Card pattern).
+> Machine-readable mirror: `.claude/registry/agent_cards.json` (canonical capability cards, count-synced to tracked agent files — A2A Agent Card pattern).
 
 ### Tool restrictions per agent
 
@@ -41,7 +40,6 @@ forge-harness ships 6 agents in `.claude/agents/`. Five serve general harness op
 | `hub-persona-auditor` | Read, Grep, Glob | Audit only — no modification |
 | `quench-challenger` | Read, Grep, Glob | Attack+prescription only — no modification |
 | `persona-innovator` | Read, Grep, Glob, WebSearch, WebFetch | Frontier scanning requires web access |
-| `plan` | Read, Bash, Glob, Grep | Design reconnaissance — no Edit or Write |
 
 ---
 
@@ -104,6 +102,16 @@ cat plugins/fh-meta/skills/steel-quench/SKILL.md
 cat plugins/fh-meta/skills/steel-quench/SKILL.md path/to/artifact.md \
   | codex exec -m gpt-5.5 -
 
+# Or use FH's runtime adapter (preferred for Codex-primary workflows)
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run \
+  --skill steel-quench \
+  --file path/to/artifact.md
+
+# Agent substitution for Claude Code Agent(...) calls
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run \
+  --agent fh-commons:quench-challenger \
+  --file path/to/artifact.md
+
 # Or pipe explicitly
 echo "Apply the following skill to the artifact below." | \
   cat - plugins/fh-meta/skills/{skill}/SKILL.md target.md \
@@ -120,7 +128,9 @@ echo "Apply the following skill to the artifact below." | \
 | **M2 — Partial** | Core workflow runs; CC-native phases require manual adaptation or skip | `steel-quench` (Wave 1–3 ✅; quench-challenger agent = manual), `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop` (git scan phase ✅; PR auto-proposal = manual) |
 | **M3 — CC-only** | Requires CC Stop hook or session-scoped agent dispatch; methodology reference only | `goal-quench` (Phase 3 Stop hook), `hub-cc-pr-reviewer` (CC session context), `install-wizard` (settings.json write) |
 
-**M2 adaptation pattern**: when a step references `Agent(subagent_type=...)` or a slash command, substitute with a direct `codex exec` call reading the sub-agent's SKILL.md — same workflow, different runtime.
+**M2 adaptation pattern**: when a step references `Agent(subagent_type=...)` or a slash command, substitute with `fh-run` (preferred) or a direct `codex exec` call reading the sub-agent's SKILL.md — same workflow, different runtime.
+
+**Goal handling under Codex**: use Codex's native goal/session feature when available. FH's portable role is the quality gate after the goal completes: `FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-gate ...`. `fh-goal` exists only for non-interactive one-shot runs that should be followed automatically by `fh-gate`; it is not a replacement for Codex-native goal control.
 
 ### Beta removal conditions
 
