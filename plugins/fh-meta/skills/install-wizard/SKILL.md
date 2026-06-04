@@ -93,17 +93,17 @@ You're developing FH itself — you need a private companion store
 alongside the public mirror.
 
 Recommended layout:
-  public:  chrono-meta/forge-harness  (methodology, skills, rules)
-  private: {org}/fh-be                (paper drafts, experiment logs,
-                                       raw signals, handoff files)
+  public:  {org}/{hub}        (methodology, skills, rules)
+  private: {org}/{hub}-be     (paper drafts, experiment logs,
+                               raw signals, handoff files)
 
 Quick setup:
-  gh repo create {org}/fh-be --private
-  git clone https://github.com/{org}/fh-be ~/PycharmProjects/fh-be
-  mkdir -p fh-be/{paper-drafts,paper-signals,digests,handoff}
+  gh repo create {org}/{hub}-be --private
+  git clone https://github.com/{org}/{hub}-be ~/path/to/{hub}-be
+  mkdir -p {hub}-be/{paper-drafts,paper-signals,digests,handoff}
 
 Key rule: knowledge/shared/ drafts stay local via .gitignore glob.
-Push snapshots to fh-be explicitly — never auto-push.
+Push snapshots to the companion store explicitly — never auto-push.
 handoff/ files bridge cloud session → local without exposing content.
 ```
 

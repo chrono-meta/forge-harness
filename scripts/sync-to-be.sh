@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
-# sync-to-be.sh — forge-harness local (gitignored) → fh-be private companion
-# Mirrors the irreplaceable private half so that: public repo + fh-be = one complete project.
-#   tracks/_meta  → fh-be/tracks-meta   (session meta, signals, manifests)
-#   tracks/_audit → fh-be/tracks-audit  (sister-asset cross-audit records)
-#   memory/       → fh-be/memory        (durable CC memory — else lost on machine reclaim)
-# Runs from CC Stop hook (throttled to 5 min) or manually.
+# sync-to-be.sh — hub local (gitignored) → private companion store.
+# Mirrors the irreplaceable private half so that: public repo + companion = one complete project.
+#   tracks/_meta    → <companion>/tracks-meta   (session meta, signals, manifests)
+#   tracks/_audit   → <companion>/tracks-audit  (sister-asset cross-audit records)
+#   memory/         → <companion>/memory        (durable CC memory — else lost on machine reclaim)
+#   CLAUDE.local.md → <companion>/hub-owner     (operator-specific wiring)
+# Runs from a CC Stop hook (throttled) or manually.
+# Override paths via env: HUB_DIR, BE_DIR.
 # Usage: bash scripts/sync-to-be.sh [--quiet]
 
 set -euo pipefail
 
-FH="$HOME/PycharmProjects/forge-harness"
-BE="$HOME/PycharmProjects/fh-be"
+FH="${HUB_DIR:-$HOME/PycharmProjects/forge-harness}"
+BE="${BE_DIR:-$HOME/PycharmProjects/fh-be}"
 QUIET="${1:-}"
 
 # CC stores per-project memory under ~/.claude/projects/<path-with-slashes-as-dashes>/memory
