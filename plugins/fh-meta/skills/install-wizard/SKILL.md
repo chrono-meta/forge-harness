@@ -511,7 +511,7 @@ install-wizard — Complete
      https://github.com/chrono-code/forge-harness
 
 🔬 Developing FH itself? Set up a private companion store:
-   gh repo create {org}/fh-be --private   # paper drafts, experiment logs, handoffs
+   gh repo create {org}/{hub}-be --private   # paper drafts, experiment logs, handoffs
    → public mirror holds methodology · private store holds research artifacts
    → field projects (internal harness) can use the same dual-repo pattern
 
