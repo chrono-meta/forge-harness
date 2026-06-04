@@ -3,7 +3,13 @@
 #
 # Blocks git commit when FH assets are staged unless all required axes have passed.
 # Full gate (all 4 axes): SKILL.md · .claude/rules/ · templates/ · CLAUDE.md
-# Lightweight gate (Axis 1+4 only): CATALOG.md · tracks/ changes only
+#                         + substantive knowledge/ · docs/*.md · AGENTS.md
+# Lightweight gate (Axis 1+4 only): CATALOG.md · tracks/ · prose-only carve-out docs
+#
+# Carve-out (knowledge/ · docs/*.md · AGENTS.md): these are FULL gate only when the
+# staged diff is *substantive* — adds a fenced code block (```) or a factual claim
+# token (arXiv: / DOI / http / a versioned dependency like x.y.z). Prose-only edits
+# (typos, rewording, link text) stay lightweight. Mirrors CLAUDE.md §Substantive carve-out.
 #
 # Install (one-time, from repo root):
 #   git config core.hooksPath templates/.git-hooks
@@ -17,11 +23,53 @@ TODAY=$(date +%Y-%m-%d)
 BRANCH_SLUG="${BRANCH//\//_}"
 FAILED=0
 
+# ── Helper: is a carve-out file's staged diff substantive? ────────────────────
+# Substantive ⇔ the *added* lines (git diff +) introduce a fenced code block or a
+# factual-claim token. Detection is mechanical, matching CLAUDE.md exactly.
+diff_is_substantive() {
+  local file="$1"
+  local added
+  added=$(git diff --cached -- "$file" 2>/dev/null | grep -E '^\+' || true)
+  # Fenced code block opened in the additions, OR a citation/version token.
+  if echo "$added" | grep -qE '^\+(```|~~~)'; then
+    return 0
+  fi
+  if echo "$added" | grep -qE 'arXiv:|DOI|https?://|[0-9]+\.[0-9]+\.[0-9]+'; then
+    return 0
+  fi
+  return 1
+}
+
 # ── Classify staged changes ──────────────────────────────────────────────────
-HEAVY=$(git diff --cached --name-only 2>/dev/null \
+STAGED=$(git diff --cached --name-only 2>/dev/null || true)
+
+# Always-heavy by path (any change is a full gate).
+HEAVY=$(echo "$STAGED" \
   | grep -E "(SKILL\.md|\.claude/rules/|templates/|CLAUDE\.md)" || true)
-LIGHT=$(git diff --cached --name-only 2>/dev/null \
+
+# Carve-out candidates: knowledge/ docs, docs/*.md, AGENTS.md. Heavy only if substantive.
+CARVEOUT=$(echo "$STAGED" \
+  | grep -E "(^knowledge/.*\.md$|^docs/.*\.md$|(^|/)AGENTS\.md$)" || true)
+
+# Always-light by path.
+LIGHT=$(echo "$STAGED" \
   | grep -E "(CATALOG\.md|^tracks/)" || true)
+
+# Evaluate carve-out files: substantive ones promote to HEAVY, the rest are LIGHT.
+if [ -n "$CARVEOUT" ]; then
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    if diff_is_substantive "$f"; then
+      HEAVY="$HEAVY"$'\n'"$f (substantive: code/claim added)"
+    else
+      LIGHT="$LIGHT"$'\n'"$f (prose-only)"
+    fi
+  done <<< "$CARVEOUT"
+fi
+
+# Trim leading blank lines that the appends may introduce.
+HEAVY=$(echo "$HEAVY" | grep -vE '^\s*$' || true)
+LIGHT=$(echo "$LIGHT" | grep -vE '^\s*$' || true)
 
 if [ -z "$HEAVY" ] && [ -z "$LIGHT" ]; then
   exit 0  # No FH assets staged

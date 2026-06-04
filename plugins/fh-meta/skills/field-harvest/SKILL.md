@@ -19,10 +19,26 @@ Determine which mode to run based on user context:
 | Condition | Mode | Priority |
 |---|---|:---:|
 | User message contains: "session log", "log today's work", "sync to hub", "sync session" | **Mode B (Session Log)** | 1 (highest) |
-| Both Mode A and B applicable | Run Mode B first, then ask "Also run Mode A pattern harvest?" | 2 |
-| Default or path specified | **Mode A (Pattern Harvest)** | 3 |
+| **Session-end auto-trigger fires** (see below) and field commits exist today | **Mode B (Session Log)** — auto-proposed | 2 |
+| Both Mode A and B applicable | Run Mode B first, then ask "Also run Mode A pattern harvest?" | 3 |
+| Default or path specified | **Mode A (Pattern Harvest)** | 4 |
 
-> **Note**: "wrap up" and "end session" are handled by CLAUDE.md Session Wrap-up chain (harvest-loop). Do not intercept those — Mode B triggers only on explicit session-log intent.
+### Session-End Auto-Trigger (item1 — Mode B)
+
+Mode B should not wait for an explicit "session log" phrase when a session is plainly ending with un-logged field work. **Auto-propose Mode B** (one line, never auto-run) when **all** hold:
+
+1. A session-close signal is detected — the CLAUDE.md Session Wrap-up chain has begun, **or** the user says a closing phrase ("wrap up", "done", "good work", "end session", "that's it for today").
+2. The current cwd is a **mapped field project** (not the FH hub itself — hub close is owned by harvest-loop / the Session Wrap-up chain).
+3. `git log --since="today"` in that field project returns **1+ commits** by the session author that are **not yet logged** to the hub (cross-check via the detection-skip ledger, item2 below).
+
+Proposal format (one line, then wait):
+```
+"Session is wrapping up and {project} has N un-logged commits today. Log them to the hub with Mode B? [y/n]"
+```
+
+**Collision guard (harvest-loop boundary)**: "wrap up" / "end session" in the **FH hub cwd** stay owned by the CLAUDE.md Session Wrap-up chain (which calls harvest-loop). This auto-trigger is **field-cwd only** and is a *proposal*, never an interception — if harvest-loop is already running for this session, do not also propose Mode B (harvest-loop calls field-harvest internally as Step H1). One proposal per session.
+
+> **Note**: harvest-loop remains the owner of hub-side wrap-up. Mode B auto-trigger only covers the gap where a *field* session ends with un-logged commits and the user never typed an explicit session-log phrase.
 
 **Execution order when both applicable**: Run git scan once, reuse results for both modes to avoid duplicate scans.
 
@@ -228,10 +244,45 @@ Determine track subdirectory:
 - Field projects → `tracks/{project-name}/`
 - External collaborations → `tracks/external/{name}/`
 
+## Step 0-B.1. Detection-Skip — Already-Logged Pattern Filter (item2)
+
+Before scanning session work, build a **skip ledger** of commits already recorded in the hub so the same commit is not logged twice across sessions (re-runs, overlapping auto-trigger + explicit invocation, multi-session same-day work).
+
+**Skip rule**: a field commit hash is **skipped** (excluded from Step 1-B scan output) if it already appears in any existing session file under the project's track directory.
+
+<!-- ⏳ PMH-PENDING — bash detection-skip style not yet confirmed. PMH (sister hub) prefers a
+     bash-implemented ledger check; awaiting their reply on the exact form (inline grep vs. a
+     persisted ledger file like tracks/{project}/.logged_commits). The block below is the
+     proposed inline-grep form — DO NOT finalize the bash style until PMH confirms. If PMH
+     lands a persisted-ledger style, replace this grep with a read of that ledger file. -->
+
+Bind the three paths from earlier Mode B steps: `HUB_PATH` = the hub root from Step 0-B, `TRACK` = the track subdirectory chosen above, `FIELD_PATH` = the field project cwd from Step 0.
+
+```bash
+# Proposed (PMH-pending) inline-grep form: collect hashes already present in hub session files,
+# then filter today's field commits against them.
+LOGGED=$(grep -rhoE '\b[0-9a-f]{7,40}\b' "$HUB_PATH/tracks/$TRACK/" 2>/dev/null | sort -u)
+
+git -C "$FIELD_PATH" log --oneline --since="today" --no-merges \
+  --author="$(git -C "$FIELD_PATH" config user.name)" \
+| while read -r hash rest; do
+    # skip if this hash is already logged in any hub session file
+    echo "$LOGGED" | grep -q "^${hash}" && continue
+    echo "$hash $rest"
+  done
+```
+
+If **all** of today's commits are already logged, report `"All N commits today are already logged to the hub — nothing new to record"` and exit (Mode B done, no empty session file written). This is also what the item1 auto-trigger consults to count *un-logged* commits — the auto-trigger must not fire on a session whose commits are all already logged.
+
+**Limitations (honest)**: hash-prefix matching can collide on very short prefixes (use 7+ chars) and only catches commits that were logged with their hash listed in the `## Commits` section (Step 3-B always lists hashes, so hub-generated logs are covered). It does not dedupe *uncommitted* work — that is intentional, uncommitted changes have no stable identity to skip on.
+
 ## Step 1-B. Scan Current Session Work
+
+Use the **detection-skip-filtered** commit set from Step 0-B.1 (already-logged hashes removed), not the raw `git log`:
 
 ```bash
 cd <field-project-path>
+# raw scan — then pass through the Step 0-B.1 skip ledger before use
 git log --oneline --since="today" --no-merges --author="$(git config user.name)"
 git status --short  # uncommitted changes
 ```
@@ -314,7 +365,8 @@ All stages Step 0~4 complete
 **Mode B (Session Log)**:
 ```
 All Steps 0-B ~ 5-B executed
-+ Session markdown file generated from git log
++ Step 0-B.1 detection-skip ledger applied (already-logged commits filtered)
++ Session markdown file generated from git log  (or "all commits already logged" exit)
 + Hub commit created (no auto-push)
 + Confirmation output with push offer
 ```

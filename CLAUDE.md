@@ -125,7 +125,7 @@ Skills without a Done When definition automatically qualify as harness-doctor L2
 
 ## FH Improvement 4-Axis Auto-Gate (Self-Verification Orchestrator)
 
-**Whenever the AI modifies FH assets** (SKILL.md · `.claude/rules/*.md` · `templates/` · `CLAUDE.md` · substantive `knowledge/` docs — see Substantive carve-out below),
+**Whenever the AI modifies FH assets** (SKILL.md · `.claude/rules/*.md` · `templates/` · `CLAUDE.md` · substantive `knowledge/` docs · substantive `docs/*.md` · `AGENTS.md` — see Substantive carve-out below),
 the 4-axis verification chain runs **automatically before the first commit** of that session.
 No user request is needed — this is a mandatory autonomous step, not a proposal.
 
@@ -143,7 +143,7 @@ FH asset modified → Axis 1 (regression_guard.sh --pr {BRANCH})
 
 **Lightweight exception** (Axis 1 + 4 only, skip Axes 2–3): Sessions where **zero SKILL.md / rules / templates files changed** (e.g., CATALOG.md entry, tracks/ update). The hook detects this automatically — no Axes 2+3 marker required for light-only commits. Judgment is file-based, not subjective.
 
-**Substantive `knowledge/` carve-out** (Axes 2–3 DO run, despite knowledge/ not being SKILL/rules/templates): a `knowledge/` doc change is **not** light if its diff adds a fenced code block (```` ``` ````) or a citation (`arXiv:` / `DOI` / `http`). Executable patterns and factual claims need phantom-detection + adversarial review *wherever they live* — this closes the gap where a substantive knowledge doc (e.g. an Implementation-Patterns section with runnable commands) slips through as "light." Prose-only knowledge edits (typos, rewording, link fixes) stay light. Detection is mechanical: `git diff` adds a ```` ``` ```` fence or a citation token → run Axes 2–3.
+**Substantive carve-out — `knowledge/` · `docs/*.md` · `AGENTS.md`** (Axes 2–3 DO run, despite these not being SKILL/rules/templates): a change to any of these is **not** light if its diff adds a fenced code block (```` ``` ````) or a citation/version claim (`arXiv:` / `DOI` / `http` / a versioned dependency like `x.y.z`). Executable patterns and factual claims need phantom-detection + adversarial review *wherever they live* — `knowledge/` Implementation-Patterns sections carry runnable commands, `docs/` holds published guides, and `AGENTS.md` is the Codex-user entry point, so a phantom skill name or wrong version there is an external-facing error the gate must catch. Prose-only edits (typos, rewording, link fixes) stay light. Detection is mechanical: `git diff` adds a ```` ``` ```` fence or a citation token → run Axes 2–3.
 
 **Unavailable axis**: If steel-quench or source-grounding-audit are not installed, note `Axis N: skipped (skill unavailable)` and proceed. Axis 1 PASS alone is sufficient to unblock a PR when Axes 2–3 are unavailable. Axis 4 (edit-manifest): if the skill is not installed, substitute a manual one-line prediction appended to `tracks/_meta/edit_manifest.yaml` — the record is what matters, not the skill.
 
@@ -181,6 +181,7 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "check install", "verify setup", "confirm install", "install-doctor" | `/install-doctor` |
 | "where does this go", "asset location", "hub vs project", "placement" | `/asset-placement-gate` |
 | "add to marketplace", "OK to publish", "pre-publish check" | `/marketplace-gate` |
+| "did I leak anything", "public surface audit", "private token scan", "is my split clean", "check tracked files for private tokens" | `/public-surface-audit` |
 | "look at this again", "is this right", "counterargument", "re-validate" | `/verify-bidirectional` |
 | "MCP failing", "tool keeps erroring", "circuit-breaker", "same error looping" | `/mcp-circuit-breaker` |
 | "token budget", "how expensive", "estimate tokens", "will this cost a lot" | `/token-budget-gate` |

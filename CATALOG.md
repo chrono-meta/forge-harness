@@ -8,6 +8,24 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-04 | forge-harness | #skill, #public-private-split, #leak-prevention, #composability-gate
+**File:** plugins/fh-meta/skills/public-surface-audit/SKILL.md
+New meta-skill: scans git-tracked files for operator-private tokens (real username, absolute home paths, companion-store name, company asset names) that belong only in gitignored files. Closes the surface-sweep gap from the Gap-1 public/private split. Dogfoods its own rule — patterns live in a gitignored source, SKILL.md carries only placeholders.
+- Decision: tracked-only scan (git ls-files); configurable pattern table + tight allowlist; severity HIGH/MED/LOW.
+- Open: skill-count drift across plugin.json / local_fh_context (separate cleanup).
+
+### 2026-06-04 | forge-harness | #issue-69, #field-harvest, #mode-b, #detection-skip
+**File:** plugins/fh-meta/skills/field-harvest/SKILL.md
+Mode B extension (Proposal A): session-end auto-proposal for un-logged field-cwd commits (item1), detection-skip for already-logged commits (item2), templates/ hub-link footer (item6).
+- Decision: auto-trigger is proposal-only (no auto-run); harvest-loop keeps hub-cwd wrap-up ownership (collision guard).
+- Open: item2 bash detection-skip style pending PMH reply (inline-grep vs persisted-ledger).
+
+### 2026-06-04 | forge-harness | #4-axis-gate, #pre-commit-hook, #docs-scope
+**File:** templates/.git-hooks/pre-commit
+4-axis gate scope extension: docs/*.md + AGENTS.md added to the substantive carve-out (Axes 2-3 when diff adds fence/citation/version). Also implemented the previously-documented-but-missing knowledge/ carve-out in the hook. Gate hook activated (core.hooksPath → templates/.git-hooks; was physically inactive).
+- Decision: path-regex carve-out bucket + diff_is_substantive() helper.
+- Open: none.
+
 ### 2026-06-03 | forge-harness | #goal-quench, #native-validation, #calibration, #stop-hook
 **File:** tracks/_meta/goal_quench_2026-06-03.md
 Run #1 native goal-quench validation (core mode): Stop hook `.active` → `.pending` confirmed working. pipeline-conductor --quick CLEAN (Step 3 ESCALATE resolved via option(a) inline fix).
