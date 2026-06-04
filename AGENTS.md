@@ -126,10 +126,12 @@ echo "Apply the following skill to the artifact below." | \
 
 | Condition | Status |
 |---|---|
-| 5+ externally validated M1 skill runs (not FH author) | ⬜ pending |
-| Known limitation list published (`docs/codex-compat.md`) | ⬜ pending |
-| At least 1 external Codex user confirms methodology reproduces | ⬜ pending |
+| Known limitation list published (`docs/codex-compat.md`) | ✅ done (2026-06-04) |
+| 5+ externally validated M1 skill runs (not FH author) | ⬜ pending — needs external users |
+| At least 1 external Codex user confirms methodology reproduces | ⬜ pending — needs external users |
 | README badge updated (`Codex-compatible` without `beta`) | ⬜ blocked on above |
+
+**Author M1 validation (2026-06-04, internal — does not satisfy the external conditions above):** `source-grounding-audit` (4/4 on a phantom-seeded fixture) and `asset-placement-gate` (correct Drop routing on a duplicate-skill proposal) ran end-to-end via `codex exec -m gpt-5.5 -` with no CC-native dependency, confirming the M1 tier assignments. Limitations observed (CC-native hook noise, no token accounting, etc.) are documented in `docs/codex-compat.md`.
 
 Tracking: open an issue at `chrono-meta/forge-harness` with label `codex-validation` to report a validated run.
 
