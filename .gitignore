@@ -14,6 +14,10 @@
 CLAUDE.local.md
 context/
 
+# public-surface-audit pattern source — operator-private token patterns (real username, employer, store).
+# The skill reads this file; it must never be public (it literally lists the private tokens to hunt for).
+.claude/rules/.public-surface-patterns
+
 # Paper — PDF regenerated from HTML; canonical version on Zenodo/arXiv
 paper/*.pdf
 
