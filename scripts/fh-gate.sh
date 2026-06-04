@@ -329,15 +329,9 @@ if [[ "$FIRST_OUTPUT_LINE" != "FH_STATUS: SUCCESS" ]]; then
   exit $EXIT_HARNESS_ERROR
 fi
 
-FH_STATUS="SUCCESS"
+# Harness-failure guard is already enforced above: the first non-empty output line
+# must be "FH_STATUS: SUCCESS" (see check at top of this block) or we exit HARNESS_ERROR.
 VERDICT=$(grep -m 1 "^FH_GATE_VERDICT:" "$PARSE_FILE" 2>/dev/null | awk '{print $2}' | tr -d '[:space:]' || true)
-
-# Harness failure guard (fail-safe: missing status → BLOCKED)
-if [[ "$FH_STATUS" != "SUCCESS" ]]; then
-  echo "ERROR: FH_STATUS=${FH_STATUS:-MISSING} — harness failure (fail-safe: BLOCKED)" >&2
-  cat "$OUTPUT_FILE" >&2
-  exit $EXIT_HARNESS_ERROR
-fi
 
 # Emit structured output to stdout
 cat "$PARSE_FILE"
@@ -368,7 +362,7 @@ case "$VERDICT" in
   BLOCKED)  echo "→ verdict: BLOCKED" >&2;  exit $EXIT_BLOCKED ;;
   ESCALATE) echo "→ verdict: ESCALATE" >&2; exit $EXIT_ESCALATE ;;
   *)
-    echo "ERROR: unrecognized verdict '${VERDICT:-EMPTY}' — fail-safe BLOCKED" >&2
+    echo "ERROR: unrecognized verdict '${VERDICT:-EMPTY}' — harness error, failing safe (commit not allowed)" >&2
     exit $EXIT_HARNESS_ERROR
     ;;
 esac

@@ -118,7 +118,7 @@ Full spec: [`fh_integration_contract.md`](knowledge/shared/harness-core/fh_integ
 
 ---
 
-## 35 skill files, 5 agents
+## 33 skills, 4 agents
 
 <details>
 <summary>Full asset activation check</summary>
