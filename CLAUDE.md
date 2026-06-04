@@ -289,11 +289,21 @@ harvest-loop Step 0-b uses this file as its source — relying on LLM memory aft
 **Session close chaining (automatic sequence — not skippable)**:
 ```
 Closing phrase detected ("wrap up", "done", "good work", "end session", etc.)
-  → ① Check git diff
-  → ② If diff exists, run harvest-loop
-  → ③ Card update — independent obligation regardless of whether harvest-loop ran
-  → ④ Check unpushed commits → propose "push?"
+  → ① Check git diff + unpushed commits (status snapshot)
+  → ② If FH assets changed: harvest-loop
+  → ③ fh-be sync — scripts/sync-to-be.sh (rsync fallback if throttled)
+  → ④ Memory hygiene — update stale entries + record new session findings
+  → ⑤ Card update ← ABSOLUTE LAST: must capture ①–④ outcomes
+  → ⑥ Commit card + push
 ```
+**Card-last guard**: ①–④ must ALL complete before ⑤ runs. Any new information produced
+during ①–④ (new commits, model changes, new findings) feeds INTO ⑤ — card is never
+written mid-sequence and then left open for more work to accumulate after it.
+
+**Mid-session card writes are drafts**: If a task (e.g., a calibration run) internally updates
+the card, that is a draft. The close chain always re-runs ⑤ to capture post-draft activities.
+Never skip ⑤ because "the card was just updated" — check for delta first.
+
 Card update is NOT a sub-step of harvest-loop — even if harvest-loop is skipped, card update must run.
 
 **Agent View pre-read (mandatory when session ran in Agent View / worktree / background job)**: Before writing the card, read fh-be handoff files to recover sub-agent completions that may not be in main session context:
