@@ -12,21 +12,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check for internal vocabulary residue
+      - name: Check for operator-private token residue
         run: |
-          echo "=== Scanning for internal vocabulary (fh-meta, fh-commons, [redacted-org], [redacted-system], [redacted-system]) ==="
-          FOUND=$(grep -r \
-            -e "fh-meta" -e "fh-commons" \
-            -e "[redacted-org]" -e "[redacted-system]" -e "[redacted-system]" \
+          echo "=== Scanning for generic operator-private patterns ==="
+          # Named internal-vocabulary terms (employer / product / sister-hub names) are
+          # deliberately NOT listed here — naming them in this public workflow would itself
+          # leak them (the exact flaw this check existed to prevent). That role moved to the
+          # local pre-commit skill /public-surface-audit, which sources its term list from a
+          # gitignored file (.claude/rules/.public-surface-patterns). CI keeps only generic,
+          # name-free patterns that are safe to appear on the public surface.
+          FOUND=$(grep -rIE \
+            -e "/Users/[a-z0-9_-]+/" \
             --include="*.md" --include="*.json" --include="*.zsh" --include="*.sh" \
             --exclude-dir=".git" \
-            . 2>/dev/null | grep -v "^Binary" || true)
+            . 2>/dev/null || true)
           if [ -n "$FOUND" ]; then
-            echo "FAIL: Internal vocabulary found:"
+            echo "FAIL: operator-private token residue found (absolute home path):"
             echo "$FOUND"
             exit 1
           fi
-          echo "PASS: No internal vocabulary found"
+          echo "PASS: no generic operator-private residue"
 
       - name: Validate plugin.json required fields
         run: |
