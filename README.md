@@ -11,8 +11,12 @@
 </p>
 
 <p align="center">
-  <b>Fork it. Rename it. Make it yours.</b><br>
-  A persistent knowledge hub that connects all your Claude Code projects —<br>shared skills, accumulated context, and a compounding improvement loop.
+  <b>Forge your Claude Code projects — pass them through, they come out faster.</b><br>
+  A practitioner's meta-harness: it raises each project's <b>floor</b> (harness-ify the setup)<br>and <b>ceiling</b> (accelerate the work), then compounds the gains across your whole portfolio.
+</p>
+
+<p align="center">
+  <i>Fork it. Rename it. Make it yours.</i>
 </p>
 
 <p align="center">
