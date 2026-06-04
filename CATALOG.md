@@ -18,7 +18,7 @@ New meta-skill: scans git-tracked files for operator-private tokens (real userna
 **File:** plugins/fh-meta/skills/field-harvest/SKILL.md
 Mode B extension (Proposal A): session-end auto-proposal for un-logged field-cwd commits (item1), detection-skip for already-logged commits (item2), templates/ hub-link footer (item6).
 - Decision: auto-trigger is proposal-only (no auto-run); harvest-loop keeps hub-cwd wrap-up ownership (collision guard).
-- Open: item2 bash detection-skip style pending PMH reply (inline-grep vs persisted-ledger).
+- Open: item2 bash detection-skip style pending sister-hub reply (inline-grep vs persisted-ledger).
 
 ### 2026-06-04 | forge-harness | #4-axis-gate, #pre-commit-hook, #docs-scope
 **File:** templates/.git-hooks/pre-commit
@@ -43,7 +43,7 @@ Run #2 native goal-quench validation (core mode): added 3 CATALOG entries for to
 ### 2026-06-03 | forge-harness | #goal-quench, #install-wizard, #calibration-schema, #done-when, #skill-evolution
 **File:** plugins/fh-meta/skills/goal-quench/SKILL.md, plugins/fh-meta/skills/install-wizard/SKILL.md
 PR #67: Calibration schema extended with `run_id`, `session_id`, `scope_hint` fields (R10 schema gaps). Phase 1.5 hand-off clarified: "update not re-create" `.active` file to preserve `start_commit`. install-wizard: Done When section added (6-step gate + `--dry-run` variant) — only active skill of 28 missing it (R07 M-tier).
-- Decision: schema fields added prospectively — backfilling retrospective N=10 rows with `mode`/`session_type` is a local fh-be task, not a SKILL.md change
+- Decision: schema fields added prospectively — backfilling retrospective N=10 rows with `mode`/`session_type` is a local companion-store task, not a SKILL.md change
 
 ### 2026-06-03 | forge-harness | #catalog, #goal-quench, #skill-evolution
 **File:** CATALOG.md
@@ -85,13 +85,7 @@ Cross-audited Headroom (Netflix engineer's OSS token-compression tool, vendor-re
 **File:** knowledge/shared/harness-core/harness_frontier_diagnosis_2026-06-02.md
 Frontier digest anchored on FH's 3-layer identity + Core Axis (WebSearch engine; curl blocked, no API key). 2026-06 signal: "Harness Engineering" named 4th AI-engineering paradigm (65% of AI failures = harness defects); A2A Agent Cards + MCP registry standardize agent discovery; AHE thesis — observability is the self-improvement bottleneck.
 - Decision: 6 strengthening candidates mapped per identity (agent-card registry + dispatch overhead budget → ①; harness-defect taxonomy + observability/eval hooks → ②; L1/L2/L3 context hierarchy + compression pass → ③)
-- Open: candidates are proposals only — none implemented yet. Raw signal + processing checklist held in private store (fh-be), not this public repo.
-
-### 2026-06-01 | cross-audit, sidecar, sister-asset | pmh, agent-in-agent, multi-model, verification
-**File:** tracks/_audit/session_2026_06_01_pmh_sidecar_verification.md
-PMH(chrono-code) → FH cross-team 검증 요청(Issue #47) 회신. sidecar-orchestrator 환원 관련 gh copilot Critical 중 FH 소관 2건 검증. (1) multi_model_sidecar_strategy.md 완성도 = 부분 수정 필요(ollama·restricted-network 메시지·경로 어댑터·gh copilot 우선은 환원 측 책임, FH 원문 유지); (2) sidecar 존재 이유 = 검증 완료 — §Mechanism "Not an agent dispatch / stateless"가 agent-in-agent 재귀 공격을 구조적으로 반박 + Experiment 1·2 실증.
-- Decision: FH 원문 유지 + 환원 어댑터는 PMH 보유 (Sister Asset Protocol — clone-and-own 금지)
-- Open: sidecar 문서가 CATALOG 미등록이었던 기록 갭 → 본 커밋으로 보강
+- Open: candidates are proposals only — none implemented yet. Raw signal + processing checklist held in a private companion store, not this public repo.
 
 ### 2026-05-31 | multi-model, sidecar, adversarial, validated | orchestrator-swap, perspective-diversity, cross-cli
 **File:** knowledge/shared/harness-core/multi_model_sidecar_strategy.md

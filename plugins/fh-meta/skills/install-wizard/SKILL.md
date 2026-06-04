@@ -19,7 +19,7 @@ category: Composability Gate
 >
 > **Manual fallback (if needed):**
 > ```bash
-> claude plugin marketplace add https://github.com/chrono-code/forge-harness.git
+> claude plugin marketplace add https://github.com/chrono-meta/forge-harness.git
 > claude plugin install -s user fh-meta@forge-harness
 > ```
 > After install, if `install-wizard` appears in `/skills` list in CC chat, you're ready.
@@ -178,7 +178,7 @@ fi
 ⚠️  FH_DIR not set — install FH first then rerun.
 
   1. Clone FH repo:
-     git clone https://github.com/chrono-code/forge-harness ~/forge-harness
+     git clone https://github.com/chrono-meta/forge-harness ~/forge-harness
 
   2. Set environment variable:
      export FH_DIR=~/forge-harness
@@ -350,7 +350,7 @@ install-wizard — Diagnosis Results ({score}/100)
   [4] Initialize ~/.cc_sentinels/ — project audit tracking
   [5] Install fh-meta plugin — activate all FH skills (if FH plugin MISS)
       AI executes automatically via Bash — no manual terminal input needed:
-        claude plugin marketplace add https://github.com/chrono-code/forge-harness.git
+        claude plugin marketplace add https://github.com/chrono-meta/forge-harness.git
         claude plugin install -s user fh-meta@forge-harness
       CC restart required after completion for skills to appear in /skills list
   [6] Add MCP plugin — activate integrations (if MCP plugin MISS)
@@ -415,7 +415,7 @@ When FH plugin is MISS, execute the following via Bash (no manual input required
 
 ```bash
 # Step A: register marketplace (idempotent — "already on disk" is OK)
-claude plugin marketplace add https://github.com/chrono-code/forge-harness.git 2>&1
+claude plugin marketplace add https://github.com/chrono-meta/forge-harness.git 2>&1
 
 # Step B: install plugin
 claude plugin install -s user fh-meta@forge-harness 2>&1
@@ -508,7 +508,7 @@ install-wizard — Complete
 💡 If this setup helped, consider contributing to FH.
    Pattern discovered → return with /field-harvest
    New skill proposal → PR:
-     https://github.com/chrono-code/forge-harness
+     https://github.com/chrono-meta/forge-harness
 
 🔬 Developing FH itself? Set up a private companion store:
    gh repo create {org}/{hub}-be --private   # paper drafts, experiment logs, handoffs

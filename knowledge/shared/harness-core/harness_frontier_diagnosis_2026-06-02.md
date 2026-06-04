@@ -99,4 +99,4 @@ hierarchical-context remedy (L1 always-on / L2 session / L3 on-demand) + prompt 
 - dasroot.net — *Token Optimization Strategies for Cost-Effective LLM Applications* — https://dasroot.net/posts/2026/04/token-optimization-llm-costs-prompt-engineering/
 
 > Raw collected signal + the improvement-signal processing checklist (working log) are kept in the
-> private companion store (`fh-be`), per the public/private split policy — not committed to this public repo.
+> private companion store, per the public/private split policy — not committed to this public repo.

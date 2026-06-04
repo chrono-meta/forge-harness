@@ -221,7 +221,7 @@ Suggested integration points:
 
 ## Implementation Patterns
 
-**Context**: §1–8 establish *why* sidecar distribution works and its validated patterns. This section adds *executable* implementation guidance reverse-harvested from PMH `sidecar-orchestrator` v1 (2026-06-01), generalized for any environment. These are **reference** patterns for any caller — they do **not** supersede §Scope vs steel-quench Wave 5: for the steel-quench multi-team case specifically, Wave 5 remains the canonical implementation.
+**Context**: §1–8 establish *why* sidecar distribution works and its validated patterns. This section adds *executable* implementation guidance reverse-harvested from a sister-harness `sidecar-orchestrator` (2026-06-01), generalized for any environment. These are **reference** patterns for any caller — they do **not** supersede §Scope vs steel-quench Wave 5: for the steel-quench multi-team case specifically, Wave 5 remains the canonical implementation.
 
 > **CLI-syntax caveat**: Exact sidecar invocation flags differ by CLI and version. The forms below use FH's validated baselines (`gh copilot suggest`, `echo … | gemini`, `npx @openai/codex exec` — see §The capability). Flags such as `--model` are catalog/version-dependent — verify with the CLI's own `--help` before relying on them.
 
@@ -235,7 +235,7 @@ When the primary sidecar path is blocked (network restrictions, API outages, rat
 | **2 (Fallback)** | Corporate AI endpoint | Internal models (if any) | Priority 1 unreachable (503, timeout, quota) |
 | **3 (Last resort)** | Direct CLI (Gemini / Codex) | Public API key | Priorities 1–2 unreachable + external network OK |
 
-**PMH empirical grounding**: some corporate networks block direct LLM-provider APIs but allow GitHub CLI routing → `gh copilot` was the only path to premium models there. Without a fallback tier the workflow blocks entirely.
+**Empirical grounding**: some corporate networks block direct LLM-provider APIs but allow GitHub CLI routing → `gh copilot` was the only path to premium models there. Without a fallback tier the workflow blocks entirely.
 
 ### Executable patterns
 
@@ -306,11 +306,11 @@ Missing any layer = compression risk. (Path conventions adapt per project — se
 
 > For *when to distribute by value tier* (perspective diversity / model-access / token economy), the canonical guidance is §When to distribute above — not repeated here.
 
-### Generalization guidelines (PMH → FH)
+### Generalization guidelines (sister-harness → FH)
 
-1. **Corporate endpoint → generic fallback**: PMH internal gateway → user-configured `.env` endpoint.
+1. **Corporate endpoint → generic fallback**: a sister-harness's internal gateway → user-configured `.env` endpoint.
 2. **Approval mode → consent gate**: prompt the user before a sidecar sends internal code/patterns to an external API.
-3. **Persistence paths → project structure**: PMH `tracks/_meta/`·`memory/`·`CATALOG.md` → adapt to the host project's equivalents.
+3. **Persistence paths → project structure**: the sister-harness's `tracks/_meta/`·`memory/`·`CATALOG.md` → adapt to the host project's equivalents.
 4. **Model names → CLI-agnostic**: replace pinned names (`claude-opus-4.x`, `gpt-5.x`) with `{model-name}` placeholders + "check CLI help for catalog".
 
 ---
@@ -320,5 +320,5 @@ Missing any layer = compression risk. (Path conventions adapt per project — se
 - `README.md §Architecture — 2-layer design` — sidecar note in Automation layer section
 - `AGENTS.md §2-Layer Architecture Context` — sidecar note distinguishing Bash invocation from agent dispatch
 - FH paper (Zenodo DOI: 10.5281/zenodo.20397566, arXiv: submit/7657304) — harness-as-durable-layer thesis
-- PMH `sidecar-orchestrator` SKILL.md (2026-06-01) — gh copilot + corporate endpoint + 3-tier fallback + 3-layer persistence
+- A sister-harness `sidecar-orchestrator` SKILL.md (2026-06-01) — gh copilot + corporate endpoint + 3-tier fallback + 3-layer persistence
 - arXiv:2605.26302 AgingBench — compression aging defense rationale
