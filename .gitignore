@@ -5,6 +5,9 @@
 .claude/scheduled_tasks.lock
 .claude/goal-quench.active
 .claude/goal-quench.pending
+.claude/be_last_sync
+.claude/worktrees/
+.claude-octopus/
 context/
 
 # Paper — PDF regenerated from HTML; canonical version on Zenodo/arXiv
