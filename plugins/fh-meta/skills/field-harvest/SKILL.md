@@ -250,16 +250,15 @@ Before scanning session work, build a **skip ledger** of commits already recorde
 
 **Skip rule**: a field commit hash is **skipped** (excluded from Step 1-B scan output) if it already appears in any existing session file under the project's track directory.
 
-<!-- ⏳ SISTER-PENDING — bash detection-skip style not yet confirmed. The sister hub prefers a
-     bash-implemented ledger check; awaiting their reply on the exact form (inline grep vs. a
-     persisted ledger file like tracks/{project}/.logged_commits). The block below is the
-     proposed inline-grep form — DO NOT finalize the bash style until the sister hub confirms.
-     If a persisted-ledger style lands, replace this grep with a read of that ledger file. -->
+> **Detection-skip style: stateless inline-grep (finalized).** FH uses the inline-grep form below
+> rather than a persisted ledger file (`tracks/{project}/.logged_commits`): it keeps no extra state to
+> sync and is self-correcting — the hub session files *are* the ledger. Adequate at FH's scale; a
+> persisted ledger would only pay off on a very large hub where re-grepping all session files is slow.
 
 Bind the three paths from earlier Mode B steps: `HUB_PATH` = the hub root from Step 0-B, `TRACK` = the track subdirectory chosen above, `FIELD_PATH` = the field project cwd from Step 0.
 
 ```bash
-# Proposed (sister-pending) inline-grep form: collect hashes already present in hub session files,
+# Stateless inline-grep: collect hashes already present in hub session files,
 # then filter today's field commits against them.
 LOGGED=$(grep -rhoE '\b[0-9a-f]{7,40}\b' "$HUB_PATH/tracks/$TRACK/" 2>/dev/null | sort -u)
 
