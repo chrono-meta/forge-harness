@@ -1,6 +1,7 @@
 ---
 name: public-surface-audit
-description: Scans git-tracked (public) files for operator-private tokens that should live only in gitignored files — real usernames, absolute home paths, companion-store names, company asset names. Reports file:line + matched token + severity, so a public/private split stays clean before publish. Triggered by "public surface audit", "did I leak anything", "check tracked files for private tokens", "private token scan", "public-surface-audit".
+description: >-
+  Scans git-tracked (public) files for operator-private tokens that should live only in gitignored files — real usernames, absolute home paths, companion-store names, company asset names. Reports file:line + matched token + severity, so a public/private split stays clean before publish. Triggered by "public surface audit", "did I leak anything", "check tracked files for private tokens", "private token scan", "public-surface-audit".
 user-invocable: true
 allowed-tools: ["Read", "Bash", "Grep", "Glob"]
 model: sonnet
