@@ -13,9 +13,10 @@ Innovator (propose) → Devil (challenge) → Mediator (synthesize) 3-layer core
 The goal is not to pick a winner — it is to **extract salvageable fragments from the losing argument and produce a conditional verdict**.
 Even those who struggle to challenge assumptions can use this structure as a rope to reach better decisions.
 
-> **Role distinction from sim-conductor**
+> **Role distinction from sim-conductor and steel-quench**
 > - sim-conductor: **validates** quality and consistency of a completed asset
-> - deliberation: perspective clash during the design decision process → **synthesis** (upstream of validation)
+> - steel-quench: **adversarially stress-tests** a near-complete artifact (post-build defect surfacing)
+> - deliberation: perspective clash during the **design decision process** → synthesis (upstream of both)
 
 ---
 

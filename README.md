@@ -100,7 +100,7 @@ Full spec: [`fh_integration_contract.md`](knowledge/shared/harness-core/fh_integ
 
 ---
 
-## 36 skills, 5 agents
+## 34 skills, 5 agents
 
 <details>
 <summary>Full asset activation check</summary>
@@ -130,13 +130,26 @@ Full spec: [`fh_integration_contract.md`](knowledge/shared/harness-core/fh_integ
 | `token-budget-gate` *(fh-commons)* | Pre-task token cost estimate | "How expensive is this?" |
 | `mcp-circuit-breaker` *(fh-commons)* | MCP tool failure pattern detection | "MCP keeps failing" |
 | `quench-challenger` *(fh-commons)* | Adversarial pressure-test agent | "Challenge this with a devil" |
-| *(+ 13 more)* | marketplace-gate · contention-layer · context-bridge-dispatch · edit-manifest · fact-checker · goal-quench · hub-persona-auditor · install-doctor · memory-hygiene · persona-innovator · prompt-regression · self-marketing-lint · skill-splitter | |
+| *(+ 11 more)* | marketplace-gate · contention-layer · edit-manifest · fact-checker · goal-quench · hub-persona-auditor · install-doctor · memory-hygiene · persona-innovator · prompt-regression · skill-splitter | |
 
 | Active count | Diagnosis |
 |:---:|---|
 | **28+** | Advanced — chain agent-composer + sim-conductor + steel-quench + pipeline-conductor |
 | **10–27** | Activation stage — gradually enable unchecked assets |
 | **0–9** | Early stage — start with `install-wizard` |
+
+**Find a skill by what you're trying to do:**
+
+| Cluster | Skills |
+|---|---|
+| Verification | `steel-quench` · `source-grounding-audit` · `convergence-loop` · `prompt-regression` · `return-path-gate` |
+| Orchestration | `agent-composer` · `pipeline-conductor` · `goal-quench` · `deliberation` |
+| Diagnosis | `harness-doctor` · `context-doctor` · `install-doctor` · `mcp-circuit-breaker` |
+| Harvesting / Learning | `harvest-loop` · `field-harvest` · `edit-manifest` · `memory-hygiene` |
+| Gate / Guard | `token-budget-gate` · `asset-placement-gate` · `marketplace-gate` |
+| Discovery | `plugin-recommender` · `cross-ecosystem-synergy-detection` · `frontier-digest` · `verify-bidirectional` |
+| Content / Simulation | `sim-conductor` · `apex-review` · `meta-prompt-builder` · `deep-clarify` |
+| Setup | `install-wizard` · `hub-cc-pr-reviewer` · `skill-splitter` |
 
 </details>
 

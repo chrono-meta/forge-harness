@@ -88,6 +88,53 @@ For complex multi-step tasks, run `/agent-composer` first to plan which agents t
 
 ---
 
+## Codex Compatibility (beta)
+
+The methodology layer (`tracks/`, `knowledge/`, `SKILL.md` docs) is Codex-compatible beta. Any AI model can follow skill workflows by reading SKILL.md files directly; the automation layer (hooks, `.claude/agents/`, `/model`) is Claude Code-native and requires manual adaptation.
+
+### Entry point for Codex users
+
+AGENTS.md is your starting point. Navigate from here to skill workflows:
+
+```bash
+# Read a skill's full workflow
+cat plugins/fh-meta/skills/steel-quench/SKILL.md
+
+# Apply via codex exec (validated pattern — codex-cli ≥ 0.135.0)
+cat plugins/fh-meta/skills/steel-quench/SKILL.md path/to/artifact.md \
+  | codex exec -m gpt-5.5 -
+
+# Or pipe explicitly
+echo "Apply the following skill to the artifact below." | \
+  cat - plugins/fh-meta/skills/{skill}/SKILL.md target.md \
+  | codex exec -m gpt-5.5 -
+```
+
+`codex exec -m gpt-5.5 -` reads from stdin in headless mode. `npx @openai/codex` (interactive) is not suitable — it requires TTY.
+
+### Skill compatibility tiers
+
+| Tier | Definition | Examples |
+|---|---|---|
+| **M1 — Full** | All phases run without CC-native dependencies — no Stop hook, no `.claude/agents/` dispatch, no `/model` | `token-budget-gate`, `asset-placement-gate`, `source-grounding-audit`, `deep-clarify`, `deliberation`, `convergence-loop` |
+| **M2 — Partial** | Core workflow runs; CC-native phases require manual adaptation or skip | `steel-quench` (Wave 1–3 ✅; quench-challenger agent = manual), `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop` (git scan phase ✅; PR auto-proposal = manual) |
+| **M3 — CC-only** | Requires CC Stop hook or session-scoped agent dispatch; methodology reference only | `goal-quench` (Phase 3 Stop hook), `hub-cc-pr-reviewer` (CC session context), `install-wizard` (settings.json write) |
+
+**M2 adaptation pattern**: when a step references `Agent(subagent_type=...)` or a slash command, substitute with a direct `codex exec` call reading the sub-agent's SKILL.md — same workflow, different runtime.
+
+### Beta removal conditions
+
+| Condition | Status |
+|---|---|
+| 5+ externally validated M1 skill runs (not FH author) | ⬜ pending |
+| Known limitation list published (`docs/codex-compat.md`) | ⬜ pending |
+| At least 1 external Codex user confirms methodology reproduces | ⬜ pending |
+| README badge updated (`Codex-compatible` without `beta`) | ⬜ blocked on above |
+
+Tracking: open an issue at `chrono-meta/forge-harness` with label `codex-validation` to report a validated run.
+
+---
+
 ## Adding new agents
 
 New agents must pass the **New Skill Creation Pre-Commit Gate** defined in `CLAUDE.md` before committing. Key requirements:

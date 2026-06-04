@@ -13,6 +13,8 @@ model: opus
 
 A designer's anxiety is most dangerous when vague. steel-quench breaks that anxiety into concrete attack angles, defends against them, and closes with residual risks explicitly stated.
 
+> **Scope boundary**: steel-quench stress-tests a **near-complete artifact** (post-build). For pre-build design decisions → `deliberation`. For completed-asset validation → `sim-conductor`.
+
 ## Trigger Phrases
 
 | Phrase | Situation |
