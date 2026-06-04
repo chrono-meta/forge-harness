@@ -1,15 +1,16 @@
 ---
 name: reference-next-session-starter
-description: Next session context — 2026-06-04. goal-quench calibration Runs #5-10 완료 (N=10 전체 완료). AGENTS.md Codex 지원 추가. DACS proposal ready-for-send.
+description: Next session context — 2026-06-04 (세션 마감 후 최종). N=10 완료. opusplan gap 실증. model→claude-opus-4-8. Run #11 예정.
 date: 2026-06-04
-tags: [session-starter, v2-paper, e-baseline, goal-quench, calibration-complete, codex-compat, dacs]
+tags: [session-starter, v2-paper, e-baseline, goal-quench, calibration-complete, codex-compat, dacs, opus-4-8]
 ---
 
 # Next Session Starter — 2026-06-04
 
 ## 현재 상태
 
-- **forge-harness** — `chrono-meta/forge-harness` · main · **push 필요** (Runs #5-10 커밋 후)
+- **forge-harness** — `chrono-meta/forge-harness` · main `0962644` ✅ (push 완료)
+- **CC 모델**: `claude-opus-4-8` (settings.json 변경 완료 — 재시작 후 적용)
 - **스킬**: 30개 fh-meta + 4 fh-commons (README: 34 skills — 정확)
 - **논문 v1.0**: Zenodo 10.5281/zenodo.20397566 ✅ · arXiv submit/7657304 **On Hold** (조치 불필요)
 - **npm**: `@chrono-meta/fh-gate@1.1.0` ✅
@@ -20,6 +21,14 @@ tags: [session-starter, v2-paper, e-baseline, goal-quench, calibration-complete,
 ---
 
 ## ⭐ 다음 세션 최우선
+
+### 0. goal-quench Run #11 — Opus 턴 측정 (세션 시작 즉시)
+
+- **CC 재시작 후 첫 번째 작업**
+- 체크: JSONL에 `claude-opus-4-8` 턴 100% 확인
+- 태스크: 추론 집약 작업 1개 (v2 paper limitations 초안 or E-ablation 해석 권장)
+- 수집: `python3 goal_quench_token_collector.py` → Opus/Sonnet 분리 확인
+- paper signal: `signal_2026-06-04_opusplan-turn-split-gap.md` 검증 데이터로 추가
 
 ### 1. E-ablation 독립세션 replication
 
@@ -63,8 +72,10 @@ gh issue view 3069 --repo tinyhumansai/openhuman
 | goal-quench calibration Run #7 | core/normal, README cluster table, YELLOW, 4.8K (0.4×) ✅ |
 | goal-quench calibration Run #8 | pro/normal, AGENTS.md Codex 지원 설계, YELLOW, 16K (0.89×) ✅ |
 | goal-quench calibration Run #9 | core/normal, DACS proposal + persona-audit, YELLOW, 11.5K (0.82×) ✅ |
-| goal-quench calibration Run #10 | core/wrap-up, 4-axis gate + commit | (이번 런) |
-| N=10 calibration key finding | **Opus plan-mode 턴 = 0** (전체 10런 Sonnet only) — opusplan 기본 설정에서도 인라인 추론은 Sonnet 처리 |
+| goal-quench calibration Run #10 | core/wrap-up, 4-axis gate + commit, 19.5K (1.3×) ✅ |
+| N=10 calibration key finding | **Opus plan-mode 턴 = 0** (전체 10런 Sonnet only) — tool call 포함 턴은 항상 Sonnet |
+| opusplan gap → paper signal | `fh-be/paper-signals/signal_2026-06-04_opusplan-turn-split-gap.md` ✅ |
+| CC 모델 변경 | `opusplan` → `claude-opus-4-8` (settings.json, 재시작 후 적용) ✅ |
 | N=10 calibration key finding | 추정 오류 범위: 0.4× ~ 5.0×. 첫 런(세션 초기화) 가장 높음. 이후 0.4×~0.89× 수렴 |
 
 ## 이전 세션 완료 (2026-06-03 sessions 1-3)
