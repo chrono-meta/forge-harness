@@ -1,39 +1,30 @@
 ---
 name: reference-next-session-starter
-description: Next session context — 2026-06-03 updated (session 2). Stop hook installed (CC new schema), template fixed. Ready: goal-quench native calibration.
-date: 2026-06-03
-tags: [session-starter, v2-paper, e-baseline, goal-quench, native-validation, npm]
+description: Next session context — 2026-06-04. goal-quench calibration Runs #5-10 완료 (N=10 전체 완료). AGENTS.md Codex 지원 추가. DACS proposal ready-for-send.
+date: 2026-06-04
+tags: [session-starter, v2-paper, e-baseline, goal-quench, calibration-complete, codex-compat, dacs]
 ---
 
-# Next Session Starter — 2026-06-03
+# Next Session Starter — 2026-06-04
 
 ## 현재 상태
 
-- **forge-harness** — `chrono-meta/forge-harness` · main `879fb52` ✅ (push 필요)
-- **스킬**: 22개 fh-meta + 4 fh-commons (PRs #61–#68 모두 머지됨)
+- **forge-harness** — `chrono-meta/forge-harness` · main · **push 필요** (Runs #5-10 커밋 후)
+- **스킬**: 30개 fh-meta + 4 fh-commons (README: 34 skills — 정확)
 - **논문 v1.0**: Zenodo 10.5281/zenodo.20397566 ✅ · arXiv submit/7657304 **On Hold** (조치 불필요)
 - **npm**: `@chrono-meta/fh-gate@1.1.0` ✅
 - **cs.SE paper v2**: Draft 1.4 ✅ (`fh-be/paper-drafts/v2_paper_draft_2026-06-02.md`)
-  - §8 Experiment 6 (E-baseline) 추가 · §5.6 cross-tier N=5 완료 · tier-independence claim 정제
-- **E-baseline**: ✅ complete — Semgrep/ESLint/Ruff 0 findings on 5 artifacts (orthogonality confirmed)
 - **E-ablation 독립세션 replication**: ⚠️ L1 한계 해소 미완료 (별도 API 호출 필요)
-- **goal-quench Stop hook**: ✅ `.claude/settings.json` 설치 완료 (CC new matcher+hooks 포맷)
+- **goal-quench calibration**: ✅ **N=10 완료** (Runs #1-4: 2026-06-03, Runs #5-10: 2026-06-04)
 
 ---
 
 ## ⭐ 다음 세션 최우선
 
-### 1. ⚡ goal-quench NATIVE 검증 (CC 재시작 후 즉시)
+### 1. E-ablation 독립세션 replication
 
-> 상세: `fh-be/handoff/NEXT_ACTION_2026-06-03_goal-quench-native-validation.md`
-
-- **Stop hook 설치됨** — CC 재시작 후 바로 캘리브레이션 시작 가능
-- 실제 태스크로 calibration 시리즈 실행 (목표: 10회)
-  1. `/goal-quench` → task 설명 입력 → `.active` 파일 생성 확인
-  2. `/goal <조건>` → 완료 시 Stop hook 발동 → `.pending` 생성 확인
-  3. 다음 응답에서 pipeline-conductor --quick 자동 실행 확인
-  4. `tracks/_meta/goal_quench_2026-06-03.md`에 결과 기록
-- 완료 시: `fh-be/paper-signals/measurement_2026-06-03_goal-quench-proxy-N1.md` PROXY → native 업데이트
+- Condition A/B 동일 세션 오염(L1) 해소 — 별도 API 호출로 재실행
+- 참고: `fh-be/paper-drafts/e_ablation_artifacts_2026-06-02.md`
 
 ### 2. arXiv On Hold 대기
 
@@ -41,18 +32,13 @@ tags: [session-starter, v2-paper, e-baseline, goal-quench, native-validation, np
 - On Hold 해제 → v2 arXiv 제출 → Awesome Lists PR 순서 유지
 - **중복 제출 절대 금지**
 
-### 3. E-ablation 독립세션 replication
+### 3. DACS 저자 컨택 발송
 
-- Condition A/B 동일 세션 오염(L1) 해소 — 별도 API 호출로 재실행
-- cs.SE paper §8 L1 한계 해소용
-- 참고: `fh-be/paper-drafts/e_ablation_artifacts_2026-06-02.md` (아티팩트 목록)
+- 제안서 ready-for-send: `tracks/_audit/proposal_dacs_crosslink_2026-06-02.md`
+- hub-persona-auditor 3-persona×4-axis 완료. 이메일 draft 포함.
+- 발송 전: arXiv On Hold 해제 후 타이밍 조율 권장 (논문 게재 후 시너지)
 
-### 4. Codex 정식 지원 (신규)
-
-- AGENTS.md 진입점 명시 + 스킬별 `codex exec` 호환성 검증
-- 배지 "beta" 제거 조건
-
-### 5. GitHub 이슈 응답 추적
+### 4. GitHub 이슈 응답 추적
 
 ```bash
 gh issue view 30057 --repo anomalyco/opencode
@@ -60,28 +46,37 @@ gh issue view 35709 --repo NousResearch/hermes-agent
 gh issue view 3069 --repo tinyhumansai/openhuman
 ```
 
-### 6. DACS 저자 컨택
+### 5. Codex beta 검증
 
-- 제안서: `tracks/_audit/proposal_dacs_crosslink_2026-06-02.md`
-- hub-persona-auditor 3+페르소나×4축 감사 후 발송 (sister_asset_protocol.md 요건)
+- AGENTS.md에 M1/M2/M3 tier 정의됨 (2026-06-04)
+- beta 제거 조건: M1 스킬 5개 외부 검증 + limitations 문서 (`docs/codex-compat.md`)
+- 다음 단계: codex-validation 이슈 오픈 or 직접 M1 스킬 검증 1회
 
 ---
 
-## 오늘 완료 요약 (2026-06-03 sessions)
+## 오늘 완료 요약 (2026-06-04)
 
 | 항목 | 결과 |
 |---|---|
-| v2 paper Draft 1.4 | N=5 tier comparison + §5.6 cross-tier 완료, §8 E-baseline 추가 ✅ |
-| E-baseline 실험 | Semgrep/ESLint/Ruff 0 findings — orthogonality confirmed ✅ |
-| Cross-session L2/L4 tier comparison | N=5 완료, fh-be 저장 ✅ |
-| goal-quench core/pro/max evolution | PRs #61-64 머지, Step D return-path 클로저 ✅ |
-| Full harness audit+fix sweep | PRs #65-68 머지 (return-path, calibration schema, Done When 등) ✅ |
-| npm @chrono-meta/fh-gate 1.0.3→1.1.0 | publish 완료 ✅ |
-| README 재디자인 + SVG/banner | 519줄→186줄, forge 테마, pillars.svg ✅ |
-| steel-quench + source-grounding-audit | S×1·A×3·Phantom×1 수정 ✅ |
-| goal-quench proxy N=1 측정 | calibration + cross-mode measurement protocol 기록 (fh-be) ✅ |
-| CLAUDE.md 버그픽스 ×2 | Agent View pre-read 강제 + Agent View 기본값 제거 (`5ba4509`) ✅ |
-| goal-quench Stop hook 설치 | CC new schema (matcher+hooks) 포맷으로 settings.json + template 수정 ✅ |
+| goal-quench calibration Run #5 | core/minor, README 36→34, GREEN, 14.9K (5.0×) ✅ |
+| goal-quench calibration Run #6 | core/minor, SKILL.md boundary ×2, GREEN, 13.7K (3.4×) ✅ |
+| goal-quench calibration Run #7 | core/normal, README cluster table, YELLOW, 4.8K (0.4×) ✅ |
+| goal-quench calibration Run #8 | pro/normal, AGENTS.md Codex 지원 설계, YELLOW, 16K (0.89×) ✅ |
+| goal-quench calibration Run #9 | core/normal, DACS proposal + persona-audit, YELLOW, 11.5K (0.82×) ✅ |
+| goal-quench calibration Run #10 | core/wrap-up, 4-axis gate + commit | (이번 런) |
+| N=10 calibration key finding | **Opus plan-mode 턴 = 0** (전체 10런 Sonnet only) — opusplan 기본 설정에서도 인라인 추론은 Sonnet 처리 |
+| N=10 calibration key finding | 추정 오류 범위: 0.4× ~ 5.0×. 첫 런(세션 초기화) 가장 높음. 이후 0.4×~0.89× 수렴 |
+
+## 이전 세션 완료 (2026-06-03 sessions 1-3)
+
+| 항목 | 결과 |
+|---|---|
+| goal-quench calibration Runs #1-4 | core/pro/max 각 모드 측정 완료 ✅ |
+| v2 paper Draft 1.4 | N=5 tier comparison + §5.6 cross-tier 완료 ✅ |
+| E-baseline 실험 | Semgrep/ESLint/Ruff 0 findings ✅ |
+| npm @chrono-meta/fh-gate 1.1.0 | publish 완료 ✅ |
+| scripts/sync-to-be.sh | Stop hook 5분 throttle ✅ |
+| Mode D 정의 정밀화 | modes_and_value.md auto-sync 반영 ✅ |
 
 ---
 
@@ -89,10 +84,8 @@ gh issue view 3069 --repo tinyhumansai/openhuman
 
 - v2 paper: `fh-be/paper-drafts/v2_paper_draft_2026-06-02.md` (Draft 1.4)
 - E-baseline: `fh-be/paper-drafts/e_baseline_results_2026-06-03.md`
-- E-ablation raw data: `fh-be/paper-drafts/e_ablation_condition_a/b_2026-06-02.md`
-- GT: `fh-be/paper-drafts/e_ablation_researcher_gt_2026-06-02.md`
-- goal-quench handoff: `fh-be/handoff/NEXT_ACTION_2026-06-03_goal-quench-native-validation.md`
-- goal-quench proxy 측정: `fh-be/paper-signals/measurement_2026-06-03_goal-quench-proxy-N1.md`
+- calibration (N=10): `tracks/_meta/goal_quench_2026-06-03.md` + `tracks/_meta/goal_quench_2026-06-04.md`
+- token collector: `tracks/_meta/goal_quench_token_collector.py`
+- DACS proposal: `tracks/_audit/proposal_dacs_crosslink_2026-06-02.md` (ready-for-send)
+- Codex compat: `AGENTS.md#codex-compatibility-beta`
 - User is QA engineer (non-coder) — 코드 설명 시 behavioral impact 위주로
-- agent_cards.json: 에이전트 추가/제거 시 재생성 필수 (harness-doctor E7)
-- npm Awesome Lists PR: arXiv On Hold 해제 후 묶어서
