@@ -41,16 +41,34 @@ sync_dir "$FH/tracks/_meta"  "$BE/tracks-meta"
 sync_dir "$FH/tracks/_audit" "$BE/tracks-audit"
 sync_dir "$MEM"              "$BE/memory"
 
+cd "$BE"
+
+# Push any commits ahead of upstream. Offline-safe: never aborts the script,
+# so a failed push just leaves commits queued for the next run to flush.
+maybe_push() {
+  git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1 || {
+    log "no upstream set for fh-be — skipping push"; return 0; }
+  local ahead
+  ahead=$(git rev-list --count '@{u}..' 2>/dev/null || echo 0)
+  [ "$ahead" -gt 0 ] || return 0
+  if git push --quiet 2>/dev/null; then
+    log "fh-be pushed ($ahead commit(s))"
+  else
+    log "push failed (offline?) — $ahead commit(s) held locally, will retry next run"
+  fi
+}
+
 if [ "$TOTAL" -eq 0 ]; then
   log "already up to date"
+  maybe_push   # flush any commits a previous run couldn't push
   exit 0
 fi
 
 # Commit in fh-be
-cd "$BE"
 git add tracks-meta/ tracks-audit/ memory/ 2>/dev/null || git add -A
 if git diff --cached --quiet; then
   log "nothing new to commit in fh-be"
+  maybe_push
   exit 0
 fi
 
@@ -59,3 +77,4 @@ MSG="sync: forge-harness private half → fh-be ($DATE)"
 git commit -m "$MSG" --no-gpg-sign 2>/dev/null || git commit -m "$MSG"
 
 log "fh-be committed"
+maybe_push
