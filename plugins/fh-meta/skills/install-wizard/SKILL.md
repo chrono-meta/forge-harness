@@ -323,7 +323,7 @@ Auto-check the following items based on detected environment. Each item classifi
 | MCP plugin | ~/.claude.json mcpServers contains entry | `python3 -c "import json,os; d=json.load(open(os.path.expanduser('~/.claude.json'))); print(list(d.get('mcpServers',{}).keys()))"` |
 | `deep-insight plugin` | settings.json plugins contains deep-insight | `grep -r "deep-insight" .claude/settings.json 2>/dev/null` |
 | `fh_env_context.jsonc` | `.claude/rules/fh_env_context.jsonc` exists | `ls .claude/rules/fh_env_context.jsonc` |
-| `phantomgate` | **(Python + AI-output projects only)** `phantomgate` present in `requirements.txt` / `pyproject.toml` | `grep "phantomgate" requirements.txt pyproject.toml 2>/dev/null` |
+| `phantom-gate` | **(Python + AI-output projects only)** `phantom-gate` present in `requirements.txt` / `pyproject.toml` | `grep "phantom.gate" requirements.txt pyproject.toml 2>/dev/null` |
 | `Streamlit pattern applied` | (Streamlit projects only, if the pattern pack is present) data_editor empty df branch/async wrapper/CSS numeric variables | CC `knowledge/shared/streamlit_patterns.md` Pattern 1-5 check (skip if file absent) |
 
 **Score calculation**: PASS = 1 point / MISS = 0.5 points / FAIL = 0 points → converted to 100-point scale.
@@ -364,10 +364,9 @@ install-wizard — Diagnosis Results ({score}/100)
       Copy: {FH_DIR}/templates/fh_env_context.jsonc → .claude/rules/fh_env_context.jsonc
       Then manually update with actual values for org name, Jira URL, environment status, etc.
       Effect: Each skill references common environment context → eliminate individual setting duplication
-  [9] Install phantomgate — AI output hallucination detection (Python + AI-output projects only, if MISS)
-      ⏳ HOLD — phantomgate is not yet published to PyPI. Do NOT emit an install command until it is.
-      Planned (once published): pip install phantomgate
-      Usage (post-publish): phantomgate scan output.txt / phantomgate scan . --project
+  [9] Install phantom-gate — AI output hallucination detection (Python + AI-output projects only, if MISS)
+      Run: pip install git+https://github.com/chrono-meta/phantom-gate.git
+      Usage: phantom-gate scan output.txt / phantom-gate scan . --project
       Detectors: M1 (phantom claims) · M2 (self-reference loops) · M3 (unvalidated external-dep claims) · M4 (temporal) · M5 (cross-file version mismatch)
       Skip condition: non-Python project OR no AI-generated output in pipeline
 
