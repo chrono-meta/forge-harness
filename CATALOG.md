@@ -8,6 +8,11 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-05 | _audit | sister-asset, gstack, field-harness, garry-tan
+**File:** tracks/_audit/session_2026_06_05_gstack-sister.md (private mirror: fh-be)
+gstack (garrytan, ~66K stars) sister-asset cross-audit — the field/execution-harness counterpart to FH's meta/governance harness, both running on the Claude Code skill substrate. FH governs / gstack executes (composes, not competes). Bidirectional import (frictionless one-command install, opinionated front door, privacy-first telemetry) / propagate (post-ship governance gate, cross-project knowledge compounding, HITL promotion gate) lists recorded.
+- Decision: public index only — bet evidence (B1·ID·SB) + full audit held in private store; external cross-link proposal to garrytan/gstack gated behind 3+ persona × 4-axis audit.
+
 ### 2026-06-04 | forge-harness | #skill, #public-private-split, #leak-prevention, #composability-gate
 **File:** plugins/fh-meta/skills/public-surface-audit/SKILL.md
 New meta-skill: scans git-tracked files for operator-private tokens (real username, absolute home paths, companion-store name, company asset names) that belong only in gitignored files. Closes the surface-sweep gap from the Gap-1 public/private split. Dogfoods its own rule — patterns live in a gitignored source, SKILL.md carries only placeholders.
