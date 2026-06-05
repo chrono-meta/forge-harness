@@ -64,6 +64,11 @@ claude plugin install -s user fh-meta@forge-harness
 cd ~/projects/{your-project} && claude
 ```
 
+> 🚪 **New here / just want the skills?** Start with the opinionated front door —
+> [`templates/starter_profile.md`](templates/starter_profile.md): one install command, a curated
+> first-five skills, and a zero-install governance gate (`npx … fh-gate`). The other 28 skills wait
+> until you need them.
+
 ---
 
 ## What it is
