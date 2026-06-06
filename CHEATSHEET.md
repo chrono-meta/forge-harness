@@ -300,6 +300,31 @@ Standard `/compact` lets the auto-algorithm decide what to preserve. **Wrap-then
 
 > **context-doctor integration**: saying `"context is getting full"` or `"slow"` → context-doctor will propose this pattern automatically.
 
+#### 6.1 — Disk-handoff: survive even a *forced* auto-compact
+
+Wrap-then-Compact (above) only helps when **you** choose the moment. The dangerous case is the
+**unplanned auto-compact at 100%+** — the harness summarizes on its own and your R&D nuance (the back-and-forth
+that produced a decision) gets dropped. The wrap-summary trick can't save you, because there was no wrap.
+
+The fix is to **stop relying on the conversation surviving at all**. Put the recoverable facts **on disk**
+*before* you compact, so a fresh session reads a file — not the lossy summary:
+
+| Step | Action |
+|---|---|
+| 1. Say **"compact"** (or notice ~80%) | Treat it as a trigger, not just a command |
+| 2. Claude writes a **handoff file** first | A single file with: current status · the *one* next action · constraints to preserve · file paths + commit hashes |
+| 3. Claude confirms `"backup written → <path>"` | Now the facts live on disk, independent of any summary |
+| 4. You run `/compact` (or auto-compact fires) | Even a forced 100% compact can only blur dialogue nuance |
+| 5. Next session lands on the handoff file | Conclusions + next step recovered from disk, not memory |
+
+**Where the handoff lives**: a durable, non-gitignored location a fresh session will actually open —
+a `handoff/NEXT_ACTION_<date>.md` in a companion store (Mode D), **or** for everyone else a note committed
+to the working repo / a PR comment. **Never** a gitignored local file (it's wiped on an ephemeral reclaim).
+
+> **Difference from Lever 6**: Wrap-then-Compact curates *what the summary says*; the disk-handoff makes the
+> facts *not depend on the summary existing at all*. Use both — the handoff is the floor that holds when an
+> auto-compact you didn't ask for fires. Say **"compact"** and Claude does step 2 automatically.
+
 ---
 
 ## 11. New technology introduction pipeline
@@ -365,3 +390,102 @@ Claude agents feature
 | "simulate how to use this in FH" | Immediately enter Step 2 |
 | "scan CC new features" | Step 1 (`--cc-scan`) → Step 2 auto-proposal |
 | "apply simulation results" | Immediately enter Step 3 |
+
+---
+
+## 12. Skills & agents — what each does and what to say
+
+> You don't memorize skill names. **Say the plain-language phrase** and Claude routes to the right skill
+> (the same trigger map lives in `CLAUDE.md`). The `/skill` form is the explicit fallback. Skills are
+> independently runnable — `fh-commons` ones work even without the full hub.
+
+### Verification & grounding — *"is this actually right?"*
+
+| Skill | What it does | Say this |
+|---|---|---|
+| `steel-quench` | All-angle adversarial attack on a design/output, then defense, until zero new blockers | "run the quench", "attack from the root", "shake out the design anxiety" |
+| `phantom-quench` | Back-traces every claim to its declared source; flags **Phantom Claims** (present in the artifact, not in the source). *Old name: `source-grounding-audit`.* | "verify the source", "where did this come from", "grounding audit", "phantom check" |
+| `verify-bidirectional` | Re-checks a decision from the opposite direction + folds your counter-argument into the baseline | "is that right?", "double-check this", "give me the counterargument" |
+| `convergence-loop` *(commons)* | Re-runs a gate until a round adds zero new failures — "truly passed", not "passed once" | "a single pass seems suspicious", "loop until it converges" |
+| `prompt-regression` | After a CLAUDE.md/rule/skill edit, probes for silent behavior regressions vs saved baselines | "did my rule change break anything", "regression-check the harness" |
+| `return-path-gate` | Checks that a skill chain is **closed** (callee's verdict feeds the caller), not fire-and-forget | "is this chain closed", "does the result feed back" |
+
+### Orchestration — *"coordinate the work"*
+
+| Skill | What it does | Say this |
+|---|---|---|
+| `agent-composer` | Reads the work context and decides which agents to dispatch, when, and in what order | "run these in parallel", "which agents should handle this", "orchestrate agents" |
+| `pipeline-conductor` | Chains the 4 verification pipelines into one gated sequence + a single aggregated report | "run the full quality gate", "end-to-end verification sweep" |
+| `goal-quench` | Adds a token-budget ceiling + quality gate on top of an autonomous `/goal` run | "run this autonomously but cap the budget", "gate the goal run" |
+| `meta-prompt-builder` | Designs *what to say* to each agent (pairs with agent-composer's *what to orchestrate*) | "help me write a prompt", "build a prompt for the agent" |
+| `deliberation` *(commons)* | Innovator → Devil → Mediator 3-role structured debate to a synthesis | "deliberate this", "argue both sides then synthesize" |
+
+### Diagnosis — *"something feels off"*
+
+| Skill | What it does | Say this |
+|---|---|---|
+| `harness-doctor` | Diagnoses harness structure (L1–L4) on the principle "a good harness gets simpler over time" | "check my Claude setup", "the harness feels complex", "too many skills" |
+| `context-doctor` | Finds the 3 main causes of token waste + prescribes `.claudeignore` / `/clear` timing | "session is slow", "context is getting full", "clean up context" |
+| `install-doctor` | Diagnoses conflicts/duplicates/overwrite risks before installing plugins into a project | "check the install", "verify my setup", "will this overwrite anything" |
+| `mcp-circuit-breaker` *(commons)* | Detects MCP failure loops, trips a breaker to stop retry waste, proposes alternatives | "MCP keeps failing", "same tool error is looping" |
+
+### Harvesting & learning — *"keep what we learned"*
+
+| Skill | What it does | Say this |
+|---|---|---|
+| `harvest-loop` | End-of-session weekly audit → pattern scan → 3-tier improvement proposals → PR draft | "wrap up this week", "harvest the session", "weekly review" |
+| `field-harvest` | Back-propagates a reusable pattern found in a field project into the hub | "I could reuse this", "pull this pattern into the hub" |
+| `memory-hygiene` | Catches "stale-but-confident" memory that drifted from reality; updates or prunes it | "memory feels bloated", "clean up memory", "is my memory still accurate" |
+| `edit-manifest` | Records a predicted-impact line per edit, closing the predict-vs-verify loop for harvest-loop | "record this edit's predicted impact" *(usually auto, Axis 4 of the gate)* |
+| `contention-layer` | When two skills conflict, harvests the missed validation angle instead of discarding one | "these two skills disagree", "harvest the conflict" |
+
+### Gates & guards — *"safe to ship / publish?"*
+
+| Skill | What it does | Say this |
+|---|---|---|
+| `token-budget-gate` *(commons)* | Estimates token cost before a multi-step task, then calibrates against actual after | "how expensive is this", "estimate the token budget first" |
+| `asset-placement-gate` | Routes a new skill/agent/plugin to the right place (hub vs project), no role overlap | "where does this go", "should this be shared", "hub or project" |
+| `marketplace-gate` | Scores a repo against 5 listing criteria (README, zero-config, maintenance, dup, safety) | "is this OK to publish", "ready for the marketplace", "pre-publish check" |
+| `public-surface-audit` | Scans git-tracked files for operator-private tokens (real username, corp names, home paths) | "did I leak anything", "scan for private tokens", "is my split clean" |
+| `self-marketing-lint` | Flags self-promotional / hype wording in descriptions (plain-text discipline) | "lint the marketing language", "is this description hyped" |
+
+> **Going public?** Don't run these one at a time — say **"publish"** / **"make this repo public"** and Claude
+> fires the **Pre-Publish Surface Gate** (CLAUDE.md), which runs `public-surface-audit` + `marketplace-gate`
+> Check 5 *before* the irreversible action. Portable checklist: `templates/PRE-PUBLISH-CHECKLIST.md`.
+
+### Discovery — *"what's out there?"*
+
+| Skill | What it does | Say this |
+|---|---|---|
+| `plugin-recommender` | Searches marketplaces + open source for a task, ranks by quality, gives install commands | "what plugin should I use", "find a tool for Jira tickets", "recommend a plugin" |
+| `cross-ecosystem-synergy-detection` | Finds cross-invocable pairs across your installed plugins/CLIs + a synergy ranking | "are my tools working together", "any synergy / overlap", "can these integrate" |
+| `frontier-digest` | Pulls latest AI/agent/harness trends from HN + arXiv into actionable insights | "latest AI trends", "frontier digest", "what's new out there" |
+
+### Simulation, review & clarification — *"pressure-test the thinking"*
+
+| Skill | What it does | Say this |
+|---|---|---|
+| `sim-conductor` | Profiles a target → derives personas → parallel-agent audit → M/S/R triage. Areas: A external-user · B internal-audit · C ideation | "external user perspective", "run an internal audit", "simulate this" |
+| `apex-review` | Reviews from a top-level decision-maker's lens, not a practitioner's | "will this hold up for leadership", "CTO-level review", "approval deck" |
+| `deep-clarify` | Turns a vague request into an actionable spec through Socratic questioning | "I'm not sure what to build", "help me clarify the requirements" |
+
+### Setup & onboarding — *"get started / keep it tidy"*
+
+| Skill | What it does | Say this |
+|---|---|---|
+| `install-wizard` | First-install onboarding (zshrc, sentinels, the FH self-gate) | "first-time setup", "run the install wizard" |
+| `hub-cc-pr-reviewer` | Reads a PR diff → 8-matrix baseline-consistency check → review comment + merge call | "review this PR", "check this diff" |
+| `skill-splitter` | Splits an over-large SKILL.md that "does everything" into scoped files | "this skill is bloated", "SKILL.md too large", "split this skill" |
+
+### Agents (sub-agents, dispatched — not slash commands)
+
+| Agent | What it does | When it's used |
+|---|---|---|
+| `challenger` *(hub)* | Frontier-grade adversarial evaluator; adapts attack vectors to artifact type, cites evidence per attack | The heavy adversarial reviewer behind steel-quench / harvest-loop |
+| `quench-challenger` *(commons)* | Devil (6-axis attack) + Innovator (alternative) + Prescriber (one-line fix) synthesis | steel-quench Wave 1 calls it first |
+| `fact-checker` *(fh-meta)* | Greps the hub to confirm an asset/skill exists before you recommend it; catches stale facts | "does this already exist in the hub", duplicate-work suspicion |
+| `hub-persona-auditor` *(fh-meta)* | 3+ persona × 4-axis (resonance/confusion/resistance/supplement) audit of an external-facing draft | Before publishing a briefing / card / guide |
+| `persona-innovator` *(fh-meta)* | Generates naming candidates + frame proposals + external frontier signals | "find naming candidates", harness evolution ideation |
+
+> **Don't see your need?** Describe it plainly — `plugin-recommender` searches beyond FH too. And if a
+> phrase here doesn't route correctly, the explicit `/skill-name` form always works.

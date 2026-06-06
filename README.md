@@ -178,6 +178,9 @@ Full spec: [`fh_integration_contract.md`](knowledge/shared/harness-core/fh_integ
 | Content / Simulation | `sim-conductor` · `apex-review` · `meta-prompt-builder` · `deep-clarify` |
 | Setup | `install-wizard` · `hub-cc-pr-reviewer` · `skill-splitter` |
 
+> **Full phrasebook** — every skill + agent with its one-line definition and the plain-language phrase
+> that triggers it: [`CHEATSHEET.md` §12](CHEATSHEET.md#12-skills--agents--what-each-does-and-what-to-say).
+
 </details>
 
 ---
