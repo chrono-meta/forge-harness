@@ -28,8 +28,9 @@ increasingly what the job actually is. You don't out-type the model. You build t
 gates it passes through, the record of what it got wrong last time. That is a harness, and a meta-harness
 is the harness that builds harnesses across every project you touch.
 
-The author stays pseudonymous on purpose, and the methodology is meant to be copied. Both are deliberate.
-forge-harness makes **no appeal to a résumé** — its value has to stand on the principles in
+The harness runs under a handle, and the methodology is meant to be copied — both on purpose. The formal
+paper carries a real name for citation; the harness does not. Either way forge-harness makes **no appeal
+to a résumé** — its value has to stand on the principles in
 [`ETHOS.md`](ETHOS.md) and the evidence in [`OUTPUT_EVIDENCE.md`](OUTPUT_EVIDENCE.md), or it doesn't
 stand at all. There is no moat to protect, so there is no name to trade on. If a principle here is useful
 to you, take it. Fork the harness, rename it, make it yours. That was always the point.
