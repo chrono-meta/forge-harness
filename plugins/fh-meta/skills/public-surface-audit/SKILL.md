@@ -24,6 +24,7 @@ breaks the "public repo = model-agnostic methodology only" invariant.
 
 - `/public-surface-audit`
 - `/public-surface-audit --target <repo path>`
+- `/public-surface-audit --json` (machine-parseable verdict for hook-gating — see Step 5)
 - "Did I leak anything into the public repo?", "public surface audit", "private token scan"
 - "Check tracked files for private tokens", "is my public/private split clean?"
 - "Did any operator-private token survive into a tracked file?", "scan before publish"
@@ -137,6 +138,38 @@ not "edit the HTML by hand". Flag them with a `(generated artifact)` note.
 
 ---
 
+## Step 3b. FP Hygiene — Placeholder & Example Exclusion
+
+A scan that flags its own placeholders erodes trust. Two **value-shape** classes are never real leaks
+and are dropped before the report — imported from `gstack-redact`'s canonical-example allowlist, scoped
+in PSA's direction to the *matched token* (not the whole line, so a real leak sharing a substring still
+reports):
+
+- **Angle-bracket placeholders** — the matched token is itself a placeholder (`<your-unix-username>`,
+  `<company-asset>`, `{project}`). PSA dogfoods these in Step 1; the scan must not report them as leaks.
+- **Canonical dummy values** — the matched token is a documented example/dummy (`EXAMPLE`, `dummy`,
+  `changeme`, `REDACTED`, `xxxx`, AWS-doc keys like `AKIAIOSFODNN7EXAMPLE`). A high-entropy *example* is
+  not a secret.
+
+```bash
+# FP-hygiene tests the MATCHED TOKEN only — never the whole line. A line-level `grep -v` would
+# suppress a real leak that merely *mentions* an example (e.g. `user=<realname> # see EXAMPLE.md`),
+# violating PSA's "allowlist tight" rule. So extract the matched span per hit and drop it only when
+# the span is *entirely* a placeholder/example (anchored ^…$).
+PLACEHOLDER='^(<[a-z0-9_-]+>|\{project\}|EXAMPLE|dummy|changeme|REDACTED|xxxx)$'
+grep -nIE "$regex" $(cat /tmp/_psa_tracked.txt) 2>/dev/null | while IFS= read -r hit; do
+  tok=$(printf '%s' "$hit" | grep -oiE "$regex" | head -1)
+  printf '%s' "$tok" | grep -qiE "$PLACEHOLDER" && continue   # token IS a placeholder → drop
+  printf '%s\n' "$hit"
+done
+```
+
+This differs from the Step 2 allowlist: Step 2 suppresses by **file::token legitimacy**, Step 3b by
+**token value-shape**. Both run — Step 2 then Step 3b. Keep it tight (PSA's "allowlist tight" rule): if a
+token only *contains* an example substring but is otherwise a real private value, it still reports.
+
+---
+
 ## Step 4. Report
 
 ```
@@ -172,6 +205,32 @@ Per HIGH/MED hit, append a one-line prescription:
 
 **Simplification guard**: 🟢 CLEAN → collapse the report to one line: "public surface clean — 0 private
 tokens in {N} tracked files (X allowlist-suppressed)." Do not print empty severity buckets.
+
+---
+
+## Step 5. Machine Output (`--json`) — Hook-Gateable Verdict
+
+By default PSA prints the Step 4 human report. With `--json`, emit a machine-parseable verdict so a
+**pre-publish / pre-push hook can gate on counts mechanically** — turning PSA from advisory into
+enforceable (FH's "enforcement is a hook, not a prompt" principle). Imported from `gstack-redact --json`.
+
+```json
+{
+  "target": "{REPO_PATH}",
+  "tracked_files": 0,
+  "findings": [
+    {"file": "path", "line": 42, "token": "<matched>", "severity": "HIGH", "class": "username"}
+  ],
+  "counts": {"HIGH": 0, "MED": 0, "LOW": 0, "suppressed": 0},
+  "verdict": "CLEAN"
+}
+```
+
+`verdict` is one of `CLEAN | REVIEW | LEAK | NOT_CONFIGURED` (same thresholds as Step 4). **`verdict` is
+authoritative — never gate on `counts` alone**: a counts-only check (`HIGH==0 && MED==0`) misreads
+`NOT_CONFIGURED` (which also has zero counts) as a pass. A caller blocks when `verdict` is `LEAK` **or**
+`NOT_CONFIGURED` — an unconfigured scan is not a pass (the same silent-failure guard as the human path:
+absence ≠ CLEAN).
 
 ---
 
@@ -222,3 +281,20 @@ Verdict: **CLEAN** (0 tokens after allowlist) | **REVIEW** (LOW-only — drift, 
   leak even though hand-editing it is wrong — report it, prescribe "regenerate from sanitized source".
 - **Allowlist tight, not loose**: when unsure whether a reference is legitimate, report it. A false LEAK
   the user dismisses is cheaper than a real leak suppressed by an over-broad allowlist.
+- **Auto-redact deliberately not imported**: `gstack-redact` offers `--auto-redact` (rewrite + diff). PSA's
+  philosophy is *report + prescribe; the human decides where the line goes* — auto-redacting a HIGH
+  (username/company) hit would pre-empt that judgment, and auto-editing a generated artifact is explicitly
+  wrong (regenerate from source). If ever imported, restrict to the MED absolute-home-path class only
+  (mechanically safe: `/Users/x/` → `~/` or `{project}`), never HIGH, never generated files.
+
+---
+
+## Sister-Asset Provenance
+
+Step 3b (FP hygiene) and Step 5 (`--json`) were imported from **garrytan/gstack** `gstack-redact`
+(`lib/redact-engine.ts`) during a hands-on sister-asset cross-audit (2026-06-06; see
+`tracks/_audit/session_2026_06_06_gstack_sister_handson.md`). They are adapted to PSA's operator-IP
+ontology — `gstack-redact`'s generic secret/PII classes (AWS / PEM / JWT / hostname) stay out of PSA's
+scope (orthogonal coverage: PSA = operator-IP leak, redact = generic secret). The reverse direction
+(PSA's operator private-codename + bare-username classes, which `gstack-redact` structurally cannot
+detect) is a candidate contribution back to gstack.
