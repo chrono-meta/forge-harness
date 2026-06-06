@@ -53,9 +53,9 @@ The handoff must be the obvious entry point a fresh local session lands on — i
 
 ---
 
-## Harness Differentiated Value — Benefits received automatically on install
+## What You Get on Install — the value the harness adds
 
-The forge-harness is not a simple plugin marketplace — it is an **integrated environment of operational philosophy + rules + skills**. Two layers combined:
+The forge-harness bundles **rules, skills, and session protocols** into one environment — not a standalone plugin list. Two layers combined:
 
 ### Layer 1 — Core assets (rules domain / auto-activated on harness install)
 
@@ -95,7 +95,7 @@ The forge-harness is not a simple plugin marketplace — it is an **integrated e
 [Layer 2] verify-bidirectional → baseline update channel
 ```
 
-→ **Mode C** users receive Layer 2 but without Layer 1 rules = partial synergy only. **Mode A·B users get both layers auto-activated** = peak harness differentiated value.
+→ **Mode C** users receive Layer 2 but without Layer 1 rules = partial synergy only. **Mode A·B users get both layers auto-activated** = both layers active (Layer 1 + Layer 2).
 
 > **Three-Doctor Loop**: `harness-doctor` (structure) + `context-doctor` (context) + `sim-conductor` (ideation) 3 skills form a diagnosis→prescription→re-diagnosis closed loop. External term: *Diagnostic Triad* (isomorphic with Anthropic 3-Agent Harness Planner·Generator·Evaluator).
 

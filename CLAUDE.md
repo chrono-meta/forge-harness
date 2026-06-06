@@ -297,7 +297,7 @@ Tiers: S=light(~5K) · M=standard(~15K, FH default) · L=full(~30K) · XL=max(~6
 
 **Current: Beta → External Validation Achieved** — v1.0 formal release conditions: additional external install evidence + at least 1 external PR.
 
-> Usage modes (A/B/C) + differentiated value (Layer 1/2) details: `.claude/rules/modes_and_value.md`
+> Usage modes (A/B/C) + what-you-get (Layer 1/2) details: `.claude/rules/modes_and_value.md`
 
 ## Auto Project Mapping Protocol
 

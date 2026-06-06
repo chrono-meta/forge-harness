@@ -93,6 +93,19 @@ Project B  ──→  connect hub in CLAUDE.md
 
 ---
 
+## Why it works
+
+After a long co-authoring session with your AI, you and it share the same context — and the same blind spots. The reviewer worth having is the one who never saw your reasoning. You can get that by hand: paste the work into a fresh, empty chat. FH just turns that chore into one routine command.
+
+- **sidecar / agent dispatch** → a reviewer with none of your session's context
+- **steel-quench · phantom-quench** → that cold pass, on demand
+
+It's model-agnostic: co-build with one AI, run the cold pass with any other. Whoever was absent from the original session is your cold reviewer — this is not a ranking of models.
+
+**What FH does not claim:** the cold pass is your base model's own ability, not a detection engine FH adds — a plain prompt to a fresh instance does much of the same. FH's value is narrower and honest: it takes a method drawn from real practice and makes running that independent pass routine, instead of a chore you skip. The methodology is copyable; what FH packages is the workflow, not a secret sauce.
+
+---
+
 ## Governance layer for AI-generated code
 
 FH wraps any coding agent (OpenCode, Codex, etc.) as a **post-generation governance gate**.
