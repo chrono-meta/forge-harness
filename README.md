@@ -23,6 +23,13 @@
   <img src="docs/pillars.svg" alt="FORK · ADAPT · COLLABORATE · EMPOWER" width="680">
 </p>
 
+<p align="center">
+  <a href="ETHOS.md"><b>The principles</b></a> ·
+  <a href="WHY.md"><b>Why it exists</b></a> ·
+  <a href="OUTPUT_EVIDENCE.md"><b>The evidence</b></a> ·
+  <a href="CHEATSHEET.md"><b>How to use it</b></a>
+</p>
+
 ---
 
 | If you're here because… | forge-harness solves it |
@@ -140,7 +147,24 @@ Full spec: [`fh_integration_contract.md`](knowledge/shared/harness-core/fh_integ
 
 ---
 
-## 33 skills, 4 agents
+## The forge
+
+forge-harness treats a project like steel — and the metaphor is literal, not decoration. Work is shaped,
+hardened by attack, and only then does it ship faster, for having survived.
+
+| Movement | What happens | The commands |
+|---|---|---|
+| **Forge** | shape the raw project into a harness — raise its floor | `install-wizard`, "harness-ify this project" |
+| **Quench** | harden it by attack — the cold pass leaves standing only what is sound | `steel-quench` · `phantom-quench` |
+| **Temper** | take the brittleness back out of the hardened asset | *the movement being forged next* |
+| → **Accelerate** | a blade that survived the forge cuts faster | `goal-quench` — *Pass → Accelerate* |
+
+Three movements are shipped; **temper** is the direction ahead — and naming the movement we have *not*
+finished is the point (see [`ETHOS.md`](ETHOS.md#the-forge)). Around the forge, two more signatures keep
+it running: `harvest-loop` (each session's lessons become permanent skills) and `agent-composer`
+(orchestrate the dispatch). The other skills wait until you need them — full list below.
+
+## 33 skills · 5 agents
 
 <details>
 <summary>Full asset activation check</summary>
