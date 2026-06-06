@@ -1,0 +1,73 @@
+# Pre-Publish Surface Gate — Portable Checklist
+
+> **Run this before making ANY repo or package publicly visible for the first time** — on any machine,
+> in any repo (not only forge-harness). Public exposure is irreversible: a repo is live the instant it
+> flips public and may be cached or forked before you scrub.
+>
+> **Order invariant: scrub before publish, never publish-then-scrub.**
+>
+> Highest risk: a repo **derived from internal/company assets** (operator-IP that originated in a private
+> harness). Origin of this checklist: `phantom-gate` shipped public, then needed a private →
+> de-company-scrub → re-public round-trip. The scrub happened *post*-publish. This checklist inverts that.
+
+## When it applies
+
+Any first-time public action:
+- `gh repo create --public` / `gh repo create ... --public`
+- `gh repo edit --visibility public` (private → public flip)
+- first `git push` to a **new public remote**
+- `npm publish` · `python -m build && twine upload dist/*` · any registry publish
+
+## Step 0 — Cheap mechanical pre-flags (10 seconds)
+
+Any single hit → **stop, do the full scan below.** These catch the common internal-asset leak class.
+
+> ⚠️ **Step 0 is a *pre-filter*, never a clean bill of health.** The `<…>` below are placeholders. If you
+> have **not** filled them from your gitignored source (`.claude/rules/.public-surface-patterns` or
+> `CLAUDE.local.md`), the email line still works but the grep lines match *nothing* and a "no hits"
+> result here means **nothing was scanned**, not "clean". Authority for the verdict is **Step 1 PSA**,
+> which reports `NOT CONFIGURED` (≠ CLEAN) when its pattern source is absent. Never publish on Step 0 alone.
+
+```bash
+# author/commit email = corp domain?  (works without config — neutral = personal/noreply)
+git log --format='%ae' | sort -u
+
+# LICENSE / README carry a private harness name or internal codename?
+# (substitute your real private values from the gitignored source — literal <…> matches nothing)
+grep -rIE '<private-harness-name>|<internal-codename>|<corp-domain>' LICENSE README* 2>/dev/null
+
+# module paths encode internal acronyms?  (e.g. detectors/<internal-acronym>/)
+git ls-files | grep -iE '<internal-acronym>'
+```
+
+## Step 1 — Run both gates (must both be non-LEAK)
+
+| Gate | Catches | Pass condition |
+|---|---|---|
+| `/public-surface-audit --target .` | operator-private tokens: real username, corp asset names, absolute home paths, companion-store name | verdict **CLEAN** (or REVIEW with LOW-only, your call) — **not** LEAK, **not** NOT CONFIGURED |
+| `/marketplace-gate` Check 5 | broad public safety: API keys, internal domains, license correctness | Public Safety check passes |
+
+- **NOT CONFIGURED ≠ CLEAN.** If PSA reports NOT CONFIGURED, the pattern source is missing — set it up
+  (empty file = explicit "nothing to protect"). A missing scan is not a clean bill of health.
+- **Generated artifacts count.** An exported HTML/PDF carrying a username is a real public-surface leak —
+  fix = regenerate from a sanitized source, not hand-edit.
+
+## Step 2 — If LEAK: scrub on a PRIVATE copy, then publish
+
+Do **not** "publish then fix". If the repo is already created, keep it **private** until clean.
+
+1. Keep/flip the repo **private** (`gh repo edit --visibility private` if already created).
+2. Full de-identify: corp email → neutral, private names/codenames → neutral handle, internal module
+   paths → generic, strip internal docs/logs. Re-run Step 1 until **non-LEAK**.
+3. Only then flip public / push / `twine upload`.
+
+## Step 3 — Record (if this was a near-miss or a real catch)
+
+A pre-publish catch is a process win worth logging:
+- forge-harness operator → `tracks/_meta/fh_signal_{date}_{source}.md` (or `field-harvest`).
+- A recurring leak class → candidate `#rule-candidate` (tighten the mechanical pre-flags in Step 0).
+
+---
+
+**Done when**: Step 0 pre-flags clean (or escalated to full scan) · Step 1 both gates non-LEAK ·
+publish executed *after* the gates passed, never before.

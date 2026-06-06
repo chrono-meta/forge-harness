@@ -158,6 +158,41 @@ FH asset modified → Axis 1 (regression_guard.sh --pr {BRANCH})
 
 ---
 
+## Pre-Publish Surface Gate (Irreversibility Gate — Publish, not Commit)
+
+**Order invariant: scrub before publish, never publish-then-scrub.** Public exposure is effectively
+irreversible — a repo or package is briefly live the instant it goes public and may be cached or forked
+before any scrub. So the audit must fire **pre-publish**, not after.
+
+**When this gate fires** — *before* any action that makes a repo/package **publicly visible for the
+first time**, especially one **derived from internal/company assets** (operator-IP that originated in a
+private harness): `gh repo create --public`, `gh repo edit --visibility public`, a first push to a new
+public remote, `npm publish`, `twine upload`, a private→public visibility flip.
+
+**Required before the public action** (both must be non-LEAK) — this gate is the **umbrella that invokes
+both**, not a competitor to them; when publish intent is detected, fire *this* gate (it then runs both),
+not marketplace-gate alone:
+1. `/public-surface-audit` — operator-private token scan (real username, corp asset names, home paths)
+2. `/marketplace-gate` Check 5 — broad public safety (API keys, internal domains, license)
+
+> Routing vs the rows below: `/marketplace-gate` alone = "is this ready to **list on a marketplace**?";
+> `/public-surface-audit` alone = reactive "did I leak a token?"; **this gate** = the *act of going
+> public* (visibility flip / first public push / registry publish) — it chains the other two.
+
+**Cheap mechanical pre-flags** (any one → stop and run the gate): author/commit **email = corp domain** ·
+`LICENSE`/`README` contains a **private harness name or internal codename** · **module paths encode
+internal acronyms**.
+
+**Why no hook (honest)**: the irreversible action is `gh repo create --public` / a visibility flip, **not
+`git commit`** — and it usually happens in a **separate repo**, not forge-harness. The FH pre-commit hook
+cannot catch either. This gate is therefore **AI-behavioral** (proactive trigger below) **+ a portable
+checklist** (`templates/PRE-PUBLISH-CHECKLIST.md`) the operator runs on any repo, on any machine.
+
+> Origin: 2026-06-05 `phantom-gate` shipped public, then needed a private→de-company-scrub→re-public
+> round-trip (`fh_signal_2026-06-05_fh-direct`). PSA existed but nothing forced it pre-publish.
+
+---
+
 ## Autonomous Initiative Layer — Context-Triggered Skill Proposals (Active Throughout Session)
 
 At any point during a session, when the following signals are detected, propose the relevant skill in one line.
@@ -182,6 +217,7 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "where does this go", "asset location", "hub vs project", "placement" | `/asset-placement-gate` |
 | "add to marketplace", "OK to publish", "pre-publish check" | `/marketplace-gate` |
 | "did I leak anything", "public surface audit", "private token scan", "is my split clean", "check tracked files for private tokens" | `/public-surface-audit` |
+| "publish", "make public", "make this repo public", "go public", "gh repo create --public", "flip to public", "first public push", "publish the package", "npm publish", "twine upload" (publish intent — **proactive**, fire *before* the action) | **Pre-Publish Surface Gate** (see above → `/public-surface-audit` + `/marketplace-gate` Check 5 must PASS first) |
 | "look at this again", "is this right", "counterargument", "re-validate" | `/verify-bidirectional` |
 | "MCP failing", "tool keeps erroring", "circuit-breaker", "same error looping" | `/mcp-circuit-breaker` |
 | "token budget", "how expensive", "estimate tokens", "will this cost a lot" | `/token-budget-gate` |
