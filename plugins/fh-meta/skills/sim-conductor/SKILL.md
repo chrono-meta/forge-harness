@@ -288,6 +288,9 @@ multi-persona findings stay comparable and the synthesis injects no bias of its 
   Suggestion — optional improvement
   (each item: [file:line or quoted span] one-line summary — rationale)
 ### Open questions   (0–3 items needed for a decision)
+### Absence check    (outside-vantage personas — newcomer/integrator: what does the artifact FAIL to
+                      specify that this standpoint needs? discoverability · undocumented contract ·
+                      unstated assumption. A normal, self-administrable rubric item — surfaces real gaps.)
 ```
 
 **FP judgment discipline** — only escalate when confident. Never escalate: pre-existing issues not
@@ -315,11 +318,13 @@ supplies the specialist lens. Same ①installed → ②fallback → ③fetch pri
 external harness's review-skills count as ① installed sources, widening the persona pool without FH
 shipping every specialist.
 
-> **Held (pending clean replication)**: an explicit **Absence/Omission check** for outside-vantage
-> personas (newcomer/integrator: "what does the artifact FAIL to specify that my standpoint needs?").
-> RESULT9 Arm E indicates omission-detection is the non-self-administrable core of multi-persona value,
-> but on n=1 with a design-drift confound — add to the protocol after the artifact-controlled replication
-> lands (fh-be RESULT9 residual).
+> **Absence check — resolved (added above)**: the clean replication (fh-be RESULT9 Arm F: identical
+> artifact, explicit omission prompt, ownership-only variable) found self ≈ isolated (~90% overlap) —
+> **omission-detection is self-administrable when explicitly asked**, refuting the earlier "the author
+> can't see their own omissions" (Arm E, a prompt/design-drift artifact). So the Absence check is a
+> normal, valuable rubric item (it surfaces real undocumented-contract gaps), not a special isolation-only
+> power. The pattern's value is rubric/standpoint *supply + routine enforcement* (copyable utility), not
+> de-biasing — see `knowledge/shared/patterns/multi-persona-review.md`.
 
 ---
 
