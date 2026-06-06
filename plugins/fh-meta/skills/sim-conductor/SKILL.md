@@ -271,6 +271,58 @@ Domain-expert objection (E-1) + Practitioner confusion (E-2) in parallel → Pat
 
 ---
 
+## Step 1.5 — Persona Output Protocol + Neutral Synthesizer (parallax)
+
+Generalized from the field `deep-insight` multi-persona pattern (fh-be #7), domain-stripped and renamed
+**parallax** for public FH (it is a mode of this skill, not a separate skill — see asset-placement
+2026-06-06). It gives the persona dispatch above a shared output contract + a neutral aggregator, so
+multi-persona findings stay comparable and the synthesis injects no bias of its own.
+
+**Shared persona output protocol** — every dispatched persona emits the same shape, whatever its lens:
+
+```
+### Strengths        (0–3, from this persona's viewpoint)
+### Concerns
+  Critical   — compile/runtime failure · clear logic error · data corruption · security leak
+  Important  — significant user/service impact in a plausible scenario
+  Suggestion — optional improvement
+  (each item: [file:line or quoted span] one-line summary — rationale)
+### Open questions   (0–3 items needed for a decision)
+```
+
+**FP judgment discipline** — only escalate when confident. Never escalate: pre-existing issues not
+introduced by this change · style/quality without a quotable rule · linter-catchable · speculative
+("might break if…") · subjective preference (→ Suggestion). **If not confident, do not mark it** — false
+positives erode reviewer trust.
+
+**Neutral synthesizer** — the aggregator is a NON-persona; it adds no opinion of its own:
+- No opinion injection — never a conclusion no persona stated.
+- Preserve attribution — always traceable which persona said what.
+- Priority labels verbatim — Critical/Important/Suggestion carried as the persona set them.
+- No forced consensus or forced conflict — report Common opinions (2+ personas agree) and Conflicts
+  (position A vs B, each with rationale) as-is. Feeds Step 2 M/S/R triage (M ← Critical or 2+ personas).
+
+The two severity vocabularies are layered, not redundant: a persona running **in isolation** assigns only
+its own Critical/Important/Suggestion — it cannot assign M/S/R, since `S = found by 3+ personas` depends on
+cross-persona agreement the isolated persona never sees. The synthesizer is the only context that can triage
+to M/S/R. So isolation *requires* the per-persona → synthesized two-layer split.
+
+**External-harness persona sourcing** — isomorphic to steel-quench Step 0.4 (Specialized Reviewer
+Discovery) + Wave 5 (external CLI teams). A needed lens may be sourced from an **installed sibling
+harness**, not only the built-in palette — e.g. gstack `/review` (staff-engineer), `/cso`
+(security-officer), `/qa` (QA-lead) when gstack is installed. sim-conductor orchestrates; the sibling
+supplies the specialist lens. Same ①installed → ②fallback → ③fetch priority as Persona Discovery — an
+external harness's review-skills count as ① installed sources, widening the persona pool without FH
+shipping every specialist.
+
+> **Held (pending clean replication)**: an explicit **Absence/Omission check** for outside-vantage
+> personas (newcomer/integrator: "what does the artifact FAIL to specify that my standpoint needs?").
+> RESULT9 Arm E indicates omission-detection is the non-self-administrable core of multi-persona value,
+> but on n=1 with a design-drift confound — add to the protocol after the artifact-controlled replication
+> lands (fh-be RESULT9 residual).
+
+---
+
 ## Step 2 — Synthesis
 
 | Tier | Criteria | Action |
