@@ -17,7 +17,7 @@ updated: 2026-05-26
 | harness-doctor | 2026-05-26 | 12+ | ✅ Core Active |
 | context-doctor | 2026-05-26 | 8+ | ✅ Active |
 | sim-conductor | 2026-05-26 | 6+ | ✅ Active |
-| source-grounding-audit | 2026-05-26 | 3 | 🆕 New |
+| phantom-quench | 2026-05-26 | 3 | 🆕 New |
 | agent-composer | 2026-05-24 | 5+ | ✅ Active |
 | steel-quench | 2026-05-26 | 4+ | ✅ Active |
 | harvest-loop | 2026-05-25 | 6+ | ✅ Active |
@@ -63,9 +63,9 @@ Skills used: harness-doctor, context-doctor, steel-quench, ...
 
 | Date | Skills Used |
 |---|---|
-| 2026-05-26 | harness-doctor, context-doctor, sim-conductor, source-grounding-audit, steel-quench, agent-composer, harvest-loop, deep-clarify(new), plan(new) |
+| 2026-05-26 | harness-doctor, context-doctor, sim-conductor, phantom-quench, steel-quench, agent-composer, harvest-loop, deep-clarify(new), plan(new) |
 | 2026-05-25 | harvest-loop, field-harvest, harness-doctor, verify-bidirectional |
-| 2026-05-22 | steel-quench, sim-conductor, source-grounding-audit(new) |
+| 2026-05-22 | steel-quench, sim-conductor, phantom-quench(new) |
 
 ---
 

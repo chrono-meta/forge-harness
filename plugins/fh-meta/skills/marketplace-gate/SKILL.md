@@ -187,7 +187,7 @@ All steps 0–2 completed
 + Overall verdict output (🟢 Recommended / 🟡 Conditional / 🔴 On hold)
 ```
 
-**→ Mandatory before 🟢 Recommended verdict: `source-grounding-audit`** — forward axis check on all citations, external URLs, and file path references in the asset being reviewed. A 🟢 verdict without source-grounding-audit is incomplete. If source-grounding-audit finds phantom refs → verdict downgrades to 🟡 Conditional automatically.
+**→ Mandatory before 🟢 Recommended verdict: `phantom-quench`** — forward axis check on all citations, external URLs, and file path references in the asset being reviewed. A 🟢 verdict without phantom-quench is incomplete. If phantom-quench finds phantom refs → verdict downgrades to 🟡 Conditional automatically.
 
 > When `agent-composer` receives a "comprehensive marketplace listing audit" request,
 > recommend: Wave 0 `fact-checker` → Wave 1 `marketplace-gate` + `hub-persona-auditor` in parallel.

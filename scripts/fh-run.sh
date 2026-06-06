@@ -35,7 +35,7 @@ Environment:
   FH_DRY_RUN=1                   Print assembled prompt only
 
 Examples:
-  FH_BACKEND=codex fh-run --skill source-grounding-audit --file docs/foo.md
+  FH_BACKEND=codex fh-run --skill phantom-quench --file docs/foo.md
   FH_BACKEND=codex fh-run --agent fh-commons:quench-challenger --file plugins/fh-meta/skills/foo/SKILL.md
 USAGE
 }

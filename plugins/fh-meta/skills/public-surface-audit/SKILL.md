@@ -182,7 +182,7 @@ tokens in {N} tracked files (X allowlist-suppressed)." Do not print empty severi
 | Broader pre-publish repo readiness (README, license, API keys) | `/marketplace-gate` (Check 5 Public Safety is the wide net; this skill is the private-token detail) |
 | A leak is a recurring process gap, not a one-off | log via `field-harvest` → candidate `#rule-candidate` |
 | Where should the leaked content actually live? | `/asset-placement-gate` (hub vs project vs CLAUDE.local.md) |
-| Phantom refs / stale links on the same surface | `/source-grounding-audit` (forward axis — orthogonal to this leak axis) |
+| Phantom refs / stale links on the same surface | `/phantom-quench` (forward axis — orthogonal to this leak axis) |
 
 ---
 

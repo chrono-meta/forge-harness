@@ -15,7 +15,7 @@ cat plugins/fh-meta/skills/<skill>/SKILL.md path/to/artifact \
 - `codex exec -m gpt-5.5 -` reads the combined prompt from stdin and runs headless.
 - `npx @openai/codex` (interactive) requires a TTY and is **not** suitable for piped skill application.
 - Inside a git repository (e.g. a clone of this repo) no extra flag is needed. **Outside** a git repo (e.g. running from `/tmp`), add `--skip-git-repo-check`.
-- `codex exec` has its own file-read tools, so a skill that back-traces claims to source files (e.g. `source-grounding-audit`) can verify paths itself — it produced real `file:line` citations in validation.
+- `codex exec` has its own file-read tools, so a skill that back-traces claims to source files (e.g. `phantom-quench`) can verify paths itself — it produced real `file:line` citations in validation.
 
 ## Runtime adapters
 
@@ -48,7 +48,7 @@ Backend defaults:
 
 ```bash
 FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run \
-  --skill source-grounding-audit \
+  --skill phantom-quench \
   --file docs/foo.md
 
 FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run \
@@ -81,8 +81,8 @@ These are **author** runs — they confirm the M1 tier assignments are accurate 
 
 | Skill | Tier | Method | Result |
 |---|---|---|---|
-| `source-grounding-audit` | M1 | Fed a fixture with 2 real + 2 phantom claims (a non-existent skill path, a fabricated "47 M1 skills" count) | **4/4 correct** — both real claims Grounded with `file:line` citations, both phantoms caught (the fabricated count corrected against the actual `AGENTS.md`) |
-| `asset-placement-gate` | M1 | Fed a proposed `phantom-checker` skill that duplicates `source-grounding-audit` | **Correct** — applied the 4-criteria bar, flagged criterion ④ overlap, routed to **Drop** with "route intent to source-grounding-audit" |
+| `phantom-quench` | M1 | Fed a fixture with 2 real + 2 phantom claims (a non-existent skill path, a fabricated "47 M1 skills" count) | **4/4 correct** — both real claims Grounded with `file:line` citations, both phantoms caught (the fabricated count corrected against the actual `AGENTS.md`) |
+| `asset-placement-gate` | M1 | Fed a proposed `phantom-checker` skill that duplicates `phantom-quench` | **Correct** — applied the 4-criteria bar, flagged criterion ④ overlap, routed to **Drop** with "route intent to phantom-quench" |
 
 Both ran end-to-end with no Claude-native dependency. The M1 tier claim holds for the two skills tested.
 

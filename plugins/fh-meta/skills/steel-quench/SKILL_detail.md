@@ -443,11 +443,11 @@ External CLIs available: check at runtime via Step 0-pre bash detection
 **Wave selection**:
 ```
 Run:  Wave 1 (claim density), Wave 2 (structural defense, weight↑),
-      Wave 3 (weight↑ — arXiv/DOI phantom risk; pair with /source-grounding-audit),
+      Wave 3 (weight↑ — arXiv/DOI phantom risk; pair with /phantom-quench),
       Wave 4 (novelty: new architecture)
       Wave 5 (cross-team scope — activate if risk_level=high or user requests)
 Skip: Phase 0 (unless user supplies an external bad-case doc)
 External CLIs available: check at runtime
 ```
 
-**Degraded coverage note**: Wave 3 without `/source-grounding-audit` available → flag as "Axis 3 skipped (skill unavailable)" and note in residual risk card.
+**Degraded coverage note**: Wave 3 without `/phantom-quench` available → flag as "Axis 3 skipped (skill unavailable)" and note in residual risk card.

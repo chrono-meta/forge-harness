@@ -194,7 +194,7 @@ Verdict: PASS (zero S-grade, convergence reached) | CONDITIONAL_PASS (A/B-grade 
 | Attack angle is a harness structure problem | `/harness-doctor` | optional |
 | After Wave convergence, propose new pattern rules | `fh-meta:persona-innovator` | optional |
 | Wave 1 structure-specific attack (6-axis) | `fh-commons:quench-challenger` | priority |
-| Back-trace whether claims exist in source files | `/source-grounding-audit` | **mandatory** when `phantom_risk=true` OR `scope=external` (see tpa_schema.md §Gate Routing Table) |
+| Back-trace whether claims exist in source files | `/phantom-quench` | **mandatory** when `phantom_risk=true` OR `scope=external` (see tpa_schema.md §Gate Routing Table) |
 
 **steel-quench → sim-conductor gate**: After Wave convergence in external-publish context, `/sim-conductor Area A` is the mandatory next step.
 
@@ -219,7 +219,7 @@ sim-conductor Area A (external user perspective)
 - **Attacks without real code are invalid.** Abstract criticism is not included in Wave 1 results.
 - **quench-challenger first.** Call fh-commons:quench-challenger in isolation in Wave 1 if available.
 - **Always check self-referential pattern (P3).** Cross-validate Wave results with external criteria.
-- **Attack surface limit**: steel-quench attacks output content patterns. Phantom Claim detection → `source-grounding-audit`.
+- **Attack surface limit**: steel-quench attacks output content patterns. Phantom Claim detection → `phantom-quench`.
 
 ## Failure Fallback
 

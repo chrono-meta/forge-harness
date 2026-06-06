@@ -40,7 +40,7 @@ Target: FH full structure vs Hermes-type agent frameworks, OpenCode-style coding
 | Layer | Provider | What it contributes |
 |---|---|---|
 | Execution | OpenCode | High-volume autonomous coding, CLI/desktop distribution, broad language support |
-| Governance | FH | `pipeline-conductor` (4-axis gated sweep) + `steel-quench` (adversarial review) + `source-grounding-audit` |
+| Governance | FH | `pipeline-conductor` (4-axis gated sweep) + `steel-quench` (adversarial review) + `phantom-quench` |
 
 **N-fold mechanism**: OpenCode is criticized for "automation-drift" — valid code that doesn't solve the core problem. FH's adversarial + grounding verification layer catches this. The combined result is an autonomous coder that must survive structured critique before the human sees it: "fast coder" → "rigorous engineer."
 
@@ -50,7 +50,7 @@ Target: FH full structure vs Hermes-type agent frameworks, OpenCode-style coding
 
 | System | OpenHuman / Hermes | FH |
 |---|---|---|
-| Provides | Local Memory Tree, persistent conversations, workspace config, cost dashboard, UI/UX | `tracks/`, `knowledge/`, `harvest-loop`, `source-grounding-audit`, `memory-hygiene` |
+| Provides | Local Memory Tree, persistent conversations, workspace config, cost dashboard, UI/UX | `tracks/`, `knowledge/`, `harvest-loop`, `phantom-quench`, `memory-hygiene` |
 
 **N-fold mechanism**: OpenHuman/Hermes stores memory but treats it as passive recall (context stuffing). FH's harvest-loop + source-grounding turns that memory into *audited institutional process* — patterns are reviewed, grounded, and promoted. Memory becomes methodology, not just storage.
 
@@ -96,7 +96,7 @@ CHANGED=$(git diff main..HEAD --name-only | tr '\n' ' ')
 # 3. pipeline-conductor --quick on changed files
 # → 4-axis gate: backward / adversarial / forward / record
 
-# 4. source-grounding-audit on any new documentation claims
+# 4. phantom-quench on any new documentation claims
 # → catches phantom references and stale citations
 ```
 

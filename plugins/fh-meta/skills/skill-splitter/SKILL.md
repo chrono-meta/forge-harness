@@ -56,7 +56,7 @@ Step 3 — Draft SKILL_detail.md
     Front-matter: name, description, load: on-demand
 
 Step 4 — Verify
-    source-grounding-audit: every §pointer in SKILL.md resolves to ## §SectionName in SKILL_detail.md
+    phantom-quench: every §pointer in SKILL.md resolves to ## §SectionName in SKILL_detail.md
     sim-conductor Area D-skill: consumer agent with SKILL.md only → must reach grade F
     → Any pointer mismatch or grade P/B → fix before commit
 ```
@@ -101,9 +101,9 @@ Run on a SKILL.md when **any one** of:
 | Situation | Skill |
 |---|---|
 | Diagnose which SKILL.md files are candidates | `/context-doctor` or `/harness-doctor` |
-| Verify §pointer grounding after split | `/source-grounding-audit` |
+| Verify §pointer grounding after split | `/phantom-quench` |
 | Verify cold-start still works after split | `/sim-conductor D skill <name>` |
-| Check new SKILL_detail.md for phantom claims | `/source-grounding-audit` |
+| Check new SKILL_detail.md for phantom claims | `/phantom-quench` |
 | Adversarial review of the split result | `/steel-quench` |
 
 ---
@@ -115,7 +115,7 @@ Step 1 classification table produced
 + SKILL.md trimmed: triggers · principles · step overview · decision tables · Done When retained
 + SKILL.md has imperative pointer for every removed section (> **Detail**: See SKILL_detail.md §X)
 + SKILL_detail.md created: ## §SectionName header for every pointer in SKILL.md
-+ source-grounding-audit: 0 phantoms (all §pointers resolve)
++ phantom-quench: 0 phantoms (all §pointers resolve)
   → Fallback (skill unavailable): run §Verification-Checklist manually from SKILL_detail.md
 + sim-conductor Area D-skill: grade F (consumer completes core task from SKILL.md alone)
   → Fallback (skill unavailable): manually confirm "trigger → step overview → key decision → Done When" all present in SKILL.md

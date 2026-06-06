@@ -116,7 +116,7 @@ else
   fi
 fi
 
-# ── Axes 2+3 — steel-quench + source-grounding-audit (full gate only) ─────────
+# ── Axes 2+3 — steel-quench + phantom-quench (full gate only) ─────────
 if [ "$GATE_MODE" = "full" ]; then
   echo "[Axis 2+3] Adversarial + Source-Grounding..."
   MARKER_DIR="$REPO_ROOT/tracks/_meta"
@@ -127,7 +127,7 @@ if [ "$GATE_MODE" = "full" ]; then
   else
     echo "  ❌ NOT CONFIRMED"
     echo ""
-    echo "  Run /steel-quench and /source-grounding-audit in your Claude session."
+    echo "  Run /steel-quench and /phantom-quench in your Claude session."
     echo "  After both PASS, Claude creates the marker automatically. Or manually:"
     echo ""
     echo "    mkdir -p \"$MARKER_DIR\""

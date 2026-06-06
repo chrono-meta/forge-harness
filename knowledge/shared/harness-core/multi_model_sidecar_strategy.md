@@ -205,7 +205,7 @@ Suggested integration points:
 - `steel-quench` — 2nd-challenger pass after Wave 1 (primary Claude challenger)
 - `pipeline-conductor` — cross-check a verdict with a sidecar before elevating to CONDITIONAL_PASS
 - `sim-conductor` — persona simulation from a different model's perspective
-- `source-grounding-audit` — Gemini reads source files as a secondary back-tracer
+- `phantom-quench` — Gemini reads source files as a secondary back-tracer
 
 ---
 

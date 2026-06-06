@@ -401,10 +401,10 @@ fit_score     = 0.00  → GAP — do not assign
 **Example 3 — Phantom detection subtask**
 
 - Subtask type: `phantom-detection`
-- Candidate agent: `source-grounding-audit` skill (`declared_capabilities=["phantom-detection","source-trace"]`, `writes=false`)
+- Candidate agent: `phantom-quench` skill (`declared_capabilities=["phantom-detection","source-trace"]`, `writes=false`)
 
 ```
-role_match    = 0.40  (role matches "source-grounding-audit" → "phantom-detection")
+role_match    = 0.40  (role matches "phantom-quench" → "phantom-detection")
 tools_overlap = 0.30  (Read+Bash match; required_tools overlap = 1.0)
 writes_compat = 0.20  (audit-only; writes=false → bonus)
 cap_bonus     = 0.10  (declared_capabilities contains "phantom-detection")

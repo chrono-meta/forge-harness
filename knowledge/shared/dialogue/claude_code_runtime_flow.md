@@ -92,7 +92,7 @@ Axis 1 — Backward: bash templates/regression_guard.sh --pr {BRANCH}
 Axis 2 — Adversarial: /steel-quench
         │
         ▼
-Axis 3 — Forward: /source-grounding-audit
+Axis 3 — Forward: /phantom-quench
         │
         ← After Axes 2+3 both PASS:
           AI creates marker: tracks/_meta/.axes_23_passed_{branch}_{date}.marker

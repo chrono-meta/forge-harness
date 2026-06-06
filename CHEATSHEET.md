@@ -97,7 +97,7 @@ git config core.hooksPath templates/.git-hooks
 chmod +x templates/.git-hooks/pre-commit
 ```
 
-After running `/steel-quench` and `/source-grounding-audit` in your session, Claude creates the Axes 2+3 pass marker automatically. If it doesn't (e.g., session interrupted), create it manually:
+After running `/steel-quench` and `/phantom-quench` in your session, Claude creates the Axes 2+3 pass marker automatically. If it doesn't (e.g., session interrupted), create it manually:
 
 ```bash
 touch "tracks/_meta/.axes_23_passed_$(git rev-parse --abbrev-ref HEAD | tr '/' '_')_$(date +%Y-%m-%d).marker"

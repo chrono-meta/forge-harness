@@ -1,6 +1,6 @@
 ---
 name: tpa-schema
-description: Canonical Target Profile Analysis schema for FH meta-harness skills. All skills that run TPA (sim-conductor, steel-quench, source-grounding-audit, agent-composer) MUST derive their routing decisions from this schema.
+description: Canonical Target Profile Analysis schema for FH meta-harness skills. All skills that run TPA (sim-conductor, steel-quench, phantom-quench, agent-composer) MUST derive their routing decisions from this schema.
 type: reference
 scope: meta-harness
 ---
@@ -12,7 +12,7 @@ scope: meta-harness
 All four skills that perform TPA **reference this file** rather than defining their own taxonomy:
 - `sim-conductor` Step 0.3
 - `steel-quench` Step 0.3
-- `source-grounding-audit` Step 0.5
+- `phantom-quench` Step 0.5
 - `agent-composer` Step 0.2
 
 ---
@@ -29,7 +29,7 @@ All four skills that perform TPA **reference this file** rather than defining th
 | `scope` | enum | `internal` · `external` | `external` if published/publishable or public repo |
 | `phantom_risk` | derived | `true` · `false` | `true` if artifact contains arXiv/DOI/http citations OR code fences in a knowledge doc |
 
-> `phantom_risk` is **derived** — do not ask the user. If `artifact_type` is `skill_md` or `design_doc` and citations or URLs are present → `true`. Use as input to `source-grounding-audit` gate trigger.
+> `phantom_risk` is **derived** — do not ask the user. If `artifact_type` is `skill_md` or `design_doc` and citations or URLs are present → `true`. Use as input to `phantom-quench` gate trigger.
 
 ---
 
@@ -68,7 +68,7 @@ All four skills that perform TPA **reference this file** rather than defining th
 
 Which gates are **mandatory** vs optional for each (artifact_type × risk_level) combination.
 
-| `artifact_type` | `scope` | steel-quench | source-grounding-audit | sim-conductor Area |
+| `artifact_type` | `scope` | steel-quench | phantom-quench | sim-conductor Area |
 |---|---|:---:|:---:|:---:|
 | `skill_md` | any | **MANDATORY** | **MANDATORY** if `phantom_risk=true` | D-skill |
 | `claude_md` / `agent_md` | any | **MANDATORY** | optional | D-skill (for agent_md) |
@@ -132,5 +132,5 @@ This is why meta-harness defaults to `risk_level=high` for these types: the blas
 |---|---|
 | `sim-conductor` Step 0.3 | Replace inline table with `artifact_type` lookup from §Artifact Type Table → `required_gates` from §Gate Routing Table |
 | `steel-quench` Step 0.3 | Derive `phantom_risk` per §Canonical Fields. Wave 5 activation condition: `scope=external AND risk_level=high` |
-| `source-grounding-audit` Step 0.5 | Gate trigger: `phantom_risk=true` OR `risk_level=high` |
+| `phantom-quench` Step 0.5 | Gate trigger: `phantom_risk=true` OR `risk_level=high` |
 | `agent-composer` Step 0.2 | Capability fit scoring input: `artifact_type` determines `role_match` lookup domain |

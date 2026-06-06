@@ -164,7 +164,7 @@ grep "^## §" plugins/{plugin}/skills/{name}/SKILL_detail.md
 ```
 
 Then run:
-- `/source-grounding-audit` — artifact: SKILL.md, declared source: SKILL_detail.md
+- `/phantom-quench` — artifact: SKILL.md, declared source: SKILL_detail.md
 - `/sim-conductor D skill {name}` — provide SKILL.md only, attempt core task from trigger phrase
 
 ---
@@ -177,7 +177,7 @@ Use before committing a completed split:
 |---|---|
 | Trigger phrases ≥ 3 | SKILL.md §Trigger Phrases has 3+ entries |
 | Done When defined | SKILL.md has Done When block with ≥1 measurable condition |
-| All §pointers resolve | source-grounding-audit: 0 phantoms |
+| All §pointers resolve | phantom-quench: 0 phantoms |
 | Cold-start grade F | sim-conductor Area D-skill: consumer reaches core completion |
 | No behavioral rule in SKILL_detail only | Any rule governing "what counts as X" present in SKILL.md |
 | No orphan §sections | Every ## §SectionName in SKILL_detail.md has a pointer from SKILL.md |

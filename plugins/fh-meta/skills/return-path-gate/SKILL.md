@@ -132,7 +132,7 @@ Apply the following decision rules per (caller → callee) pair.
 | Caller identity | Tier |
 |---|:---:|
 | Core pipeline skill (harvest-loop, steel-quench, apex-review, agent-composer, sim-conductor, pipeline-conductor) | HIGH |
-| Diagnostic or gate skill (harness-doctor, source-grounding-audit, verify-bidirectional, return-path-gate) | MEDIUM |
+| Diagnostic or gate skill (harness-doctor, phantom-quench, verify-bidirectional, return-path-gate) | MEDIUM |
 | Utility or advisory skill (context-doctor, plugin-recommender, frontier-digest, etc.) | LOW |
 
 *Callee consequence tier*:
@@ -239,7 +239,7 @@ Verdict: PASS (0 HIGH severity OPEN chains) | CONDITIONAL_PASS (MEDIUM/LOW sever
 | Situation | Connected Skill |
 |---|---|
 | Check harness structural completeness alongside chain closure | `/harness-doctor` |
-| Verify phantom references in §Chains targets (callee skill actually exists) | `/source-grounding-audit` |
+| Verify phantom references in §Chains targets (callee skill actually exists) | `/phantom-quench` |
 | Run chain audit as pre-flight before parallel dispatch | `pipeline-conductor` Step 0.5 calls this skill |
 | Prescribe verdict format for callee skills missing structured output | `/meta-prompt-builder` |
 | Chain OPEN finding becomes improvement candidate | `/field-harvest` |

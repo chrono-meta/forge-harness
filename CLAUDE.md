@@ -133,7 +133,7 @@ No user request is needed — this is a mandatory autonomous step, not a proposa
 
 ```
 FH asset modified → Axis 1 (regression_guard.sh --pr {BRANCH})
-  → Axis 2 (/steel-quench) → Axis 3 (/source-grounding-audit)
+  → Axis 2 (/steel-quench) → Axis 3 (/phantom-quench)
   → marker: tracks/_meta/.axes_23_passed_{branch}_{date}.marker
   → Axis 4 (/edit-manifest RECORD, today's entry in edit_manifest.yaml)
   → All 4 PASS → git commit allowed   |   Any FAIL → fix inline, re-run
@@ -145,7 +145,7 @@ FH asset modified → Axis 1 (regression_guard.sh --pr {BRANCH})
 
 **Substantive carve-out — `knowledge/` · `docs/*.md` · `AGENTS.md`** (Axes 2–3 DO run, despite these not being SKILL/rules/templates): a change to any of these is **not** light if its diff adds a fenced code block (```` ``` ````) or a citation/version claim (`arXiv:` / `DOI` / `http` / a versioned dependency like `x.y.z`). Executable patterns and factual claims need phantom-detection + adversarial review *wherever they live* — `knowledge/` Implementation-Patterns sections carry runnable commands, `docs/` holds published guides, and `AGENTS.md` is the Codex-user entry point, so a phantom skill name or wrong version there is an external-facing error the gate must catch. Prose-only edits (typos, rewording, link fixes) stay light. Detection is mechanical: `git diff` adds a ```` ``` ```` fence or a citation token → run Axes 2–3.
 
-**Unavailable axis**: If steel-quench or source-grounding-audit are not installed, note `Axis N: skipped (skill unavailable)` and proceed. Axis 1 PASS alone is sufficient to unblock a PR when Axes 2–3 are unavailable. Axis 4 (edit-manifest): if the skill is not installed, substitute a manual one-line prediction appended to `tracks/_meta/edit_manifest.yaml` — the record is what matters, not the skill.
+**Unavailable axis**: If steel-quench or phantom-quench are not installed, note `Axis N: skipped (skill unavailable)` and proceed. Axis 1 PASS alone is sufficient to unblock a PR when Axes 2–3 are unavailable. Axis 4 (edit-manifest): if the skill is not installed, substitute a manual one-line prediction appended to `tracks/_meta/edit_manifest.yaml` — the record is what matters, not the skill.
 
 **Axis ownership** (each skill is already complete — orchestrator only coordinates):
 
@@ -153,7 +153,7 @@ FH asset modified → Axis 1 (regression_guard.sh --pr {BRANCH})
 |---|---|---|
 | Backward | `regression_guard.sh` | Critical section loss, broken refs, syntax errors, line reduction |
 | Adversarial | `steel-quench` | Trigger phrase collisions, design attack surface, over-engineered steps |
-| Forward | `source-grounding-audit` | Phantom references, paths that don't exist, stale external links |
+| Forward | `phantom-quench` | Phantom references, paths that don't exist, stale external links |
 | Record | `edit-manifest` RECORD | Logs predicted impact — closes the predict-verify loop for future harvest-loop |
 
 ---

@@ -1,6 +1,6 @@
 ---
 name: pipeline-conductor
-description: Chains the four core FH verification pipelines (harvest-loop → steel-quench → source-grounding-audit → sim-conductor) into a single gated sweep. Accepts a scope (single skill, specific asset, full harness) and aggregates results into one structured report. Supports --quick mode (steps 2+3 only) and --full mode (all four steps). Triggered by "run the full pipeline", "chain all verifications", "end-to-end sweep", "pipeline-conductor", or "verify everything".
+description: Chains the four core FH verification pipelines (harvest-loop → steel-quench → phantom-quench → sim-conductor) into a single gated sweep. Accepts a scope (single skill, specific asset, full harness) and aggregates results into one structured report. Supports --quick mode (steps 2+3 only) and --full mode (all four steps). Triggered by "run the full pipeline", "chain all verifications", "end-to-end sweep", "pipeline-conductor", or "verify everything".
 user-invocable: true
 allowed-tools: ["Read", "Write", "Bash", "Grep", "Glob", "Agent"]
 model: sonnet
@@ -10,7 +10,7 @@ model: sonnet
 
 Chains the four standalone FH verification pipelines into a gated sequence. Each step receives the previous step's verdict before proceeding. Aggregates all findings into a single structured report at the end.
 
-The gap this closes: harvest-loop, steel-quench, source-grounding-audit, and sim-conductor are each invocable independently but have no automatic hand-off between them. Running them sequentially by hand loses inter-step signal — a FAIL in step 2 should block step 3 rather than silently continuing. pipeline-conductor enforces that ordering.
+The gap this closes: harvest-loop, steel-quench, phantom-quench, and sim-conductor are each invocable independently but have no automatic hand-off between them. Running them sequentially by hand loses inter-step signal — a FAIL in step 2 should block step 3 rather than silently continuing. pipeline-conductor enforces that ordering.
 
 ## Triggers
 
@@ -92,7 +92,7 @@ Do not infer scope — a wrong scope produces misleading verdicts.
 
 The four constituent skills use heterogeneous scope models. Translate the pipeline scope to each skill's invocation form before running any step:
 
-| Pipeline scope | harvest-loop (Step 1) | steel-quench (Step 2) | source-grounding-audit (Step 3) | sim-conductor (Step 4) |
+| Pipeline scope | harvest-loop (Step 1) | steel-quench (Step 2) | phantom-quench (Step 3) | sim-conductor (Step 4) |
 |---|---|---|---|---|
 | Single SKILL.md | Check session findings relevant to this skill; propose mode only | Adversarial attack on this SKILL.md | Back-trace claims in this SKILL.md to declared sources | Area D (artifact review) on this SKILL.md |
 | Specific directory | Check session findings in this domain | Attack all SKILL.md files in directory | Back-trace all claims in directory | Area A + Area D on the domain |
@@ -219,13 +219,13 @@ Run steel-quench against the target scope.
 
 ---
 
-## Step 3. source-grounding-audit — Phantom Claim Detection
+## Step 3. phantom-quench — Phantom Claim Detection
 
-Run source-grounding-audit against the target scope.
+Run phantom-quench against the target scope.
 
 **What it checks**: Proper nouns, numerical values, file paths, and branching conditions back-traced to declared source files. Claims not found in source are marked Phantom.
 
-**Invocation**: Run source-grounding-audit scoped to the same target as Steps 1 and 2.
+**Invocation**: Run phantom-quench scoped to the same target as Steps 1 and 2.
 
 **Load-bearing Phantom** (binary test — apply mechanically):
 
@@ -238,7 +238,7 @@ All other locations (§Triggers, advisory §Chains language, frontmatter descrip
 
 **Verdict criteria**:
 
-| source-grounding-audit result | pipeline-conductor verdict |
+| phantom-quench result | pipeline-conductor verdict |
 |---|---|
 | 0 Phantoms, all claims grounded | `PASS` |
 | Phantom claims found, none load-bearing (binary test) | `CONDITIONAL_PASS` — list Phantoms |
@@ -246,12 +246,12 @@ All other locations (§Triggers, advisory §Chains language, frontmatter descrip
 | Grounding ambiguous (source file exists but content unclear) | `ESCALATE` |
 
 **On FAIL**: Output the load-bearing Phantom(s). Ask:
-> "source-grounding-audit found a load-bearing Phantom claim. Fix and re-run Step 3, or abort the sweep?"
+> "phantom-quench found a load-bearing Phantom claim. Fix and re-run Step 3, or abort the sweep?"
 
 **On CONDITIONAL_PASS**: Capture non-load-bearing Phantoms. Continue to Step 4.
 
 ```
-[Step 3 — source-grounding-audit]
+[Step 3 — phantom-quench]
   Verdict: {verdict}
   Basis:   {one-line}
   Phantoms: {count} — {load-bearing: Y/N} — {top item or "none"}
@@ -320,7 +320,7 @@ pipeline-conductor — Sweep Report
   Step 0.5 — return-path-gate:       {PASS / CONDITIONAL_PASS / FAIL / SKIPPED / degraded}
   Step 1   — harvest-loop:           {PASS / CONDITIONAL_PASS / FAIL / ESCALATE / SKIPPED}
   Step 2   — steel-quench:           {verdict}
-  Step 3   — source-grounding-audit: {verdict}
+  Step 3   — phantom-quench: {verdict}
   Step 4   — sim-conductor:          {verdict}
 
   Overall: {CLEAN (--full) / CLEAN (--quick) / CLEAN (--no-sim) / PENDING / BLOCKED}

@@ -57,7 +57,7 @@ append a manifest entry **before** committing.
 
 > **Wiring note**: This Record step is invoked manually or via harvest-loop until the
 > CLAUDE.md 3-axis auto-gate is explicitly extended to call it. The auto-gate currently
-> chains regression_guard → steel-quench → source-grounding-audit; adding edit-manifest
+> chains regression_guard → steel-quench → phantom-quench; adding edit-manifest
 > Record as a pre-step is a proposed extension, not yet wired. Do not assume automatic
 > invocation — call it explicitly after an FH asset edit.
 

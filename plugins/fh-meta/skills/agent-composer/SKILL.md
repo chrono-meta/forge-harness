@@ -58,7 +58,7 @@ For each subtask in the composition plan:
 | Subtask type | Strong fit signal | Weak fit signal |
 |---|---|---|
 | Adversarial review | `subagent_type="challenger"`, artifact_type match | general-purpose only |
-| Phantom detection | `source-grounding-audit` | general-purpose only |
+| Phantom detection | `phantom-quench` | general-purpose only |
 | Persona simulation | `hub-persona-auditor`, deep-insight persona | general-purpose only |
 | Code generation | `writes: true` + code tools | `writes: false` or no code tools |
 | Audit-only | `writes: false` (safe) | `writes: true` (risky for audit) |

@@ -79,7 +79,7 @@ Read target artifact(s) → classify on 5 dimensions → output recommendation �
 | `audience` | external installer / first-time user → newcomer↑ · internal team only → devil↑ |
 | `claim_density` | 3+ stated benefits or superlatives → devil-advocate↑ |
 | `risk_level` | external publish / marketplace listing → steel-quench prerequisite triggered |
-| `novelty` | first-of-its-kind / no prior session evidence → source-grounding-audit recommended |
+| `novelty` | first-of-its-kind / no prior session evidence → phantom-quench recommended |
 
 ```
 Target Profile output:
@@ -92,7 +92,7 @@ Recommendation:
   Areas: [list + rationale]
   Persona composition: [list + weight]
   Scale: [Minimum 3 | Extended 4–8 | Full ≤16]
-  Prerequisites: [steel-quench / source-grounding-audit / none]
+  Prerequisites: [steel-quench / phantom-quench / none]
 ```
 
 #### Persona Discovery (after profile → before dispatch)

@@ -479,6 +479,6 @@ F7 (bash -n parse) is a general-purpose syntax capability. Other skills reuse it
 |---|---|---|
 | harness-doctor Step 10 (this) | Regression detection — new syntax errors from change | *Backward* |
 | steel-quench | Attack vector — "SKILL.md claims bash runs but has syntax errors" | *Adversarial* |
-| source-grounding-audit | Phantom claim — code in docs that doesn't parse = fabricated example | *Forward* |
+| phantom-quench | Phantom claim — code in docs that doesn't parse = fabricated example | *Forward* |
 
 For shared utility: `templates/regression_guard.sh` — extract `count_bad_blocks` function or invoke with ref pair.

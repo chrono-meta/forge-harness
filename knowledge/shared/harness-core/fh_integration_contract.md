@@ -196,7 +196,7 @@ All backends must produce the same `FH_STATUS` / `FH_GATE_VERDICT` header. Missi
 ### Pattern 2-c — Direct skill or agent run
 
 ```bash
-FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run --skill source-grounding-audit --file docs/foo.md
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run --skill phantom-quench --file docs/foo.md
 FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run --agent fh-commons:quench-challenger --file plugins/fh-meta/skills/foo/SKILL.md
 ```
 

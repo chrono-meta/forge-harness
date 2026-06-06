@@ -144,10 +144,10 @@ Target Profile:
   novelty: high (references recent paper)
 
 Recommendation:
-  Areas: D-code + source-grounding-audit (quantitative claims)
+  Areas: D-code + phantom-quench (quantitative claims)
   Persona composition: challenger (claim-evidence), domain-expert (arXiv validity)
   Scale: Minimum (3)
-  Prerequisites: source-grounding-audit recommended (novelty + citations)
+  Prerequisites: phantom-quench recommended (novelty + citations)
 ```
 
 ---

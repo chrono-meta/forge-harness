@@ -52,7 +52,7 @@ New work arrives
     Did it work?
     ├── Axis 1 (backward): regression_guard.sh
     ├── Axis 2 (adversarial): steel-quench
-    ├── Axis 3 (forward): source-grounding-audit
+    ├── Axis 3 (forward): phantom-quench
     └── Axis 4 (record): confirm edit-manifest entry exists
 
     ▼ Axis 6 — Improve
@@ -72,7 +72,7 @@ Applies automatically when any FH asset is modified (SKILL.md, rules, templates,
 |---|---|---|
 | **Backward** | `regression_guard.sh` | Critical section loss, broken refs, syntax errors, line reduction |
 | **Adversarial** | `steel-quench` | Trigger phrase collisions, design attack surface, over-engineered steps |
-| **Forward** | `source-grounding-audit` | Phantom references, paths that don't exist, stale external links |
+| **Forward** | `phantom-quench` | Phantom references, paths that don't exist, stale external links |
 | **Record** | `edit-manifest RECORD` | Logs predicted impact — closes the predict-verify loop |
 
 **Hard gate**: git pre-commit hook (`templates/.git-hooks/pre-commit`) blocks commit until marker + manifest entry exist.

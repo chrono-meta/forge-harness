@@ -109,7 +109,7 @@ FH_BACKEND=auto npx --package @chrono-meta/fh-gate fh-gate "src/foo.ts" full
 For direct skill or agent execution outside Claude Code, use `fh-run`:
 
 ```bash
-FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run --skill source-grounding-audit --file docs/foo.md
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run --skill phantom-quench --file docs/foo.md
 FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run --agent fh-commons:quench-challenger --file plugins/fh-meta/skills/foo/SKILL.md
 ```
 
@@ -135,7 +135,7 @@ Full spec: [`fh_integration_contract.md`](knowledge/shared/harness-core/fh_integ
 | Asset | Role | Triggers |
 |---|---|---|
 | `steel-quench` | Full-spectrum adversarial verification | "Run the quench", "Attack from the root" |
-| `source-grounding-audit` | Phantom claim detection + source back-tracing | "Verify the source", "Grounding audit" |
+| `phantom-quench` | Phantom claim detection + source back-tracing | "Verify the source", "Grounding audit" |
 | `harvest-loop` | End-of-session learning → evolution pipeline | "Harvest the session" |
 | `agent-composer` | Plans optimal agent dispatch | "Run in parallel", "Which agents?" |
 | `sim-conductor` | Meta-simulation orchestrator | "External user perspective" |
@@ -169,7 +169,7 @@ Full spec: [`fh_integration_contract.md`](knowledge/shared/harness-core/fh_integ
 
 | Cluster | Skills |
 |---|---|
-| Verification | `steel-quench` · `source-grounding-audit` · `convergence-loop` · `prompt-regression` · `return-path-gate` |
+| Verification | `steel-quench` · `phantom-quench` · `convergence-loop` · `prompt-regression` · `return-path-gate` |
 | Orchestration | `agent-composer` · `pipeline-conductor` · `goal-quench` · `deliberation` |
 | Diagnosis | `harness-doctor` · `context-doctor` · `install-doctor` · `mcp-circuit-breaker` |
 | Harvesting / Learning | `harvest-loop` · `field-harvest` · `edit-manifest` · `memory-hygiene` |

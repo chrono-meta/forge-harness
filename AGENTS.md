@@ -124,7 +124,7 @@ echo "Apply the following skill to the artifact below." | \
 
 | Tier | Definition | Examples |
 |---|---|---|
-| **M1 — Full** | All phases run without CC-native dependencies — no Stop hook, no `.claude/agents/` dispatch, no `/model` | `token-budget-gate`, `asset-placement-gate`, `source-grounding-audit`, `deep-clarify`, `deliberation`, `convergence-loop` |
+| **M1 — Full** | All phases run without CC-native dependencies — no Stop hook, no `.claude/agents/` dispatch, no `/model` | `token-budget-gate`, `asset-placement-gate`, `phantom-quench`, `deep-clarify`, `deliberation`, `convergence-loop` |
 | **M2 — Partial** | Core workflow runs; CC-native phases require manual adaptation or skip | `steel-quench` (Wave 1–3 ✅; quench-challenger agent = manual), `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop` (git scan phase ✅; PR auto-proposal = manual) |
 | **M3 — CC-only** | Requires CC Stop hook or session-scoped agent dispatch; methodology reference only | `goal-quench` (Phase 3 Stop hook), `hub-cc-pr-reviewer` (CC session context), `install-wizard` (settings.json write) |
 
@@ -141,7 +141,7 @@ echo "Apply the following skill to the artifact below." | \
 | At least 1 external Codex user confirms methodology reproduces | ⬜ pending — needs external users |
 | README badge updated (`Codex-compatible` without `beta`) | ⬜ blocked on above |
 
-**Author M1 validation (2026-06-04, internal — does not satisfy the external conditions above):** `source-grounding-audit` (4/4 on a phantom-seeded fixture) and `asset-placement-gate` (correct Drop routing on a duplicate-skill proposal) ran end-to-end via `codex exec -m gpt-5.5 -` with no CC-native dependency, confirming the M1 tier assignments. Limitations observed (CC-native hook noise, no token accounting, etc.) are documented in `docs/codex-compat.md`.
+**Author M1 validation (2026-06-04, internal — does not satisfy the external conditions above):** `phantom-quench` (4/4 on a phantom-seeded fixture) and `asset-placement-gate` (correct Drop routing on a duplicate-skill proposal) ran end-to-end via `codex exec -m gpt-5.5 -` with no CC-native dependency, confirming the M1 tier assignments. Limitations observed (CC-native hook noise, no token accounting, etc.) are documented in `docs/codex-compat.md`.
 
 Tracking: open an issue at `chrono-meta/forge-harness` with label `codex-validation` to report a validated run.
 

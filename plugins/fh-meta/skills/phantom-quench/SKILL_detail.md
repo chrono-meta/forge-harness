@@ -1,4 +1,4 @@
-# source-grounding-audit — Execution Detail
+# phantom-quench — Execution Detail
 
 On-demand reference. Load the section indicated by the pointer in SKILL.md.
 
@@ -153,7 +153,7 @@ Process prescription:
 **Completion Declaration Format**
 
 ```
-## source-grounding-audit Complete
+## phantom-quench Complete
 
 Audit scope: {artifact file} / source {N files}
 {N} total claims audited
@@ -179,4 +179,4 @@ Next actions:
 
 **Evidence Record**
 
-- **Verified in practice**: TC generation without reading source files → steel-quench passes → source-grounding-audit back-trace detects numerous Phantoms (notifications vs. push notifications, version names vs. non-enrolled, bottom sheet vs. screen navigation). **Procedure**: Read sources in order then regenerate → replace with source-based TCs. **Recurrence prevention**: Source gate implementation — FileNotFoundError if required source files absent. steel-quench misses this because: outputs look logically sound so pattern attacks cannot identify Phantoms — only source back-tracing can detect them.
+- **Verified in practice**: TC generation without reading source files → steel-quench passes → phantom-quench back-trace detects numerous Phantoms (notifications vs. push notifications, version names vs. non-enrolled, bottom sheet vs. screen navigation). **Procedure**: Read sources in order then regenerate → replace with source-based TCs. **Recurrence prevention**: Source gate implementation — FileNotFoundError if required source files absent. steel-quench misses this because: outputs look logically sound so pattern attacks cannot identify Phantoms — only source back-tracing can detect them.

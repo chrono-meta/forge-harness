@@ -54,7 +54,7 @@ Proposed three-layer harness taxonomy:
 | Academic Layer | FH Equivalent | Assets |
 |---|---|---|
 | Harness interface | Context injection layer | `CLAUDE.md` · `.claude/rules/*.md` · `MEMORY.md` |
-| Harness mechanisms | Skill bus | `verify-bidirectional` · `steel-quench` · `source-grounding-audit` · `agent-composer` |
+| Harness mechanisms | Skill bus | `verify-bidirectional` · `steel-quench` · `phantom-quench` · `agent-composer` |
 | Scale | Multi-agent dispatch | Agent View · `context-bridge-dispatch` · `agent-composer` parallel dispatch |
 | *(meta layer, not in taxonomy)* | Harness evolution | `harvest-loop` · `harness-doctor` · `frontier-digest` · `prompt-regression` |
 

@@ -123,7 +123,7 @@ Findings:
 
 ### The gap FH closes
 
-OpenHuman's Memory Tree stores persistent context (technical decisions, file paths, architectural claims). These are validated once at write time, then trusted indefinitely. FH's `memory-hygiene` + `source-grounding-audit` pattern re-verifies memory entries against live state.
+OpenHuman's Memory Tree stores persistent context (technical decisions, file paths, architectural claims). These are validated once at write time, then trusted indefinitely. FH's `memory-hygiene` + `phantom-quench` pattern re-verifies memory entries against live state.
 
 ### Workflow
 
