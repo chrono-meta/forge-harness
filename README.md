@@ -205,17 +205,21 @@ If you use external CLIs (Gemini, Codex, `gh copilot`) as sidecars, their costs 
 
 ---
 
-## Multi-Model Sidecar (v1.3)
+## Multi-Model Sidecar
 
-Run Gemini, Codex, or `gh copilot` as independent peer reviewers alongside Claude.
+Run Gemini, Codex, or `gh copilot` as independent reviewers alongside Claude. The point is **context
+isolation**: a reviewer that did *not* co-create the work is cold to its froth — whoever sits *outside* the
+collaboration tends to catch what the co-author, now an advocate for the shared result, glides past. It's
+symmetric, not a model-ranking: when you co-build with Gemini, a fresh Claude catches its froth; when you
+co-build with Claude, a fresh sidecar catches Claude's.
 
-| Tier | Setup | Defects found |
-|---|---|---|
-| **C1** Single Claude | Default | 25% |
-| **C2** 3 cross-session Claude personas | No extra tools | 75% |
-| **C3** C2 + external CLI | External CLI installed | 100% (+3 Claude blind spots) |
+In one internal case study, layering reviewers surfaced progressively more issues — a single in-session
+pass missed items that cross-session personas caught, and an external-CLI reviewer surfaced a few the
+Claude personas shared a blind spot on. Treat it as a worked example, **not a benchmark**: the gain scales
+with task complexity and how much you co-created the artifact, and an isolated reviewer also adds false
+positives you have to triage. Whether the net is worth it on a given task is an empirical, per-use question.
 
-Claude-side token cost: **zero increase** C2→C3.
+Claude-side token cost does not increase when the extra reviewer is an external CLI — it bills to its own quota.
 
 ---
 
