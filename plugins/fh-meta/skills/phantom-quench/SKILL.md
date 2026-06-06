@@ -18,6 +18,11 @@ model: sonnet
 > This is a **label rename, not a capability change** — phantom-quench does not fuse steel-quench or
 > inject faults; those remain separate (orthogonality is deliberate — see Role Separation below).
 >
+> **Quench-series semantics** (resolves the "quench *what*?" question): each member subjects a different
+> thing to the forge — steel-quench hardens an **existing output**; phantom-quench hardens the system
+> against **mistaking the absent for present** (the phantom illusion — *not* the phantom as a material to
+> harden); goal-quench hardens the **goal itself** into an advanced version. Same verb, consistent grammar.
+>
 > **Not the same as `phantom-gate`.** `phantom-gate` is the *productized standalone* phantom detector — a
 > PyPI package run against any repo from the shell. `phantom-quench` is the *in-harness skill* — the same
 > detection lineage as a method invoked inside a Claude session against a declared source set. Tool vs
