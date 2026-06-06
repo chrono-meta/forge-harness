@@ -148,6 +148,27 @@ Wave 4 convergence = Wave 3 criteria + 3 AI-specific vectors actually reviewed +
 
 ---
 
+## External-GT Adjudication (when the target has a public ground truth)
+
+When quenching a **public artifact that has its own ground truth** — a repo's open issues, test suite, or
+stated policy/threat-model (a frontier codebase, a sister project — *not* your own in-progress draft) — add
+an adjudication pass after the panel produces findings. The panel (Wave 5 cross-family) gives decorrelated
+detection; this pass adds the *external check* the panel cannot self-supply. For each finding, classify:
+
+| Class | Test | Meaning |
+|---|---|---|
+| **Corroborated** | matches an OPEN issue / a failing test | independent rediscovery — strongest |
+| **Novel** | no matching issue, but confirmed by logic or a written test | caught what the target missed |
+| **Reframe / reject** | the target's own docs/policy/threat-model marks it intentional or out-of-scope | NOT a confident catch — a false positive |
+
+The GT (not a cross-family vote) resolves contention objectively, and it catches the panel's own
+**shared training-prior** false positives. Report only Corroborated + Novel as confident catches; a null
+result on sound code is the correct answer, not a failure. **Basis**: 2026-06-06 frontier-quench sweep —
+a single-family pass repeated still misses what cross-family catches, and a target's `SECURITY.md` reframed
+"security" findings to "correctness" (its permission layer was UX, not a boundary).
+
+---
+
 ## Cross-Project Common Patterns (initial seed)
 
 | # | Pattern Name | Description | Response Direction |
@@ -219,6 +240,7 @@ sim-conductor Area A (external user perspective)
 - **Attacks without real code are invalid.** Abstract criticism is not included in Wave 1 results.
 - **quench-challenger first.** Call fh-commons:quench-challenger in isolation in Wave 1 if available.
 - **Always check self-referential pattern (P3).** Cross-validate Wave results with external criteria.
+- **Public target → adjudicate against external GT before claiming.** A finding the target's own docs/policy/threat-model marks intentional or out-of-scope is a false positive, not a catch. See §External-GT Adjudication.
 - **Attack surface limit**: steel-quench attacks output content patterns. Phantom Claim detection → `phantom-quench`.
 
 ## Failure Fallback
