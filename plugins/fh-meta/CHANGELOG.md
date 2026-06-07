@@ -25,6 +25,7 @@ grade (embedded methodology + Done-When), not name-copied from the field deep-in
 - `challenger` U1 expanded to absorb the standalone skeptic "why not just X?" lens (web-grounded external-alternative search). Skeptic removed as a separate persona.
 - sim-conductor palette → shipped-agent index (sourced installed-first); provenance note clarified ("renamed" = pattern→parallax, not personas; lineage acknowledged, nothing carried as a shell).
 - Cross-skill references realigned: deliberation, steel-quench multi-team, apex-review, agent-composer, return_path_gate.
+- `challenger` relocated `.claude/agents/` → `plugins/fh-meta/agents/` so the full spectrum (beginner · main-player · expert · challenger) ships and registers from the plugin (plugin-only installs no longer reference an unbundled adversary). Registry synced: AGENTS.md + `.claude/registry/agent_cards.json` now list all 8 agents; `package.json` files entry de-duplicated (covered by `plugins/fh-meta/agents`).
 - Rationale: bias-isolation operationalization — context-separated diverse personas make the "outside-the-author reads cold" assumption executable (see `tracks/_meta/fh_signal_2026-06-07`).
 
 ---

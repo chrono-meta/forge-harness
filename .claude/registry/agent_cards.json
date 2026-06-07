@@ -1,14 +1,38 @@
 {
   "version": "1.0",
-  "generated": "2026-06-02",
+  "generated": "2026-06-07",
   "source": "derived from AGENTS.md (Agent Registry + Tool restrictions tables) and tracked agent files",
-  "convention": "A2A Agent Card pattern — machine-readable capability discovery, count-synced to .claude/agents/ plus plugin agents/",
-  "agent_count": 5,
+  "convention": "A2A Agent Card pattern — machine-readable capability discovery, count-synced to plugin agents/ directories",
+  "agent_count": 8,
   "agents": [
     {
+      "id": "beginner",
+      "file": "plugins/fh-meta/agents/beginner.md",
+      "role": "First-contact cold-read standpoint (user-mastery spectrum entry tier) — surfaces onboarding friction a fluent author cannot feel; constructive, not adversarial",
+      "allowed_tools": ["Read"],
+      "invoked_by": ["sim-conductor", "marketplace-gate", "install-wizard", "direct"],
+      "writes": false
+    },
+    {
+      "id": "main-player",
+      "file": "plugins/fh-meta/agents/main-player.md",
+      "role": "Engaged-user standpoint (user-mastery spectrum core tier) — intelligently scopes Light/Midcore/Heavy; Heavy carries the classic power-user edge/limit lens",
+      "allowed_tools": ["Read", "Grep", "Glob"],
+      "invoked_by": ["sim-conductor", "direct"],
+      "writes": false
+    },
+    {
+      "id": "expert",
+      "file": "plugins/fh-meta/agents/expert.md",
+      "role": "Domain-authority standpoint (user-mastery spectrum frontier tier) — web-grounded accuracy + SOTA currency, citation-enforced; checks against the external world, not internal assets",
+      "allowed_tools": ["Read", "WebSearch", "WebFetch"],
+      "invoked_by": ["sim-conductor", "paper-review", "direct"],
+      "writes": false
+    },
+    {
       "id": "challenger",
-      "file": ".claude/agents/challenger.md",
-      "role": "Frontier-grade adversarial evaluator — adapts attack vectors to artifact type, enforces evidence citation, models its own information asymmetry",
+      "file": "plugins/fh-meta/agents/challenger.md",
+      "role": "Frontier-grade adversarial evaluator — adapts attack vectors to artifact type, enforces evidence citation, models its own information asymmetry; U1 absorbs the skeptic 'why not just X?' lens",
       "allowed_tools": ["Read", "Grep", "Glob", "WebSearch", "WebFetch"],
       "invoked_by": ["steel-quench", "harvest-loop", "sim-conductor", "direct"],
       "writes": false

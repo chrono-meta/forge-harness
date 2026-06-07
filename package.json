@@ -41,7 +41,6 @@
     }
   },
   "files": [
-    ".claude/agents/challenger.md",
     "AGENTS.md",
     "CATALOG.md",
     "CHEATSHEET.md",
