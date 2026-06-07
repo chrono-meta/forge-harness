@@ -26,15 +26,15 @@ category: Composability Gate
 > See `README.md > Advanced Settings > Plugin Install` for detailed guide.
 
 Run immediately after cloning forge-harness (FH), or when setting up a new project for the first time.
-Sets up periodic notification structure (zshrc hook) and weekly audit notifications within Claude Code (CC) sessions. The zshrc hook is permanently applied; CronCreate is valid only for the current session.
+Sets up the periodic-audit notification structure: a permanent zshrc hook (`fh_audit_check.zsh`, runs on terminal start) plus FH's session-start mtime detection. Both surface a weekly-audit reminder when 7+ days have elapsed since the last `weekly_audit` — no persistent cron is used (a session-scoped scheduler cannot survive to fire on a later day).
 
 ## Key Terms
 
 | Term | Definition |
 |---|---|
 | **sentinel** | An empty file that records whether a specific event (audit complete, install complete, etc.) has occurred. Created in `~/.cc_sentinels/`. |
-| **CronCreate** | Claude Code built-in command — schedules periodic tasks valid for the current session. Disappears when session ends. |
 | **zshrc hook** | Shell function added to `~/.zshrc`. Automatically runs on terminal start and applies permanently. |
+| **session-start detection** | FH's durable weekly-audit cadence — at session start the mtime of the latest `weekly_audit_*` is checked and `/harvest-loop` is proposed if 7+ days elapsed (see CLAUDE.md Cadence Rules). No persistent scheduler required. |
 
 ## Execution Modes
 
@@ -51,7 +51,7 @@ Sets up periodic notification structure (zshrc hook) and weekly audit notificati
 - **Per-item approval**: Select each item individually (Y approve / N skip / L later)
 - **Double-confirm irreversible changes**: Preview before file writes and zshrc modifications
 - **User review before PR creation**: Output PR parameters (title, base branch, included files, body) and get approval before execution. No automatic submission.
-- **Periodic audit structure setup**: zshrc hook (permanently applied on terminal start) + sentinel initialization + CronCreate (valid for current CC session)
+- **Periodic audit structure setup**: zshrc hook (permanently applied on terminal start) + sentinel initialization + session-start mtime detection (7-day threshold)
 
 ## Execution Steps
 
@@ -489,8 +489,9 @@ fi
 mkdir -p ~/.cc_sentinels
 touch ~/.cc_sentinels/$(basename "$(pwd)")_wizard_done
 
-# Weekly audit schedule in CC (CronCreate — valid for this session)
-# → auto-call /harvest-loop (lightweight mode) every Monday at 9:03
+# Weekly audit cadence — NO cron needed (a session-scoped scheduler cannot fire on a later day).
+# Durable mechanism = the zshrc hook above (fh_audit_check.zsh warns on terminal start when 7+ days
+# since last weekly_audit) + FH session-start detection (proposes /harvest-loop lightweight when overdue).
 ```
 
 ### Step 5. Completion Report + Contribution Guidance
@@ -503,7 +504,7 @@ install-wizard — Complete
   From now on:
   · Periodic audit auto-check on terminal start
   · Yellow warning output when weekly_audit exceeds 7 days
-  · Auto /harvest-loop (lightweight) at 9am Monday when CC is open
+  · /harvest-loop (lightweight) proposed at session start when 7+ days since last weekly_audit
 
   Next step skills:
   · Not sure which plugin you need → /plugin-recommender
