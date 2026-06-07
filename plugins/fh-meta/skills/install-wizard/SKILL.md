@@ -180,8 +180,10 @@ fi
   1. Clone FH repo:
      git clone https://github.com/chrono-meta/forge-harness ~/forge-harness
 
-  2. Set environment variable:
+  2. Set environment variables:
      export FH_DIR=~/forge-harness
+     export CC_HUB_DIR=$FH_DIR   # FH hub dir (holds tracks/_audit for the weekly-audit mtime check);
+                                 # equals FH_DIR unless you run a separate hub clone
 
   3. Install FH plugin in CC:
      Settings → Plugins → Add → {FH_DIR}/plugins/fh-meta
@@ -219,7 +221,7 @@ install-wizard — Environment Detection
 > **Core message**: FH is not something placed on top of an existing harness.  
 > It analyzes existing rules to remove duplicates — making things lighter.
 >
-> **Measured expectations** (--dry-run verified values):
+> **Illustrative single-run measurements** (n=1 per project, `--dry-run` verified — not benchmarks; your numbers will differ):
 >
 > | Project type | Example | Total volume | Reduction | Main cause |
 > |---|---|---|---|---|
@@ -326,7 +328,7 @@ Auto-check the following items based on detected environment. Each item classifi
 | `phantom-gate` | **(Python + AI-output projects only)** `phantom-gate` present in `requirements.txt` / `pyproject.toml` | `grep "phantom.gate" requirements.txt pyproject.toml 2>/dev/null` |
 | `Streamlit pattern applied` | (Streamlit projects only, if the pattern pack is present) data_editor empty df branch/async wrapper/CSS numeric variables | CC `knowledge/shared/streamlit_patterns.md` Pattern 1-5 check (skip if file absent) |
 
-**Score calculation**: PASS = 1 point / MISS = 0.5 points / FAIL = 0 points → converted to 100-point scale.
+**Score calculation**: PASS = 1 / MISS = 0.5 / FAIL = 0. Formula: `score = round( Σ(points) ÷ (applicable item count) × 100 )`. Conditional items (Streamlit / phantom-gate / MCP / deep-insight) are excluded from the denominator when not relevant, so always print the denominator next to the score (e.g. `{score}/100 over {n} applicable items`) — the percentage is reproducible only when the item count is shown.
 
 ### Step 2. Diagnosis Report + Proposal List
 
@@ -357,9 +359,11 @@ install-wizard — Diagnosis Results ({score}/100)
   [6] Add MCP plugin — activate integrations (if MCP plugin MISS)
       Run: claude mcp add <your-mcp-plugin> -- npx -y <your-mcp-plugin>
       CC restart required after completion
-  [7] Install deep-insight plugin — activate sim-conductor multi-persona simulation (if deep-insight MISS)
-      Settings → Plugins → Add → {deep-insight plugin path}
-      Without install, /sim-conductor persona branching disabled (single-point simulation only)
+  [7] (Optional — field plugin, NOT required) Install deep-insight — adds the field's domain personas to sim-conductor
+      deep-insight is a private/field marketplace plugin. sim-conductor already ships the built-in
+      user-mastery spectrum (beginner · main-player · expert · challenger), so multi-persona simulation
+      works WITHOUT it. If you have access: Settings → Plugins → Add → <your deep-insight path>.
+      If not: skip — sim-conductor falls back to the built-in spectrum agents (no capability lost).
   [8] Create fh_env_context.jsonc — org/network/Git environment context file (if fh_env_context.jsonc MISS)
       Copy: {FH_DIR}/templates/fh_env_context.jsonc → .claude/rules/fh_env_context.jsonc
       Then manually update with actual values for org name, Jira URL, environment status, etc.
@@ -477,9 +481,16 @@ source "$FH_DIR/templates/fh_audit_check.zsh"
 EOF
 fi
 
-# 4-axis verification gate — install the FH pre-commit hook on the forge-harness clone (idempotent)
-# Git does NOT set core.hooksPath automatically on clone, so this one-time step is required for the gate to enforce (otherwise it stays advisory).
+# 4-axis verification gate (Mode D / FH-self-development only — OPT-IN, double-confirm required)
+# SCOPE (state this before asking): this gates commits IN YOUR FH CLONE ($FH_DIR) — git commit there is
+#   blocked until the 4-axis markers pass. It is FH-internal infra (hardcodes hub paths/markers) and is
+#   NEVER installed into field projects (see auto_project_mapping.md §6). Skip unless you develop FH itself.
+# Per Core Principles (Per-item approval + Double-confirm irreversible changes): this is NOT auto-run —
+#   it is a separate explicit Y/N, not folded into the baseline-setup batch.
 if [ -d "$FH_DIR/templates/.git-hooks" ]; then
+  echo "Enable the 4-axis pre-commit gate on your FH clone ($FH_DIR)? It will block commits there until"
+  echo "markers pass (Mode D / FH-development only). Skip if you are not developing FH itself. (Y/N)"
+  # → On explicit Y only:
   git -C "$FH_DIR" config core.hooksPath templates/.git-hooks
   chmod +x "$FH_DIR/templates/.git-hooks/pre-commit" 2>/dev/null
   echo "4-axis pre-commit gate: installed (core.hooksPath -> templates/.git-hooks)"
