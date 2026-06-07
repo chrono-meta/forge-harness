@@ -10,6 +10,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## Plugin Level
 
+### [1.4.1] — 2026-06-08
+
+**docs: repo-root declutter + pre-commit gate hardening**
+
+- Moved `ETHOS.md`, `WHY.md`, `OUTPUT_EVIDENCE.md`, `CONTRIBUTING.md` into `docs/` (root
+  declutter; `LICENSE`/`CITATION.cff`/`AGENTS.md` kept at root for GitHub/Codex/npm reasons).
+  npm `files[]` updated so the package still ships `docs/CONTRIBUTING.md`; README links repointed.
+- Hardened the 4-axis pre-commit hook (`templates/.git-hooks/pre-commit`): `diff_is_substantive`
+  is now rename-aware with a source-scope discriminator — a pure rename *within* the gated
+  namespace no longer false-positives, while content `git mv`'d *into* the namespace from outside
+  is scanned in full (closes a rename-into-scope review-skip found by an isolated steel-quench
+  challenger). Fails closed on git error; matches indented fences. Not shipped to npm (templates/).
+- `docs/OUTPUT_EVIDENCE.md` agent count 5 → 8 (PR #77 agents), surfaced by phantom-quench.
+
 ### [1.4.0] — 2026-06-07
 
 **feat: user-mastery spectrum persona agents — sim-conductor shells elevated to frontier-grade agents**
