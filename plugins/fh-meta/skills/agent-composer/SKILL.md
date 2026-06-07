@@ -114,7 +114,7 @@ Default composition table by task type.
 |---|---|:---:|
 | **[Wave 0] Recon (all tasks)** | Recon agent (A) — file/structure understanding. Direct orchestrator execution forbidden | — |
 | **[Wave 0] All tasks including new assets** | fact-checker (A) — proactive duplicate/stale validation | — |
-| Meta-simulation quality validation | sim-conductor (S) — devil-advocate + newcomer + power-user | ✅ Parallel |
+| Meta-simulation quality validation | sim-conductor (S) — challenger + beginner + main-player | ✅ Parallel |
 | Field pattern harvest | field-harvest (S) | — |
 | Harness structural diagnosis | harness-doctor (S) | — |
 | New asset placement decision | asset-placement-gate (S) | — |

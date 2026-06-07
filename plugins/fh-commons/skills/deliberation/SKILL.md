@@ -71,7 +71,7 @@ Upon completing Step 0, include the following in the output:
 Jury auto-selection criteria:
 | Topic nature | Recommended jury personas |
 |---|---|
-| New user experience related | `newcomer` + `power-user` |
+| New user experience related | `beginner` + `main-player` |
 | Technical implementation feasibility | `persona-be` + `persona-fe` |
 | Business viability / policy / legal | `persona-pm` + `persona-business` |
 | General design decisions | No jury (3-layer is sufficient) |

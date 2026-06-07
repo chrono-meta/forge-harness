@@ -145,7 +145,7 @@ Choose your next step:
   D. Exit
 ```
 
-> **"Conditionally passed" → option B is the default path**: Conditions listed by personas remain unresolved until sim-conductor Area E runs devil/newcomer/power-user validation against them. Choosing C or D without sim-conductor leaves those conditions unverified — present B as the default choice and require explicit opt-out.
+> **"Conditionally passed" → option B is the default path**: Conditions listed by personas remain unresolved until sim-conductor Area E runs challenger/beginner/main-player validation against them. Choosing C or D without sim-conductor leaves those conditions unverified — present B as the default choice and require explicit opt-out.
 
 ---
 

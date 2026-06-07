@@ -64,11 +64,11 @@ GAP detected for [perspective X]:
 
 | Artifact type | Optimal personas | Likely GAP (not in FH native) |
 |---|---|---|
-| SKILL.md / governance doc | challenger · newcomer · governance-expert | governance-expert → query plugin-recommender |
-| README / marketing copy | newcomer · devil-advocate · domain-expert | domain-expert (field-specific) → query |
-| Python / JS code | challenger/Code · power-user · security-auditor | security-auditor → query if auth/data |
-| Auth / security-sensitive code | security-auditor · challenger/Code · power-user | security-auditor → block if GAP (high-weight) |
-| Design doc + citations | challenger · domain-expert · skeptic | domain-expert (field-specific) → query |
+| SKILL.md / governance doc | challenger · beginner · expert | deep org-specific governance role → query plugin-recommender |
+| README / marketing copy | beginner · challenger · expert | none native (challenger U1 covers the skeptic lens); niche field depth → query |
+| Python / JS code | challenger/Code · main-player (Heavy) · security-auditor | security-auditor → query if auth/data |
+| Auth / security-sensitive code | security-auditor · challenger/Code · main-player (Heavy) | security-auditor → block if GAP (high-weight) |
+| Design doc + citations | challenger · expert | expert web-grounds citations natively; deep niche subfield → query |
 
 ### Degraded coverage flag
 
@@ -96,7 +96,7 @@ Target Profile:
 
 Recommendation:
   Areas: B (internal meta audit) + D-skill (cold-start validation)
-  Persona composition: challenger (high — claim verification), newcomer (medium — onboarding), governance-expert (medium)
+  Persona composition: challenger (high — claim verification), beginner (medium — onboarding), expert (medium — governance accuracy)
   Scale: Minimum (3)
   Prerequisites: none (not yet external publish)
 ```
@@ -112,7 +112,7 @@ Target Profile:
 
 Recommendation:
   Areas: A (external user perspective — primary) + C (naming gap scan)
-  Persona composition: newcomer (high), devil-advocate (high — claim density), power-user (medium)
+  Persona composition: beginner (high), challenger (high — claim density), main-player (medium)
   Scale: Extended (4–5)
   Prerequisites: steel-quench REQUIRED before Area A proceeds
 ```
@@ -128,7 +128,7 @@ Target Profile:
 
 Recommendation:
   Areas: D-code (primary)
-  Persona composition: challenger/Code (edge cases, security surface), power-user (performance)
+  Persona composition: challenger/Code (edge cases, security surface), main-player (Heavy — performance, limits)
   Scale: Minimum (2 — third persona adds minimal value for bash)
   Prerequisites: none
 ```
@@ -145,7 +145,7 @@ Target Profile:
 
 Recommendation:
   Areas: D-code + phantom-quench (quantitative claims)
-  Persona composition: challenger (claim-evidence), domain-expert (arXiv validity)
+  Persona composition: challenger (claim-evidence), expert (arXiv validity, web-grounded)
   Scale: Minimum (3)
   Prerequisites: phantom-quench recommended (novelty + citations)
 ```
@@ -167,11 +167,11 @@ Run multi-team? (a) Full panel  (b) Claude sub-agents only  (c) Skip to Area B
 
 | Team | CLI | Personas | Dispatch method |
 |---|---|---|---|
-| T0 Claude | Agent sub-agent | hub-persona-auditor · challenger · domain-expert | Agent() call |
-| T1 Gemini | `gemini` pipe | newcomer · power-user · devil | `echo PROMPT \| gemini` |
-| T2 Copilot | `gh copilot suggest` | devil · domain-expert | `gh copilot suggest -t shell` |
-| T3 Ollama | `ollama run` | devil | `ollama run llama3 PROMPT` |
-| T4 Codex | `npx @openai/codex exec` | devil · edge-case-hunter | `echo PROMPT \| npx @openai/codex exec -m gpt-5 -` |
+| T0 Claude | Agent sub-agent | hub-persona-auditor · challenger · expert | Agent() call |
+| T1 Gemini | `gemini` pipe | beginner · main-player · challenger | `echo PROMPT \| gemini` |
+| T2 Copilot | `gh copilot suggest` | challenger · expert | `gh copilot suggest -t shell` |
+| T3 Ollama | `ollama run` | challenger | `ollama run llama3 PROMPT` |
+| T4 Codex | `npx @openai/codex exec` | challenger · edge-case-hunter | `echo PROMPT \| npx @openai/codex exec -m gpt-5 -` |
 
 ### CLI detection bash
 
@@ -205,7 +205,7 @@ Claude blind spots (external-only findings):
 
 Structural methods to reduce self-reference risk in Area B:
 
-1. **Regular devil attacks**: Area B once/month + devil attack (challenger) once/quarter. Route devil → defense results directly into SKILL.md via steel-quench handoff after Area B ends.
+1. **Regular adversarial attacks**: Area B once/month + `challenger` attack once/quarter. Route challenger → defense results directly into SKILL.md via steel-quench handoff after Area B ends.
 2. **Direct external user validation**: Non-owner attempts install + invocation → collect reactions. (cascade β validated: first autonomous external run confirmed.)
 3. **steel-quench integration**: After Area B ends, hand off challenger findings to `/steel-quench` for deeper adversarial review + SKILL.md inscription.
 4. **Dual validation principle**: Internal validation (Area B) alone is insufficient — minimized only when combined with external install reaction collection or cross-model validation.
@@ -266,7 +266,7 @@ Findings format: `[judgment type · pattern · root cause · fix direction]`
 
 ### E-2 — Practitioner Confusion
 
-Agent (Newcomer brief): confusing items, fix suggestions more awkward than original, classification criteria consistency breaks.
+Agent (`beginner` brief): confusing items, fix suggestions more awkward than original, classification criteria consistency breaks.
 
 Findings format: `[item · confusion cause · improvement direction]`
 

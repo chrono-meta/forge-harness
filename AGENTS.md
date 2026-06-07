@@ -19,11 +19,14 @@ CLAUDE.md governs *how* the session runs. AGENTS.md defines *what each agent doe
 
 ## Agent Registry
 
-forge-harness ships 5 tracked agents across `.claude/agents/` and plugin `agents/` directories. Four serve general harness operations; one (`quench-challenger`) is steel-quench-dedicated.
+forge-harness ships 8 tracked agents across plugin `agents/` directories. The **user-mastery spectrum** (`beginner` · `main-player` · `expert`) plus `challenger` (adversarial axis) supply multi-persona review; `fact-checker`, `hub-persona-auditor`, and `persona-innovator` serve general harness operations; `quench-challenger` is steel-quench-dedicated.
 
 | Agent | File | Role | Invoked by |
 |---|---|---|---|
-| `challenger` | `.claude/agents/challenger.md` | Frontier-grade adversarial evaluator — adapts attack vectors to artifact type, enforces evidence citation, models its own information asymmetry | `steel-quench`, `harvest-loop`, `sim-conductor`, or direct dispatch |
+| `beginner` | `plugins/fh-meta/agents/beginner.md` | First-contact cold-read standpoint (spectrum entry tier) — onboarding friction a fluent author cannot feel; constructive, not adversarial | `sim-conductor` Area A, `marketplace-gate`, `install-wizard`, or direct dispatch |
+| `main-player` | `plugins/fh-meta/agents/main-player.md` | Engaged-user standpoint (spectrum core tier) — intelligently scopes Light/Midcore/Heavy; Heavy = classic power-user edge/limit lens | `sim-conductor` Area A/D-code, or direct dispatch |
+| `expert` | `plugins/fh-meta/agents/expert.md` | Domain-authority standpoint (spectrum frontier tier) — web-grounded accuracy + SOTA currency, citation-enforced | `sim-conductor` Area E/D, paper review, or direct dispatch |
+| `challenger` | `plugins/fh-meta/agents/challenger.md` | Frontier-grade adversarial evaluator — adapts attack vectors to artifact type, enforces evidence citation, models its own information asymmetry; U1 absorbs the skeptic "why not just X?" lens | `steel-quench`, `harvest-loop`, `sim-conductor`, or direct dispatch |
 | `fact-checker` | `plugins/fh-meta/agents/fact-checker.md` | Pre-recommendation deduplication — greps hub assets for existing skills/agents/patterns before main agent commits to a new recommendation; catches stale facts and duplicate work | Main agent before any new asset creation or recommendation |
 | `hub-persona-auditor` | `plugins/fh-meta/agents/hub-persona-auditor.md` | Pre-publication audit of external-facing assets — 3+ persona simulation, 4-axis review (resonance/confusion/resistance/supplement), 3-tier revision proposals | `hub-cc-pr-reviewer`, `sim-conductor`, or direct dispatch |
 | `quench-challenger` | `plugins/fh-commons/agents/quench-challenger.md` | Steel-quench dedicated adversary — 3-DNA synthesis of Devil + Innovator + Prescriber; every attack paired with a concrete fix direction | `steel-quench` Wave 1 (primary), `install-doctor`, `marketplace-gate` |
