@@ -1,7 +1,7 @@
 # ETHOS — what forge-harness believes
 
 > The compressed identity. Six named principles that travel as quotable units.
-> For *what it is* see [`README.md`](README.md); for *why it exists* see [`WHY.md`](WHY.md);
+> For *what it is* see [`README.md`](../README.md); for *why it exists* see [`WHY.md`](WHY.md);
 > for the *evidence* see [`OUTPUT_EVIDENCE.md`](OUTPUT_EVIDENCE.md).
 
 forge-harness (FH) is a **quality-harness**: a practitioner's meta-harness for Claude Code that

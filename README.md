@@ -28,9 +28,9 @@
 </p>
 
 <p align="center">
-  <a href="ETHOS.md"><b>The principles</b></a> ·
-  <a href="WHY.md"><b>Why it exists</b></a> ·
-  <a href="OUTPUT_EVIDENCE.md"><b>The evidence</b></a> ·
+  <a href="docs/ETHOS.md"><b>The principles</b></a> ·
+  <a href="docs/WHY.md"><b>Why it exists</b></a> ·
+  <a href="docs/OUTPUT_EVIDENCE.md"><b>The evidence</b></a> ·
   <a href="CHEATSHEET.md"><b>How to use it</b></a>
 </p>
 
@@ -164,7 +164,7 @@ hardened by attack, and only then does it ship faster, for having survived.
 | → **Accelerate** | a blade that survived the forge cuts faster | `goal-quench` — *Pass → Accelerate* |
 
 Three movements are shipped; **temper** is the direction ahead — and naming the movement we have *not*
-finished is the point (see [`ETHOS.md`](ETHOS.md#the-forge)). Around the forge, two more signatures keep
+finished is the point (see [`ETHOS.md`](docs/ETHOS.md#the-forge)). Around the forge, two more signatures keep
 it running: `harvest-loop` (each session's lessons become permanent skills) and `agent-composer`
 (orchestrate the dispatch). The other skills wait until you need them — full list below.
 
@@ -286,5 +286,5 @@ External convergence:
 | [`CHEATSHEET.md`](CHEATSHEET.md) | Full command reference |
 | [`AGENTS.md`](AGENTS.md) | Runtime agent specs |
 | [`CATALOG.md`](CATALOG.md) | Past work search index |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to contribute skills and patterns |
+| [`CONTRIBUTING.md`](docs/CONTRIBUTING.md) | How to contribute skills and patterns |
 | [`fh_integration_contract.md`](knowledge/shared/harness-core/fh_integration_contract.md) | Governance gate spec |

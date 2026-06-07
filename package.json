@@ -45,7 +45,7 @@
     "CATALOG.md",
     "CHEATSHEET.md",
     "CLAUDE.md",
-    "CONTRIBUTING.md",
+    "docs/CONTRIBUTING.md",
     "bin/fh-gate.js",
     "bin/fh-run.js",
     "bin/fh-goal.js",
