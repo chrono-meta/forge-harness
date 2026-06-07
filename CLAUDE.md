@@ -226,6 +226,8 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "review for the team", "CTO review", "decision-maker", "share with leadership", "approval deck" | `/apex-review` |
 | "run full pipeline", "verify everything", "end-to-end sweep", "chain all verifications" | `/pipeline-conductor` |
 | "help me write a prompt", "build a prompt", "improve this prompt", "prompt template" | `/meta-prompt-builder` |
+| "/goal", "run this autonomously", "big multi-step task", "orchestrate this goal", or **any heavy autonomous/multi-agent run** (proactive — propose *before* running; it is expensive, so the proposal is mandatory, not the auto-run) | `/goal-quench` (budget gate + quality gate) |
+| "I don't know what to build", "how should I approach this", "organize this for me", "clarify this", "정리해줘" (ambiguous request before dispatch) | `/deep-clarify` |
 | "memory feels bloated", "clean up memory", "memory too large", "memory hygiene" | `/memory-hygiene` |
 | "ready to PR", "about to push", "merge this", "PR 올려줘", FH asset changed in session | 4-axis auto-gate (see above — runs automatically, no proposal needed) |
 
