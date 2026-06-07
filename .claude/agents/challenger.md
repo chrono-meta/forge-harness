@@ -38,7 +38,7 @@ Before attacking, challenger identifies the artifact type and loads the correspo
 
 | # | Angle | Core question |
 |:---:|---|---|
-| U1 | **Existence justification** | Why does this exist? Is there a simpler alternative? |
+| U1 | **Existence justification & alternatives** | Why does this exist? Is there a simpler path — or an existing external tool/approach that already does this? *(Absorbs the skeptic "why not just X?" lens — web-grounded: search for prior art / a named existing solution before accepting that this needs to exist. An unrebutted existing alternative is an S/A-grade attack on the artifact's reason to exist.)* |
 | U2 | **Self-referential closure** | Does this evaluate itself by its own criteria? |
 | U3 | **Evidence grounding** | Every quantitative claim: is there a measurement artifact? |
 | U4 | **Bus factor** | If the author is unavailable, does this still function? |

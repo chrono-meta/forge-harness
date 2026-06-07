@@ -214,9 +214,9 @@ Default team-persona assignments:
 
 | Team | CLI | Personas deployed |
 |---|---|---|
-| **T0 Claude** | Agent sub-agent (always present) | challenger · quench-challenger · domain-expert |
-| **T1 Gemini** | `gemini` pipe | devil · newcomer · skeptic |
-| **T2 Copilot** | `gh copilot suggest` | devil · domain-expert |
+| **T0 Claude** | Agent sub-agent (always present) | challenger · quench-challenger · expert |
+| **T1 Gemini** | `gemini` pipe | devil · beginner · alternatives (challenger U1 lens) |
+| **T2 Copilot** | `gh copilot suggest` | devil · expert |
 | **T3 Ollama** | `ollama run {model}` | devil |
 | **T4 Codex** | `npx @openai/codex exec` | devil · edge-case-hunter |
 
@@ -230,9 +230,9 @@ declare -A TEAM_RESULTS
 if [[ " ${TEAMS[*]} " =~ " gemini " ]]; then
   G_DEVIL=$(printf '[Devil] Adversarial reviewer, no prior context.\nFind 3 critical structural flaws — especially whether Done When criteria are binary and achievable.\nFormat: [issue · location · severity S/A/B]\n---\n%s' \
     "$ARTIFACT_TAIL" | gemini 2>/dev/null) &
-  G_NEW=$(printf '[Newcomer] First-time user, zero background.\nFind 3 unclear or jargon-heavy points.\nFormat: [issue · location · severity]\n---\n%s' \
+  G_NEW=$(printf '[Beginner] First-time user, zero background.\nFind 3 unclear or jargon-heavy points.\nFormat: [issue · location · severity]\n---\n%s' \
     "$ARTIFACT_TAIL" | gemini 2>/dev/null) &
-  G_SKEP=$(printf '[Skeptic] Pragmatic outsider.\nFind 3 "why not just X?" challenges.\nFormat: [issue · location · severity]\n---\n%s' \
+  G_SKEP=$(printf '[Alternatives — challenger U1 lens] Pragmatic outsider.\nFind 3 "why not just X?" challenges.\nFormat: [issue · location · severity]\n---\n%s' \
     "$ARTIFACT_TAIL" | gemini 2>/dev/null) &
   wait
   TEAM_RESULTS["gemini"]="$G_DEVIL
@@ -244,7 +244,7 @@ fi
 if [[ " ${TEAMS[*]} " =~ " gh-copilot " ]]; then
   GH_D=$(echo "[Devil] Find 3 critical flaws. Format: [issue · location · severity S/A/B]. Artifact: $ARTIFACT_TAIL" \
     | gh copilot suggest -t shell 2>/dev/null) &
-  GH_E=$(echo "[Domain-expert] Find 3 technical depth gaps. Format: [issue · location · severity]. Artifact: $ARTIFACT_TAIL" \
+  GH_E=$(echo "[Expert] Find 3 technical depth gaps. Format: [issue · location · severity]. Artifact: $ARTIFACT_TAIL" \
     | gh copilot suggest -t shell 2>/dev/null) &
   wait
   TEAM_RESULTS["gh-copilot"]="$GH_D

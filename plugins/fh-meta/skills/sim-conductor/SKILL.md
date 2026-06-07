@@ -32,7 +32,7 @@ Proposal format: `"If it's related to [X], should I simulate with /sim-conductor
 | "Test it with personas", "Run an external user simulation" | External user reaction | Area A |
 | "Look at it through someone else's eyes" | External perspective | Area A |
 | "Validate that this actually works" | Real-usage validation | Area D |
-| "Find problems aggressively" | Adversarial validation | Area B (devil persona) |
+| "Find problems aggressively" | Adversarial validation | Area B (`challenger`) |
 
 ## Triggers
 
@@ -76,8 +76,8 @@ Read target artifact(s) → classify on 5 dimensions → output recommendation �
 | Dimension | Signal → Weight shift |
 |---|---|
 | `artifact_type` | SKILL.md / design-doc → Area B + D-skill↑ · README / CHEATSHEET → Area A↑ · code / config → Area D-code↑ |
-| `audience` | external installer / first-time user → newcomer↑ · internal team only → devil↑ |
-| `claim_density` | 3+ stated benefits or superlatives → devil-advocate↑ |
+| `audience` | external installer / first-time user → beginner↑ · internal team only → challenger↑ |
+| `claim_density` | 3+ stated benefits or superlatives → challenger↑ |
 | `risk_level` | external publish / marketplace listing → steel-quench prerequisite triggered |
 | `novelty` | first-of-its-kind / no prior session evidence → phantom-quench recommended |
 
@@ -113,8 +113,8 @@ Persona Discovery output:
 
 ```
 Persona Map:
-  newcomer       → [installed agent name] OR [built-in fallback]
-  devil-advocate → [installed agent name] OR [built-in fallback]
+  beginner       → [installed agent: beginner] OR [ad-hoc directive]
+  challenger     → [installed agent: challenger] OR [ad-hoc directive]
   [profile-specific role] → ⚠️ GAP — plugin-recommender recommends: [X] (install? y/n)
 ```
 
@@ -165,17 +165,20 @@ sim-conductor does **not** run a fixed persona set. It derives needed perspectiv
 ③ External fetch — chain to /plugin-recommender when ①② insufficient for high-stakes tasks
 ```
 
-Built-in fallback palette (② tier):
+Shipped standpoint agents (① tier — sourced installed-first):
 
-| Role | Perspective | Focus |
-|---|---|---|
-| Newcomer | First-time user, zero development context | Clarity, terminology, onboarding friction |
-| Power-user | Advanced user, edge cases | Undocumented behavior, limits |
-| Devil-advocate | Adversarial critic | Claim-evidence gaps, naming-substance mismatch |
-| Domain-expert | Adjacent-field subject matter expert | Technical accuracy, completeness |
-| Skeptic | Pragmatic outsider | ROI, "why not just X?" |
+FH ships a coherent **user-mastery spectrum** as real, reusable agents (not prompt-directive shells) — found by the ① installed-first scan, reusable across skills, and each isolated-context dispatchable for a true cold read (the bias-isolation value: an evaluator outside the author's context reads cold):
 
-Derive task-specific personas (e.g. "security auditor", "non-native reader") when the task profile demands it.
+| Agent | Spectrum tier | Standpoint | Type |
+|---|---|---|---|
+| `beginner` | entry | First-contact cold-read — onboarding friction a fluent author cannot feel | reasoning |
+| `main-player` | core | Engaged user; intelligently scopes Light / Midcore / Heavy (Heavy = classic power-user edge/limit lens) | reasoning |
+| `expert` | frontier | Domain authority; web-grounded accuracy + SOTA currency, citation-enforced | data (WebSearch/WebFetch) |
+| `challenger` | adversarial axis | Frontier adversary; U1 absorbs the skeptic "why not just X?" lens | adversarial |
+
+> **Lineage**: `beginner` / `main-player` / `expert` are the FH-native frontier successors to the field deep-insight `user` group (newcomer / power-user) — re-derived to FH grade with embedded methodology + Done-When, not name-copied. `challenger` is the advanced form of the field `devil-advocate`. The former standalone skeptic standpoint is folded into `challenger` U1.
+
+**Ad-hoc roles** (② tier — prompt-directive fallback): when the profile demands a standpoint with no shipped agent (e.g. "security auditor", "non-native reader"), inject the role as a directive into a general-purpose Agent. Prefer ① shipped agents; use ② only for genuinely task-specific one-offs.
 
 #### Scale
 
@@ -197,9 +200,9 @@ Pre-entry user confirmation required before multi-team execution.
 
 > **Detail**: See `SKILL_detail.md §MultiTeam` — team formation table (T0–T4), CLI detection bash, confirmation dialog, cross-team synthesis format — read when multi-team mode activates.
 
-**A-1** (Newcomer Agent) — description friendliness · onboarding friction · terminology clarity
-**A-2** (Power-user Agent) — install conflicts · duplication · silent overwrite
-**A-3** (challenger Agent, artifact_type="SKILL") — claim-evidence gaps · angles U3, U5, S2
+**A-1** (`beginner`) — first-contact friendliness · onboarding friction · terminology clarity
+**A-2** (`main-player`) — engaged-use fit; Heavy tier: install conflicts · duplication · silent overwrite
+**A-3** (`challenger`, artifact_type="SKILL") — claim-evidence gaps · angles U3, U5, S2
 
 > ⚠️ **Human review gate**: Area A S-tier judgments require owner review before entering AI-AI loop.
 
@@ -246,10 +249,10 @@ Persona composition adapts to `artifact_type` from Step 0.3 profile:
 
 | Artifact type | Primary persona | Supporting persona | Focus |
 |---|---|---|---|
-| SKILL.md / design doc | challenger (artifact_type="SKILL") | Newcomer | Governance gaps, behavioral rule coverage |
-| Python / JS / bash code | challenger (artifact_type="Code") | Power-user | Edge cases, performance, security surface |
-| Prompt / config | Newcomer | challenger | Interpretation errors, implicit assumptions |
-| Auth / security-sensitive | challenger + Security-auditor† | Power-user | Attack surface, privilege escalation |
+| SKILL.md / design doc | challenger (artifact_type="SKILL") | `beginner` | Governance gaps, behavioral rule coverage |
+| Python / JS / bash code | challenger (artifact_type="Code") | `main-player` (Heavy) | Edge cases, performance, security surface |
+| Prompt / config | `beginner` | challenger | Interpretation errors, implicit assumptions |
+| Auth / security-sensitive | challenger + Security-auditor† | `main-player` (Heavy) | Attack surface, privilege escalation |
 
 † Security-auditor = built-in fallback role (② tier) injected as prompt directive.
 
@@ -265,7 +268,7 @@ Consumer agent attempts actual use (not just reads and judges). Grades: F (funct
 
 ### Area E — Artifact Quality Review
 
-Domain-expert objection (E-1) + Practitioner confusion (E-2) in parallel → Pattern structuring (E-3) integrates both.
+`expert` objection (E-1) + Practitioner confusion (E-2) in parallel → Pattern structuring (E-3) integrates both.
 
 > **Detail**: See `SKILL_detail.md §AreaE-Detail` — E-1/E-2/E-3 execution, finding format, pattern naming procedure — read when executing Area E.
 
@@ -273,10 +276,17 @@ Domain-expert objection (E-1) + Practitioner confusion (E-2) in parallel → Pat
 
 ## Step 1.5 — Persona Output Protocol + Neutral Synthesizer (parallax)
 
-Generalized from the field `deep-insight` multi-persona pattern (fh-be #7), domain-stripped and renamed
-**parallax** for public FH (it is a mode of this skill, not a separate skill — see asset-placement
+Generalized from the field `deep-insight` multi-persona pattern (fh-be #7), domain-stripped — the *pattern*
+is renamed **parallax** for public FH (it is a mode of this skill, not a separate skill — see asset-placement
 2026-06-06). It gives the persona dispatch above a shared output contract + a neutral aggregator, so
 multi-persona findings stay comparable and the synthesis injects no bias of its own.
+
+> **Naming provenance (precise)**: "renamed" above refers to the *pattern* (→ parallax), not the personas.
+> The company-team-coupled field personas (fe/be/ios/pm/ux-writer/compliance/qa) were domain-stripped
+> entirely. The generic `user` group (newcomer/power-user) was **re-derived to FH grade as the shipped
+> `beginner` / `main-player` / `expert` mastery-spectrum agents** (embedded methodology + Done-When, not
+> name-copied shells), and the field `devil-advocate` was **advanced into `challenger`** (sandboxed-adversary
+> + adaptive attack matrix). Lineage is acknowledged; nothing is carried verbatim as a shell.
 
 **Shared persona output protocol** — every dispatched persona emits the same shape, whatever its lens:
 
@@ -288,7 +298,7 @@ multi-persona findings stay comparable and the synthesis injects no bias of its 
   Suggestion — optional improvement
   (each item: [file:line or quoted span] one-line summary — rationale)
 ### Open questions   (0–3 items needed for a decision)
-### Absence check    (outside-vantage personas — newcomer/integrator: what does the artifact FAIL to
+### Absence check    (outside-vantage personas — beginner/integrator: what does the artifact FAIL to
                       specify that this standpoint needs? discoverability · undocumented contract ·
                       unstated assumption. A normal, self-administrable rubric item — surfaces real gaps.)
 ```

@@ -67,7 +67,7 @@ Basis: [one-line rationale]
 - `Conditionally passed` → **mandatory sim-conductor dispatch** (option B is default; user must explicitly opt out)
 - `Rejected` → redesign required
 
-**Why it matters**: Without this gate, persona conditions from apex-review are listed but never verified. sim-conductor's devil/newcomer/power-user validation is the only mechanism that resolves them.
+**Why it matters**: Without this gate, persona conditions from apex-review are listed but never verified. sim-conductor's challenger/beginner/main-player validation is the only mechanism that resolves them.
 
 ---
 
