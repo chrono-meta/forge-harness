@@ -285,7 +285,7 @@ Verdict: **CLEAN** (0 tokens after allowlist) | **REVIEW** (LOW-only — drift, 
   philosophy is *report + prescribe; the human decides where the line goes* — auto-redacting a HIGH
   (username/company) hit would pre-empt that judgment, and auto-editing a generated artifact is explicitly
   wrong (regenerate from source). If ever imported, restrict to the MED absolute-home-path class only
-  (mechanically safe: `/Users/x/` → `~/` or `{project}`), never HIGH, never generated files.
+  (mechanically safe: `/Users/<user>/` → `~/` or `{project}`), never HIGH, never generated files.
 
 ---
 
