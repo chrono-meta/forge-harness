@@ -138,9 +138,13 @@ echo 'source ~/.cc_secrets/tokens.env' >> ~/.zshrc
 **The following are environment detection procedures that CC executes automatically. No need for users to run manually.**
 
 ```bash
-# Prompt injection pre-flight: check for AI instruction injection in external config files
-if grep -rE "^# CLAUDE:|^# AI:|<instructions>" ~/.zshrc .claude/settings.json 2>/dev/null | grep -q .; then
-  echo "⚠️  AI instruction pattern detected in external config files — injection risk. Manual check recommended."; fi
+# Prompt injection pre-flight: scan config AND the project's AI-instruction surfaces — CLAUDE.md,
+# AGENTS.md, .claude/rules/* — which are the higher-risk vectors in an unknown repo (not just shell/settings).
+# Injection-SPECIFIC patterns only (override/exfil), since instruction files legitimately carry directives;
+# advisory (recommend manual review), never an auto-block.
+if grep -rIE "ignore (all )?previous|disregard (the )?above|exfiltrat|^# CLAUDE:|^# AI:|<instructions>" \
+     ~/.zshrc .claude/settings.json CLAUDE.md AGENTS.md .claude/rules/ 2>/dev/null | grep -q .; then
+  echo "⚠️  AI-instruction / override pattern detected in config or instruction files — injection risk in an unknown repo. Review the listed files manually before proceeding."; fi
 
 # FH location
 echo "FH_DIR=${FH_DIR:-not set}"
@@ -164,13 +168,13 @@ python3 -c "import json,os; d=json.load(open(os.path.expanduser('~/.claude.json'
 # zshrc hook status
 grep -q "fh_audit_check.zsh" ~/.zshrc 2>/dev/null && echo "zshrc hook: present" || echo "zshrc hook: absent"
 
-# Framework detection (Streamlit) — must be specified in requirements.txt or pyproject.toml
-STREAMLIT_PROJECT=false
-if grep -q "streamlit" requirements.txt 2>/dev/null || \
-   grep -q "streamlit" pyproject.toml 2>/dev/null; then
-  STREAMLIT_PROJECT=true
-  echo "Framework: Streamlit detected"
-fi
+# Framework detection (optional) — only used to look for a matching OPTIONAL domain pattern pack.
+# Generic: capture the framework name; the pattern-pack path is derived as {framework}_patterns.md.
+# No pattern pack ships by default — this is a user-supplied extension point, absence is the normal state.
+FRAMEWORK=""
+for fw in streamlit django fastapi flask; do
+  if grep -qi "$fw" requirements.txt pyproject.toml 2>/dev/null; then FRAMEWORK="$fw"; echo "Framework: $fw detected"; break; fi
+done
 ```
 
 **Bootstrap guidance when FH_DIR is not set (stop immediately in Step 0):**
@@ -196,11 +200,12 @@ fi
 
 *(Run after Step 0-A·B pre-checks. Output results as environment card, then continue to Step 0-C.)*
 
-Output detection results as **environment card**. Activate CC pattern reference on Streamlit detection:
+Output detection results as **environment card**. If a framework was detected AND you maintain a matching
+optional domain pattern pack, reference it (none ship by default — absence is normal, never a gap):
 ```
-📌 Streamlit project detected → CC pattern reference activated
-   {CC_HUB_DIR}/knowledge/shared/streamlit_patterns.md loaded (if present — optional Streamlit pattern pack, not shipped by default)
-   Check: data_editor empty df / column nesting / async wrapper / CSS numeric variables
+📌 {FRAMEWORK} project detected → optional domain pattern pack check
+   {CC_HUB_DIR}/knowledge/shared/{FRAMEWORK}_patterns.md loaded (only if you supplied it; not shipped by default)
+   If absent: skip silently — no pack is the expected default state.
 ```
 
 ```
@@ -326,9 +331,9 @@ Auto-check the following items based on detected environment. Each item classifi
 | `deep-insight plugin` | settings.json plugins contains deep-insight | `grep -r "deep-insight" .claude/settings.json 2>/dev/null` |
 | `fh_env_context.jsonc` | `.claude/rules/fh_env_context.jsonc` exists | `ls .claude/rules/fh_env_context.jsonc` |
 | `phantom-gate` | **(Python + AI-output projects only)** `phantom-gate` present in `requirements.txt` / `pyproject.toml` | `grep "phantom.gate" requirements.txt pyproject.toml 2>/dev/null` |
-| `Streamlit pattern applied` | (Streamlit projects only, if the pattern pack is present) data_editor empty df branch/async wrapper/CSS numeric variables | CC `knowledge/shared/streamlit_patterns.md` Pattern 1-5 check (skip if file absent) |
+| `Domain pattern pack applied` | (optional — only when a `{framework}_patterns.md` pack is present; none ship by default) framework-specific pattern checks | `knowledge/shared/{framework}_patterns.md` check (skip if file absent — the normal default) |
 
-**Score calculation**: PASS = 1 / MISS = 0.5 / FAIL = 0. Formula: `score = round( Σ(points) ÷ (applicable item count) × 100 )`. Conditional items (Streamlit / phantom-gate / MCP / deep-insight) are excluded from the denominator when not relevant, so always print the denominator next to the score (e.g. `{score}/100 over {n} applicable items`) — the percentage is reproducible only when the item count is shown.
+**Score calculation**: PASS = 1 / MISS = 0.5 / FAIL = 0. Formula: `score = round( Σ(points) ÷ (applicable item count) × 100 )`. Conditional items (domain pattern pack / phantom-gate / MCP / deep-insight) are excluded from the denominator when not relevant, so always print the denominator next to the score (e.g. `{score}/100 over {n} applicable items`) — the percentage is reproducible only when the item count is shown.
 
 ### Step 2. Diagnosis Report + Proposal List
 
