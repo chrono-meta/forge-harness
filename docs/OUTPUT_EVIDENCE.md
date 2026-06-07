@@ -9,7 +9,7 @@
 | What | Count | Notes |
 |---|---:|---|
 | Active skills | **33** | 29 in `fh-meta` + 4 in `fh-commons`; 3 deprecated redirect stubs not counted |
-| Agent definitions | **5** | `challenger`, `quench-challenger`, `fact-checker`, `hub-persona-auditor`, `persona-innovator` |
+| Agent definitions | **8** | `challenger`, `quench-challenger`, `fact-checker`, `hub-persona-auditor`, `persona-innovator`, `beginner`, `main-player`, `expert` |
 | Operating rules | **6** | `.claude/rules/*.md` — mapping, modes, sync, sister-asset, operations |
 | Knowledge docs | **23** | `knowledge/` — 6-axis framework, compounding loop, runtime flow, dialogue playbook |
 | Plugins | **2** | `fh-meta` (meta-harness) + `fh-commons` (project-agnostic) |

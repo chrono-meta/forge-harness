@@ -23,18 +23,56 @@ TODAY=$(date +%Y-%m-%d)
 BRANCH_SLUG="${BRANCH//\//_}"
 FAILED=0
 
-# ── Helper: is a carve-out file's staged diff substantive? ────────────────────
-# Substantive ⇔ the *added* lines (git diff +) introduce a fenced code block or a
-# factual-claim token. Detection is mechanical, matching CLAUDE.md exactly.
+# ── Is a path inside the gated (carve-out) namespace? ─────────────────────────
+# Mirror of the CARVEOUT classifier below. Used to tell a rename WITHIN the gated
+# namespace (already-reviewed content relocating) from a rename INTO it from outside
+# (content gated for the first time → must be scanned in full).
+is_carveout_path() {
+  echo "$1" | grep -qE '(^knowledge/.*\.md$|^docs/.*\.md$|(^|/)AGENTS\.md$)'
+}
+
+# ── Helper: is a carve-out file's staged change substantive? ──────────────────
+# Substantive ⇔ the content this commit puts into the gated file introduces a code
+# fence (``` / ~~~, possibly indented) or a citation/version token. Mechanical.
+#
+# "What content is new to the gate" differs by change shape:
+#  - plain edit/add (no rename): the staged DIFF additions — spec "diff adds …",
+#    so a prose/typo fix to a doc that already contains a fence stays light.
+#  - rename WITHIN the gated namespace (docs/→docs/, knowledge/→…): the rename-paired
+#    diff — a pure move adds nothing (light); a move+edit shows only the real delta.
+#  - rename INTO the gated namespace from outside (root→docs/, scratch→docs/): the
+#    file is gated for the FIRST time, so its ENTIRE staged content is new to the gate
+#    and is scanned whole. Otherwise content authored in an ungated path could be
+#    `git mv`'d into docs/ to evade review (fh_signal_2026-06-08_hook-rename-false-positive,
+#    challenger S1). Filtering by the new path alone also breaks rename pairing, which
+#    was the original false positive on pure within-scope moves.
+# Fails CLOSED (returns substantive) on any git error — a gate must not fail open.
 diff_is_substantive() {
-  local file="$1"
-  local added
-  added=$(git diff --cached -- "$file" 2>/dev/null | grep -E '^\+' || true)
-  # Fenced code block opened in the additions, OR a citation/version token.
-  if echo "$added" | grep -qE '^\+(```|~~~)'; then
+  local file="$1" body rc oldpath mode
+  oldpath=$(git diff --cached -M --name-status 2>/dev/null \
+            | awk -F'\t' -v f="$file" '$1 ~ /^R/ && $3 == f { print $2; exit }')
+  if [ -n "$oldpath" ] && ! is_carveout_path "$oldpath"; then
+    body=$(git show ":$file" 2>/dev/null); rc=$?; mode=whole   # into-scope: whole file
+  elif [ -n "$oldpath" ]; then
+    body=$(git diff --cached -M -- "$oldpath" "$file" 2>/dev/null); rc=$?; mode=diff
+  else
+    body=$(git diff --cached -- "$file" 2>/dev/null); rc=$?; mode=diff
+  fi
+  [ "$rc" -ne 0 ] && return 0   # git error → fail closed (demand review)
+
+  # In diff mode only ADDED lines count (removed/context lines near a fence must not
+  # false-match); in whole mode the raw file content is the body. Strip exactly ONE
+  # leading '+' rather than excluding '^+++' — an added content line beginning with
+  # '++' renders as '+++…' and a pattern-exclude would silently drop it (challenger
+  # A-grade). The diff file-header '+++ b/path' degrades to a harmless '++ b/path'.
+  if [ "$mode" = diff ]; then
+    body=$(printf '%s\n' "$body" | grep -E '^\+' | sed 's/^\+//' || true)
+  fi
+  # Fenced code block (leading indentation allowed), OR a citation/version token.
+  if printf '%s\n' "$body" | grep -qE '^[[:space:]]*(```|~~~)'; then
     return 0
   fi
-  if echo "$added" | grep -qE 'arXiv:|DOI|https?://|[0-9]+\.[0-9]+\.[0-9]+'; then
+  if printf '%s\n' "$body" | grep -qE 'arXiv:|DOI|https?://|[0-9]+\.[0-9]+\.[0-9]+'; then
     return 0
   fi
   return 1
