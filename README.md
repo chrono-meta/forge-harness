@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/chrono-meta/forge-harness/main/docs/banner.png" alt="forge-harness — Forge your projects, pass them through, faster." width="680">
+  <img src="https://raw.githubusercontent.com/chrono-meta/forge-harness/main/docs/banner.png" alt="forge-harness — Forge your projects, pass them through, faster. Quality is the lever — speed is the result." width="680">
 </p>
 
 <p align="center">
@@ -13,6 +13,10 @@
 <p align="center">
   <b>Forge your Claude Code projects — pass them through, they come out faster.</b><br>
   A practitioner's meta-harness: it raises each project's <b>floor</b> (harness-ify the setup)<br>and <b>ceiling</b> (accelerate the work), then compounds the gains across your whole portfolio.
+</p>
+
+<p align="center">
+  <b>Quality is the lever; speed is the result.</b> Every change earns its way through the gates —<br>adversarial · phantom · regression — and <i>that</i> is what makes the next change faster.
 </p>
 
 <p align="center">
@@ -227,16 +231,18 @@ it running: `harvest-loop` (each session's lessons become permanent skills) and 
 Claude Code does not auto-select models by task complexity — you configure this once.
 
 ```bash
-/model opusplan   # recommended for forge-harness
+/model opus   # recommended for forge-harness — pin Opus so gate/verification turns never silently drop
 ```
 
 | Command | Who runs what | Best for |
 |---|---|---|
-| `/model sonnet` | Sonnet handles everything | Fast coding, simple tasks |
-| `/model opus` | Opus handles everything | Complex reasoning, architecture |
-| `/model opusplan` | **Opus plans · Sonnet executes** | FH orchestration + sub-agents |
+| `/model opus` | Opus handles everything | **FH default** — verification, governance, agent reasoning |
+| `/model opusplan` | Opus *plans* · Sonnet executes *(when Opus engages)* | Cost-conscious routine coding — see caveat |
+| `/model sonnet` | Sonnet handles everything | Fast, simple tasks (no FH gates) |
 
-**Why `opusplan` for FH**: CC switches models per-turn based on task weight — Opus activates for plan-mode turns (complex reasoning, decomposition decisions), Sonnet handles execution turns (tool calls, file edits, bash). forge-harness orchestration leans on both: Opus for design decisions in agent-composer / goal-quench / steel-quench, Sonnet for the actual file edits and sub-agent execution contexts. Sub-agent token costs are CC-visible and appear in the session jsonl under `message.model`.
+**Why `/model opus` for FH**: FH is a *quality* harness — its value lives in verification turns (steel-quench, phantom-quench, the 4-axis gate, agent reasoning) that must not silently run on a weaker model. `opusplan`'s Opus engagement is **not guaranteed**: in a measured 10-turn run it used Opus on **0** turns (CC classifies few turns as "plan-mode"), so the reasoning FH leans on quietly ran on Sonnet — pinning `/model opus` removed that variance (22/22 turns Opus in the follow-up). **Sub-agent dispatch** model is set by the dispatch's own `model` parameter; the session model/plan-mode does **not** propagate Opus to sub-agents, so pin Opus there too for adversarial/verification agents. Use `opusplan` only when the task is mostly routine edits and you accept that Opus may not engage.
+
+> **By role**: editing the harness itself → `/model opus` (full). Running FH on a field project → `/model opus` for any gated/verification work; `opusplan` is an acceptable cost tradeoff for routine coding, with the caveat above. Sub-agent token costs are CC-visible in the session jsonl under `message.model`.
 
 If you use external CLIs (Gemini, Codex, `gh copilot`) as sidecars, their costs are billed to their own quota and not visible in CC's token display.
 
