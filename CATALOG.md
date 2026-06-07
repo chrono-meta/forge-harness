@@ -9,7 +9,7 @@ AI reads this file first when searching past work. Open individual files for det
 <!-- Add entries in reverse date order (newest at top) -->
 
 ### 2026-06-05 | _audit | sister-asset, gstack, field-harness, garry-tan
-**File:** tracks/_audit/session_2026_06_05_gstack-sister.md (private mirror: fh-be)
+**File:** tracks/_audit/session_2026_06_05_gstack-sister.md (private companion mirror)
 gstack (garrytan, ~66K stars) sister-asset cross-audit — the field/execution-harness counterpart to FH's meta/governance harness, both running on the Claude Code skill substrate. FH governs / gstack executes (composes, not competes). Bidirectional import (frictionless one-command install, opinionated front door, privacy-first telemetry) / propagate (post-ship governance gate, cross-project knowledge compounding, HITL promotion gate) lists recorded.
 - Decision: public index only — bet evidence (B1·ID·SB) + full audit held in private store; external cross-link proposal to garrytan/gstack gated behind 3+ persona × 4-axis audit.
 

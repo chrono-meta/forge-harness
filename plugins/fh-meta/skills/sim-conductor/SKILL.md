@@ -276,7 +276,7 @@ Consumer agent attempts actual use (not just reads and judges). Grades: F (funct
 
 ## Step 1.5 — Persona Output Protocol + Neutral Synthesizer (parallax)
 
-Generalized from the field `deep-insight` multi-persona pattern (fh-be #7), domain-stripped — the *pattern*
+Generalized from the field `deep-insight` multi-persona pattern (private companion store), domain-stripped — the *pattern*
 is renamed **parallax** for public FH (it is a mode of this skill, not a separate skill — see asset-placement
 2026-06-06). It gives the persona dispatch above a shared output contract + a neutral aggregator, so
 multi-persona findings stay comparable and the synthesis injects no bias of its own.
@@ -328,7 +328,7 @@ supplies the specialist lens. Same ①installed → ②fallback → ③fetch pri
 external harness's review-skills count as ① installed sources, widening the persona pool without FH
 shipping every specialist.
 
-> **Absence check — resolved (added above)**: the clean replication (fh-be RESULT9 Arm F: identical
+> **Absence check — resolved (added above)**: the clean replication (companion-store experiment, Arm F: identical
 > artifact, explicit omission prompt, ownership-only variable) found self ≈ isolated (~90% overlap) —
 > **omission-detection is self-administrable when explicitly asked**, refuting the earlier "the author
 > can't see their own omissions" (Arm E, a prompt/design-drift artifact). So the Absence check is a

@@ -420,7 +420,6 @@ fi
 
 ```bash
 if echo "$changed" | grep -q "^README\.md$"; then
-  grep -n "chrono-code" README.md 2>/dev/null && echo "STALE: 'chrono-code' found — should be 'chrono-meta'" || true
   actual=$(ls -d plugins/fh-meta/skills/*/ plugins/fh-commons/skills/*/ 2>/dev/null | wc -l | tr -d ' ')
   readme_count=$(grep -oE '[0-9]+ (fh-meta[^)]+)?skills' README.md 2>/dev/null | head -1 || echo "not found")
   echo "Actual skills: $actual | README mentions: $readme_count"
