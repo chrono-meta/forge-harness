@@ -332,10 +332,15 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc.)
   → ② If FH assets changed: harvest-loop
   → ③ Sync local/gitignored session state to your durable companion store, if you keep one
   → ④ Memory hygiene — update stale entries + record new session findings
-  → ⑤ Card update ← ABSOLUTE LAST: must capture ①–④ outcomes
+  → ④-b npm freshness — if any npm-shipped asset changed this session (the `package.json` `files[]`
+       surface: skills · agents · README · AGENTS.md · CLAUDE.md · CHEATSHEET), **propose an npm
+       republish**: version bump + Pre-Publish Surface Gate (`/public-surface-audit` + `/marketplace-gate`
+       Check 5) + `npm publish`. The npm-served README and shipped skills/agents freeze at publish time,
+       so updating FH assets without republishing leaves the package stale. **Propose, don't auto-publish.**
+  → ⑤ Card update ← ABSOLUTE LAST: must capture ①–④-b outcomes
   → ⑥ Commit card + push
 ```
-**Card-last guard**: ①–④ must ALL complete before ⑤ runs. Any new information produced
+**Card-last guard**: ①–④-b must ALL complete before ⑤ runs. Any new information produced
 during ①–④ (new commits, model changes, new findings) feeds INTO ⑤ — card is never
 written mid-sequence and then left open for more work to accumulate after it.
 

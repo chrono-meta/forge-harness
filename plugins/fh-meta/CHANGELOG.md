@@ -10,7 +10,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## Plugin Level
 
-### [Unreleased] — 2026-06-07
+### [1.4.0] — 2026-06-07
 
 **feat: user-mastery spectrum persona agents — sim-conductor shells elevated to frontier-grade agents**
 
@@ -27,6 +27,10 @@ grade (embedded methodology + Done-When), not name-copied from the field deep-in
 - Cross-skill references realigned: deliberation, steel-quench multi-team, apex-review, agent-composer, return_path_gate.
 - `challenger` relocated `.claude/agents/` → `plugins/fh-meta/agents/` so the full spectrum (beginner · main-player · expert · challenger) ships and registers from the plugin (plugin-only installs no longer reference an unbundled adversary). Registry synced: AGENTS.md + `.claude/registry/agent_cards.json` now list all 8 agents; `package.json` files entry de-duplicated (covered by `plugins/fh-meta/agents`).
 - Rationale: bias-isolation operationalization — context-separated diverse personas make the "outside-the-author reads cold" assumption executable (see `tracks/_meta/fh_signal_2026-06-07`).
+
+Also in 1.4.0 (shipped together):
+- **install-wizard** — fixed defects surfaced by the spectrum runtime review (verified against source): broken weekly-audit cadence (CronCreate session-death vs weekly promise + allowed-tools gap → session-start/zshrc detection); 4-axis gate auto-install → OPT-IN double-confirm + scope; deep-insight reframed Optional (spectrum ships, so no longer required); reproducible score formula; CC_HUB_DIR documented; metrics relabeled illustrative; prompt-injection scan widened; streamlit pattern-pack generalized.
+- **Model guidance** — README + onboarding default switched `/model opusplan` → `/model opus` (opusplan engaged Opus 0/10 in a measured run; explicit opus 22/22); quality-gate hero line added; banner updated (Path A). CLAUDE.md autonomous-initiative layer gained `goal-quench` + `deep-clarify` rows, and the session-close chain gained an npm-republish freshness step.
 
 ---
 
