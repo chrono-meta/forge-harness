@@ -26,15 +26,15 @@ category: Composability Gate
 > See `README.md > Advanced Settings > Plugin Install` for detailed guide.
 
 Run immediately after cloning forge-harness (FH), or when setting up a new project for the first time.
-Sets up periodic notification structure (zshrc hook) and weekly audit notifications within Claude Code (CC) sessions. The zshrc hook is permanently applied; CronCreate is valid only for the current session.
+Sets up the periodic-audit notification structure: a permanent zshrc hook (`fh_audit_check.zsh`, runs on terminal start) plus FH's session-start mtime detection. Both surface a weekly-audit reminder when 7+ days have elapsed since the last `weekly_audit` — no persistent cron is used (a session-scoped scheduler cannot survive to fire on a later day).
 
 ## Key Terms
 
 | Term | Definition |
 |---|---|
 | **sentinel** | An empty file that records whether a specific event (audit complete, install complete, etc.) has occurred. Created in `~/.cc_sentinels/`. |
-| **CronCreate** | Claude Code built-in command — schedules periodic tasks valid for the current session. Disappears when session ends. |
 | **zshrc hook** | Shell function added to `~/.zshrc`. Automatically runs on terminal start and applies permanently. |
+| **session-start detection** | FH's durable weekly-audit cadence — at session start the mtime of the latest `weekly_audit_*` is checked and `/harvest-loop` is proposed if 7+ days elapsed (see CLAUDE.md Cadence Rules). No persistent scheduler required. |
 
 ## Execution Modes
 
@@ -51,7 +51,7 @@ Sets up periodic notification structure (zshrc hook) and weekly audit notificati
 - **Per-item approval**: Select each item individually (Y approve / N skip / L later)
 - **Double-confirm irreversible changes**: Preview before file writes and zshrc modifications
 - **User review before PR creation**: Output PR parameters (title, base branch, included files, body) and get approval before execution. No automatic submission.
-- **Periodic audit structure setup**: zshrc hook (permanently applied on terminal start) + sentinel initialization + CronCreate (valid for current CC session)
+- **Periodic audit structure setup**: zshrc hook (permanently applied on terminal start) + sentinel initialization + session-start mtime detection (7-day threshold)
 
 ## Execution Steps
 
@@ -138,9 +138,13 @@ echo 'source ~/.cc_secrets/tokens.env' >> ~/.zshrc
 **The following are environment detection procedures that CC executes automatically. No need for users to run manually.**
 
 ```bash
-# Prompt injection pre-flight: check for AI instruction injection in external config files
-if grep -rE "^# CLAUDE:|^# AI:|<instructions>" ~/.zshrc .claude/settings.json 2>/dev/null | grep -q .; then
-  echo "⚠️  AI instruction pattern detected in external config files — injection risk. Manual check recommended."; fi
+# Prompt injection pre-flight: scan config AND the project's AI-instruction surfaces — CLAUDE.md,
+# AGENTS.md, .claude/rules/* — which are the higher-risk vectors in an unknown repo (not just shell/settings).
+# Injection-SPECIFIC patterns only (override/exfil), since instruction files legitimately carry directives;
+# advisory (recommend manual review), never an auto-block.
+if grep -rIE "ignore (all )?previous|disregard (the )?above|exfiltrat|^# CLAUDE:|^# AI:|<instructions>" \
+     ~/.zshrc .claude/settings.json CLAUDE.md AGENTS.md .claude/rules/ 2>/dev/null | grep -q .; then
+  echo "⚠️  AI-instruction / override pattern detected in config or instruction files — injection risk in an unknown repo. Review the listed files manually before proceeding."; fi
 
 # FH location
 echo "FH_DIR=${FH_DIR:-not set}"
@@ -164,13 +168,13 @@ python3 -c "import json,os; d=json.load(open(os.path.expanduser('~/.claude.json'
 # zshrc hook status
 grep -q "fh_audit_check.zsh" ~/.zshrc 2>/dev/null && echo "zshrc hook: present" || echo "zshrc hook: absent"
 
-# Framework detection (Streamlit) — must be specified in requirements.txt or pyproject.toml
-STREAMLIT_PROJECT=false
-if grep -q "streamlit" requirements.txt 2>/dev/null || \
-   grep -q "streamlit" pyproject.toml 2>/dev/null; then
-  STREAMLIT_PROJECT=true
-  echo "Framework: Streamlit detected"
-fi
+# Framework detection (optional) — only used to look for a matching OPTIONAL domain pattern pack.
+# Generic: capture the framework name; the pattern-pack path is derived as {framework}_patterns.md.
+# No pattern pack ships by default — this is a user-supplied extension point, absence is the normal state.
+FRAMEWORK=""
+for fw in streamlit django fastapi flask; do
+  if grep -qi "$fw" requirements.txt pyproject.toml 2>/dev/null; then FRAMEWORK="$fw"; echo "Framework: $fw detected"; break; fi
+done
 ```
 
 **Bootstrap guidance when FH_DIR is not set (stop immediately in Step 0):**
@@ -180,8 +184,10 @@ fi
   1. Clone FH repo:
      git clone https://github.com/chrono-meta/forge-harness ~/forge-harness
 
-  2. Set environment variable:
+  2. Set environment variables:
      export FH_DIR=~/forge-harness
+     export CC_HUB_DIR=$FH_DIR   # FH hub dir (holds tracks/_audit for the weekly-audit mtime check);
+                                 # equals FH_DIR unless you run a separate hub clone
 
   3. Install FH plugin in CC:
      Settings → Plugins → Add → {FH_DIR}/plugins/fh-meta
@@ -194,11 +200,12 @@ fi
 
 *(Run after Step 0-A·B pre-checks. Output results as environment card, then continue to Step 0-C.)*
 
-Output detection results as **environment card**. Activate CC pattern reference on Streamlit detection:
+Output detection results as **environment card**. If a framework was detected AND you maintain a matching
+optional domain pattern pack, reference it (none ship by default — absence is normal, never a gap):
 ```
-📌 Streamlit project detected → CC pattern reference activated
-   {CC_HUB_DIR}/knowledge/shared/streamlit_patterns.md loaded (if present — optional Streamlit pattern pack, not shipped by default)
-   Check: data_editor empty df / column nesting / async wrapper / CSS numeric variables
+📌 {FRAMEWORK} project detected → optional domain pattern pack check
+   {CC_HUB_DIR}/knowledge/shared/{FRAMEWORK}_patterns.md loaded (only if you supplied it; not shipped by default)
+   If absent: skip silently — no pack is the expected default state.
 ```
 
 ```
@@ -219,7 +226,7 @@ install-wizard — Environment Detection
 > **Core message**: FH is not something placed on top of an existing harness.  
 > It analyzes existing rules to remove duplicates — making things lighter.
 >
-> **Measured expectations** (--dry-run verified values):
+> **Illustrative single-run measurements** (n=1 per project, `--dry-run` verified — not benchmarks; your numbers will differ):
 >
 > | Project type | Example | Total volume | Reduction | Main cause |
 > |---|---|---|---|---|
@@ -324,9 +331,9 @@ Auto-check the following items based on detected environment. Each item classifi
 | `deep-insight plugin` | settings.json plugins contains deep-insight | `grep -r "deep-insight" .claude/settings.json 2>/dev/null` |
 | `fh_env_context.jsonc` | `.claude/rules/fh_env_context.jsonc` exists | `ls .claude/rules/fh_env_context.jsonc` |
 | `phantom-gate` | **(Python + AI-output projects only)** `phantom-gate` present in `requirements.txt` / `pyproject.toml` | `grep "phantom.gate" requirements.txt pyproject.toml 2>/dev/null` |
-| `Streamlit pattern applied` | (Streamlit projects only, if the pattern pack is present) data_editor empty df branch/async wrapper/CSS numeric variables | CC `knowledge/shared/streamlit_patterns.md` Pattern 1-5 check (skip if file absent) |
+| `Domain pattern pack applied` | (optional — only when a `{framework}_patterns.md` pack is present; none ship by default) framework-specific pattern checks | `knowledge/shared/{framework}_patterns.md` check (skip if file absent — the normal default) |
 
-**Score calculation**: PASS = 1 point / MISS = 0.5 points / FAIL = 0 points → converted to 100-point scale.
+**Score calculation**: PASS = 1 / MISS = 0.5 / FAIL = 0. Formula: `score = round( Σ(points) ÷ (applicable item count) × 100 )`. Conditional items (domain pattern pack / phantom-gate / MCP / deep-insight) are excluded from the denominator when not relevant, so always print the denominator next to the score (e.g. `{score}/100 over {n} applicable items`) — the percentage is reproducible only when the item count is shown.
 
 ### Step 2. Diagnosis Report + Proposal List
 
@@ -357,9 +364,11 @@ install-wizard — Diagnosis Results ({score}/100)
   [6] Add MCP plugin — activate integrations (if MCP plugin MISS)
       Run: claude mcp add <your-mcp-plugin> -- npx -y <your-mcp-plugin>
       CC restart required after completion
-  [7] Install deep-insight plugin — activate sim-conductor multi-persona simulation (if deep-insight MISS)
-      Settings → Plugins → Add → {deep-insight plugin path}
-      Without install, /sim-conductor persona branching disabled (single-point simulation only)
+  [7] (Optional — field plugin, NOT required) Install deep-insight — adds the field's domain personas to sim-conductor
+      deep-insight is a private/field marketplace plugin. sim-conductor already ships the built-in
+      user-mastery spectrum (beginner · main-player · expert · challenger), so multi-persona simulation
+      works WITHOUT it. If you have access: Settings → Plugins → Add → <your deep-insight path>.
+      If not: skip — sim-conductor falls back to the built-in spectrum agents (no capability lost).
   [8] Create fh_env_context.jsonc — org/network/Git environment context file (if fh_env_context.jsonc MISS)
       Copy: {FH_DIR}/templates/fh_env_context.jsonc → .claude/rules/fh_env_context.jsonc
       Then manually update with actual values for org name, Jira URL, environment status, etc.
@@ -477,9 +486,16 @@ source "$FH_DIR/templates/fh_audit_check.zsh"
 EOF
 fi
 
-# 4-axis verification gate — install the FH pre-commit hook on the forge-harness clone (idempotent)
-# Git does NOT set core.hooksPath automatically on clone, so this one-time step is required for the gate to enforce (otherwise it stays advisory).
+# 4-axis verification gate (Mode D / FH-self-development only — OPT-IN, double-confirm required)
+# SCOPE (state this before asking): this gates commits IN YOUR FH CLONE ($FH_DIR) — git commit there is
+#   blocked until the 4-axis markers pass. It is FH-internal infra (hardcodes hub paths/markers) and is
+#   NEVER installed into field projects (see auto_project_mapping.md §6). Skip unless you develop FH itself.
+# Per Core Principles (Per-item approval + Double-confirm irreversible changes): this is NOT auto-run —
+#   it is a separate explicit Y/N, not folded into the baseline-setup batch.
 if [ -d "$FH_DIR/templates/.git-hooks" ]; then
+  echo "Enable the 4-axis pre-commit gate on your FH clone ($FH_DIR)? It will block commits there until"
+  echo "markers pass (Mode D / FH-development only). Skip if you are not developing FH itself. (Y/N)"
+  # → On explicit Y only:
   git -C "$FH_DIR" config core.hooksPath templates/.git-hooks
   chmod +x "$FH_DIR/templates/.git-hooks/pre-commit" 2>/dev/null
   echo "4-axis pre-commit gate: installed (core.hooksPath -> templates/.git-hooks)"
@@ -489,8 +505,9 @@ fi
 mkdir -p ~/.cc_sentinels
 touch ~/.cc_sentinels/$(basename "$(pwd)")_wizard_done
 
-# Weekly audit schedule in CC (CronCreate — valid for this session)
-# → auto-call /harvest-loop (lightweight mode) every Monday at 9:03
+# Weekly audit cadence — NO cron needed (a session-scoped scheduler cannot fire on a later day).
+# Durable mechanism = the zshrc hook above (fh_audit_check.zsh warns on terminal start when 7+ days
+# since last weekly_audit) + FH session-start detection (proposes /harvest-loop lightweight when overdue).
 ```
 
 ### Step 5. Completion Report + Contribution Guidance
@@ -503,7 +520,7 @@ install-wizard — Complete
   From now on:
   · Periodic audit auto-check on terminal start
   · Yellow warning output when weekly_audit exceeds 7 days
-  · Auto /harvest-loop (lightweight) at 9am Monday when CC is open
+  · /harvest-loop (lightweight) proposed at session start when 7+ days since last weekly_audit
 
   Next step skills:
   · Not sure which plugin you need → /plugin-recommender
