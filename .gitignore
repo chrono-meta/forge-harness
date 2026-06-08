@@ -37,6 +37,11 @@ knowledge/shared/harness-core/*_paper_framework.md
 tracks/**
 !tracks/**/
 !tracks/**/.gitkeep
+
+# qasp — company-domain content (kakaopay GHE, payment/insurance). Fully local isolation:
+# the project NAME must never reach public FH git, so even its .gitkeep is ignored.
+# (sync-to-be.sh already only mirrors _meta/_audit, so fh-be never receives it either.)
+/tracks/qasp/
 .codex/
 
 # Local skill registry — auto-generated per-machine scan (personal paths). Regenerated each session.
