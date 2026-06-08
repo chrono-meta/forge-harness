@@ -75,6 +75,12 @@ claude plugin install -s user fh-meta@forge-harness
 cd ~/projects/{your-project} && claude
 ```
 
+> ⚠️ **Plugin-only is partial synergy.** You get the skills and agents, but **not** Layer 1 — the
+> `CLAUDE.md` governance (active onboarding, the 4-axis gate, mode branching) and the compounding
+> context (`tracks/` memory accumulation, `harvest-loop` learning). Each skill runs the same in
+> isolation; what's missing is the orchestration that makes them compound across sessions. Clone the
+> hub (above) when you want the full set, not just the tools.
+
 > 🚪 **New here / just want the skills?** Start with the opinionated front door —
 > [`templates/starter_profile.md`](templates/starter_profile.md): one install command, a curated
 > first-five skills, and a zero-install governance gate (`npx … fh-gate`). The other 28 skills wait
