@@ -335,8 +335,13 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc.)
   → ④-b npm freshness — if any npm-shipped asset changed this session (the `package.json` `files[]`
        surface: skills · agents · README · AGENTS.md · CLAUDE.md · CHEATSHEET), **propose an npm
        republish**: version bump + Pre-Publish Surface Gate (`/public-surface-audit` + `/marketplace-gate`
-       Check 5) + `npm publish`. The npm-served README and shipped skills/agents freeze at publish time,
-       so updating FH assets without republishing leaves the package stale. **Propose, don't auto-publish.**
+       Check 5) + `npm publish` + **`git tag vX.Y.Z` on the bump commit + `git push origin vX.Y.Z`**
+       (tag at publish time, in lockstep with the version — keeps git tags aligned with npmjs.com so
+       Releases/Tags never drift). The npm-served README and shipped skills/agents freeze at publish
+       time, so updating FH assets without republishing leaves the package stale. **Propose, don't
+       auto-publish.** Tag drift caveat: when a bump rides inside a functional commit (no explicit
+       "bump" commit), tag *that* commit — otherwise the version ships to npm untagged (e.g. 1.4.4/1.4.5
+       shipped untagged, backfilled 2026-06-08).
   → ⑤ Card update ← ABSOLUTE LAST: must capture ①–④-b outcomes
   → ⑥ Commit card + push
 ```
