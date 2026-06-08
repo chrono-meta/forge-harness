@@ -173,6 +173,33 @@ claude plugin list
 
 ---
 
+## 9.5. npx / CLI — zero-install governance gate (any repo, no Claude Code session)
+
+The npm package `@chrono-meta/fh-gate` runs FH's governance gate as a plain CLI — no clone, no plugin, no `claude` session. Use it in CI or any repo. It shells out to a backend (`claude --print` or `codex exec`) and returns a machine-parseable verdict + exit code.
+
+```bash
+# Governance gate — wraps any coding agent's output as a post-generation check
+npx --package @chrono-meta/fh-gate fh-gate                    # auto-detect from git diff
+npx --package @chrono-meta/fh-gate fh-gate "src/foo.ts" full  # explicit files + level
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-gate   # Codex backend (default: claude)
+# → FH_GATE_VERDICT: PASS | PENDING | BLOCKED | ESCALATE
+# → exit: 0 PASS · 1 PENDING · 2 BLOCKED · 3 ESCALATE · 10 harness error · 11 arg error
+
+# Run a skill or agent doc through a backend, outside Claude Code
+npx --package @chrono-meta/fh-gate fh-run --skill <name>
+npx --package @chrono-meta/fh-gate fh-goal "<goal text>"      # goal runner
+```
+
+| Knob | Values | Effect |
+|------|--------|--------|
+| `FH_BACKEND` | `claude` \| `codex` \| `auto` | Backend CLI (`auto` prefers Codex when both present) |
+| `FH_MODEL` | model id | Override backend model |
+| level arg | `quick` \| `full` | Gate depth (default `quick`) |
+
+> **vs the plugin path (§9):** the plugin gives you interactive `/slash-commands` inside a `claude` session (Claude-only). The npx path is a single-shot CLI that runs **without** Claude Code and works with Codex too — built for CI pipelines and non-Claude users. Exit codes make it gate-able in GitHub Actions.
+
+---
+
 ## 10. Token efficiency best practices (AI collaboration guide)
 
 4 levers to reduce context cost. Combine for amplified effect.

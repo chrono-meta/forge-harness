@@ -7,8 +7,11 @@
 
 set -euo pipefail
 
-VERSION="0.1.0"
 FH_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Single source of truth: read version from the package.json shipped alongside this script.
+# No jq dependency (users may not have it); fall back to "unknown" if unreadable.
+VERSION="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$FH_ROOT/package.json" 2>/dev/null | head -1)"
+VERSION="${VERSION:-unknown}"
 _TMPDIR="${TMPDIR:-/tmp}"
 
 FH_BACKEND="${FH_BACKEND:-codex}"
