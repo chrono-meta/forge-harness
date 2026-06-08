@@ -182,10 +182,10 @@ Any 1 [Attack Succeeded]        → fix affected items, re-run Wave-P3 (max 2 re
 Still [Attack Succeeded] after 2 re-runs → "gate structural redesign required" → ESCALATE
 ```
 
-**Basis**: reverse-imported from a field-side harness (chrono-meta/fh-be#9, signal 2026-06-08). Field
-evidence: a TC coverage gate declared a 1-round PASS, then additional FAILs surfaced in rounds 2–3 — the
-gate-PASS-then-defect-found-in-next-stage pattern Wave-P3 collapses. Generalized from the field's
-domain-coupled (mcp-spec-to-tc) form to a gate-agnostic boundary hook. Shares its root with
+**Basis**: reverse-imported from a field-side sister harness (private companion signal, 2026-06-08). Field
+evidence: a test-case coverage gate declared a 1-round PASS, then additional FAILs surfaced in rounds 2–3 —
+the gate-PASS-then-defect-found-in-next-stage pattern Wave-P3 collapses. Generalized from the field's
+domain-coupled (a spec→test-case gate) form to a gate-agnostic boundary hook. Shares its root with
 `fh-commons:convergence-loop` (single-pass distrust).
 
 > **Detail**: See `SKILL_detail.md §WaveP3` — per-dimension attack questions, gap criteria, and output format — read when running a gate-passage re-attack.
