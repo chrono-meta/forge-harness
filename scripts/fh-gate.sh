@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# fh-gate.sh — FH governance gate v1.2
+# fh-gate.sh — FH governance gate (version read from package.json at runtime)
 #
 # Executes governance review end-to-end via a selectable AI backend.
 # CI-ready: machine-parseable verdict + exit codes.
@@ -28,8 +28,11 @@
 
 set -euo pipefail
 
-VERSION="1.2.0"
 FH_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Single source of truth: read version from the package.json shipped alongside this script.
+# No jq dependency (users may not have it); fall back to "unknown" if unreadable.
+VERSION="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$FH_ROOT/package.json" 2>/dev/null | head -1)"
+VERSION="${VERSION:-unknown}"
 CALLER_CWD="$(pwd -P)"
 _TMPDIR="${TMPDIR:-/tmp}"
 
