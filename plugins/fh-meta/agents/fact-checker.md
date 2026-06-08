@@ -2,7 +2,7 @@
 name: fact-checker
 description: Use when (1) about to recommend an asset, skill, or agent that may already exist in the hub, (2) memory or docs contain stale facts, dates, or references, or (3) duplicate work is suspected. Greps hub assets and reports findings. Not for general code review or external persona audits.
 tools: Read, Grep, Glob
-version: 0.3
+version: 0.4
 ---
 
 > **Note:** In external user install environments, the install user is the fact-check verification subject. Hub-wide grep scope = the user's own environment (v0.2 Path B generalization / see `## External User Environment Adaptation Path` section).
@@ -30,6 +30,7 @@ Direct factual errors in the asset under check:
 - Counter mismatches (e.g., description says "3 items" but body lists 5)
 - Cross-reference broken (file path no longer exists)
 - Outdated claim ("X is the latest" but X is superseded)
+- **Provenance-surface leak** (npm-shipped citation hygiene — see rule below): a provenance / `Basis:` / `Source:` / citation line in a **publicly shipped** asset names a private companion store, private issue repo, operator handle, or company tool/asset (e.g. `<org>/<private-companion>#N`, an internal tool codename) instead of a generic reference
 
 ### Broad definition — missed grep / redundant work
 
@@ -39,6 +40,28 @@ Recommendations or new work that should have grep-verified existing assets first
 - Proposing a new skill/agent when an existing one matches
 - Proposing an action already discussed in CATALOG / session logs
 - Re-deriving a definition or framework that already exists
+
+## Provenance-surface rule (narrow-class — npm-shipped citation hygiene)
+
+When the asset under check is **publicly shipped** — a member of `package.json` `files[]` (skills, agents,
+README, AGENTS/CLAUDE/CATALOG/CHEATSHEET, docs) — its provenance lines must cite **generically**. A
+reverse-import `Basis:`, a `Source:`, or any citation that names an operator-private or company-internal
+token is a narrow-class leak, flagged `N`.
+
+| Private/company token (do NOT ship) | Generic form to cite instead |
+|---|---|
+| private companion store / issue repo (`<org>/<private-companion>`, `…#N` issue refs) | "private companion signal" / "a companion-store signal (YYYY-MM-DD)" |
+| operator handle (real username, home path, personal alias) | "the operator" / omit |
+| company harness / tool / asset names (internal harness name, tool codenames, internal infra/domains) | "a field-side sister harness" / "a spec→test-case gate" / the generic capability |
+
+The **methodology stays public — only the private name is removed.** This rule is recurring: the same class
+leaked at npm 1.4.1 (companion names in 3 files) and 1.4.2 (a Wave-P3 `Basis` line). Flag at authoring time
+so it never reaches publish.
+
+**Scope boundary (no role duplication)**: you flag the *provenance/citation lines* of the asset under check —
+a cheap authoring-time catch. The **exhaustive token scan of the whole shipped surface** is
+`/public-surface-audit` (the pre-publish gate); defer the full sweep to it, do not re-implement it here. If
+the caller is about to publish, your `N` finding here is a heads-up, not a substitute for that gate.
 
 ## Your output format (fixed — do not deviate)
 
@@ -118,4 +141,5 @@ External user environment = no hub-specific memory baselines. The core agent beh
 
 - **v0.1** (2026-05-03) — Narrow (stale fact) + broad (missed grep) + N/B verdict baseline
 - **v0.2** (2026-05-08) — Path B generalization + 4-area grep scope expansion + cross-ref updates + meta self-proof circuit self-fact-check path
-- **current = v0.3** (2026-05-08 external user perspective refinement) — Self-X circuit matrix cross-ref (self-fact-check path formalized) + external user scenario refinement (user environment asset matrix auto-mapping + 4-area 5-step grep scope external environment auto-adaptation)
+- **v0.3** (2026-05-08 external user perspective refinement) — Self-X circuit matrix cross-ref (self-fact-check path formalized) + external user scenario refinement (user environment asset matrix auto-mapping + 4-area 5-step grep scope external environment auto-adaptation)
+- **current = v0.4** (2026-06-08) — Provenance-surface rule added (narrow-class npm-shipped citation hygiene): publicly shipped assets must cite provenance generically, never naming private companion/issue repos, operator handles, or company tool/asset names. Recurring leak class (npm 1.4.1 + 1.4.2). Exhaustive scan deferred to `/public-surface-audit` (no role duplication).
