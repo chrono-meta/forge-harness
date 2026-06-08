@@ -1,7 +1,7 @@
 ---
 name: steel-quench
 description: >-
-  A meta-skill that concretizes a designer's anxiety into AI-driven all-angle challenger attacks (via fh-commons:quench-challenger) and shakes off flaws through defensive rounds. Systematically surfaces root weaknesses of near-complete projects wave by wave, guaranteeing near-human-review quality without direct human deep inspection. Wave 4 (Meta-Aware Adversary) is an advanced mode where the challenger uses its own AI nature — hallucination, context collapse, prompt injection, tool lock-in — as attack vectors. Built-in fh-commons:quench-challenger agent outputs harness structure 6-axis attack+prescription pairs; after convergence, fh-meta:persona-innovator auto-extracts new patterns. Triggered by: "quench this", "devil's judgment", "all-angle review", "end-to-end verification", "steel quench", "deep pre-completion inspection", "shake out design anxiety", "attack from the root".
+  A meta-skill that concretizes a designer's anxiety into AI-driven all-angle challenger attacks (via fh-commons:quench-challenger) and shakes off flaws through defensive rounds. Systematically surfaces root weaknesses of near-complete projects wave by wave, guaranteeing near-human-review quality without direct human deep inspection. Wave 4 (Meta-Aware Adversary) is an advanced mode where the challenger uses its own AI nature — hallucination, context collapse, prompt injection, tool lock-in — as attack vectors. Wave-P3 (gate-passage re-attack) re-attacks an artifact on Coverage/Narrative/False-confidence right after an upstream gate declares PASS. Built-in fh-commons:quench-challenger agent outputs harness structure 6-axis attack+prescription pairs; after convergence, fh-meta:persona-innovator auto-extracts new patterns. Triggered by: "quench this", "devil's judgment", "all-angle review", "end-to-end verification", "steel quench", "deep pre-completion inspection", "shake out design anxiety", "attack from the root", "did it really pass?".
 user-invocable: true
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "WebSearch", "Agent"]
 model: opus
@@ -25,6 +25,7 @@ A designer's anxiety is most dangerous when vague. steel-quench breaks that anxi
 | "shake out design anxiety", "deep pre-completion inspection" | Concretize vague anxiety |
 | "attack from the root" | Re-verify from reason for existence |
 | "diagnose with counterexample", "use this bad case as reference" | Phase 0 calibration |
+| "did it really pass?", "re-attack after the gate", "the gate said PASS" | Wave-P3 gate-passage re-attack |
 | `/steel-quench` | Explicit call |
 
 ---
@@ -38,7 +39,7 @@ A designer's anxiety is most dangerous when vague. steel-quench breaks that anxi
 | **Wave 2** | Defense — defend or state as residual risk | — |
 | **Wave 3+** | Convergence — repeat until zero new S-grade | Zero new S-grade |
 | **Wave 4** (optional) | Meta-Aware Adversary — AI uses its own nature as attack vector | Zero new S-grade + AI-specific criteria |
-| **Wave-P3** (reserved) | Domain gate integration slot | Future use |
+| **Wave-P3** (optional) | Gate-passage re-attack — when an upstream gate declares PASS, re-attack the just-passed artifact on Coverage / Narrative / False-confidence | All 3 dimensions Attack Failed |
 | **Wave 5** (optional) | Multi-Team Adversarial Panel — external CLIs or cross-session Claude | Zero new S-grade cross-team |
 
 ---
@@ -148,6 +149,49 @@ Wave 4 convergence = Wave 3 criteria + 3 AI-specific vectors actually reviewed +
 
 ---
 
+## Wave-P3 — Gate-Passage Re-Attack (optional)
+
+**Activation**: When an upstream gate declares PASS on an artifact — any "declared-complete boundary"
+(a verification gate's terminal PASS, a `/pipeline-conductor` green sweep, a `/marketplace-gate` listing
+verdict, the 4-axis auto-gate marker, a domain TC/coverage gate). Propose preemptively, run after approval.
+No gate-PASS in scope → skip Wave-P3 entirely.
+
+> A 1-round gate PASS is exactly when reviewers stop looking — "we just passed" is the lowest-vigilance
+> moment in any workflow. Wave-P3 distrusts the declaration and re-attacks the just-passed artifact on three
+> dimensions the gate's own pass criteria structurally could not check. Only when all three Attack Failed can
+> a **"Real PASS"** be declared.
+
+**Agent utilization**:
+- `fh-commons:quench-challenger` (optional) — adds 6-axis structural attack to each dimension. If absent, run the 3 dimensions directly.
+- `fh-meta:persona-innovator` (after convergence) — error/gap patterns found during Wave-P3 → auto-propose new Cross-Project Pattern rows or skill-candidate signals.
+
+The three dimensions generalize the gate's three blind spots:
+
+| # | Dimension | The blind spot it attacks |
+|:---:|---|---|
+| Wave-P3a | **Coverage** | *What did the gate not check?* Items marked covered/passed that lack a traceable artifact (ID, test, file, citation). |
+| Wave-P3b | **Narrative** | *What story does the passed artifact tell that may be wrong?* Residual hardcoded/environment-coupled values and vague, unverifiable claims the PASS declaration smuggled through. |
+| Wave-P3c | **False-confidence** | *Did the gate produce false confidence?* High-risk items that passed carrying only a binary pass/fail, with no residual-risk or failure-mode caveat. |
+
+Each dimension is `Attack Succeeded` (defect found) or `Attack Failed` (clean).
+
+**Wave-P3 Done When**:
+```
+All 3 dimensions [Attack Failed] → ✅ Real PASS → activate fh-meta:persona-innovator (extract new patterns)
+Any 1 [Attack Succeeded]        → fix affected items, re-run Wave-P3 (max 2 re-runs)
+Still [Attack Succeeded] after 2 re-runs → "gate structural redesign required" → ESCALATE
+```
+
+**Basis**: reverse-imported from a field-side harness (chrono-meta/fh-be#9, signal 2026-06-08). Field
+evidence: a TC coverage gate declared a 1-round PASS, then additional FAILs surfaced in rounds 2–3 — the
+gate-PASS-then-defect-found-in-next-stage pattern Wave-P3 collapses. Generalized from the field's
+domain-coupled (mcp-spec-to-tc) form to a gate-agnostic boundary hook. Shares its root with
+`fh-commons:convergence-loop` (single-pass distrust).
+
+> **Detail**: See `SKILL_detail.md §WaveP3` — per-dimension attack questions, gap criteria, and output format — read when running a gate-passage re-attack.
+
+---
+
 ## External-GT Adjudication (when the target has a public ground truth)
 
 When quenching a **public artifact that has its own ground truth** — a repo's open issues, test suite, or
@@ -242,6 +286,7 @@ sim-conductor Area A (external user perspective)
 - **Always check self-referential pattern (P3).** Cross-validate Wave results with external criteria.
 - **Public target → adjudicate against external GT before claiming.** A finding the target's own docs/policy/threat-model marks intentional or out-of-scope is a false positive, not a catch. See §External-GT Adjudication.
 - **Attack surface limit**: steel-quench attacks output content patterns. Phantom Claim detection → `phantom-quench`.
+- **Gate cross-reference**: any FH skill that declares a PASS / green / listing-ready verdict (`pipeline-conductor`, `marketplace-gate`, the 4-axis auto-gate, `convergence-loop`, domain coverage gates) is a valid Wave-P3 entry point. Invoke `/steel-quench` Wave-P3 on the just-passed artifact rather than editing each gate to embed it — the hook lives here, callers reference it.
 
 ## Failure Fallback
 

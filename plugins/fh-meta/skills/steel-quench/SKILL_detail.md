@@ -170,6 +170,64 @@ New S-grade blockers: N (from AI-specific vectors: N)
 
 ---
 
+## §WaveP3 — Gate-Passage Re-Attack (per-dimension spec + output format)
+
+> Summary, activation, agent utilization, and Done When live in `SKILL.md §Wave-P3`. This section holds the
+> per-dimension attack questions and the output format — read when actually running a gate-passage re-attack.
+
+### Wave-P3a — Coverage re-attack
+
+Second-pass search for gaps hiding behind the pass declaration — *what the gate did not check.*
+
+| Attack Question | Gap Criterion |
+|---|---|
+| Do items the gate marked "covered" / "documented" / "done" actually have a traceable artifact (test ID, file, commit, citation)? | Marked-covered item without a backing artifact = gap |
+| Are boundary/edge cases the gate's scope implied actually each enumerated? | Implied-but-absent case = gap |
+| Does every claimed mapping (state→test, requirement→implementation, claim→source) resolve 1:1? | Unresolved mapping = gap |
+
+Verdict: `[Wave-P3a: Attack Succeeded]` (gap found) / `[Wave-P3a: Attack Failed]` (no gap)
+
+### Wave-P3b — Narrative re-attack
+
+Residue the pass declaration carried through unexamined — *the story the artifact tells that may be wrong.*
+
+| Attack Question | Residue Criterion |
+|---|---|
+| Do passed outputs hardcode concrete values where a parameter/placeholder belongs? | 1 hardcoded value = residue |
+| Do passed outputs contain unverifiable vague terms ("works correctly", "handled properly", "normally")? | 1 vague term = residue |
+| Do passed outputs assume environment-coupled values (absolute paths, fixed accounts, machine-specific config)? | 1 coupled assumption = residue |
+
+Verdict: `[Wave-P3b: Attack Succeeded]` (residue found) / `[Wave-P3b: Attack Failed]` (clean)
+
+### Wave-P3c — False-confidence re-attack
+
+High-risk items that passed without a caveat — *did the gate manufacture confidence it had not earned?*
+
+| Attack Question | Missing Criterion |
+|---|---|
+| Do high-risk items (irreversible action, security boundary, branch/assignment logic) carry a failure-mode / FP caveat? | Missing caveat on a high-risk item = gap |
+| Do items prone to confusion (near-identical states, off-by-one boundaries) carry a confusion warning? | Missing warning = gap |
+| Among the highest-priority items, do >50% carry only binary pass/fail with no residual-risk note? | Ratio exceeded = gap |
+
+Verdict: `[Wave-P3c: Attack Succeeded]` (missing found) / `[Wave-P3c: Attack Failed]` (all labeled)
+
+### Wave-P3 Output Format
+
+```
+## Wave-P3 — Gate-Passage Re-Attack Results (gate: {which gate declared PASS})
+
+| Dimension | Attack Result | Discovered Items | Fix Required |
+|:---:|:---:|---|:---:|
+| Wave-P3a (Coverage)          | Succeeded/Failed | [gaps or none]    | Y/N |
+| Wave-P3b (Narrative)         | Succeeded/Failed | [residue or none] | Y/N |
+| Wave-P3c (False-confidence)  | Succeeded/Failed | [missing or none] | Y/N |
+
+✅ Real PASS → persona-innovator: [N new pattern/rule candidates]
+❌ Fix required, re-run (round N)
+```
+
+---
+
 ## §Wave5 — Multi-Team Adversarial Panel (Full Spec)
 
 **Activation**: After Wave 1~4 convergence + A-grade items remain. `--sidecar` flag or "run sidecar wave".
