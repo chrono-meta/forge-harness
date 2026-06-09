@@ -8,6 +8,12 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #golden-probes, #offline-eval, #doc-code-coupling, #anthropic-4layer
+**File:** .claude/regression/probes.md (+ templates/.git-hooks/pre-commit, prompt-regression SKILL.md)
+Anthropic 4-layer sister-audit imports (operator-approved): I1 — 28-probe known-answer golden set with check classes, the standing offline eval prompt-regression auto-loads (its P-GATE-01 had already gone stale 5→6 the same day the gate grew — fixed, plus an explicit anti-stale maintenance rule). I2 — pre-commit doc-code coupling WARN (measured class, never blocks) when executables are staged without any doc asset.
+- Decision: probes.md canonical-when-present, SKILL.md default matrix = Mode C fallback (single-source preserved); coupling check warns rather than blocks — the decision is made conscious, doc-neutral script fixes stay friction-free.
+- Open: npm republish (prompt-regression SKILL.md is shipped) — folded into the open 1.4.8 handoff.
+
 ### 2026-06-10 | forge-harness | #new-skill-gate, #check-class, #done-when, #g2
 **File:** CLAUDE.md
 G2 from the supervisor-loops audit: New Skill Creation Pre-Commit Gate extended 5→6 items — "Check-class declared": each Done When condition states its class (mandatory-pass / measured / judged per 6axis §Axis 5), and judged conditions must name their adversarial pairing (no judge-only path). The taxonomy now lives in the operating loop, not just the knowledge doc.
