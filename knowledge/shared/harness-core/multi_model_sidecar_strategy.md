@@ -70,9 +70,16 @@ FH's SKILL.md format is shared across all three major AI CLIs. FH skills load na
 |---|---|---|
 | **Claude Code** | `.claude/plugins/` native | ✅ Primary environment |
 | **Codex CLI** | `SKILL.md` plugin (`fh-meta@forge-harness`) | ✅ Validated |
-| **Gemini CLI** | `gemini skills install <path> --consent` | ✅ Validated |
+| **Gemini CLI** | `gemini skills install <path> --consent` | ✅ Validated — ⚠️ direct `gemini` CLI EOL 2026-06-18 |
+| **Antigravity CLI** (`agy`) | vendor states Skills/Hooks migrate from Gemini CLI | 🔶 **candidate — not yet demonstrated** (verify FH SKILL.md load before claiming) |
 
-This means FH is not just model-agnostic in theory — the methodology layer physically runs in all three CLI environments without modification. This is the empirical foundation for the cross-CLI portability claim.
+This means FH is not just model-agnostic in theory — the methodology layer physically runs in multiple CLI environments without modification. This is the empirical foundation for the cross-CLI portability claim.
+
+> **Gemini-CLI → Antigravity migration (2026-06-18)**: the validated `gemini skills install` path dies on
+> EOL. The vendor states Antigravity (`agy`) inherits Skills/Hooks, so FH skill-load under `agy` is the
+> natural successor — but it is a **verification candidate, not a validated claim** (honesty discipline:
+> claim only what's demonstrated). Closing it = the same cheap gate Codex/Gemini passed: load 1–2 FH
+> skills under `agy`, capture graded output. Until then this row stays 🔶, not ✅.
 
 > **Load ≠ full parity**: "loads and lists as Enabled" means the SKILL.md *methodology* is readable and runnable as guidance. Skills whose steps dispatch a sub-agent (`Agent` tool, `fh-commons:*` challengers) or depend on slash-commands/hooks are **Claude-native** — on Gemini/Codex they degrade to manual methodology, not automated execution. Cross-CLI portability covers the *methodology layer*; the automation layer (sub-agents, hooks, slash commands) requires Claude Code as host. See `README.md §2-layer architecture`.
 
@@ -99,9 +106,17 @@ This document is the **rationale layer** (why sidecars, when, what value, what b
 
 | Sidecar | Invocation | Model access |
 |---|---|---|
-| **Gemini CLI** | `echo "prompt" \| gemini` or `gemini -p "prompt"` | Gemini family (default: current model) |
-| **Codex CLI** | `npx @openai/codex exec "prompt"` | GPT-4o / GPT-5.5 (non-interactive exec mode) |
-| **Copilot CLI** (`gh copilot`) | `gh copilot -- -p "prompt" --allow-all-tools` | Copilot model catalog — **subscription-dependent**: preview = claude-haiku-4.5 + gpt-5-mini; international/enterprise subscription = GPT-5.5, Claude Opus 4.7, etc. Verify: `gh copilot -- -p "list available models"` |
+| **Gemini CLI** | `echo "prompt" \| gemini --skip-trust` or `gemini -p "prompt"` | Gemini family. ⚠️ **the direct `gemini` CLI is being sunset (vendor EOL 2026-06-18)** → its successor is the Antigravity router-shell (`agy`) or the Gemini API (Tier 2). `--skip-trust` is required outside a trusted directory (headless). A *pure-text* prompt needs no tool-permission flag. |
+| **Antigravity CLI** (`agy`) | `echo "prompt" \| agy` or `agy -p "prompt" --model "<name>"` | **Router-shell** (route-to-model selector, same class as Copilot — *not* a harness): model-selectable across providers (e.g. Gemini 3.x · Claude Sonnet/Opus · GPT-OSS-120B). For cross-provider **diversity** pick a *non-Claude* model from a Claude host (Claude→Claude = no divergence — see §Boundaries). Agentic: `-p` pre-flights tool permission, so a headless tool-using run needs `--dangerously-skip-permissions` (or run under the host's approval mode); a pure-text run does not. |
+| **Codex CLI** | `npx @openai/codex exec "prompt"` (or `codex exec --skip-git-repo-check -`) | GPT-4o / GPT-5.5 (non-interactive exec mode — true headless, no permission pre-flight) |
+| **Copilot CLI** (`gh copilot`) | `gh copilot -- -p "prompt" --allow-all-tools` | Copilot model catalog — **subscription-dependent**: preview = claude-haiku-4.5 + gpt-5-mini; international/enterprise subscription = GPT-5.5, Claude Opus, etc. Verify: `gh copilot -- -p "list available models"`. Router-shell (agentic) — same permission-preflight note as `agy`. |
+
+> **Binary names churn — probe by capability, never pin a name.** The Gemini-CLI→Antigravity migration
+> (direct `gemini` EOL 2026-06-18) is the live proof: a Tier-1 entry pinned to the literal `gemini`
+> binary goes stale on a fixed date. The resolution protocol below therefore probes for *whichever route
+> exists* (direct CLI · router-shell · API), and Gemini access simply migrates `gemini` → (`agy` | API)
+> without changing the methodology. **Router-shells (`agy`, `gh copilot`) are a Tier-1 *class*, not a
+> harness** (§Two shells) — they select+forward a model; FH governs which/when.
 
 ---
 
@@ -123,10 +138,14 @@ task sprays calls to every model.
 **Resolution order (Tier 1 → 2 → 3)** — bind the first tier that resolves:
 
 ```bash
-# Tier 1 — subscription / logged-in CLI (zero marginal cost; preferred)
-for cli in gemini codex aider; do command -v "$cli" >/dev/null 2>&1 && echo "tier1:$cli"; done
+# Tier 1 — subscription / logged-in CLI (zero marginal cost; preferred).
+#   Probe by CAPABILITY, never pin a fixed binary name — names churn: the direct `gemini`
+#   CLI is sunset 2026-06-18, its Tier-1 successor is the `agy` (Antigravity) router-shell.
+#   Direct provider CLIs + router-shells (agy/gh-copilot) are all Tier-1 routes.
+for cli in gemini agy codex aider; do command -v "$cli" >/dev/null 2>&1 && echo "tier1:$cli"; done
 command -v gh >/dev/null 2>&1 && gh copilot --help >/dev/null 2>&1 && echo "tier1:gh-copilot"
-#   (codex may be `npx @openai/codex` when not on PATH — see §The capability for exact flags)
+#   (codex may be `npx @openai/codex` when not on PATH; agy/gh-copilot are router-shells —
+#    model-selectable, so pick a non-Claude model from a Claude host for genuine diversity)
 
 # Tier 2 — native API key (pay-per-use; only if no Tier-1 CLI)
 for k in GEMINI_API_KEY OPENAI_API_KEY ANTHROPIC_API_KEY; do
