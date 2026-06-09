@@ -274,6 +274,8 @@ max mode never installs anything silently — discovery and synergy-check are su
 
 Runs after Step C (or after Step B if no capability gap). Selects an adversarial sidecar based on the task's quality-risk profile — distinct from Step C's capability-gap sidecar, which addresses missing tools. Step D's sidecar addresses **blind-spot risk**: the generator and reviewer sharing the same reasoning distribution.
 
+> **Availability resolution**: "Gemini sidecar if available" / "if external CLIs available" below is decided by the canonical Tier 1→2→3 recipe in `knowledge/shared/harness-core/multi_model_sidecar_strategy.md §Sidecar Engine Resolution Protocol` — discovery is automatic, invocation stays value-gated. Tier 3 (Claude sub-agent) guarantees this step never hard-fails even with zero external CLIs/keys.
+
 **Scope → sidecar routing table**:
 
 | Task scope signal | Sidecar | Invocation point |

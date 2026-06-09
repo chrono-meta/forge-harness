@@ -105,6 +105,60 @@ This document is the **rationale layer** (why sidecars, when, what value, what b
 
 ---
 
+## Sidecar Engine Resolution Protocol (Zero-Config default)
+
+**Problem this solves**: skills across FH say *"Gemini sidecar if available"* / *"if external
+CLIs available"* without a shared definition of how "available" is decided. This is the canonical
+resolution recipe — every sidecar-invoking skill resolves engine availability through it, so a
+user who configured nothing still gets intelligent multi-model use, and a plugin-only (Mode C)
+user never hits a hard error.
+
+**Core principle — discovery is automatic; invocation stays value-gated.** Probing the
+environment is cheap (shell `command -v` + env-var check, near-zero cost), so it runs **by
+default** on every sidecar-eligible step. *Actually invoking* a sidecar still passes the value
+test in §When NOT to invoke — intelligent use, not indiscriminate fan-out. "Default multi-AI"
+means FH auto-knows what is available and uses it when the task warrants it, never that every
+task sprays calls to every model.
+
+**Resolution order (Tier 1 → 2 → 3)** — bind the first tier that resolves:
+
+```bash
+# Tier 1 — subscription / logged-in CLI (zero marginal cost; preferred)
+for cli in gemini codex aider; do command -v "$cli" >/dev/null 2>&1 && echo "tier1:$cli"; done
+command -v gh >/dev/null 2>&1 && gh copilot --help >/dev/null 2>&1 && echo "tier1:gh-copilot"
+#   (codex may be `npx @openai/codex` when not on PATH — see §The capability for exact flags)
+
+# Tier 2 — native API key (pay-per-use; only if no Tier-1 CLI)
+for k in GEMINI_API_KEY OPENAI_API_KEY ANTHROPIC_API_KEY; do
+  [ -n "${!k:-}" ] && echo "tier2:$k"
+done
+
+# Tier 3 — guaranteed fallback: Claude Code's own isolated sub-agent (always available)
+#   No external resource → orchestrator spawns an Agent(subagent_type=…) / prompt-chunking.
+#   This tier never fails, so the chain has no hard-error state. Same-provider, so it serves
+#   model-access/parallelism, NOT cross-provider diversity (see §Boundaries).
+echo "tier3:claude-subagent"   # used when Tiers 1–2 resolve nothing
+```
+
+**Verdict mapping**:
+- Tier 1/2 resolved **and cross-provider** → genuine diversity wave (primary use case).
+- Only Tier 3 available → no diversity; proceed with the Claude sub-agent (no error, reduced value).
+- The resolution result is **advisory** to the caller's own value test — a resolved engine is
+  *usable*, not *mandatory*.
+
+**Relation to the §Implementation-Patterns fallback chain**: that chain degrades *when a chosen
+path is blocked* (network / quota); this protocol decides *what exists in the first place*. Same
+fan-out, two moments — resolve first (this), degrade-on-failure second (that). Do not duplicate
+the tier list into callers; cite this section.
+
+**Skills that resolve through this protocol** (wired 2026-06-09): `goal-quench` (Step D sidecar
+routing), `steel-quench` (Wave 5 / runtime-adapter fallback), `harvest-loop` (Step 3.5-X
+cross-validation). Other sidecar-using skills (`sim-conductor`, `pipeline-conductor`,
+`agent-composer`) inherit by reference — when they say "if available", availability = this
+protocol's verdict.
+
+---
+
 ## Empirical validation
 
 ### Experiment 1 — Sidecar invocation (2026-05-31)
