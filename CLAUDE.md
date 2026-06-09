@@ -109,17 +109,20 @@ Simplification guard: trivial denials with one obvious fix → state block + sin
 
 ## New Skill Creation Pre-Commit Gate
 
-All 5 items below must pass before committing a new SKILL.md. If any fails, fix and re-commit.
+All 6 items below must pass before committing a new SKILL.md. If any fails, fix and re-commit.
 
 | Item | Criterion |
 |---|---|
 | **Role duplication check** | Pass `/asset-placement-gate` — no overlap with existing role clusters |
 | **Description diet** | Plain text / 0 self-marketing expressions / 0 emphasis words (⭐, "critical", "groundbreaking") |
 | **Done When defined** | At least 1 explicit completion condition |
+| **Check-class declared** | Each Done When condition states its check class — mandatory-pass / measured / judged (`harness_6axis_framework.md` §Axis 5). Any judged condition names its adversarial pairing — no judge-only path |
 | **Natural language triggers** | At least 3 examples that work without internal vocabulary |
 | **Independently executable** | Confirmed to work without other FH skills (or dependencies are explicitly documented) |
 
 Skills without a Done When definition automatically qualify as harness-doctor L2 M-tier.
+Check-class declaration applies to **new** skills; existing skills backfill opportunistically
+(when next edited), not retroactively.
 
 ---
 
