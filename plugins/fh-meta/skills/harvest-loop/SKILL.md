@@ -115,7 +115,7 @@ Output final proposal list → Y: PR creation / N: persist to tracks/_meta/fh_si
 
 **Fallback** (deep-insight not installed): Inline synthesis. Apply same judgment matrix. If quality low → Step 3.75 Critic processes as CONDITIONAL PASS.
 
-**Step 3.5-X** (optional): Cross-session 2nd validation when 2+ HIGH-grade items exist. External CLI (gemini/codex) or cross-session Claude. Items flagged as over-promoted → downgrade HIGH → MED.
+**Step 3.5-X** (optional): Cross-session 2nd validation when 2+ HIGH-grade items exist. External CLI (gemini/codex) or cross-session Claude. Items flagged as over-promoted → downgrade HIGH → MED. External CLI availability is resolved via `knowledge/shared/harness-core/multi_model_sidecar_strategy.md §Sidecar Engine Resolution Protocol` (Tier 1→2→3; Tier 3 = cross-session Claude — no hard-fail when no external CLI exists).
 
 > **Detail**: See `SKILL_detail.md §Step3-5X` — bash execution scripts for external CLI and cross-session Claude fallback — read when running Step 3.5-X validation.
 

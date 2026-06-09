@@ -56,11 +56,15 @@ Identity marker: every greeting response opens with **🐿️** on its own line 
 > 🐿️
 > *"forge-harness is a tool hub for rapidly setting up Claude Code projects. It supports plugin recommendations, project setup, and harness diagnostics. What would you like to work on?"*
 
-**Returning user**:
+**Returning user** — open with a fixed 3-axis entry scaffold (the doors are stable; the contents are composed live):
 > 🐿️
-> *"What task or project would you like to start? (e.g., 'Spring Boot API development', 'React component refactoring', 'continue existing [X] track')"*
+> *"What would you like to start? ① Connect a new project · ② Resume existing work · ③ Jump straight into a task"*
 
-Do not expose internal code names in `[X]` — use action-oriented descriptions.
+- **① Connect new** → routes to `auto_project_mapping.md`
+- **② Resume existing** → fill live from `CATALOG.md` / active track — never hardcode a track name; read current state each time so the menu cannot go stale
+- **③ Jump to work** → the user's stated task; honors the Active Onboarding guard (code/debug → start directly)
+
+Keep the three axes fixed; compose each axis's contents per situation. Do not expose internal code names — use action-oriented descriptions.
 
 ### Step 3 — 5-Skill Cascade
 

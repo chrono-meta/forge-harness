@@ -80,6 +80,8 @@ For the target artifact, scan installed agents for a domain-specific adversarial
 2. Built-in fallback: `fh-commons:quench-challenger` (general-purpose adversarial review)
 3. GAP for high-risk artifact: query `/plugin-recommender "adversarial reviewer for [artifact_type]"` → user: install / skip / use fallback
 
+> **Sidecar availability** for a cross-provider challenger (Gemini/Codex, Wave 5) is resolved via the Tier 1→2→3 recipe in `knowledge/shared/harness-core/multi_model_sidecar_strategy.md §Sidecar Engine Resolution Protocol`; Tier 3 = the `fh-commons:quench-challenger` Claude sub-agent below (guaranteed fallback — same-provider, so model-access not cross-provider diversity).
+
 **Runtime adapter note**: In Claude Code, invoke the fallback as an isolated `Agent(subagent_type="fh-commons:quench-challenger")`. In Codex-primary or other non-Claude runtimes, use the FH adapter instead:
 
 ```bash
