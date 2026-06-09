@@ -68,12 +68,21 @@ New work arrives
 
 Applies automatically when any FH asset is modified (SKILL.md, rules, templates, CLAUDE.md, substantive knowledge/ docs).
 
-| Gate axis | Tool | What it catches |
-|---|---|---|
-| **Backward** | `regression_guard.sh` | Critical section loss, broken refs, syntax errors, line reduction |
-| **Adversarial** | `steel-quench` | Trigger phrase collisions, design attack surface, over-engineered steps |
-| **Forward** | `phantom-quench` | Phantom references, paths that don't exist, stale external links |
-| **Record** | `edit-manifest RECORD` | Logs predicted impact — closes the predict-verify loop |
+| Gate axis | Tool | Class | What it catches |
+|---|---|---|---|
+| **Backward** | `regression_guard.sh` | mandatory-pass | Critical section loss, broken refs, syntax errors, line reduction |
+| **Adversarial** | `steel-quench` | judged | Trigger phrase collisions, design attack surface, over-engineered steps |
+| **Forward** | `phantom-quench` | judged | Phantom references, paths that don't exist, stale external links |
+| **Record** | `edit-manifest RECORD` | mandatory-pass | Logs predicted impact — closes the predict-verify loop |
+
+**Check classes**: every verify check is one of three classes — **mandatory-pass**
+(deterministic; blocks on fail), **measured** (quantitative; tracked, not blocking alone —
+e.g. `token-budget-gate`, goal-quench calibration), **judged** (LLM-judge with cited
+evidence). **Judged rule**: a judge verdict alone never passes — it must be paired with
+adversarial re-verification (`steel-quench` / `verify-bidirectional`), and its cited evidence
+is itself subject to `phantom-quench`. (Taxonomy adapted from external supervisor-loop
+discourse, 2026-06; FH adds the judged-pairing rule and evidence re-verification, which the
+source leaves open.)
 
 **Hard gate**: git pre-commit hook (`templates/.git-hooks/pre-commit`) blocks commit until marker + manifest entry exist.
 
