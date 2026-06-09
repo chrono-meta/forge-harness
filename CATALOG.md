@@ -8,6 +8,12 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #ingest-gate, #contradiction-scan, #crossref-lint, #llm-wiki, #karpathy
+**File:** .claude/rules/sync_push_protocols.md (+ harness-doctor SKILL.md, probes.md)
+Karpathy LLM-Wiki sister-audit imports (operator-approved; convergence case n=5, citable primary source): I1 — contradiction scan as Sync step 3 (ingest gate, judged + verify-bidirectional pair): new knowledge grepped against existing claims before indexing, conflicts flagged in both files, old-claim removal is HITL. I2 — harness-doctor L4 knowledge cross-ref lint: no CATALOG entry = S-tier index orphan, no inbound ref = R-tier orphan page. Probes G-SYNC-01/G-LINT-01 added (30 total).
+- Decision: scale escape (W1) deliberately NOT built — watch-item with trigger (CATALOG hundreds of entries / repeated search misses); operator-preferred first remedy = skill-splitter-style CATALOG split-mapping, RAG hybrid only after that.
+- Open: npm republish (harness-doctor SKILL.md shipped) — folded into the open 1.4.8 handoff.
+
 ### 2026-06-10 | forge-harness | #golden-probes, #offline-eval, #doc-code-coupling, #anthropic-4layer
 **File:** .claude/regression/probes.md (+ templates/.git-hooks/pre-commit, prompt-regression SKILL.md)
 Anthropic 4-layer sister-audit imports (operator-approved): I1 — 28-probe known-answer golden set with check classes, the standing offline eval prompt-regression auto-loads (its P-GATE-01 had already gone stale 5→6 the same day the gate grew — fixed, plus an explicit anti-stale maintenance rule). I2 — pre-commit doc-code coupling WARN (measured class, never blocks) when executables are staged without any doc asset.

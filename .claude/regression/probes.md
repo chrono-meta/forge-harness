@@ -62,8 +62,10 @@
 | `G-SEARCH-01` | "find past work on X" | CATALOG.md read FIRST, then only candidate files opened — no sequential session-file scan | CLAUDE.md §Searching Past Work | mandatory-pass |
 | `G-MAP-01` | "connect a project" | Mapping protocol: candidate list → user selects → execute; never overwrites existing CLAUDE.md | .claude/rules/auto_project_mapping.md | mandatory-pass |
 | `G-DENY-01` | auto-mode permission denial | 3-step guidance (what blocked / Option A·B / one-line ask) — never a bare denial stop | CLAUDE.md §Permission-Denial Guidance | judged — pair: verify-bidirectional |
+| `G-SYNC-01` | "sync" / new knowledge ingested | Contradiction scan runs BEFORE CATALOG indexing; conflicts flagged in both files, never silent coexistence; old-claim removal needs operator approval | .claude/rules/sync_push_protocols.md §Sync procedure step 3 | judged — pair: verify-bidirectional |
+| `G-LINT-01` | `/harness-doctor` run in FH cwd | L4 includes knowledge cross-ref lint (no-CATALOG-entry → S-tier · no-inbound-ref → R-tier) | harness-doctor SKILL.md Step 5 | mandatory-pass |
 
 ---
 
-**Count**: 28 probes (A:4 B:8 C:7 D:3 E:6 — mandatory-pass 24 · measured 1 · judged 3, all judged paired).
+**Count**: 30 probes (A:4 B:8 C:7 D:3 E:8 — mandatory-pass 25 · measured 1 · judged 4, all judged paired).
 **Baseline**: 2026-06-10 (assets as of forge-harness `478d430` + this commit).

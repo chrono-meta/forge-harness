@@ -115,6 +115,10 @@ Hook divergence verdict: 0 hooks = Normal · 1+ hooks (session-end/Stop) = S-tie
 - Tracks with no sync in 30+ days → R-tier
 - CATALOG.md: 5+ open items in recent 5 sessions → S-tier
 - Field project CLAUDE.md missing → S-tier
+- **Knowledge cross-ref lint**: `knowledge/**/*.md` with no CATALOG.md entry → S-tier
+  (index orphan — unfindable via CATALOG-first search); with no inbound reference from
+  any CLAUDE.md / rules / SKILL.md / knowledge doc → R-tier (orphan page).
+  Mechanical: `grep -L` filenames against CATALOG.md, then `grep -rl` for inbound refs.
 
 ### Step 6. L5 — Pattern Analysis *(FH only)*
 
@@ -246,6 +250,8 @@ Verdict: ✅ CONSISTENT · 🟧 INCONSISTENT (fix before push) · 🟩 REVIEW (i
 | Step 11 PR consistency check verdict | ✅ PR pre-push verification complete |
 
 **This skill Done When = "prescription report output complete".** Actual resolution of M/S/R items belongs to user or follow-up work.
+
+**Check classes** (`harness_6axis_framework.md` §Axis 5): report-output completions above = mandatory-pass (report exists or not). M/S/R tier *assignments* = judged — paired with verify-bidirectional when the user challenges a tier.
 
 Verdict: PASS (M-tier 0, "Structure healthy") | CONDITIONAL_PASS (S/R remain, no M) | FAIL (1+ M-tier found) | ESCALATE (structural ambiguity before prescription can be issued)
 
