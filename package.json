@@ -23,7 +23,9 @@
     "fh-goal": "bin/fh-goal.js"
   },
   "scripts": {
-    "prepare": "chmod +x bin/fh-gate.js bin/fh-run.js bin/fh-goal.js scripts/fh-gate.sh scripts/fh-run.sh scripts/fh-goal.sh"
+    "prepare": "chmod +x bin/fh-gate.js bin/fh-run.js bin/fh-goal.js scripts/fh-gate.sh scripts/fh-run.sh scripts/fh-goal.sh",
+    "test": "bash scripts/selfcheck.sh",
+    "prepublishOnly": "bash scripts/selfcheck.sh"
   },
   "engines": {
     "node": ">=16"
@@ -54,6 +56,7 @@
     "scripts/fh-gate.sh",
     "scripts/fh-run.sh",
     "scripts/fh-goal.sh",
+    "scripts/selfcheck.sh",
     "plugins/fh-meta/skills",
     "plugins/fh-meta/agents",
     "plugins/fh-commons/skills",

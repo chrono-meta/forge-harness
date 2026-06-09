@@ -8,6 +8,12 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #selfcheck, #mandatory-pass, #npm-test, #self-application
+**File:** scripts/selfcheck.sh (+ package.json)
+G1 fix from the supervisor-loops 100%+ audit: FH's own shipped code (bin/fh-*.js, scripts/fh-*.sh) had zero deterministic checks. New selfcheck.sh runs node --check + bash -n over the npm-shipped executable surface and the gate-chain bash infra (15 checks), wired as `npm test` and `prepublishOnly` — a publish can no longer ship a syntactically broken executable.
+- Decision: syntax-only scope (zero side effects, runs anywhere); blocking wired at publish, not commit — doc commits stay unaffected.
+- Open: npm republish to ship selfcheck.sh in the tarball (machine-bound, laptop).
+
 ### 2026-06-10 | forge-harness | #verify-axis, #check-classes, #supervisor-loops, #sister-asset
 **File:** knowledge/shared/harness-core/harness_6axis_framework.md
 Axis 5 check-class taxonomy added: every verify check classified as mandatory-pass (deterministic, blocking) / measured (quantitative, tracked) / judged (LLM-judge + cited evidence). Judged rule: a judge verdict never passes alone — paired adversarial re-verification + evidence itself phantom-checked. Import from supervisor-loops sister-audit (operator-approved; cross-audit + proposal in companion store).
