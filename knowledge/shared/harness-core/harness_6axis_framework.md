@@ -77,12 +77,13 @@ Applies automatically when any FH asset is modified (SKILL.md, rules, templates,
 
 **Check classes**: every verify check is one of three classes — **mandatory-pass**
 (deterministic; blocks on fail), **measured** (quantitative; tracked, not blocking alone —
-e.g. `token-budget-gate`, goal-quench calibration), **judged** (LLM-judge with cited
-evidence). **Judged rule**: a judge verdict alone never passes — it must be paired with
-adversarial re-verification (`steel-quench` / `verify-bidirectional`), and its cited evidence
-is itself subject to `phantom-quench`. (Taxonomy adapted from external supervisor-loop
-discourse, 2026-06; FH adds the judged-pairing rule and evidence re-verification, which the
-source leaves open.)
+e.g. `token-budget-gate`, goal-quench calibration), **judged** (LLM-judge emitting verdict +
+cited evidence + a corrective action — a judge score without a fix path is unactionable, and
+self-judges grade leniently). **Judged rule**: a judge verdict alone never passes — it must be
+paired with adversarial re-verification (`steel-quench` / `verify-bidirectional`), and its
+cited evidence is itself subject to `phantom-quench`. (Taxonomy adapted from external
+supervisor-loop discourse, 2026-06; FH adds the judged-pairing rule and evidence
+re-verification, which the source leaves open.)
 
 **Hard gate**: git pre-commit hook (`templates/.git-hooks/pre-commit`) blocks commit until marker + manifest entry exist.
 

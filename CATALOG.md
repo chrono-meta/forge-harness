@@ -16,7 +16,7 @@ G1 fix from the supervisor-loops 100%+ audit: FH's own shipped code (bin/fh-*.js
 
 ### 2026-06-10 | forge-harness | #verify-axis, #check-classes, #supervisor-loops, #sister-asset
 **File:** knowledge/shared/harness-core/harness_6axis_framework.md
-Axis 5 check-class taxonomy added: every verify check classified as mandatory-pass (deterministic, blocking) / measured (quantitative, tracked) / judged (LLM-judge + cited evidence). Judged rule: a judge verdict never passes alone — paired adversarial re-verification + evidence itself phantom-checked. Import from supervisor-loops sister-audit (operator-approved; cross-audit + proposal in companion store).
+Axis 5 check-class taxonomy added: every verify check classified as mandatory-pass (deterministic, blocking) / measured (quantitative, tracked) / judged (LLM-judge + cited evidence + corrective action — self-judges grade leniently). Judged rule: a judge verdict never passes alone — paired adversarial re-verification + evidence itself phantom-checked. Import from supervisor-loops sister-audit (operator-approved; cross-audit + proposal in companion store; corrective-action clause added after full-transcript delta check).
 - Decision: descriptive labels over C1/C2/C3 numbering — avoids collision with unanchored "steel-quench C3 config" vocab (goal-quench:283, logged as fh_signal for separate fix).
 
 ### 2026-06-09 | forge-harness | #sidecar, #zero-config, #engine-resolution, #roadmap, #mode-c
