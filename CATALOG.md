@@ -8,6 +8,22 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #new-skill-gate, #check-class, #done-when, #g2
+**File:** CLAUDE.md
+G2 from the supervisor-loops audit: New Skill Creation Pre-Commit Gate extended 5→6 items — "Check-class declared": each Done When condition states its class (mandatory-pass / measured / judged per 6axis §Axis 5), and judged conditions must name their adversarial pairing (no judge-only path). The taxonomy now lives in the operating loop, not just the knowledge doc.
+- Decision: applies to new skills only; existing 28 backfill opportunistically when next edited — no retroactive block.
+
+### 2026-06-10 | forge-harness | #selfcheck, #mandatory-pass, #npm-test, #self-application
+**File:** scripts/selfcheck.sh (+ package.json)
+G1 fix from the supervisor-loops 100%+ audit: FH's own shipped code (bin/fh-*.js, scripts/fh-*.sh) had zero deterministic checks. New selfcheck.sh runs node --check + bash -n over the npm-shipped executable surface and the gate-chain bash infra (15 checks), wired as `npm test` and `prepublishOnly` — a publish can no longer ship a syntactically broken executable.
+- Decision: syntax-only scope (zero side effects, runs anywhere); blocking wired at publish, not commit — doc commits stay unaffected.
+- Open: npm republish to ship selfcheck.sh in the tarball (machine-bound, laptop).
+
+### 2026-06-10 | forge-harness | #verify-axis, #check-classes, #supervisor-loops, #sister-asset
+**File:** knowledge/shared/harness-core/harness_6axis_framework.md
+Axis 5 check-class taxonomy added: every verify check classified as mandatory-pass (deterministic, blocking) / measured (quantitative, tracked) / judged (LLM-judge + cited evidence + corrective action — self-judges grade leniently). Judged rule: a judge verdict never passes alone — paired adversarial re-verification + evidence itself phantom-checked. Import from supervisor-loops sister-audit (operator-approved; cross-audit + proposal in companion store; corrective-action clause added after full-transcript delta check).
+- Decision: descriptive labels over C1/C2/C3 numbering — avoids collision with unanchored "steel-quench C3 config" vocab (goal-quench:283, logged as fh_signal for separate fix).
+
 ### 2026-06-09 | forge-harness | #sidecar, #zero-config, #engine-resolution, #roadmap, #mode-c
 **File:** knowledge/shared/harness-core/multi_model_sidecar_strategy.md (+ hybrid_orchestration_architecture_roadmap.md)
 Added canonical §Sidecar Engine Resolution Protocol — Tier1 subscription-CLI → Tier2 API-key → Tier3 Claude-subagent guaranteed fallback. Principle: discovery automatic/free, invocation value-gated (intelligent default multi-AI, no hard-fail for Mode C). Wired pointers into goal-quench Step D / steel-quench runtime-adapter / harvest-loop Step 3.5-X; sim-conductor/pipeline-conductor/agent-composer inherit by reference. Source hybrid-orchestration design archived as proposed roadmap (versions→placeholders, Python pseudo-code→illustrative, non-shipped tagged Proposed). PR #80.
