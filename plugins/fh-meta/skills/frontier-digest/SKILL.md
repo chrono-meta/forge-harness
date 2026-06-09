@@ -29,11 +29,14 @@ model: sonnet
 
 ```
 Priority:
+0. /deep-research built-in available (check live session skill list)
+   → use it as the collection+verification engine (staged source gathering,
+     cross-checking, cited synthesis) — Tier-0 route, no API key needed
 1. ANTHROPIC_API_KEY environment variable → Claude Sonnet
 2. Neither → WebSearch mode (raw data only, no synthesis)
 ```
 
-Report detection result in one line. Example: `🔑 Using Claude Sonnet`
+Report detection result in one line. Example: `🔑 Using Claude Sonnet` / `🔑 Engine: /deep-research (built-in)`
 
 ---
 

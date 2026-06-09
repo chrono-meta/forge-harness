@@ -8,6 +8,11 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #tier-0, #builtins, #security-review, #deep-research, #role-split
+**File:** plugins/fh-meta/skills/plugin-recommender/SKILL.md (+ frontier-digest, CLAUDE.md, probes.md)
+CC built-ins utilization imports (operator-approved; video claims verified 8/13 real via claude-code-guide agent): Tier 0 = platform built-ins added to plugin-recommender (discovery order 0, "enumerate from live session" anti-stale, governance-add guard for FH-native precedence — goal-quench pattern named). /deep-research as frontier-digest Tier-0 engine. /security-review as Pre-Publish chain item 3 (code-security axis, skip-note path). Permission-Denial Option C, code-review role split, /loop WATCH row. G-TRIG-05 probe synced — anti-stale maintenance rule's first live use.
+- Decision: built-in beats plugin install at ~80% coverage; FH native beats built-in only when it adds governance.
+
 ### 2026-06-10 | forge-harness | #ingest-gate, #contradiction-scan, #crossref-lint, #llm-wiki, #karpathy
 **File:** .claude/rules/sync_push_protocols.md (+ harness-doctor SKILL.md, probes.md)
 Karpathy LLM-Wiki sister-audit imports (operator-approved; convergence case n=5, citable primary source): I1 — contradiction scan as Sync step 3 (ingest gate, judged + verify-bidirectional pair): new knowledge grepped against existing claims before indexing, conflicts flagged in both files, old-claim removal is HITL. I2 — harness-doctor L4 knowledge cross-ref lint: no CATALOG entry = S-tier index orphan, no inbound ref = R-tier orphan page. Probes G-SYNC-01/G-LINT-01 added (30 total).

@@ -27,7 +27,7 @@
 | `G-TRIG-02` | "context is getting long" | `/context-doctor` proposed | CLAUDE.md §Autonomous Initiative | mandatory-pass |
 | `G-TRIG-03` | "harness is complex" | `/harness-doctor` proposed | CLAUDE.md §Autonomous Initiative | mandatory-pass |
 | `G-TRIG-04` | "wrap up this week" / "weekly" | `/harvest-loop` proposed | CLAUDE.md §Autonomous Initiative | mandatory-pass |
-| `G-TRIG-05` | "publish" / "make this repo public" / "npm publish" | **Pre-Publish Surface Gate fires BEFORE the action** (chains /public-surface-audit + /marketplace-gate Check 5) | CLAUDE.md §Pre-Publish Surface Gate | mandatory-pass |
+| `G-TRIG-05` | "publish" / "make this repo public" / "npm publish" | **Pre-Publish Surface Gate fires BEFORE the action** (chains /public-surface-audit + /marketplace-gate Check 5 + /security-review when repo ships code) | CLAUDE.md §Pre-Publish Surface Gate | mandatory-pass |
 | `G-TRIG-06` | "/goal" or heavy multi-agent run | `/goal-quench` **proposed first** (mandatory proposal, never auto-run) | CLAUDE.md §Autonomous Initiative | mandatory-pass |
 | `G-TRIG-07` | "정리해줘" / ambiguous pre-dispatch request | `/deep-clarify` proposed | CLAUDE.md §Autonomous Initiative | mandatory-pass |
 | `G-TRIG-08` | a skill already running emits its own signal | No duplicate proposal (guard) | CLAUDE.md §Autonomous Initiative Guard | judged — pair: verify-bidirectional |
