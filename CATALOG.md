@@ -8,6 +8,17 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-09 | forge-harness | #sidecar, #zero-config, #engine-resolution, #roadmap, #mode-c
+**File:** knowledge/shared/harness-core/multi_model_sidecar_strategy.md (+ hybrid_orchestration_architecture_roadmap.md)
+Added canonical §Sidecar Engine Resolution Protocol — Tier1 subscription-CLI → Tier2 API-key → Tier3 Claude-subagent guaranteed fallback. Principle: discovery automatic/free, invocation value-gated (intelligent default multi-AI, no hard-fail for Mode C). Wired pointers into goal-quench Step D / steel-quench runtime-adapter / harvest-loop Step 3.5-X; sim-conductor/pipeline-conductor/agent-composer inherit by reference. Source hybrid-orchestration design archived as proposed roadmap (versions→placeholders, Python pseudo-code→illustrative, non-shipped tagged Proposed). PR #80.
+- Decision: single-source resolution protocol — skills cite it instead of re-inventing "if available" probes.
+- Open: npm republish (machine-bound) — 3 npm-shipped SKILL.md changed; handed off to laptop via fh-be.
+
+### 2026-06-09 | forge-harness | #onboarding, #greeting, #3-axis-scaffold, #returning-user
+**File:** knowledge/shared/harness-core/fh_detail_protocols.md
+Returning-user greeting (Step 2): single free-form e.g. line → fixed 3-axis entry scaffold (① connect new → auto_project_mapping · ② resume existing → filled live from CATALOG · ③ jump to work), plus a "keep axes fixed, compose contents per situation" note. PR #80.
+- Decision: axis ② read live from CATALOG each session so the menu can't go stale — qasp-style clarity without rigidity.
+
 ### 2026-06-05 | _audit | sister-asset, gstack, field-harness, garry-tan
 **File:** tracks/_audit/session_2026_06_05_gstack-sister.md (private companion mirror)
 gstack (garrytan, ~66K stars) sister-asset cross-audit — the field/execution-harness counterpart to FH's meta/governance harness, both running on the Claude Code skill substrate. FH governs / gstack executes (composes, not competes). Bidirectional import (frictionless one-command install, opinionated front door, privacy-first telemetry) / propagate (post-ship governance gate, cross-project knowledge compounding, HITL promotion gate) lists recorded.
