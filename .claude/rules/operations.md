@@ -30,6 +30,8 @@ The hub audits and improves itself weekly.
 2. Copy `_template_weekly.md` → `weekly_audit_YYYY-MM-DD.md`
 3. Propose 3-tier improvements (🟥mandatory/🟧strong/🟩recommended)
 
+**Recurrence escalation** (N=3 threshold): Scanner output shows the same defect class in 3+ distinct commits or sessions within the audit window → S-tier signal; propose instrumenting as a CI probe (`npm test` extension or pre-commit hook) rather than adding a new habit rule. Three recurrences indicate the defect class is structural — habits don't hold.
+
 **Phase 2 (skill-ized):** `/harvest-loop` (lightweight mode) automates the above procedure (manual ~10 min → auto ~3 min target). Scanner invocation, prediction vs measurement comparison, repetitive pattern detection, promotion/deprecation candidate proposal automated.
 
 **Session start auto-detection (L1):** When Claude Code session starts in hub cwd, check mtime of recent `weekly_audit_*.md` file → propose audit if 7+ days elapsed.
