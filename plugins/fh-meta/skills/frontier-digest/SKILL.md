@@ -40,6 +40,21 @@ Report detection result in one line. Example: `🔑 Using Claude Sonnet` / `🔑
 
 ---
 
+## Step 0.5. Operator Intake (speculative-interview arm — walled channels)
+
+On **cadence-triggered** runs (7d), ask the operator one line before collecting:
+
+> *"이번 주에 본 벽 뒤 소스(YouTube·LinkedIn·X 등 기계가 못 닿는 링크/요약)가 있으면 던져 주세요 — triage해서 기록합니다. 없으면 그냥 진행할게요."*
+
+- Operator may skip — zero pressure; the autonomous arms (Step 1) run regardless.
+- Why: walled channels return 403 to machine fetch — **the operator is the only wide-net sensor
+  for them**. This arm turns ad-hoc link-throwing into a scheduled intake (manual-validated n=2).
+- Received sources route to the sister-asset/triage flow with its **lightweight path**: C-tier
+  (territory already covered) = one-paragraph entry only; full cross-audit reserved for A/B-tier.
+  Partial wall-bypass is allowed first: try WebSearch + secondary sources before declaring unfetchable.
+
+---
+
 ## Step 1. Data Collection
 
 ### HackerNews (Algolia API)

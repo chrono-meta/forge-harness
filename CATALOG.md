@@ -8,6 +8,11 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #credit-economy, #operator-intake, #lightweight-triage, #frontier-digest
+**File:** plugins/fh-meta/skills/frontier-digest/SKILL.md (+ .claude/rules/sister_asset_protocol.md)
+Credit-economy engine run #2 formalization (operator-approved; this session = manual run #2: 7 walled sources → 8 audits → 15 same-day gate-passed imports, 2 human corrections): R1 — frontier-digest Step 0.5 operator-intake asks for walled-channel sources (YouTube/LinkedIn/X, machine-403) on cadence runs only, skippable, try wall-bypass (WebSearch + secondary) first. R2 — sister protocol lightweight path: dedup-hit/no-increment sources get a one-paragraph entry, full cross-audits reserved for A/B-tier.
+- Decision: the operator stays the wide-net sensor for walled channels by design (human = scarce oracle), the machine owns endurance (triage→gate cycles); intake cost discipline keeps the wide net wide.
+
 ### 2026-06-10 | forge-harness | #comprehension-debt, #loop-engineering, #osmani, #harness-doctor
 **File:** plugins/fh-meta/skills/harness-doctor/SKILL.md
 Taxonomy 6→7: Comprehension Debt (runtime/operator-side, S) — loop output outpacing operator understanding, named from Osmani's Loop Engineering (canonical upstream of the supervisor-loops lineage; Cherny/Steinberger quotes — paper citation upgraded from the Korean video to this primary source, convergence count unchanged at n=5). Signals mechanical: merged change without CATALOG entry, manifest pending backlog, zero card delta. Countermeasures pre-existing (CATALOG summaries, predict-verify, card protocol).
