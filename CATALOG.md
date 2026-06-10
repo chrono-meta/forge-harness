@@ -8,10 +8,25 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #tier-floor-quench, #below-floor-live, #floor-governance, #dual-challenger
+**File:** knowledge/shared/harness-core/multi_model_sidecar_strategy.md §Floor governance (+ quench-challenger.md)
+Tier-floor design quenched same-day by dual challenger dispatch — F1 opus (floor met) + F2 sonnet (below-floor; floor=opus): first live firing of the below-floor flag, on the design that defines it. Both tiers found the same 2 S-grades: cross-provider "floor-equivalent" undecidable (vibes equivalence) and re-quench tags with no consumer (permanent silent degradation). §Floor governance ships the fixes: external tiers below-floor-by-default until measured equivalence entries (the backend×tier ladder is the evidence source); below-floor judged verdicts provisional until floor re-run or operator acceptance, weekly audit = standing consumer; floor: hard for depth-critical roles (floor outranks diversity); diversity_rationale tie-break; claims age; pin-is-not-a-cap resolution. Wave-T runs #11/#12 both τ-PASS (fix-traceable complexity only).
+- Decision: below-floor challenger empirically buys value (sonnet 6/6 real findings, 2 unique) but misses the deepest (opus-only hard-floor insight) — F2 doctrine and the floor both validated by the same experiment.
+- Open: first weekly-audit below-floor consumption + first measured equivalence entry (laptop ladder).
+
+
+### 2026-06-10 | forge-harness | #tier-floor, #model-resolution, #default-sonnet, #sidecar-protocol
+**File:** knowledge/shared/harness-core/multi_model_sidecar_strategy.md (+ quench-challenger.md, steel-quench SKILL.md, README.md, templates/CLAUDE.md)
+Tier-floor resolution ships — the model dimension of the Sidecar Engine Resolution Protocol: assets declare measured-or-justified tier floors (quench-challenger=opus, Wave-T/harness-doctor=sonnet measured, mechanical=none); environment resolves R1 native dispatch / R2 cross-provider / R3 below-floor-with-flag (never hard-fail). Public guidance flips to default `/model sonnet` + floored dispatch; human-set session defaults are inviolable (FH dispatches sub-agents, never switches the session model); pinning the strongest available model recommended only for harness-editing (Mode D).
+- Decision: floor-not-pin semantics; below-floor judged verdicts auto-tagged re-quench candidates (Degraded coverage rule extension); no specific top-anchor model or subscription window named publicly (anti-stale).
+- Decision: grounded in same-day measurements (operation tier-flat 100/100/97/94; depth differential on design increments only) — the guidance flip and the mechanism ship together, neither alone.
+- Open: first organic below-floor dispatch + first Sonnet-default external install feedback (verify_next em-2026-06-10v).
+
+
 ### 2026-06-10 | forge-harness | #model-tier, #tier-flattening, #worked-example, #output-evidence
 **File:** docs/OUTPUT_EVIDENCE.md (+ README.md §Model setup)
 Model-tier flattening measured and published: 30-point blind battery (rule-application + meta-dev fixtures, pre-registered rubric) on four Claude tiers — operation 100/100/97/94 (anchor/Opus 4.8/Sonnet 4.6/Haiku 4.5), tier separation only on above-rubric design increments (3/3·1/3·0.5/3·0/3). Public claim scoped honestly: single trial, self-graded, worked example not benchmark. README §Model setup gains the evidence note grounding the existing Opus recommendation.
-- Decision: operating FH ≈ model-flat (the harness is the score); developing FH is where tier matters — recommendation unchanged (opus for harness-editing/gates), now evidence-backed.
+- Decision: operating FH ≈ model-flat (the harness is the score); developing FH is where tier matters — recommendation unchanged (opus for harness-editing/gates), now evidence-backed. **[superseded same-day by the tier-floor entry above: default flipped to sonnet + floored dispatch; opus pin now Mode-D-only]**
 - Open: real Qwen-class measurement on laptop (batteries are a portable fixture pack, fh-be record).
 
 ### 2026-06-10 | forge-harness | #fc, #consent-lane, #federated-compounding, #starved-center, #v3

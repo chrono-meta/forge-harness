@@ -17,7 +17,7 @@ When a user starts a session with greetings like "hello", "let's start", "resume
 After Layer A completes, **when the user enters a task**, activate AI proactive initiative mode:
 
 1. **Auto-initiative (1-line question)** — *"What task/project would you like to start? (e.g., 'Spring Boot API development', 'React component refactoring', 'continue existing [X] track')"* (if active track exists: *"Would you like to continue active track [X], or enter a new task?"*)
-2. **5-skill cascade** — `plugin-recommender` (internal GHE → external → built-in candidates) → `cross-ecosystem-synergy-detection` (synergy grade table) → `.claudeignore` standard initiative (`cp templates/.claudeignore`) → model switching guidance (`/model opus` for FH gate/verification work; `opusplan` only for cost-conscious routine coding — see README model guidance) → `verify-bidirectional`·`harvest-loop` natural emergence waiting
+2. **5-skill cascade** — `plugin-recommender` (internal GHE → external → built-in candidates) → `cross-ecosystem-synergy-detection` (synergy grade table) → `.claudeignore` standard initiative (`cp templates/.claudeignore`) → model switching guidance (default `/model sonnet` — FH dispatches floored skills/agents at higher tiers itself; pin a stronger model only for harness-editing sessions — see README §Model setup) → `verify-bidirectional`·`harvest-loop` natural emergence waiting
 3. **User consent → actual setup** — plugin install / skill pre-activation / `.claudeignore` application / model switch
 4. **Project cwd handover guidance** — *"Setup complete. Move to the project cwd and call `claude` to start working."*
 

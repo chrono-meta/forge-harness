@@ -69,7 +69,7 @@ Skip: [list of skipped waves with reason]
 External CLIs available: [yes/no → Wave 5 available]
 ```
 
-**Degraded coverage rule**: if a high-weight wave or capability is skipped (user choice, unavailable tool, or scope=internal), flag explicitly in the output header — do not silently proceed.
+**Degraded coverage rule**: if a high-weight wave or capability is skipped (user choice, unavailable tool, or scope=internal) **or runs below its declared model-tier floor** (tier-floor resolution, `multi_model_sidecar_strategy.md §Tier-floor`), flag explicitly in the output header — do not silently proceed. Below-floor example: `challenger: sonnet (below-floor; floor=opus)`; a judged verdict produced below floor is a re-quench candidate once a floor-tier is available.
 
 ---
 
