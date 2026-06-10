@@ -1,0 +1,30 @@
+# Sub-agent invocation log (operations.md §Sub-agent Operations).
+# Fields: date · agent · model · purpose · prompt_summary · outcome · finding · note
+# outcome ∈ {accepted, partial, rejected, sustained}
+
+- date: 2026-06-10
+  agent: general-purpose
+  model: opus
+  purpose: "Differential test (control) — blind Axis-2 floor-compliance self-flagging"
+  prompt_summary: "Run FH 4-axis gate Axis 2 on the frontier-digest video-harvest diff as an Opus-4.8 orchestrator; report verdict + FLOOR-COMPLIANCE line. Blind to the below-floor finding."
+  outcome: accepted
+  finding: "FLOOR-COMPLIANCE: at-floor. Explicitly distinguished capability-met from mechanism(dispatch)-skipped; PASS verdict (LOW/INFO)."
+  note: "Control arm for fh_signal_2026-06-10_adversarial-floor-enforcement discriminator test."
+
+- date: 2026-06-10
+  agent: general-purpose
+  model: sonnet
+  purpose: "Differential test (variable) — blind Axis-2 floor-compliance self-flagging"
+  prompt_summary: "Identical prompt to the Opus arm, stated tier = Sonnet 4.6. Blind to the below-floor finding."
+  outcome: accepted
+  finding: "FLOOR-COMPLIANCE: BELOW-FLOOR — self-flagged flawlessly + prescribed remediation. Harsher pass (2 HIGH + 2 MED, BLOCK). Refutes the tier-inherent-unreliability hypothesis: root cause = rule salience, not model tier."
+  note: "Variable arm. Result fed back into the signal (hypothesis refuted)."
+
+- date: 2026-06-10
+  agent: fh-commons:quench-challenger
+  model: opus
+  purpose: "Axis-2 floor-compliant adversarial review of the S1/S3 fix (REAL dispatch, not inline)"
+  prompt_summary: "Attack the de-dating diff; verify S1/S3 resolved without new defects; verdict PASS/BLOCK."
+  outcome: accepted
+  finding: "PASS. S1/S3 confirmed resolved. 2 MED (Tier-2 gap, probe-not-wired-to-guards) + 3 LOW (ffmpeg-unchecked, blockquote-anchor, example-stale-risk). Folded ffmpeg+pre-EOL+Tier-2-gloss; deferred guard-wiring + heading-promote."
+  note: "This is the floor-MET counterpart to the 60515de below-floor inline slip — closes the gate properly per tier-floor governance."
