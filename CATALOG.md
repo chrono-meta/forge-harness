@@ -8,6 +8,13 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #tier-floor-quench, #below-floor-live, #floor-governance, #dual-challenger
+**File:** knowledge/shared/harness-core/multi_model_sidecar_strategy.md §Floor governance (+ quench-challenger.md)
+Tier-floor design quenched same-day by dual challenger dispatch — F1 opus (floor met) + F2 sonnet (below-floor; floor=opus): first live firing of the below-floor flag, on the design that defines it. Both tiers found the same 2 S-grades: cross-provider "floor-equivalent" undecidable (vibes equivalence) and re-quench tags with no consumer (permanent silent degradation). §Floor governance ships the fixes: external tiers below-floor-by-default until measured equivalence entries (the backend×tier ladder is the evidence source); below-floor judged verdicts provisional until floor re-run or operator acceptance, weekly audit = standing consumer; floor: hard for depth-critical roles (floor outranks diversity); diversity_rationale tie-break; claims age; pin-is-not-a-cap resolution. Wave-T runs #11/#12 both τ-PASS (fix-traceable complexity only).
+- Decision: below-floor challenger empirically buys value (sonnet 6/6 real findings, 2 unique) but misses the deepest (opus-only hard-floor insight) — F2 doctrine and the floor both validated by the same experiment.
+- Open: first weekly-audit below-floor consumption + first measured equivalence entry (laptop ladder).
+
+
 ### 2026-06-10 | forge-harness | #tier-floor, #model-resolution, #default-sonnet, #sidecar-protocol
 **File:** knowledge/shared/harness-core/multi_model_sidecar_strategy.md (+ quench-challenger.md, steel-quench SKILL.md, README.md, templates/CLAUDE.md)
 Tier-floor resolution ships — the model dimension of the Sidecar Engine Resolution Protocol: assets declare measured-or-justified tier floors (quench-challenger=opus, Wave-T/harness-doctor=sonnet measured, mechanical=none); environment resolves R1 native dispatch / R2 cross-provider / R3 below-floor-with-flag (never hard-fail). Public guidance flips to default `/model sonnet` + floored dispatch; human-set session defaults are inviolable (FH dispatches sub-agents, never switches the session model); pinning the strongest available model recommended only for harness-editing (Mode D).

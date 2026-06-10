@@ -211,11 +211,36 @@ because it has opus?". A floor is satisfied by the chosen engine's **strongest f
   merely because it is below floor — a below-floor cross-provider pass still buys the diversity the
   step exists for; flag it and proceed.
 
-**Human override is inviolable**: if the operator pins a session default (stronger or weaker),
-FH follows it for session turns and uses floors only for its own dispatches. Pinning a
-stronger-than-opus default strengthens harness *self-development* in particular (measured:
-the tier cliff sits on design-increment work) — mostly relevant to harness developers (Mode D),
-not field operation.
+**Floor governance** (from the design's own first quench — challenger findings, both tiers):
+- **Cross-provider equivalence is opt-in with evidence, never assumed**: an external engine's tier
+  counts as **below-floor by default** until a measured equivalence entry exists (recorded in the floor
+  table above with its evidence citation, same discipline as the floor declarations themselves). The
+  backend×tier ladder measurement is exactly what produces these entries — name-matching or vibes never
+  satisfies a floor.
+- **Below-floor judged verdicts are provisional, and the queue has a consumer**: a judged-class verdict
+  produced below floor does **not** count as gate-PASS evidence for promotion/merge until either a
+  floor-tier re-run or an explicit operator acceptance. The **weekly audit** (run at the highest
+  available tier per the cadence-compensation policy) is the standing consumer: it scans recent quench
+  records for `below-floor` markers and re-runs or explicitly writes them off — flags terminate, they
+  do not decorate.
+- **`floor: hard` for depth-critical judged roles** (quench-challenger, apex-review): for these, the
+  floor outranks diversity — prefer a floor-meeting engine (incl. the native Tier-3 sub-agent at floor)
+  over a below-floor diversity engine. Only when *no* engine anywhere reaches the floor does F2 apply
+  (never-hard-fail preserved). When a below-floor engine is deliberately chosen over an available
+  floor-meeting one (diversity genuinely the point), record a one-line `diversity_rationale`
+  (the existing `sidecar_rationale` convention) — no rationale, floor-meeting engine wins the tie.
+- **Tier-flat / floor claims age**: no-floor and floor declarations cite their basis and are
+  re-validated opportunistically when the asset next changes (the standing backfill rule) — a floor
+  without a cited basis is treated as unjustified by reviewers.
+
+**Human override is inviolable — and a pin is not a cap**: if the operator pins a session default
+(stronger or weaker), FH follows it for **session turns**; floors govern FH's **own sub-agent
+dispatches** and a session pin does not lower them — that separation *is* the Sonnet-main +
+Opus-dispatch doctrine (pinned-sonnet sessions still dispatch floored agents at opus). If the operator
+explicitly caps dispatches too ("sonnet only, everywhere"), that is an environment limit: F2 applies,
+flags and all. Pinning a stronger-than-opus default strengthens harness *self-development* in
+particular (measured: the tier cliff sits on design-increment work) — mostly relevant to harness
+developers (Mode D), not field operation.
 
 ---
 
