@@ -8,6 +8,12 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #mode-d-notice, #model-guidance, #self-dev-entry
+**File:** CLAUDE.md §Mode D Model Notice
+Conditional model-pin guidance at self-dev entry (operator request): fires once at the 4-axis gate's own activation trigger — session model opus+ = silent · below-opus = one-line pin recommendation with measured rationale · identity-withheld runtime = static fallback. Advisory only, never auto-switches (pin-is-not-a-cap); field-operation sessions never see it.
+- Decision: zero new triggers — reuses the gate activation condition; the notice and the gate share one detection point.
+
+
 ### 2026-06-10 | forge-harness | #tier-floor-quench, #below-floor-live, #floor-governance, #dual-challenger
 **File:** knowledge/shared/harness-core/multi_model_sidecar_strategy.md §Floor governance (+ quench-challenger.md)
 Tier-floor design quenched same-day by dual challenger dispatch — F1 opus (floor met) + F2 sonnet (below-floor; floor=opus): first live firing of the below-floor flag, on the design that defines it. Both tiers found the same 2 S-grades: cross-provider "floor-equivalent" undecidable (vibes equivalence) and re-quench tags with no consumer (permanent silent degradation). §Floor governance ships the fixes: external tiers below-floor-by-default until measured equivalence entries (the backend×tier ladder is the evidence source); below-floor judged verdicts provisional until floor re-run or operator acceptance, weekly audit = standing consumer; floor: hard for depth-critical roles (floor outranks diversity); diversity_rationale tie-break; claims age; pin-is-not-a-cap resolution. Wave-T runs #11/#12 both τ-PASS (fix-traceable complexity only).
