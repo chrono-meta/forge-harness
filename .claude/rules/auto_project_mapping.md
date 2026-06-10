@@ -77,6 +77,7 @@ Basic mapping (steps 1–5) registers a project *lightly* (tracks/ + a starter C
 | 1 | Session rules | `templates/.claude/rules/session.md` → `{project}/.claude/rules/session.md` | Session-start auto-read, backup, rule hierarchy |
 | 2 | Context filter | `templates/.claudeignore` → `{project}/.claudeignore` | Token footprint control |
 | 3 | Env card | `templates/fh_env_context.jsonc` → `{project}/.claude/rules/fh_env_context.jsonc` | Environment context for sessions |
+| 4 | **Official-plugin scan** (recommend list only — **never auto-install**) | plugin-recommender Tier 0/1 pass on the project's stack | No-reinvention acceleration: matching `*-lsp` for the project's language + workflow plugins (code-review · commit-commands · feature-dev …) from `claude-plugins-official` — see `knowledge/shared/plugin-catalog/recommended_plugins.md` §Category 0.5. Each install user-approved |
 
 **Not installed (deliberately)**: the FH 4-axis **pre-commit gate** (`templates/.git-hooks/`) is FH-*internal* infra — it hard-codes hub paths and requires hub markers (`tracks/_meta/.axes_23_passed_*`, `tracks/_meta/edit_manifest.yaml`), so dropping it into a target project would **block that project's commits**, not help. A project-generic regression gate is a future candidate, not shipped today.
 

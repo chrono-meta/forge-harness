@@ -113,7 +113,7 @@ All 6 items below must pass before committing a new SKILL.md. If any fails, fix 
 
 | Item | Criterion |
 |---|---|
-| **Role duplication check** | Pass `/asset-placement-gate` — no overlap with existing role clusters |
+| **Role duplication check** | Pass `/asset-placement-gate` — no overlap with existing role clusters, **platform built-ins (Tier 0), or `claude-plugins-official` (Tier 1 official)**. Reinventing an official capability requires explicit justification in the SKILL.md (no-reinvention rule — FH builds only what adds governance) |
 | **Description diet** | Plain text / 0 self-marketing expressions / 0 emphasis words (⭐, "critical", "groundbreaking") |
 | **Done When defined** | At least 1 explicit completion condition |
 | **Check-class declared** | Each Done When condition states its check class — mandatory-pass / measured / judged (`harness_6axis_framework.md` §Axis 5). Any judged condition names its adversarial pairing — no judge-only path |

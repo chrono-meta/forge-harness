@@ -8,6 +8,11 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #no-reinvention, #official-first, #claude-plugins-official, #full-harness-mode
+**File:** knowledge/shared/plugin-catalog/recommended_plugins.md (+ CLAUDE.md, auto_project_mapping.md)
+Operator-declared meta-harness 철칙 — no-reinvention / official-first: (a) plugin catalog gains Category 0.5, the claude-plugins-official 36-plugin inventory (12 LSP + workflow + authoring + setup groups; name-based, anti-stale "re-enumerate when recommending", role-split warnings for claude-md-management overlap); (b) New Skill gate Role-duplication criterion now also checks Tier 0 built-ins + official plugins — reinventing an official capability requires explicit justification; (c) Full-Harness Mode item 4: official-plugin scan for the mapped project's stack (recommend-only, never auto-install) — mapped-project acceleration with zero FH build.
+- Decision: FH builds only what adds governance on top of official capabilities; drafting tools (skill-creator etc.) never exempt their output from the FH gate.
+
 ### 2026-06-10 | forge-harness | #tier-0, #builtins, #security-review, #deep-research, #role-split
 **File:** plugins/fh-meta/skills/plugin-recommender/SKILL.md (+ frontier-digest, CLAUDE.md, probes.md)
 CC built-ins utilization imports (operator-approved; video claims verified 9/13 real — agent initially ruled skill-creator nonexistent, operator-corrected: it is an official plugin in claude-plugins-official): Tier 0 = platform built-ins added to plugin-recommender (discovery order 0, "enumerate from live session" anti-stale, governance-add guard for FH-native precedence — goal-quench pattern named). /deep-research as frontier-digest Tier-0 engine. /security-review as Pre-Publish chain item 3 (code-security axis, skip-note path). Permission-Denial Option C, code-review role split, /loop WATCH row. G-TRIG-05 probe synced — anti-stale maintenance rule's first live use.
