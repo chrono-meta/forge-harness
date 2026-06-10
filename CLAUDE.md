@@ -155,6 +155,31 @@ FH asset modified → Axis 1 (regression_guard.sh --pr {BRANCH})
 
 **Unavailable axis**: If steel-quench or phantom-quench are not installed, note `Axis N: skipped (skill unavailable)` and proceed. Axis 1 PASS alone is sufficient to unblock a PR when Axes 2–3 are unavailable. Axis 4 (edit-manifest): if the skill is not installed, substitute a manual one-line prediction appended to `tracks/_meta/edit_manifest.yaml` — the record is what matters, not the skill.
 
+**Target-tier sim gate (Mode D supplement — all change classes: fix, improvement, new asset)**: the
+discriminator is not the change class but the **enforcement column**: does the asset's effect depend on
+a session *following prose instructions* (salience-dependent — rules, onboarding scaffolds, SKILL.md
+trigger behavior), or is it mechanically enforced (hooks, scripts — tier-independent, normal 4-axis
+path, exempt)? For salience-dependent changes, verify with a **blind simulation in an isolated Agent**
+(no main-session reasoning inherited — isolation is the FH mechanism that keeps the sim honest) with
+`model:` pinned to the tier the change must survive on. Application strength scales with context:
+- **Mode D (FH self-dev) — near-mandatory**: any salience-dependent FH asset change runs the sim
+  before Done. Mandatory without exception when the change fixes a behavioral miss *observed* on a
+  specific tier — sim at that same tier (the verification tier must match the failure tier; fixing on
+  a stronger model and verifying by review alone leaves "does it fire on the weaker tier?" unanswered).
+- **Field harness assets (templates/ propagated via Full-Harness Mode) — conditional**: sim at the
+  default field tier (Sonnet) when the behavior is load-bearing (gates, onboarding, destructive/publish
+  paths); skip with a one-line note for low-stakes prose.
+- **Light mapping (tracks/ registration, CATALOG entries) — exempt**, alongside mechanical changes
+  (hook logic, scripts, file moves — tier-independent by construction).
+
+**Autonomy floor**: the skip/run *judgment* on conditional cases is itself depth-sensitive — trust it
+only at opus-tier or above. A below-floor orchestrator does not silently skip: it runs the sim or asks
+the operator (one line), mirroring §Floor governance.
+
+If `model:`-pinned dispatch is unavailable (plan/billing gate), fall back to a cross-session headless
+run (`claude -p "<trigger>" --model <tier>` in the target cwd) — stronger isolation, zero instruction
+contamination. Record sim results in the Axes 2–3 marker + sub-agent invocation log.
+
 **Axis ownership** (each skill is already complete — orchestrator only coordinates):
 
 | Axis | Skill | What it catches |

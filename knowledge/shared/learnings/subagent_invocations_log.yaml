@@ -58,3 +58,9 @@
   trigger: 4-axis auto-gate Axis 2 (FH asset modified)
   outcome: accepted
   note: "0S+2A+2B — all 4 source-verified true (Only-exclusivity contradiction w/ §Guards, missing sync anchor, unanchored cadence claim, scope salience); cross-cutting anchor edit resolved all in one pass"
+- date: 2026-06-11
+  agent: cross-session claude -p (claude-sonnet-4-6, headless, FH cwd)
+  task: target-tier sim gate dogfood — blind greeting sim verifying c43209c 3-door menu on bug tier
+  trigger: operator request (gate codified same session); model-pinned Agent dispatch (sonnet, haiku) blocked by plan gate -> cross-session fallback
+  outcome: accepted
+  note: "PASS — 3-door menu fired with card candidates composed into doors 2/3, cadence below menu; residual: missing 🐿️ marker (fh_signal_2026-06-11_fh-direct)"
