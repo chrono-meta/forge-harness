@@ -111,12 +111,14 @@ This document is the **rationale layer** (why sidecars, when, what value, what b
 | **Codex CLI** | `npx @openai/codex exec "prompt"` (or `codex exec --skip-git-repo-check -`) | GPT-4o / GPT-5.5 (non-interactive exec mode — true headless, no permission pre-flight) |
 | **Copilot CLI** (`gh copilot`) | `gh copilot -- -p "prompt" --allow-all-tools` | Copilot model catalog — **subscription-dependent**: preview = claude-haiku-4.5 + gpt-5-mini; international/enterprise subscription = GPT-5.5, Claude Opus, etc. Verify: `gh copilot -- -p "list available models"`. Router-shell (agentic) — same permission-preflight note as `agy`. |
 
-> **Binary names churn — probe by capability, never pin a name.** The Gemini-CLI→Antigravity migration
-> (direct `gemini` EOL 2026-06-18) is the live proof: a Tier-1 entry pinned to the literal `gemini`
-> binary goes stale on a fixed date. The resolution protocol below therefore probes for *whichever route
-> exists* (direct CLI · router-shell · API), and Gemini access simply migrates `gemini` → (`agy` | API)
-> without changing the methodology. **Router-shells (`agy`, `gh copilot`) are a Tier-1 *class*, not a
-> harness** (§Two shells) — they select+forward a model; FH governs which/when.
+### Binary names churn — probe by capability, never pin a name
+
+The Gemini-CLI→Antigravity migration (direct `gemini` EOL 2026-06-18) is the live proof: a Tier-1
+entry pinned to the literal `gemini` binary goes stale on a fixed date. The resolution protocol below
+therefore probes for *whichever route exists* (direct CLI · router-shell · API), and Gemini access
+simply migrates `gemini` → (`agy` | API) without changing the methodology. **Router-shells (`agy`,
+`gh copilot`) are a Tier-1 *class*, not a harness** (§Two shells) — they select+forward a model; FH
+governs which/when.
 
 ---
 
