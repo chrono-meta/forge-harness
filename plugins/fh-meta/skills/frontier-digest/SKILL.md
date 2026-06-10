@@ -52,6 +52,15 @@ On **cadence-triggered** runs (7d), ask the operator one line before collecting:
 - Received sources route to the sister-asset/triage flow with its **lightweight path**: C-tier
   (territory already covered) = one-paragraph entry only; full cross-audit reserved for A/B-tier.
   Partial wall-bypass is allowed first: try WebSearch + secondary sources before declaring unfetchable.
+- **Video sources (local/laptop only — cloud VMs typically 403 on video hosts)**: resolve a
+  *video-harvest* capability via the Sidecar Engine Resolution Protocol
+  (`multi_model_sidecar_strategy.md`) instead of asking the operator to summarize by hand —
+  **Tier 1**: subscription CLI that can summarize the video (e.g. `codex`, or the Gemini route via
+  its current router-shell — agentic sidecars get approval-mode first) · **Tier 3 guaranteed
+  fallback**: Claude itself harvests the transcript (`yt-dlp --write-auto-subs --skip-download`)
+  and summarizes the text — sufficient for talk-style content; visually-dense videos still need a
+  natively multimodal Tier-1 engine. Unresolvable (cloud, no sidecar) → operator summary remains
+  the path, as today.
 
 ---
 

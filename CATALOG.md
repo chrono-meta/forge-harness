@@ -12,6 +12,7 @@ AI reads this file first when searching past work. Open individual files for det
 **File:** plugins/fh-meta/skills/frontier-digest/SKILL.md (+ .claude/rules/sister_asset_protocol.md)
 Credit-economy engine run #2 formalization (operator-approved; this session = manual run #2: 7 walled sources → 8 audits → 15 same-day gate-passed imports, 2 human corrections): R1 — frontier-digest Step 0.5 operator-intake asks for walled-channel sources (YouTube/LinkedIn/X, machine-403) on cadence runs only, skippable, try wall-bypass (WebSearch + secondary) first. R2 — sister protocol lightweight path: dedup-hit/no-increment sources get a one-paragraph entry, full cross-audits reserved for A/B-tier.
 - Decision: the operator stays the wide-net sensor for walled channels by design (human = scarce oracle), the machine owns endurance (triage→gate cycles); intake cost discipline keeps the wide net wide.
+- Follow-up (same day): Step 0.5 video-harvest ladder — Tier 1 sidecar (codex / Gemini-route, agentic = approval-mode first) → Tier 3 Claude+yt-dlp transcript → operator floor; laptop verification trio handed off. First applied instance of the capability-probe principle.
 
 ### 2026-06-10 | forge-harness | #comprehension-debt, #loop-engineering, #osmani, #harness-doctor
 **File:** plugins/fh-meta/skills/harness-doctor/SKILL.md
