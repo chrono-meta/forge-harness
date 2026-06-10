@@ -56,7 +56,7 @@ Identity marker: every greeting response opens with **🐿️** on its own line 
 > 🐿️
 > *"forge-harness is a tool hub for rapidly setting up Claude Code projects. It supports plugin recommendations, project setup, and harness diagnostics. What would you like to work on?"*
 
-**Returning user** — open with a fixed 3-axis entry scaffold (the doors are stable; the contents are composed live):
+**Returning user** — open with a fixed 3-axis entry scaffold (the doors are stable; the contents are composed live). A summary copy of the door skeleton lives in CLAUDE.md §Active Onboarding — keep door labels in sync when editing:
 > 🐿️
 > *"What would you like to start? ① Connect/map a project · ② Work on a mapped project — {field candidates} · ③ FH self-development — {FH worklist}"*
 
