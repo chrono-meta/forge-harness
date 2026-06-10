@@ -8,6 +8,14 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #tier-floor, #model-resolution, #default-sonnet, #sidecar-protocol
+**File:** knowledge/shared/harness-core/multi_model_sidecar_strategy.md (+ quench-challenger.md, steel-quench SKILL.md, README.md, templates/CLAUDE.md)
+Tier-floor resolution ships — the model dimension of the Sidecar Engine Resolution Protocol: assets declare measured-or-justified tier floors (quench-challenger=opus, Wave-T/harness-doctor=sonnet measured, mechanical=none); environment resolves R1 native dispatch / R2 cross-provider / R3 below-floor-with-flag (never hard-fail). Public guidance flips to default `/model sonnet` + floored dispatch; human-set session defaults are inviolable (FH dispatches sub-agents, never switches the session model); pinning the strongest available model recommended only for harness-editing (Mode D).
+- Decision: floor-not-pin semantics; below-floor judged verdicts auto-tagged re-quench candidates (Degraded coverage rule extension); no specific top-anchor model or subscription window named publicly (anti-stale).
+- Decision: grounded in same-day measurements (operation tier-flat 100/100/97/94; depth differential on design increments only) — the guidance flip and the mechanism ship together, neither alone.
+- Open: first organic below-floor dispatch + first Sonnet-default external install feedback (verify_next em-2026-06-10v).
+
+
 ### 2026-06-10 | forge-harness | #model-tier, #tier-flattening, #worked-example, #output-evidence
 **File:** docs/OUTPUT_EVIDENCE.md (+ README.md §Model setup)
 Model-tier flattening measured and published: 30-point blind battery (rule-application + meta-dev fixtures, pre-registered rubric) on four Claude tiers — operation 100/100/97/94 (anchor/Opus 4.8/Sonnet 4.6/Haiku 4.5), tier separation only on above-rubric design increments (3/3·1/3·0.5/3·0/3). Public claim scoped honestly: single trial, self-graded, worked example not benchmark. README §Model setup gains the evidence note grounding the existing Opus recommendation.
