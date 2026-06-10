@@ -107,6 +107,7 @@ File: {path}
 | .claude/rules files unmodified 90+ days | R-tier |
 | settings.json JSON syntax error | M-tier |
 | Hooks in settings.json (PostToolUse/Stop) that don't fire in Agent View | S-tier or M-tier |
+| Public-surface FH recommendation or default changed — no N-shot measurement evidence traceable in session records or PR body | S-tier |
 
 Hook divergence verdict: 0 hooks = Normal · 1+ hooks (session-end/Stop) = S-tier · 1+ hooks (PostToolUse file writes or external API) = M-tier (data loss risk in Agent View).
 
@@ -162,6 +163,7 @@ Hook divergence verdict: 0 hooks = Normal · 1+ hooks (session-end/Stop) = S-tie
 | **Self-Preferential Bias** *(runtime)* | judged-class check without a named adversarial pairing (gate-rejectable for new skills; scan existing for backfill) · a self-graded verdict cited as sole completion evidence | M |
 | **Goal Drift** *(runtime)* | Long session with S/A-tier work but no pre-compaction completion log (`fh_completed_*` missing) · early-stated constraints absent from card/manifest at close | S |
 | **Comprehension Debt** *(runtime/operator)* | Merged FH-asset change with no CATALOG entry · edit_manifest `validation_status: pending` backlog piling up unverified · session closed with work done but zero card delta | S |
+| **Evidence Gap** *(FH self-dev)* | Public-surface FH recommendation or default changed with no N-shot measurement evidence traceable in session records or PR history (L3 check) | S |
 
 Signal in 2+ classes → escalate one tier.
 Rows 1–3 = structural (2026-06-02 frontier diagnosis). Rows 4–6 = runtime behavioral, agent-side —
