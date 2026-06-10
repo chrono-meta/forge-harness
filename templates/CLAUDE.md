@@ -40,6 +40,13 @@ signals being stuck ("keeps failing", "why is this still wrong").
 2. **Session pin** — if the work is inherently main-thread (iterative dialogue design, repeated
    whole-context reasoning), propose: *"This work demands session-level design depth — pinning
    `/model opus` is recommended. Proceeding as-is also works: dispatches still cover floored units."*
+3. **No higher tier available** — common in metered API routing (a Bedrock-style Sonnet-only
+   deployment) or alternative runtimes (Hermes / OpenCode-class) that don't offer higher Claude
+   tiers: skip the proposal, proceed at the available tier, and **flag depth-sensitive
+   deliverables with an explicit below-floor limitation note** (F2 semantics — tier-floor
+   resolution, `multi_model_sidecar_strategy.md §Tier-floor`). Silent proceeding is the failure
+   mode this rung exists to prevent; the note makes the deliverable a re-review candidate when a
+   floor tier becomes reachable.
 
 **Guards** (mirrors the hub's Mode D Model Notice): once per session · advisory only — **never
 switch the session model autonomously** (human override is inviolable) · sessions where nothing
