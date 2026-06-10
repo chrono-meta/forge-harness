@@ -32,8 +32,10 @@ deliberate act of placement.
 | Ingest contradiction scan | claims that conflict with existing CATALOG/knowledge — flagged, never silently coexisting |
 | `hub-cc-pr-reviewer` | coherence with hub baselines |
 
-The merge is the irreversible public action, so the gate sits there — local hooks are a convenience,
-the PR gate is the authority.
+The merge is the irreversible publication into this repo, so the authoritative gate sits there — local
+hooks are a convenience. One caveat is even earlier: **content pushed to a public fork is world-readable
+before any server gate runs.** If the lane gate flags a real credential, treat it as **burned and rotate
+it** — closing or fixing the PR does not un-publish the fork's history.
 
 ## What happens after merge
 
