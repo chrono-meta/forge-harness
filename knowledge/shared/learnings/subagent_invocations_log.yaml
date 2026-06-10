@@ -28,3 +28,27 @@
   outcome: accepted
   finding: "PASS. S1/S3 confirmed resolved. 2 MED (Tier-2 gap, probe-not-wired-to-guards) + 3 LOW (ffmpeg-unchecked, blockquote-anchor, example-stale-risk). Folded ffmpeg+pre-EOL+Tier-2-gloss; deferred guard-wiring + heading-promote."
   note: "This is the floor-MET counterpart to the 60515de below-floor inline slip — closes the gate properly per tier-floor governance."
+- date: 2026-06-10
+  agent: fh-commons:quench-challenger (opus, round 1)
+  task: adversarial pass on mechanical below-floor detector staged diff (Axis 2)
+  trigger: 4-axis gate full mode, floor=opus met via dispatch
+  outcome: accepted
+  note: "3A+1B findings all source-verified true and fixed (engine-field unenforced, heredoc paste loop, legacy self-block, model/floor mismatch undetected)"
+- date: 2026-06-10
+  agent: fh-commons:quench-challenger (opus, round 2)
+  task: convergence verification of round-1 fixes
+  trigger: convergence-loop discipline (FAIL→FIX→re-verify)
+  outcome: accepted
+  note: "all 4 fixes VERIFIED empirically, CONVERGED; flagged live 0-byte marker precondition (true, resolved pre-commit)"
+- date: 2026-06-10
+  agent: general-purpose (opus, blind sim)
+  task: post-ship gate simulation — write Axis-2 marker as inline-Opus orchestrator
+  trigger: operator request (sidecar simulation)
+  outcome: accepted
+  note: "wrote at-floor honestly; shipped validator PASS — legitimate inline not blocked"
+- date: 2026-06-10
+  agent: general-purpose (sonnet, blind sim)
+  task: post-ship gate simulation — write Axis-2 marker as inline-Sonnet orchestrator
+  trigger: operator request (sidecar simulation)
+  outcome: accepted
+  note: "self-flagged below-floor + wrote own ack — exposed ack rubber-stamp residual (MED, recorded in signal); counterfactual at-floor claim BLOCKED by cross-check"
