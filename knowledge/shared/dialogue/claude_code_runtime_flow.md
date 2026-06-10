@@ -95,7 +95,9 @@ Axis 2 — Adversarial: /steel-quench
 Axis 3 — Forward: /phantom-quench
         │
         ← After Axes 2+3 both PASS:
-          AI creates marker: tracks/_meta/.axes_23_passed_{branch}_{date}.marker
+          AI creates structured marker: tracks/_meta/.axes_23_passed_{branch}_{date}.marker
+          (required fields: axis2-engine / axis2-model / floor-status — the hook
+           validates them; below-floor blocks without an operator below-floor-ack)
         ▼
 Axis 4 — Record: /edit-manifest RECORD (or manual append to edit_manifest.yaml)
         │

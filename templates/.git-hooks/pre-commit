@@ -172,6 +172,96 @@ else
   fi
 fi
 
+# ── Marker floor validation (mechanical below-floor detector) ─────────────────
+# Adversarial (Axis 2) floor compliance was advisory-only — it depended on the
+# orchestrator self-flagging in prose, which fails on rule salience, not tier
+# (fh_signal_2026-06-10_adversarial-floor-enforcement: blind A/B showed both Opus
+# and Sonnet self-flag when the rule is in active context; the live slip happened
+# because it wasn't). So the marker now REQUIRES machine-greppable floor fields,
+# and the hook validates them — compliance no longer depends on recall.
+#
+# Required marker fields (free prose may follow them):
+#   axis2-engine: quench-challenger | inline | <external cli>
+#   axis2-model:  <tier that produced the adversarial pass, e.g. opus>
+#   floor-status: at-floor | above-floor | below-floor   (floor = opus, PR #86)
+#   below-floor-ack: <operator acceptance>   ← required iff floor-status: below-floor
+#
+# Opus-inline is at-floor (capability met even though dispatch was skipped) — the
+# gate must not block legitimate at/above-floor inline passes by the orchestrator.
+# A below-floor judged verdict is PROVISIONAL (not gate-PASS evidence) per
+# §Floor governance, so it blocks unless the operator explicitly accepts it; the
+# weekly audit remains the standing consumer that re-runs or writes off acks.
+# Single-line recreate command — indentation-immune on paste (a displayed heredoc
+# pastes with leading indent: the anchored grep misses and an indented EOF never
+# terminates <<'EOF' — non-converging fix loop, challenger Axis-5 A-finding).
+marker_recreate_hint() {
+  echo "     printf 'axis2-engine: quench-challenger\\naxis2-model: opus\\nfloor-status: at-floor\\n' > \"$1\""
+}
+
+validate_marker_floor() {
+  local m="$1" fs model
+  # Leading whitespace tolerated on field lines (defense-in-depth vs indented writes).
+  fs=$(grep -m1 -E '^[[:space:]]*floor-status:' "$m" 2>/dev/null \
+       | sed -E 's/^[[:space:]]*floor-status:[[:space:]]*//; s/[[:space:]].*$//')
+  if [ -z "$fs" ]; then
+    echo "  ❌ MARKER FORMAT — missing floor-status: line (legacy/empty marker)"
+    echo "     The marker must carry machine-readable floor fields. Recreate it:"
+    marker_recreate_hint "$m"
+    return 1
+  fi
+  case "$fs" in
+    at-floor|above-floor)
+      : ;;
+    below-floor)
+      if ! grep -qE '^[[:space:]]*below-floor-ack:[[:space:]]*[^[:space:]]' "$m"; then
+        echo "  ❌ BELOW-FLOOR adversarial pass without operator ack"
+        echo "     A judged verdict produced below the opus floor is provisional —"
+        echo "     it is not gate-PASS evidence (§Floor governance). Either:"
+        echo "       (1) re-run Axis 2 at ≥ floor: dispatch quench-challenger at opus,"
+        echo "           then set floor-status: at-floor; or"
+        echo "       (2) record explicit operator acceptance in the marker:"
+        echo "           below-floor-ack: <one-line reason, operator-approved>"
+        return 1
+      fi
+      echo "  ⚠️  below-floor pass accepted via operator ack (provisional —"
+      echo "     weekly audit re-queues below-floor markers for floor-tier re-run)"
+      ;;
+    *)
+      echo "  ❌ MARKER FORMAT — invalid floor-status: '$fs'"
+      echo "     Allowed: at-floor | above-floor | below-floor"
+      return 1
+      ;;
+  esac
+  if ! grep -qE '^[[:space:]]*axis2-engine:[[:space:]]*[^[:space:]]' "$m"; then
+    echo "  ❌ MARKER FORMAT — missing axis2-engine: line"
+    echo "     Record what ran the adversarial pass (quench-challenger | inline | <cli>)."
+    return 1
+  fi
+  model=$(grep -m1 -E '^[[:space:]]*axis2-model:' "$m" 2>/dev/null \
+          | sed -E 's/^[[:space:]]*axis2-model:[[:space:]]*//; s/[[:space:]].*$//')
+  if [ -z "$model" ]; then
+    echo "  ❌ MARKER FORMAT — missing axis2-model: line"
+    echo "     Record the tier that actually produced the adversarial pass"
+    echo "     (e.g. axis2-model: opus). This is what makes the floor auditable."
+    return 1
+  fi
+  # Model/floor cross-check — a known below-floor tier cannot claim at/above-floor.
+  # This catches the literal 2026-06-10 incident pattern (Sonnet pass labeled
+  # "Opus floor") mechanically. Floor = opus; tiers known to sit below it are
+  # enumerated here — above-floor models are NOT enumerated (no name baked in).
+  case "$fs" in
+    at-floor|above-floor)
+      if echo "$model" | grep -qiE 'sonnet|haiku'; then
+        echo "  ❌ MODEL/FLOOR MISMATCH — axis2-model: $model cannot be $fs (floor=opus)"
+        echo "     Set floor-status: below-floor (+ below-floor-ack: if operator-accepted),"
+        echo "     or re-run Axis 2 at ≥ floor (dispatch quench-challenger at opus)."
+        return 1
+      fi
+      ;;
+  esac
+  return 0
+}
+
 # ── Axes 2+3 — steel-quench + phantom-quench (full gate only) ─────────
 if [ "$GATE_MODE" = "full" ]; then
   echo "[Axis 2+3] Adversarial + Source-Grounding..."
@@ -179,15 +269,20 @@ if [ "$GATE_MODE" = "full" ]; then
   MARKER="$MARKER_DIR/.axes_23_passed_${BRANCH_SLUG}_${TODAY}.marker"
 
   if [ -f "$MARKER" ]; then
-    echo "  ✅ PASS (marker confirmed: .axes_23_passed_${BRANCH_SLUG}_${TODAY}.marker)"
+    if validate_marker_floor "$MARKER"; then
+      echo "  ✅ PASS (marker confirmed + floor fields valid:"
+      echo "     .axes_23_passed_${BRANCH_SLUG}_${TODAY}.marker)"
+    else
+      FAILED=1
+    fi
   else
     echo "  ❌ NOT CONFIRMED"
     echo ""
     echo "  Run /steel-quench and /phantom-quench in your Claude session."
     echo "  After both PASS, Claude creates the marker automatically. Or manually:"
     echo ""
-    echo "    mkdir -p \"$MARKER_DIR\""
-    echo "    touch \"$MARKER\""
+    echo "     mkdir -p \"$MARKER_DIR\""
+    marker_recreate_hint "$MARKER"
     echo ""
     FAILED=1
   fi

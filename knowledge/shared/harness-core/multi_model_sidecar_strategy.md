@@ -224,7 +224,10 @@ because it has opus?". A floor is satisfied by the chosen engine's **strongest f
   floor-tier re-run or an explicit operator acceptance. The **weekly audit** (run at the highest
   available tier per the cadence-compensation policy) is the standing consumer: it scans recent quench
   records for `below-floor` markers and re-runs or explicitly writes them off — flags terminate, they
-  do not decorate.
+  do not decorate. For the hub's own 4-axis gate this is now **mechanically enforced**: the Axes 2+3
+  pass marker must carry structured floor fields (engine / producing model / floor-status) and the
+  pre-commit hook blocks a below-floor marker that lacks an explicit operator ack — self-flagging in
+  prose proved salience-fragile at any tier (the adversarial-floor-enforcement signal's A/B finding).
 - **`floor: hard` for depth-critical judged roles** (quench-challenger, apex-review): for these, the
   floor outranks diversity — prefer a floor-meeting engine (incl. the native Tier-3 sub-agent at floor)
   over a below-floor diversity engine. Only when *no* engine anywhere reaches the floor does F2 apply

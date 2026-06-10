@@ -98,11 +98,18 @@ git config core.hooksPath templates/.git-hooks
 chmod +x templates/.git-hooks/pre-commit
 ```
 
-After running `/steel-quench` and `/phantom-quench` in your session, Claude creates the Axes 2+3 pass marker automatically. If it doesn't (e.g., session interrupted), create it manually:
+After running `/steel-quench` and `/phantom-quench` in your session, Claude creates the Axes 2+3 pass marker automatically. The marker must carry machine-readable floor fields — the hook validates them (a bare `touch` marker no longer passes; below-floor passes block unless an explicit `below-floor-ack:` line records operator acceptance). If Claude doesn't create it (e.g., session interrupted), create it manually:
 
 ```bash
-touch "tracks/_meta/.axes_23_passed_$(git rev-parse --abbrev-ref HEAD | tr '/' '_')_$(date +%Y-%m-%d).marker"
+cat > "tracks/_meta/.axes_23_passed_$(git rev-parse --abbrev-ref HEAD | tr '/' '_')_$(date +%Y-%m-%d).marker" <<'EOF'
+axis2-engine: quench-challenger
+axis2-model: opus
+floor-status: at-floor
+<scope / findings prose>
+EOF
 ```
+
+> **Migration note**: markers created before the floor-field upgrade are 0-byte legacy files — past-date ones are inert (the hook only reads today's marker), but a legacy marker for *today* must be regenerated in the structured format above before the first post-upgrade commit.
 
 ---
 

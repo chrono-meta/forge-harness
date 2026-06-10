@@ -139,6 +139,8 @@ No user request is needed — this is a mandatory autonomous step, not a proposa
 FH asset modified → Axis 1 (regression_guard.sh --pr {BRANCH})
   → Axis 2 (/steel-quench) → Axis 3 (/phantom-quench)
   → marker: tracks/_meta/.axes_23_passed_{branch}_{date}.marker
+     (structured — required fields: axis2-engine / axis2-model / floor-status;
+      hook validates mechanically: below-floor blocks without below-floor-ack)
   → Axis 4 (/edit-manifest RECORD, today's entry in edit_manifest.yaml)
   → All 4 PASS → git commit allowed   |   Any FAIL → fix inline, re-run
 ```
