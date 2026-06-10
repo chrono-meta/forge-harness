@@ -8,6 +8,11 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #failure-modes, #agentic-laziness, #self-preferential-bias, #goal-drift, #harness-doctor
+**File:** plugins/fh-meta/skills/harness-doctor/SKILL.md
+Harness-Defect Taxonomy 3→6 classes: runtime behavioral failure modes named from dynamic-workflows discourse (LinkedIn full-text triage) — Agentic Laziness (completion claims without per-item evidence, S), Self-Preferential Bias (judged check without adversarial pairing, M), Goal Drift (no pre-compaction completion log, S). FH already had the countermeasures (golden probes/coverage, judged-pairing rule, fh_completed + card-last guard) — the import is the *naming*, making diagnosis explicit.
+- Decision: signals kept mechanically checkable (list/pairing/log presence) — no judge-only signal in the taxonomy itself; sources not counted as new convergence (discourse extension, anti-inflation).
+
 ### 2026-06-10 | forge-harness | #no-reinvention, #official-first, #claude-plugins-official, #full-harness-mode
 **File:** knowledge/shared/plugin-catalog/recommended_plugins.md (+ CLAUDE.md, auto_project_mapping.md)
 Operator-declared meta-harness 철칙 — no-reinvention / official-first: (a) plugin catalog gains Category 0.5, the claude-plugins-official 36-plugin inventory (12 LSP + workflow + authoring + setup groups; name-based, anti-stale "re-enumerate when recommending", role-split warnings for claude-md-management overlap); (b) New Skill gate Role-duplication criterion now also checks Tier 0 built-ins + official plugins — reinventing an official capability requires explicit justification; (c) Full-Harness Mode item 4: official-plugin scan for the mapped project's stack (recommend-only, never auto-install) — mapped-project acceleration with zero FH build.
