@@ -189,17 +189,27 @@ measured-or-justified, never asserted (same discipline as check-class declaratio
 depth-sensitive class), while Wave-T and `harness-doctor` floor at sonnet (measured: T-3 blind
 3/3 on both tiers, 2026-06-10), and mechanical scripts have no floor at all (measured tier-flat).
 
-**Environment-side resolution** (mirrors Tier 1→2→3 — bind the first that reaches the floor):
-- **R1 — native dispatch ≥ floor**: the runtime's own sub-agent dispatch can reach the floor
-  (CC `Agent(model=…)`) → use it. The session's default model stays untouched — FH **never
-  switches the user's session model**; it only dispatches sub-agents.
-- **R2 — cross-provider route ≥ floor**: a Tier-1/2 engine offers a floor-equivalent tier → use it
-  per the capability-probe rule.
-- **R3 — best-available < floor** (e.g., a Sonnet-only API-routed environment): **run anyway at the
-  best available tier + mandatory below-floor flag.** Never hard-fail — the analog of Tier 3's
-  no-hard-error guarantee. The output header carries e.g. `challenger: sonnet (below-floor;
-  floor=opus)`, and a **judged verdict produced below floor is auto-tagged a re-quench candidate**
-  for when a floor-tier becomes available — degraded delivery is explicit, never silent coverage.
+**Composition order — engine first, floor second (does NOT reorder the engine ladder)**: the Tier 1→2→3
+Engine Resolution above keeps full authority over *which engine* runs — including its **perspective-
+diversity-first** doctrine (a cross-provider Tier-1 CLI beats a same-provider Claude sub-agent whenever
+diversity is the point, e.g. Wave 5). Tier-floor resolution then applies **within the chosen engine**:
+it asks "does this engine reach the asset's floor?", never "should we switch to a Claude sub-agent
+because it has opus?". A floor is satisfied by the chosen engine's **strongest floor-equivalent tier**
+(e.g. an external CLI's top model for an opus-floored asset) — floors measure strength, not provider.
+
+**Floor resolution within the chosen engine**:
+- **F1 — engine reaches the floor**: dispatch at the floor tier (native CC `Agent(model=…)` when the
+  chosen engine is the Claude sub-agent; the CLI/API's floor-equivalent tier when it is external).
+  The session's default model stays untouched — FH **never switches the user's session model**;
+  floors apply only to FH's own dispatches.
+- **F2 — engine tops out below the floor** (e.g., a Sonnet-only API-routed environment, or an external
+  CLI whose available tiers sit below floor-equivalent): **run anyway at the engine's best tier +
+  mandatory below-floor flag.** Never hard-fail — the analog of Tier 3's no-hard-error guarantee.
+  The output header carries e.g. `challenger: sonnet (below-floor; floor=opus)`, and a **judged verdict
+  produced below floor is auto-tagged a re-quench candidate** for when a floor-tier becomes available —
+  degraded delivery is explicit, never silent coverage. Do **not** abandon a diversity-chosen engine
+  merely because it is below floor — a below-floor cross-provider pass still buys the diversity the
+  step exists for; flag it and proceed.
 
 **Human override is inviolable**: if the operator pins a session default (stronger or weaker),
 FH follows it for session turns and uses floors only for its own dispatches. Pinning a
