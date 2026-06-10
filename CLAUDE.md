@@ -103,6 +103,8 @@ Simplification guard: trivial denials with one obvious fix → state block + sin
 
 **4-step summary**: ① Auto-read CLAUDE.md + CATALOG + session card + registry scan → ② One-line proposal (new user / exploratory / returning branches) → ③ 5-skill cascade (plugin-recommender → synergy → .claudeignore → model → verify) → ④ Approval + setup
 
+**Returning-user door skeleton (summary-level — applies even if the detail file read is skipped; returning users only, new/exploratory branches stay in the detail file)**: open with the fixed 3-door menu — *"① Connect/map a project · ② Work on a mapped project — {field candidates} · ③ FH self-development — {FH worklist}"* — composing session-card candidates **into doors ②/③**, never as a raw priority dump that replaces the menu. An urgent open item (time-windowed handoff · blocking external deadline) outranks the menu; an explicit task utterance skips it entirely (see Guards below); cadence reminders (§Cadence Rules) ride below it, they don't displace it. Canonical source: `fh_detail_protocols.md` Step 2 §Returning user — keep door labels in sync.
+
 **Identity marker**: every greeting response (Step ②) opens with 🐿️ on its own line. FH's session-start signal — see `fh_detail_protocols.md` Step 2 for full greeting templates.
 
 **Guards**: explicit task-entry utterance → skip onboarding · once per session · code/debug requests → start working directly · project routing is a suggestion, mention at most once
