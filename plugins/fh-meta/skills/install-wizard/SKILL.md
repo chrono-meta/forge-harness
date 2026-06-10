@@ -97,10 +97,17 @@ Recommended layout:
   private: {org}/{hub}-be     (paper drafts, experiment logs,
                                raw signals, handoff files)
 
-Quick setup:
+Quick setup (remote-backed):
   gh repo create {org}/{hub}-be --private
   git clone https://github.com/{org}/{hub}-be ~/path/to/{hub}-be
   mkdir -p {hub}-be/{paper-drafts,paper-signals,digests,handoff}
+
+Local-only variant (no GitHub — your data never leaves the machine):
+  git init ~/path/to/{hub}-be      # no remote needed
+  mkdir -p ~/path/to/{hub}-be/{paper-drafts,paper-signals,digests,handoff}
+  → the sync script detects the missing upstream and skips push
+    automatically; local git history carries durability. Any store
+    name works — set BE_DIR (and HUB_DIR) env vars to your paths.
 
 Key rule: knowledge/shared/ drafts stay local via .gitignore glob.
 Push snapshots to the companion store explicitly — never auto-push.
@@ -536,6 +543,7 @@ install-wizard — Complete
 
 🔬 Developing FH itself? Set up a private companion store:
    gh repo create {org}/{hub}-be --private   # paper drafts, experiment logs, handoffs
+   (or local-only: git init ~/path/{hub}-be — no remote; push is auto-skipped)
    → public mirror holds methodology · private store holds research artifacts
    → field projects (internal harness) can use the same dual-repo pattern
 

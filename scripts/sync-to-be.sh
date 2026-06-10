@@ -58,6 +58,15 @@ sync_file "$FH/CLAUDE.local.md" "$BE/hub-owner"
 
 cd "$BE"
 
+# Mirror-only mode: a plain (non-git) companion directory is a valid local-only
+# setup — files are already mirrored above; just skip the commit/push half.
+# Without this guard, set -e kills the script at `git add` with a noisy error
+# on every Stop-hook run (fh_signal_2026-06-10: companion-store portability).
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
+  log "companion store is not a git repo — mirror-only mode ($TOTAL file(s) synced, no commit/push)"
+  exit 0
+}
+
 # Push any commits ahead of upstream. Offline-safe: never aborts the script,
 # so a failed push just leaves commits queued for the next run to flush.
 maybe_push() {
