@@ -12,6 +12,7 @@ If you'd like to make forge-harness better, pull requests are welcome.
 | **Templates** | Common files to add under `templates/` |
 | **Documentation** | README, skill description refinement, typo fixes |
 | **Field pattern harvest** | Proposing a pattern discovered in real use as a skill (see `/field-harvest`) |
+| **Session contribution (consent lane)** | Share a de-identified work session in `tracks/_contrib/` — see §Consent Lane below |
 
 ## Choosing a Contribution Path — Check First
 
@@ -23,6 +24,21 @@ If you'd like to make forge-harness better, pull requests are welcome.
 | Plugin Level version bump | **Full path** + 3-piece set | Full |
 
 > **Adding a new skill = Full path required**. Improving an existing skill = Lightweight path available.
+
+## Consent Lane — share a session (`tracks/_contrib/`)
+
+Everything under `tracks/` is private by design **except** `tracks/_contrib/` — the consent lane.
+Placing a session file there is your explicit consent to publish it; it lands via PR through the lane
+gate (`/public-surface-audit` + `/marketplace-gate` Check 5 + ingest contradiction scan + reviewer pass).
+
+- Start from `templates/contrib_session.md` → `tracks/_contrib/{your-handle}/{topic}/session_YYYY_MM_DD_{slug}.md`
+- **De-identify first** (no employer/project/colleague names, paths, domains, credentials) — the gate
+  re-checks, but scrubbing is yours first
+- Full charter, gate table, and what-happens-after-merge: [`tracks/_contrib/README.md`](../tracks/_contrib/README.md)
+- Overhead: minimal — the skill-PR rules don't apply (it's a session, not a skill); only the lane gate + frontmatter floor
+
+Merged sessions get CATALOG credit under your handle, and `harvest-loop` distills repeating patterns
+into shared knowledge/skills — your session becomes compound interest for every cloner.
 
 ## PR Rules (Short Version)
 

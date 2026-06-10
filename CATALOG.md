@@ -8,6 +8,13 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #fc, #consent-lane, #federated-compounding, #starved-center, #v3
+**File:** tracks/_contrib/README.md (+ .gitignore, templates/contrib_session.md, docs/CONTRIBUTING.md, README.md)
+FC F1 pour — the consent lane opens (operator override: "실제증명으로 찍어누른다" — real-proof-first supersedes the v2-submission latch). `tracks/_contrib/` becomes the only tracked subtree under tracks/: surgical 2-line un-ignore, placement = consent, PR-time lane gate (PSA + marketplace-gate C5 + ingest contradiction scan + reviewer). Lane charter + session template + CONTRIBUTING §Consent Lane + README row shipped — exactly the don't-overbuild list, no new skill/verifier.
+- Decision: operator lifted the v2 latch (2026-06-10) — paper timing no longer gates feature publicization; proof-by-shipping doctrine recorded in the lab ledger.
+- Decision: privacy default unchanged — the lane is consent-by-placement; the firewall (PSA/Pre-Publish/4-axis) is the lane's load-bearing precondition, not weakened by it.
+- Open: F2 begins on the first external lane PR (live gate run + friction signals); F3 verdict 2 quarters post-open (PAID vs WRITTEN-OFF per falsifiability criterion).
+
 ### 2026-06-10 | forge-harness | #wave-t, #temper, #steel-quench, #forge-fourth-movement, #v3
 **File:** plugins/fh-meta/skills/steel-quench/SKILL.md (+ templates/temper_check.sh, docs/ETHOS.md, README.md)
 Wave-T (Temper) ships — the fourth forge movement, poured from lab validation (operator-approved): after Wave 3+ convergence, measure the complexity the quench itself added (T-1 temper_check.sh delta, fence-excluding · T-2 harness-doctor absolute tier · T-3 τ-verdict, judged-paired with the quench's own findings). Validation: 9 runs across 4 independent convergences (0 false flags, simplification un-punished) + synthetic positive control (sensitivity) + same-commit dogfood run #10 on the pour itself (τ-PASS). ETHOS/README "direction ahead" IOU converted to delivery.

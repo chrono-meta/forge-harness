@@ -38,6 +38,12 @@ tracks/**
 !tracks/**/
 !tracks/**/.gitkeep
 
+# FC consent lane — the ONLY tracked subtree under tracks/ (v3 federated compounding).
+# Writing into tracks/_contrib/ IS the consent act: contributions here are public by intent,
+# gated at PR time (public-surface-audit + marketplace-gate Check 5 + ingest contradiction scan).
+!tracks/_contrib/
+!tracks/_contrib/**
+
 # qasp — company-domain content (kakaopay GHE, payment/insurance). Fully local isolation:
 # the project NAME must never reach public FH git, so even its .gitkeep is ignored.
 # (sync-to-be.sh already only mirrors _meta/_audit, so fh-be never receives it either.)

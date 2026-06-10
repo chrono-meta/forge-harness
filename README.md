@@ -293,4 +293,5 @@ External convergence:
 | [`AGENTS.md`](AGENTS.md) | Runtime agent specs |
 | [`CATALOG.md`](CATALOG.md) | Past work search index |
 | [`CONTRIBUTING.md`](docs/CONTRIBUTING.md) | How to contribute skills and patterns |
+| [`tracks/_contrib/`](tracks/_contrib/README.md) | **Consent lane** — share a de-identified work session; the repo compounds across operators, not just locally |
 | [`fh_integration_contract.md`](knowledge/shared/harness-core/fh_integration_contract.md) | Governance gate spec |
