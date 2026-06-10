@@ -27,7 +27,7 @@ done
 
 # Bash surface: npm-shipped scripts + local bin wrappers + gate-chain infra
 for f in scripts/*.sh bin/fh-gate bin/fh-run bin/fh-goal \
-         templates/regression_guard.sh templates/temper_check.sh templates/.git-hooks/pre-commit; do
+         templates/regression_guard.sh templates/temper_check.sh templates/predelete_check.sh templates/.git-hooks/pre-commit; do
   [ -f "$f" ] || continue
   check "bash -n $f" bash -n "$f"
 done
