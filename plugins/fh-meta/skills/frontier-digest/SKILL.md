@@ -54,13 +54,22 @@ On **cadence-triggered** runs (7d), ask the operator one line before collecting:
   Partial wall-bypass is allowed first: try WebSearch + secondary sources before declaring unfetchable.
 - **Video sources (local/laptop only — cloud VMs typically 403 on video hosts)**: resolve a
   *video-harvest* capability via the Sidecar Engine Resolution Protocol
-  (`multi_model_sidecar_strategy.md`) instead of asking the operator to summarize by hand —
-  **Tier 1**: subscription CLI that can summarize the video (e.g. `codex`, or the Gemini route via
-  its current router-shell — agentic sidecars get approval-mode first) · **Tier 3 guaranteed
-  fallback**: Claude itself harvests the transcript (`yt-dlp --write-auto-subs --skip-download`)
-  and summarizes the text — sufficient for talk-style content; visually-dense videos still need a
-  natively multimodal Tier-1 engine. Unresolvable (cloud, no sidecar) → operator summary remains
-  the path, as today.
+  (`multi_model_sidecar_strategy.md`) — probe by **capability, not engine name**. A CLI that is a
+  valid sidecar for other tasks is not automatically a video-harvest engine.
+  **Tier 1 — a natively multimodal CLI that ingests the URL directly** (verified 2026-06-10,
+  laptop, video `oZUeRib1Xec`): the current verified invocation is `gemini --skip-trust -p "{URL}"`
+  → grounded timestamped summary ✅. ⚠️ **the direct `gemini` CLI is being sunset (vendor EOL
+  2026-06-18)** — after that date probe `agy` (the Antigravity router-shell successor, same class)
+  or the Gemini API; see `multi_model_sidecar_strategy.md §Binary names churn`. A coding-agent CLI
+  with no native video/transcript access (`codex`) **cannot** — it spent ~67K tokens, recovered
+  only the title, then asked for a pasted transcript ❌; do not route video to it. Agentic
+  router-shells (`agy`) get approval-mode first.
+  **Tier 3 — conditional fallback (not guaranteed)**: Claude harvests the transcript via
+  `yt-dlp --write-auto-subs --skip-download` and summarizes — fine for talk-style content, but
+  needs `ffmpeg` + a `curl_cffi` impersonation target; the timedtext endpoint may return HTTP 429,
+  and that dep has no wheel on brew's Python 3.14 (blocked on this machine 2026-06-10).
+  Unresolvable (cloud, no sidecar; or all tiers blocked) → operator summary remains the path, as
+  today.
 
 ---
 
