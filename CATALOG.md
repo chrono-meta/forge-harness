@@ -8,6 +8,18 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #wave-t, #temper, #steel-quench, #forge-fourth-movement, #v3
+**File:** plugins/fh-meta/skills/steel-quench/SKILL.md (+ templates/temper_check.sh, docs/ETHOS.md, README.md)
+Wave-T (Temper) ships — the fourth forge movement, poured from lab validation (operator-approved): after Wave 3+ convergence, measure the complexity the quench itself added (T-1 temper_check.sh delta, fence-excluding · T-2 harness-doctor absolute tier · T-3 τ-verdict, judged-paired with the quench's own findings). Validation: 9 runs across 4 independent convergences (0 false flags, simplification un-punished) + synthetic positive control (sensitivity) + same-commit dogfood run #10 on the pour itself (τ-PASS). ETHOS/README "direction ahead" IOU converted to delivery.
+- Decision: organic τ-FAIL redefined from promotion-blocker to standing watch (operator-approved) — synthetic control covers sensitivity; first organic flag → human verdict → recorded.
+- Decision: Wave-T stays one script + one section reusing harness-doctor (don't-overbuild guard is part of the shipped spec).
+- Open: npm 1.4.8 ships Wave-T + temper_check.sh + selfcheck 21 (folded into the open laptop handoff).
+
+### 2026-06-10 | forge-harness | #selfcheck, #count-consistency, #drift-class-kill
+**File:** scripts/selfcheck.sh
+Count-consistency probes (mandatory-pass): plugin.json ×2 / marketplace.json / README header / local_fh_context stated counts vs actual dirs (active = non-deprecated). Motivated by 4 same-day drift instances — the class now fails npm test + prepublishOnly instead of waiting for a doctor run.
+- Decision: deprecation detected mechanically (frontmatter `deprecated: true` or DEPRECATED marker in head -20).
+
 ### 2026-06-10 | forge-harness | #backlog-cleanup, #phantom-fix, #count-drift, #goal-quench
 **File:** plugins/fh-meta/skills/goal-quench/SKILL.md (+ templates/local_fh_context.md, plugin.json, README.md)
 Backlog cleanup (cloud session 2): goal-quench phantom vocab fixed — "steel-quench C3 config" → "cross-provider challenger" (anchored to steel-quench:83 vocabulary + §Sidecar Engine Resolution Protocol; token `steel-quench-crossprovider`, 4 spots; resolves `fh_signal_2026-06-10_fh-direct`). Skill/agent count drift fixed: local_fh_context 26→29 active (−2 deprecated, +5 missing), plugin.json agents 3→7, README agents 5→8 (skills 33 verified correct = 36 dirs − 3 deprecated). Resolves the 06-04 "skill-count drift" Open item.

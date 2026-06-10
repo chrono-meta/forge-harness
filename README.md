@@ -166,13 +166,13 @@ hardened by attack, and only then does it ship faster, for having survived.
 |---|---|---|
 | **Forge** | shape the raw project into a harness — raise its floor | `install-wizard`, "harness-ify this project" |
 | **Quench** | harden it by attack — the cold pass leaves standing only what is sound | `steel-quench` · `phantom-quench` |
-| **Temper** | take the brittleness back out of the hardened asset | *the movement being forged next* |
+| **Temper** | take the brittleness back out of the hardened asset | `steel-quench` Wave-T · `templates/temper_check.sh` |
 | → **Accelerate** | a blade that survived the forge cuts faster | `goal-quench` — *Pass → Accelerate* |
 
-Three movements are shipped; **temper** is the direction ahead — and naming the movement we have *not*
-finished is the point (see [`ETHOS.md`](docs/ETHOS.md#the-forge)). Around the forge, two more signatures keep
-it running: `harvest-loop` (each session's lessons become permanent skills) and `agent-composer`
-(orchestrate the dispatch). The other skills wait until you need them — full list below.
+All four movements ship. Temper was named before it was built — deliberately (see
+[`ETHOS.md`](docs/ETHOS.md#the-forge)) — and shipped once measurement runs validated it. Around the forge,
+two more signatures keep it running: `harvest-loop` (each session's lessons become permanent skills) and
+`agent-composer` (orchestrate the dispatch). The other skills wait until you need them — full list below.
 
 ## 33 skills · 8 agents
 

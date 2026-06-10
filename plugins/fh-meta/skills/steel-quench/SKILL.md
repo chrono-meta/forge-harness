@@ -41,6 +41,7 @@ A designer's anxiety is most dangerous when vague. steel-quench breaks that anxi
 | **Wave 4** (optional) | Meta-Aware Adversary — AI uses its own nature as attack vector | Zero new S-grade + AI-specific criteria |
 | **Wave-P3** (optional) | Gate-passage re-attack — when an upstream gate declares PASS, re-attack the just-passed artifact on Coverage / Narrative / False-confidence | All 3 dimensions Attack Failed |
 | **Wave 5** (optional) | Multi-Team Adversarial Panel — external CLIs or cross-session Claude | Zero new S-grade cross-team |
+| **Wave-T** (after convergence) | Temper — measure complexity the quench *added*; flag over-hardening | τ-PASS or named τ-FAIL |
 
 ---
 
@@ -191,6 +192,32 @@ domain-coupled (a spec→test-case gate) form to a gate-agnostic boundary hook. 
 `fh-commons:convergence-loop` (single-pass distrust).
 
 > **Detail**: See `SKILL_detail.md §WaveP3` — per-dimension attack questions, gap criteria, and output format — read when running a gate-passage re-attack.
+
+---
+
+## Wave-T — Temper (post-convergence)
+
+Quench hardens, but quenched steel is brittle — no smith ships it un-tempered. steel-quench attacks
+until zero new S-grade; nothing in that loop asks whether the hardening itself **introduced complexity
+beyond what the fixes required** (defense scaffolding, decorative wiring). Wave-T is that inverse
+corrective. It runs **after Wave 3+ convergence, before Done When**. It does not attack; it measures
+the cost of the convergence just achieved.
+
+| Step | Class | What it does |
+|---|---|---|
+| **T-1 complexity delta** | measured | `bash templates/temper_check.sh <repo> <file> <pre-quench-ref>` — Δlines/sections/steps/tables/fences/cross-refs, baseline (pre-Wave-1) → post-convergence. Prose-only counts: code-fence interiors are excluded (bash comments are not sections) |
+| **T-2 absolute context** | measured | `harness-doctor` L1–L3 on the post-quench asset — absolute complexity tier (reuse, don't reimplement) |
+| **T-3 τ verdict** | judged — paired with the quench's own Wave findings (each flagged construct must trace to a specific finding it allegedly fixes; no judge-only path) | **τ-PASS**: added complexity ⊆ what the fixes required. **τ-FAIL**: the quench introduced a construct that *defends against an attack rather than fixing the flaw* — name it, propose the simpler form, hand back for de-brittling. τ-FAIL is the temper step working, not a quench failure |
+
+**T-3 heuristic flags** (any → review, never auto-reject): a new section/table/step whose only referent
+is a Wave-N finding · Δcross-refs ≫ Δsteps (wiring, not function) · the asset crosses a harness-doctor
+complexity tier it was below pre-quench.
+
+**Don't-overbuild guard (τ applied to τ)**: Wave-T is one script + this section, reusing harness-doctor
+for the absolute read. If Wave-T grows its own detection engine, it has failed its own test — a temper
+step that adds complexity is self-refuting. Known limits (honest): `temper_check.sh` takes one path —
+renamed files need a manual pre/post measurement; the wiring flag uses strict `>`, so Δxrefs = Δsteps
+does not fire it (the section flag usually carries those cases).
 
 ---
 
