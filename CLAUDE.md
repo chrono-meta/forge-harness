@@ -214,6 +214,32 @@ checklist** (`templates/PRE-PUBLISH-CHECKLIST.md`) the operator runs on any repo
 
 ---
 
+## Destructive-Op Gate (Irreversibility Gate — Delete/Rewrite, not Commit)
+
+**Order invariant: enumerate → recover → destroy, never destroy-then-check.** Deletion and history
+rewrite are irreversible in the way publish is — except the loss is *silent* (nobody sees what a
+deleted branch was carrying).
+
+**When this gate fires** — *before* any of: branch deletion (local or remote), history rewrite /
+force-push, scrub of tracked history, bulk deletion of session records / tracks content.
+
+1. **Enumerate (measured)**: `bash templates/predelete_check.sh <repo> [base]` — per branch: commits
+   off base + unique paths. Verdicts: SAFE (fully merged) · CHECK (0 unique paths but commits off
+   base — shared files may hold *newer* content, e.g. an unmerged session card) · REVIEW (unique
+   paths — recovery mandatory).
+2. **Recover (judged — depth-sensitive)**: every CHECK/REVIEW item gets a content-direction look;
+   live un-integrated state (cards · handoffs · signals · session records) is integrated to main
+   **before** anything is deleted. This step exists because the loss class is silent — run it at the
+   strongest available tier (floor semantics, §Tier-floor); a below-floor pass is provisional.
+3. **Destroy** only what passed — REVIEW blocks a scripted delete chain (script exits 1).
+
+> Origin: 2026-06-10 branch cleanup — pre-deletion enumeration recovered a parallel session's card
+> (weekly-audit completion + #88 merge state) that existed **only on an unmerged branch** with zero
+> unique paths: exactly the CHECK class, invisible to "is it merged?" intuition. Deletion without the
+> gate destroys live state without anyone noticing.
+
+---
+
 ## Autonomous Initiative Layer — Context-Triggered Skill Proposals (Active Throughout Session)
 
 At any point during a session, when the following signals are detected, propose the relevant skill in one line.
@@ -240,6 +266,7 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "add to marketplace", "OK to publish", "pre-publish check" | `/marketplace-gate` |
 | "did I leak anything", "public surface audit", "private token scan", "is my split clean", "check tracked files for private tokens" | `/public-surface-audit` |
 | "publish", "make public", "make this repo public", "go public", "gh repo create --public", "flip to public", "first public push", "publish the package", "npm publish", "twine upload" (publish intent — **proactive**, fire *before* the action) | **Pre-Publish Surface Gate** (see above → `/public-surface-audit` + `/marketplace-gate` Check 5 must PASS first) |
+| "delete the branch", "브랜치 삭제", "브랜치 정리", "clean up branches", "force-push", "rewrite history", "지워도 돼?" (destructive intent — **proactive**, fire *before* the action) | **Destructive-Op Gate** (see above → enumerate → recover → destroy; `templates/predelete_check.sh`) |
 | "look at this again", "is this right", "counterargument", "re-validate" | `/verify-bidirectional` |
 | "MCP failing", "tool keeps erroring", "circuit-breaker", "same error looping" | `/mcp-circuit-breaker` |
 | "token budget", "how expensive", "estimate tokens", "will this cost a lot" | `/token-budget-gate` |

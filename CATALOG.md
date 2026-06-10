@@ -8,6 +8,13 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #destructive-op-gate, #irreversibility, #silent-loss, #branch-cleanup-incident
+**File:** CLAUDE.md §Destructive-Op Gate (+ templates/predelete_check.sh, scripts/selfcheck.sh)
+Third irreversibility gate (sibling of Pre-Publish): enumerate → recover → destroy, never destroy-then-check. predelete_check.sh classifies branches SAFE/CHECK/REVIEW (CHECK = 0 unique paths but commits off base — shared files may hold newer content, the silent-loss class); REVIEW blocks scripted deletes (exit 1); the recovery step is judged/depth-sensitive (strongest-tier floor semantics). Signal-table row fires on destructive intents proactively. Origin: same-day incident — a parallel session's card (weekly-audit done + #88) lived only on an unmerged 0-unique-path branch; pre-deletion enumeration recovered it. Dogfood replay: the script lands that exact branch in CHECK.
+- Decision: safety mechanized rather than tier-escalated — Sonnet-default stays valid because the gate carries the depth, with the judged step floor-routed for the residual.
+- Decision: scope split vs Pre-Publish kept explicit (publish = exposure irreversibility, destroy = silent-loss irreversibility).
+
+
 ### 2026-06-10 | forge-harness | #mode-d-notice, #model-guidance, #self-dev-entry
 **File:** CLAUDE.md §Mode D Model Notice
 Conditional model-pin guidance at self-dev entry (operator request): fires once at the 4-axis gate's own activation trigger — session model opus+ = silent · below-opus = one-line pin recommendation with measured rationale · identity-withheld runtime = static fallback. Advisory only, never auto-switches (pin-is-not-a-cap); field-operation sessions never see it.
