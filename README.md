@@ -273,6 +273,13 @@ above-rubric *design* increments (developing the harness, not running it) — wh
 Sonnet with **tier-floored dispatch** covering the depth-sensitive turns, and a pinned stronger model is
 recommended only for harness-editing sessions. Details: `docs/OUTPUT_EVIDENCE.md` §Validation signals.
 
+**Measured, not asserted** (2026-06-10, worked example): on a 30-point blind rule-application battery,
+*operating* FH was nearly model-flat — Opus 4.8 / Sonnet 4.6 / Haiku 4.5 scored **100 / 97 / 94** against
+a top-tier anchor at 100, with the rules in context doing most of the work. The tiers separated only on
+above-rubric *design* increments (developing the harness, not running it) — which is exactly why the
+recommendation stays Opus for harness-editing and gate turns, while field operation tolerates lower tiers.
+Details: `docs/OUTPUT_EVIDENCE.md` §Validation signals.
+
 If you use external CLIs (Gemini, Codex, `gh copilot`) as sidecars, their costs are billed to their own quota and not visible in CC's token display.
 
 ---
