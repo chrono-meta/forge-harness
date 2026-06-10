@@ -161,12 +161,15 @@ Hook divergence verdict: 0 hooks = Normal · 1+ hooks (session-end/Stop) = S-tie
 | **Agentic Laziness** *(runtime)* | Completion claims without per-item evidence — "all N done" with no enumerable list in session records / PR bodies · Done When lacking any mandatory-pass condition | S |
 | **Self-Preferential Bias** *(runtime)* | judged-class check without a named adversarial pairing (gate-rejectable for new skills; scan existing for backfill) · a self-graded verdict cited as sole completion evidence | M |
 | **Goal Drift** *(runtime)* | Long session with S/A-tier work but no pre-compaction completion log (`fh_completed_*` missing) · early-stated constraints absent from card/manifest at close | S |
+| **Comprehension Debt** *(runtime/operator)* | Merged FH-asset change with no CATALOG entry · edit_manifest `validation_status: pending` backlog piling up unverified · session closed with work done but zero card delta | S |
 
 Signal in 2+ classes → escalate one tier.
-Rows 1–3 = structural (2026-06-02 frontier diagnosis). Rows 4–6 = runtime behavioral — classes named
-from dynamic-workflows discourse (2026-06); FH countermeasures already exist and are what the signals
-check for: golden probes + multi-persona coverage (laziness) · judged-pairing rule (bias) ·
-pre-compaction completion log + card-last guard (drift).
+Rows 1–3 = structural (2026-06-02 frontier diagnosis). Rows 4–6 = runtime behavioral, agent-side —
+named from dynamic-workflows discourse (2026-06). Row 7 = runtime, operator-side — named from
+loop-engineering discourse (Osmani, 2026-06): loop output outpacing operator understanding. FH
+countermeasures already exist and are what the signals check for: golden probes + multi-persona
+coverage (laziness) · judged-pairing rule (bias) · pre-compaction completion log + card-last guard
+(drift) · CATALOG 3-line summaries + manifest predict-verify + card protocol (comprehension debt).
 
 ---
 

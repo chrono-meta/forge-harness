@@ -8,6 +8,11 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #comprehension-debt, #loop-engineering, #osmani, #harness-doctor
+**File:** plugins/fh-meta/skills/harness-doctor/SKILL.md
+Taxonomy 6→7: Comprehension Debt (runtime/operator-side, S) — loop output outpacing operator understanding, named from Osmani's Loop Engineering (canonical upstream of the supervisor-loops lineage; Cherny/Steinberger quotes — paper citation upgraded from the Korean video to this primary source, convergence count unchanged at n=5). Signals mechanical: merged change without CATALOG entry, manifest pending backlog, zero card delta. Countermeasures pre-existing (CATALOG summaries, predict-verify, card protocol).
+- Decision: taxonomy now covers both loop sides — agent behavior (rows 4–6) and operator comprehension (row 7); FH's HITL PR principle recorded as a deliberate L2 cap on asset-changing loops (Osmani L3 rejected for asset mutation).
+
 ### 2026-06-10 | forge-harness | #failure-modes, #agentic-laziness, #self-preferential-bias, #goal-drift, #harness-doctor
 **File:** plugins/fh-meta/skills/harness-doctor/SKILL.md
 Harness-Defect Taxonomy 3→6 classes: runtime behavioral failure modes named from dynamic-workflows discourse (LinkedIn full-text triage) — Agentic Laziness (completion claims without per-item evidence, S), Self-Preferential Bias (judged check without adversarial pairing, M), Goal Drift (no pre-compaction completion log, S). FH already had the countermeasures (golden probes/coverage, judged-pairing rule, fh_completed + card-last guard) — the import is the *naming*, making diagnosis explicit.
