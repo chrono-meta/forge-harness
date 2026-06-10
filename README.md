@@ -237,25 +237,41 @@ two more signatures keep it running: `harvest-loop` (each session's lessons beco
 Claude Code does not auto-select models by task complexity — you configure this once.
 
 ```bash
-/model opus   # recommended for forge-harness — pin Opus so gate/verification turns never silently drop
+/model sonnet   # recommended default — FH dispatches stronger models itself where they matter
 ```
 
 | Command | Who runs what | Best for |
 |---|---|---|
-| `/model opus` | Opus handles everything | **FH default** — verification, governance, agent reasoning |
+| `/model sonnet` | Sonnet session; FH dispatches higher-tier sub-agents on declared floors | **FH default** — operation + routine dev |
+| `/model opus` | Opus handles everything | Harness-editing sessions (Mode D) · maximum depth on every turn |
 | `/model opusplan` | Opus *plans* · Sonnet executes *(when Opus engages)* | Cost-conscious routine coding — see caveat |
-| `/model sonnet` | Sonnet handles everything | Fast, simple tasks (no FH gates) |
 
-**Why `/model opus` for FH**: FH is a *quality* harness — its value lives in verification turns (steel-quench, phantom-quench, the 4-axis gate, agent reasoning) that must not silently run on a weaker model. `opusplan`'s Opus engagement is **not guaranteed**: in a measured 10-turn run it used Opus on **0** turns (CC classifies few turns as "plan-mode"), so the reasoning FH leans on quietly ran on Sonnet — pinning `/model opus` removed that variance (22/22 turns Opus in the follow-up). **Sub-agent dispatch** model is set by the dispatch's own `model` parameter; the session model/plan-mode does **not** propagate Opus to sub-agents, so pin Opus there too for adversarial/verification agents. Use `opusplan` only when the task is mostly routine edits and you accept that Opus may not engage.
+**Why default Sonnet now works**: measured (see §Model setup evidence note below), *operating* FH is
+nearly model-flat — the rules in context do most of the work. What still needs a stronger model is a
+small set of depth-sensitive turns, and FH handles those itself: **some skills and agents declare a
+model-tier floor** (e.g. `quench-challenger` floors at opus) and are dispatched as sub-agents at the
+floor tier when your environment can reach it — your session model stays untouched. **FH never switches
+your session model**: a default you set by hand is followed; floors apply only to FH's own sub-agent
+dispatches. If your environment tops out below a floor (e.g. Sonnet-only API routing), the floored
+asset still runs at the best available tier with an explicit `below-floor` flag in its output — degraded
+delivery is visible, never silent (tier-floor resolution: `knowledge/shared/harness-core/multi_model_sidecar_strategy.md §Tier-floor`).
 
-> **By role**: editing the harness itself → `/model opus` (full). Running FH on a field project → `/model opus` for any gated/verification work; `opusplan` is an acceptable cost tradeoff for routine coding, with the caveat above. Sub-agent token costs are CC-visible in the session jsonl under `message.model`.
+**`opusplan` caveat (measured)**: its Opus engagement is **not guaranteed** — in a measured 10-turn run
+it used Opus on **0** turns (CC classifies few turns as "plan-mode"). If you want Opus on every turn,
+pin `/model opus` (22/22 turns Opus in the follow-up run). **Sub-agent dispatch** model is set by the
+dispatch's own `model` parameter; the session model/plan-mode does **not** propagate to sub-agents.
+
+> **By role**: running FH (field projects, gates, routine dev) → `/model sonnet` + let the floors
+> escalate. Editing the harness itself (Mode D) → pin the strongest model you have — harness
+> *self-development* is where tier depth measurably pays (design-increment finding), while operation
+> does not. Sub-agent token costs are CC-visible in the session jsonl under `message.model`.
 
 **Measured, not asserted** (2026-06-10, worked example): on a 30-point blind rule-application battery,
 *operating* FH was nearly model-flat — Opus 4.8 / Sonnet 4.6 / Haiku 4.5 scored **100 / 97 / 94** against
 a top-tier anchor at 100, with the rules in context doing most of the work. The tiers separated only on
-above-rubric *design* increments (developing the harness, not running it) — which is exactly why the
-recommendation stays Opus for harness-editing and gate turns, while field operation tolerates lower tiers.
-Details: `docs/OUTPUT_EVIDENCE.md` §Validation signals.
+above-rubric *design* increments (developing the harness, not running it) — which is why the default is
+Sonnet with **tier-floored dispatch** covering the depth-sensitive turns, and a pinned stronger model is
+recommended only for harness-editing sessions. Details: `docs/OUTPUT_EVIDENCE.md` §Validation signals.
 
 If you use external CLIs (Gemini, Codex, `gh copilot`) as sidecars, their costs are billed to their own quota and not visible in CC's token display.
 

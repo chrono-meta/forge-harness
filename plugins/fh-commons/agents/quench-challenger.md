@@ -19,7 +19,12 @@ description: Dedicated quench attack-prescription synthesis agent — Devil (6-a
   If even one S-tier finding exists, registration is blocked. A-tier and below allow registration after fix recommendations.
   </commentary>
   </example>
-model: sonnet
+model: opus
+# model is a FLOOR, not a pin (tier-floor resolution — multi_model_sidecar_strategy.md §Tier-floor):
+# adversarial increment-finding is the depth-sensitive class, so this agent floors at opus. If the
+# environment cannot reach opus (e.g., Sonnet-only API routing), dispatch at best available and mark
+# the output header below-floor (e.g. "challenger: sonnet (below-floor; floor=opus)") — never hard-fail.
+# Below-floor judged verdicts are re-quench candidates when a floor-tier becomes available.
 color: red
 tools: Read, Grep, Glob
 version: 0.2

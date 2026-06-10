@@ -176,6 +176,37 @@ cross-validation). Other sidecar-using skills (`sim-conductor`, `pipeline-conduc
 `agent-composer`) inherit by reference — when they say "if available", availability = this
 protocol's verdict.
 
+### Tier-floor resolution — the model dimension (added 2026-06-10)
+
+The ladder above resolves **which engine**; this subsection resolves **which model tier within it**.
+Same shape: an asset declares a requirement, the environment resolves it, and resolution never
+hard-fails.
+
+**Asset-side floor**: an asset may declare a minimum model tier via its existing
+`model:`/`complexity_routing` frontmatter — that declaration is a **floor, not a pin**. Floors are
+measured-or-justified, never asserted (same discipline as check-class declaration): e.g.
+`quench-challenger` floors at opus (adversarial increment-finding is the product — the
+depth-sensitive class), while Wave-T and `harness-doctor` floor at sonnet (measured: T-3 blind
+3/3 on both tiers, 2026-06-10), and mechanical scripts have no floor at all (measured tier-flat).
+
+**Environment-side resolution** (mirrors Tier 1→2→3 — bind the first that reaches the floor):
+- **R1 — native dispatch ≥ floor**: the runtime's own sub-agent dispatch can reach the floor
+  (CC `Agent(model=…)`) → use it. The session's default model stays untouched — FH **never
+  switches the user's session model**; it only dispatches sub-agents.
+- **R2 — cross-provider route ≥ floor**: a Tier-1/2 engine offers a floor-equivalent tier → use it
+  per the capability-probe rule.
+- **R3 — best-available < floor** (e.g., a Sonnet-only API-routed environment): **run anyway at the
+  best available tier + mandatory below-floor flag.** Never hard-fail — the analog of Tier 3's
+  no-hard-error guarantee. The output header carries e.g. `challenger: sonnet (below-floor;
+  floor=opus)`, and a **judged verdict produced below floor is auto-tagged a re-quench candidate**
+  for when a floor-tier becomes available — degraded delivery is explicit, never silent coverage.
+
+**Human override is inviolable**: if the operator pins a session default (stronger or weaker),
+FH follows it for session turns and uses floors only for its own dispatches. Pinning a
+stronger-than-opus default strengthens harness *self-development* in particular (measured:
+the tier cliff sits on design-increment work) — mostly relevant to harness developers (Mode D),
+not field operation.
+
 ---
 
 ## Empirical validation
