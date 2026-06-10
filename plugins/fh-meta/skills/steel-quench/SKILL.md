@@ -219,6 +219,11 @@ step that adds complexity is self-refuting. Known limits (honest): `temper_check
 renamed files need a manual pre/post measurement; the wiring flag uses strict `>`, so Δxrefs = Δsteps
 does not fire it (the section flag usually carries those cases).
 
+**Model note**: T-1 is bash (no model), T-2 reuses harness-doctor (sonnet-rated). T-3 adjudication was
+validated blind on both Opus and Sonnet (3-fixture ground-truth test, 3/3 each, 2026-06-10) — Wave-T
+end-to-end does not require the largest model tier. Opus remains the recommendation for full
+steel-quench runs (challenger waves are broader than T-3).
+
 ---
 
 ## External-GT Adjudication (when the target has a public ground truth)

@@ -45,6 +45,13 @@
 - **External contribution**: filed gstack issue #1890 (subscription-auth bug) — the harness's own
   cross-audit protocol surfacing a real bug in a sister project.
 - **Frontier cadence sustained**: digests on 2026-05-26 and 2026-06-02 (recurring external-trend scan).
+- **Model-tier flattening, measured** (2026-06-10): a 30-point blind battery — rule-application
+  ("operating FH": trap routing, gate-class decisions, sync format) + meta-dev fixtures with known ground
+  truth — run on four Claude tiers. Operation scores: top-tier anchor / Opus 4.8 / Sonnet 4.6 / Haiku 4.5
+  = **100 / 100 / 97 / 94**. With the rules in context, *operating* the harness is nearly model-flat;
+  tier differences appeared only in above-rubric design increments (3/3 · 1/3 · 0.5/3 · 0/3) — i.e. in
+  *developing* the harness, not running it. Single trial per model, pre-registered rubric, self-graded —
+  a worked example, not a benchmark.
 
 ## What this evidence does *not* establish
 
