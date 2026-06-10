@@ -13,6 +13,15 @@ When a **sister asset** (another team in the organization · external frontier �
 - An external reference URL repeatedly appears in the weekly audit scanner aggregation
 - User mentions "that other project/team also did this"
 
+## Lightweight path (C-tier — cheap debt entry)
+
+If step 1 (asset identity) shows the territory is **already covered** — dedup hit on the source, or
+a prior cross-audit of the same claims, with no new increment — do **not** write a full cross-audit:
+record a **one-paragraph entry** (source · dedup verdict · the one-line increment if any · pointer to
+the prior audit) in the ledger/log used for speculative intake. Full steps 2–3 are reserved for
+A/B-tier sources (new territory or a real increment). Keeps intake cheap — the discipline that lets
+the wide net stay wide.
+
 ## 3 steps after detection
 
 1. **Asset identity confirmation (5 min)** — Confirm creation date · author · access scope (internal-public·open-source) · scope in one line. Identify **resolution difference** from the hub's corresponding asset.

@@ -133,6 +133,24 @@ if [ -n "$LIGHT" ]; then
 fi
 echo ""
 
+# ── Doc-code coupling check (measured class — WARN, never blocks) ─────────────
+# Stale docs poison AI accuracy: when executable code changes but the docs that
+# describe it do not, the manuals drift (import: Anthropic 4-layer L4 practice —
+# "code change forces skill-doc update"). FH applies it as a WARN because many
+# script changes are doc-neutral; the warning makes the *decision* conscious.
+EXEC_STAGED=$(echo "$STAGED" | grep -E '^(bin/|scripts/).*' || true)
+DOC_STAGED=$(echo "$STAGED" \
+  | grep -E '(README\.md|CHEATSHEET\.md|CLAUDE\.md|AGENTS\.md|^docs/|^knowledge/|SKILL\.md|^\.claude/regression/)' || true)
+if [ -n "$EXEC_STAGED" ] && [ -z "$DOC_STAGED" ]; then
+  echo ""
+  echo "⚠️  DOC-CODE COUPLING (measured — commit allowed)"
+  echo "   Executable changes staged with no doc asset staged:"
+  echo "$EXEC_STAGED" | sed 's/^/     /'
+  echo "   If behavior/usage changed: update README/CHEATSHEET/SKILL.md or probes"
+  echo "   (.claude/regression/probes.md) in this commit. If doc-neutral, proceed."
+  echo ""
+fi
+
 # ── Axis 1 — Regression Guard (always required) ──────────────────────────────
 echo "[Axis 1] Regression Guard..."
 GUARD="$REPO_ROOT/templates/regression_guard.sh"

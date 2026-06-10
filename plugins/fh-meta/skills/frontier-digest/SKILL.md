@@ -29,11 +29,38 @@ model: sonnet
 
 ```
 Priority:
+0. /deep-research built-in available (check live session skill list)
+   → use it as the collection+verification engine (staged source gathering,
+     cross-checking, cited synthesis) — Tier-0 route, no API key needed
 1. ANTHROPIC_API_KEY environment variable → Claude Sonnet
 2. Neither → WebSearch mode (raw data only, no synthesis)
 ```
 
-Report detection result in one line. Example: `🔑 Using Claude Sonnet`
+Report detection result in one line. Example: `🔑 Using Claude Sonnet` / `🔑 Engine: /deep-research (built-in)`
+
+---
+
+## Step 0.5. Operator Intake (speculative-interview arm — walled channels)
+
+On **cadence-triggered** runs (7d), ask the operator one line before collecting:
+
+> *"이번 주에 본 벽 뒤 소스(YouTube·LinkedIn·X 등 기계가 못 닿는 링크/요약)가 있으면 던져 주세요 — triage해서 기록합니다. 없으면 그냥 진행할게요."*
+
+- Operator may skip — zero pressure; the autonomous arms (Step 1) run regardless.
+- Why: walled channels return 403 to machine fetch — **the operator is the only wide-net sensor
+  for them**. This arm turns ad-hoc link-throwing into a scheduled intake (manual-validated n=2).
+- Received sources route to the sister-asset/triage flow with its **lightweight path**: C-tier
+  (territory already covered) = one-paragraph entry only; full cross-audit reserved for A/B-tier.
+  Partial wall-bypass is allowed first: try WebSearch + secondary sources before declaring unfetchable.
+- **Video sources (local/laptop only — cloud VMs typically 403 on video hosts)**: resolve a
+  *video-harvest* capability via the Sidecar Engine Resolution Protocol
+  (`multi_model_sidecar_strategy.md`) instead of asking the operator to summarize by hand —
+  **Tier 1**: subscription CLI that can summarize the video (e.g. `codex`, or the Gemini route via
+  its current router-shell — agentic sidecars get approval-mode first) · **Tier 3 guaranteed
+  fallback**: Claude itself harvests the transcript (`yt-dlp --write-auto-subs --skip-download`)
+  and summarizes the text — sufficient for talk-style content; visually-dense videos still need a
+  natively multimodal Tier-1 engine. Unresolvable (cloud, no sidecar) → operator summary remains
+  the path, as today.
 
 ---
 

@@ -28,11 +28,19 @@ Follow this protocol when the user requests "sync", "save session", or similar.
 2. If learnings/feedback exist, create separate file
    → tracks/{project}/learnings/feedback_{slug}.md
 
-3. Add entry to CATALOG.md
+3. Contradiction scan — ingest gate (class: judged, pair: verify-bidirectional)
+   → Before indexing, grep CATALOG.md + knowledge/ for claims the new content contradicts
+     (same topic with opposite conclusion · superseded version/number · changed definition)
+   → Contradiction found: flag it in BOTH the new file and its CATALOG entry
+     ("conflicts with / supersedes: {file}") — contradictions never coexist silently
+   → Removing or rewriting the OLD claim requires operator approval (HITL)
+   → Clean scan: proceed without notes
+
+4. Add entry to CATALOG.md
    → Maintain reverse date order (newest at top)
    → Include tags, 3-line summary, key decisions
 
-4. git commit
+5. git commit
    → "sync: {project} {date} session — {one-line summary}"
 ```
 
@@ -90,6 +98,9 @@ Storage path: `tracks/{project}/session_YYYY_MM_DD_{slug}.md`
 ### Cross-project patterns
 
 Patterns applicable to 2+ projects are written in `knowledge/shared/`.
+
+**Ingest gate applies here too**: before adding a `knowledge/shared/` doc, run the
+contradiction scan (Sync procedure step 3) against existing knowledge/ claims.
 
 ---
 

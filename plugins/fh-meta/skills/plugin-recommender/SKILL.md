@@ -49,6 +49,7 @@ Tier is **independent of platform origin** (Anthropic / OpenAI / community). A w
 
 | Tier | Criteria | Sources |
 |---|---|---|
+| **Tier 0** | Platform built-in — ships with the runtime, zero install, zero token cost to discover | Claude Code built-in skills/commands (e.g. `/deep-research`, `/code-review`, `/review`, `/security-review`, `/batch`, `/loop`, `/fewer-permission-prompts`, `/goal`, `/rewind`, `/team-onboarding`) — inventory varies by version/environment: enumerate from the live session, do not assume |
 | **Tier 1** | Marketplace-listed + performance-validated (benchmark data or production usage evidence) | Anthropic official · Codex marketplace verified · CC marketplace verified · FH community reviewed (steel-quench + sim-conductor validated) |
 | **Tier 2** | Marketplace-listed, no explicit performance data | Any marketplace source (CC marketplace · Codex marketplace · npm · GHE) |
 | **Tier 3** | Not marketplace-listed, source-available (GitHub/npm) | Repo-only agents/plugins |
@@ -87,13 +88,15 @@ When queried for a specific capability (e.g., "adversarial reviewer for bash cod
 
 **Discovery order (stop when sufficient Tier 1 candidates found):**
 
+0. **Platform built-ins (Tier 0)** — does a built-in skill/command already cover the capability? Check the live session's available-skills list before any plugin search. A built-in that covers ~80% beats installing a plugin for the rest
 1. **Installed locally** — `.claude/agents/`, `plugins/` in current cwd
 2. **FH native skills** — always-loaded knowledge in `plugins/fh-meta/` and `plugins/fh-commons/`
 3. **Claude Code marketplace** — `claude mcp search [capability]` or known CC registry (see verified targets above)
 4. **Codex marketplace** — `npx @openai/codex list-agents [capability]` or known Codex registry
 5. **npm ecosystem** — `@chrono-meta/`, `@anthropic/`, and other known-quality scoped packages
 
-**Discovery priority**: installed > FH native > Tier 1 (any platform) > Tier 2 > Tier 3 > Tier 4
+**Discovery priority**: built-in (Tier 0) > installed > FH native > Tier 1 (any platform) > Tier 2 > Tier 3 > Tier 4
+**Tier 0 guard**: FH native wins over a built-in only when the FH skill adds governance the built-in lacks (e.g. `/goal` → `goal-quench` adds budget+quality gates; code diff review stays with built-in `/code-review`, FH-asset coherence with `hub-cc-pr-reviewer`)
 
 **When sim-conductor chains here for persona discovery**: apply the same platform-aware search scoped to persona/simulation/review capability tags. Return discovered agents with their Tier rating so sim-conductor can decide whether to install or use a built-in brief.
 

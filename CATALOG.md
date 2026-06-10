@@ -8,6 +8,44 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #credit-economy, #operator-intake, #lightweight-triage, #frontier-digest
+**File:** plugins/fh-meta/skills/frontier-digest/SKILL.md (+ .claude/rules/sister_asset_protocol.md)
+Credit-economy engine run #2 formalization (operator-approved; this session = manual run #2: 7 walled sources → 8 audits → 15 same-day gate-passed imports, 2 human corrections): R1 — frontier-digest Step 0.5 operator-intake asks for walled-channel sources (YouTube/LinkedIn/X, machine-403) on cadence runs only, skippable, try wall-bypass (WebSearch + secondary) first. R2 — sister protocol lightweight path: dedup-hit/no-increment sources get a one-paragraph entry, full cross-audits reserved for A/B-tier.
+- Decision: the operator stays the wide-net sensor for walled channels by design (human = scarce oracle), the machine owns endurance (triage→gate cycles); intake cost discipline keeps the wide net wide.
+- Follow-up (same day): Step 0.5 video-harvest ladder — Tier 1 sidecar (codex / Gemini-route, agentic = approval-mode first) → Tier 3 Claude+yt-dlp transcript → operator floor; laptop verification trio handed off. First applied instance of the capability-probe principle.
+
+### 2026-06-10 | forge-harness | #comprehension-debt, #loop-engineering, #osmani, #harness-doctor
+**File:** plugins/fh-meta/skills/harness-doctor/SKILL.md
+Taxonomy 6→7: Comprehension Debt (runtime/operator-side, S) — loop output outpacing operator understanding, named from Osmani's Loop Engineering (canonical upstream of the supervisor-loops lineage; Cherny/Steinberger quotes — paper citation upgraded from the Korean video to this primary source, convergence count unchanged at n=5). Signals mechanical: merged change without CATALOG entry, manifest pending backlog, zero card delta. Countermeasures pre-existing (CATALOG summaries, predict-verify, card protocol).
+- Decision: taxonomy now covers both loop sides — agent behavior (rows 4–6) and operator comprehension (row 7); FH's HITL PR principle recorded as a deliberate L2 cap on asset-changing loops (Osmani L3 rejected for asset mutation).
+
+### 2026-06-10 | forge-harness | #failure-modes, #agentic-laziness, #self-preferential-bias, #goal-drift, #harness-doctor
+**File:** plugins/fh-meta/skills/harness-doctor/SKILL.md
+Harness-Defect Taxonomy 3→6 classes: runtime behavioral failure modes named from dynamic-workflows discourse (LinkedIn full-text triage) — Agentic Laziness (completion claims without per-item evidence, S), Self-Preferential Bias (judged check without adversarial pairing, M), Goal Drift (no pre-compaction completion log, S). FH already had the countermeasures (golden probes/coverage, judged-pairing rule, fh_completed + card-last guard) — the import is the *naming*, making diagnosis explicit.
+- Decision: signals kept mechanically checkable (list/pairing/log presence) — no judge-only signal in the taxonomy itself; sources not counted as new convergence (discourse extension, anti-inflation).
+
+### 2026-06-10 | forge-harness | #no-reinvention, #official-first, #claude-plugins-official, #full-harness-mode
+**File:** knowledge/shared/plugin-catalog/recommended_plugins.md (+ CLAUDE.md, auto_project_mapping.md)
+Operator-declared meta-harness 철칙 — no-reinvention / official-first: (a) plugin catalog gains Category 0.5, the claude-plugins-official 36-plugin inventory (12 LSP + workflow + authoring + setup groups; name-based, anti-stale "re-enumerate when recommending", role-split warnings for claude-md-management overlap); (b) New Skill gate Role-duplication criterion now also checks Tier 0 built-ins + official plugins — reinventing an official capability requires explicit justification; (c) Full-Harness Mode item 4: official-plugin scan for the mapped project's stack (recommend-only, never auto-install) — mapped-project acceleration with zero FH build.
+- Decision: FH builds only what adds governance on top of official capabilities; drafting tools (skill-creator etc.) never exempt their output from the FH gate.
+
+### 2026-06-10 | forge-harness | #tier-0, #builtins, #security-review, #deep-research, #role-split
+**File:** plugins/fh-meta/skills/plugin-recommender/SKILL.md (+ frontier-digest, CLAUDE.md, probes.md)
+CC built-ins utilization imports (operator-approved; video claims verified 9/13 real — agent initially ruled skill-creator nonexistent, operator-corrected: it is an official plugin in claude-plugins-official): Tier 0 = platform built-ins added to plugin-recommender (discovery order 0, "enumerate from live session" anti-stale, governance-add guard for FH-native precedence — goal-quench pattern named). /deep-research as frontier-digest Tier-0 engine. /security-review as Pre-Publish chain item 3 (code-security axis, skip-note path). Permission-Denial Option C, code-review role split, /loop WATCH row. G-TRIG-05 probe synced — anti-stale maintenance rule's first live use.
+- Decision: built-in beats plugin install at ~80% coverage; FH native beats built-in only when it adds governance.
+
+### 2026-06-10 | forge-harness | #ingest-gate, #contradiction-scan, #crossref-lint, #llm-wiki, #karpathy
+**File:** .claude/rules/sync_push_protocols.md (+ harness-doctor SKILL.md, probes.md)
+Karpathy LLM-Wiki sister-audit imports (operator-approved; convergence case n=5, citable primary source): I1 — contradiction scan as Sync step 3 (ingest gate, judged + verify-bidirectional pair): new knowledge grepped against existing claims before indexing, conflicts flagged in both files, old-claim removal is HITL. I2 — harness-doctor L4 knowledge cross-ref lint: no CATALOG entry = S-tier index orphan, no inbound ref = R-tier orphan page. Probes G-SYNC-01/G-LINT-01 added (30 total).
+- Decision: scale escape (W1) deliberately NOT built — watch-item with trigger (CATALOG hundreds of entries / repeated search misses); operator-preferred first remedy = skill-splitter-style CATALOG split-mapping, RAG hybrid only after that.
+- Open: npm republish (harness-doctor SKILL.md shipped) — folded into the open 1.4.8 handoff.
+
+### 2026-06-10 | forge-harness | #golden-probes, #offline-eval, #doc-code-coupling, #anthropic-4layer
+**File:** .claude/regression/probes.md (+ templates/.git-hooks/pre-commit, prompt-regression SKILL.md)
+Anthropic 4-layer sister-audit imports (operator-approved): I1 — 28-probe known-answer golden set with check classes, the standing offline eval prompt-regression auto-loads (its P-GATE-01 had already gone stale 5→6 the same day the gate grew — fixed, plus an explicit anti-stale maintenance rule). I2 — pre-commit doc-code coupling WARN (measured class, never blocks) when executables are staged without any doc asset.
+- Decision: probes.md canonical-when-present, SKILL.md default matrix = Mode C fallback (single-source preserved); coupling check warns rather than blocks — the decision is made conscious, doc-neutral script fixes stay friction-free.
+- Open: npm republish (prompt-regression SKILL.md is shipped) — folded into the open 1.4.8 handoff.
+
 ### 2026-06-10 | forge-harness | #new-skill-gate, #check-class, #done-when, #g2
 **File:** CLAUDE.md
 G2 from the supervisor-loops audit: New Skill Creation Pre-Commit Gate extended 5→6 items — "Check-class declared": each Done When condition states its class (mandatory-pass / measured / judged per 6axis §Axis 5), and judged conditions must name their adversarial pairing (no judge-only path). The taxonomy now lives in the operating loop, not just the knowledge doc.

@@ -19,6 +19,23 @@ version: 0.1
 | 4 | 2026-05-08 | **Organization GHE Tier 1 cross-recommendation simulation** — 5 repos | ★★★ 2 items + ★★ 3 items found / harness return value 4 paths |
 | 5 | 2026-05-08 | **Organization GHE Tier 2 sister asset cross-recommendation simulation** — 6 repos | ★★★ 1 item + ★★ 4 items + ★ 2 items / Tier 1+2 cumulative n=11 |
 
+## Category 0.5 — claude-plugins-official (Tier 1 official — check BEFORE building or searching elsewhere)
+
+> **No-reinvention rule (meta-harness 철칙)**: if an official plugin covers the capability, use it —
+> do not rebuild it as an FH skill or hunt third-party. FH builds only what adds *governance* on top.
+> Source: [`anthropics/claude-plugins-official/plugins`](https://github.com/anthropics/claude-plugins-official/tree/main/plugins)
+> — inventory snapshot 2026-06-10 (36 plugins), **name-based grouping; verify each plugin's actual
+> behavior via its README before install — do not trust the group label alone. Re-enumerate the
+> directory when recommending; this list goes stale.**
+
+| Group | Plugins | FH / mapped-project relevance |
+|---|---|---|
+| **Language servers (12)** | clangd · csharp · gopls · jdtls · kotlin · lua · php · pyright · ruby · rust-analyzer · swift · typescript (`*-lsp`) | Full-Harness Mode step 4: match to the mapped project's language — instant capability boost, zero FH build |
+| **Dev workflow** | feature-dev · commit-commands · pr-review-toolkit · code-review · code-simplifier · code-modernization · frontend-design | Field-project execution layer. Role split: code work → these; FH-asset coherence → FH skills |
+| **Authoring/extension** | skill-creator · plugin-dev · hookify · mcp-server-dev · agent-sdk-dev | Drafting tools. **FH 6-item gate still applies to anything they produce** |
+| **Setup/session** | claude-code-setup · claude-md-management · mcp-tunnels · session-report · explanatory/learning-output-style | ⚠️ `claude-md-management` overlaps FH territory — role split: file mechanics → plugin; methodology/governance → FH. Evaluate before adopting |
+| **Other** | security-guidance · ralph-loop · math-olympiad · playground · example-plugin · cwc-makers | `security-guidance`: candidate complement to Pre-Publish gate — evaluate |
+
 ## Category 1 — Claude Code Built-in (Standard usage / no install)
 
 | Item | Mechanism | Usage path |

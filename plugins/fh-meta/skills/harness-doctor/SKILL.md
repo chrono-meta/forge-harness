@@ -115,6 +115,10 @@ Hook divergence verdict: 0 hooks = Normal · 1+ hooks (session-end/Stop) = S-tie
 - Tracks with no sync in 30+ days → R-tier
 - CATALOG.md: 5+ open items in recent 5 sessions → S-tier
 - Field project CLAUDE.md missing → S-tier
+- **Knowledge cross-ref lint**: `knowledge/**/*.md` with no CATALOG.md entry → S-tier
+  (index orphan — unfindable via CATALOG-first search); with no inbound reference from
+  any CLAUDE.md / rules / SKILL.md / knowledge doc → R-tier (orphan page).
+  Mechanical: `grep -L` filenames against CATALOG.md, then `grep -rl` for inbound refs.
 
 ### Step 6. L5 — Pattern Analysis *(FH only)*
 
@@ -154,8 +158,18 @@ Hook divergence verdict: 0 hooks = Normal · 1+ hooks (session-end/Stop) = S-tie
 | **Context Drift** | Stale paths in CLAUDE.md (L3) · rules unmodified 90+ days (L3) · CLAUDE.md over threshold (L2) | S |
 | **Schema Misalignment** | Plugin count drift · SKILL.md missing `Done When` (undocumented contract) | M |
 | **State Degradation** | tracks/ no sync 30+ days (L4) · INACTIVE_90D skills (L5-A) · orphaned memory entries | M |
+| **Agentic Laziness** *(runtime)* | Completion claims without per-item evidence — "all N done" with no enumerable list in session records / PR bodies · Done When lacking any mandatory-pass condition | S |
+| **Self-Preferential Bias** *(runtime)* | judged-class check without a named adversarial pairing (gate-rejectable for new skills; scan existing for backfill) · a self-graded verdict cited as sole completion evidence | M |
+| **Goal Drift** *(runtime)* | Long session with S/A-tier work but no pre-compaction completion log (`fh_completed_*` missing) · early-stated constraints absent from card/manifest at close | S |
+| **Comprehension Debt** *(runtime/operator)* | Merged FH-asset change with no CATALOG entry · edit_manifest `validation_status: pending` backlog piling up unverified · session closed with work done but zero card delta | S |
 
 Signal in 2+ classes → escalate one tier.
+Rows 1–3 = structural (2026-06-02 frontier diagnosis). Rows 4–6 = runtime behavioral, agent-side —
+named from dynamic-workflows discourse (2026-06). Row 7 = runtime, operator-side — named from
+loop-engineering discourse (Osmani, 2026-06): loop output outpacing operator understanding. FH
+countermeasures already exist and are what the signals check for: golden probes + multi-persona
+coverage (laziness) · judged-pairing rule (bias) · pre-compaction completion log + card-last guard
+(drift) · CATALOG 3-line summaries + manifest predict-verify + card protocol (comprehension debt).
 
 ---
 
@@ -246,6 +260,8 @@ Verdict: ✅ CONSISTENT · 🟧 INCONSISTENT (fix before push) · 🟩 REVIEW (i
 | Step 11 PR consistency check verdict | ✅ PR pre-push verification complete |
 
 **This skill Done When = "prescription report output complete".** Actual resolution of M/S/R items belongs to user or follow-up work.
+
+**Check classes** (`harness_6axis_framework.md` §Axis 5): report-output completions above = mandatory-pass (report exists or not). M/S/R tier *assignments* = judged — paired with verify-bidirectional when the user challenges a tier.
 
 Verdict: PASS (M-tier 0, "Structure healthy") | CONDITIONAL_PASS (S/R remain, no M) | FAIL (1+ M-tier found) | ESCALATE (structural ambiguity before prescription can be issued)
 

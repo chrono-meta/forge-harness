@@ -87,7 +87,7 @@ The forge-harness hub has a dual identity: **(a) a seed for others** + **(b) you
 When blocked by auto-mode permission denial, **do not stop at the bare denial** — turn the block into a decision the user can act on in one step:
 
 1. **State what was blocked** and why
-2. **Option A — Approval mode**: show exact commands to run after switching; **Option B — Manual review**: list specific files/sections
+2. **Option A — Approval mode**: show exact commands to run after switching; **Option B — Manual review**: list specific files/sections; **Option C — Reduce future prompts**: propose built-in `/fewer-permission-prompts` when the same read-only call class keeps getting prompted
 3. **Ask which option** — one line, then wait
 
 **Sub-agent variant**: report (what was blocked + ready-to-apply content + exact unblock step) back to orchestrator — never silently fail. Switching modes lifts permission block, not FH gates — the 4-axis gate still applies.
@@ -113,7 +113,7 @@ All 6 items below must pass before committing a new SKILL.md. If any fails, fix 
 
 | Item | Criterion |
 |---|---|
-| **Role duplication check** | Pass `/asset-placement-gate` — no overlap with existing role clusters |
+| **Role duplication check** | Pass `/asset-placement-gate` — no overlap with existing role clusters, **platform built-ins (Tier 0), or `claude-plugins-official` (Tier 1 official)**. Reinventing an official capability requires explicit justification in the SKILL.md (no-reinvention rule — FH builds only what adds governance) |
 | **Description diet** | Plain text / 0 self-marketing expressions / 0 emphasis words (⭐, "critical", "groundbreaking") |
 | **Done When defined** | At least 1 explicit completion condition |
 | **Check-class declared** | Each Done When condition states its check class — mandatory-pass / measured / judged (`harness_6axis_framework.md` §Axis 5). Any judged condition names its adversarial pairing — no judge-only path |
@@ -172,11 +172,14 @@ first time**, especially one **derived from internal/company assets** (operator-
 private harness): `gh repo create --public`, `gh repo edit --visibility public`, a first push to a new
 public remote, `npm publish`, `twine upload`, a private→public visibility flip.
 
-**Required before the public action** (both must be non-LEAK) — this gate is the **umbrella that invokes
-both**, not a competitor to them; when publish intent is detected, fire *this* gate (it then runs both),
+**Required before the public action** (all must be non-LEAK/non-FAIL) — this gate is the **umbrella that
+invokes them**, not a competitor; when publish intent is detected, fire *this* gate (it then runs the chain),
 not marketplace-gate alone:
 1. `/public-surface-audit` — operator-private token scan (real username, corp asset names, home paths)
 2. `/marketplace-gate` Check 5 — broad public safety (API keys, internal domains, license)
+3. `/security-review` (built-in, when the repo ships executable code) — code-security pass on the
+   publishable surface; complements 1–2 which scan tokens/metadata, not code behavior. Skip note
+   (`skipped: docs-only repo` or `skipped: built-in unavailable`) if not applicable
 
 > Routing vs the rows below: `/marketplace-gate` alone = "is this ready to **list on a marketplace**?";
 > `/public-surface-audit` alone = reactive "did I leak a token?"; **this gate** = the *act of going
@@ -208,7 +211,8 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "wrap up this week", "review", "audit", "weekly", "retrospective" | `/harvest-loop` |
 | "pull this into FH", "reverse-harvest", "worth keeping", "harvest pattern", "field pattern" | `/field-harvest` |
 | "harness is complex", "too many skills", "check structure", "harness" | `/harness-doctor` |
-| "review this PR", "check diff", "code review" | `/hub-cc-pr-reviewer` |
+| "review this PR", "check diff", "code review" | code diff → built-in `/code-review`·`/review` · FH-asset coherence → `/hub-cc-pr-reviewer` (role split) |
+| "keep watching X", "poll this", "check every N minutes", recurring WATCH item | built-in `/loop` (interval runner) — pair with the WATCH list, don't hand-poll |
 | "are these in sync", "synergy", "can these integrate", "any overlap" | `/cross-ecosystem-synergy-detection` |
 | "latest trends", "frontier", "external resources" | `/frontier-digest` |
 | "orchestrate agents", "parallel dispatch", "combine skills", "multiple agents" | `/agent-composer` |

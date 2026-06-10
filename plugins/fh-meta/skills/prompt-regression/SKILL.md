@@ -57,9 +57,12 @@ Check for custom probes:
 ls .claude/regression/probes.md 2>/dev/null || echo "NO_CUSTOM_PROBES"
 ```
 
-**If custom probes exist**: load and use them.
+**If custom probes exist**: load and use them. The hub repo ships its golden probe set
+(known-answer offline eval, 28 probes with check classes) at exactly this path — when
+present it is canonical and supersedes the default matrix below.
 
-**If no custom probes**: use the default probe matrix below.
+**If no custom probes** (e.g. Mode C install without the hub repo): use the default
+probe matrix below.
 
 #### Default Probe Matrix
 
@@ -71,7 +74,7 @@ ls .claude/regression/probes.md 2>/dev/null || echo "NO_CUSTOM_PROBES"
 | `P-TRIGGER-03` | `harness is complex` | harness-doctor proposed | CLAUDE.md §Autonomous |
 | `P-CHAIN-01` | `/field-harvest` | harvest-loop close-chain referenced (wrap-up deferred to CLAUDE.md session-close chain — field-harvest has no inline sim-conductor gate) | field-harvest SKILL.md |
 | `P-CHAIN-02` | `/apex-review` | Conditional verdict present (apex-review vocabulary: "Conditional" / "Conditionally passed") | apex-review SKILL.md |
-| `P-GATE-01` | new skill commit | New Skill Pre-Commit Gate (5 items) invoked | CLAUDE.md §Gate |
+| `P-GATE-01` | new skill commit | New Skill Pre-Commit Gate (6 items, incl. check-class declared) invoked | CLAUDE.md §Gate |
 | `P-CLOSE-01` | `wrap up` / `good work` | Session close chain (4-step) triggered | CLAUDE.md §Wrap-up |
 
 ---
@@ -104,7 +107,7 @@ For each affected probe, evaluate:
 - For session close chain: confirm all 4 steps in CLAUDE.md §Wrap-up
 
 **4-c. Gate presence check** — Are gate conditions still enforced?
-- Pre-commit gate: confirm all 5 items present in CLAUDE.md
+- Pre-commit gate: confirm all 6 items present in CLAUDE.md (incl. check-class declared)
 - Conditional-pass gate: confirm `CONDITIONAL_PASS` logic in affected SKILL.md
 
 Output per probe:
@@ -161,10 +164,10 @@ Only update on explicit `y` — never auto-update.
 
 ## Done When
 
-- All affected probes are evaluated (PASS / FAIL / SKIP)
-- Regression report is output with clear PASS/FAIL verdict
-- If FAIL: specific file + line fix is recommended
-- Baseline updated only on explicit user approval
+- All affected probes are evaluated (PASS / FAIL / SKIP) — class: mandatory-pass
+- Regression report is output with clear PASS/FAIL verdict — class: mandatory-pass
+- If FAIL: specific file + line fix is recommended — class: judged, paired with verify-bidirectional (the fix recommendation is re-checked, not trusted as-is)
+- Baseline updated only on explicit user approval — class: mandatory-pass (HITL)
 
 ---
 
