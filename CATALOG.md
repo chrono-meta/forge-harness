@@ -8,6 +8,12 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #model-tier, #tier-flattening, #worked-example, #output-evidence
+**File:** docs/OUTPUT_EVIDENCE.md (+ README.md §Model setup)
+Model-tier flattening measured and published: 30-point blind battery (rule-application + meta-dev fixtures, pre-registered rubric) on four Claude tiers — operation 100/100/97/94 (anchor/Opus 4.8/Sonnet 4.6/Haiku 4.5), tier separation only on above-rubric design increments (3/3·1/3·0.5/3·0/3). Public claim scoped honestly: single trial, self-graded, worked example not benchmark. README §Model setup gains the evidence note grounding the existing Opus recommendation.
+- Decision: operating FH ≈ model-flat (the harness is the score); developing FH is where tier matters — recommendation unchanged (opus for harness-editing/gates), now evidence-backed.
+- Open: real Qwen-class measurement on laptop (batteries are a portable fixture pack, fh-be record).
+
 ### 2026-06-10 | forge-harness | #fc, #consent-lane, #federated-compounding, #starved-center, #v3
 **File:** tracks/_contrib/README.md (+ .gitignore, templates/contrib_session.md, docs/CONTRIBUTING.md, README.md)
 FC F1 pour — the consent lane opens (operator override: "실제증명으로 찍어누른다" — real-proof-first supersedes the v2-submission latch). `tracks/_contrib/` becomes the only tracked subtree under tracks/: surgical 2-line un-ignore, placement = consent, PR-time lane gate (PSA + marketplace-gate C5 + ingest contradiction scan + reviewer). Lane charter + session template + CONTRIBUTING §Consent Lane + README row shipped — exactly the don't-overbuild list, no new skill/verifier.

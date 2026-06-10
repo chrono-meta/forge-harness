@@ -250,6 +250,13 @@ Claude Code does not auto-select models by task complexity — you configure thi
 
 > **By role**: editing the harness itself → `/model opus` (full). Running FH on a field project → `/model opus` for any gated/verification work; `opusplan` is an acceptable cost tradeoff for routine coding, with the caveat above. Sub-agent token costs are CC-visible in the session jsonl under `message.model`.
 
+**Measured, not asserted** (2026-06-10, worked example): on a 30-point blind rule-application battery,
+*operating* FH was nearly model-flat — Opus 4.8 / Sonnet 4.6 / Haiku 4.5 scored **100 / 97 / 94** against
+a top-tier anchor at 100, with the rules in context doing most of the work. The tiers separated only on
+above-rubric *design* increments (developing the harness, not running it) — which is exactly why the
+recommendation stays Opus for harness-editing and gate turns, while field operation tolerates lower tiers.
+Details: `docs/OUTPUT_EVIDENCE.md` §Validation signals.
+
 If you use external CLIs (Gemini, Codex, `gh copilot`) as sidecars, their costs are billed to their own quota and not visible in CC's token display.
 
 ---
