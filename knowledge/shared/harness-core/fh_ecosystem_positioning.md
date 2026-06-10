@@ -140,6 +140,7 @@ This is the N-fold synergy claim stated precisely. The controlled experiment des
 ## References
 
 - `fh_opencode_governance_wrapper.md` — step-by-step usage guide with empirical findings
+- `fh_synergy_playbook.md` — concrete FH×OpenCode/Hermes/OpenHuman workflow specs that operationalize this positioning
 - `multi_model_sidecar_strategy.md` — orchestrator-swap experiment that generated this audit
 - `README.md §Architecture` — 2-layer design (methodology vs automation)
 - `AGENTS.md` — 6-agent registry (fact-checker added after this audit)

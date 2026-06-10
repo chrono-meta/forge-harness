@@ -268,6 +268,42 @@ v1.2 release complete (PR #1–#5): harvest-loop Step 0, agent-composer worktree
 
 <!-- Time-independent reference documents -->
 
+### 2026-06-06 | pattern | parallax, multi-persona-review, synthesizer, standpoint-coverage
+**File:** `knowledge/shared/patterns/multi-persona-review.md`
+Generalized architecture for multi-persona parallel artifact review ("parallax") — parallel isolated personas + shared output protocol + neutral synthesizer. Domain-agnostic, IP-stripped; embodied as sim-conductor Step 1.5.
+
+### 2026-05-31 | reference | ecosystem-positioning, opencode, hermes, openhuman, readiness
+**File:** `knowledge/shared/harness-core/fh_ecosystem_positioning.md`
+FH's structural position in the AI agent framework ecosystem vs Hermes/OpenCode/OpenHuman — gap analysis, synergy map, layered readiness verdict from 3-model adversarial audit. Companion: `fh_synergy_playbook.md` (concrete workflow specs).
+
+### 2026-06-04 | schema | tpa, target-profile-analysis, routing, sim-conductor, steel-quench
+**File:** `knowledge/shared/harness-core/tpa_schema.md`
+Canonical Target Profile Analysis schema — all TPA-running skills (sim-conductor, steel-quench, phantom-quench, agent-composer) derive routing decisions from this schema. Single source for profile fields.
+
+### 2026-06-04 | draft | goal-quench, anthropic-issue, native-goal, token-budget
+**File:** `knowledge/shared/harness-core/goal_quench_anthropic_issue.md`
+Draft Anthropic GitHub issue — native /goal token budget + quality verification hook proposal. Held until arXiv number confirmation.
+
+### 2026-05-26 | measurement | skill-quality-rubric, maturity-score, verifiable-numbers
+**File:** `knowledge/shared/harness-core/skill_quality_rubric.md`
+Skill maturity score formula definition. Declaring verifiable/evolution numbers without this file violates the cold-audit "self-declaration = delete if no basis" rule.
+
+### 2026-06-04 | core-reference | compounding-loop, weekly-cycle, axis-6, automation
+**File:** `knowledge/shared/harness-core/hub_compounding_loop.md`
+Core reference doc (CLAUDE.md Consult-First table): weekly/monthly/quarterly feedback cycles + Axis-6 Compounding automation roadmap.
+
+### 2026-06-04 | core-reference | runtime-flow, session-chronology, subagent-delegation
+**File:** `knowledge/shared/dialogue/claude_code_runtime_flow.md`
+Core reference doc (CLAUDE.md Consult-First table): chronological flow of a Claude Code session (does) + sub-agent delegation flowchart.
+
+### 2026-06-04 | core-reference | dialogue-playbook, token-efficiency, rule-hierarchy
+**File:** `knowledge/shared/dialogue/ai_dialogue_playbook.md`
+Core reference doc (CLAUDE.md Consult-First table): session-start principles, token efficiency, rule hierarchy, amplifier/coach dual mode (should).
+
+### 2026-06-04 | glossary | terminology, meta-harness, launch-pad, transit-acceleration
+**File:** `knowledge/shared/GLOSSARY.md`
+Key term definitions — meta-harness, meta hub, launch pad effect, transit acceleration value, shared skill pool, operating modes. Entry point for FH-internal vocabulary; linked from CHEATSHEET.
+
 ### 2026-04-28 | template | maturity-roadmap, 3-phase-frame, frontier-tracking, simplification-gate
 **File:** `knowledge/shared/harness-core/hub_maturity_roadmap.md`
 Hub long-term evolution path frame. Phase I (entering maturity) → Phase II (frontier following (b)cadence) → Phase III (leading) 3-stage model + 5-criteria gate (audit automation·operations guide·external propagation·sub-agent judgment·self-diagnosis warning) + 6 indicators (seed repo·blog·citations·external adoption·self-evolving·industry original) + simplification gate (self-diagnosis + within 200 lines + unreferenced archive at each transition). General-purpose template derived from first verified operating instance.
