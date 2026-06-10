@@ -280,14 +280,14 @@ Runs after Step C (or after Step B if no capability gap). Selects an adversarial
 
 | Task scope signal | Sidecar | Invocation point |
 |---|---|---|
-| Code quality review / new SKILL.md / governance gate change | `steel-quench` C3 config (Gemini sidecar if available) | Post-/goal, before pipeline-conductor |
+| Code quality review / new SKILL.md / governance gate change | `steel-quench` cross-provider challenger (Gemini sidecar if available; Tier 3 Claude sub-agent fallback per the Sidecar Engine Resolution Protocol) | Post-/goal, before pipeline-conductor |
 | Architecture design / cross-project dependency | `agent-composer` multi-model panel (if external CLIs available; otherwise single-Claude sub-agent) | Parallel to /goal as separate Agent |
 | External publication / marketplace-gate / skill release | `sim-conductor` + `steel-quench` Wave 5 | Post-/goal quality gate |
 | No signal match (default) | None — pipeline-conductor handles quality alone | — |
 
 Write resolved sidecar to `.active`:
 ```
-sidecar: none | steel-quench-c3 | agent-composer-panel | sim-conductor | {cli-name}
+sidecar: none | steel-quench-crossprovider | agent-composer-panel | sim-conductor | {cli-name}
 sidecar_rationale: {one-line reason — which scope signal triggered this}
 ```
 
@@ -410,7 +410,7 @@ After pipeline-conductor completes, read `sidecar:` from `.pending`. If non-none
 
 | Sidecar | Wait for | Failure action |
 |---|---|---|
-| `steel-quench-c3` | Wave 2 convergence: PASS or CONDITIONAL_PASS | FAIL → reopen Phase 2, surface blocking findings to user |
+| `steel-quench-crossprovider` | Wave 2 convergence: PASS or CONDITIONAL_PASS | FAIL → reopen Phase 2, surface blocking findings to user |
 | `agent-composer-panel` | Panel findings file written + incorporated into pipeline-conductor context | Not yet written → re-run pipeline-conductor with panel findings |
 | `sim-conductor` + `steel-quench-w5` | Both: sim-conductor Area A PASS **and** steel-quench W5 convergence PASS | Either FAIL → block Done When; surface failing verdict |
 
@@ -438,7 +438,7 @@ After each goal-quench run, append to `tracks/_meta/goal_quench_{YYYY-MM-DD}.md`
   actual_vs_estimate_ratio: N.N  # actual / estimated (e.g., 4.7 means actual was 4.7× estimate)
   budget_verdict: GREEN/YELLOW/ORANGE/RED
   pipeline_verdict: CLEAN/PENDING/BLOCKED/ESCALATE
-  sidecar: none | steel-quench-c3 | agent-composer-panel | sim-conductor | {cli-name}
+  sidecar: none | steel-quench-crossprovider | agent-composer-panel | sim-conductor | {cli-name}
   sidecar_type: none | cc-subagent | external-cli  # cc-subagent = isolated Sonnet context; external-cli = untracked
   sidecar_model: none | sonnet | {model-name}  # standard baseline: sonnet; external CLIs vary by tier
   orchestrator_tokens: N | unknown  # Opus orchestrator CC tokens (pro/max only; visible in CC)

@@ -22,13 +22,14 @@ not decoration:
 |---|---|---|
 | **Forge** | shape the raw project into a harness — raise its floor | `install-wizard`, harness-ify |
 | **Quench** | harden it by attack — the cold pass leaves standing only what is sound | `steel-quench`, `phantom-quench` |
-| **Temper** | take the brittleness back out of the hardened asset | **the movement being forged next** |
+| **Temper** | take the brittleness back out of the hardened asset | `steel-quench` **Wave-T** + `templates/temper_check.sh` |
 | → **Accelerate** | a blade that survived the forge cuts faster — pass, then run | `goal-quench` · *Pass → Accelerate* |
 
-Three movements are shipped. **Temper** — the corrective that keeps a hardened asset from shattering under
-maintenance load — is the **direction ahead**, not a finished claim. Quenched steel is hard but brittle;
-no smith ships it un-tempered, and neither will FH. Naming the movement we have *not* yet built is itself
-the discipline — see principle 5.
+All four movements now ship. **Temper** spent its first months named-but-unbuilt — deliberately, per
+principle 5 — and shipped only after measurement runs on independent quench convergences validated that
+the check flags over-hardening without punishing simplification. Quenched steel is hard but brittle;
+no smith ships it un-tempered, and now neither does FH: after convergence, Wave-T measures the complexity
+the quench itself added and hands over-built constructs back for de-brittling.
 
 ---
 

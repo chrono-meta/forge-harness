@@ -8,6 +8,32 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #fc, #consent-lane, #federated-compounding, #starved-center, #v3
+**File:** tracks/_contrib/README.md (+ .gitignore, templates/contrib_session.md, docs/CONTRIBUTING.md, README.md)
+FC F1 pour — the consent lane opens (operator override: "실제증명으로 찍어누른다" — real-proof-first supersedes the v2-submission latch). `tracks/_contrib/` becomes the only tracked subtree under tracks/: surgical 2-line un-ignore, placement = consent, PR-time lane gate (PSA + marketplace-gate C5 + ingest contradiction scan + reviewer). Lane charter + session template + CONTRIBUTING §Consent Lane + README row shipped — exactly the don't-overbuild list, no new skill/verifier.
+- Decision: operator lifted the v2 latch (2026-06-10) — paper timing no longer gates feature publicization; proof-by-shipping doctrine recorded in the lab ledger.
+- Decision: privacy default unchanged — the lane is consent-by-placement; the firewall (PSA/Pre-Publish/4-axis) is the lane's load-bearing precondition, not weakened by it.
+- Open: F2 begins on the first external lane PR (live gate run + friction signals); F3 verdict 2 quarters post-open (PAID vs WRITTEN-OFF per falsifiability criterion).
+
+### 2026-06-10 | forge-harness | #wave-t, #temper, #steel-quench, #forge-fourth-movement, #v3
+**File:** plugins/fh-meta/skills/steel-quench/SKILL.md (+ templates/temper_check.sh, docs/ETHOS.md, README.md)
+Wave-T (Temper) ships — the fourth forge movement, poured from lab validation (operator-approved): after Wave 3+ convergence, measure the complexity the quench itself added (T-1 temper_check.sh delta, fence-excluding · T-2 harness-doctor absolute tier · T-3 τ-verdict, judged-paired with the quench's own findings). Validation: 9 runs across 4 independent convergences (0 false flags, simplification un-punished) + synthetic positive control (sensitivity) + same-commit dogfood run #10 on the pour itself (τ-PASS). ETHOS/README "direction ahead" IOU converted to delivery.
+- Decision: organic τ-FAIL redefined from promotion-blocker to standing watch (operator-approved) — synthetic control covers sensitivity; first organic flag → human verdict → recorded.
+- Decision: Wave-T stays one script + one section reusing harness-doctor (don't-overbuild guard is part of the shipped spec).
+- Open: npm 1.4.8 ships Wave-T + temper_check.sh + selfcheck 21 (folded into the open laptop handoff).
+
+### 2026-06-10 | forge-harness | #selfcheck, #count-consistency, #drift-class-kill
+**File:** scripts/selfcheck.sh
+Count-consistency probes (mandatory-pass): plugin.json ×2 / marketplace.json / README header / local_fh_context stated counts vs actual dirs (active = non-deprecated). Motivated by 4 same-day drift instances — the class now fails npm test + prepublishOnly instead of waiting for a doctor run.
+- Decision: deprecation detected mechanically (frontmatter `deprecated: true` or DEPRECATED marker in head -20).
+
+### 2026-06-10 | forge-harness | #backlog-cleanup, #phantom-fix, #count-drift, #goal-quench
+**File:** plugins/fh-meta/skills/goal-quench/SKILL.md (+ templates/local_fh_context.md, plugin.json, README.md)
+Backlog cleanup (cloud session 2): goal-quench phantom vocab fixed — "steel-quench C3 config" → "cross-provider challenger" (anchored to steel-quench:83 vocabulary + §Sidecar Engine Resolution Protocol; token `steel-quench-crossprovider`, 4 spots; resolves `fh_signal_2026-06-10_fh-direct`). Skill/agent count drift fixed: local_fh_context 26→29 active (−2 deprecated, +5 missing), plugin.json agents 3→7, README agents 5→8 (skills 33 verified correct = 36 dirs − 3 deprecated). Resolves the 06-04 "skill-count drift" Open item.
+- Decision: counting policy is mechanical — active = non-deprecated skill dirs, agents = files in agents/; descriptive sidecar labels confirmed over C-numbering (per 06-10 check-class decision).
+- Verified-no-action: 05-26 cross-ref recommendations already implemented — arXiv 2605.18747 (README:282 + definition doc:39) and Sylph 2604.21003 (definition doc:71/:105) — L4 open NOT raised.
+- Open: npm 1.4.8 republish ships plugin.json/README/SKILL.md count+phantom fixes (folded into the open laptop handoff).
+
 ### 2026-06-10 | forge-harness | #credit-economy, #operator-intake, #lightweight-triage, #frontier-digest
 **File:** plugins/fh-meta/skills/frontier-digest/SKILL.md (+ .claude/rules/sister_asset_protocol.md)
 Credit-economy engine run #2 formalization (operator-approved; this session = manual run #2: 7 walled sources → 8 audits → 15 same-day gate-passed imports, 2 human corrections): R1 — frontier-digest Step 0.5 operator-intake asks for walled-channel sources (YouTube/LinkedIn/X, machine-403) on cadence runs only, skippable, try wall-bypass (WebSearch + secondary) first. R2 — sister protocol lightweight path: dedup-hit/no-increment sources get a one-paragraph entry, full cross-audits reserved for A/B-tier.
@@ -260,6 +286,42 @@ v1.2 release complete (PR #1–#5): harvest-loop Step 0, agent-composer worktree
 ## Reference Documents
 
 <!-- Time-independent reference documents -->
+
+### 2026-06-06 | pattern | parallax, multi-persona-review, synthesizer, standpoint-coverage
+**File:** `knowledge/shared/patterns/multi-persona-review.md`
+Generalized architecture for multi-persona parallel artifact review ("parallax") — parallel isolated personas + shared output protocol + neutral synthesizer. Domain-agnostic, IP-stripped; embodied as sim-conductor Step 1.5.
+
+### 2026-05-31 | reference | ecosystem-positioning, opencode, hermes, openhuman, readiness
+**File:** `knowledge/shared/harness-core/fh_ecosystem_positioning.md`
+FH's structural position in the AI agent framework ecosystem vs Hermes/OpenCode/OpenHuman — gap analysis, synergy map, layered readiness verdict from 3-model adversarial audit. Companion: `fh_synergy_playbook.md` (concrete workflow specs).
+
+### 2026-06-04 | schema | tpa, target-profile-analysis, routing, sim-conductor, steel-quench
+**File:** `knowledge/shared/harness-core/tpa_schema.md`
+Canonical Target Profile Analysis schema — all TPA-running skills (sim-conductor, steel-quench, phantom-quench, agent-composer) derive routing decisions from this schema. Single source for profile fields.
+
+### 2026-06-04 | draft | goal-quench, anthropic-issue, native-goal, token-budget
+**File:** `knowledge/shared/harness-core/goal_quench_anthropic_issue.md`
+Draft Anthropic GitHub issue — native /goal token budget + quality verification hook proposal. Held until arXiv number confirmation.
+
+### 2026-05-26 | measurement | skill-quality-rubric, maturity-score, verifiable-numbers
+**File:** `knowledge/shared/harness-core/skill_quality_rubric.md`
+Skill maturity score formula definition. Declaring verifiable/evolution numbers without this file violates the cold-audit "self-declaration = delete if no basis" rule.
+
+### 2026-06-04 | core-reference | compounding-loop, weekly-cycle, axis-6, automation
+**File:** `knowledge/shared/harness-core/hub_compounding_loop.md`
+Core reference doc (CLAUDE.md Consult-First table): weekly/monthly/quarterly feedback cycles + Axis-6 Compounding automation roadmap.
+
+### 2026-06-04 | core-reference | runtime-flow, session-chronology, subagent-delegation
+**File:** `knowledge/shared/dialogue/claude_code_runtime_flow.md`
+Core reference doc (CLAUDE.md Consult-First table): chronological flow of a Claude Code session (does) + sub-agent delegation flowchart.
+
+### 2026-06-04 | core-reference | dialogue-playbook, token-efficiency, rule-hierarchy
+**File:** `knowledge/shared/dialogue/ai_dialogue_playbook.md`
+Core reference doc (CLAUDE.md Consult-First table): session-start principles, token efficiency, rule hierarchy, amplifier/coach dual mode (should).
+
+### 2026-06-04 | glossary | terminology, meta-harness, launch-pad, transit-acceleration
+**File:** `knowledge/shared/GLOSSARY.md`
+Key term definitions — meta-harness, meta hub, launch pad effect, transit acceleration value, shared skill pool, operating modes. Entry point for FH-internal vocabulary; linked from CHEATSHEET.
 
 ### 2026-04-28 | template | maturity-roadmap, 3-phase-frame, frontier-tracking, simplification-gate
 **File:** `knowledge/shared/harness-core/hub_maturity_roadmap.md`

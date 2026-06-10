@@ -3,6 +3,7 @@
 Frequently used commands and phrases.
 
 > **`<harness-root>`** = the path where you cloned this repo. Example: `~/projects/forge-harness`. Replace `<harness-root>` in the commands below with your actual path.
+> Unfamiliar with a term (meta-harness, launch pad effect, transit acceleration…)? See `knowledge/shared/GLOSSARY.md`.
 
 ---
 
