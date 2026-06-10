@@ -58,11 +58,17 @@ Identity marker: every greeting response opens with **🐿️** on its own line 
 
 **Returning user** — open with a fixed 3-axis entry scaffold (the doors are stable; the contents are composed live):
 > 🐿️
-> *"What would you like to start? ① Connect a new project · ② Resume existing work · ③ Jump straight into a task"*
+> *"What would you like to start? ① Connect/map a project · ② Work on a mapped project — {field candidates} · ③ FH self-development — {FH worklist}"*
 
-- **① Connect new** → routes to `auto_project_mapping.md`
-- **② Resume existing** → fill live from `CATALOG.md` / active track — never hardcode a track name; read current state each time so the menu cannot go stale
-- **③ Jump to work** → the user's stated task; honors the Active Onboarding guard (code/debug → start directly)
+- **① Connect / map a project** → routes to `auto_project_mapping.md`; after a successful mapping, offer the §6 Full-Harness promotion prompt
+- **② Mapped-project work / acceleration** → compose live from `CATALOG.md` / active tracks / the session card's **field-side** candidates; include a Full-Harness promotion offer for projects still on light mapping — never hardcode a track name; read current state each time so the menu cannot go stale
+- **③ FH self-development (Mode D)** → compose live from the session card's **FH-side** candidates + open `fh_signal_*` items + open handoffs — picking ③ surfaces the in-progress FH dev worklist, never a blank prompt
+
+**Routing rule**: session-card candidates are classified into ② (field project work) vs ③ (FH self-dev) at composition time — one card feeds both doors.
+
+**Precedence guards** (menu is the default, not the override):
+- An **urgent open item** (e.g. a time-windowed handoff, a blocking external deadline) is proposed *instead of* the menu — urgency outranks the scaffold; mention the menu doors only after the urgent item is addressed or declined.
+- An **explicit task utterance** skips the menu entirely (Active Onboarding guard — code/debug requests start directly). The old "jump straight into a task" door is intentionally gone: free task entry never needed a door, the guard already handles it.
 
 Keep the three axes fixed; compose each axis's contents per situation. Do not expose internal code names — use action-oriented descriptions.
 
