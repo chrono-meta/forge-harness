@@ -52,3 +52,9 @@
   trigger: operator request (sidecar simulation)
   outcome: accepted
   note: "self-flagged below-floor + wrote own ack — exposed ack rubber-stamp residual (MED, recorded in signal); counterfactual at-floor claim BLOCKED by cross-check"
+- date: 2026-06-11
+  agent: fh-commons:quench-challenger (fable inherit)
+  task: steel-quench Wave 1 on CLAUDE.md 3-door skeleton promotion (2-line governance edit)
+  trigger: 4-axis auto-gate Axis 2 (FH asset modified)
+  outcome: accepted
+  note: "0S+2A+2B — all 4 source-verified true (Only-exclusivity contradiction w/ §Guards, missing sync anchor, unanchored cadence claim, scope salience); cross-cutting anchor edit resolved all in one pass"
