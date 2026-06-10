@@ -174,7 +174,7 @@ finished is the point (see [`ETHOS.md`](docs/ETHOS.md#the-forge)). Around the fo
 it running: `harvest-loop` (each session's lessons become permanent skills) and `agent-composer`
 (orchestrate the dispatch). The other skills wait until you need them — full list below.
 
-## 33 skills · 5 agents
+## 33 skills · 8 agents
 
 <details>
 <summary>Full asset activation check</summary>

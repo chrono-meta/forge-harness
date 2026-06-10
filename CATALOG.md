@@ -8,6 +8,13 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-10 | forge-harness | #backlog-cleanup, #phantom-fix, #count-drift, #goal-quench
+**File:** plugins/fh-meta/skills/goal-quench/SKILL.md (+ templates/local_fh_context.md, plugin.json, README.md)
+Backlog cleanup (cloud session 2): goal-quench phantom vocab fixed — "steel-quench C3 config" → "cross-provider challenger" (anchored to steel-quench:83 vocabulary + §Sidecar Engine Resolution Protocol; token `steel-quench-crossprovider`, 4 spots; resolves `fh_signal_2026-06-10_fh-direct`). Skill/agent count drift fixed: local_fh_context 26→29 active (−2 deprecated, +5 missing), plugin.json agents 3→7, README agents 5→8 (skills 33 verified correct = 36 dirs − 3 deprecated). Resolves the 06-04 "skill-count drift" Open item.
+- Decision: counting policy is mechanical — active = non-deprecated skill dirs, agents = files in agents/; descriptive sidecar labels confirmed over C-numbering (per 06-10 check-class decision).
+- Verified-no-action: 05-26 cross-ref recommendations already implemented — arXiv 2605.18747 (README:282 + definition doc:39) and Sylph 2604.21003 (definition doc:71/:105) — L4 open NOT raised.
+- Open: npm 1.4.8 republish ships plugin.json/README/SKILL.md count+phantom fixes (folded into the open laptop handoff).
+
 ### 2026-06-10 | forge-harness | #credit-economy, #operator-intake, #lightweight-triage, #frontier-digest
 **File:** plugins/fh-meta/skills/frontier-digest/SKILL.md (+ .claude/rules/sister_asset_protocol.md)
 Credit-economy engine run #2 formalization (operator-approved; this session = manual run #2: 7 walled sources → 8 audits → 15 same-day gate-passed imports, 2 human corrections): R1 — frontier-digest Step 0.5 operator-intake asks for walled-channel sources (YouTube/LinkedIn/X, machine-403) on cadence runs only, skippable, try wall-bypass (WebSearch + secondary) first. R2 — sister protocol lightweight path: dedup-hit/no-increment sources get a one-paragraph entry, full cross-audits reserved for A/B-tier.
