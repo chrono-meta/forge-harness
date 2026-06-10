@@ -241,7 +241,15 @@ because it has opus?". A floor is satisfied by the chosen engine's **strongest f
 **Human override is inviolable — and a pin is not a cap**: if the operator pins a session default
 (stronger or weaker), FH follows it for **session turns**; floors govern FH's **own sub-agent
 dispatches** and a session pin does not lower them — that separation *is* the Sonnet-main +
-Opus-dispatch doctrine (pinned-sonnet sessions still dispatch floored agents at opus). If the operator
+Opus-dispatch doctrine (pinned-sonnet sessions still dispatch floored agents at opus).
+
+**Field depth-escalation (the upward complement)**: floors push *dispatches* up automatically, but
+main-thread depth on a field session has no floor — so the templates bundle carries a Field
+Depth-Escalation Notice (templates CLAUDE.md): on strain signals (repeated correction loops,
+non-decomposable design reasoning, user stuck), the session AI proposes the cheaper rung first —
+an opus sidecar dispatch for packageable units — and a session pin only for inherently main-thread
+depth. Advisory, once per session, never auto-switches; the symmetric counterpart of the hub's
+Mode D Model Notice, placed field-side so the proposal does not depend on mid-session rule recall. If the operator
 explicitly caps dispatches too ("sonnet only, everywhere"), that is an environment limit: F2 applies,
 flags and all. Pinning a stronger-than-opus default strengthens harness *self-development* in
 particular (measured: the tier cliff sits on design-increment work) — mostly relevant to harness

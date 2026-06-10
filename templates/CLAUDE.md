@@ -17,11 +17,33 @@ When a user starts a session with greetings like "hello", "let's start", "resume
 After Layer A completes, **when the user enters a task**, activate AI proactive initiative mode:
 
 1. **Auto-initiative (1-line question)** — *"What task/project would you like to start? (e.g., 'Spring Boot API development', 'React component refactoring', 'continue existing [X] track')"* (if active track exists: *"Would you like to continue active track [X], or enter a new task?"*)
-2. **5-skill cascade** — `plugin-recommender` (internal GHE → external → built-in candidates) → `cross-ecosystem-synergy-detection` (synergy grade table) → `.claudeignore` standard initiative (`cp templates/.claudeignore`) → model switching guidance (default `/model sonnet` — FH dispatches floored skills/agents at higher tiers itself; pin a stronger model only for harness-editing sessions — see README §Model setup) → `verify-bidirectional`·`harvest-loop` natural emergence waiting
+2. **5-skill cascade** — `plugin-recommender` (internal GHE → external → built-in candidates) → `cross-ecosystem-synergy-detection` (synergy grade table) → `.claudeignore` standard initiative (`cp templates/.claudeignore`) → model switching guidance (default `/model sonnet` — FH dispatches floored skills/agents at higher tiers itself; pin a stronger model for harness-editing sessions, or when the Field Depth-Escalation Notice below fires — see README §Model setup) → `verify-bidirectional`·`harvest-loop` natural emergence waiting
 3. **User consent → actual setup** — plugin install / skill pre-activation / `.claudeignore` application / model switch
 4. **Project cwd handover guidance** — *"Setup complete. Move to the project cwd and call `claude` to start working."*
 
 **Simplification guard**: When an explicit task utterance is made (e.g., "debug X code"), enter task immediately (skip onboarding). Activates once per session.
+
+### Field Depth-Escalation Notice (advisory — once per session)
+
+The Sonnet default covers routine field work because FH dispatches floored skills/agents at higher
+tiers itself. But when **main-thread development visibly strains the session tier**, surface a
+one-line escalation proposal — do not leave it to recall:
+
+**Triggers** (any one): the same problem survives 2–3 correction loops · the work enters
+architecture/design reasoning that cannot be decomposed into a dispatchable unit · the user
+signals being stuck ("keeps failing", "why is this still wrong").
+
+**Two-step ladder** (propose the cheaper rung first):
+1. **Opus dispatch (sidecar)** — if the heavy reasoning packages into a unit (a design review, a
+   root-cause hunt, an adversarial pass), propose dispatching it to an Opus agent: the session
+   stays on Sonnet, cost stays local to the unit.
+2. **Session pin** — if the work is inherently main-thread (iterative dialogue design, repeated
+   whole-context reasoning), propose: *"This work demands session-level design depth — pinning
+   `/model opus` is recommended. Proceeding as-is also works: dispatches still cover floored units."*
+
+**Guards** (mirrors the hub's Mode D Model Notice): once per session · advisory only — **never
+switch the session model autonomously** (human override is inviolable) · sessions where nothing
+strains never see it — the Sonnet default stays friction-free.
 
 **Basis**: Meta-harness mission *"easy and convenient + no setup burden + token savings"* direct implementation mechanism. Natural hub/action-leader division (single trigger in meta-harness cwd → handover to action-leader cwd).
 
