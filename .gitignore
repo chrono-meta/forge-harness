@@ -44,10 +44,9 @@ tracks/**
 !tracks/_contrib/
 !tracks/_contrib/**
 
-# qasp — company-domain content (kakaopay GHE, payment/insurance). Fully local isolation:
-# the project NAME must never reach public FH git, so even its .gitkeep is ignored.
-# (sync-to-be.sh already only mirrors _meta/_audit, so fh-be never receives it either.)
-/tracks/qasp/
+# Private/isolated field tracks: a track whose NAME itself is non-public must be ignored
+# via .git/info/exclude (local-only, untracked) — never list it here, since this file is
+# tracked and would publish the name. See Drift Prevention / privacy split in CLAUDE.md.
 .codex/
 
 # Local skill registry — auto-generated per-machine scan (personal paths). Regenerated each session.
