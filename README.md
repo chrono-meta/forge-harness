@@ -99,6 +99,12 @@ forge-harness is structured as **two distinct layers**:
 
 The methodology layer is the portable core — persistent hub, accumulating learnings, curating cross-project knowledge. The automation layer makes it frictionless when running Claude Code.
 
+**Where this sits (2026):** "harness engineering" is now a public paradigm — and basic agent
+orchestration is rapidly commoditizing into standard infrastructure. FH deliberately stakes nothing on
+that plumbing. Its durable layer is what does *not* commoditize: the governance gates (adversarial ·
+phantom · regression), drift control, and the cross-project compounding loop. Routing and dispatch are
+means; **the gate and the loop are the asset.**
+
 ```
 forge-harness/   ← the hub (persistent brain)
 ├── knowledge/   → shared across all projects
@@ -272,13 +278,6 @@ a top-tier anchor at 100, with the rules in context doing most of the work. The 
 above-rubric *design* increments (developing the harness, not running it) — which is why the default is
 Sonnet with **tier-floored dispatch** covering the depth-sensitive turns, and a pinned stronger model is
 recommended only for harness-editing sessions. Details: `docs/OUTPUT_EVIDENCE.md` §Validation signals.
-
-**Measured, not asserted** (2026-06-10, worked example): on a 30-point blind rule-application battery,
-*operating* FH was nearly model-flat — Opus 4.8 / Sonnet 4.6 / Haiku 4.5 scored **100 / 97 / 94** against
-a top-tier anchor at 100, with the rules in context doing most of the work. The tiers separated only on
-above-rubric *design* increments (developing the harness, not running it) — which is exactly why the
-recommendation stays Opus for harness-editing and gate turns, while field operation tolerates lower tiers.
-Details: `docs/OUTPUT_EVIDENCE.md` §Validation signals.
 
 If you use external CLIs (Gemini, Codex, `gh copilot`) as sidecars, their costs are billed to their own quota and not visible in CC's token display.
 
