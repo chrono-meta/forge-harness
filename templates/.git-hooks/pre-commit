@@ -305,6 +305,44 @@ else
   FAILED=1
 fi
 
+# ── Privacy guard — tracks/ staged-path allowlist (structural, name-free) ─────
+# tracks/** is local-by-default (frozen-seed policy); the only public lanes are
+# tracks/_contrib/** (consent lane) and ALREADY-TRACKED .gitkeep skeleton files.
+# A newly staged path outside those lanes is treated as a potential private-name
+# leak and blocks fail-closed. No deny-list of names exists here on purpose: a
+# tracked deny-list would itself publish the names it protects (measured origin:
+# tracked .gitignore carried a private track name + company domain in its comment,
+# fixed 2026-06-11). Intentional public mapping (a new track's .gitkeep) passes
+# with explicit per-commit consent: TRACKS_PUBLIC_OK=1 git commit ...
+echo "[Privacy] tracks/ staged-path allowlist..."
+TRACKS_LEAK=0
+while IFS= read -r p; do
+  [ -z "$p" ] && continue
+  case "$p" in
+    tracks/_contrib/*) ;;
+    tracks/*)
+      if [ "$(basename "$p")" = ".gitkeep" ]; then
+        if git ls-files --error-unmatch "$p" >/dev/null 2>&1; then
+          continue  # already-tracked skeleton
+        elif [ "${TRACKS_PUBLIC_OK:-0}" = "1" ]; then
+          echo "  ⚠️  new public track skeleton allowed by TRACKS_PUBLIC_OK=1: $p"
+          continue
+        fi
+      fi
+      echo "  ❌ FAIL — staged tracks/ path outside public lanes: $p"
+      TRACKS_LEAK=1; FAILED=1 ;;
+  esac
+done <<TRACKS_EOF
+$(git diff --cached --name-only --diff-filter=ACR)
+TRACKS_EOF
+if [ "$TRACKS_LEAK" -eq 1 ]; then
+  echo "  tracks/** is local-only. Public lanes: tracks/_contrib/** · tracked .gitkeep."
+  echo "  Consent-lane content → move under tracks/_contrib/. New public track skeleton"
+  echo "  → re-run with TRACKS_PUBLIC_OK=1. Private content → unstage (git restore --staged)."
+else
+  echo "  ✅ PASS"
+fi
+
 # ── Verdict ───────────────────────────────────────────────────────────────────
 echo ""
 echo "══════════════════════════════════════════════"
