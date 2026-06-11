@@ -25,10 +25,10 @@ Custom sub-agents can be defined in hub or project `.claude/agents/*.md` (Claude
 
 The hub audits and improves itself weekly.
 
-**Phase 1.5 (manual + scanner):**
-1. `./tracks/_audit/_scanner.sh "7 days ago"` — commit/tag/stale file/sub-agent invocation log/self-asset reference audit aggregation
+**Phase 1.5 (manual):**
+1. Gather window data by hand — `git log --since="{window}" --oneline` (+ count), `git tag --sort=-creatordate`, tail of `knowledge/shared/learnings/subagent_invocations_log.yaml`, stale-file spot checks. (No `_scanner.sh` exists — a prior reference here was a phantom, fixed 2026-06-11; the automation path is Phase 2 harvest-loop, a standalone scanner script is deliberately not built.)
 2. `bash scripts/below_floor_scan.sh` — below-floor marker re-run queue (the standing consumer §Floor governance promises: exit 1 = pending floor-tier re-validations, treat as S-tier; resolve via `floor-rerun:` / `floor-writeoff:` appended to the marker)
-3. Copy `_template_weekly.md` → `weekly_audit_YYYY-MM-DD.md`
+3. Write `tracks/_audit/weekly_audit_YYYY-MM-DD.md` mirroring the previous audit file's format (frontmatter + activity table + 🟥🟧🟩 + pattern table — no separate template file exists)
 4. Propose 3-tier improvements (🟥mandatory/🟧strong/🟩recommended)
 
 **Recurrence escalation** (N=3 threshold): Scanner output shows the same defect class in 3+ distinct commits or sessions within the audit window → S-tier signal; propose instrumenting as a CI probe (`npm test` extension or pre-commit hook) rather than adding a new habit rule. Three recurrences indicate the defect class is structural — habits don't hold.

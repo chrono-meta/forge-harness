@@ -176,6 +176,20 @@ for k in GEMINI_API_KEY OPENAI_API_KEY ANTHROPIC_API_KEY; do
   [ -n "${!k:-}" ] && echo "tier2:$k"
 done
 
+# Tier 1.5 — OAuth-proxy ("anti-api" class): a local OpenAI-compatible server that fronts a
+#   logged-in CLI/OAuth session, letting any OpenAI-spec client use that subscription as a
+#   backend. Verified instance: `hermes proxy start` ("forwards OpenAI-compatible requests to
+#   an OAuth-authenticated provider; external apps point at the proxy with any bearer token" —
+#   upstreams: Nous Portal, xAI Grok). Sits between Tier 1 (the session itself) and Tier 2
+#   (a raw key): zero marginal cost like Tier 1, API-shaped like Tier 2.
+#   Probe detects the capability only — login state is shown by `hermes proxy status` and a
+#   non-logged-in upstream reads "not logged in" (substring-greps for "logged in" false-match it).
+command -v hermes >/dev/null 2>&1 && echo "tier1.5:hermes-proxy (candidate — verify an upstream is logged in via: hermes proxy status)"
+#   Two cautions, always surfaced when this rung binds: (a) wrapping an OAuth session into an
+#   API surface may sit outside the provider's ToS — operator's call, per provider; (b) from
+#   2026-06-15, proxied **Claude-subscription** usage = third-party-agent class = the metered
+#   hard-capped credit pool, not the subscription pool — prefer non-Claude upstreams here.
+
 # Tier 3 — guaranteed fallback: Claude Code's own isolated sub-agent (always available)
 #   No external resource → orchestrator spawns an Agent(subagent_type=…) / prompt-chunking.
 #   This tier never fails, so the chain has no hard-error state. Same-provider, so it serves
