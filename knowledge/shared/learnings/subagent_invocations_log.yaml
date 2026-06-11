@@ -82,3 +82,15 @@
   trigger: CLAUDE.md cadence rule (7d+ overdue) + operator door-3 batch approval
   outcome: accepted
   note: "digest written to companion store only (no FH asset touched, no commit — reviewed by main session); headline: NLAH arXiv:2603.25723 = convergence candidate n=6, Fable 5 tier shift, Stop-hook additionalContext channel; 5 candidates parked as unapproved checklist"
+- date: 2026-06-11
+  task: "Axis 2 adversarial review — mcp_tool_gating template"
+  agent: general-purpose (model: opus)
+  self_contained_prompt: yes
+  outcome: accepted
+  note: "2S+4B; S1 name-spoofing was a real design hole (server controls names too) — fixed inline"
+- date: 2026-06-11
+  task: "Target-tier sim — mcp_tool_gating under sonnet, unfilled-§3 scenario"
+  agent: general-purpose (model: sonnet)
+  self_contained_prompt: yes
+  outcome: accepted
+  note: "PASS — per-item ask on send, batch-approve refused citing meta-write tier; offered §3 fill"

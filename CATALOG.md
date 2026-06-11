@@ -8,6 +8,11 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-11 | forge-harness | #mcp-gating, #external-mcp, #name-keyed-policy, #measured-origin, #field-template
+**File:** templates/.claude/rules/mcp_tool_gating.md (+ auto_project_mapping.md §6 row 4, CLAUDE.md mount-intent trigger)
+Cloud session (Mode D, ext): new field template — external-MCP tool gating with three tiers (ask / ask-meta-write / allow-untrusted-read), name-keyed because server-supplied annotations are unreliable (measured same-day: live messaging-class MCP shipped all-None hints incl. irreversible send + approval-resolution tools — fh-be `signal_2026-06-11_hermes-mcp-cloud-boot.md`). Opus challenger caught the name-spoofing hole (server controls names too → behavior-confirmation required for non-ask tiers, fixed inline); sonnet blind sim PASS on unfilled-§3 scenario (per-item ask on send, batch approval-grant refused).
+- Decision: prefer host-native per-tool permission config as enforcement; this template = what-to-gate + portable fallback. §6 install row is conditional (MCP present); the proactive mount-intent trigger is the load-bearing path.
+
 ### 2026-06-11 | forge-harness | #identity-marker, #door-skeleton, #target-tier-sim, #below-floor-consumer, #false-control-kill
 **File:** CLAUDE.md §Active Onboarding (+ fh_detail_protocols.md, scripts/below_floor_scan.sh, .claude/rules/operations.md)
 Cloud session (Mode D): 🐿️ marker folded into the returning-user door skeleton — one salience unit with the menu, closing the sonnet-sim marker-drop residual (`fh_signal_2026-06-11`); verified by blind sonnet Agent sim PASS (verification tier = failure tier; in-session model-pinned dispatch available in cloud, no headless fallback needed). 6/15 billing one-line amendment rode the same CLAUDE.md edit (no churn commit). below_floor_scan.sh ships as the standing consumer the pre-commit hook promised ("weekly audit re-queues below-floor markers") but never had — resolution via `floor-rerun:`/`floor-writeoff:` marker appends, wired as weekly Phase 1.5 step 2.
