@@ -296,6 +296,14 @@ Output to user (one line only):
 
 Do not ask for confirmation. The user may override by re-running `/goal-quench --sidecar none`.
 
+**Dispatch-failure triage (saturation disguise)**: a sidecar dispatch that fails with a 1M-context /
+usage-credits error late in a long run may be reporting *session context saturation*, not a billing
+gate (measured 2026-06-12: identical error pre-compaction; the same opus-pinned dispatch succeeded
+post-compaction with the sub-agent completing normally). Triage order: compact — flushing handoff
+state to disk first — → retry the dispatch once → only then take the headless `claude -p` fallback
+(credit-pool cost) or an inline at-floor pass. Concluding "billing gate" from the first failure
+skips the cheapest recovery.
+
 ### Hand-off
 
 After orchestration, **update** (not re-create) `.claude/goal-quench.active` — add `mode:` and `composed_plan:` lines alongside existing budget fields. Re-creating the file loses the `start_commit` field written in Phase 1 Step 3. Then proceed to threshold injection (Phase 1 Step 4) and hand off to /goal. Phase 3 verification then runs as in core — `pipeline-conductor --quick` for pro, `--full` for max (max implies external-facing stakes).

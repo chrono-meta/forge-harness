@@ -194,7 +194,11 @@ the operator (one line), mirroring §Floor governance.
 
 If `model:`-pinned dispatch is unavailable (plan/billing gate), fall back to a cross-session headless
 run (`claude -p "<trigger>" --model <tier>` in the target cwd) — stronger isolation, zero instruction
-contamination. 2026-06-15+: headless `claude -p` draws from the hard-capped credit pool, not the
+contamination. **Saturation disguise (N=2, 2026-06-11/12)**: the same "Usage credits required for 1M
+context" error also fires when the *session* is near context saturation, not the plan gate — in a
+long-running session, compact (flush handoff state to disk first) and retry the dispatch once before
+concluding the gate is closed (identical opus-pinned dispatch failed pre-compaction, succeeded
+post-compaction 2026-06-12). 2026-06-15+: headless `claude -p` draws from the hard-capped credit pool, not the
 subscription — prefer in-session Agent dispatch when the plan gate allows; take the headless fallback
 knowingly. Record sim results in the Axes 2–3 marker + sub-agent invocation log.
 
