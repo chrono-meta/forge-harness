@@ -259,6 +259,7 @@ a single-family pass repeated still misses what cross-family catches, and a targ
 | P6 | **AI dependency single point of failure** | Claude API/MCP removal causes collapse | Document graceful degradation + fallback |
 | P7 | **Hallucination-contaminated defense** | Defense relies on LLM inference, not measurement | Mandate citing original file/commit/value |
 | P8 | **Context Collapse unguarded** | Key instructions lost to compression → harness silent | Review CLAUDE.md compact repeated insertion |
+| P9 | **Harness-bulk as model compensation** | Pipeline thickened to substitute for a model capability ceiling (a gap no iteration count closes — e.g. domain understanding) — complexity replaces missing capability, violating the field axis "simpler over time" (meta-harness: distinguish from complexity that earns its scope) | Route the task class to a stronger model; never paper over the ceiling with more harness. Signals: steps added for one model's weakness; step count rising while class quality stays flat across iterations |
 
 Add new rows as new patterns are discovered.
 

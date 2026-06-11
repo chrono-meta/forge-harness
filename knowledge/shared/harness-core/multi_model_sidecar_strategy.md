@@ -83,6 +83,19 @@ This means FH is not just model-agnostic in theory — the methodology layer phy
 
 > **Load ≠ full parity**: "loads and lists as Enabled" means the SKILL.md *methodology* is readable and runnable as guidance. Skills whose steps dispatch a sub-agent (`Agent` tool, `fh-commons:*` challengers) or depend on slash-commands/hooks are **Claude-native** — on Gemini/Codex they degrade to manual methodology, not automated execution. Cross-CLI portability covers the *methodology layer*; the automation layer (sub-agents, hooks, slash commands) requires Claude Code as host. See `README.md §2-layer architecture`.
 
+> **Check-class taxonomy = the model-portability map**: the Axis-5 check classes
+> (`harness_6axis_framework.md` §Axis 5) double as the portability map. **Mandatory-pass** checks —
+> and the mechanical subset of **measured** checks (scripts and greps that run with no model) — are
+> model-independent *by construction*; model-produced measured scores (e.g. tier batteries) are
+> tracked, not assumed flat. **Judged** checks are where model choice matters most, and
+> judged-pairing bounds that sensitivity. Two consequences: (1) pushing a workflow's checks toward
+> mechanical classes is a high-leverage portability move wherever mechanization is feasible — a
+> mechanized check ports to any backend the moment it ships; (2) when auditing what survives a
+> backend/tier swap, classify by check class first and re-validate the judged steps (the same
+> discipline as §Floor governance's below-floor re-run rule, below) instead of re-testing
+> everything. Judged-class tier sensitivity is what `docs/OUTPUT_EVIDENCE.md` actually measured —
+> the "by construction" claim rests on the no-model property, not on that single trial.
+
 ## Orchestrator–sidecar model strategy
 
 Use the strongest available model as orchestrator; delegate subsidiary tasks to lighter sidecar models for token economy:
