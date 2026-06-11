@@ -76,3 +76,9 @@
   trigger: 4-axis auto-gate Axis 2 (FH asset modified)
   outcome: accepted
   note: "PASS 0S+3B — marker-append/hook-collision CLEAN (replicated validate_marker_floor), P9 check verdict 'builds the control, not paper-over'; B1 scanner-autoinvoke implication fixed, B2 signal status update routed to fh-be, B3 opus hardcode accepted (matches hook convention)"
+- date: 2026-06-11
+  agent: claude (background, frontier-digest skill execution)
+  task: cadence-overdue frontier-digest run (16d+ since 2026-05-26) — WebSearch mode, incremental-only
+  trigger: CLAUDE.md cadence rule (7d+ overdue) + operator door-3 batch approval
+  outcome: accepted
+  note: "digest written to companion store only (no FH asset touched, no commit — reviewed by main session); headline: NLAH arXiv:2603.25723 = convergence candidate n=6, Fable 5 tier shift, Stop-hook additionalContext channel; 5 candidates parked as unapproved checklist"
