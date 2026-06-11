@@ -71,15 +71,24 @@ FH's SKILL.md format is shared across all three major AI CLIs. FH skills load na
 | **Claude Code** | `.claude/plugins/` native | ✅ Primary environment |
 | **Codex CLI** | `SKILL.md` plugin (`fh-meta@forge-harness`) | ✅ Validated |
 | **Gemini CLI** | `gemini skills install <path> --consent` | ✅ Validated — ⚠️ direct `gemini` CLI EOL 2026-06-18 |
-| **Antigravity CLI** (`agy`) | vendor states Skills/Hooks migrate from Gemini CLI | 🔶 **candidate — not yet demonstrated** (verify FH SKILL.md load before claiming) |
+| **Antigravity CLI** (`agy`) | `agy plugin install <local-path>` — Claude `.claude-plugin/` layout handled without conversion (bulk `agy plugin import claude` also exists) | ✅ Validated 2026-06-11 (agy 1.0.7) — fh-meta imported (32 skills + 7 agents); print-mode load probe reproduced phantom-quench purpose/trigger/Phantom-Claim definition from SKILL.md |
 
 This means FH is not just model-agnostic in theory — the methodology layer physically runs in multiple CLI environments without modification. This is the empirical foundation for the cross-CLI portability claim.
 
-> **Gemini-CLI → Antigravity migration (2026-06-18)**: the validated `gemini skills install` path dies on
-> EOL. The vendor states Antigravity (`agy`) inherits Skills/Hooks, so FH skill-load under `agy` is the
-> natural successor — but it is a **verification candidate, not a validated claim** (honesty discipline:
-> claim only what's demonstrated). Closing it = the same cheap gate Codex/Gemini passed: load 1–2 FH
-> skills under `agy`, capture graded output. Until then this row stays 🔶, not ✅.
+> **Gemini-CLI → Antigravity migration (2026-06-18)**: **closed 2026-06-11, ahead of EOL** — same cheap
+> gate Codex/Gemini passed. `agy plugin install ./plugins/fh-meta` (agy 1.0.7) imported 32 skills +
+> 7 agents straight from the Claude `.claude-plugin/` layout (note: standalone `agy plugin validate`
+> expects a root `plugin.json`, but `install` does not). Load probe in print mode answered
+> phantom-quench's purpose, a trigger phrase, and the Phantom-Claim definition accurately and named
+> steel-quench as a second visible skill. Two same-day measurements:
+> (1) `agy -p` (print mode) **auto-approves tool calls** — it ran a shell command and read a file
+> outside the workspace with no permission prompt (nonce-verified, not hallucinated). Headless sidecar
+> dispatch therefore works like `codex exec` — no approval mode required; permission prompts belong to
+> interactive mode.
+> (2) Post-EOL caveat on the Gemini row: the binary outlives the backend, so `command -v gemini` keeps
+> passing after 2026-06-18 while pipes degrade to empty output behind `2>/dev/null` guards — a silent
+> degradation. Once EOL hits, sidecar team detection should probe `agy` first (follow-up:
+> `fh_signal_2026-06-11_fh-direct`).
 
 > **Load ≠ full parity**: "loads and lists as Enabled" means the SKILL.md *methodology* is readable and runnable as guidance. Skills whose steps dispatch a sub-agent (`Agent` tool, `fh-commons:*` challengers) or depend on slash-commands/hooks are **Claude-native** — on Gemini/Codex they degrade to manual methodology, not automated execution. Cross-CLI portability covers the *methodology layer*; the automation layer (sub-agents, hooks, slash commands) requires Claude Code as host. See `README.md §2-layer architecture`.
 
