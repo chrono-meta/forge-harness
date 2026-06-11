@@ -101,7 +101,7 @@ Simplification guard: trivial denials with one obvious fix → state block + sin
 
 **Triggers**: greetings (`hi`/`hello`/`hey`/`안녕` — and the same word in any language; FH is English-based but language-agnostic, a bare greeting in any tongue fires this) · start intent (`resume`, `continue`, `where were we`) · new task (`new project`, `new task`) · discovery (`what is this`, `what can you do`, `first time here`)
 
-**4-step summary**: ① Auto-read CLAUDE.md + CATALOG + session card + registry scan → ② One-line proposal (new user / exploratory / returning branches) → ③ 5-skill cascade (plugin-recommender → synergy → .claudeignore → model → verify) → ④ Approval + setup
+**4-step summary**: ① Auto-read CLAUDE.md + CATALOG + session card + registry scan + UAP (`tracks/_meta/user_adaptation_profile.md`, if present — apply user-tuned defaults: preferred tier, suppressed proposals, muted nags; see §Operational Adaptation Loop) → ② One-line proposal (new user / exploratory / returning branches) → ③ 5-skill cascade (plugin-recommender → synergy → .claudeignore → model → verify) → ④ Approval + setup
 
 **Greeting branch + door skeleton (summary-level — applies even if the detail file read is skipped)**: the branch test is **mechanical local state — session files under `tracks/`** — never git log / CATALOG residue (a fresh clone carries full history but zero session files: it is a NEW install — origin: a fresh-clone sonnet sim rendered the returning menu off commit messages, `fh_signal_2026-06-11` FP8). Every variant opens with **🐿️ on its own line as the skeleton's first line** — the marker is part of the skeleton, one salience unit with the menu, not a separate rule.
 
@@ -333,7 +333,7 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "memory feels bloated", "clean up memory", "memory too large", "memory hygiene" | `/memory-hygiene` |
 | "ready to PR", "about to push", "merge this", "PR 올려줘", FH asset changed in session | 4-axis auto-gate (see above — runs automatically, no proposal needed) |
 
-**Guard**: Do not propose a skill that is already running. One signal = one-line proposal (no pressure).
+**Guard**: Do not propose a skill that is already running. One signal = one-line proposal (no pressure). Before proposing, consult the UAP (§Operational Adaptation Loop): a skill the user has rejected 3+ times is **suppressed**, not re-proposed.
 For per-skill utterance patterns, see the relevant `SKILL.md §Trigger Phrases` section.
 
 ### Cadence Rules — Check at Session Start
@@ -344,6 +344,19 @@ At session start, determine the last run time from history files and auto-propos
 |---|---|---|
 | `/frontier-digest` | `tracks/_meta/frontier_digest_*.md` | Propose at session start if 7+ days since last run |
 | `/harness-doctor` | `tracks/_meta/*harness_doctor*.md` | Propose at session start if 30+ days since last run |
+
+> A cadence reminder the user has repeatedly declined is **muted** per the UAP (see the loop below) — don't re-nag.
+
+## Operational Adaptation Loop — User-Tuned Self-Optimization
+
+> Detail: `.claude/rules/operational_adaptation.md`
+
+Self-healing is not only FH-self-dev (Mode D 4-axis) and reactive (`verify-bidirectional`). A **standing, per-user operational loop** tunes FH behavior to the individual during normal field use, and escalates **only generalizable** learnings to the `field-harvest` → FH-origin PR funnel — idiosyncratic taste stays local (drift guard).
+
+- **User Adaptation Profile (UAP)** — `tracks/_meta/user_adaptation_profile.md` (local/gitignored; **behavioral prefs only, never domain content**). Records skill-proposal outcomes (`accepted`/`rejected`/`sustained` — same vocabulary as `operations.md`), preferred tier/language/cadence, recurring friction, muted nags.
+- **Pass** — rides `field-harvest` Mode B at field-session close (no new trigger, one per session): READ to apply (suppress a 3×-rejected proposal, default to preferred tier, mute declined cadence nags), WRITE to update outcomes.
+- **Generalization gate** — idiosyncratic → UAP local; generalizable (any user benefits; `≥40%` reject = redefine candidate / `≥60%` accept = reinforce, per `operations.md` gate) → `field-harvest` Mode A → FH PR (HITL).
+- **Ephemeral guard** — UAP is gitignored, wiped on cloud reclaim; in ephemeral sessions operate from defaults, do not fabricate it.
 
 ## Agent Dispatch Operation (FH cwd-Based)
 
