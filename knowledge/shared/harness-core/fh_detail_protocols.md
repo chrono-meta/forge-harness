@@ -64,11 +64,15 @@ Identity marker: every greeting response opens with **🐿️** on its own line 
 
 **Returning user** (branch test above) — open with the fixed 4-door menu (the doors are stable; the contents are composed live). A summary copy lives in CLAUDE.md §Active Onboarding — keep branch tests and door labels in sync when editing:
 > 🐿️
-> *"What would you like to start? ① Map a project · ② Create a new project · ③ Accelerate a mapped project (work · Full-Harness) — {field candidates} · ④ Cross-project synergy"*
+> *"What would you like to start? ① Map a project · ② Create a new project · ③ Accelerate a mapped project (work · Full-Harness · skills/agents/plugins) — {field candidates} · ④ Cross-project synergy"*
 
 - **① Map a project** → routes to `auto_project_mapping.md`; after a successful mapping, offer the §6 Full-Harness promotion prompt
 - **② Create a new project** → Step 3-0 (new project setup)
-- **③ Accelerate a mapped project** → compose live from `CATALOG.md` / active tracks / the session card's **field-side** candidates; include a Full-Harness promotion offer for projects still on light mapping — never hardcode a track name; read current state each time so the menu cannot go stale
+- **③ Accelerate a mapped project** → compose live from `CATALOG.md` / active tracks / the session card's **field-side** candidates — never hardcode a track name; read current state each time so the menu cannot go stale. **Acceleration levers** (offer per project state, each user-approved):
+  - **Full-Harness promotion** for projects still on light mapping (`auto_project_mapping.md` §6)
+  - **Skill-ification** of repeated patterns (`#skill-candidate` tag at 3+ recurrences → SKILL.md draft; FH skill gates — diet · Done When · triggers — apply to field skills too)
+  - **Sub-agent proposals** (`.claude/agents/*.md`, invocation rules in `operations.md`)
+  - **Plugin adoption / plugin-ification — no-reinvention order**: platform built-ins (Tier 0) and `claude-plugins-official` (Tier 1) **first**, via `/plugin-recommender` — FH builds only the governance increment on top (mirrors §6 item 5: recommend-only, never auto-install)
 - **④ Cross-project synergy** → render **only when 2+ project tracks exist** (underscore meta dirs don't count); runs `cross-ecosystem-synergy-detection` across mapped tracks. Findings flow back into each project (skills/patterns each project can adopt); when a finding fills an FH gap or repeats across 2+ projects, *propose* an FH contribution (`/field-harvest` → `tracks/_contrib` consent lane) — contribution is an **outcome of findings, never a standing door**
 - **🔧 FH self-development (developer door — unnumbered, conditional)** → append ` · 🔧 FH self-development — {FH worklist}` to the menu line **only when FH-dev state exists**: session card `tracks/_meta/reference_next_session_starter.md` · open `fh_signal_*` files · `CLAUDE.local.md`. The hub operator always has this state (owner always sees it — no flag). Compose live from the card's **FH-side** candidates + open `fh_signal_*` items + open handoffs — picking it surfaces the in-progress FH dev worklist, never a blank prompt. Without dev state the door is **silently absent**; the user typing `developer` / `개발자` **as a standalone utterance or menu reply** (never a substring of a task sentence — "I'm a developer at X" does not open it) opens it on demand → route to `docs/CONTRIBUTING.md` + `tracks/_contrib/` + open `fh_signal_*` items (the contribution entry path)
 

@@ -113,7 +113,7 @@ Simplification guard: trivial denials with one obvious fix → state block + sin
 - **Returning user** (session files OR mapped project tracks exist): fixed 4-door menu —
 
   > 🐿️
-  > *"① Map a project · ② Create a new project · ③ Accelerate a mapped project (work · Full-Harness) — {field candidates} · ④ Cross-project synergy"*
+  > *"① Map a project · ② Create a new project · ③ Accelerate a mapped project (work · Full-Harness · skills/agents/plugins) — {field candidates} · ④ Cross-project synergy"*
 
   Render conditions: ①②③ always (③'s candidates composed live) · ④ only when **2+ project tracks** exist (underscore meta dirs don't count) — synergy findings flow back into each project, and may *propose* an FH contribution (`/field-harvest` → `tracks/_contrib`) as an **outcome of findings, never a standing door**.
 
