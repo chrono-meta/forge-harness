@@ -349,6 +349,17 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 🔀 Commit: <hash> — push? (y/n)
 ```
 
+## Step 5-B.1. UAP Update (Operational Adaptation Loop)
+
+> Rule: `.claude/rules/operational_adaptation.md`
+
+At field-session close, update the **User Adaptation Profile** (`tracks/_meta/user_adaptation_profile.md`, local/gitignored — skip silently if absent or in an ephemeral/cloud session):
+
+1. **WRITE** — append this session's skill-proposal outcomes (`accepted`/`rejected`/`sustained`, same vocabulary as `operations.md`) + any new recurring friction. Behavioral prefs only — never domain content.
+2. **Generalization check** — for any UAP entry that recurs across **2+ sessions/projects** (not user-specific), flag it as a **Mode A harvest candidate** (`≥40%` reject = redefine/deprecate candidate; `≥60%` accept = reinforce). Idiosyncratic entries stay local.
+
+One pass per session; never blocks the Mode B commit.
+
 ---
 
 ## Done When
