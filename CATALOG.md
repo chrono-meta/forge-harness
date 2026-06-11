@@ -8,11 +8,22 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-11 | forge-harness | #mcp-gating, #external-mcp, #name-keyed-policy, #measured-origin, #field-template
+**File:** templates/.claude/rules/mcp_tool_gating.md (+ auto_project_mapping.md §6 row 4, CLAUDE.md mount-intent trigger)
+Cloud session (Mode D, ext): new field template — external-MCP tool gating with three tiers (ask / ask-meta-write / allow-untrusted-read), name-keyed because server-supplied annotations are unreliable (measured same-day: live messaging-class MCP shipped all-None hints incl. irreversible send + approval-resolution tools — fh-be `signal_2026-06-11_hermes-mcp-cloud-boot.md`). Opus challenger caught the name-spoofing hole (server controls names too → behavior-confirmation required for non-ask tiers, fixed inline); sonnet blind sim PASS on unfilled-§3 scenario (per-item ask on send, batch approval-grant refused).
+- Decision: prefer host-native per-tool permission config as enforcement; this template = what-to-gate + portable fallback. §6 install row is conditional (MCP present); the proactive mount-intent trigger is the load-bearing path.
+
 ### 2026-06-11 | forge-harness | #identity-marker, #door-skeleton, #target-tier-sim, #below-floor-consumer, #false-control-kill
 **File:** CLAUDE.md §Active Onboarding (+ fh_detail_protocols.md, scripts/below_floor_scan.sh, .claude/rules/operations.md)
 Cloud session (Mode D): 🐿️ marker folded into the returning-user door skeleton — one salience unit with the menu, closing the sonnet-sim marker-drop residual (`fh_signal_2026-06-11`); verified by blind sonnet Agent sim PASS (verification tier = failure tier; in-session model-pinned dispatch available in cloud, no headless fallback needed). 6/15 billing one-line amendment rode the same CLAUDE.md edit (no churn commit). below_floor_scan.sh ships as the standing consumer the pre-commit hook promised ("weekly audit re-queues below-floor markers") but never had — resolution via `floor-rerun:`/`floor-writeoff:` marker appends, wired as weekly Phase 1.5 step 2.
 - Decision: ack rubber-stamp (card item 4) closed via route-around — build the re-run consumer, leave the ack untouched (per opus-challenger verdict on the reverted regex attempt).
 - Decision: opus challenger PASS 0S+3B — marker-append/hook-collision replicated CLEAN; P9 check: "builds the control, not paper-over".
+
+### 2026-06-11 | forge-harness | #p9, #harness-bulk, #check-class, #model-portability, #steel-quench
+**File:** plugins/fh-meta/skills/steel-quench/SKILL.md (+ knowledge/shared/harness-core/multi_model_sidecar_strategy.md)
+Two field-validated generalizations promoted to the public mirror (origin: 2026-06-08 field reversal — a weak open-weight model's domain ceiling proved iteration-proof while the pipeline thickened to compensate): (a) steel-quench Cross-Project Patterns gains **P9 harness-bulk-as-model-compensation** (route the task class to a stronger model; never paper over a capability ceiling with more harness — signals are measured: steps added for one model's weakness, quality flat while step count rises); (b) sidecar strategy gains the **check-class = model-portability map** principle (mandatory-pass + mechanical-measured port by construction; judged is where model choice matters, bounded by judged-pairing and §Floor governance re-runs).
+- Decision: 4-axis gate ran with opus challenger (CONDITIONAL_PASS → A-grade measured-class over-claim narrowed inline + 4 B fixes) + blind sonnet target-tier sim (P9 fixture correctly classified + routed) — the salience row survives the field tier.
+- Decision: P9 scope-tagged to the field axis ("simpler over time"); meta-harness complexity that earns its scope is explicitly distinguished.
 
 ### 2026-06-10 | forge-harness | #destructive-op-gate, #irreversibility, #silent-loss, #branch-cleanup-incident
 **File:** CLAUDE.md §Destructive-Op Gate (+ templates/predelete_check.sh, scripts/selfcheck.sh)
