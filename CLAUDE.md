@@ -103,9 +103,14 @@ Simplification guard: trivial denials with one obvious fix → state block + sin
 
 **4-step summary**: ① Auto-read CLAUDE.md + CATALOG + session card + registry scan → ② One-line proposal (new user / exploratory / returning branches) → ③ 5-skill cascade (plugin-recommender → synergy → .claudeignore → model → verify) → ④ Approval + setup
 
-**Returning-user door skeleton (summary-level — applies even if the detail file read is skipped; returning users only, new/exploratory branches stay in the detail file)**: open with the fixed 3-door menu — *"① Connect/map a project · ② Work on a mapped project — {field candidates} · ③ FH self-development — {FH worklist}"* — composing session-card candidates **into doors ②/③**, never as a raw priority dump that replaces the menu. An urgent open item (time-windowed handoff · blocking external deadline) outranks the menu; an explicit task utterance skips it entirely (see Guards below); cadence reminders (§Cadence Rules) ride below it, they don't displace it. Canonical source: `fh_detail_protocols.md` Step 2 §Returning user — keep door labels in sync.
+**Returning-user door skeleton (summary-level — applies even if the detail file read is skipped; returning users only, new/exploratory branches stay in the detail file)**: open with the fixed 3-door menu, **🐿️ on its own line as the skeleton's first line** —
 
-**Identity marker**: every greeting response (Step ②) opens with 🐿️ on its own line. FH's session-start signal — see `fh_detail_protocols.md` Step 2 for full greeting templates.
+> 🐿️
+> *"① Connect/map a project · ② Work on a mapped project — {field candidates} · ③ FH self-development — {FH worklist}"*
+
+The marker is part of this skeleton — one salience unit with the menu, not a separate rule (origin: a sonnet-tier sim emitted the menu but dropped the standalone marker rule, `fh_signal_2026-06-11`). Compose session-card candidates **into doors ②/③**, never as a raw priority dump that replaces the menu. An urgent open item (time-windowed handoff · blocking external deadline) outranks the menu; an explicit task utterance skips it entirely (see Guards below); cadence reminders (§Cadence Rules) ride below it, they don't displace it. Canonical source: `fh_detail_protocols.md` Step 2 §Returning user — keep door labels in sync.
+
+**Identity marker**: every greeting response (Step ②) opens with 🐿️ on its own line. For returning users it is embedded in the door skeleton above (do not strip it when composing doors); new/exploratory branch templates carry it in `fh_detail_protocols.md` Step 2.
 
 **Guards**: explicit task-entry utterance → skip onboarding · once per session · code/debug requests → start working directly · project routing is a suggestion, mention at most once
 **Metadata-is-not-intent guard**: the trigger is the user's **typed message only**. Session metadata — branch name (auto-derived from the first message, e.g. `claude/korean-greeting-*`), repo name, file paths — is **never** a task spec and never suppresses or redirects the greeting trigger. A bare greeting fires onboarding even when the branch name looks like a feature request; if the only "task" signal lives in metadata and not in what the user typed, treat the message as a greeting and run the 3-axis scaffold.
@@ -178,7 +183,9 @@ the operator (one line), mirroring §Floor governance.
 
 If `model:`-pinned dispatch is unavailable (plan/billing gate), fall back to a cross-session headless
 run (`claude -p "<trigger>" --model <tier>` in the target cwd) — stronger isolation, zero instruction
-contamination. Record sim results in the Axes 2–3 marker + sub-agent invocation log.
+contamination. 2026-06-15+: headless `claude -p` draws from the hard-capped credit pool, not the
+subscription — prefer in-session Agent dispatch when the plan gate allows; take the headless fallback
+knowingly. Record sim results in the Axes 2–3 marker + sub-agent invocation log.
 
 **Axis ownership** (each skill is already complete — orchestrator only coordinates):
 

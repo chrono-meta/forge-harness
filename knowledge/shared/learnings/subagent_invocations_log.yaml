@@ -64,3 +64,21 @@
   trigger: operator request (gate codified same session); model-pinned Agent dispatch (sonnet, haiku) blocked by plan gate -> cross-session fallback
   outcome: accepted
   note: "PASS — 3-door menu fired with card candidates composed into doors 2/3, cadence below menu; residual: missing 🐿️ marker (fh_signal_2026-06-11_fh-direct)"
+- date: 2026-06-11
+  agent: general-purpose (sonnet, blind sim, in-session Agent dispatch)
+  task: target-tier sim gate — blind greeting sim verifying 🐿️-in-skeleton fold-in (Option A) at the failure tier
+  trigger: 4-axis auto-gate Mode D supplement (salience-dependent change, observed sonnet miss fh_signal_2026-06-11)
+  outcome: accepted
+  note: "PASS — 🐿️ on its own line as skeleton first line + 3-door menu emitted; cadence rode below menu; model-pinned dispatch available in cloud env (plan gate absent), no claude -p fallback needed"
+- date: 2026-06-11
+  agent: general-purpose (opus, quench-challenger role)
+  task: steel-quench Axis 2 on 🐿️ fold-in + 6/15 billing amendment + below_floor_scan.sh consumer + operations.md wiring
+  trigger: 4-axis auto-gate Axis 2 (FH asset modified)
+  outcome: accepted
+  note: "PASS 0S+3B — marker-append/hook-collision CLEAN (replicated validate_marker_floor), P9 check verdict 'builds the control, not paper-over'; B1 scanner-autoinvoke implication fixed, B2 signal status update routed to fh-be, B3 opus hardcode accepted (matches hook convention)"
+- date: 2026-06-11
+  agent: claude (background, frontier-digest skill execution)
+  task: cadence-overdue frontier-digest run (16d+ since 2026-05-26) — WebSearch mode, incremental-only
+  trigger: CLAUDE.md cadence rule (7d+ overdue) + operator door-3 batch approval
+  outcome: accepted
+  note: "digest written to companion store only (no FH asset touched, no commit — reviewed by main session); headline: NLAH arXiv:2603.25723 = convergence candidate n=6, Fable 5 tier shift, Stop-hook additionalContext channel; 5 candidates parked as unapproved checklist"

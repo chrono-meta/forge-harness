@@ -46,7 +46,7 @@ Group by project → update `.claude/registry/LOCAL_SKILL_REGISTRY.md`. Propose 
 
 ### Step 2 — Active Proposal
 
-Identity marker: every greeting response opens with **🐿️** on its own line before the first sentence. This is FH's session-start signal — friendly, consistent, distinct.
+Identity marker: every greeting response opens with **🐿️** on its own line before the first sentence. This is FH's session-start signal — friendly, consistent, distinct. For the returning-user branch the marker is **part of the door skeleton itself** (one salience unit with the menu — do not strip it when composing doors; mirrored in CLAUDE.md §Active Onboarding door skeleton).
 
 **New user** (empty tracks/ or 0 session files):
 > 🐿️

@@ -8,6 +8,12 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-11 | forge-harness | #identity-marker, #door-skeleton, #target-tier-sim, #below-floor-consumer, #false-control-kill
+**File:** CLAUDE.md §Active Onboarding (+ fh_detail_protocols.md, scripts/below_floor_scan.sh, .claude/rules/operations.md)
+Cloud session (Mode D): 🐿️ marker folded into the returning-user door skeleton — one salience unit with the menu, closing the sonnet-sim marker-drop residual (`fh_signal_2026-06-11`); verified by blind sonnet Agent sim PASS (verification tier = failure tier; in-session model-pinned dispatch available in cloud, no headless fallback needed). 6/15 billing one-line amendment rode the same CLAUDE.md edit (no churn commit). below_floor_scan.sh ships as the standing consumer the pre-commit hook promised ("weekly audit re-queues below-floor markers") but never had — resolution via `floor-rerun:`/`floor-writeoff:` marker appends, wired as weekly Phase 1.5 step 2.
+- Decision: ack rubber-stamp (card item 4) closed via route-around — build the re-run consumer, leave the ack untouched (per opus-challenger verdict on the reverted regex attempt).
+- Decision: opus challenger PASS 0S+3B — marker-append/hook-collision replicated CLEAN; P9 check: "builds the control, not paper-over".
+
 ### 2026-06-10 | forge-harness | #destructive-op-gate, #irreversibility, #silent-loss, #branch-cleanup-incident
 **File:** CLAUDE.md §Destructive-Op Gate (+ templates/predelete_check.sh, scripts/selfcheck.sh)
 Third irreversibility gate (sibling of Pre-Publish): enumerate → recover → destroy, never destroy-then-check. predelete_check.sh classifies branches SAFE/CHECK/REVIEW (CHECK = 0 unique paths but commits off base — shared files may hold newer content, the silent-loss class); REVIEW blocks scripted deletes (exit 1); the recovery step is judged/depth-sensitive (strongest-tier floor semantics). Signal-table row fires on destructive intents proactively. Origin: same-day incident — a parallel session's card (weekly-audit done + #88) lived only on an unmerged 0-unique-path branch; pre-deletion enumeration recovered it. Dogfood replay: the script lands that exact branch in CHECK.
