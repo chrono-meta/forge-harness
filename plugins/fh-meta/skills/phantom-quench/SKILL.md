@@ -1,6 +1,6 @@
 ---
 name: phantom-quench
-description: The grounding member of the quench series — extracts proper nouns, numerical values, and branching conditions from artifacts (TCs, analysis reports, design documents), back-traces them to declared source files, and marks anything not found as a Phantom Claim (ungrounded — present in the artifact but not traceable to a declared source; not a claim that it is necessarily false). If steel-quench attacks output patterns (self-declarations, cushion language), phantom-quench attacks input tracing (where did this come from?). Renamed from source-grounding-audit (2026-06-06, quench-series); `/source-grounding-audit` still resolves as an alias. Triggered by "phantom detection", "phantom-quench", "phantom claim", "hallucinated claim detection", "source back-trace", "source audit", "verify source", "TC evidence tracing", "where did this come from", "grounding audit", "source grounding audit", "false claim detection".
+description: The grounding member of the quench series — extracts proper nouns, numerical values, and branching conditions from artifacts (TCs, analysis reports, design documents), back-traces them to declared source files, and marks anything not found as a Phantom Claim (ungrounded — present in the artifact but not traceable to a declared source; not a claim that it is necessarily false). If steel-quench attacks output patterns (self-declarations, cushion language), phantom-quench attacks input tracing (where did this come from?). Renamed from source-grounding-audit (2026-06-06, quench-series); the old name appears here so legacy references still route to this skill (alias stub directory removed 2026-06-12). Triggered by "phantom detection", "phantom-quench", "phantom claim", "hallucinated claim detection", "source back-trace", "source audit", "verify source", "TC evidence tracing", "where did this come from", "grounding audit", "source grounding audit", "false claim detection".
 user-invocable: true
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 model: sonnet
@@ -13,8 +13,10 @@ model: sonnet
 > **Renamed from `source-grounding-audit` (2026-06-06)** — the grounding member of the quench series
 > (steel-quench · phantom-quench · goal-quench). Same skill, same ruleset; only the label changed to fit
 > the family. The **v1 paper (Zenodo 10.5281/zenodo.20397566) cites the old name** — that is the
-> historical record, not a phantom. `/source-grounding-audit` still resolves via the deprecated redirect
-> stub at `plugins/fh-meta/skills/source-grounding-audit/SKILL.md` (`successor: phantom-quench`).
+> historical record, not a phantom (`paper/forge_harness_v1.0.html` is left unchanged by design; readers
+> map *source-grounding-audit (v1) = phantom-quench (current)*). The deprecated redirect stub directory
+> was removed 2026-06-12 — old-name utterances ("source grounding audit", "grounding audit") route here
+> via this description's trigger phrases.
 > This is a **label rename, not a capability change** — phantom-quench does not fuse steel-quench or
 > inject faults; those remain separate (orthogonality is deliberate — see Role Separation below).
 >

@@ -24,10 +24,10 @@ What expert grounds against:
 What expert does NOT rely on:
   - Its own unverified parametric recall ("I think X is true")
   - Internal hub assets only (that is fact-checker's job — internal grep)
-  - Declared-source-file back-tracing only (that is source-grounding-audit's job)
+  - Declared-source-file back-tracing only (that is phantom-quench's job)
 ```
 
-**Boundary (no overlap)**: `fact-checker` greps the *hub/own environment*; `source-grounding-audit` traces claims to *declared internal source files*; `expert` checks against the *external world / frontier*. The three cover internal-duplication, internal-provenance, and external-accuracy respectively.
+**Boundary (no overlap)**: `fact-checker` greps the *hub/own environment*; `phantom-quench` traces claims to *declared internal source files*; `expert` checks against the *external world / frontier*. The three cover internal-duplication, internal-provenance, and external-accuracy respectively.
 
 ## Accuracy Matrix
 
