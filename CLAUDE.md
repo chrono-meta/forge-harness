@@ -103,17 +103,28 @@ Simplification guard: trivial denials with one obvious fix → state block + sin
 
 **4-step summary**: ① Auto-read CLAUDE.md + CATALOG + session card + registry scan → ② One-line proposal (new user / exploratory / returning branches) → ③ 5-skill cascade (plugin-recommender → synergy → .claudeignore → model → verify) → ④ Approval + setup
 
-**Returning-user door skeleton (summary-level — applies even if the detail file read is skipped; returning users only, new/exploratory branches stay in the detail file)**: open with the fixed 3-door menu, **🐿️ on its own line as the skeleton's first line** —
+**Greeting branch + door skeleton (summary-level — applies even if the detail file read is skipped)**: the branch test is **mechanical local state — session files under `tracks/`** — never git log / CATALOG residue (a fresh clone carries full history but zero session files: it is a NEW install — origin: a fresh-clone sonnet sim rendered the returning menu off commit messages, `fh_signal_2026-06-11` FP8). Every variant opens with **🐿️ on its own line as the skeleton's first line** — the marker is part of the skeleton, one salience unit with the menu, not a separate rule.
 
-> 🐿️
-> *"① Connect/map a project · ② Work on a mapped project — {field candidates} · ③ FH self-development — {FH worklist}"*
+- **New user** (no session files AND no mapped project tracks under `tracks/` — fresh clone/install; underscore meta dirs `_meta`/`_audit`/`_contrib` don't count): 2-door starter, never the returning menu —
 
-The marker is part of this skeleton — one salience unit with the menu, not a separate rule (origin: a sonnet-tier sim emitted the menu but dropped the standalone marker rule, `fh_signal_2026-06-11`). Compose session-card candidates **into doors ②/③**, never as a raw priority dump that replaces the menu. An urgent open item (time-windowed handoff · blocking external deadline) outranks the menu; an explicit task utterance skips it entirely (see Guards below); cadence reminders (§Cadence Rules) ride below it, they don't displace it. Canonical source: `fh_detail_protocols.md` Step 2 §Returning user — keep door labels in sync.
+  > 🐿️
+  > *"Looks like you're new here! ① Create your first project (guided) · ② Map an existing project — and I can run `/install-wizard` to finish initial setup."*
 
-**Identity marker**: every greeting response (Step ②) opens with 🐿️ on its own line. For returning users it is embedded in the door skeleton above (do not strip it when composing doors); new/exploratory branch templates carry it in `fh_detail_protocols.md` Step 2.
+- **Returning user** (session files OR mapped project tracks exist): fixed 4-door menu —
+
+  > 🐿️
+  > *"① Map a project · ② Create a new project · ③ Accelerate a mapped project (work · Full-Harness) — {field candidates} · ④ Cross-project synergy"*
+
+  Render conditions: ①②③ always (③'s candidates composed live) · ④ only when **2+ project tracks** exist (underscore meta dirs don't count) — synergy findings flow back into each project, and may *propose* an FH contribution (`/field-harvest` → `tracks/_contrib`) as an **outcome of findings, never a standing door**.
+
+- **Developer door (unnumbered, outside the menu)**: when **FH-dev state exists** (session card `tracks/_meta/reference_next_session_starter.md` · open `fh_signal_*` files · `CLAUDE.local.md`), append to the menu line: ` · 🔧 FH self-development — {FH worklist}`. The hub operator always has this state, so the owner always sees it — no flag needed. Without dev state the door is **silently absent**; the user typing `developer` / `개발자` **as a standalone utterance or menu reply** (not a substring of a task sentence) opens it on demand (routes to `docs/CONTRIBUTING.md` + `tracks/_contrib/` + open `fh_signal_*` items).
+
+Compose session-card candidates **into door ③ (field) and the 🔧 door (FH-dev)**, never as a raw priority dump that replaces the menu. An urgent open item (time-windowed handoff · blocking external deadline) outranks the menu; an explicit task utterance skips it entirely (see Guards below); cadence reminders (§Cadence Rules) ride below it, they don't displace it. Canonical source: `fh_detail_protocols.md` Step 2 — keep branch tests and door labels in sync.
+
+**Identity marker**: every greeting response (Step ②) opens with 🐿️ on its own line. It is embedded in both skeletons above (do not strip it when composing doors); the exploratory branch template carries it in `fh_detail_protocols.md` Step 2.
 
 **Guards**: explicit task-entry utterance → skip onboarding · once per session · code/debug requests → start working directly · project routing is a suggestion, mention at most once
-**Metadata-is-not-intent guard**: the trigger is the user's **typed message only**. Session metadata — branch name (auto-derived from the first message, e.g. `claude/korean-greeting-*`), repo name, file paths — is **never** a task spec and never suppresses or redirects the greeting trigger. A bare greeting fires onboarding even when the branch name looks like a feature request; if the only "task" signal lives in metadata and not in what the user typed, treat the message as a greeting and run the 3-axis scaffold.
+**Metadata-is-not-intent guard**: the trigger is the user's **typed message only**. Session metadata — branch name (auto-derived from the first message, e.g. `claude/korean-greeting-*`), repo name, file paths — is **never** a task spec and never suppresses or redirects the greeting trigger. A bare greeting fires onboarding even when the branch name looks like a feature request; if the only "task" signal lives in metadata and not in what the user typed, treat the message as a greeting and run the greeting branch + door skeleton above.
 
 ## New Skill Creation Pre-Commit Gate
 
