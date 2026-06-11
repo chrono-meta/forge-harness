@@ -8,6 +8,11 @@ AI reads this file first when searching past work. Open individual files for det
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-06-11 | forge-harness | #readme-dedup, #commoditization-defense, #b1-boundary, #seed-vetting, #field-routing
+**File:** README.md (PR #93) + fh-be signals/handoffs (PR #24+) + qasp-dev v0.14 (field)
+Cloud session #4 (Mode D, remote-doable batch): README stale duplicate "Measured, not asserted" block removed (pre-tier-floor copy contradicted default-Sonnet stance) + "Where this sits (2026)" positioning para (gate+loop are the asset — plumbing commoditizes). fh-be: B1 scope boundary (AW2 simple-vs-complex import), SC1–4 seed vetting (SC1 phantom arXiv fixed → 2509.19349; SC3 commoditization threat to bet ID), gstack positioning-triangle line. Field: qasp-be handoff verified+executed — DefectPatternMatcher+Bug Mode implemented UTF-8-clean in qasp-dev (25 tests PASS, 0 regressions); qasp-qwen(OpenCode) downgrade triage hardened to 2-tier (살림/차단) with free-tier 80/20 split — β/SC2 field case logged.
+- Decision: README action PARTIAL (merge done; About refresh + npm 1.4.14 laptop-bound); full-TC locked on qwen build per operator's CaseCraft limit measurement — structure-transform survives (P6/P6.5 deterministic), meaning-fill routes to frontier.
+
 ### 2026-06-11 | forge-harness | #mcp-gating, #external-mcp, #name-keyed-policy, #measured-origin, #field-template
 **File:** templates/.claude/rules/mcp_tool_gating.md (+ auto_project_mapping.md §6 row 4, CLAUDE.md mount-intent trigger)
 Cloud session (Mode D, ext): new field template — external-MCP tool gating with three tiers (ask / ask-meta-write / allow-untrusted-read), name-keyed because server-supplied annotations are unreliable (measured same-day: live messaging-class MCP shipped all-None hints incl. irreversible send + approval-resolution tools — fh-be `signal_2026-06-11_hermes-mcp-cloud-boot.md`). Opus challenger caught the name-spoofing hole (server controls names too → behavior-confirmation required for non-ask tiers, fixed inline); sonnet blind sim PASS on unfilled-§3 scenario (per-item ask on send, batch approval-grant refused).
