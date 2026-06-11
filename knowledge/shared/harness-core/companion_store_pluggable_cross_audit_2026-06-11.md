@@ -84,3 +84,35 @@ vault · gbrain LLM-wiki). Role + single-source guard unchanged; only the backen
 setup-time choice. Implemented in the same session via a `modes_and_value.md` Pluggable-backends
 subsection (the companion store's home; project→track mapping in `auto_project_mapping.md` is a
 separate concern and is left untouched).
+
+## Backend-use value — gbrain routing threshold (decision 2026-06-11)
+
+Two distinct questions, do not conflate:
+- **Import value** (learn *from* gbrain) — already YES, captured in the import ledger above
+  (engine-factory pluggable pattern, brains-and-sources routing, thin-router). Needs no trial.
+- **Backend-use value** (route FH outputs *through* gbrain) — a **threshold call**, separate from
+  the above, and currently **low**.
+
+**Why low now**: over plain markdown (`-be` / Obsidian), gbrain adds exactly one thing —
+**retrieval/recall at scale** (hybrid search, pgvector). So routing value is a function of corpus
+size + query pattern, not a flat win:
+
+| Condition | gbrain routing value |
+|---|---|
+| FH outputs findable by grep + CATALOG (≤ hundreds of files) | **low** — markdown wins on simplicity |
+| Corpus large enough that grep/CATALOG breaks down | high |
+| Want FH signals searchable **in one query with the personal brain** (cross-corpus) | **gbrain's unique win** |
+| Queries are exact-match (grep) rather than semantic recall | low |
+
+gbrain itself sets the threshold: PGLite default, Supabase suggested only at **1000+ files**. FH's
+session-record corpus is far below that → markdown (`-be`/Obsidian) is the correct default today;
+gbrain routing is a **future candidate** for when the corpus grows.
+
+**What a trial would (and wouldn't) tell you**: a priori reasoning settles the threshold question
+above. Only **ergonomics** — ingest friction, whether unified FH-plus-personal-brain search is
+genuinely useful in the workflow, latency — needs a hands-on trial (a ~15-min local PGLite spike).
+Run that trial **only if cross-corpus unified search is actually wanted**; otherwise skip it.
+
+**Decision**: default to `-be`/Obsidian; treat gbrain routing as conditional (corpus growth OR a
+real cross-corpus-search need). Obsidian needs no trial (markdown in a vault path, works today);
+the trial is gbrain-specific.
