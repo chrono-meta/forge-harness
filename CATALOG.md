@@ -153,7 +153,7 @@ Added canonical §Sidecar Engine Resolution Protocol — Tier1 subscription-CLI 
 ### 2026-06-09 | forge-harness | #onboarding, #greeting, #3-axis-scaffold, #returning-user
 **File:** knowledge/shared/harness-core/fh_detail_protocols.md
 Returning-user greeting (Step 2): single free-form e.g. line → fixed 3-axis entry scaffold (① connect new → auto_project_mapping · ② resume existing → filled live from CATALOG · ③ jump to work), plus a "keep axes fixed, compose contents per situation" note. PR #80.
-- Decision: axis ② read live from CATALOG each session so the menu can't go stale — qasp-style clarity without rigidity.
+- Decision: axis ② read live from CATALOG each session so the menu can't go stale — field-harness-style clarity without rigidity.
 
 ### 2026-06-05 | _audit | sister-asset, gstack, field-harness, garry-tan
 **File:** tracks/_audit/session_2026_06_05_gstack-sister.md (private companion mirror)
