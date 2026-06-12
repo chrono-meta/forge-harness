@@ -25,21 +25,11 @@ Diagnoses the 3 main causes of session token waste and prescribes immediate reme
 
 ### Step 1. `.claudeignore` Diagnosis + Generation
 
-```bash
-# Check whether .claudeignore exists in current project root
-ls -la .claudeignore 2>/dev/null || echo "MISSING"
-```
+Check whether `.claudeignore` exists in the project root (bash in §Step-Bash).
 
 **If absent**: Scan project structure and auto-generate.
 
 **If already present**: Keep existing content + suggest additional patterns only (no overwrite). Check for sentinel comment (`# context-doctor:`) and add to first line if absent.
-
-```bash
-# Project type detection
-ls package.json pyproject.toml build.gradle pom.xml 2>/dev/null | head -5
-# Top-level directory list
-ls -d */ 2>/dev/null | head -20
-```
 
 Generation criteria — by project type:
 
@@ -58,25 +48,13 @@ Automatically add sentinel comment to first line when generating/updating:
 ```
 → Suppresses auto-invocation in subsequent sessions.
 
+> **Detail**: See `SKILL_detail.md §Step-Bash` — detection bash for Steps 1/2/4/5, large-file warning format, audit report format — read when executing any step's commands.
+
 ### Step 2. Large File Detection + Split Strategy Guidance
 
-```bash
-# Detect files exceeding 500 lines (top 10)
-find . -name "*.py" -o -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.java" -o -name "*.kt" \
-  | grep -v node_modules | grep -v .git \
-  | xargs wc -l 2>/dev/null | sort -rn | head -11 | tail -10
-```
+Detect files exceeding 500 lines (top 10 — bash in §Step-Bash) and output the split-read guidance per file (offset + limit, section by section).
 
-When files exceeding 500 lines are found:
-
-```
-⚠️  Large file detected: {filename} ({N} lines)
-    Full read cost: ~{token count} tokens
-    Recommended: split reads with offset + limit
-    Example: Read({filename}, offset=0, limit=100)  → proceed section by section
-```
-
-**Repeated full-read pattern** (burst pattern) detection criteria:
+**Repeated full-read pattern** (burst pattern) detection criteria (behavioral):
 - 3+ files over 500 lines exist and `.claudeignore` was absent
 - User mentions "read it all at once" / "re-read the whole thing every time"
 
@@ -119,49 +97,15 @@ When context is near the limit and you want to *preserve state* rather than rese
 
 ### Step 4. harvest-loop Integration (burst pattern recording)
 
-When burst pattern is detected (if `tracks/_audit/` exists):
+When burst pattern is detected and `tracks/_audit/` exists: locate the latest weekly_audit file and suggest adding the Token Efficiency Check items to it (bash + checklist block in §Step-Bash).
 
-```bash
-# Check latest weekly_audit file
-ls -1t tracks/_audit/weekly_audit_*.md 2>/dev/null | head -1
-```
-
-If found: Suggest adding the following to the `## Check Items` or `## Token Efficiency` section of that file:
-
-```markdown
-### Token Efficiency Check (context-doctor)
-- [ ] .claudeignore is up to date
-- [ ] 500+ line large files list and whether split reads are followed
-- [ ] Whether burst pattern occurred (3+ full reads of same large file)
-- [ ] Whether /clear was used after direction changes
-```
-
-Environments without `tracks/_audit/` (Mode C — plugin only):
-→ Output items to terminal only, skip file writes.
+Environments without `tracks/_audit/` (Mode C — plugin only): → output items to terminal only, skip file writes.
 
 ### Step 5. CC Context Structure Regular Audit (Hub Environment Only)
 
-**Hub environment detection condition**: CLAUDE.md contains "your-hub" or "meta hub" + `memory/MEMORY.md` exists.
+**Hub environment detection condition**: CLAUDE.md contains "your-hub" or "meta hub" + `memory/MEMORY.md` exists. Skip Step 5 when not in a hub environment.
 
-```bash
-# CLAUDE.md line count
-wc -l CLAUDE.md .claude/CLAUDE.md 2>/dev/null | sort -rn | head -3
-
-# MEMORY.md line count (200-line limit)
-wc -l memory/MEMORY.md 2>/dev/null
-
-# memory/*.md files exceeding 30K
-find memory -name "*.md" -size +30k 2>/dev/null | xargs wc -l | sort -rn | head -10
-
-# SKILL.md files > 300 lines with no SKILL_detail.md (skill-splitter candidates)
-find plugins -name "SKILL.md" 2>/dev/null | while read f; do
-  lines=$(wc -l < "$f")
-  detail=$(dirname "$f")/SKILL_detail.md
-  [ "$lines" -gt 300 ] && [ ! -f "$detail" ] && echo "[skill-splitter candidate] $f ($lines lines)"
-done
-```
-
-**Audit thresholds + prescriptions**:
+Run the audit bash (§Step-Bash) and apply thresholds:
 
 | Target | Threshold | Prescription |
 |---|---|---|
@@ -170,19 +114,7 @@ done
 | memory/*.md single file | Exceeds 30K (300 lines) | Suggest splitting accumulated history into separate files |
 | SKILL.md (any) | > 300 lines AND no SKILL_detail.md | Propose `/skill-splitter` — governance-semantic split (not compression); compression removes content, splitting routes it on-demand |
 
-Audit result report format:
-```
-CC Context Audit Results
-  CLAUDE.md: {N} lines {status}
-  MEMORY.md: {N} lines / 200-line limit ({remaining} lines remaining)
-  Bloated files ({30K+}):
-    - {filename}: {N} lines → compression recommended
-  Recommended actions: {summary}
-```
-
 **Frequency**: When explicitly called with `/context-doctor` or auto-invoked at session start when MEMORY.md is detected at 180+ lines.
-
-> Skip Step 5 when not in a hub environment.
 
 ## Context Hierarchy (L1/L2/L3)
 
@@ -216,25 +148,7 @@ Advisory and tool-agnostic — recommend (and, where a doc is being authored/edi
 
 Keep it reversible: compress the *working copy* in context, not the source of truth on disk, unless the user is explicitly editing that file.
 
-### Tooling — Headroom (external option)
-
-The advisory pass above is tool-agnostic, but a concrete, reversible, local-first implementation exists: **Headroom** (`github.com/chopratejas/headroom`, open source, v0.22). It compresses tool outputs, logs, files, and RAG chunks before they reach the LLM — **vendor/coverage-reported** at 60–95% fewer tokens with the same answers ([The Register, 2026-05-31](https://www.theregister.com/ai-ml/2026/05/31/netflix-wiz-creates-app-to-slash-ai-bills-then-open-sources-it/5248702); figures unverified by FH). General token-efficiency basis: `../../../../knowledge/shared/harness-core/harness_frontier_diagnosis_2026-06-02.md`.
-
-**Redundancy-category targeting** (its key insight — import this into the pass): the high-yield targets are *machine-generated, schema-repetitive* payloads, not prose. Prioritize compressing, in order:
-
-1. **MCP tool outputs** — ~70% redundant JSON (most relevant to FH: heavy MCP sessions burn tokens here).
-2. **Logs** — ~90% jettisonable.
-3. **DB dumps / structured query output** — one schema, repeated rows.
-4. **File trees / directory listings** — repeated path metadata.
-
-Plain prose docs compress far less — spend the budget on the four categories above first.
-
-**Integration surfaces** (all local, runtime-side — outside the FH repo, so for the user's local setup, not a hub asset):
-- **Library** — `compress(messages)` inline (Python/TS).
-- **Proxy** — `headroom proxy --port 8787`, zero code change, then point the client at it.
-- **MCP server / agent-wrap** — wrap an MCP server or the agent CLI directly.
-
-Caveats: v0.22 is still early — pilot before relying on it; compression carries a quality/accuracy tradeoff, so its local-first + reversible design (matching the reversibility rule above) is the safeguard. See the repo for exact config — do not assume flags.
+> **Detail**: See `SKILL_detail.md §Headroom` — external tooling option (redundancy-category targeting, integration surfaces, caveats) — read when executing a compression pass and considering tooling.
 
 ## External User Environment Adaptation
 

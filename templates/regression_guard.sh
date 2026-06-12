@@ -146,10 +146,28 @@ print('OK')
   fi
 
   # F4. Operational keyword preservation
+  # Split-awareness: a skill-splitter split moves content to the sibling
+  # SKILL_detail.md — a token still present in SKILL.md + SKILL_detail.md combined
+  # is a MOVE, not a loss. Only the combined shortfall is a regression signal.
+  # NOTE: combined-count is a PRESENCE heuristic, not semantic equivalence — an
+  # unrelated detail-file line can absorb the count. True equivalence is owned by
+  # F2 (critical sections) + the Axis 2/3 review, not this counter.
+  detail_content=""
+  if echo "$f" | grep -q "SKILL\.md$"; then
+    detail_content=$(read_after "$(dirname "$f")/SKILL_detail.md")
+  fi
   for token in "M-tier" "S-tier" "R-tier" "PASS" "BLOCK" "Wave 0" "Wave 1" "Wave 4" "Step 0" "Step 1" "Step 2" "Step 3" "Step 4" "fan-in" "Done When"; do
     before=$(count_in "$before_content" "$token")
     after=$(count_in "$after_content" "$token")
     if [ "$before" -gt 0 ] && [ "$after" -lt "$before" ]; then
+      if [ -n "$detail_content" ]; then
+        in_detail=$(count_in "$detail_content" "$token")
+        if [ $((after + in_detail)) -ge "$before" ]; then
+          echo "  ℹ️  token '$token' moved to SKILL_detail.md ($before → $after + $in_detail in detail)"
+          continue
+        fi
+        after=$((after + in_detail))   # genuine combined shortfall → evaluate on combined count
+      fi
       diff=$((before - after))
       ratio=$((diff * 100 / before))
       if [ "$ratio" -ge 50 ]; then

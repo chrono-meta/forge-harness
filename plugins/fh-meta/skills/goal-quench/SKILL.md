@@ -33,7 +33,7 @@ The evaluator principle: Haiku judges completion (every turn, cheap). pipeline-c
 
 ## Modes — core → pro → max (fluid)
 
-goal-quench is a ladder, not a fixed shape. The tier names mirror Claude Code's subscription units (core / pro / max). The default (**core**) is the narrow safety belt — for users who only want /goal's two structural gaps closed. **pro** and **max** add optimization and orchestration on top, and are **auto-recommended by the Phase-1 budget verdict** so the orchestration cost is only paid when the task is large enough to justify it.
+goal-quench is a ladder, not a fixed shape. The default (**core**) is the narrow safety belt — for users who only want /goal's two structural gaps closed. **pro** and **max** add optimization and orchestration on top, and are **auto-recommended by the Phase-1 budget verdict** so the orchestration cost is only paid when the task is large enough to justify it.
 
 | Mode | Adds over previous | Chained skills | Auto-recommended when |
 |---|---|---|---|
@@ -58,7 +58,7 @@ For **CC-only users**, pro/max sidecars run as isolated sub-agents (Sonnet for e
 
 Therefore:
 - **Never auto-escalate a GREEN/YELLOW task to pro/max.** For external CLI users, sidecar costs are untracked and invisible in CC's budget display. For CC sub-agent users, the overhead is estimable but still real — orchestrator Opus × 3 applies. Note the appropriate caveat when disclosing cost.
-- **Model escalation cost**: With `/model opusplan`, Opus activates on plan-mode turns (reasoning, decomposition decisions) and Sonnet handles execution turns — both CC-visible in session jsonl under `message.model`. External CLI sidecar fees are additional and invisible to CC; state both when present.
+- **Model escalation cost**: With `/model opusplan`, Opus activates on plan-mode turns and Sonnet handles execution turns — both CC-visible in session jsonl under `message.model`. External CLI sidecar fees are additional and invisible to CC; state both when present.
 - **RED is no longer a dead-end.** v1 hard-blocked RED ("split manually"). v2 turns RED into the **on-ramp to max** — agent-composer decomposes the over-budget goal into sequential sub-goals automatically.
 
 ---
@@ -78,46 +78,11 @@ Therefore:
 
 ## One-Time Setup (required)
 
-### Claude Code Runtime
+**Claude Code runtime**: merge the Stop-hook snippet from `templates/goal-quench-hook-setup.md` into `.claude/settings.json`, and gitignore the two state files. Recovery flags exist for hook failures: `/goal-quench --verify` (Phase 3 only, manual trigger) and `/goal-quench --recover` (interrupted /goal — promotes `.active` → `.pending`).
 
-Copy the hook snippet from `templates/goal-quench-hook-setup.md` and merge into your `.claude/settings.json`.
+**Codex runtime**: do not replace Codex's native goal/session capability with goal-quench state files — use `fh-gate`/`fh-goal` as post-run governance wrappers instead.
 
-Add to `.gitignore`:
-```
-.claude/goal-quench.active
-.claude/goal-quench.pending
-```
-
-**Hook failure fallback**: The Stop hook may fire silently without triggering verification (hook failure, session reset, or CC version differences). If Phase 3 verification has not run after /goal completes, manually trigger it:
-> `/goal-quench --verify` — skips Phase 1+2, runs pipeline-conductor --quick using current session scope.
-
-**Interrupted /goal recovery**: If /goal is interrupted (error, user abort, CC crash), the Stop hook may not fire — leaving `.claude/goal-quench.active` without a `.pending`. Detect and recover:
-```bash
-[ -f .claude/goal-quench.active ] && ! [ -f .claude/goal-quench.pending ] && echo "Interrupted — run /goal-quench --recover"
-```
-> `/goal-quench --recover` — promotes `.active` → `.pending` and runs Phase 3 verification on partially-completed work.
-
-### Codex Runtime
-
-Codex has its own goal/session capability. Do not replace it with goal-quench state files. In Codex-primary sessions:
-
-1. Use Codex's native goal/session feature for goal control.
-2. Use `fh-run` for any FH skill/agent sub-step that would otherwise require Claude Code `Agent(...)`.
-3. After the Codex goal completes, run FH governance on changed files:
-
-```bash
-FH_BACKEND=codex npx @chrono-meta/fh-gate "{changed-files}" quick codex-goal
-```
-
-For non-interactive one-shot runs only, `fh-goal` can run a backend task and then invoke `fh-gate` automatically:
-
-```bash
-FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-goal \
-  --prompt "{task}" \
-  --gate quick
-```
-
-`fh-goal` is not a Codex goal replacement; it is a post-run governance wrapper.
+> **Detail**: See `SKILL_detail.md §Setup` — CC hook snippet + gitignore lines, hook-failure/interrupted-run recovery commands, Codex runtime commands — read when performing one-time setup or recovery.
 
 ---
 
@@ -125,45 +90,26 @@ FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-goal \
 
 ### Step 1. Collect task description
 
-Ask:
-> "What will you run with /goal? Describe the task and expected scope."
+Ask: *"What will you run with /goal? Describe the task and expected scope."* Collect: task description, target files or directories, expected output.
 
-Collect: task description, target files or directories, expected output.
+**Pre-flight rule (pro/max only)**: verify required chained skills (context-doctor, agent-composer) are installed before proposing pro/max. If any is missing, **fall back to core and warn**: "Pro/max mode requires `{skill}` — not installed. Running in core mode instead."
 
-**Pre-flight check (pro/max mode only)**: before proposing pro/max, verify required chained skills are available:
-```bash
-for skill in context-doctor agent-composer; do
-  [ -f ".claude/plugins/cache/forge-harness/fh-meta/"*"/skills/${skill}/SKILL.md" ] 2>/dev/null \
-  || find ~/.claude/plugins -name "${skill}" -type d 2>/dev/null | grep -q . \
-  || echo "WARNING: ${skill} not found — pro/max mode requires it. Falling back to core."
-done
-```
-If any required skill is missing, **fall back to core and warn**: "Pro/max mode requires `{skill}` — not installed. Running in core mode instead."
+> **Detail**: See `SKILL_detail.md §Phase1-Blocks` — pre-flight check bash, token-budget-gate invocation contract, state file format, threshold injection block, hand-off output — read when executing Phase 1 Steps 1–5.
 
 ### Step 2. token-budget-gate estimate
 
-**Invocation contract**:
-```
-Input:  task description (one paragraph), target file count (approximate)
-Trigger phrase: "estimate token budget for: {task description}"
-Expected output fields:
-  - estimated_tokens: N
-  - verdict: GREEN | YELLOW | ORANGE | RED
-  - reasoning: one-line basis for estimate
-```
+Run token-budget-gate against the task description (invocation contract in §Phase1-Blocks). If the skill is not installed, use this fallback estimator and note `budget_source: fallback-heuristic` in `.active`:
 
-If `token-budget-gate` skill is not installed, use this fallback estimator:
 ```
 < 5 files changed, no new architecture  → GREEN  (< 10K)
 5–20 files or new module/feature        → YELLOW (10K–30K)
 20+ files or cross-system refactor      → ORANGE (30K–60K)
 Full-project migration or rewrite       → RED    (> 60K)
 ```
-**Session overhead factor (empirical calibration, N=10, 2026-06-01–06-03)**: The tiers above estimate *task* tokens only. Actual full CC session tokens average 4.7× the task estimate (range: 1.3×–10.5×) for harness-heavy projects (dense CLAUDE.md + multi-rule auto-load). Multiply task estimate by 4× for FH-density projects (rough inference only — not measured for non-FH projects), to get expected session total. This multiplier informs the mode recommendation — it does not change the go/no-go gate thresholds.
 
-Note the fallback in `.active` as `budget_source: fallback-heuristic` instead of `budget_source: token-budget-gate`.
+**Session overhead factor (empirical, N=10, 2026-06-01–06-03)**: the tiers estimate *task* tokens only. Actual full CC session tokens average 4.7× the task estimate (range 1.3×–10.5×) for harness-heavy projects. Multiply task estimate by 4× for FH-density projects to get the expected session total — this informs the mode recommendation, not the go/no-go thresholds.
 
-Run token-budget-gate against the task description. Map the result to a go/no-go decision:
+Map the verdict to a go/no-go decision:
 
 | token-budget-gate verdict | goal-quench action |
 |---|---|
@@ -172,60 +118,21 @@ Run token-budget-gate against the task description. Map the result to a go/no-go
 | ORANGE (30K–60K) | Propose **pro mode** as the cheaper path: "This is expensive. Run as a single /goal, or let pro mode optimize (context-doctor) + decompose (agent-composer) it?" Proceed in core only if the user declines orchestration. |
 | RED (> 60K) | Propose **max mode** instead of a hard block: "Too big for one /goal run. Route through max mode — agent-composer decomposes into sequential sub-goals, plugin-recommender fills any capability gaps." Hard-block only if the user declines orchestration. |
 
-On RED, the user has two paths:
-- **Accept max mode** (recommended) → goal-quench enters Phase 1.5 and lets agent-composer decompose the over-budget goal into sequential sub-goals, each small enough to run under its own budget. This is the v2 recovery path that replaces v1's dead-end.
-- **Decline orchestration** → goal-quench halts and does not write `.active` or inject thresholds. The user may still run `/goal` manually — but goal-quench will not gate or verify a session started without its active file.
+On RED: **accept max mode** (recommended) → Phase 1.5 decomposition recovery path; **decline orchestration** → goal-quench halts, writes no `.active`, and will not gate or verify a session started without its active file.
 
 ### Step 3. Write state file
 
-Create `.claude/goal-quench.active`:
+Create `.claude/goal-quench.active` (format in §Phase1-Blocks). `target_files` is the **verification artifact** — what pipeline-conductor will evaluate in Phase 3. Specify explicitly if known; otherwise write `"inferred from git diff"` and Phase 3 resolves via `git diff {start_commit}..HEAD` (captures interim commits).
 
-```
-scope: {task description — one line}
-mode: core | pro | max
-target_files: {comma-separated file paths or directory; "inferred from git diff" if not known}
-budget_estimate: {N} tokens
-budget_source: token-budget-gate | fallback-heuristic
-budget_verdict: {GREEN/YELLOW/ORANGE/RED}
-pipeline_mode: {--quick for core/pro · --full for max}
-composed_plan: {sub-goal list from Phase 1.5 agent-composer; "n/a" in core mode}
-timestamp: {YYYY-MM-DD HH:MM}
-session_pid: {$$}
-start_commit: {git rev-parse HEAD}
-```
-
-`target_files` is the **verification artifact** — what pipeline-conductor --quick will evaluate in Phase 3. Specify files/directories explicitly if known; otherwise write `"inferred from git diff"` and Phase 3 will resolve using `git diff {start_commit}..HEAD` to capture all changes including interim commits made during the /goal session.
-
-> **Control flow (core vs pro/max)**: in **core** mode, proceed directly Step 3 → Step 4. In **pro/max** mode, run **Phase 1.5 (orchestration) here — after Step 3, before Step 4** — then return to Step 4 to inject thresholds and hand off. The `composed_plan` field in `.active` stays `n/a` until Phase 1.5 fills it.
+> **Control flow (core vs pro/max)**: in **core** mode, proceed directly Step 3 → Step 4. In **pro/max** mode, run **Phase 1.5 (orchestration) here — after Step 3, before Step 4** — then return to Step 4. The `composed_plan` field in `.active` stays `n/a` until Phase 1.5 fills it.
 
 ### Step 4. Inject mid-run budget thresholds
 
-Before the user runs /goal, output the following instruction block so Claude carries it into the /goal session:
-
-```
-─── goal-quench budget thresholds (active for this /goal run) ───
-50% of estimated budget consumed:
-  → Output a one-line progress summary. No action required.
-
-70% consumed:
-  → YELLOW: re-prioritize remaining tasks. Drop lowest-priority items
-    if the goal can still be met without them.
-
-85% consumed:
-  → ORANGE: stop current task, commit completed work, surface to user:
-    "Budget at 85%. Completed: [X]. Remaining: [Y]. Continue / stop?"
-
-95% consumed:
-  → RED: stop immediately. Commit everything completed so far.
-    Output: "Budget exhausted. Completed tasks: [list]. Incomplete: [list]."
-─────────────────────────────────────────────────────────────────
-```
+Before the user runs /goal, output the threshold instruction block (50% progress note · 70% re-prioritize · 85% stop-and-ask · 95% stop-and-commit — full block in §Phase1-Blocks) so Claude carries it into the /goal session.
 
 ### Step 5. Hand off to /goal
 
-Output:
-> "goal-quench ready. Budget: {verdict} (~{N} tokens). Now run: `/goal {your condition}`
-> When /goal finishes, the Stop hook will trigger pipeline-conductor --quick automatically."
+Output the ready message (budget verdict + estimated tokens + "run `/goal {your condition}`" — template in §Phase1-Blocks).
 
 ---
 
@@ -237,29 +144,17 @@ The ordering is deliberate: optimize the context first (cheapest win), then deco
 
 ### Step A — context-doctor (token-reduction pre-pass) · pro + max
 
-Invoke context-doctor on the target scope before /goal runs. It generates/updates `.claudeignore`, flags over-read files, and recommends `/clear` timing. This lowers the per-turn token floor /goal will consume — actual reduction, not just the estimate the budget gate produced.
-
-**Re-estimate** the budget after the pre-pass. If the verdict drops (e.g., ORANGE → YELLOW), offer to step back down to core: "Context trimmed; estimate is now YELLOW. Continue in pro, or drop to core?" (See Simplification Guards — post-optimization step-down.)
+Invoke context-doctor on the target scope before /goal runs (generates/updates `.claudeignore`, flags over-read files, recommends `/clear` timing). **Re-estimate** the budget after the pre-pass. If the verdict drops (e.g., ORANGE → YELLOW), offer to step back down to core (see Simplification Guards — post-optimization step-down).
 
 ### Step B — agent-composer (goal decomposition) · pro + max
 
-Hand the task description to agent-composer in compose-only mode. It returns a Wave plan: the goal split into independent/sequential sub-tasks with capability-fit scoring (agent-composer Step 0.2). For RED-origin runs this decomposition is the recovery path v1 lacked — each sub-goal is small enough to run under its own budget.
+Hand the task description to agent-composer in compose-only mode → Wave plan with capability-fit scoring (agent-composer Step 0.2). For RED-origin runs this decomposition is the recovery path v1 lacked.
 
-**Sub-goal execution (user-driven, not automatic)**: `/goal` is a user-invoked command — goal-quench cannot programmatically drive a loop over sub-goals. After agent-composer produces the Wave plan, goal-quench writes it to `.claude/goal-quench.queue` and outputs:
-
-> "Sub-goal plan ready. Run each sub-goal in order by invoking `/goal-quench` again with the next sub-goal description. goal-quench will gate each sub-goal independently."
-
-Sub-goal queue format (`.claude/goal-quench.queue`):
-```
-remaining:
-  - sub-goal-1: {description}
-  - sub-goal-2: {description}
-completed: []
-```
-
-Each `/goal-quench` invocation pops the first `remaining` item, runs it as a core-mode run (Phase 1 GREEN/YELLOW expected → /goal → Phase 3 verify → commit), then moves it to `completed`. The outer pro/max run owns the decomposition; each inner invocation owns its sub-goal's gate. When `remaining` is empty, delete `.claude/goal-quench.queue`. (Parallel sub-goal execution is deferred — sequential is the v2 contract.)
+**Sub-goal execution (user-driven, not automatic)**: `/goal` is user-invoked — goal-quench cannot programmatically loop over sub-goals. Write the plan to `.claude/goal-quench.queue` (format in §Queue-Format) and instruct the user to invoke `/goal-quench` once per sub-goal. Each invocation pops the first `remaining` item, runs it as an independent core-mode run, then moves it to `completed`. When `remaining` is empty, delete the queue file. (Parallel sub-goal execution is deferred — sequential is the v2 contract.)
 
 goal-quench does **not** re-implement agent-composer's gates — its destructive-action gate (Step 2.7) and per-wave fan-out cap apply as-is.
+
+> **Detail**: See `SKILL_detail.md §Queue-Format` — queue file format, plan-ready output text, sidecar `.active` fields — read when writing the queue (Step B) or the sidecar fields (Step D).
 
 ### Step C — plugin-recommender + synergy pre-validation · max only
 
@@ -272,64 +167,38 @@ max mode never installs anything silently — discovery and synergy-check are su
 
 ### Step D — scope-driven sidecar configuration · pro + max
 
-Runs after Step C (or after Step B if no capability gap). Selects an adversarial sidecar based on the task's quality-risk profile — distinct from Step C's capability-gap sidecar, which addresses missing tools. Step D's sidecar addresses **blind-spot risk**: the generator and reviewer sharing the same reasoning distribution.
+Runs after Step C (or after Step B if no capability gap). Selects an adversarial sidecar based on the task's quality-risk profile — distinct from Step C's capability-gap sidecar. Step D's sidecar addresses **blind-spot risk**: the generator and reviewer sharing the same reasoning distribution.
 
-> **Availability resolution**: "Gemini sidecar if available" / "if external CLIs available" below is decided by the canonical Tier 1→2→3 recipe in `knowledge/shared/harness-core/multi_model_sidecar_strategy.md §Sidecar Engine Resolution Protocol` — discovery is automatic, invocation stays value-gated. Tier 3 (Claude sub-agent) guarantees this step never hard-fails even with zero external CLIs/keys.
+> **Availability resolution**: "if available" below is decided by the canonical Tier 1→2→3 recipe in `knowledge/shared/harness-core/multi_model_sidecar_strategy.md §Sidecar Engine Resolution Protocol` — discovery is automatic, invocation stays value-gated. Tier 3 (Claude sub-agent) guarantees this step never hard-fails even with zero external CLIs/keys.
 
 **Scope → sidecar routing table**:
 
 | Task scope signal | Sidecar | Invocation point |
 |---|---|---|
-| Code quality review / new SKILL.md / governance gate change | `steel-quench` cross-provider challenger (Gemini sidecar if available; Tier 3 Claude sub-agent fallback per the Sidecar Engine Resolution Protocol) | Post-/goal, before pipeline-conductor |
+| Code quality review / new SKILL.md / governance gate change | `steel-quench` cross-provider challenger (Gemini sidecar if available; Tier 3 Claude sub-agent fallback) | Post-/goal, before pipeline-conductor |
 | Architecture design / cross-project dependency | `agent-composer` multi-model panel (if external CLIs available; otherwise single-Claude sub-agent) | Parallel to /goal as separate Agent |
 | External publication / marketplace-gate / skill release | `sim-conductor` + `steel-quench` Wave 5 | Post-/goal quality gate |
 | No signal match (default) | None — pipeline-conductor handles quality alone | — |
 
-Write resolved sidecar to `.active`:
-```
-sidecar: none | steel-quench-crossprovider | agent-composer-panel | sim-conductor | {cli-name}
-sidecar_rationale: {one-line reason — which scope signal triggered this}
-```
+Write the resolved `sidecar:` + `sidecar_rationale:` fields to `.active` (format in §Queue-Format). Output one line: *"Sidecar: {config} — {rationale}"*. Do not ask for confirmation; the user may override via `/goal-quench --sidecar none`.
 
-Output to user (one line only):
-> "Sidecar: {config} — {rationale}"
-
-Do not ask for confirmation. The user may override by re-running `/goal-quench --sidecar none`.
-
-**Dispatch-failure triage (saturation disguise)**: a sidecar dispatch that fails with a 1M-context /
-usage-credits error late in a long run may be reporting *session context saturation*, not a billing
-gate (measured 2026-06-12: identical error pre-compaction; the same opus-pinned dispatch succeeded
-post-compaction with the sub-agent completing normally). Triage order: compact — flushing handoff
-state to disk first — → retry the dispatch once → only then take the headless `claude -p` fallback
-(credit-pool cost) or an inline at-floor pass. Concluding "billing gate" from the first failure
-skips the cheapest recovery.
+**Dispatch-failure triage (saturation disguise)**: a sidecar dispatch failing with a 1M-context / usage-credits error late in a long run may be reporting *session context saturation*, not a billing gate (measured 2026-06-12). Triage order: compact — flushing handoff state to disk first — → retry the dispatch once → only then take the headless `claude -p` fallback (credit-pool cost) or an inline at-floor pass.
 
 ### Hand-off
 
-After orchestration, **update** (not re-create) `.claude/goal-quench.active` — add `mode:` and `composed_plan:` lines alongside existing budget fields. Re-creating the file loses the `start_commit` field written in Phase 1 Step 3. Then proceed to threshold injection (Phase 1 Step 4) and hand off to /goal. Phase 3 verification then runs as in core — `pipeline-conductor --quick` for pro, `--full` for max (max implies external-facing stakes).
+After orchestration, **update** (not re-create) `.claude/goal-quench.active` — add `mode:` and `composed_plan:` lines alongside existing budget fields. Re-creating the file loses the `start_commit` field. Then proceed to threshold injection (Phase 1 Step 4) and hand off to /goal. Phase 3 verification runs as in core — `pipeline-conductor --quick` for pro, `--full` for max.
 
 ---
 
 ## Phase 2 — Mid-run (during /goal execution)
 
-goal-quench does not directly control /goal execution. The budget thresholds injected in Phase 1 are instructions Claude follows during the /goal session.
+goal-quench does not directly control /goal execution. The budget thresholds injected in Phase 1 are instructions Claude follows during the /goal session: track approximate consumption against the estimate, execute the corresponding action at each threshold (50/70/85/95%), self-enforced without waiting for goal-quench.
 
-**What Claude should do mid-run**:
+**Threshold enforcement caveat**: Claude cannot reliably read its own real-time token consumption — thresholds are instructional approximations, not mechanically enforced. For hard enforcement, see the Anthropic feature request (--budget flag).
 
-- Track approximate token consumption against the Phase 1 estimate
-- At each threshold (50/70/85/95%), execute the corresponding action
-- Do not wait for goal-quench to intervene — the thresholds are self-enforced
+**Queue mode (per-sub-goal threshold scope)**: each `/goal-quench` invocation from the queue is an independent core-mode run — thresholds are re-injected fresh against that sub-goal's own Phase 1 estimate, not inherited from the outer pro/max run.
 
-**Threshold enforcement caveat**: Claude cannot reliably read its own real-time token consumption during a /goal session. The 50/70/85/95% thresholds are instructional — Claude approximates consumption based on task complexity and turn count. They are not mechanically enforced. For hard enforcement, see the Anthropic feature request (--budget flag).
-
-**Queue mode (per-sub-goal threshold scope)**: When running sequential sub-goals from `.claude/goal-quench.queue`, each `/goal-quench` invocation is an independent core-mode run — thresholds are re-injected fresh for each sub-goal's Phase 1 estimate, not inherited from the outer pro/max run. The outer run owns the decomposition plan; each inner invocation owns its sub-goal's budget gate. Concretely: if sub-goal-1 estimate is 12K (YELLOW), thresholds are set against 12K — not against the outer RED estimate that triggered the queue in the first place.
-
-**What goal-quench cannot do in v1** (requires native Anthropic support):
-- Hard-enforce token ceiling mid-run (--budget flag, not yet available)
-- Auto-checkpoint commit on sub-goal completion (--checkpoint flag, not yet available)
-- Mid-run Sonnet quality signal (requires structured evaluator hooks)
-
-These gaps are the basis for the Anthropic feature request (see `knowledge/shared/harness-core/goal_quench_anthropic_issue.md`).
+**What goal-quench cannot do in v1** (requires native Anthropic support): hard token ceiling (--budget), auto-checkpoint commits (--checkpoint), mid-run Sonnet quality signal. These gaps are the basis for the feature request (`knowledge/shared/harness-core/goal_quench_anthropic_issue.md`).
 
 ---
 
@@ -337,67 +206,21 @@ These gaps are the basis for the Anthropic feature request (see `knowledge/share
 
 ### Claude Code path
 
-When /goal stops, the Stop hook fires and:
-1. Detects `.claude/goal-quench.active`
-2. Copies it to `.claude/goal-quench.pending`
-3. Removes `.active`
-4. Prints: "[goal-quench] /goal finished. Verification pending — starting pipeline-conductor --quick."
+When /goal stops, the Stop hook: detects `.active` → copies to `.pending` → removes `.active` → prints the verification-pending notice.
 
-On the next Claude response (after /goal), check for `.claude/goal-quench.pending` **with a freshness guard** — only act if the timestamp in the file is within the current session (< 4 hours old):
-
-```bash
-if [ -f .claude/goal-quench.pending ]; then
-  PENDING_TIME=$(grep "^timestamp:" .claude/goal-quench.pending | sed 's/^timestamp: //')
-  NOW=$(date +%s)
-  PENDING_EPOCH=$(date -d "$PENDING_TIME" +%s 2>/dev/null || date -j -f "%Y-%m-%d %H:%M" "$PENDING_TIME" +%s 2>/dev/null)
-  AGE_HOURS=$(( (NOW - PENDING_EPOCH) / 3600 ))
-  if [ "$AGE_HOURS" -lt 4 ]; then
-    echo "goal-quench verification pending (created: $PENDING_TIME — ${AGE_HOURS}h ago)"
-  else
-    echo "STALE: goal-quench.pending is ${AGE_HOURS}h old. Run /goal-quench --verify to re-evaluate or delete to clear."
-    exit 0
-  fi
-fi
-```
-
-If found and fresh: **automatically run pipeline-conductor** before responding to any other request — `--quick` for core/pro, `--full` for max (the `mode:` field in `.pending` selects which). This is not optional — pending verification takes priority.
-
-If found but stale (> 4 hours): warn the user — "A stale goal-quench.pending exists from {timestamp}. Run `/goal-quench --verify` to re-evaluate, or delete it to clear." Do not auto-trigger verification on stale state.
+On the next Claude response, check `.claude/goal-quench.pending` **with a freshness guard** (bash in §Phase3-Bash):
+- **Fresh (< 4 hours)**: **automatically run pipeline-conductor** before responding to any other request — `--quick` for core/pro, `--full` for max (the `mode:` field in `.pending` selects). Not optional — pending verification takes priority.
+- **Stale (> 4 hours)**: warn — "A stale goal-quench.pending exists from {timestamp}. Run `/goal-quench --verify` to re-evaluate, or delete it to clear." Do not auto-trigger verification on stale state.
 
 ### Codex path
 
-No Stop hook is required. After the Codex goal/session completes, resolve changed files with git and run:
+After the Codex goal completes, run `fh-gate` on changed files (commands in §Phase3-Bash). Treat `BLOCKED`/`ESCALATE` the same as the Claude path.
 
-```bash
-FH_BACKEND=codex npx @chrono-meta/fh-gate "{changed-files}" quick codex-goal
-```
-
-For high-stakes or external-facing work, use `full` instead of `quick`. Treat `BLOCKED` or `ESCALATE` the same as the Claude path: fix and re-run the gate, or surface the decision to the user.
+> **Detail**: See `SKILL_detail.md §Phase3-Bash` — freshness guard bash, verification-artifact resolution bash, Codex gate commands — read when executing Phase 3.
 
 ### Verification flow
 
-```bash
-# Read scope and target from pending file
-SCOPE=$(grep "^scope:" .claude/goal-quench.pending | sed 's/^scope: //')
-TARGET=$(grep "^target_files:" .claude/goal-quench.pending | sed 's/^target_files: //')
-
-# Resolve artifact: explicit target or git diff
-# Use git diff against the commit recorded at Phase 1 start, NOT HEAD,
-# to capture files changed during the entire /goal session including interim commits.
-GOAL_START_COMMIT=$(grep "^start_commit:" .claude/goal-quench.pending | sed 's/^start_commit: //')
-if [ "$TARGET" = "inferred from git diff" ] || [ -z "$TARGET" ]; then
-  if [ -n "$GOAL_START_COMMIT" ]; then
-    TARGET=$(git diff "$GOAL_START_COMMIT"..HEAD --name-only 2>/dev/null | tr '\n' ' ')
-  else
-    # Fallback: staged + unstaged changes (does not capture interim commits)
-    TARGET=$(git status --short 2>/dev/null | awk '{print $2}' | tr '\n' ' ')
-  fi
-fi
-# Guard: reject empty target
-[ -z "$TARGET" ] && echo "ERROR: cannot resolve verification artifact — no files changed or start_commit missing" && exit 1
-```
-
-Run `pipeline-conductor --quick` on `$TARGET` (the artifact changed during this /goal session). Gate on result:
+Resolve the verification artifact from `.pending` — explicit `target_files`, or `git diff {start_commit}..HEAD` when inferred (bash in §Phase3-Bash; empty target = hard error). Run pipeline-conductor on the artifact and gate on the result:
 
 | pipeline-conductor verdict | goal-quench action | Delete `.pending`? |
 |---|---|---|
@@ -406,9 +229,9 @@ Run `pipeline-conductor --quick` on `$TARGET` (the artifact changed during this 
 | `BLOCKED` | Block commit. Output blocking items. Ask: "Fix and re-run /goal, or accept partial completion?" | **Only after user acknowledges** |
 | `ESCALATE` | Surface to user for decision. Do not auto-delete — preserve state until user explicitly decides. | **Only after user decision** |
 
-**Deletion rule**: On BLOCKED or ESCALATE, `.pending` must survive until the user makes an explicit decision. Deleting before that decision loses the recovery anchor.
+**Deletion rule**: On BLOCKED or ESCALATE, `.pending` must survive until the user makes an explicit decision — deleting before that loses the recovery anchor.
 
-**Deadlock prevention**: While `.pending` exists (BLOCKED/ESCALATE), the next-turn verification check runs ONCE per turn only — not on every subsequent turn. After the first verification output, suppress further auto-trigger until the user explicitly acts (fix + re-run, accept, or delete). If the user starts a new `/goal-quench` run while `.pending` exists, warn: "A previous verification is pending. Resolve it first (`/goal-quench --verify`) or clear it (`rm .claude/goal-quench.pending`)." Do not silently overwrite with a new `.active` file.
+**Deadlock prevention**: While `.pending` exists (BLOCKED/ESCALATE), the next-turn verification check runs ONCE per turn only. After the first verification output, suppress further auto-trigger until the user explicitly acts. If the user starts a new `/goal-quench` run while `.pending` exists, warn and do not silently overwrite with a new `.active`.
 
 Record actual token usage in `tracks/_meta/goal_quench_{YYYY-MM-DD}.md` for calibration (regardless of verdict).
 
@@ -428,53 +251,9 @@ This gate is **blocking** — Done When cannot be reached until the sidecar verd
 
 ## Calibration Record
 
-After each goal-quench run, append to `tracks/_meta/goal_quench_{YYYY-MM-DD}.md`:
+After each goal-quench run, append a calibration entry to `tracks/_meta/goal_quench_{YYYY-MM-DD}.md`. Baseline (N=10, 2026-06-01–06-03, Sonnet): mean actual/estimate ratio 4.7× — systematic underestimation from session overhead. Target: 10 prospective runs per mode before treating mode comparison as reliable.
 
-```yaml
-- run_id: GQ-{YYYYMMDD}-{N}  # e.g. GQ-20260603-01 — unique per run, links to session JSONL
-  session_id: "{first-8-chars-of-jsonl-filename}"  # for JSONL back-trace
-  date: YYYY-MM-DD
-  task: {one-line description}
-  scope_hint: "{N files affected, task type}"  # e.g. "3 new files, signal doc"
-  mode: core | pro | max
-  session_type: minor | normal | heavy | continuation  # for within-type comparison
-  estimated_tokens: N
-  budget_source: token-budget-gate | fallback-heuristic
-  actual_tokens: N  # from ~/.claude/projects/*/conversation*.jsonl or user-reported; "unknown" if unavailable
-  estimation_error: over | under | accurate
-  estimation_error_pct: "N%"  # e.g. "717%" — magnitude of under/over; omit if accurate
-  actual_vs_estimate_ratio: N.N  # actual / estimated (e.g., 4.7 means actual was 4.7× estimate)
-  budget_verdict: GREEN/YELLOW/ORANGE/RED
-  pipeline_verdict: CLEAN/PENDING/BLOCKED/ESCALATE
-  sidecar: none | steel-quench-crossprovider | agent-composer-panel | sim-conductor | {cli-name}
-  sidecar_type: none | cc-subagent | external-cli  # cc-subagent = isolated Sonnet context; external-cli = untracked
-  sidecar_model: none | sonnet | {model-name}  # standard baseline: sonnet; external CLIs vary by tier
-  orchestrator_tokens: N | unknown  # Opus orchestrator CC tokens (pro/max only; visible in CC)
-  sidecar_tokens: N | unknown  # Sonnet sub-agent CC tokens if cc-subagent; "untracked" if external-cli
-  sidecar_findings_count: N  # 0 if sidecar=none
-  threshold_triggered: none/50/70/85/95
-  notes: {optional — why estimate was off, what scope changed}
-```
-
-**`actual_tokens` collection**: Claude cannot read session token counts directly. Preferred method:
-```bash
-python3 -c "
-import json, glob
-f = sorted(glob.glob('~/.claude/projects/*/conversation*.jsonl'.replace('~', __import__('os').path.expanduser('~'))))[-1]
-lines = [json.loads(l) for l in open(f)]
-total = sum(m.get('message',{}).get('usage',{}).get('input_tokens',0) + m.get('message',{}).get('usage',{}).get('output_tokens',0) for m in lines)
-print(f'Session tokens: {total:,}')
-"
-```
-Fallback: turn count × estimated tokens/turn (~2K for short turns, ~8K for long file edits). Write `"unknown"` if no estimate is possible.
-
-**Retrospective calibration baseline (N=10, 2026-06-01–06-03, Sonnet)**: mean actual/estimate ratio = 4.7× (range 1.3×–10.5×). Systematic underestimation due to session overhead. Full data held in the private companion store (`paper-signals/`).
-
-After 10 additional prospective runs, compute mean estimation error per mode — calibrate the session_overhead_factor if systematic over/under persists.
-
-`pipeline_verdict` enum includes `ESCALATE` — record it when Phase 3 required user decision before proceeding.
-
-This data calibrates future estimates. Target: 10 prospective runs per mode before treating mode comparison as reliable. Runs with `budget_source: fallback-heuristic` calibrate the fallback tiers; runs with `token-budget-gate` calibrate the skill itself.
+> **Detail**: See `SKILL_detail.md §Calibration-Record` — full YAML entry format, actual_tokens collection script, calibration baseline notes — read when appending the post-run record.
 
 ---
 

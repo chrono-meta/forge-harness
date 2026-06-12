@@ -1,0 +1,249 @@
+---
+name: goal-quench-detail
+description: Detail reference for goal-quench — one-time setup blocks, Phase 1 formats, queue format, Phase 3 verification bash, calibration record format. Load when executing a specific phase.
+load: on-demand
+---
+
+# goal-quench — Detail Reference
+
+> Load when executing a specific phase. SKILL.md contains the mode ladder, triggers, phase-by-phase behavioral rules, verdict mapping tables, simplification guards, chains, and Done When.
+
+---
+
+## §Setup — One-Time Setup Blocks
+
+### Claude Code Runtime
+
+Copy the hook snippet from `templates/goal-quench-hook-setup.md` and merge into your `.claude/settings.json`.
+
+Add to `.gitignore`:
+```
+.claude/goal-quench.active
+.claude/goal-quench.pending
+```
+
+**Hook failure fallback**: The Stop hook may fire silently without triggering verification (hook failure, session reset, or CC version differences). If Phase 3 verification has not run after /goal completes, manually trigger it:
+> `/goal-quench --verify` — skips Phase 1+2, runs pipeline-conductor --quick using current session scope.
+
+**Interrupted /goal recovery**: If /goal is interrupted (error, user abort, CC crash), the Stop hook may not fire — leaving `.claude/goal-quench.active` without a `.pending`. Detect and recover:
+```bash
+[ -f .claude/goal-quench.active ] && ! [ -f .claude/goal-quench.pending ] && echo "Interrupted — run /goal-quench --recover"
+```
+> `/goal-quench --recover` — promotes `.active` → `.pending` and runs Phase 3 verification on partially-completed work.
+
+### Codex Runtime
+
+Codex has its own goal/session capability. Do not replace it with goal-quench state files. In Codex-primary sessions:
+
+1. Use Codex's native goal/session feature for goal control.
+2. Use `fh-run` for any FH skill/agent sub-step that would otherwise require Claude Code `Agent(...)`.
+3. After the Codex goal completes, run FH governance on changed files:
+
+```bash
+FH_BACKEND=codex npx @chrono-meta/fh-gate "{changed-files}" quick codex-goal
+```
+
+For non-interactive one-shot runs only, `fh-goal` can run a backend task and then invoke `fh-gate` automatically:
+
+```bash
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-goal \
+  --prompt "{task}" \
+  --gate quick
+```
+
+`fh-goal` is not a Codex goal replacement; it is a post-run governance wrapper.
+
+---
+
+## §Phase1-Blocks
+
+### Pre-flight check bash (pro/max mode only)
+
+```bash
+for skill in context-doctor agent-composer; do
+  [ -f ".claude/plugins/cache/forge-harness/fh-meta/"*"/skills/${skill}/SKILL.md" ] 2>/dev/null \
+  || find ~/.claude/plugins -name "${skill}" -type d 2>/dev/null | grep -q . \
+  || echo "WARNING: ${skill} not found — pro/max mode requires it. Falling back to core."
+done
+```
+
+### token-budget-gate invocation contract
+
+```
+Input:  task description (one paragraph), target file count (approximate)
+Trigger phrase: "estimate token budget for: {task description}"
+Expected output fields:
+  - estimated_tokens: N
+  - verdict: GREEN | YELLOW | ORANGE | RED
+  - reasoning: one-line basis for estimate
+```
+
+### State file format (`.claude/goal-quench.active`)
+
+```
+scope: {task description — one line}
+mode: core | pro | max
+target_files: {comma-separated file paths or directory; "inferred from git diff" if not known}
+budget_estimate: {N} tokens
+budget_source: token-budget-gate | fallback-heuristic
+budget_verdict: {GREEN/YELLOW/ORANGE/RED}
+pipeline_mode: {--quick for core/pro · --full for max}
+composed_plan: {sub-goal list from Phase 1.5 agent-composer; "n/a" in core mode}
+timestamp: {YYYY-MM-DD HH:MM}
+session_pid: {$$}
+start_commit: {git rev-parse HEAD}
+```
+
+### Mid-run budget threshold injection block (Phase 1 Step 4)
+
+```
+─── goal-quench budget thresholds (active for this /goal run) ───
+50% of estimated budget consumed:
+  → Output a one-line progress summary. No action required.
+
+70% consumed:
+  → YELLOW: re-prioritize remaining tasks. Drop lowest-priority items
+    if the goal can still be met without them.
+
+85% consumed:
+  → ORANGE: stop current task, commit completed work, surface to user:
+    "Budget at 85%. Completed: [X]. Remaining: [Y]. Continue / stop?"
+
+95% consumed:
+  → RED: stop immediately. Commit everything completed so far.
+    Output: "Budget exhausted. Completed tasks: [list]. Incomplete: [list]."
+─────────────────────────────────────────────────────────────────
+```
+
+### Hand-off output (Phase 1 Step 5)
+
+> "goal-quench ready. Budget: {verdict} (~{N} tokens). Now run: `/goal {your condition}`
+> When /goal finishes, the Stop hook will trigger pipeline-conductor --quick automatically."
+
+---
+
+## §Queue-Format
+
+Sub-goal queue format (`.claude/goal-quench.queue`):
+```
+remaining:
+  - sub-goal-1: {description}
+  - sub-goal-2: {description}
+completed: []
+```
+
+Output after agent-composer produces the Wave plan:
+
+> "Sub-goal plan ready. Run each sub-goal in order by invoking `/goal-quench` again with the next sub-goal description. goal-quench will gate each sub-goal independently."
+
+Sidecar fields written to `.active` (Phase 1.5 Step D):
+```
+sidecar: none | steel-quench-crossprovider | agent-composer-panel | sim-conductor | {cli-name}
+sidecar_rationale: {one-line reason — which scope signal triggered this}
+```
+
+---
+
+## §Phase3-Bash
+
+### Freshness guard (next-response `.pending` check)
+
+```bash
+if [ -f .claude/goal-quench.pending ]; then
+  PENDING_TIME=$(grep "^timestamp:" .claude/goal-quench.pending | sed 's/^timestamp: //')
+  NOW=$(date +%s)
+  PENDING_EPOCH=$(date -d "$PENDING_TIME" +%s 2>/dev/null || date -j -f "%Y-%m-%d %H:%M" "$PENDING_TIME" +%s 2>/dev/null)
+  AGE_HOURS=$(( (NOW - PENDING_EPOCH) / 3600 ))
+  if [ "$AGE_HOURS" -lt 4 ]; then
+    echo "goal-quench verification pending (created: $PENDING_TIME — ${AGE_HOURS}h ago)"
+  else
+    echo "STALE: goal-quench.pending is ${AGE_HOURS}h old. Run /goal-quench --verify to re-evaluate or delete to clear."
+    exit 0
+  fi
+fi
+```
+
+### Verification flow (artifact resolution)
+
+```bash
+# Read scope and target from pending file
+SCOPE=$(grep "^scope:" .claude/goal-quench.pending | sed 's/^scope: //')
+TARGET=$(grep "^target_files:" .claude/goal-quench.pending | sed 's/^target_files: //')
+
+# Resolve artifact: explicit target or git diff
+# Use git diff against the commit recorded at Phase 1 start, NOT HEAD,
+# to capture files changed during the entire /goal session including interim commits.
+GOAL_START_COMMIT=$(grep "^start_commit:" .claude/goal-quench.pending | sed 's/^start_commit: //')
+if [ "$TARGET" = "inferred from git diff" ] || [ -z "$TARGET" ]; then
+  if [ -n "$GOAL_START_COMMIT" ]; then
+    TARGET=$(git diff "$GOAL_START_COMMIT"..HEAD --name-only 2>/dev/null | tr '\n' ' ')
+  else
+    # Fallback: staged + unstaged changes (does not capture interim commits)
+    TARGET=$(git status --short 2>/dev/null | awk '{print $2}' | tr '\n' ' ')
+  fi
+fi
+# Guard: reject empty target
+[ -z "$TARGET" ] && echo "ERROR: cannot resolve verification artifact — no files changed or start_commit missing" && exit 1
+```
+
+### Codex path
+
+No Stop hook is required. After the Codex goal/session completes, resolve changed files with git and run:
+
+```bash
+FH_BACKEND=codex npx @chrono-meta/fh-gate "{changed-files}" quick codex-goal
+```
+
+For high-stakes or external-facing work, use `full` instead of `quick`. Treat `BLOCKED` or `ESCALATE` the same as the Claude path: fix and re-run the gate, or surface the decision to the user.
+
+---
+
+## §Calibration-Record
+
+After each goal-quench run, append to `tracks/_meta/goal_quench_{YYYY-MM-DD}.md`:
+
+```yaml
+- run_id: GQ-{YYYYMMDD}-{N}  # e.g. GQ-20260603-01 — unique per run, links to session JSONL
+  session_id: "{first-8-chars-of-jsonl-filename}"  # for JSONL back-trace
+  date: YYYY-MM-DD
+  task: {one-line description}
+  scope_hint: "{N files affected, task type}"  # e.g. "3 new files, signal doc"
+  mode: core | pro | max
+  session_type: minor | normal | heavy | continuation  # for within-type comparison
+  estimated_tokens: N
+  budget_source: token-budget-gate | fallback-heuristic
+  actual_tokens: N  # from ~/.claude/projects/*/conversation*.jsonl or user-reported; "unknown" if unavailable
+  estimation_error: over | under | accurate
+  estimation_error_pct: "N%"  # e.g. "717%" — magnitude of under/over; omit if accurate
+  actual_vs_estimate_ratio: N.N  # actual / estimated (e.g., 4.7 means actual was 4.7× estimate)
+  budget_verdict: GREEN/YELLOW/ORANGE/RED
+  pipeline_verdict: CLEAN/PENDING/BLOCKED/ESCALATE
+  sidecar: none | steel-quench-crossprovider | agent-composer-panel | sim-conductor | {cli-name}
+  sidecar_type: none | cc-subagent | external-cli  # cc-subagent = isolated Sonnet context; external-cli = untracked
+  sidecar_model: none | sonnet | {model-name}  # standard baseline: sonnet; external CLIs vary by tier
+  orchestrator_tokens: N | unknown  # Opus orchestrator CC tokens (pro/max only; visible in CC)
+  sidecar_tokens: N | unknown  # Sonnet sub-agent CC tokens if cc-subagent; "untracked" if external-cli
+  sidecar_findings_count: N  # 0 if sidecar=none
+  threshold_triggered: none/50/70/85/95
+  notes: {optional — why estimate was off, what scope changed}
+```
+
+**`actual_tokens` collection**: Claude cannot read session token counts directly. Preferred method:
+```bash
+python3 -c "
+import json, glob
+f = sorted(glob.glob('~/.claude/projects/*/conversation*.jsonl'.replace('~', __import__('os').path.expanduser('~'))))[-1]
+lines = [json.loads(l) for l in open(f)]
+total = sum(m.get('message',{}).get('usage',{}).get('input_tokens',0) + m.get('message',{}).get('usage',{}).get('output_tokens',0) for m in lines)
+print(f'Session tokens: {total:,}')
+"
+```
+Fallback: turn count × estimated tokens/turn (~2K for short turns, ~8K for long file edits). Write `"unknown"` if no estimate is possible.
+
+**Retrospective calibration baseline (N=10, 2026-06-01–06-03, Sonnet)**: mean actual/estimate ratio = 4.7× (range 1.3×–10.5×). Systematic underestimation due to session overhead. Full data held in the private companion store (`paper-signals/`).
+
+After 10 additional prospective runs, compute mean estimation error per mode — calibrate the session_overhead_factor if systematic over/under persists.
+
+`pipeline_verdict` enum includes `ESCALATE` — record it when Phase 3 required user decision before proceeding.
+
+This data calibrates future estimates. Target: 10 prospective runs per mode before treating mode comparison as reliable. Runs with `budget_source: fallback-heuristic` calibrate the fallback tiers; runs with `token-budget-gate` calibrate the skill itself.

@@ -38,6 +38,8 @@ Priority:
 
 Report detection result in one line. Example: `🔑 Using Claude Sonnet` / `🔑 Engine: /deep-research (built-in)`
 
+On first run without an API key, output the environment setup guide (format in §Output-Formats).
+
 ---
 
 ## Step 0.5. Operator Intake (speculative-interview arm — walled channels)
@@ -47,157 +49,47 @@ On **cadence-triggered** runs (7d), ask the operator one line before collecting:
 > *"이번 주에 본 벽 뒤 소스(YouTube·LinkedIn·X 등 기계가 못 닿는 링크/요약)가 있으면 던져 주세요 — triage해서 기록합니다. 없으면 그냥 진행할게요."*
 
 - Operator may skip — zero pressure; the autonomous arms (Step 1) run regardless.
-- Why: walled channels return 403 to machine fetch — **the operator is the only wide-net sensor
-  for them**. This arm turns ad-hoc link-throwing into a scheduled intake (manual-validated n=2).
-- Received sources route to the sister-asset/triage flow with its **lightweight path**: C-tier
-  (territory already covered) = one-paragraph entry only; full cross-audit reserved for A/B-tier.
-  Partial wall-bypass is allowed first: try WebSearch + secondary sources before declaring unfetchable.
-- **Video sources (local/laptop only — cloud VMs typically 403 on video hosts)**: resolve a
-  *video-harvest* capability via the Sidecar Engine Resolution Protocol
-  (`multi_model_sidecar_strategy.md`) — probe by **capability, not engine name**. A CLI that is a
-  valid sidecar for other tasks is not automatically a video-harvest engine.
-  **Tier 1 — a natively multimodal CLI that ingests the URL directly**: probe for one, then route
-  to it (pre-EOL example invocation: `gemini --skip-trust -p "{URL}"` → timestamped summary). ⚠️
-  **the direct `gemini` CLI is being sunset (vendor EOL 2026-06-18)** — after that probe `agy` (the
-  Antigravity router-shell successor, same class) or the Gemini API; see
-  `multi_model_sidecar_strategy.md §Binary names churn`. A coding-agent CLI with **no native
-  video/transcript access** (e.g. `codex`) cannot do this — it burns tokens, recovers only
-  metadata (title), then asks for a pasted transcript; do not route video to it. Agentic
-  router-shells (`agy`) get approval-mode first.
-  **Tier 3** (Tier 2 = router-shell / Gemini API, see the protocol) **— conditional fallback (not
-  guaranteed)**: `yt-dlp --write-auto-subs --skip-download` then summarize the transcript — fine
-  for talk-style content. **Probe the environment first**:
-  `yt-dlp --version && python3 -c "import curl_cffi" && command -v ffmpeg` — Tier 3 needs all three
-  (`yt-dlp`, `curl_cffi` impersonation target, `ffmpeg`), and the timedtext endpoint may return
-  HTTP 429; if the probe fails, fall through rather than assuming it works. Unresolvable (cloud, no sidecar; or all tiers blocked) →
-  operator summary remains the path, as today.
+- Why: walled channels return 403 to machine fetch — **the operator is the only wide-net sensor for them**. This arm turns ad-hoc link-throwing into a scheduled intake (manual-validated n=2).
+- Received sources route to the sister-asset/triage flow with its **lightweight path**: C-tier (territory already covered) = one-paragraph entry only; full cross-audit reserved for A/B-tier. Partial wall-bypass is allowed first: try WebSearch + secondary sources before declaring unfetchable.
+- **Video sources (local/laptop only — cloud VMs typically 403 on video hosts)**: probe by **capability, not engine name** via the Sidecar Engine Resolution Protocol. Tier 1 = natively multimodal CLI ingesting the URL directly (⚠️ direct `gemini` CLI EOL 2026-06-18 — probe `agy` or the Gemini API after); never route video to a coding-agent CLI without native video access (it burns tokens and recovers only metadata). Tier 3 = `yt-dlp` transcript fallback, **conditional** — probe the environment first, never assume it works. Unresolvable → operator summary remains the path.
+
+> **Detail**: See `SKILL_detail.md §Video-Harvest` — full tier ladder, probe commands, EOL/router-shell notes — read when a video source needs harvesting.
 
 ---
 
 ## Step 1. Data Collection
 
-### HackerNews (Algolia API)
+Collect from four sources (bash per source in §Collection-Bash):
 
-Collect latest stories by keyword. Via `curl`:
-
-```bash
-for KW in "AI agent" "LLM harness" "Claude" "multi-agent" "context engineering"; do
-  curl -s --max-time 8 \
-    "https://hn.algolia.com/api/v1/search?query=$(echo $KW | tr ' ' '+')&tags=story&hitsPerPage=5&numericFilters=points>10"
-done
-```
-
-Collection criteria: score > 10, keyword-relevant items only. Max 15 items.
-
-### arxiv
-
-```bash
-for Q in "multi-agent LLM" "AI software testing" "context engineering agents"; do
-  curl -s --max-time 8 \
-    "https://export.arxiv.org/api/query?search_query=all:${Q// /+}&max_results=2&sortBy=submittedDate&sortOrder=descending"
-done
-```
-
-Max 6 items.
-
-### TLDR AI (RSS)
-
-```bash
-curl -s --max-time 8 "https://tldr.tech/api/rss/ai"
-```
-
-Parse `<item>` → title + link. Max 5 items.
-
-### The Batch — deeplearning.ai (HTML scraping)
-
-```bash
-curl -s --max-time 10 -L "https://www.deeplearning.ai/the-batch/"
-```
-
-Extract `"title":"..."` + `"slug":"issue-\d+"` pattern → URL: `https://www.deeplearning.ai/the-batch/{slug}/`. Max 5 items.
+| Source | Method | Cap |
+|---|---|---|
+| HackerNews | Algolia API, score > 10, keyword-relevant | 15 items |
+| arxiv | export API, latest by submittedDate | 6 items |
+| TLDR AI | RSS, title + link | 5 items |
+| The Batch (deeplearning.ai) | HTML scraping, title + issue slug | 5 items |
 
 Report progress: `📡 HN 15 items · arxiv 5 items · TLDR 5 items · Batch 5 items collected`
+
+> **Detail**: See `SKILL_detail.md §Collection-Bash` — curl commands per source with parsing notes — read when executing Step 1.
 
 ---
 
 ## Step 2. Synthesis
 
-### With Anthropic API
+- **With Anthropic API**: run the synthesis prompt (full prompt in §Synthesis-Prompt) — outputs This Week's Frontier Highlights (max 3) / FH Immediate Application Candidates (2-3) / Warning Signals, within 400 characters, no preamble.
+- **WebSearch mode (no API key)**: search directly with the WebSearch tool, then synthesize in context (queries in §Synthesis-Prompt).
 
-Prompt:
-
-```
-You are an AI harness engineering expert.
-Analyze the collected external data below and extract insights
-directly relevant to forge-harness (FH) operations and improvement.
-
-FH Context:
-- FH = AI collaboration meta-harness (skill · plugin · agent system)
-- Core skills: steel-quench, harness-doctor, sim-conductor,
-               agent-composer, apex-review
-- Areas of interest: multi-agent orchestration, context engineering,
-                     self-check gate, frontier cross-diagnosis
-
-[Insert collected data]
-
-Output format:
-## This Week's Frontier Highlights (max 3)
-**[Title]** — FH connection point in one sentence
-
-## FH Immediate Application Candidates
-2-3 specific ideas
-
-## Warning Signals
-Noise or excessive complexity alerts (if any)
-
-Length: within 400 characters. Start directly with content, no preamble.
-```
-
-### WebSearch Mode (no API key)
-
-Search directly with WebSearch tool, then synthesize in context:
-
-```
-Search: "AI agent harness 2025 site:news.ycombinator.com"
-Search: "multi-agent LLM orchestration latest"
-```
+> **Detail**: See `SKILL_detail.md §Synthesis-Prompt` — full API prompt with FH context block, WebSearch queries — read when executing Step 2.
 
 ---
 
 ## Step 3. Output
 
-Print synthesis result in the conversation:
+Print the synthesis result in the conversation (format in §Output-Formats): engine line + Highlights + Immediate Application Candidates + Warning Signals + collection stats.
 
-```markdown
-## 🔭 FH Frontier Digest — YYYY-MM-DD
+**With `--save` flag**: save to `digests/frontier_{today}.md` (path priority: FH install path → `~/.claude/frontier-digest/digests/` → cwd; details in §Output-Formats). After saving: `✅ Saved: {path}`
 
-🔑 [Engine used: Claude Sonnet / WebSearch]
-
-## This Week's Frontier Highlights
-...
-
-## FH Immediate Application Candidates
-...
-
-## Warning Signals
-...
-
----
-📊 Collected: HN N items · arxiv N items · TLDR N items · Batch N items | [View sources →]
-```
-
-### With --save flag
-
-```python
-# Save path priority
-# 1. FH install path digests/
-# 2. ~/.claude/frontier-digest/digests/
-# 3. current cwd/digests/
-
-path = f"digests/frontier_{today}.md"
-```
-
-After saving: `✅ Saved: {path}`
+> **Detail**: See `SKILL_detail.md §Output-Formats` — conversation output template, save path priority, fh_signal file format, env setup guide — read when executing Steps 3–4.
 
 ---
 
@@ -219,26 +111,7 @@ Immediately after Step 3 output, if **"FH Immediate Application Candidates"** ha
 
 **→ When to use [4] persona-innovator**: Frontier candidates contain new architectural patterns, naming opportunities, or design frames not yet in FH vocabulary. persona-innovator compares the external signal against existing FH assets and proposes concrete naming/framing actions. Runs as Mode E (external scan) with the frontier candidates as input context.
 
-If user selects [3], create signal file in this format:
-
-```markdown
----
-date: YYYY-MM-DD
-source: frontier-digest
-engine: [Claude Sonnet / WebSearch]
----
-
-# FH Improvement Signal — YYYY-MM-DD
-
-## Sources
-HN N items + arxiv N items collected
-
-## Immediate Application Candidates
-[Copy Step 2 "FH Immediate Application Candidates" items here]
-
-## Processing Status
-- [ ] Pending review
-```
+If user selects [3], create the signal file (format in §Output-Formats).
 
 ### 4-b. Connected Project Improvement Suggestion (when context detected)
 
@@ -255,23 +128,6 @@ When running `/frontier-digest --chain`:
 1. Auto-save immediate application candidates as fh_signal file (with `--save`)
 2. Auto-invoke `persona-innovator` Mode E with candidates as input — extracts naming/framing proposals (no user prompt needed)
 3. Auto-propose `field-harvest` skill with persona-innovator output as context (with user approval gate)
-
----
-
-## Environment Setup Guide (initial notice)
-
-When running `/frontier-digest` for the first time without API key set:
-
-```
-🔑 No API key detected — running in WebSearch mode.
-
-For more precise synthesis:
-  Anthropic: export ANTHROPIC_API_KEY=sk-ant-xxx
-
-To save key permanently (~/.cc_secrets pattern):
-  echo 'export ANTHROPIC_API_KEY=sk-ant-xxx' > ~/.cc_secrets
-  chmod 600 ~/.cc_secrets
-```
 
 ---
 

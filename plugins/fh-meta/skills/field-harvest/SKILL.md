@@ -46,38 +46,17 @@ Proposal format (one line, then wait):
 
 ## Step 0. Field Project Path Detection
 
-When no path is specified, auto-detect with 3-level priority:
+When no path is specified, auto-detect with 3-level priority: ① FH `auto_project_mapping.md` → ② auto-discover git repos in common dev directories (excluding the hub itself) → ③ scan parent of cwd. List discovered repos and ask the user to select; 0 repos → prompt for direct path input.
 
-```bash
-# Priority 1: Read FH auto_project_mapping.md
-cat .claude/rules/auto_project_mapping.md 2>/dev/null | grep -E "path:|project:" | head -10
-
-# Priority 2: Auto-discover git repos in common development directories
-find "$HOME/projects" "$HOME/dev" "$HOME/workspace" "$HOME/PycharmProjects" \
-  -maxdepth 2 -name ".git" -type d 2>/dev/null \
-  | sed 's|/.git||' \
-  | grep -v "forge-harness\|harness_framework" \
-  | head -10
-
-# Priority 3: Scan parent directory of current cwd
-find "$(dirname "$(pwd)")" -maxdepth 1 -name ".git" -type d 2>/dev/null \
-  | sed 's|/.git||'
-```
-
-List discovered repos to user and ask to select target. If 0 repos found, prompt for direct path input.
+> **Detail**: See `SKILL_detail.md §ModeA-Blocks` — path-detection bash, commit scan, classification commands, candidate list format, PR creation bash — read when executing Mode A Steps 0–4.
 
 ## Step 1. Recent Commit Scan
 
-```bash
-cd "$FIELD_PATH"
-git log --oneline --since="<N> days ago" --no-merges
-```
-
-If commit count is 0, report "no changes within last <N> days" and exit.
+Scan `git log --oneline --since="<N> days ago" --no-merges` in the field path. If commit count is 0, report "no changes within last <N> days" and exit.
 
 ## Step 2. Harvest Candidate Classification
 
-Classify each commit using the following criteria:
+Classify each commit using the following criteria (commit message + changed-file patterns first → read diff when needed):
 
 ### FH Reverse Absorption Candidate Conditions (when one or more apply)
 
@@ -96,66 +75,13 @@ Classify each commit using the following criteria:
 - Bug fixes (one-off non-reproducible)
 - Simple documentation updates
 
-Classification method:
-
-```bash
-# Commit detail check
-git show <hash> --stat
-git show <hash> -- "*.md" "*.py" "*.sh" | head -100
-```
-
-First classify by commit message + changed file patterns → read diff for detail when needed.
-
 ## Step 3. Harvest Candidate List Presentation
 
-```
-field-harvest results — <project name> (within <N> days)
-
-Scanned: <total commits>
-FH absorption candidates: <N>
-
-Candidate list:
-┌─────────────────────────────────────────────────────┐
-│ [1] <commit hash> "<commit message>"                 │
-│     Type: <workflow pattern / feedback rule / ...>   │
-│     Absorption location: plugins/fh-meta/skills/<X>/ │
-│     Impact: ★★★ (applicable across projects)         │
-├─────────────────────────────────────────────────────┤
-│ [2] ...                                              │
-└─────────────────────────────────────────────────────┘
-
-Field-only (skipped): <M>
-
-→ Absorb to FH via PR? [all / select number / skip]
-```
-
-If 0 candidates, report "no absorption candidates" and exit.
+Output the candidate list (format in §ModeA-Blocks): scanned count, FH absorption candidates with type/location/impact stars, field-only skipped count, then ask `[all / select number / skip]`. If 0 candidates, report "no absorption candidates" and exit.
 
 ## Step 4. PR Creation (upon user approval)
 
-```bash
-cd "$FH_ROOT"
-git checkout -b harvest/"$FIELD_PROJECT"-"$YYYYMMDD"
-
-# Apply approved patterns
-# - Update skill SKILL.md
-# - Update .claude/rules/
-# - Update templates/
-
-git add -A
-git commit -m "harvest($FIELD_PROJECT): $PATTERN_SUMMARY — $FIELD_COMMIT_HASH absorbed"
-git push origin harvest/"$FIELD_PROJECT"-"$YYYYMMDD"
-
-gh pr create \
-  --title "harvest: $FIELD_PROJECT pattern absorption ($DATE)" \
-  --body "..."
-```
-
-PR body includes:
-- Original field commit hash + link
-- Absorbed pattern summary
-- Application location (which skill/rule)
-- Expected cross-project impact
+Create a `harvest/{project}-{date}` branch in FH, apply approved patterns, commit, push, and `gh pr create` (bash + PR body checklist in §ModeA-Blocks).
 
 ## Step 5. Done (Mode A Complete)
 
@@ -227,49 +153,17 @@ Records session work from field projects to the knowledge hub when a session end
 
 ## Step 0-B. Locate Hub Path
 
-Auto-detect knowledge hub location (3-level priority):
+Auto-detect knowledge hub location with 3-level priority: ① FH env vars (`FH_DIR`/`CC_HUB_DIR`) → ② auto-discover hub candidates near home → ③ ask user. Track subdirectory: field projects → `tracks/{project-name}/`, external collaborations → `tracks/external/{name}/`.
 
-```bash
-# Priority 1: FH environment variables (set in ~/.zshrc)
-echo "${FH_DIR:-${CC_HUB_DIR:-}}"
-
-# Priority 2: Auto-discover hub candidates near home
-find ~ -maxdepth 3 -name "tracks" -type d 2>/dev/null \
-  | grep -E "(forge-harness|knowledge-hub)" | head -3
-
-# Priority 3: Ask user
-```
-
-Determine track subdirectory:
-- Field projects → `tracks/{project-name}/`
-- External collaborations → `tracks/external/{name}/`
+> **Detail**: See `SKILL_detail.md §ModeB-Blocks` — hub-locate bash, detection-skip inline-grep, session scan, session markdown template, hub commit bash, confirmation format — read when executing Mode B Steps 0-B–5-B.
 
 ## Step 0-B.1. Detection-Skip — Already-Logged Pattern Filter (item2)
 
 Before scanning session work, build a **skip ledger** of commits already recorded in the hub so the same commit is not logged twice across sessions (re-runs, overlapping auto-trigger + explicit invocation, multi-session same-day work).
 
-**Skip rule**: a field commit hash is **skipped** (excluded from Step 1-B scan output) if it already appears in any existing session file under the project's track directory.
+**Skip rule (behavioral)**: a field commit hash is **skipped** (excluded from Step 1-B scan output) if it already appears in any existing session file under the project's track directory.
 
-> **Detection-skip style: stateless inline-grep (finalized).** FH uses the inline-grep form below
-> rather than a persisted ledger file (`tracks/{project}/.logged_commits`): it keeps no extra state to
-> sync and is self-correcting — the hub session files *are* the ledger. Adequate at FH's scale; a
-> persisted ledger would only pay off on a very large hub where re-grepping all session files is slow.
-
-Bind the three paths from earlier Mode B steps: `HUB_PATH` = the hub root from Step 0-B, `TRACK` = the track subdirectory chosen above, `FIELD_PATH` = the field project cwd from Step 0.
-
-```bash
-# Stateless inline-grep: collect hashes already present in hub session files,
-# then filter today's field commits against them.
-LOGGED=$(grep -rhoE '\b[0-9a-f]{7,40}\b' "$HUB_PATH/tracks/$TRACK/" 2>/dev/null | sort -u)
-
-git -C "$FIELD_PATH" log --oneline --since="today" --no-merges \
-  --author="$(git -C "$FIELD_PATH" config user.name)" \
-| while read -r hash rest; do
-    # skip if this hash is already logged in any hub session file
-    echo "$LOGGED" | grep -q "^${hash}" && continue
-    echo "$hash $rest"
-  done
-```
+> **Detection-skip style: stateless inline-grep (finalized).** FH uses the inline-grep form (bash in §ModeB-Blocks) rather than a persisted ledger file: it keeps no extra state to sync and is self-correcting — the hub session files *are* the ledger. Adequate at FH's scale.
 
 If **all** of today's commits are already logged, report `"All N commits today are already logged to the hub — nothing new to record"` and exit (Mode B done, no empty session file written). This is also what the item1 auto-trigger consults to count *un-logged* commits — the auto-trigger must not fire on a session whose commits are all already logged.
 
@@ -277,14 +171,7 @@ If **all** of today's commits are already logged, report `"All N commits today a
 
 ## Step 1-B. Scan Current Session Work
 
-Use the **detection-skip-filtered** commit set from Step 0-B.1 (already-logged hashes removed), not the raw `git log`:
-
-```bash
-cd <field-project-path>
-# raw scan — then pass through the Step 0-B.1 skip ledger before use
-git log --oneline --since="today" --no-merges --author="$(git config user.name)"
-git status --short  # uncommitted changes
-```
+Use the **detection-skip-filtered** commit set from Step 0-B.1 (already-logged hashes removed), not the raw `git log`. Also capture uncommitted changes via `git status --short`.
 
 ## Step 2-B. Extract Session Summary
 
@@ -299,55 +186,17 @@ git status --short  # uncommitted changes
 
 ## Step 3-B. Generate Session Markdown
 
-Template:
-
-```markdown
-# Session YYYY-MM-DD — <Slug>
-
-## Context
-<Initial problem inferred from first commit>
-
-## Solution
-<What was implemented — aggregated from commits>
-
-## Commits
-1. `<hash>` — <message>
-
-## Next Session
-<Parsed from TODO/FIXME, or user-supplied>
-
-## Key Learnings
-<Patterns discovered — user-supplied or inferred>
-
-## FH Backport Points (Optional)
-<If patterns worth meta-skill/rule promotion>
-
----
-**Tags**: #<project> #<topic>
-```
-
-Filename: `session_YYYY_MM_DD_<slug>.md`
+Generate from the template in §ModeB-Blocks (Context / Solution / Commits / Next Session / Key Learnings / FH Backport Points / Tags). Filename: `session_YYYY_MM_DD_<slug>.md`.
 
 ## Step 4-B. Write + Commit to Hub
 
-```bash
-cd <hub-path>
-# Write session file
-git add tracks/<track>/session_$(date +%Y_%m_%d)_<slug>.md
-git commit -m "session: <title> (<project> <date>)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-```
+Write the session file and commit to the hub (bash in §ModeB-Blocks).
 
 > **Push policy**: commit only. Push requires explicit user approval ("push해줘", "push it"). Do not auto-push — consistent with FH PR principle.
 
 ## Step 5-B. Confirmation
 
-```
-✅ Session logged to knowledge hub
-📝 tracks/<track>/session_YYYY_MM_DD_<slug>.md
-🔀 Commit: <hash> — push? (y/n)
-```
+Output the confirmation block (file path + commit hash + push offer — format in §ModeB-Blocks).
 
 ## Step 5-B.1. UAP Update (Operational Adaptation Loop)
 

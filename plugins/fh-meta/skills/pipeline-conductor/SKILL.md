@@ -49,11 +49,7 @@ Basis:   [one-line summary of deciding factor]
 | `FAIL` | Blocking issue found | Halt chain, surface to user immediately |
 | `ESCALATE` | Ambiguous state requiring human judgment | Pause chain, present three options to user |
 
-`CONDITIONAL_PASS` means proceed, not skip. Items captured under `CONDITIONAL_PASS` accumulate into the final report's Pending section and must be addressed before the sweep is considered clean.
-
-`FAIL` halts the chain. The user decides whether to fix-and-resume or abandon the sweep.
-
-`ESCALATE` pauses the chain. The user chooses one of three paths — the chain resumes or closes based on their decision.
+`CONDITIONAL_PASS` means proceed, not skip — captured items accumulate into the final report's Pending section and must be addressed before the sweep is considered clean. `FAIL` halts the chain (user decides fix-and-resume or abandon). `ESCALATE` pauses the chain pending the user's choice.
 
 ### ESCALATE Handling
 
@@ -72,21 +68,17 @@ When any step returns `ESCALATE`, present:
 
 ## Step 0. Scope, Mode, and Translation
 
-Determine the following before running any pipeline step.
+Determine before running any pipeline step:
 
-**1. Scope**: What is being verified?
-   - Single skill: path to `SKILL.md` (e.g., `plugins/fh-meta/skills/foo/SKILL.md`)
-   - Specific asset: file or directory path
-   - Full harness: all assets under `plugins/` and `templates/`
+1. **Scope**: single skill (path to `SKILL.md`) · specific asset (file/directory) · full harness (`plugins/` + `templates/`)
+2. **Mode**: `--quick`, `--no-sim`, or `--full` (default)
+3. **Branch**: current git branch (used for regression guard and report header)
 
-**2. Mode**: `--quick`, `--no-sim`, or `--full` (default)
+If scope is not specified, ask: *"What should I sweep? (e.g., a specific skill path, a directory, or the full harness)"* **Do not infer scope** — a wrong scope produces misleading verdicts.
 
-**3. Branch**: Current git branch (used for regression guard and report header)
+Output the sweep plan and get Y/N confirmation before running.
 
-If scope is not specified, ask:
-> "What should I sweep? (e.g., a specific skill path, a directory, or the full harness)"
-
-Do not infer scope — a wrong scope produces misleading verdicts.
+> **Detail**: See `SKILL_detail.md §Output-Formats` — sweep plan block, per-step verdict blocks, aggregated report template — read when emitting any step output.
 
 ### Scope Translation Table
 
@@ -97,19 +89,6 @@ The four constituent skills use heterogeneous scope models. Translate the pipeli
 | Single SKILL.md | Check session findings relevant to this skill; propose mode only | Adversarial attack on this SKILL.md | Back-trace claims in this SKILL.md to declared sources | Area D (artifact review) on this SKILL.md |
 | Specific directory | Check session findings in this domain | Attack all SKILL.md files in directory | Back-trace all claims in directory | Area A + Area D on the domain |
 | Full harness | Check all recent session findings | Attack all harness assets under scope | Back-trace all claims across harness | Area A + Area B + Area D |
-
-### Step 0 Output
-
-```
-pipeline-conductor — Sweep Plan
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Scope:  {scope}
-  Mode:   {--full / --quick / --no-sim}
-  Branch: {branch name}
-  Steps:  {1 → 2 → 3 → 4 / 2 → 3 / 1 → 2 → 3}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Proceed? (Y: run / N: cancel)
-```
 
 ---
 
@@ -125,21 +104,7 @@ Run `/return-path-gate --skill [scope]`.
 | MEDIUM/LOW severity OPEN chains only | `CONDITIONAL_PASS` | Proceed; capture in Pending |
 | 1+ HIGH severity OPEN chains | `FAIL` | **Halt sweep** — fix chains before running pipeline |
 
-**On FAIL (HIGH severity OPEN chains)**:
-
-```
-[Step 0.5 — return-path-gate]
-  Verdict: FAIL
-  Basis:   HIGH severity OPEN chain(s) — inter-step verdicts unreliable with broken chains
-  Open:    [list of OPEN chains with severity]
-
-Fix OPEN chains then re-run pipeline-conductor.
-Skip? (S: override gate — records as degraded, disqualifies CLEAN (--full) status)
-```
-
-`S` (skip) is available but must be declared explicitly. Skipping records as `degraded: return-path-gate (user override)` in the final report and the sweep cannot reach `CLEAN (--full)` status regardless of subsequent step verdicts.
-
-**On CONDITIONAL_PASS (MEDIUM/LOW only)**: Capture OPEN chains in Pending. Continue to Step 1.
+**Skip override rule**: `S` (skip on FAIL) is available but must be declared explicitly. Skipping records as `degraded: return-path-gate (user override)` in the final report and the sweep **cannot reach `CLEAN (--full)` status** regardless of subsequent step verdicts.
 
 ---
 
@@ -147,16 +112,7 @@ Skip? (S: override gate — records as degraded, disqualifies CLEAN (--full) sta
 
 > Skipped in `--quick` mode.
 
-Check for harvest-loop signals in the current session. pipeline-conductor reads session context for harvest-loop findings rather than invoking harvest-loop directly — invoking harvest-loop mid-sweep would start a new harvest cycle that conflicts with the sweep's own pattern collection. If no harvest-loop run exists in this session, pipeline-conductor can invoke harvest-loop in proposal mode (`/harvest-loop`) as a pre-Step-1 option, but this is not automatic.
-
-**What it checks**: Whether recent session learnings have been absorbed, whether duplicate skill candidates are pending, whether knowledge loop integrity issues exist in the current session.
-
-**Invocation path**:
-- If harvest-loop ran in this session: read its output and incorporate findings.
-- If harvest-loop did not run in this session: output `CONDITIONAL_PASS` — knowledge loop not validated in this sweep.
-- If harvest-loop auto-skipped (fewer than 3 patterns found): output `CONDITIONAL_PASS` — sub-threshold, knowledge loop not validated.
-
-**Verdict criteria**:
+Check for harvest-loop signals in the current session — read session context rather than invoking harvest-loop directly (a mid-sweep invocation would conflict with the sweep's own pattern collection).
 
 | harvest-loop result | pipeline-conductor verdict |
 |---|---|
@@ -166,34 +122,18 @@ Check for harvest-loop signals in the current session. pipeline-conductor reads 
 | Did not run this session | `CONDITIONAL_PASS` — note: knowledge loop not validated |
 | Auto-skipped (< 3 patterns) | `CONDITIONAL_PASS` — note: sub-threshold, not validated |
 
-**On FAIL**: Output the harvest-loop failure reason. Ask:
-> "harvest-loop reported a blocking issue. Fix and re-run Step 1, or abort the sweep?"
-
-**On CONDITIONAL_PASS**: Log all pending patterns or unvalidated notes. Continue to Step 2.
-
-```
-[Step 1 — harvest-loop]
-  Verdict: {verdict}
-  Basis:   {one-line}
-  Pending: {list of items if CONDITIONAL_PASS, else "none"}
-```
+> **Detail**: See `SKILL_detail.md §Execution-Notes` — harvest-loop invocation path, per-step FAIL prompts, Area B cadence bash, what-each-step-checks reference — read when executing Steps 1–4.
 
 ---
 
 ## Step 2. steel-quench — Adversarial Verification
 
-Run steel-quench against the target scope.
-
-**What it checks**: Design attack surface, trigger phrase collisions, over-engineered steps, self-declaration language, structural flaws surfaced by devil-advocate rounds.
-
-**Invocation**: Run steel-quench in its standard mode. For `--quick`, this is the first step.
+Run steel-quench against the target scope (for `--quick`, this is the first step).
 
 **steel-quench severity vocabulary** (S/A/B grade — not M/S/R):
 - **S-grade**: Immediate blocker — must fix before proceeding
 - **A-grade**: Required before deployment — fix before external release
 - **B-grade**: Improvement recommended — non-blocking
-
-**Verdict criteria**:
 
 | steel-quench result | pipeline-conductor verdict |
 |---|---|
@@ -202,41 +142,18 @@ Run steel-quench against the target scope.
 | 1+ S-grade findings | `FAIL` |
 | Wave 4 (Meta-Aware Adversary) surfaces structural ambiguity | `ESCALATE` |
 
-**On FAIL**: Output S-grade finding(s) from steel-quench. Ask:
-> "steel-quench found a blocking issue. Fix and re-run Step 2, or abort the sweep?"
-
-**On CONDITIONAL_PASS**: Capture A-grade and B-grade findings. Continue to Step 3.
-
-```
-[Step 2 — steel-quench]
-  Verdict: {verdict}
-  Basis:   {one-line}
-  Findings:
-    S-grade: {count} — {top item or "none"}
-    A-grade: {count} — {top item or "none"}
-    B-grade: {count} — {top item or "none"}
-```
-
 ---
 
 ## Step 3. phantom-quench — Phantom Claim Detection
 
-Run phantom-quench against the target scope.
+Run phantom-quench scoped to the same target as Steps 1 and 2.
 
-**What it checks**: Proper nouns, numerical values, file paths, and branching conditions back-traced to declared source files. Claims not found in source are marked Phantom.
-
-**Invocation**: Run phantom-quench scoped to the same target as Steps 1 and 2.
-
-**Load-bearing Phantom** (binary test — apply mechanically):
-
-A Phantom is load-bearing if it appears in any of:
+**Load-bearing Phantom** (binary test — apply mechanically). A Phantom is load-bearing if it appears in any of:
 - `§Done When` section of the skill under audit
 - Any numbered `§Step N` execution body
 - `§Chains` with mandatory dispatch language (`→ Mandatory next`)
 
 All other locations (§Triggers, advisory §Chains language, frontmatter description) are non-load-bearing by definition.
-
-**Verdict criteria**:
 
 | phantom-quench result | pipeline-conductor verdict |
 |---|---|
@@ -245,40 +162,15 @@ All other locations (§Triggers, advisory §Chains language, frontmatter descrip
 | 1+ load-bearing Phantoms | `FAIL` |
 | Grounding ambiguous (source file exists but content unclear) | `ESCALATE` |
 
-**On FAIL**: Output the load-bearing Phantom(s). Ask:
-> "phantom-quench found a load-bearing Phantom claim. Fix and re-run Step 3, or abort the sweep?"
-
-**On CONDITIONAL_PASS**: Capture non-load-bearing Phantoms. Continue to Step 4.
-
-```
-[Step 3 — phantom-quench]
-  Verdict: {verdict}
-  Basis:   {one-line}
-  Phantoms: {count} — {load-bearing: Y/N} — {top item or "none"}
-```
-
 ---
 
 ## Step 4. sim-conductor — Pre-Deploy Simulation
 
 > Skipped in `--quick` and `--no-sim` modes.
 
-Run sim-conductor against the target scope.
+Run sim-conductor against the target scope: Area A + Area B (if cadence allows) + Area D (if scope is a specific SKILL.md or document).
 
-**What it checks**: Transferability to external users, new-user entry point friction, power-user edge cases, artifact quality from an outside perspective.
-
-**Area B cadence check** (sim-conductor Area B has a once-per-week frequency limit):
-
-```bash
-find tracks/_meta/ -name "*sim_conductor*" -newer "$(date -v-7d +%Y-%m-%d 2>/dev/null || date -d '7 days ago' +%Y-%m-%d 2>/dev/null)" 2>/dev/null | head -1
-```
-
-- Result found (Area B ran within 7 days): skip Area B → run Area A + Area D only. Capture as `CONDITIONAL_PASS` with note: "Area B skipped — within 7-day cadence limit."
-- No result (Area B not run within 7 days): run Area A + Area B + Area D (scope permitting).
-
-**Invocation**: Area A + Area B (if cadence allows) + Area D (if scope is a specific SKILL.md or document).
-
-**Verdict criteria**:
+**Area B cadence rule (behavioral)**: Area B has a once-per-week frequency limit. If Area B ran within 7 days (detection bash in §Execution-Notes) → skip Area B, run Area A + D only, capture as `CONDITIONAL_PASS` with note "Area B skipped — within 7-day cadence limit."
 
 | sim-conductor result | pipeline-conductor verdict |
 |---|---|
@@ -287,51 +179,11 @@ find tracks/_meta/ -name "*sim_conductor*" -newer "$(date -v-7d +%Y-%m-%d 2>/dev
 | 1+ M-tier findings from any persona | `FAIL` |
 | Persona results conflict, resolution requires human judgment | `ESCALATE` |
 
-**On FAIL**: Output M-tier finding(s) from sim-conductor. Ask:
-> "sim-conductor found a blocking issue. Fix and re-run Step 4, or accept findings and close with FAIL status?"
-
-**On CONDITIONAL_PASS**: Capture S/R-tier findings. Proceed to final report.
-
-```
-[Step 4 — sim-conductor]
-  Verdict: {verdict}
-  Basis:   {one-line}
-  Area B:  {ran / skipped — cadence limit}
-  Findings:
-    M: {count} — {top item or "none"}
-    S: {count} — {top item or "none"}
-    R: {count} — {top item or "none"}
-```
-
 ---
 
 ## Step 5. Aggregated Report
 
-After all steps complete (or after chain halt), output the aggregated report.
-
-```
-pipeline-conductor — Sweep Report
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Scope:  {scope}
-  Mode:   {mode}
-  Branch: {branch}
-  Date:   {YYYY-MM-DD}
-
-  Step 0.5 — return-path-gate:       {PASS / CONDITIONAL_PASS / FAIL / SKIPPED / degraded}
-  Step 1   — harvest-loop:           {PASS / CONDITIONAL_PASS / FAIL / ESCALATE / SKIPPED}
-  Step 2   — steel-quench:           {verdict}
-  Step 3   — phantom-quench: {verdict}
-  Step 4   — sim-conductor:          {verdict}
-
-  Overall: {CLEAN (--full) / CLEAN (--quick) / CLEAN (--no-sim) / PENDING / BLOCKED}
-
-  ── Pending items (CONDITIONAL_PASS steps + accepted ESCALATE) ──
-  {item list, or "none"}
-
-  ── Blocking items (FAIL steps + unresolved ESCALATE) ──
-  {item list, or "none — sweep completed cleanly"}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
+After all steps complete (or after chain halt), output the aggregated report (template in §Output-Formats).
 
 **Overall verdict logic**:
 
@@ -347,14 +199,7 @@ pipeline-conductor — Sweep Report
 - `PENDING`: Resolve captured items before external release.
 - `BLOCKED`: Do not proceed. Fix blocking items and re-run affected step(s).
 
-### Report Persistence
-
-Save the report to:
-```
-tracks/_meta/pipeline_conductor_{YYYY-MM-DD}_{scope-slug}.md
-```
-
-If `tracks/_meta/` does not exist, output a B-grade warning and skip persistence.
+**Report persistence**: save to `tracks/_meta/pipeline_conductor_{YYYY-MM-DD}_{scope-slug}.md`. If `tracks/_meta/` does not exist, output a B-grade warning and skip persistence.
 
 ---
 
@@ -370,12 +215,7 @@ If `tracks/_meta/` does not exist, output a B-grade warning and skip persistence
 
 Resume is scope-bound — the scope from Step 0 is preserved across resume calls.
 
-**After ESCALATE**:
-
-1. Present the three options (see ESCALATE Handling above).
-2. Option (a) — user provides decision: incorporate as resolution note, re-evaluate the step gate with decision context, continue chain from step N or N+1.
-3. Option (b) — accept and continue: mark ESCALATE item as PENDING, continue chain from step N+1.
-4. Option (c) — abort: close sweep, output BLOCKED report with ESCALATE item in blocking section.
+**After ESCALATE**: present the three options (see ESCALATE Handling above); (a) incorporate decision and continue, (b) mark PENDING and continue from N+1, (c) abort with BLOCKED report.
 
 ---
 
