@@ -98,7 +98,7 @@ git config core.hooksPath templates/.git-hooks
 chmod +x templates/.git-hooks/pre-commit
 ```
 
-After running `/steel-quench` and `/phantom-quench` in your session, Claude creates the Axes 2+3 pass marker automatically. The marker must carry machine-readable floor fields — the hook validates them (a bare `touch` marker no longer passes; below-floor passes block unless an explicit `below-floor-ack:` line records operator acceptance). If Claude doesn't create it (e.g., session interrupted), create it manually:
+After running `/steel-quench` and `/phantom-quench` in your session, Claude creates the Axes 2+3 pass marker automatically. The marker must carry machine-readable floor fields — the hook validates them (a bare `touch` marker no longer passes; below-floor passes block unless an explicit `below-floor-ack:` line records operator acceptance, **quoting the operator's approval utterance verbatim** — an unquoted reason is rejected as agent-self-writable). If Claude doesn't create it (e.g., session interrupted), create it manually:
 
 ```bash
 cat > "tracks/_meta/.axes_23_passed_$(git rev-parse --abbrev-ref HEAD | tr '/' '_')_$(date +%Y-%m-%d).marker" <<'EOF'

@@ -243,7 +243,7 @@ claude CLI also absent  → Skip Wave 5, note in residual risk card
 
 ```
 Wave 5 — Multi-Team Panel available.
-Detected external CLIs: [gemini · gh-copilot · ollama | none]
+Detected external CLIs: [agy · gemini · gh-copilot · ollama | none]
 
 Estimated token cost:
   External CLIs: each team ×2-3 personas → ~2K–5K tokens per team (billed to that CLI)
@@ -259,7 +259,15 @@ Run Wave 5?
 
 ```bash
 TEAMS=()
-command -v gemini           &>/dev/null && TEAMS+=("gemini")
+# tb = portable timebox (darwin ships no `timeout`; perl alarm works everywhere)
+tb() { perl -e 'alarm shift; exec @ARGV' "$@"; }
+command -v agy              &>/dev/null && TEAMS+=("agy")
+# gemini backend EOL 2026-06-18 — the binary outlives the service, so a bare `command -v` goes
+# silently stale (pipes return empty behind 2>/dev/null). Liveness probe (one minimal billed
+# call, timeboxed) gates the slot instead. Probe uses the SAME stdin-pipe form the T1 dispatch
+# uses (probing a different invocation path can pass while dispatch fails — agy proved the two
+# forms diverge on one binary). Probe result is valid for the session — skip re-probe on re-runs.
+command -v gemini           &>/dev/null && [ -n "$(echo ping | tb 20 gemini 2>/dev/null)" ] && TEAMS+=("gemini")
 command -v gh               &>/dev/null && gh copilot --version &>/dev/null 2>&1 && TEAMS+=("gh-copilot")
 command -v ollama           &>/dev/null && TEAMS+=("ollama")
 npx @openai/codex --version &>/dev/null 2>&1 && TEAMS+=("codex")
@@ -277,6 +285,7 @@ Default team-persona assignments:
 | **T2 Copilot** | `gh copilot suggest` | devil · expert |
 | **T3 Ollama** | `ollama run {model}` | devil |
 | **T4 Codex** | `npx @openai/codex exec` | devil · edge-case-hunter |
+| **T5 agy** | `agy -p "PROMPT"` (argument form only — stdin pipe prints help, measured 2026-06-13) | devil · beginner · alternatives (gemini successor) |
 
 **Step 1 — Parallel Team Dispatch**:
 
@@ -332,6 +341,46 @@ $ARTIFACT_TAIL" 2>/dev/null) &
 $C_EDGE"
 fi
 
+# ── T5: agy (Antigravity) — gemini successor ──────────────
+# Constraints: argument form only (`agy -p "PROMPT"`); timebox+retry is a hard rule
+# (intermittent hang class, ~50% observed 2026-06-11); -p auto-approves tool execution,
+# so feed only trusted artifacts — never untrusted external content. Serial by design
+# (worst case ~6 min if the hang class fires on every call) — do NOT copy the T1-T4
+# `VAR=$(...) &` pattern: it assigns inside a background subshell.
+if [[ " ${TEAMS[*]} " =~ " agy " ]]; then
+  # tb redefined here — each fenced block must be self-contained when copy-run.
+  # Limitation: alarm kills the exec'd process only; a child holding the stdout
+  # pipe can outlive it (same gap as `timeout` without process-group kill).
+  tb() { perl -e 'alarm shift; exec @ARGV' "$@"; }
+  agy_call() {  # $1=prompt — 60s timebox, 1 retry on empty
+    local out; out=$(tb 60 agy -p "$1" 2>/dev/null)
+    [ -z "$out" ] && out=$(tb 60 agy -p "$1" 2>/dev/null)
+    printf '%s' "$out"
+  }
+  A_DEVIL=$(agy_call "[Devil] Adversarial reviewer, no prior context.
+Find 3 critical structural flaws — especially whether Done When criteria are binary and achievable.
+Format: [issue · location · severity S/A/B]
+---
+$ARTIFACT_TAIL")
+  A_NEW=$(agy_call "[Beginner] First-time user, zero background.
+Find 3 unclear or jargon-heavy points.
+Format: [issue · location · severity]
+---
+$ARTIFACT_TAIL")
+  A_SKEP=$(agy_call "[Alternatives — challenger U1 lens] Pragmatic outsider.
+Find 3 \"why not just X?\" challenges.
+Format: [issue · location · severity]
+---
+$ARTIFACT_TAIL")
+  if [ -n "$A_DEVIL$A_NEW$A_SKEP" ]; then
+    TEAM_RESULTS["agy"]="$A_DEVIL
+$A_NEW
+$A_SKEP"
+  else
+    echo "T5 agy: empty after timebox+retry — dropped (degraded coverage, do not count in synthesis)"
+  fi
+fi
+
 # ── Path B: Cross-session Claude fallback ─────────────────
 if [ ${#TEAMS[@]} -eq 0 ]; then
   TEAM_RESULTS["cross-session-claude"]=$(claude --print \
@@ -356,7 +405,7 @@ Confidence scoring:
   1 team only                       → B-grade (single-team observation)
 
 Claude blind spots (highest value):
-  Issues raised by T1~T4 but absent from Wave 1~4 (T0) results
+  Issues raised by T1~T5 but absent from Wave 1~4 (T0) results
   → flag explicitly as "cross-team delta"
 ```
 

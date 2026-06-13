@@ -172,13 +172,19 @@ Run multi-team? (a) Full panel  (b) Claude sub-agents only  (c) Skip to Area B
 | T2 Copilot | `gh copilot suggest` | challenger · expert | `gh copilot suggest -t shell` |
 | T3 Ollama | `ollama run` | challenger | `ollama run llama3 PROMPT` |
 | T4 Codex | `npx @openai/codex exec` | challenger · edge-case-hunter | `echo PROMPT \| npx @openai/codex exec -m gpt-5 -` |
+| T5 agy | `agy -p` (gemini successor) | challenger · beginner | `agy -p "PROMPT"` — argument form only (stdin pipe prints help); timebox+retry hard rule (intermittent hang class); -p auto-approves tools → trusted artifacts only |
 
 ### CLI detection bash
 
 ```bash
 # Detect available external CLIs
 AVAILABLE_CLIS=""
-command -v gemini   &>/dev/null && AVAILABLE_CLIS="$AVAILABLE_CLIS gemini"
+tb() { perl -e 'alarm shift; exec @ARGV' "$@"; }   # portable timebox — darwin ships no `timeout`
+command -v agy      &>/dev/null && AVAILABLE_CLIS="$AVAILABLE_CLIS agy"
+# gemini backend EOL 2026-06-18 — binary outlives the service; liveness probe (timeboxed minimal
+# call) replaces the bare `command -v`, which would pass while pipes silently return empty.
+# Probe uses the same stdin-pipe form T1 dispatch uses; result valid per session (no re-probe).
+command -v gemini   &>/dev/null && [ -n "$(echo ping | tb 20 gemini 2>/dev/null)" ] && AVAILABLE_CLIS="$AVAILABLE_CLIS gemini"
 command -v gh       &>/dev/null && gh copilot --version &>/dev/null && AVAILABLE_CLIS="$AVAILABLE_CLIS copilot"
 command -v ollama   &>/dev/null && AVAILABLE_CLIS="$AVAILABLE_CLIS ollama"
 command -v npx      &>/dev/null && npx @openai/codex --version &>/dev/null 2>&1 && AVAILABLE_CLIS="$AVAILABLE_CLIS codex"

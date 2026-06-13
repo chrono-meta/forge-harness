@@ -184,7 +184,15 @@ fi
 #   axis2-engine: quench-challenger | inline | <external cli>
 #   axis2-model:  <tier that produced the adversarial pass, e.g. opus>
 #   floor-status: at-floor | above-floor | below-floor   (floor = opus, PR #86)
-#   below-floor-ack: <operator acceptance>   ← required iff floor-status: below-floor
+#   below-floor-ack: "<verbatim operator approval utterance>" — <reason>
+#                     ← required iff floor-status: below-floor; the quoted span is
+#                       mandatory (rubber-stamp hardening, 2026-06-13). This narrows
+#                       rubber-stamping to two residual classes — quote fabrication
+#                       (active-fabrication, honesty-layer-blocked) and OUT-OF-CONTEXT
+#                       quoting (a real but non-approval utterance) — both of which
+#                       are weekly-audit targets: the audit re-queues below-floor
+#                       markers and checks the quote against the session record.
+#                       The hook enforces the form, not genuineness.
 #
 # Opus-inline is at-floor (capability met even though dispatch was skipped) — the
 # gate must not block legitimate at/above-floor inline passes by the orchestrator.
@@ -220,7 +228,17 @@ validate_marker_floor() {
         echo "       (1) re-run Axis 2 at ≥ floor: dispatch quench-challenger at opus,"
         echo "           then set floor-status: at-floor; or"
         echo "       (2) record explicit operator acceptance in the marker:"
-        echo "           below-floor-ack: <one-line reason, operator-approved>"
+        echo "           below-floor-ack: \"<verbatim operator utterance>\" — <reason>"
+        return 1
+      fi
+      # Rubber-stamp guard: the ack must contain a QUOTED operator utterance
+      # ("..." or “…”, ≥2 chars). A bare reason is agent-self-writable; a quote
+      # ties the ack to a conversational event auditable in the session record.
+      if ! grep -m1 -E '^[[:space:]]*below-floor-ack:' "$m" \
+           | grep -qE '"[^"]{2,}"|“[^”]{2,}”'; then
+        echo "  ❌ BELOW-FLOOR ack without quoted operator utterance (rubber-stamp guard)"
+        echo "     The ack line must quote the operator's approval verbatim:"
+        echo "       below-floor-ack: \"<what the operator actually said>\" — <reason>"
         return 1
       fi
       echo "  ⚠️  below-floor pass accepted via operator ack (provisional —"
