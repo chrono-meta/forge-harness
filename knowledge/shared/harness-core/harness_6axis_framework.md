@@ -109,3 +109,7 @@ Lower levels cannot override higher. AI contribution → PR proposal only (no di
 - `ai_dialogue_playbook.md` — Axis 2 dialogue principles (how to ask, delegate, record)
 - `claude_code_runtime_flow.md` — Axis 4 runtime behavior (chronological session flow)
 - `.claude/rules/operations.md` — Sub-agent operations, weekly cycle detail
+
+**External sibling (independent convergence)**
+
+- arXiv:2603.25723 (*Natural-Language Agent Harnesses*, NLAH) — external academic sibling that independently converges on the same core thesis: a harness control layer can be an executable natural-language object, not code. NLAH measures the natural-language-harness form empirically; FH governs and compounds it.
