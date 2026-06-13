@@ -371,12 +371,12 @@ the web-automation value appears when the Codex session has a Browser/Chrome con
 Code host should therefore treat Codex as the preferred handoff for web-flow probes only after probing
 that connector capability, and should fall back to the normal text sidecar role when it is absent.
 
-**FH-local workspace note**: some operator setups load `chrono-meta/forge-harness` and
-`chrono-meta/fh-be` as sibling repositories inside one working folder to form a personal FH
-environment. Capability routing should be resolved at the workspace level in that setup: preserve which
-repository owns the artifact or change, but choose the runtime by the surface being tested (FH docs and
-governance in `forge-harness`; backend/runtime work in `fh-be`; live web-flow probes through a
-Browser/Chrome-capable Codex session when available).
+**FH-local workspace note**: some operator setups load the public forge-harness mirror and a private
+companion store (the `*-be` pattern) as sibling repositories inside one working folder to form a personal
+FH environment. Capability routing should be resolved at the workspace level in that setup: preserve which
+repository owns the artifact or change, but choose the runtime by the surface being tested (public FH docs
+and governance in the mirror; backend/runtime/experiment work in the companion store; live web-flow probes
+through a Browser/Chrome-capable Codex session when available).
 
 > **v2 paper candidate**: Does model tier affect the quality of perspective divergence, or is the divergence pattern stable across tiers? The orchestrator-swap experiment used entry/mid-tier sidecars — replicating with all-premium models (Gemini Pro, GPT-4o, Claude Opus) would test whether diversity compounds further or plateaus. This is a natural follow-on experiment for the v2 empirical section.
 
