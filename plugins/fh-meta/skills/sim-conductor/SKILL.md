@@ -78,7 +78,7 @@ Read target artifact(s) → classify on 5 dimensions → output recommendation �
 | `artifact_type` | SKILL.md / design-doc → Area B + D-skill↑ · README / CHEATSHEET → Area A↑ · code / config → Area D-code↑ |
 | `audience` | external installer / first-time user → beginner↑ · internal team only → challenger↑ |
 | `claim_density` | 3+ stated benefits or superlatives → challenger↑ |
-| `risk_level` | external publish / marketplace listing → steel-quench prerequisite triggered |
+| `risk_level` | external publish / marketplace listing → steel-quench prerequisite triggered. **Mechanical floor (not judge-only)**: any of — publish/marketplace target · public-surface or visibility change · auth/secret-handling or executable code · an FH asset under the 4-axis gate — **forces `risk_level ≥ medium`** regardless of profiler judgment. The floor closes the "fool the profiler into `low` to skip Step 0.6" seam; the judge may only raise above the floor, never below it. |
 | `novelty` | first-of-its-kind / no prior session evidence → phantom-quench recommended |
 
 ```
@@ -146,6 +146,48 @@ Proactively surface 1 concern, then confirm whether to proceed. Skip if no conce
 | E execution timing error | Area E before pipeline run (no artifact yet) |
 
 Concern format: `"One thing to check before [Area X]: [concern]. Proceed?"`
+
+---
+
+## Step 0.6 — Cross-Model Coverage Gate (risk≥medium — hard)
+
+Closes the homogeneous-blind-spot + formatting-flattery vector (judge-robustness swarm, 2026-06-13):
+a panel of same-session Claude sub-agents shares one model's blind spots, so a clean verdict can be
+flattery the **whole panel** is blind to — and with no quotable-rule violation, no persona escalates.
+For `risk_level ≥ medium` targets (from Step 0.3), at least one persona MUST come from a source
+**outside the orchestrator's own session context**. This **promotes the former advisory "dual
+validation principle"** (detail §AreaB-Baseline #4) to a hard gate — the mechanical-anchor pattern of
+hardening #1–#5: a judged verdict binds to a fact the judge cannot fake.
+
+**Graceful-degradation ladder** — take the highest available rung. The gate **never breaks
+sim-conductor**; at the bottom it only withdraws the *unsafe autonomy* (self-certifying a blind verdict),
+not the run:
+
+| Rung | Source | `cross_model_coverage` | Closes | When |
+|---|---|:---:|---|---|
+| 1 | External CLI team (Multi-Team Mode — §MultiTeam) | `external` | model-level blind spot (genuine cross-model) | 1+ external CLI live + probe non-empty |
+| 2 | Cross-session Claude — `claude -p` headless, or an Agent with **zero inherited context** | `cross-session` | **session-contamination only** — a fresh Claude shares the same weights/RLHF gradient, so it does **not** close the model-level blind spot; it only removes the orchestrator's working-memory bias. Honest partial mitigation, labeled as such | no external CLI; dispatch probe returns non-empty |
+| 3 | Same-session sub-agents only | `NONE` | nothing — homogeneous panel | neither rung's probe succeeded |
+
+**Mechanical anchor** — `cross_model_coverage` is valid **only if backed by a quoted dispatch artifact**,
+not a self-assessment (the self-signing hole hardening #1 closed for the marker — same fix here). To
+record `external` or `cross-session`, the Step 3 report must **quote a non-empty excerpt of the actual
+dispatch output** (external CLI stdout, or the dispatched Agent's returned verdict text); a label with no
+quoted excerpt is invalid and falls to `NONE`. **Liveness, not mere availability**: probe the rung before
+claiming it — attempt the dispatch with a timeout; if it errors or returns empty (plan-gate closed,
+context saturated, CLI present-but-dead), record `NONE`, never assume the rung succeeded. This is the
+same honest scope as #1: the artifact makes the claim **auditable**, not cryptographically unforgeable —
+a fabricated excerpt remains the operator's + weekly-audit's residual by design. On rung 3 (`NONE`) for a
+risk≥medium target:
+- the report flags `⚠️ cross-model coverage: NONE — homogeneous same-session panel; verdict provisional`, **and**
+- **Step 4 auto-commit privilege is withdrawn** (see Step 4): M-tier fixes may be *prepared* but the
+  commit waits for the operator's explicit go. Auto-committing a structurally self-blind verdict is
+  exactly what the exploit targeted — so that single privilege is what degrades, not the simulation.
+
+`risk_level = low` targets are exempt (a homogeneous panel is acceptable); the gate fires only at
+medium+. The rung-2 fallback is what makes this CC-only-safe: a Claude-only environment still gets a
+real cross-context read (a fresh isolated dispatch shares no working memory with the orchestrator), so
+`NONE` is reached only when *both* external CLIs and a second Claude context are unavailable.
 
 ---
 
@@ -315,6 +357,29 @@ positives erode reviewer trust.
 - No forced consensus or forced conflict — report Common opinions (2+ personas agree) and Conflicts
   (position A vs B, each with rationale) as-is. Feeds Step 2 M/S/R triage (M ← Critical or 2+ personas).
 
+**Zero-coverage map (mandatory synthesizer output)** — the synthesizer must emit, mechanically, the set
+of standpoints that produced **no** finding, not only the ones that did (judge-robustness swarm,
+2026-06-13). Enumerate the persona **standpoints** in play — those the Step 0.3 profile recommended,
+**plus the standpoints its dimensions imply** (risk_level=high → a security/publish standpoint ·
+audience=mixed → a non-native-reader standpoint · claim_density=high → a claim-evidence standpoint).
+List the *standpoints*, not the bare dimension names (a `risk_level (low) → ZERO` row is noise that
+trains operators to ignore ⚠️). Mark each `covered` (≥1 persona addressed it) or `ZERO` (no persona
+touched it):
+
+```
+Coverage map:
+  beginner (onboarding friction)      → covered (A-1: 2 findings)
+  challenger (claim-evidence)         → covered (A-3: 1 finding)
+  security surface (risk_level=high)  → ZERO ⚠️
+  non-native reader (audience=mixed)  → ZERO ⚠️
+```
+
+A clean report with `ZERO` standpoints is **not** a pass — it is an uncovered surface, reported as such.
+This converts the formatting-flattery failure (everything reads fine → nothing escalates) into a visible
+gap: **silence on a standpoint is reported as `ZERO`, never inferred as approval.** It is a checklist
+derived from the profile and the dispatch outputs — a mechanical anchor, not a judgment. Carry the map
+verbatim into the Step 3 report.
+
 The two severity vocabularies are layered, not redundant: a persona running **in isolation** assigns only
 its own Critical/Important/Suggestion — it cannot assign M/S/R, since `S = found by 3+ personas` depends on
 cross-persona agreement the isolated persona never sees. The synthesizer is the only context that can triage
@@ -365,6 +430,13 @@ File: `$REPORT_DIR/sim_YYYY_MM_DD_area_[X].md`
 1+ M-tier → fix immediately → commit. PR creation requires explicit user request.
 0 M-tier → commit report only + report S/R backlog.
 
+**Cross-model gate on auto-commit (risk≥medium)** — when Step 0.6 recorded `cross_model_coverage: NONE`
+on a risk≥medium target, the auto-commit privilege is **withdrawn**: prepare the M-tier fixes and write
+the report, but do **not** self-commit — surface *"cross-model coverage NONE on a risk≥medium target;
+the verdict is from a homogeneous same-session panel. Commit the fixes, or add a cross-context read
+first?"* and wait for the operator's go. `external`/`cross-session` coverage, or risk_level=low, commits
+as normal. (This withdraws one privilege, not the run — the report and fixes still exist.)
+
 > **Detail**: See `SKILL_detail.md §PR-Bash` — branch creation bash, commit + push, gh pr create template — read when creating a PR.
 
 ---
@@ -390,8 +462,10 @@ Convergence within an AI-AI loop is **provisional**. Elevated to final only afte
 | 1+ M-tier → fixed + committed (or "none") | ✅ Prescription complete |
 | Report `tracks/_meta/sim_YYYY_MM_DD_*.md` saved | ✅ Persistence complete |
 | 0 M-tier → report committed + S/R backlog reported | ✅ Health check complete |
+| risk≥medium → `cross_model_coverage` recorded in report (external/cross-session/NONE) | ✅ Coverage gate ran *(check class: measured — the recorded value reflects the dispatch path that ran, not a self-grade; pair: NONE withdraws auto-commit per Step 4)* |
+| Synthesizer emitted the zero-coverage map (every profile standpoint marked covered/ZERO) | ✅ Blind-spot surface reported *(check class: mechanical — a checklist over the profile, not a judgment)* |
 
-Verdicts: PASS · CONDITIONAL_PASS (S/R only, or Area B cadence skip) · FAIL (M-tier unresolved) · ESCALATE (persona conflict requiring human judgment).
+Verdicts: PASS · CONDITIONAL_PASS (S/R only, or Area B cadence skip) · FAIL (M-tier unresolved) · ESCALATE (persona conflict requiring human judgment, **or** `cross_model_coverage: NONE` on risk≥medium → auto-commit withdrawn pending operator go).
 
 **Mandatory for Area A (external publish)**: steel-quench must complete in same session before Area A is marked complete.
 

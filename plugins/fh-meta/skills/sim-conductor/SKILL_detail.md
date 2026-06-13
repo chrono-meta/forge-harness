@@ -214,7 +214,7 @@ Structural methods to reduce self-reference risk in Area B:
 1. **Regular adversarial attacks**: Area B once/month + `challenger` attack once/quarter. Route challenger → defense results directly into SKILL.md via steel-quench handoff after Area B ends.
 2. **Direct external user validation**: Non-owner attempts install + invocation → collect reactions. (cascade β validated: first autonomous external run confirmed.)
 3. **steel-quench integration**: After Area B ends, hand off challenger findings to `/steel-quench` for deeper adversarial review + SKILL.md inscription.
-4. **Dual validation principle**: Internal validation (Area B) alone is insufficient — minimized only when combined with external install reaction collection or cross-model validation.
+4. **Dual validation principle**: Internal validation (Area B) alone is insufficient — minimized only when combined with external install reaction collection or cross-model validation. **For risk≥medium targets this is no longer advisory: it is the hard Cross-Model Coverage Gate** (SKILL.md Step 0.6) — at least one persona from outside the orchestrator's session context (external CLI → cross-session Claude → else `cross_model_coverage: NONE` withdraws auto-commit). Promoted from advisory to gate by the judge-robustness swarm (2026-06-13): a homogeneous same-session panel shares blind spots, so its clean verdict cannot self-certify.
 
 **Dispatch template for Area B parallel**:
 ```
@@ -291,6 +291,7 @@ type: simulation-report
 date: YYYY-MM-DD
 areas: [A|B|C|D|E|all]
 target_profile: [artifact_type | audience | risk_level]
+cross_model_coverage: [external | cross-session | NONE | n/a-low-risk]   # Step 0.6 — recorded from dispatch path
 m_count: N
 s_count: N
 r_count: N
@@ -298,6 +299,10 @@ r_count: N
 
 ## Target Profile
 artifact_type: [type] · audience: [internal|external|mixed] · risk_level: [low|medium|high]
+
+## Coverage map (Step 1.5 — every profile standpoint marked covered/ZERO)
+[verbatim zero-coverage map; ⚠️ on each ZERO]
+cross_model_coverage: [external | cross-session | NONE]   # NONE on risk≥medium → auto-commit withdrawn (Step 4)
 
 ## M-tier ([N] items)
 | # | Issue | Location | Prescription |
