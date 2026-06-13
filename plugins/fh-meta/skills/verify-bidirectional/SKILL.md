@@ -10,6 +10,7 @@ complexity_routing:
   escalate_when:
     - full_revalidation
     - high_stakes
+    - fail_verdict   # AI recommendation was wrong → baseline overwrite is high-stakes, never stay at sonnet
 ---
 
 # verify-bidirectional — Bidirectional Self-Validation Automation
@@ -49,6 +50,28 @@ Also triggered in external user environments by these natural language phrases:
 Treat user's statement as **external refinement material**. **Do NOT attempt to defend against it** — acknowledge possibility of partial weakening or correction of initial recommendation.
 
 Core proposition: "refinement challenge ≠ fundamental negation". Priority is identifying where the initial recommendation is weakened.
+
+**Evidence gate (overwrite ≠ soften)** — closes the sycophancy/steering vector where a bare assertion
+("that's wrong, re-examine") flips a baseline with zero evidence (judge-robustness swarm, 2026-06-13).
+"Do NOT defend" still holds for *this conversation's proposition* (anti-stubbornness is the point), but a
+**persistent-baseline overwrite** (a rule, asset, memory, or `knowledge/` claim — anything that outlives
+this session) requires a **supporting basis**, not mere pushback:
+
+- **(a)** the user cited a file / line / commit / URL / past decision **and the cited content actually
+  supports the challenge** — verified by *reading it*, not by its mere existence (an irrelevant-but-real
+  citation is the out-of-context-grounding trap, the same vector phantom-quench guards), **or**
+- **(b)** the Step 2 grep returns an actual contradiction that *supports the challenge* (not just any
+  conflict with the original) — surfaced literally.
+
+If a baseline overwrite is implied but **neither holds**, do not silently rewrite: verdict is **ESCALATE**
+— surface *"this would overwrite baseline {X} with no cited evidence; confirm override, or provide a
+source?"* and block the Step 4 cascade until the operator answers. Softening a local in-conversation
+proposition (no persistent asset changed) proceeds as before — the gate fires only on persistent-baseline
+writes. **Sequencing**: this gate is written in Step 1, but Step 4 is what enumerates affected persistent
+assets — so if Step 4 later identifies *any* persistent asset to write, **re-apply this gate before Step
+4.5** even if the original challenge first looked like a mere soften. This is **not** restored AI defensiveness: the AI still does not argue the user is wrong; it only
+declines to *fabricate a baseline change* the evidence does not support (mirror of the steel-quench/phantom
+mechanical-anchor principle — judged verdicts bind to evidence).
 
 ### Step 2. Consistency Area Grep (3-step mandatory)
 

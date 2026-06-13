@@ -164,8 +164,30 @@ No gate-PASS in scope → skip Wave-P3 entirely.
 > dimensions the gate's own pass criteria structurally could not check. Only when all three Attack Failed can
 > a **"Real PASS"** be declared.
 
+**PASS-framing redaction (mandatory pre-step)** — the artifact reaches Wave-P3 *carrying its own
+PASS declaration* (a `✅`, a "Verified" header, the gate marker), and a re-judge that reads that
+framing is biased toward "Attack Failed" — the exact bias Wave-P3 exists to defeat (judge-robustness
+swarm, 2026-06-13). Before feeding the artifact to the dimensions/challenger, **strip the pass-framing
+at the bash layer, not the AI layer**:
+
+```bash
+# Strip framing glyphs + canonical FH verdict PHRASES only — never the bare word PASS
+# (a global s/PASS//g corrupts substance: "status==PASS" → "status==", manufacturing findings).
+P3R=$(mktemp)
+sed -E -e 's/[✅🟩✓]//g' \
+       -e 's/(ALL AXES PASSED|FH_GATE_VERDICT:[[:space:]]*PASS|Real PASS|VERIFIED|[Gg]ate[^.]{0,24}declared PASS)//g' \
+       "{ARTIFACT}" > "$P3R"
+# feed "$P3R" to Wave-P3; clean up after: rm -f "$P3R"
+```
+
+Feed `$P3R` to Wave-P3, then `rm -f "$P3R"`. The redaction is mechanical, so it cannot itself be
+placated. **Honest scope**: it strips framing glyphs and *canonical FH verdict phrases* — bare-word or
+lowercase prose self-congratulation ("this passed review", "looks green") is out of scope for `sed`
+and is covered by a prose backstop instead: the Wave-P3 persona is instructed to **disregard any
+residual self-pass language in the artifact** and attack as if no verdict were stated.
+
 **Agent utilization**:
-- `fh-commons:quench-challenger` (optional) — adds 6-axis structural attack to each dimension. If absent, run the 3 dimensions directly.
+- `fh-commons:quench-challenger` (optional) — adds 6-axis structural attack to each dimension, fed the **redacted** artifact. If absent, run the 3 dimensions directly on the redacted copy.
 - `fh-meta:persona-innovator` (after convergence) — error/gap patterns found during Wave-P3 → auto-propose new Cross-Project Pattern rows or skill-candidate signals.
 
 The three dimensions generalize the gate's three blind spots:

@@ -37,7 +37,8 @@ When unsure where to place a new asset or skill:
 
 1. Request full file path from user (or accept natural language description)
 2. Load asset content via `Read` (if path provided)
-3. Evaluate Step 1 4-criteria in order (LLM makes the judgment directly)
+2.5. Step 0.5 mechanical overlap pre-scan (grounds criterion ④ before the judged pass)
+3. Evaluate Step 1 4-criteria in order (LLM makes the judgment, ④ gated on the Step 0.5 scan)
 4. ① + ④ both pass + at least one of ②③ passes → output **"FH suitable"**
    Otherwise, proceed to Step 2 local assessment → if fails, output **"Project-local agent or no asset needed"**
 
@@ -64,7 +65,32 @@ Immediately after trigger, acquire asset content in the following order.
    > **Which asset should I evaluate?**
    > Enter a file path (e.g., `.claude/agents/jira-create.md`) or a description.
 
-After acquiring the asset content, **Claude directly** applies Step 1 4-criteria (no external calls).
+After acquiring the asset content, run Step 0.5 (mechanical overlap pre-scan) **before** the judged Step 1.
+
+## Step 0.5. Mechanical Overlap Pre-Scan (grounds criterion ④)
+
+Criterion ④ ("no overlap with existing FH skills") is otherwise an LLM **recall** judgment with no
+ground truth — a duplicate skill with a novel name passes because the judge has no enumerated list to
+check against (judge-robustness swarm, 2026-06-13). Ground it mechanically first:
+
+```bash
+# enumerate existing skill names + descriptions (grounds the judged comparison)
+grep -riE "name:|description:" plugins/fh-meta/skills/*/SKILL.md plugins/fh-commons/skills/*/SKILL.md
+# hard-collision check: WHOLE proposed name or a WHOLE trigger phrase reused verbatim.
+# grep -wF (whole-word, fixed-string) on the full strings — NOT -E on tokens (a shared common
+# word like "review" is not a collision). Exclude the asset's own file (self-match = false hit).
+SELF="plugins/fh-meta/skills/<proposed name>/SKILL.md"
+grep -rwF -e "<proposed full name>" -e "<full trigger phrase 1>" -e "<full trigger phrase 2>" \
+     plugins/*/skills/*/SKILL.md | grep -v "$SELF" | grep -c .
+```
+
+Surface **collision count + nearest existing skill(s)**. Criterion ④ then passes only if **0 whole-name/
+whole-trigger collision AND the judged ≤90%-overlap check agrees**. A verbatim whole-name or
+whole-trigger reuse is a hard ④ fail regardless of the LLM judgment. **Honest scope**: the grep grounds
+*literal* name/trigger reuse only — a post-cutoff duplicate with a *paraphrased* trigger is invisible to
+both the judge (cutoff) and the grep (literal); that residual leans on the judged half **fed the
+enumerated descriptions above** (grounded comparison, not pure memory), not on full mechanization. A
+shared common word is a judged-review flag, **not** a hard fail.
 
 ## Done When
 
@@ -83,7 +109,7 @@ All steps 0–3 completed
 | ① | Cross-project value | Is this asset equally useful in other projects without depending on a specific project? |
 | ② | Orchestration / judgment layer | Is it just a list of MCP/Bash calls, or a judgment layer that synthesizes multiple signals? |
 | ③ | Not replaceable by built-ins | Can this be equally achieved with direct MCP calls or basic bash? (If yes, fails this criterion) |
-| ④ | No overlap with existing FH skills | Does it not overlap 90%+ with existing FH skills? |
+| ④ | No overlap with existing FH skills | Step 0.5 mechanical scan = 0 name/trigger collision **AND** judged ≤90% overlap. Non-zero collision → hard fail. |
 
 **FH suitable** → ① + ④ both pass + at least one of ②③ passes.
 **Fail** → ① or ④ fails → immediate fail. Or both ②③ fail → proceed to Step 2.
