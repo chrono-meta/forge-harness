@@ -59,6 +59,15 @@ Agents in this registry belong to the **Automation layer**. Skills (in `plugins/
 
 > **Codex-compatible beta**: The Methodology layer (`tracks/`, `knowledge/`, skill documentation) is designated Codex-compatible beta. Gemini, Codex, and other AI users can apply FH methodology without the Automation layer — manual invocation replaces hook/agent dispatch.
 
+> **Directory → destination routing (where your outputs belong)**: not everything in the methodology layer is public-shareable. `knowledge/` and `SKILL.md` docs are the **public, reusable** methodology. `tracks/` is **local / private by convention** — work history, session records, `fh_signal_*`, audit logs — and is gitignored on the public mirror. An AI working in a local workspace that pairs the public mirror with a private companion store (the `*-be` pattern) must **not** infer "same folder ⇒ same repository"; route by content type:
+>
+> | Content | Default destination |
+> |---|---|
+> | reusable methodology · docs · skills · public guidance · polished external-facing conclusions | public mirror (`knowledge/`, `plugins/`, `docs/`) |
+> | raw signal · operator observation · private validation · handoff · paper draft · PR-background reasoning log | private companion store (`*-be` pattern) — or keep local; do **not** commit to the public mirror |
+>
+> When unsure, treat raw / observational / operator-specific material as **private-first** and promote only the polished result to public. (Concrete per-operator bindings — exact companion-store path, sync mechanism — live in the operator's local config, not here.)
+
 > **Multi-model sidecar (validated)**: Any FH user can delegate to other models via sidecar — Gemini CLI, OpenAI/Codex CLI, or Copilot CLI's model catalog — invoked with `Bash` from within the Claude Code session. FH is the orchestrating harness; the sidecar is a routing/access layer (not a second harness — different layer entirely). Validated empirically: `echo "prompt" | gemini` works inside a CC session and produces usable output. Sidecar calls are Bash invocations, not agent dispatches — they bypass this registry and are coordinated inline by the skill. Capability routing matters too: Gemini/Antigravity is the natural multimodal sidecar, while a Codex app/runtime session with Browser/Chrome connectors is the preferred handoff for live web-flow automation. In a local FH workspace that pairs the public methodology mirror with a private companion store (the `*-be` pattern), route by workspace capability while preserving each repository's ownership boundary. See `knowledge/shared/harness-core/multi_model_sidecar_strategy.md` for the full pattern.
 
 ---
