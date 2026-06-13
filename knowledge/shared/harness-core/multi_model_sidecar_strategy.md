@@ -353,6 +353,33 @@ Three use cases, ordered by primacy under a **full-subscription environment** (C
 
 **Implication**: In a full-subscription environment, sidecar invocation should default to the strongest available sidecar model, not a lightweight one. The goal is maximum perspective divergence, not cost savings.
 
+### Surface-Specialized Orchestration (operator observation, 2026-06-13)
+
+Sidecar value has evolved from generic "model diversity" to **surface-specialized orchestration**. Routing is determined not by model capability alone, but by which runtime natively governs the **task surface**. Each runtime excels on its own surface, but FH fundamentally distrusts their self-reports (fluency) and binds them via gate/review.
+
+Observed surface split across the Claude Code / Gemini / Codex family:
+
+| Runtime | Surface & Role | FH routing criteria |
+|---|---|---|
+| **Claude Code / Opus** | **FH governor**. Public/private hygiene, hook/gate, claim-scope review, repo governance | The task depends on terminal/repository governance, `.claude/agents/` dispatch, or FH-native automation. |
+| **Codex** | **Web-flow pilot**. Direct click, page navigation, login state, guest onboarding, browser UI iteration | The task depends on live web-flow automation (requires Codex app/runtime with Browser connectors). |
+| **Gemini / Antigravity** | **Multimodal ingestion**. Video, screen recording, image-based UI/UX observation, time-flow data | The task surface is visual/temporal (video/recording/image) — Gemini is the routing candidate. FH asserts the surface match, not a measured ingestion mechanism (the mechanism claim is unverified self-report). |
+
+**FH Governance Meta-Rule**: The orchestrating harness synthesizes these surfaces but **never trusts a runtime's self-report**. A live pilot's "success" or a multimodal ingestion's "comprehensive read" is always cross-checked by FH gates. 
+
+
+This is **affordance routing, not provider ranking**. `codex exec` remains a headless text/CLI sidecar;
+the web-automation value appears when the Codex session has a Browser/Chrome control surface. A Claude
+Code host should therefore treat Codex as the preferred handoff for web-flow probes only after probing
+that connector capability, and should fall back to the normal text sidecar role when it is absent.
+
+**FH-local workspace note**: some operator setups load the public forge-harness mirror and a private
+companion store (the `*-be` pattern) as sibling repositories inside one working folder to form a personal
+FH environment. Capability routing should be resolved at the workspace level in that setup: preserve which
+repository owns the artifact or change, but choose the runtime by the surface being tested (public FH docs
+and governance in the mirror; backend/runtime/experiment work in the companion store; live web-flow probes
+through a Browser/Chrome-capable Codex session when available).
+
 > **v2 paper candidate**: Does model tier affect the quality of perspective divergence, or is the divergence pattern stable across tiers? The orchestrator-swap experiment used entry/mid-tier sidecars — replicating with all-premium models (Gemini Pro, GPT-4o, Claude Opus) would test whether diversity compounds further or plateaus. This is a natural follow-on experiment for the v2 empirical section.
 
 ---
