@@ -157,6 +157,8 @@ FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-goal --prompt "Implement 
 
 The broader FH automation layer still depends on Claude Code for sub-agents, hooks, and slash commands. The portable path is shared documents plus runtime adapters, not separate Codex and Claude forks.
 
+**Recommended posture — Claude Code as orchestrator, others as sidecars.** FH's automation layer (auto-firing hooks, sub-agent dispatch, onboarding, memory) is Claude-Code-native, so the fullest experience runs **Claude Code as the main orchestrator with Gemini, Codex, or Antigravity (`agy`) as actively-used sidecars**. You can also run a **non-CC runtime as your main agent** — you keep the full methodology layer and M1 skills through `fh-gate`/`fh-run`, but you do **not** get the autopilot layer: hooks don't auto-fire, M2 agent-dispatch steps need the adapter (or interactive approval), and M3 skills are reference-only. This is a deliberate two-layer boundary, not a gap to be closed. Per-runtime detail: [`docs/codex-compat.md`](docs/codex-compat.md) (tier-by-tier) and [`multi_model_sidecar_strategy.md`](knowledge/shared/harness-core/multi_model_sidecar_strategy.md) (sidecar engines, including the Gemini→`agy` succession at the 2026-06-18 EOL).
+
 **Empirical result (2026-05-31)**: Applied to OpenCode's AI-generated `permission/arity.ts` (163 lines, CI green). Current gate semantics classify this as BLOCKED: 2 A-grade findings CI didn't catch (short-token overflow in allowlist, executor tools absent from arity table).
 
 Full spec: [`fh_integration_contract.md`](knowledge/shared/harness-core/fh_integration_contract.md)
