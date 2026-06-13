@@ -353,6 +353,31 @@ Three use cases, ordered by primacy under a **full-subscription environment** (C
 
 **Implication**: In a full-subscription environment, sidecar invocation should default to the strongest available sidecar model, not a lightweight one. The goal is maximum perspective divergence, not cost savings.
 
+### Capability-specialized routing (operator observation, 2026-06-13)
+
+Sidecar value is not only "which model reasons differently?" It is also "which runtime can touch the
+surface the task depends on?"
+
+Observed role split across the Claude Code / Gemini / Codex family:
+
+| Runtime | Distinctive FH value | Route there when... |
+|---|---|---|
+| **Claude Code** | FH automation host: hooks, slash commands, `.claude/agents/`, session memory | The task depends on FH-native automation, agent dispatch, or repository-governance flow |
+| **Gemini / Antigravity** | Multimodal-heavy interpretation and visual/source ingestion | The task depends on images, video, visual trend reading, or broad multimodal synthesis |
+| **Codex app/runtime** | Direct web-flow operation when Browser/Chrome control connectors are available | The task depends on live UI flows: login state, guest onboarding, browser screenshots, web-form iteration, or end-to-end product walkthroughs |
+
+This is **affordance routing, not provider ranking**. `codex exec` remains a headless text/CLI sidecar;
+the web-automation value appears when the Codex session has a Browser/Chrome control surface. A Claude
+Code host should therefore treat Codex as the preferred handoff for web-flow probes only after probing
+that connector capability, and should fall back to the normal text sidecar role when it is absent.
+
+**FH-local workspace note**: some operator setups load `chrono-meta/forge-harness` and
+`chrono-meta/fh-be` as sibling repositories inside one working folder to form a personal FH
+environment. Capability routing should be resolved at the workspace level in that setup: preserve which
+repository owns the artifact or change, but choose the runtime by the surface being tested (FH docs and
+governance in `forge-harness`; backend/runtime work in `fh-be`; live web-flow probes through a
+Browser/Chrome-capable Codex session when available).
+
 > **v2 paper candidate**: Does model tier affect the quality of perspective divergence, or is the divergence pattern stable across tiers? The orchestrator-swap experiment used entry/mid-tier sidecars — replicating with all-premium models (Gemini Pro, GPT-4o, Claude Opus) would test whether diversity compounds further or plateaus. This is a natural follow-on experiment for the v2 empirical section.
 
 ---
