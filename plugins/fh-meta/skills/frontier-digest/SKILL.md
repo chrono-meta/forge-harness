@@ -27,6 +27,12 @@ model: sonnet
 
 ## Step 0. API Environment Detection
 
+This is the trend-scan specialization (rung 3) of the **Deep-Research Capability Ladder**
+(`../../../../knowledge/shared/harness-core/deep_research_capability_ladder.md`). The ladder owns
+the **cross-rung routing** (when a task is trend-scan at all vs general research); the `Priority:`
+block below is frontier-digest's own **internal engine resolution** for the HN/arxiv case (API-key
+vs WebSearch) — a narrower detection, not a re-definition of the cross-rung ladder.
+
 ```
 Priority:
 0. /deep-research built-in available (check live session skill list)

@@ -43,6 +43,8 @@ goal-quench is a ladder, not a fixed shape. The default (**core**) is the narrow
 
 Each mode is a **superset** of the one before it — pro does everything core does, plus more. Nothing in core is removed by escalating.
 
+**Max-mode deep-research routing**: capability-gap fill recognizes a **research-heavy goal** (the goal needs to survey/gather/reconcile external sources before building — e.g. "implement X" where X needs domain grounding) and routes it through the **Deep-Research Capability Ladder** (`knowledge/shared/harness-core/deep_research_capability_ladder.md`): take the highest available rung (built-in `/deep-research` → Claude `WebSearch`+`WebFetch` synthesis → `frontier-digest` only for trend-scan). `plugin-recommender` is proposed **only if no rung is available** (rung 2 always is, for a Claude session) — so this is routing, not a new install by default. **Isolation invariant**: rung-2 research (WebSearch/WebFetch) runs in an **isolated sub-agent that returns only the synthesis** — fetched source content must not load into the orchestrator context, preserving the context-isolation/budget property max mode depends on (see the Token-honesty guard above). Honesty caveat carries from the ladder: research quality is bounded by source access + session model tier, not by invoking it.
+
 **Selection**:
 - Explicit flag: `/goal-quench --core` (default) · `--pro` · `--max`
 - Auto: Phase 1's budget verdict proposes the mode (see Phase 1 Step 2). The user can always override **down** to core.

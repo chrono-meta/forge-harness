@@ -308,6 +308,7 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "keep watching X", "poll this", "check every N minutes", recurring WATCH item | built-in `/loop` (interval runner) — pair with the WATCH list, don't hand-poll |
 | "are these in sync", "synergy", "can these integrate", "any overlap" | `/cross-ecosystem-synergy-detection` |
 | "latest trends", "frontier", "external resources" | `/frontier-digest` |
+| "research this deeply", "survey the literature", "comprehensive analysis", "deep research", "look this up thoroughly", "조사해줘", "리서치" (general topic research, not trend-scan) | **Deep-Research Capability Ladder** (`knowledge/shared/harness-core/deep_research_capability_ladder.md`) — route to the highest available rung: built-in `/deep-research` if present → else Claude `WebSearch`+`WebFetch` synthesis (tier-sensitive) → `/frontier-digest` only if it's AI/harness trend-scan. No-reinvention: FH routes, does not build a research engine. |
 | "orchestrate agents", "parallel dispatch", "combine skills", "multiple agents" | `/agent-composer` |
 | "run a simulation", "external user perspective", "internal audit", "quality check" | `/sim-conductor` |
 | "first install", "FH setup", "wizard", "install-wizard" | `/install-wizard` |
