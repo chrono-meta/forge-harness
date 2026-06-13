@@ -353,18 +353,20 @@ Three use cases, ordered by primacy under a **full-subscription environment** (C
 
 **Implication**: In a full-subscription environment, sidecar invocation should default to the strongest available sidecar model, not a lightweight one. The goal is maximum perspective divergence, not cost savings.
 
-### Capability-specialized routing (operator observation, 2026-06-13)
+### Surface-Specialized Orchestration (operator observation, 2026-06-13)
 
-Sidecar value is not only "which model reasons differently?" It is also "which runtime can touch the
-surface the task depends on?"
+Sidecar value has evolved from generic "model diversity" to **surface-specialized orchestration**. Routing is determined not by model capability alone, but by which runtime natively governs the **task surface**. Each runtime excels on its own surface, but FH fundamentally distrusts their self-reports (fluency) and binds them via gate/review.
 
-Observed role split across the Claude Code / Gemini / Codex family:
+Observed surface split across the Claude Code / Gemini / Codex family:
 
-| Runtime | Distinctive FH value | Route there when... |
+| Runtime | Surface & Role | FH routing criteria |
 |---|---|---|
-| **Claude Code** | FH automation host: hooks, slash commands, `.claude/agents/`, session memory | The task depends on FH-native automation, agent dispatch, or repository-governance flow |
-| **Gemini / Antigravity** | Multimodal-heavy interpretation and visual/source ingestion | The task depends on images, video, visual trend reading, or broad multimodal synthesis |
-| **Codex app/runtime** | Direct web-flow operation when Browser/Chrome control connectors are available | The task depends on live UI flows: login state, guest onboarding, browser screenshots, web-form iteration, or end-to-end product walkthroughs |
+| **Claude Code / Opus** | **FH governor**. Public/private hygiene, hook/gate, claim-scope review, repo governance | The task depends on terminal/repository governance, `.claude/agents/` dispatch, or FH-native automation. |
+| **Codex** | **Web-flow pilot**. Direct click, page navigation, login state, guest onboarding, browser UI iteration | The task depends on live web-flow automation (requires Codex app/runtime with Browser connectors). |
+| **Gemini / Antigravity** | **Multimodal ingestion**. Video, screen recording, image-based UI/UX observation, time-flow data | The task depends on native ingestion of visual/temporal data without intermediate text conversion. |
+
+**FH Governance Meta-Rule**: The orchestrating harness synthesizes these surfaces but **never trusts a runtime's self-report**. A live pilot's "success" or a multimodal ingestion's "comprehensive read" is always cross-checked by FH gates. 
+
 
 This is **affordance routing, not provider ranking**. `codex exec` remains a headless text/CLI sidecar;
 the web-automation value appears when the Codex session has a Browser/Chrome control surface. A Claude
