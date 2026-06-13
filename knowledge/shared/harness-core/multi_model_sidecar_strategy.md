@@ -363,7 +363,7 @@ Observed surface split across the Claude Code / Gemini / Codex family:
 |---|---|---|
 | **Claude Code / Opus** | **FH governor**. Public/private hygiene, hook/gate, claim-scope review, repo governance | The task depends on terminal/repository governance, `.claude/agents/` dispatch, or FH-native automation. |
 | **Codex** | **Web-flow pilot**. Direct click, page navigation, login state, guest onboarding, browser UI iteration | The task depends on live web-flow automation (requires Codex app/runtime with Browser connectors). |
-| **Gemini / Antigravity** | **Multimodal ingestion**. Video, screen recording, image-based UI/UX observation, time-flow data | The task surface is visual/temporal (video/recording/image) — Gemini is the routing candidate. FH asserts the surface match, not a measured ingestion mechanism (the mechanism claim is unverified self-report). |
+| **Gemini / Antigravity** | **Multimodal ingestion**. Video, screen recording, image-based UI/UX observation, time-flow data | The task surface is visual/temporal (video/recording/image). Among the three runtimes, **only Gemini natively ingests video/multimodal input** (CC and Codex do not) — an established capability boundary confirmed across prior experiments, not a self-report. The routing choice for visual/temporal surfaces. (FH states the capability boundary; specific performance benchmarks are a separate measurement.) |
 
 **FH Governance Meta-Rule**: The orchestrating harness synthesizes these surfaces but **never trusts a runtime's self-report**. A live pilot's "success" or a multimodal ingestion's "comprehensive read" is always cross-checked by FH gates. 
 
