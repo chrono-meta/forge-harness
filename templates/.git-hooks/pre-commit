@@ -183,6 +183,16 @@ fi
 # Required marker fields (free prose may follow them):
 #   axis2-engine: quench-challenger | inline | <external cli>
 #   axis2-model:  <tier that produced the adversarial pass, e.g. opus>
+#   axis2-evidence: <what the pass actually found — finding count + verdict, or
+#                    "clean — 0 findings"; e.g. "PASS no-S, 4B applied" / "1S/4A fixed">
+#                    ← Honest scope (judge-robustness swarm, 2026-06-13): the hook enforces
+#                      this field's PRESENCE + NON-VACUITY (a real result was recorded), not
+#                      PROVENANCE. The marker is a trusted-runner attestation — a session that
+#                      fabricates a pass it never ran is the residual the WEEKLY AUDIT + OPERATOR
+#                      cover, not mechanism (cryptographic provenance is unachievable when the
+#                      runner controls everything the hook can see). This field makes the marker
+#                      auditable (the audit can check the recorded verdict against reality) and
+#                      catches the realistic failure: a vacuous "trust me, it ran" marker.
 #   floor-status: at-floor | above-floor | below-floor   (floor = opus, PR #86)
 #   below-floor-ack: "<verbatim operator approval utterance>" — <reason>
 #                     ← required iff floor-status: below-floor; the quoted span is
@@ -203,7 +213,7 @@ fi
 # pastes with leading indent: the anchored grep misses and an indented EOF never
 # terminates <<'EOF' — non-converging fix loop, challenger Axis-5 A-finding).
 marker_recreate_hint() {
-  echo "     printf 'axis2-engine: quench-challenger\\naxis2-model: opus\\nfloor-status: at-floor\\n' > \"$1\""
+  echo "     printf 'axis2-engine: quench-challenger\\naxis2-model: opus\\nfloor-status: at-floor\\naxis2-evidence: PASS no-S\\n' > \"$1\""
 }
 
 validate_marker_floor() {
@@ -261,6 +271,27 @@ validate_marker_floor() {
     echo "  ❌ MARKER FORMAT — missing axis2-model: line"
     echo "     Record the tier that actually produced the adversarial pass"
     echo "     (e.g. axis2-model: opus). This is what makes the floor auditable."
+    return 1
+  fi
+  # axis2-evidence — presence + non-vacuity (NOT provenance; see header note + the
+  # 2026-06-13 judge-robustness swarm). Catches the realistic failure: a marker that
+  # asserts a pass with no recorded result. The hook cannot verify the pass ran — that
+  # residual is the weekly audit's + operator's, by design (documented, not silent).
+  ev=$(grep -m1 -E '^[[:space:]]*axis2-evidence:' "$m" 2>/dev/null \
+       | sed -E 's/^[[:space:]]*axis2-evidence:[[:space:]]*//')
+  if [ -z "$ev" ]; then
+    echo "  ❌ MARKER FORMAT — missing axis2-evidence: line"
+    echo "     Record what the adversarial pass actually found, so the marker is auditable:"
+    echo "       axis2-evidence: PASS no-S   |   1S/4A fixed   |   clean — 0 findings"
+    echo "     (The hook enforces form + non-vacuity, not provenance — a fabricated pass is"
+    echo "      the weekly audit's + operator's residual, not the hook's. See header note.)"
+    return 1
+  fi
+  # Non-vacuity: must carry a finding count/severity OR an explicit verdict token —
+  # blocks an empty-substance "it ran, trust me" line.
+  if ! echo "$ev" | grep -qiE '[0-9]|clean|pass|fail|no-s|none|finding|converg'; then
+    echo "  ❌ MARKER — axis2-evidence too vacuous (no count or verdict token)"
+    echo "     Cite the actual result: 'PASS no-S' / '1S/4A fixed' / 'clean — 0 findings'."
     return 1
   fi
   # Model/floor cross-check — a known below-floor tier cannot claim at/above-floor.

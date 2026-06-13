@@ -98,13 +98,14 @@ git config core.hooksPath templates/.git-hooks
 chmod +x templates/.git-hooks/pre-commit
 ```
 
-After running `/steel-quench` and `/phantom-quench` in your session, Claude creates the Axes 2+3 pass marker automatically. The marker must carry machine-readable floor fields — the hook validates them (a bare `touch` marker no longer passes; below-floor passes block unless an explicit `below-floor-ack:` line records operator acceptance, **quoting the operator's approval utterance verbatim** — an unquoted reason is rejected as agent-self-writable). If Claude doesn't create it (e.g., session interrupted), create it manually:
+After running `/steel-quench` and `/phantom-quench` in your session, Claude creates the Axes 2+3 pass marker automatically. The marker must carry machine-readable floor fields — the hook validates them (a bare `touch` marker no longer passes; below-floor passes block unless an explicit `below-floor-ack:` line records operator acceptance, **quoting the operator's approval utterance verbatim** — an unquoted reason is rejected as agent-self-writable). It also requires an **`axis2-evidence:`** line recording what the pass actually found (a finding count or verdict token — `PASS no-S` / `1S/4A fixed` / `clean — 0 findings`); a vacuous "it ran" line is rejected. *Honest scope: this enforces the marker is non-vacuous + auditable, not that the pass truly ran — a fabricated attestation is the weekly audit's + operator's residual, by design (judge-robustness swarm, 2026-06-13).* If Claude doesn't create it (e.g., session interrupted), create it manually:
 
 ```bash
 cat > "tracks/_meta/.axes_23_passed_$(git rev-parse --abbrev-ref HEAD | tr '/' '_')_$(date +%Y-%m-%d).marker" <<'EOF'
 axis2-engine: quench-challenger
 axis2-model: opus
 floor-status: at-floor
+axis2-evidence: PASS no-S
 <scope / findings prose>
 EOF
 ```

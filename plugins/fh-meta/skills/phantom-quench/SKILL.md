@@ -123,14 +123,44 @@ Extract claims from the artifact that require source back-tracing. Claim types: 
 
 Back-trace each claim to the declared source files using Read + Grep directly — no inference judgment. Partial match is not treated as match.
 
+**Mechanical anchor (GROUNDED is gated on a literal grep hit *in the right slot*, not a bare
+judgment)** — this closes *out-of-context grounding*: citing a real, readable file for a false claim,
+where the judge biases GROUNDED merely because the source *exists* and contains domain-adjacent text
+(measured 2026-06-13, judge-robustness swarm — the cheapest S-exploit of this skill). The anchor is
+**typed** — applying one byte-literal rule to every claim type both under-blocks (a token that hits an
+irrelevant line) and over-blocks (a correct value formatted differently); each type gets the right check:
+
+- **Proper noun / exact identifier** (skill name, file path, API name, flag): run
+  `grep -n "<exact token>" <cited file>` — must return a non-empty line, surfaced **literally**
+  (`file:line: matched text`), and that line must be where the identifier is *used as the claim
+  asserts* (a bare occurrence elsewhere is **not** grounding — e.g. claim "X is the default model" needs
+  the line that sets X as default, not any line mentioning X). No qualifying hit → Phantom.
+- **Numerical / range value**: grep the value, but **normalize format/unit before judging** —
+  `300s` ≡ `300 seconds`, `≥5` ≡ `>= 5` (ASCII/Unicode), `5 minutes` ≡ `300 seconds`. The *value* must
+  sit in the slot the claim asserts. A correct value in a different format = Grounded (note the
+  normalization in evidence); a **different** value in that slot = Partial (re-confirm) or Phantom.
+  Never auto-Phantom a format variant.
+- **Branching / multi-clause condition**: no single greppable token. Either **decompose to atomic
+  sub-conditions** and grep each identifier, or — if it stays a compound judgment — keep it
+  **judged-class with the adversarial pairing declared** (do not fake a single-token grep). State which.
+
+**Universal rule**: a grep hit counts only if the surfaced line *expresses the claimed relation*.
+"The token appears somewhere in a real file" is precisely the out-of-context trap, not evidence.
+
+A claim that is **cited to a specific source but the source cannot be Read** (path doesn't resolve,
+line beyond EOF) is **S-grade Phantom**, *not* the softer Source-Missing 🔴 — a citation that does not
+resolve means the citation was invented. Source-Missing 🔴 is reserved for *undeclared* sources only.
+Declared "sources" that are not resolvable file paths (e.g. `source: "the codebase"`) count as **0
+sources** for the Step 0.5 blocker.
+
 Back-tracing classification:
 
 | Classification | Criteria | Marking |
 |---|---|:---:|
-| **Grounded** | Claim directly confirmed in source | ✅ |
-| **Partial** | Similar content in source but not exact match — needs re-confirmation | ⚠️ |
-| **Phantom** | Cannot be found in source | ❌ |
-| **Source-Missing** | Source itself cannot be Read or was not declared | 🔴 |
+| **Grounded** | Typed anchor passes: identifier grep-hits *in the asserting slot* / value matches after normalization / branching sub-conditions trace (line surfaced) | ✅ |
+| **Partial** | A *different* value sits in the claimed slot, or a compound condition partially traces — needs re-confirmation | ⚠️ |
+| **Phantom** | Exact token not found in source, **or** cited to a named source that cannot be Read | ❌ |
+| **Source-Missing** | Source was **not declared** (undeclared only — a failed *cited* source is Phantom) | 🔴 |
 
 > **Detail**: See `SKILL_detail.md §Step2-Detail` — back-tracing execution procedure, classification decision rules, and Step 2 output format template — read when handling edge cases or formatting results.
 
@@ -232,7 +262,7 @@ This skill can be used independently without the full meta-harness structure.
 
 ```
 Step 1 claim extraction complete
-+ Step 2 all claims back-traced (using Read tool — no inference judgment)
++ Step 2 all claims back-traced (Read + Grep — highest-priority GROUNDED requires a typed literal grep hit in the asserting slot, not inference)
 + Step 3 Phantom severity classification + prescription output
 + Step 4 process pattern diagnosis complete (skip if 0 Phantoms)
 + "phantom-quench Complete" declaration output
@@ -244,7 +274,7 @@ Verdict: PASS (0 Phantom claims) | CONDITIONAL_PASS (LOW-severity Phantoms only,
 
 ## Operating Notes
 
-- **Never back-trace by inference**: Judging "this value is probably in the source" treats it as Partial not Phantom. Always directly confirm with Read + Grep.
+- **Never back-trace by inference**: Judging "this value is probably in the source" treats it as Partial not Phantom. Always directly confirm with Read + Grep. **GROUNDED on a highest-priority claim is gated on a literal grep hit of the exact token (Step 2 mechanical anchor) — "the file exists and looks right" is the out-of-context-grounding trap, not evidence.**
 - **Partial is not Grounded**: Processing similar-value-in-source as Grounded misses the reconstruction modification pattern.
 - **Source not declared itself is S-grade**: If source is not declared when making an artifact, no claim can subsequently be verified. Recommend mandating source declaration in the process design stage.
 - **Recommended to use with steel-quench**: steel-quench quenches structural flaws, phantom-quench ensures source consistency. The two skills are orthogonal and artifact quality assurance is strengthened when used together.
