@@ -31,13 +31,13 @@ Completion sweep of all currently-unblocked carries. FP3: agy joins the sidecar 
 - Decision: probe must exercise the same invocation form the dispatch uses (forms diverge on one binary — agy proved it); hook enforces ack form, weekly audit owns genuineness.
 
 ### 2026-06-11 | forge-harness | #readme-dedup, #commoditization-defense, #b1-boundary, #seed-vetting, #field-routing
-**File:** README.md (PR #93) + fh-be signals/handoffs (PR #24+) + field project v0.14 (private track)
-Cloud session #4 (Mode D, remote-doable batch): README stale duplicate "Measured, not asserted" block removed (pre-tier-floor copy contradicted default-Sonnet stance) + "Where this sits (2026)" positioning para (gate+loop are the asset — plumbing commoditizes). fh-be: B1 scope boundary (AW2 simple-vs-complex import), SC1–4 seed vetting (SC1 phantom arXiv fixed → 2509.19349; SC3 commoditization threat to bet ID), gstack positioning-triangle line. Field: private-track companion handoff verified+executed — DefectPatternMatcher+Bug Mode implemented UTF-8-clean in the field repo (25 tests PASS, 0 regressions); its OpenCode(sLLM) lane's downgrade triage hardened to 2-tier (keep/block) with free-tier 80/20 split — β/SC2 field case logged.
-- Decision: README action PARTIAL (merge done; About refresh + npm 1.4.14 laptop-bound); full-TC locked on qwen build per operator's CaseCraft limit measurement — structure-transform survives (P6/P6.5 deterministic), meaning-fill routes to frontier.
+**File:** README.md (PR #93) + companion-store signals/handoffs (PR #24+) + field project v0.14 (private track)
+Cloud session #4 (Mode D, remote-doable batch): README stale duplicate "Measured, not asserted" block removed (pre-tier-floor copy contradicted default-Sonnet stance) + "Where this sits (2026)" positioning para (gate+loop are the asset — plumbing commoditizes). Companion store: B1 scope boundary (AW2 simple-vs-complex import), SC1–4 seed vetting (SC1 phantom arXiv fixed → 2509.19349; SC3 commoditization threat to bet ID), gstack positioning-triangle line. Field: private-track companion handoff verified+executed — DefectPatternMatcher+Bug Mode implemented UTF-8-clean in the field repo (25 tests PASS, 0 regressions); its OpenCode(sLLM) lane's downgrade triage hardened to 2-tier (keep/block) with free-tier 80/20 split — β/SC2 field case logged.
+- Decision: README action PARTIAL (merge done; About refresh + npm 1.4.14 laptop-bound); full-TC locked on local-LLM build per operator's CaseCraft limit measurement — structure-transform survives (P6/P6.5 deterministic), meaning-fill routes to frontier.
 
 ### 2026-06-11 | forge-harness | #mcp-gating, #external-mcp, #name-keyed-policy, #measured-origin, #field-template
 **File:** templates/.claude/rules/mcp_tool_gating.md (+ auto_project_mapping.md §6 row 4, CLAUDE.md mount-intent trigger)
-Cloud session (Mode D, ext): new field template — external-MCP tool gating with three tiers (ask / ask-meta-write / allow-untrusted-read), name-keyed because server-supplied annotations are unreliable (measured same-day: live messaging-class MCP shipped all-None hints incl. irreversible send + approval-resolution tools — fh-be `signal_2026-06-11_hermes-mcp-cloud-boot.md`). Opus challenger caught the name-spoofing hole (server controls names too → behavior-confirmation required for non-ask tiers, fixed inline); sonnet blind sim PASS on unfilled-§3 scenario (per-item ask on send, batch approval-grant refused).
+Cloud session (Mode D, ext): new field template — external-MCP tool gating with three tiers (ask / ask-meta-write / allow-untrusted-read), name-keyed because server-supplied annotations are unreliable (measured same-day: live messaging-class MCP shipped all-None hints incl. irreversible send + approval-resolution tools — companion store `signal_2026-06-11_hermes-mcp-cloud-boot.md`). Opus challenger caught the name-spoofing hole (server controls names too → behavior-confirmation required for non-ask tiers, fixed inline); sonnet blind sim PASS on unfilled-§3 scenario (per-item ask on send, batch approval-grant refused).
 - Decision: prefer host-native per-tool permission config as enforcement; this template = what-to-gate + portable fallback. §6 install row is conditional (MCP present); the proactive mount-intent trigger is the load-bearing path.
 
 ### 2026-06-11 | forge-harness | #identity-marker, #door-skeleton, #target-tier-sim, #below-floor-consumer, #false-control-kill
@@ -84,7 +84,7 @@ Tier-floor resolution ships — the model dimension of the Sidecar Engine Resolu
 **File:** docs/OUTPUT_EVIDENCE.md (+ README.md §Model setup)
 Model-tier flattening measured and published: 30-point blind battery (rule-application + meta-dev fixtures, pre-registered rubric) on four Claude tiers — operation 100/100/97/94 (anchor/Opus 4.8/Sonnet 4.6/Haiku 4.5), tier separation only on above-rubric design increments (3/3·1/3·0.5/3·0/3). Public claim scoped honestly: single trial, self-graded, worked example not benchmark. README §Model setup gains the evidence note grounding the existing Opus recommendation.
 - Decision: operating FH ≈ model-flat (the harness is the score); developing FH is where tier matters — recommendation unchanged (opus for harness-editing/gates), now evidence-backed. **[superseded same-day by the tier-floor entry above: default flipped to sonnet + floored dispatch; opus pin now Mode-D-only]**
-- Open: real Qwen-class measurement on laptop (batteries are a portable fixture pack, fh-be record).
+- Open: real local-LLM-class measurement on laptop (batteries are a portable fixture pack, companion-store record).
 
 ### 2026-06-10 | forge-harness | #fc, #consent-lane, #federated-compounding, #starved-center, #v3
 **File:** tracks/_contrib/README.md (+ .gitignore, templates/contrib_session.md, docs/CONTRIBUTING.md, README.md)
@@ -170,7 +170,7 @@ Axis 5 check-class taxonomy added: every verify check classified as mandatory-pa
 **File:** knowledge/shared/harness-core/multi_model_sidecar_strategy.md (+ hybrid_orchestration_architecture_roadmap.md)
 Added canonical §Sidecar Engine Resolution Protocol — Tier1 subscription-CLI → Tier2 API-key → Tier3 Claude-subagent guaranteed fallback. Principle: discovery automatic/free, invocation value-gated (intelligent default multi-AI, no hard-fail for Mode C). Wired pointers into goal-quench Step D / steel-quench runtime-adapter / harvest-loop Step 3.5-X; sim-conductor/pipeline-conductor/agent-composer inherit by reference. Source hybrid-orchestration design archived as proposed roadmap (versions→placeholders, Python pseudo-code→illustrative, non-shipped tagged Proposed). PR #80.
 - Decision: single-source resolution protocol — skills cite it instead of re-inventing "if available" probes.
-- Open: npm republish (machine-bound) — 3 npm-shipped SKILL.md changed; handed off to laptop via fh-be.
+- Open: npm republish (machine-bound) — 3 npm-shipped SKILL.md changed; handed off to laptop via the companion store.
 
 ### 2026-06-09 | forge-harness | #onboarding, #greeting, #3-axis-scaffold, #returning-user
 **File:** knowledge/shared/harness-core/fh_detail_protocols.md
