@@ -306,6 +306,7 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "context is getting long", "token limit", "/clear", "slow", "context" (burden) | `/context-doctor` |
 | "wrap up this week", "review", "audit", "weekly", "retrospective" | `/harvest-loop` |
 | "pull this into FH", "reverse-harvest", "worth keeping", "harvest pattern", "field pattern" | `/field-harvest` |
+| "용광로모드", "crucible mode", "absorb this whole corpus", "throw everything in", "re-forge FH identity", "melt this down" (total-immersion absorption, not cherry-pick — esp. a whole corpus on a core FH axis, or a frontier showcase risking FOMO) | `knowledge/shared/harness-core/crucible_mode.md` (read it, run the chain: total-ingest → steel-quench/phantom-quench melt → governor identity-bonding → sim/persona reforge → field-harvest rebirth; the core invariants stay unmeltable) |
 | "harness is complex", "too many skills", "check structure", "harness" | `/harness-doctor` |
 | "review this PR", "check diff", "code review" | code diff → built-in `/code-review`·`/review` · FH-asset coherence → `/hub-cc-pr-reviewer` (role split) |
 | "keep watching X", "poll this", "check every N minutes", recurring WATCH item | built-in `/loop` (interval runner) — pair with the WATCH list, don't hand-poll |

@@ -53,7 +53,9 @@ New work arrives
     ├── Axis 1 (backward): regression_guard.sh
     ├── Axis 2 (adversarial): steel-quench
     ├── Axis 3 (forward): phantom-quench
-    └── Axis 4 (record): confirm edit-manifest entry exists
+    ├── Axis 4 (record): confirm edit-manifest entry exists
+    └── Before claiming "done": attach (a) evidence (b) failure-checks run
+        (c) residual risk — bare "completed" does not pass (see Completion-claim discipline)
 
     ▼ Axis 6 — Improve
     Worth keeping as a pattern?
@@ -85,6 +87,20 @@ cited evidence is itself subject to `phantom-quench`. (Taxonomy adapted from ext
 supervisor-loop discourse, 2026-06; FH adds the judged-pairing rule and evidence
 re-verification, which the source leaves open.)
 
+**Completion-claim discipline** (judged-class sharpening): a "done" / "passed" claim is itself a judged
+verdict and must carry three things, not just an assertion — **(a) an evidence artifact** (the output,
+diff, or run that shows it), **(b) the enumerated failure-checks actually run** (which negative cases
+were tested, not only that it "works"), and **(c) the explicit residual risk** (what could still be
+wrong). A bare "completed" with none of these is an ungrounded judge verdict and does not pass. Each of
+(a)–(c) must be **non-vacuous** — a named artifact, an enumerated case list, and a specific risk; "it
+works" / "tested" / "none known" are vacuous fills and fail the discipline (same non-vacuity bar as the
+CLAUDE.md §marker rule: a recorded verdict/count, not "it ran"). Bounded scope: (b) means the negative
+cases you *actually ran*, not all conceivable ones; (c) means the one or two risks you can name now, not
+an exhaustive proof of safety. Applies to every skill's Done When and to `goal-quench` /
+`pipeline-conductor` completion gates. (Harvested as independent-convergence reinforcement from sister
+assets — oh-my-claudecode "Ralph" Done-When + book/19689's verification-before-completion-claim theme;
+cross-audit `tracks/_audit/session_2026_06_14_wikidocs-deep-sweep.md`.)
+
 **Hard gate**: git pre-commit hook (`templates/.git-hooks/pre-commit`) blocks commit until marker + manifest entry exist.
 
 **Lightweight exception** (Axis 1 + 4 only): sessions where zero SKILL.md/rules/templates files changed.
@@ -105,6 +121,8 @@ Lower levels cannot override higher. AI contribution → PR proposal only (no di
 
 ## Related
 
+- `harness_design_decision_lens.md` — orthogonal companion: the 7 architectural-bet decisions (which design point at Axis 1 / Axis 4) + default-bias checklist + scaffolding-removal method
+- `crucible_mode.md` — total-immersion absorption stance: chains Axis 5 (the melt) + Axis 6 (the rebirth) with an unmeltable identity core; used when a whole corpus on a core FH axis is absorbed
 - `hub_compounding_loop.md` — Axis 6 automation (weekly/monthly/quarterly cycles)
 - `ai_dialogue_playbook.md` — Axis 2 dialogue principles (how to ask, delegate, record)
 - `claude_code_runtime_flow.md` — Axis 4 runtime behavior (chronological session flow)
