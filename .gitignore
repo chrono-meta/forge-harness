@@ -51,3 +51,8 @@ tracks/**
 
 # Local skill registry — auto-generated per-machine scan (personal paths). Regenerated each session.
 .claude/registry/LOCAL_SKILL_REGISTRY.md
+
+# Playwright MCP artifacts — browser snapshots/screenshots may capture arbitrary (incl. logged-in)
+# pages; keep out of the public surface. Demo PNGs are local-only by default.
+.playwright-mcp/
+*-playwright-demo.png
