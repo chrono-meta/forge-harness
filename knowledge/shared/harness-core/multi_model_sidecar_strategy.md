@@ -382,6 +382,55 @@ through a Browser/Chrome-capable Codex session when available).
 
 > **v2 paper candidate**: Does model tier affect the quality of perspective divergence, or is the divergence pattern stable across tiers? The orchestrator-swap experiment used entry/mid-tier sidecars — replicating with all-premium models (Gemini Pro, GPT-4o, Claude Opus) would test whether diversity compounds further or plateaus. This is a natural follow-on experiment for the v2 empirical section.
 
+### Debate Circulation Loop + governor source-verification (methodology, promoted 2026-06-14)
+
+Surface-specialized routing answers *which runtime does the work*. The **Debate Circulation Loop**
+answers *how to trust the result when several runtimes disagree* — it is the verification methodology
+that rides on top of surface routing, and the model-level expression of the judge-robustness principle
+(a judged verdict reached only by a judge is foolable; bind it to a mechanical anchor).
+
+**The loop** — used when a question genuinely spans multiple runtimes (compatibility calls,
+cross-surface mining, contested claims):
+
+1. **Relay** the same question to each runtime (CC governor + the surface-appropriate sidecars).
+2. **Mutual critique** — each runtime critiques the others' output. The key asymmetry: *a runtime's
+   own blind spot is invisible to itself but visible to a peer.* Divergence is the signal, not noise.
+3. **Governor closes with source** — CC/Opus does not average the opinions (a debate is *also* judged,
+   so a vote is still judge-only). It **closes the loop against a source of ground truth**: re-reads
+   the cited file, runs the command, checks the live surface. Only the source-verified residue is kept.
+4. **Promote refined, quarantine raw** — only the governor-closed conclusion is eligible for public
+   promotion; raw runtime output stays in the private companion store first (drift guard).
+
+**Standing clause — distrust the self-report, the gate is the backstop.** A runtime's claim about its
+*own* strength is the least reliable thing it emits. Origin: a sidecar self-reported "strong
+public/private separation" and was then disproven by an actual private-store leak the *governor* caught
+— after which the sidecar accepted the catch and self-modeled the blind spot. Fluency is not accuracy;
+this is why every runtime output terminates at an FH gate/review, never at the runtime's own verdict.
+
+**Cross-surface verification (the strongest form)** — make the *verifier* live on a different surface
+than the *claimer*, so the check is mechanical rather than a second opinion:
+
+| Role | Runtime | Why |
+|---|---|---|
+| Claim producer | Gemini (multimodal) | reads the video/image, emits a timestamped claim |
+| Claim verifier | Codex (web-flow) | independently clicks that timestamp in a browser → ground-truth compare |
+| Governor | CC / Opus | records, adjudicates, closes against source |
+
+A timestamp *read by a model* is judged; the same timestamp *clicked on a different surface* is a
+mechanical anchor. Verifier-≠-claimer is an independent verification path, not self-verification — the
+multi-runtime realization of "judged → mechanical."
+
+**When to run it (cost guard).** The loop is expensive (N runtime calls + governor close). Reserve it
+for genuine multi-runtime decisions; trivial questions take a single runtime + a gate. Tier note:
+trust the loop's *strategic* reasoning only from frontier-top sidecars (Codex/Gemini Pro high-reasoning
+tiers); a below-floor model (e.g. a Flash backend) is a producer, not a trusted critic — its critique
+is itself subject to §Floor governance.
+
+> Live instance (this doc's own promotion, 2026-06-14): mining two external sources for FH-reinforcement
+> ran *as* the loop — Gemini ingested a web book the governor's fetcher was 403-blocked from, Codex ran
+> the adversarial governance critique of `oh-my-claudecode` import candidates, and CC closed both against
+> FH's own asset inventory (most candidates resolved to ALREADY-HAVE, a healthy sister-asset result).
+
 ---
 
 ## Mechanism (how it works)
