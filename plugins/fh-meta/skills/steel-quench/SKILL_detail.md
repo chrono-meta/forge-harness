@@ -558,3 +558,120 @@ External CLIs available: check at runtime
 ```
 
 **Degraded coverage note**: Wave 3 without `/phantom-quench` available → flag as "Axis 3 skipped (skill unavailable)" and note in residual risk card.
+
+---
+
+## §TriggerProbe — Trigger-Accuracy Probe Worked Example
+
+Worked instance for SKILL.md §Step 0.5 (Trigger-Accuracy Probe). Imported from skill-creator's
+eval-driven trigger loop + plugin-dev/skill-reviewer's description-trigger check (sister-asset
+cross-audit `tracks/_audit/session_2026_06_14_official-plugins-cross-audit.md`, Import #1). The import
+is **prose-scale**: a dispatched fire-count, not skill-creator's `run_loop.py` / `benchmark.json` eval
+engine (no-reinvention — FH adds the *measured number* to its trigger-collision axis, it does not
+rebuild the engine).
+
+Target: a hypothetical `pdf-extract` skill whose description reads *"Extract text and tables from PDF
+files. Use when the user wants to pull data out of a PDF."*
+
+**Probe set authored from the description** (16 phrases: 8 should-fire + 8 near-miss should-NOT-fire).
+The near-misses are deliberately adjacent — same keyword (`extract`, `pdf`) but a different *task verb* —
+because that is where trigger collisions actually live:
+
+| # | Phrase | should-fire? | why |
+|---|---|---|---|
+| 1 | "grab the line items out of this invoice.pdf" | ✅ | extract from pdf |
+| 2 | "I need the clauses of this scanned contract as text" | ✅ | extract text |
+| 3 | "pull the table on page 3 of the Q4 report (it's a pdf)" | ✅ | extract table |
+| 4 | "convert this PDF to a spreadsheet" | ✅ | extract → structured |
+| 5 | "read what's in attached.pdf and summarize" | ✅ | read content |
+| 6 | "extract the figures from this research-paper pdf" | ✅ | extract |
+| 7 | "I have a folder of pdfs, get the totals from each" | ✅ | batch extract |
+| 8 | "what does this pdf say" | ✅ | content request |
+| 9 | "make a PDF from this markdown" | ❌ | *generate*, not extract |
+| 10 | "merge these three pdfs into one" | ❌ | *manipulate*, not extract |
+| 11 | "fill out this PDF form for me" | ❌ | *write*, not read |
+| 12 | "extract the frames from this video" | ❌ | keyword 'extract', wrong medium |
+| 13 | "OCR this scanned image.png" | ❌ | image, not pdf — discriminating near-miss |
+| 14 | "compress this pdf so it's smaller" | ❌ | *transform*, not extract |
+| 15 | "redact the SSNs in this pdf" | ❌ | *edit*, not extract |
+| 16 | "split this pdf at the bookmarks" | ❌ | *manipulate* |
+
+**Dispatch + measured result** (isolation-run via Agent / `fh-run`, not judged inline):
+```
+trigger-probe: 8/8 fire · 2/8 false-fire (model: sonnet)
+```
+should-not #9 ("make a PDF") and #11 ("fill out form") false-fired — the description's loose
+"pull data out of a PDF" let *generation* and *form-fill* leak in.
+
+**Verdict mapping** (per §Step 0.5 table): should-fire 8/8 PASS · false-fire **2/8** (= 25%, above the
+~20% guideline; at N=8 the reachable values straddle the bound as 1/8=12.5% / 2/8=25%, so report the
+count and take the stricter verdict) → **overtrigger / collision (A-grade)**.
+
+**Before → after description fix** (the *output* of the probe — narrow the verb, name the near-miss
+boundary explicitly):
+> *Before:* "Extract text and tables from PDF files. Use when the user wants to pull data out of a PDF."
+> *After:* "Extract existing text and tables **from** PDF files (read-only). Use when the user wants the
+> **content** of a PDF as text/data — not to create, fill, merge, redact, compress, or split a PDF
+> (those are separate tasks)."
+
+Re-probe after the fix: `8/8 fire · 0/8 false-fire` → trigger surface PASS (measured). This is the
+predict → measure → fix loop at prose scale: the probe converts steel-quench's previously *judged*
+"could this trigger collide?" into a *measured* fire-count, closing the same judge-only gap the
+mechanical-anchor doctrine targets (`[[feedback_judge_robustness_mechanical_anchor]]`).
+
+**Honesty caveat** (carried from §Step 0.5): the probe measures trigger-*description* accuracy on the
+**session model**, not on every field tier — a description that fires cleanly on Opus may undertrigger
+on Haiku. Record the probe model in the result line; a below-floor probe model makes the PASS
+provisional (re-probe at floor tier, `[[feedback_verify_before_downgrade]]`).
+
+---
+
+## §CodeLens — Silent-Failure Scan Worked Examples
+
+Worked instances for the SKILL.md Wave 1 **code-artifact supplementary lens** (Import #2 — imported from
+pr-review-toolkit/silent-failure-hunter, sister-asset cross-audit 2026-06-14). The lens fires **only** on
+`artifact_type ∈ {bash_script, code}` (canonical enum, `tpa_schema.md`); the FH-original increment over silent-failure-hunter is the
+**severity-by-blast-radius rule**: a swallowed error is S (not just "high") when it hides a *gate /
+verification / destructive-or-publish* failure — the same blast-radius logic FH's irreversibility gates use.
+
+### Example 1 — bash (a gate script swallowing its own failure)
+
+```bash
+# regression check before publish
+bash templates/predelete_check.sh "$REPO" 2>/dev/null || true   # ← finding
+gh repo edit --visibility public
+```
+
+**Finding** (cite the line): `2>/dev/null || true` on a *gate* command — `predelete_check.sh`'s REVIEW
+exit (which is supposed to block) is discarded, and the next line publishes regardless.
+- Pattern: **empty-catch / `|| true` swallow** + **exit-code ignored**.
+- Severity: **S** — it hides a gate failure on a *publish* (irreversible) path. Not "A": the blast radius
+  is an un-recoverable public exposure.
+- Fix: `bash templates/predelete_check.sh "$REPO" || { echo "predelete REVIEW — aborting publish"; exit 1; }`
+
+### Example 2 — python (broad catch + unjustified silent fallback)
+
+```python
+try:
+    cfg = load_config(path)
+except Exception:          # ← finding 1: broad catch
+    cfg = DEFAULT_CONFIG   # ← finding 2: unjustified silent fallback
+```
+
+**Findings**:
+- **Broad catch** (`except Exception`): a `KeyboardInterrupt`-adjacent or unrelated `OSError` is masked as
+  "config missing." Severity **A** — narrow to `except FileNotFoundError`.
+- **Unjustified fallback**: falls back to `DEFAULT_CONFIG` with **no log that it did so** — the operator
+  later debugs "why is prod using defaults?" blind. Severity **A** (silent degradation, the worst class:
+  cf. P6 — graceful degradation must be *documented*, not silent).
+- Fix: catch the specific error **and** `log.warning("config %s missing — using DEFAULT_CONFIG", path)`
+  before the fallback. The fallback is fine; the *silence* is the defect.
+
+### Boundary note (over-engineering guard)
+
+On a SKILL.md / design-doc / README target the lens emits exactly one line — `code-lens: n/a (non-code
+artifact)` — and adds **zero** attack weight. This is deliberate: making silent-failure a 6th *mandatory*
+Wave 1 angle would force an "N/A" on every methodology artifact (the majority of FH targets), which
+steel-quench's own Wave-1 angle #1 ("is there no simpler alternative?") would correctly attack as
+over-engineering. Conditional-by-artifact-type keeps the lens sharp where it applies and invisible where
+it doesn't.

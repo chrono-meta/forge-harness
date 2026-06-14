@@ -136,7 +136,7 @@ All 6 items below must pass before committing a new SKILL.md. If any fails, fix 
 | **Description diet** | Plain text / 0 self-marketing expressions / 0 emphasis words (⭐, "critical", "groundbreaking") |
 | **Done When defined** | At least 1 explicit completion condition |
 | **Check-class declared** | Each Done When condition states its check class — mandatory-pass / measured / judged (`harness_6axis_framework.md` §Axis 5). Any judged condition names its adversarial pairing — no judge-only path |
-| **Natural language triggers** | At least 3 examples that work without internal vocabulary |
+| **Natural language triggers** | At least 3 examples that work without internal vocabulary. This is a **form** check (judged — do the examples avoid internal jargon). For a load-bearing gate/router skill it can be upgraded **judged → measured** with steel-quench's `Step 0.5 — Trigger-Accuracy Probe` (a dispatched should-fire / near-miss-should-not-fire fire-count), turning "do these triggers collide?" from a guess into a number. Optional for ordinary skills; recommended when the skill is a routing/gate surface |
 | **Independently executable** | Confirmed to work without other FH skills (or dependencies are explicitly documented) |
 
 Skills without a Done When definition automatically qualify as harness-doctor L2 M-tier.
@@ -351,6 +351,17 @@ At session start, determine the last run time from history files and auto-propos
 | `/harness-doctor` | `tracks/_meta/*harness_doctor*.md` | Propose at session start if 30+ days since last run |
 
 > A cadence reminder the user has repeatedly declined is **muted** per the UAP (see the loop below) — don't re-nag.
+
+#### Event-bound proposals (context-entry, not time)
+
+Some proposals are not *time*-overdue — they fire **once when a specific work context is entered**. `persona-innovator` (ideation/naming + external-frontier absorption) is most valuable in exactly two contexts and friction-noise everywhere else, so it is proposed on context-entry rather than every session or every N days:
+
+| Context entered | Proposal | innovator mode | Guard |
+|---|---|---|---|
+| **Mapped-project acceleration** (door ③ — field harness work begins) | gap/naming scan | Mode I (internal) | once/session · UAP-suppressible |
+| **Mode D FH self-dev** (an FH asset is about to change — the 4-axis gate's own trigger) | gap + external-frontier scan | Mode F (full) | once/session · UAP-suppressible |
+
+**Not always-on** (cost + simplicity guard): innovator runs WebSearch/WebFetch, so a per-turn fire would tax tokens and risk decorative-unit over-generation — the very thing steel-quench's Wave-1 angle #1 ("is there no simpler alternative?") attacks. One proposal per context-entry; the user accepts or declines. In a Mode D session this runs *before* the change (design-time ideation), distinct from the post-change 4-axis verification gate. **Promotion is measured, not assumed**: log each outcome to `knowledge/shared/learnings/subagent_invocations_log.yaml`; escalate to a stronger cadence only after the `operations.md` gate clears (`accepted ≥ 60%`) — innovator is v0.2 with no pilot data yet. A 3×-declined proposal is UAP-muted like any cadence nag. (innovator also rides `frontier-digest --chain`; that 7-day path is unchanged and complementary.)
 
 ## Operational Adaptation Loop — User-Tuned Self-Optimization
 
