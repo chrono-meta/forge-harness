@@ -99,6 +99,33 @@ Treat the adapter output as the isolated challenger result for Wave 1. This pres
 
 ---
 
+## Step 0.5 — Trigger-Accuracy Probe (SKILL.md artifacts only · measured)
+
+> **Import origin** (sister-asset cross-audit 2026-06-14, `tracks/_audit/session_2026_06_14_official-plugins-cross-audit.md`): skill-creator + plugin-dev/skill-reviewer measure trigger accuracy **empirically**; FH's skill gate ("3+ NL triggers") and steel-quench's trigger-collision attack are **judged**, not measured. This probe converts that one verdict to **measured** — the mechanical-anchor discipline (a terminal trigger verdict should rest on a count, not an inference: the W4-4 question applied to the skill's own description).
+
+**Fires only when** `artifact_type = skill_md` (Step 0.3 canonical enum, `tpa_schema.md` — i.e. a SKILL.md) AND the **trigger surface** changed. *Trigger surface* = exactly the `description:` YAML field **plus** the `## Triggers` / `## Trigger Phrases` section (and nothing else — a body-wave or procedure edit with both of those untouched does **not** fire it). Any other artifact has no trigger surface — note `Step 0.5: skipped (not a skill_md trigger change)` and proceed.
+
+**Procedure** (prose-scale — FH routes + governs, it does **not** rebuild skill-creator's eval engine; no Python harness, no vector store):
+1. From the skill's `description`, author **8–10 should-trigger** phrases (varied, realistic user utterances; include some that omit the skill's internal vocabulary) and **8–10 near-miss should-NOT-trigger** phrases (share keywords/domain but actually need a different tool — the discriminating cases, not obvious irrelevants).
+2. Dispatch the probe set **in isolation** (`Agent` / `fh-run` — same isolation rule as Wave 1; the author session must not judge its own triggers) against the live skill description only.
+3. **Count** and report as measured: `trigger-probe: <fired>/<should> fire · <false>/<should-not> false-fire (model: <tier>)`.
+
+**Verdict mapping** (measured → severity; feeds Wave-T temper + Done When):
+
+| Measured | Verdict | Severity |
+|---|---|---|
+| should-fire < 70% | **undertrigger** — description too narrow, or diet stripped a real trigger | S if load-bearing gate skill, else A |
+| should-not false-fire > 20% | **overtrigger / collision** — bleeds into an adjacent skill's territory (the collision class steel-quench owns, now measured) | A |
+| both within bound | trigger surface PASS (measured, not guessed) | — |
+
+**Threshold granularity** (the bounds are guidelines, not a knife-edge): at the probe size (N=8–10 → ~10–12.5% steps) the percentages are coarse and 20%/70% may not be exactly reachable. Report the **count** (`2/8 false-fire`), not just a percentage; on a boundary result take the **stricter** verdict and re-probe with more phrases before finalizing. The bound is a trigger-collision heuristic, not a derived constant.
+
+**Honesty caveat**: the probe measures *trigger-description* accuracy on the session model — not field behavior across all tiers. A near-floor model may under-fire regardless of description quality; record the probe model and, on a below-floor run, treat the result as provisional (Step 0.3 below-floor rule).
+
+> **Detail**: See `SKILL_detail.md §TriggerProbe` — worked probe set + fire-count table + before/after description fix.
+
+---
+
 ## Wave 1 — 5 Mandatory Attack Angles
 
 **Execution principles**: Attacks must be based on real code/files/configs — abstract criticism prohibited.
@@ -117,7 +144,18 @@ Isolation can be achieved by Claude Code `Agent(...)` or by `fh-run --agent fh-c
 
 **S-grade Immediate Human Gate**: If Wave 1 contains 1+ S-grade blocker → pause, surface options (a) proceed to Wave 2 / (b) human review first / (c) abort. Do not silently enter Wave 2 with unreviewed S-grade items.
 
-> **Detail**: See `SKILL_detail.md §Wave1` — Wave 1 output format, optional numeric score, quench-challenger invocation.
+**Code-artifact supplementary lens — silent-failure scan** (conditional · fires only when `artifact_type ∈ {bash_script, code}` — Step 0.3 canonical enum, `tpa_schema.md`; non-code artifact → note `code-lens: n/a (non-code artifact)` and skip). `artifact_type` is derived from **file path / extension** (`tpa_schema.md` classification rule), **not** interior content — a `skill_md` that embeds a ```` ```bash ```` fence stays `skill_md` and does **not** fire this lens (do not conflate with the CLAUDE.md Substantive carve-out, which keys Axes 2–3 of the *commit gate* off code-fence presence — a different mechanism). Import origin: pr-review-toolkit/silent-failure-hunter (sister-asset cross-audit 2026-06-14, Import #2). Wave 1's 5 angles attack *structure*; this adds the named *error-suppression* vector the general angles miss. Grep the diff/file for each named pattern:
+
+| Pattern | What to flag | Severity guide |
+|---|---|---|
+| **Empty catch / `\|\| true` / `2>/dev/null` swallow** | An error path that discards the error with no log, no re-raise, no user surface | S if it hides a gate/verification failure, else A |
+| **Broad catch** (`except:` / `catch (e)` with no type) | Catches more than intended; masks unrelated failures | A |
+| **Unjustified fallback** | Falls back to a default on error without recording *that* it fell back | A — silent degradation is the worst class (cf. P6 graceful-degradation must be *documented*) |
+| **Exit-code ignored** | A piped/chained command whose non-zero exit can't propagate (`cmd1 \| cmd2`, missing `set -e`/`pipefail`) | A if it gates a downstream destructive/publish step |
+
+A finding here is a real-code attack (Wave 1 execution principle) — cite the exact line. The lens is a *checklist supplement*, not a 6th mandatory angle: it carries no weight on non-code artifacts.
+
+> **Detail**: See `SKILL_detail.md §Wave1` — Wave 1 output format, optional numeric score, quench-challenger invocation; and `§CodeLens` — silent-failure worked examples (bash + python).
 
 ---
 
@@ -147,6 +185,8 @@ The challenger (quench-challenger in Wave 4 mode) knows it's running in an isola
 | W4-5 | **Tool Dependency Lock-in** | "If a specific MCP/plugin/tool is removed, does harness functionality collapse?" |
 
 Wave 4 convergence = Wave 3 criteria + 3 AI-specific vectors actually reviewed + hallucination defense based on original file references.
+
+> **W4-4 ↔ Step 0.5**: W4-4 is the *general* measurement-vs-inference question; **Step 0.5 (Trigger-Accuracy Probe)** is its *measured instance* for one surface — the skill's own trigger description. When the target is a `skill_md` with a changed trigger surface, satisfy W4-4 by running Step 0.5 rather than answering it by inference.
 
 > **Detail**: See `SKILL_detail.md §Wave4` — Wave 4 output format, defense principles, convergence criteria, activation declaration format.
 

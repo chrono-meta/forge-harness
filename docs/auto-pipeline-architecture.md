@@ -79,7 +79,7 @@ Agents propose; humans approve. Circuit Breaker role.
 
 What FH does:
 
-- **MEMORY.md keyword-trigger loading** → Agents receive only the knowledge they need. Rather than loading all memory at once, only entries matching conversation keywords are lazy-loaded to prevent attention fragmentation.
+- **MEMORY.md intent-based recall** → Agents receive only the knowledge the inferred intent calls for. Rather than loading all memory at once, entries are recalled by applicability (intent match + a one-hop associative spread along `[[links]]`), not literal keyword overlap, to prevent attention fragmentation.
 - **Context Card mandatory injection** → Before parallel dispatch, session context (purpose · completed items · this agent's task · caveats) is inserted into each agent brief. Eliminates sub-agent orientation tax.
 - **Domain knowledge pre-injection** → Reduces the cost of agents learning the domain upfront. Skips the discovery round where agents figure out "what is this codebase."
 

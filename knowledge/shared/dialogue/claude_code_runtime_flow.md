@@ -145,7 +145,7 @@ Auto-memory trigger? (user_role, feedback, project state, reference)
         │
         ▼
 MEMORY.md loaded at session start as system context (always-on)
-Specific memory files loaded on-demand (keyword trigger from MEMORY.md index)
+Specific memory files recalled on-demand (intent-based + 1-hop associative recall from the MEMORY.md index — memory_intent_recall.md)
 ```
 
 **Two-layer storage rule**: `tracks/` = local detailed history (survives session, not machine change).
