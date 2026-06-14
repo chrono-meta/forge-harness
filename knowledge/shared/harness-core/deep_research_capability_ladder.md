@@ -22,14 +22,30 @@ research-heavy task can pull it.
 
 | Rung | Capability | When it applies | Tier note |
 |---|---|---|---|
-| **1. Agentic research skill** | A built-in `/deep-research` (or equivalent autonomous multi-step researcher) — **only if present in the live session skill list** | Best when available: it runs its own search→read→synthesize loop | Self-contained; bills to its own path |
+| **1. Agentic research skill** | An autonomous multi-step researcher **present in the live session skill list** — in Claude Code that is `octo:research` (Claude Octopus, multi-AI synthesis) when installed. A native `/deep-research` was **not registered in CC in this install** (measured 2026-06-14: Skill `deep-research` → "Unknown skill"; the Claude **app** surfaces it highlighted, this CC build does not). Treat it as **app-side / operator-invoked unless a future CC build surfaces it** — re-detect from the live skill list, don't assume CC *cannot* have it (capability is install- and version-dependent — `[[feedback_verify_before_downgrade]]`) | Best when agent-fireable: runs its own search→read→synthesize loop | Self-contained; an external multi-AI path (Octopus → Gemini/Codex) bills **outside** CC's budget |
 | **2. Claude multi-source synthesis** | `WebSearch` + `WebFetch` tools, synthesized in-context | The always-available floor for any Claude session — no extra install | **Tier-sensitive**: synthesis depth tracks the session model. Routine survey = Sonnet default; deep analysis / contested findings = pin Opus (tier-floor, `multi_model_sidecar_strategy.md §Tier-floor resolution`) |
 | **3. `frontier-digest`** | The narrow specialization — HN + arxiv trend scan with FH-context synthesis | Use **only** when the research *is* AI/harness trend-scanning, not general topic research | FH-native; has its own WebSearch fallback |
 
 **Resolution rule**: detect research-heavy intent → check the live skill list → take rung 1 if a
-`/deep-research`-class skill is present, else rung 2 (always available), and route to rung 3 instead
-only when the task is specifically trend-scanning. The rung is chosen at runtime from what the session
-actually has — never assume rung 1 exists (it is a conditional detect, phantom-safe).
+rung-1-class skill is **agent-fireable** (`octo:research` etc.), else rung 2 (always available), and
+route to rung 3 instead only when the task is specifically trend-scanning. The rung is chosen at
+runtime from what the session actually has — never assume rung 1 exists (it is a conditional detect,
+phantom-safe).
+
+**Runtime-aware routing (the axis this ladder was missing — corrected 2026-06-14).** "Highest rung"
+is *runtime-relative*: a capability that exists in one runtime is not agent-fireable from another.
+
+| Runtime | Highest deep-research rung | Who fires it |
+|---|---|---|
+| **Claude app** (claude.ai / desktop) | native `/deep-research` built-in | **operator directly** (separate runtime — CC did not surface it this install; re-detect) |
+| **Claude Code CLI** (this env) | `octo:research` (Octopus multi-AI) *if installed*, else rung 2 WebSearch | agent (me) can fire |
+
+For the **deepest** pass, prefer the **cross-runtime hand-back** over burning external multi-AI tokens
+from CC: the operator runs the Claude-app `/deep-research`, then hands the result to the CC **governor**
+(me), who closes it by source-verification — the deep-research instance of the Debate Circulation Loop
+(`multi_model_sidecar_strategy.md` cross-runtime routing). Routing to `octo:research` from CC is the
+agent-fireable middle path; it costs external (Gemini/Codex) billing invisible to CC, so propose it,
+don't auto-fire (token-honesty, same as `goal-quench` pro/max sidecar disclosure).
 
 **Tie-breaker (the trend-scan ∩ research overlap)**: a request like "comprehensive analysis of recent
 agent-harness papers" is both literature survey and AI/harness trend. Default to **rung 2 general

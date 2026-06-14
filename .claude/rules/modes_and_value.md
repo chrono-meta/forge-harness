@@ -78,7 +78,7 @@ The forge-harness bundles **rules, skills, and session protocols** into one envi
 | **Active onboarding protocol** | Greeting trigger → 5-skill auto cascade | ✅ | ✅ | ❌ | ✅ |
 | **Harness usage mode 4 branches** | User-free mode branching + AI guidance obligation | ✅ | ✅ | ❌ | ✅ |
 | **Asset synergy branch judgment** | Auto-judgment of meta/hub seed vs field persistent location for new assets | ✅ | ✅ | ❌ | ✅ |
-| **Memory system auto-operation** | User utterances/insights auto-persisted + keyword trigger auto-load | ✅ | Partial | ❌ | ✅ |
+| **Memory system auto-operation** | User utterances/insights auto-persisted + intent-based + associative auto-recall | ✅ | Partial | ❌ | ✅ |
 | **Companion-store routing** | Drafts/signals/handoffs → private store; methodology → public mirror | ❌ | ❌ | ❌ | ✅ |
 
 ### Layer 2 — Skills domain (can separate plugin/skill / available in all Modes A·B·C·D)

@@ -252,9 +252,9 @@ Use when conversation has grown long and past context becomes noise. Clears cont
 
 > Using Opus continuously for the same task multiplies token cost 3–5x. Switching down strategically is a strategy.
 
-### Lever 4 — Keyword trigger load (Context Isolate)
+### Lever 4 — Intent-based recall load (Context Isolate)
 
-Only read necessary documents at the necessary time. MEMORY.md keyword trigger method.
+Only read necessary documents at the necessary time. MEMORY.md intent-based + associative recall (index→body; `knowledge/shared/dialogue/memory_intent_recall.md`).
 
 ```
 ✅ Only read CATALOG.md first at session start

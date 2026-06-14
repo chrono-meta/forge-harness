@@ -559,7 +559,7 @@ fi
 Sidecar results are high-risk for **compression aging** (AgingBench, arXiv:2605.26302) — single-session outputs that vanish if not structurally anchored. Persist in 3 independent layers so at least one survives compression/refactoring:
 
 1. **Full result file** — `tracks/_meta/sidecar_{target}_{YYYY_MM_DD}.md` with frontmatter (`type: sidecar-review`, `models`, `target`, `priority`) + tiered findings (M/S/R).
-2. **Memory reference entry** — one keyword-tagged line in the durable memory store (`~/.claude/.../memory/`) so next session auto-loads on keyword trigger.
+2. **Memory reference entry** — one applicability-phrased line in the durable memory store (`~/.claude/.../memory/`) so next session recalls it on intent match (`memory_intent_recall.md`).
 3. **CATALOG search entry** — 3-line summary + Decision/Open, pointing at the Layer-1 file.
 
 Missing any layer = compression risk. (Path conventions adapt per project — see Generalization below.)
