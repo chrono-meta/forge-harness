@@ -94,6 +94,74 @@ Grounded: N / Partial: N / Phantom: N / Source-Missing: N
 
 ---
 
+## §Step2E-Detail
+
+**Step 2-E — External Claim Fetch + Support Execution Detail**
+
+Fires only for external-cited claims (when Step 0.5 flags `risk_level:external` or `external_citation`).
+The principle: **existence ≠ support**. Check that the fetched source *states the claim*, anchored on a
+literal span — never on a model's agreement.
+
+**Identifier normalization** (resolve to a fetchable URL before WebFetch):
+
+| Citation form | Resolved URL |
+|---|---|
+| `arXiv:NNNN.NNNNN` / `arXiv:NNNN.NNNNNvK` | `https://arxiv.org/abs/NNNN.NNNNN` |
+| bare DOI `10.xxxx/...` | `https://doi.org/10.xxxx/...` |
+| `http(s)://...` | use as-is (HTTPS-upgrade handled by WebFetch) |
+| Named source, no URL ("paper X shows Y") | **one** `WebSearch` to locate the canonical URL → then WebFetch it. Do **not** verify against the search snippet alone — the snippet is not the source. |
+| version token `pkg x.y.z` | the package registry/release page (npm/PyPI/GitHub releases) for that exact version |
+
+**WebFetch prompt template** (ask for a *span*, not a *verdict* — this keeps the anchor non-model):
+
+```
+From this page, quote verbatim the sentence or span that states: "<the exact claim being checked>",
+and label it: ASSERTS (the page states the claim is true) / NEGATES (the page states it is false, or
+attributes it to refuted prior work) / MENTIONS (the words appear but do not assert the claim).
+If no relevant span exists, reply exactly: NONE.
+Do not summarize, infer, or judge support — only quote a present span with its label, or reply NONE.
+```
+
+Polarity is load-bearing: a page saying "X does NOT hold" or "earlier work claimed X — we refute it"
+contains a span lexically matching the claim. Asking for the label keeps the *retriever* mechanical while
+surfacing the stance the *judge* needs — a NEGATES/MENTIONS span is **not** grounding.
+
+**Span-evidence format** (a Grounded external verdict is invalid without this):
+
+```
+✅ Grounded — <claim>
+   source: <resolved URL>
+   span: "<verbatim quoted span from fetched content>"
+```
+
+**Step 2-E output format**:
+
+```
+## Step 2-E — External Source Support Results
+
+| # | Claim | Cited source | Result | Span / reason |
+|:---:|---|---|:---:|---|
+| 1 | [claim] | [arXiv:.../URL] | ✅/🟠/⏳/❌ | "[quoted span]" or "NONE" or "403 — env-blocked" or "id does not resolve" |
+...
+
+Grounded: N / Unsupported: N / Unreachable: N / Phantom: N
+```
+
+**Decision rules**:
+- Span labelled **ASSERTS** that expresses the claimed relation → **Grounded ✅** (record span).
+- Span labelled **NEGATES or MENTIONS** → **Unsupported 🟠** (a negating or merely-mentioning span is not
+  grounding — the false-Grounded trap).
+- Fetch succeeded, content readable, span = NONE or off-claim → **Unsupported 🟠** (cited-but-not-verified).
+- Identifier does not resolve at all (404 on a specific arXiv id, dead DOI, fabricated) → **Phantom ❌**.
+- Identifier plausibly real but fetch blocked in this environment (paywall/403/timeout/cross-host) →
+  **Unreachable ⏳** — provisional; note the limit, route to a second surface or the human gate; never auto-Phantom.
+- `WebFetch`/`WebSearch` **absent/disabled in the environment** (not one source — the capability) → Step 2-E
+  cannot run: report "external grounding NOT PERFORMED — no fetch capability" and set verdict **ESCALATE**
+  (do not mark every claim Unreachable + CONDITIONAL_PASS — that falsely implies grounding was attempted).
+- **Never** upgrade NONE to Grounded because a second model "thinks it's probably right" (agreement bias).
+
+---
+
 ## §Step3-Detail
 
 **Step 3 — Prescription Procedures + Output Format**
@@ -162,6 +230,8 @@ Result summary:
   ✅ Grounded: N
   ⚠️ Partial: N (fix recommended)
   ❌ Phantom: N (S: N / A: N / B: N)
+  🟠 Unsupported: N (external source fetched but does not support claim — S/A/B)
+  ⏳ Unreachable: N (external source un-fetchable here — second surface pending)
   🔴 Source-Missing: N
 
 Process pattern: {detected pattern or "none"}
