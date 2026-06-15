@@ -182,17 +182,17 @@ Task:
 7. Do NOT mark the PR ready, do NOT merge. STOP after opening the draft PR.
 ```
 
-## 8. Field-project adoption — any user, any project (e.g. QASP)
+## 8. Field-project adoption — any user, any project
 
-The loop is **not FH-only**. Anyone accelerating their own project — or the operator on a field project
-like QASP — can adopt the same shape. Only **two things are FH-specific and must be swapped**; the rest
+The loop is **not FH-only**. Anyone accelerating their own project — or the operator on any mapped field
+project — can adopt the same shape. Only **two things are FH-specific and must be swapped**; the rest
 is project-agnostic.
 
 | Layer | FH (this doc) | Field-project version |
 |---|---|---|
-| Daily scan lens | "frontier signals relevant to FH skills/structure" | "...relevant to **{project}'s domain/stack**" (QASP → QA automation, TC quality, MCP/JIRA frontier) |
+| Daily scan lens | "frontier signals relevant to FH skills/structure" | "...relevant to **{project}'s domain/stack**" |
 | Durable daily store | `🛰️ Frontier Digest Log` issue in `forge-harness` | same pattern, an issue in the **project's own repo** |
-| Weekly verification gate | **FH 4-axis gate** (hub-internal hook — hard-codes hub paths/markers) | **the project's OWN gate** — NOT the FH hook (per `auto_project_mapping.md §6`, the FH gate is deliberately not installed into projects; it would block the project's commits). QASP → `pytest -q` + **Self-Check Gate 33/33** + `regression_guard.sh`; a generic project → its test suite + lint |
+| Weekly verification gate | **FH 4-axis gate** (hub-internal hook — hard-codes hub paths/markers) | **the project's OWN gate** — NOT the FH hook (per `auto_project_mapping.md §6`, the FH gate is deliberately not installed into projects; it would block the project's commits). A project supplies its own: its test suite + lint + whatever quality gate it trusts |
 | HITL spine | draft PR → operator merge | **identical** — draft PR → owner merge (never auto-merge) |
 | Branch | `claude/frontier-auto-*` | **identical** — `claude/`-prefixed |
 
@@ -201,10 +201,10 @@ issue; weekly = at most one scoped proposal as a **draft PR**, gated by *whateve
 project trusts*, merged by a human. Substitute the lens + the gate; keep the ephemeral-safe GitHub
 store and the draft-PR HITL.
 
-**For QASP specifically**: the weekly proposer's gate is the project's own — run `pytest -q` and the
-33/33 Self-Check Gate (`docs` references in qasp CLAUDE.md) instead of the FH marker/hook, and the
-model floor concern (§4) does **not** apply (no FH marker = no `floor-status` cross-check), so the
-weekly QASP routine can run on sonnet. Open the draft PR against the qasp repo's `claude/` branch.
+**For a field project**: the weekly proposer's gate is the project's own — run the project's test
+suite and its own quality gate instead of the FH marker/hook, and the model floor concern (§4) does
+**not** apply (no FH marker = no `floor-status` cross-check), so a field project's weekly routine can
+run on sonnet. Open the draft PR against the project repo's `claude/` branch.
 
 **Propagation path**: this pattern can ride **Full-Harness Mode** (`auto_project_mapping.md §6`) as an
 opt-in project-local asset — offered, never auto-installed, owner approves each routine. It is a
