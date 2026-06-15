@@ -214,6 +214,30 @@ cross-validation). Other sidecar-using skills (`sim-conductor`, `pipeline-conduc
 `agent-composer`) inherit by reference — when they say "if available", availability = this
 protocol's verdict.
 
+### Video-extraction capability-gated router (added 2026-06-15)
+
+Video understanding is a **task-specific specialization** of the resolution ladder above — the
+general "which engine" question, narrowed to "which path can actually *watch* this video". Two axes
+decide the route: **capability** (what's installed) and **length** (frame-extraction tools go sparse
+past ~10 min).
+
+| Condition (probe in order) | Route | Why |
+|---|---|---|
+| `command -v gemini` **or** `agy` (or `GEMINI_API_KEY`) | **Gemini / agy sidecar** — URL-native ingest, **no frame cap**, handles long/dense video | Native multimodal; the operator-verified YouTube-URL path (`gemini --skip-trust -p "<URL>"`). ⚠ direct `gemini` EOL 2026-06-18 → `agy` successor / Gemini API (same Tier-floor migration as the text ladder) |
+| Claude-only host (no Gemini/agy), `ffmpeg`+`yt-dlp` present | **claude-video `/watch`** — ffmpeg frames (≤2fps/100, **best ≤10 min**) → Claude's own vision Read; captions via yt-dlp/Whisper | No separate multimodal runtime, **no Gemini-EOL exposure** — Claude watches natively. **3rd-party executable — review before install** (`/plugin marketplace add bradautomates/claude-video`; brew installs + Whisper egress) |
+| Cloud / text-only sandbox (host blocks video) | **remote transcript MCP** | URL hosts 403 in cloud VMs; transcript-only is the floor (the daily-routine sandbox case) |
+
+**2nd axis — length**: short/medium → claude-video is fine and keeps everything in-Claude; long or
+visually-dense → prefer Gemini/agy (claude-video's frame cap goes sparse past ~10 min).
+
+**Governance invariant (do not drop)**: whichever route runs, the **governor never trusts a
+multimodal "comprehensive read"** as a terminal verdict — a video claim (timestamped summary) is a
+*claim*, cross-checked on a second surface (e.g. Codex clicking the timestamp, or a caption grep)
+before it anchors a decision (`cross_runtime_routing` debate-loop; judge-robustness "judged →
+mechanical"). claude-video is the *executor* FH lacked; FH's cross-check discipline is the
+*governance* claude-video has no equivalent for — compose, don't trust. (Sister-asset intake:
+`fh-be/paper-signals/sister_2026-06-15_claude-video.md`.)
+
 ### Tier-floor resolution — the model dimension (added 2026-06-10)
 
 The ladder above resolves **which engine**; this subsection resolves **which model tier within it**.
