@@ -121,6 +121,16 @@ echo "---\ndate: $(date +%Y-%m-%d)\nentries_checked: N\nupdated: N\ndrifted: N\n
 ## Constraints
 
 - **No auto-deletion**: Archive candidates are proposed, not deleted. Human confirmation required.
+- **Snapshot before archive (Destructive-Op Gate for memory)**: before applying any confirmed
+  archive/removal in Step 4, snapshot **every memory root the entry could live in** first — tar **all**
+  roots Step 1 enumerated (`~/.claude/projects/*/memory/` AND hub-local `memory/`), not just one:
+  `tar czf tracks/_meta/memory_snapshot_$(date +%Y%m%d-%H%M%S).tgz <each Step-1 root that exists>` — so
+  a wrong archive in any scanned root is one-command recoverable (a single-root snapshot can pass while
+  the archived entry lived in the other root — bind the scope to the entry, not to "a tarball exists").
+  Archive moves entries to a `.archive/` sibling, never hard-deletes (mirrors the Curator's
+  tar-before-pass + rollback discipline; the Step 2 staleness thresholds are already the mechanical
+  no-LLM pre-pass that the judged Step 3 re-verify sits on top of — order preserved: mechanical roster
+  first, judged re-verify second).
 - **Feedback type**: Never auto-modify feedback rules — flag only.
 - **Simplification guard**: If 0 stale entries found, output one line "memory-hygiene: all fresh" and exit.
 - **FH online advantage**: Unlike offline harnesses, FH can re-verify external references live.
@@ -130,9 +140,10 @@ echo "---\ndate: $(date +%Y-%m-%d)\nentries_checked: N\nupdated: N\ndrifted: N\n
 
 ```
 Step 1~5 complete
-+ Staleness roster output
++ Staleness roster output (Step 2 = mechanical no-LLM pre-pass)
 + Re-verification run for all STALE entries
 + User gate presented and responded to (y/N per item)
++ If any archive confirmed: snapshot covering the archived entry's root written before the move (tracks/_meta/memory_snapshot_*.tgz, spanning all existing Step-1 roots) — check class: mandatory-pass (snapshot covers the entry's dir, not merely "a tarball exists")
 + Hygiene log written to tracks/_meta/memory_hygiene_{date}.md
 ```
 

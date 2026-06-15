@@ -298,3 +298,14 @@ Phase 1: token-budget-gate verdict output + mode resolved (core default, or pro/
 ```
 
 Verdict: PASS (CLEAN verification) | CONDITIONAL_PASS (PENDING verification) | FAIL (BLOCKED verification) | ESCALATE (user decision required on partial completion)
+
+**Completion-claim discipline (Ralph — no silent partial completion):** a PASS/CONDITIONAL_PASS
+verdict must **enumerate, not assert** — (a) **evidence artifact**: the pipeline-conductor verification
+verdict + the calibration record path; (b) **failed/skipped checks by name** (which pipeline axes /
+sidecars FAILED or were skipped). This list is **not self-asserted** — reconcile it against the resolved
+mode's in-scope axis/sidecar set: a list shorter than (in-scope − passed) is incomplete, not PASS (an
+empty list is valid only when every in-scope check passed). This is the mechanical anchor that keeps the
+clause off a judge-only path; (c) **explicit residual risk beyond what the mode-qualifier already states**
+(e.g. an axis that ran but on degraded input). A verdict that omits any of the three is **incomplete, not
+PASS**. (Convergent sister evidence: oh-my-claudecode Ralph "refuses silent partial completion"; Hermes
+Agent `/goal` per-turn completion judge.)

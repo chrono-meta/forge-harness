@@ -268,3 +268,14 @@ Step 0 scope confirmed and scope translation table applied
 Verdict: PASS (all conditions met, sweep complete) | CONDITIONAL_PASS (sweep complete, pending items captured) | FAIL (chain halted, blocking items remain) | ESCALATE (chain paused, human decision required)
 
 A sweep is not done until the Step 5 report is output. Emitting per-step verdicts without the aggregated report is incomplete.
+
+**Completion-claim discipline (Ralph — no silent partial completion):** the Step 5 report's overall
+verdict must **enumerate, not assert** — (a) **evidence artifact**: the per-step verdict source (report
+path + the verdict lines it aggregates); (b) **failed + skipped checks listed by name** (degraded /
+skipped / `--quick`-omitted steps included). This list is **not self-asserted** — reconcile it against
+the Step 0 in-scope step set: a list shorter than (in-scope − passed) is incomplete (an empty list is
+valid only when every in-scope step passed). This is the mechanical anchor that keeps the clause off a
+judge-only path; (c) **explicit residual risk beyond what the mode-qualifier states** (e.g. a single-skill
+scope is not a full-harness claim). A CLEAN verdict that omits any of the three is **incomplete**.
+(Convergent sister evidence: oh-my-claudecode Ralph "refuses silent partial completion"; Hermes Agent
+`/goal` per-turn completion judge.)
