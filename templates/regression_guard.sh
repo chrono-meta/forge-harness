@@ -124,7 +124,38 @@ print('OK')
   before_content=$(read_before "$f")
   after_content=$(read_after "$f")
 
+  # Deprecation-stub exemption (frontmatter-scoped, stub-shaped): a file soft-deleted into a
+  # small pointer stub. Content loss is the INTENT (mirrors the file-deletion skip above), so
+  # content-preservation checks (F2 sections, F3 code blocks, F4 tokens, F6 line reduction) are
+  # skipped. Structural-integrity checks a stub must STILL satisfy keep running: F1 frontmatter,
+  # F5 ref resolution, F7 bash syntax.
+  #
+  # Guarded so it cannot be abused to gut a LIVE asset (Axis-2 challenger 2026-06-16):
+  #   (a) frontmatter must start at line 1 AND be CLOSED — kills the `---` horizontal-rule
+  #       collision in non-SKILL files (CLAUDE.md / rules have HRs but no real frontmatter, so
+  #       a body line `deprecated: true` could otherwise self-exempt them);
+  #   (b) `deprecated: true` in canonical YAML (one+ space) inside that block;
+  #   (c) a non-empty `successor:` pointer (enforces what this comment promises — no dead-end stub);
+  #   (d) the result is actually stub-sized (<= 50 lines) — a "deprecated" 200-line file is not a
+  #       soft-delete and runs the full checks.
+  # (We deliberately do NOT also require deprecated-in-BOTH-before+after: that would block the
+  # common one-commit "deprecate + stub" flow with no safety gain once (a)-(d) hold — the residual
+  # is a loud, reviewable, git-recoverable deprecation declaration, not silent content loss.)
+  is_deprecated=0
+  if [ "$(printf '%s\n' "$after_content" | head -1)" = "---" ]; then
+    fm=$(printf '%s\n' "$after_content" | awk 'NR==1{next} /^---$/{exit} {print}')
+    has_close=$(printf '%s\n' "$after_content" | awk 'NR==1{next} /^---$/{print "yes"; exit}')
+    if [ "$has_close" = "yes" ] \
+       && printf '%s\n' "$fm" | grep -qE '^deprecated:[[:space:]]+true[[:space:]]*$' \
+       && printf '%s\n' "$fm" | grep -qE '^successor:[[:space:]]+[^[:space:]]' \
+       && [ "$(printf '%s\n' "$after_content" | wc -l | tr -d ' ')" -le 50 ]; then
+      is_deprecated=1
+      echo "  ℹ️  deprecated stub — content-loss checks (F2/F3/F4/F6) exempted (F1/F5/F7 still enforced)"
+    fi
+  fi
+
   # F2. Critical section preservation
+  if [ "$is_deprecated" -eq 0 ]; then
   for section in "## Execution Steps" "## Done When" "## Triggers" "## Activation Triggers" "## Trigger Phrases"; do
     before=$(count_in "$before_content" "^$section")
     after=$(count_in "$after_content" "^$section")
@@ -133,8 +164,10 @@ print('OK')
       M_TIER=$((M_TIER + 1))
     fi
   done
+  fi
 
   # F3. Code block count
+  if [ "$is_deprecated" -eq 0 ]; then
   before_code=$(count_in "$before_content" '^```')
   after_code=$(count_in "$after_content" '^```')
   if [ "$before_code" -gt 0 ]; then
@@ -144,6 +177,7 @@ print('OK')
       S_TIER=$((S_TIER + 1))
     fi
   fi
+  fi
 
   # F4. Operational keyword preservation
   # Split-awareness: a skill-splitter split moves content to the sibling
@@ -152,6 +186,7 @@ print('OK')
   # NOTE: combined-count is a PRESENCE heuristic, not semantic equivalence — an
   # unrelated detail-file line can absorb the count. True equivalence is owned by
   # F2 (critical sections) + the Axis 2/3 review, not this counter.
+  if [ "$is_deprecated" -eq 0 ]; then
   detail_content=""
   if echo "$f" | grep -q "SKILL\.md$"; then
     detail_content=$(read_after "$(dirname "$f")/SKILL_detail.md")
@@ -179,6 +214,7 @@ print('OK')
       fi
     fi
   done
+  fi
 
   # F5. Cross-reference integrity (broken file paths)
   # Use process substitution to avoid subshell — M_TIER must update in parent shell
@@ -232,7 +268,7 @@ print('OK')
     if [ "$after_lines" -lt "$before_lines" ]; then
       delta=$((before_lines - after_lines))
       pct=$((delta * 100 / before_lines))
-      if [ "$pct" -ge 30 ]; then
+      if [ "$pct" -ge 30 ] && [ "$is_deprecated" -eq 0 ]; then
         echo "  ⚠️  S-TIER  reduced ${pct}% ($before_lines → $after_lines lines, -$delta)"
         S_TIER=$((S_TIER + 1))
       else

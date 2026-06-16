@@ -94,3 +94,23 @@
   self_contained_prompt: yes
   outcome: accepted
   note: "PASS — per-item ask on send, batch-approve refused citing meta-write tier; offered §3 fill"
+- date: 2026-06-16
+  task: "field-project deep-frontier sweep #1 — agent-as-QA-strategy-partner (spec/PRD→TC) frontier"
+  agent: general-purpose (inherit opus)
+  outcome: accepted
+  note: "6 frontier links verified (APITestGenie/LLMCFG-TGen/TrickCatcher/CANDOR-adjacent/Katalon-agentic). Delta=Non-Model Ground (frontier verifies LLM output but terminal verdict still LLM-as-judge); a fixed self-check loop + pre-injected failure-pattern corpus are the field deltas. Honest gap: no non-English-PRD→TC frontier found."
+- date: 2026-06-16
+  task: "field-project deep-frontier sweep #2 — planning-review tool (multimodal × multi-model cross-check)"
+  agent: general-purpose (inherit opus)
+  outcome: accepted
+  note: "Empty-cell finding: multimodal planning input (design/PRD) × multi-model cross-verification AS non-model ground is unfilled by frontier — Kiro(single-model semantic-entropy)/SemEval(multi-model but general hallucination). A multi-inference planning-review sits in the empty cell = publishable delta."
+- date: 2026-06-16
+  task: "field-project deep-frontier sweep #3 — dynamic test-pilot / runtime test agent frontier"
+  agent: general-purpose (inherit opus)
+  outcome: accepted
+  note: "CANDOR directly confirms delta: even 'strong oracle' grounds verdict in LLM consensus-against-NL-spec, NOT measured runtime data. Autonoma 'boundaries/deterministic artifacts' closest converging vocab. Delta=static·dynamic complementarity AS explicit invariant."
+- date: 2026-06-16
+  task: "field-project deep-frontier sweep #4 — hybrid-app mobile automation + LLM-harness layering (independent-convergence check)"
+  agent: general-purpose (inherit opus)
+  outcome: accepted
+  note: "VERDICT (peak-of-transition): 'layer an LLM/agent on an existing Appium suite' frontier DOES exist + mainstream — appium/appium-mcp (official, v1.85.7 2026-06-16) + BrowserStack selfHeal. The field tool = strong independent CONVERGENCE not lead = credential. Narrow lead axes: (a) hybrid-app context-switch domain, (b) non-model data verification + strategy→execution bridge. Sandbox: a public hybrid demo app mappable externally; the real in-corp sandbox needs a handoff."
