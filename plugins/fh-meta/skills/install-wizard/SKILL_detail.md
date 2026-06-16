@@ -12,33 +12,55 @@ load: on-demand
 
 ## §Mode-D-Companion-Setup
 
-Guide companion-store setup before Step 1 when Mode D (FH developer/researcher) is detected:
+Guide companion-store setup before Step 1 when Mode D (FH developer/researcher) is detected.
+
+**Ask the backend question FIRST — do not assume a `*-be` git repo.** The companion store is a
+*role* (durable private home for drafts · signals · handoffs · gitignored-session mirror), not a
+fixed technology. FH emits the same artifact for every backend — **markdown output files** — so the
+only thing that changes is where those files land. Branch on what the user already runs (see
+`modes_and_value.md §Pluggable backends`):
 
 ```
-You're developing FH itself — you need a private companion store
-alongside the public mirror.
+You're developing FH itself — you need a durable PRIVATE companion store
+alongside the public mirror. Where should research artifacts live?
 
-Recommended layout:
-  public:  {org}/{hub}        (methodology, skills, rules)
-  private: {org}/{hub}-be     (paper drafts, experiment logs,
-                               raw signals, handoff files)
+Q: Do you already run a durable knowledge store?
 
-Quick setup (remote-backed):
-  gh repo create {org}/{hub}-be --private
-  git clone https://github.com/{org}/{hub}-be ~/path/to/{hub}-be
-  mkdir -p {hub}-be/{paper-drafts,paper-signals,digests,handoff}
+ ┌─ Already garden knowledge in Obsidian
+ │    → point the output path AT the vault. Obsidian IS markdown, so drafts
+ │      are backlinked instantly — zero new infra, nothing to git init.
+ │      Set BE_DIR=/path/to/vault/fh   (the sync target is just a folder)
+ │      ⚠ use a NON-git vault subfolder: if BE_DIR lands inside a git-backed
+ │        vault (Obsidian Git plugin), the sync script auto-commits private
+ │        session-meta (incl. CLAUDE.local.md) into the vault's remote.
+ │
+ ├─ Run a queryable memory brain (gbrain / LLM-wiki)
+ │    → your gbrain INGESTS the emitted markdown (`gbrain ingest <path>`).
+ │      Set BE_DIR=/path/to/staging   (same env var as the other backends — FH
+ │      writes markdown there; your brain then `gbrain ingest`s that path).
+ │      (A deeper FH→gbrain MCP integration is a future candidate — not wired today.)
+ │
+ └─ None of the above (DEFAULT) → a private *-be git repo
+      Quick setup (remote-backed):
+        gh repo create {org}/{hub}-be --private
+        git clone https://github.com/{org}/{hub}-be ~/path/to/{hub}-be
+        mkdir -p {hub}-be/{paper-drafts,paper-signals,digests,handoff}
+      Local-only variant (no GitHub — data never leaves the machine):
+        git init ~/path/to/{hub}-be      # no remote needed
+        mkdir -p ~/path/to/{hub}-be/{paper-drafts,paper-signals,digests,handoff}
+        → the sync script detects the missing upstream and skips push
+          automatically; local git history carries durability.
 
-Local-only variant (no GitHub — your data never leaves the machine):
-  git init ~/path/to/{hub}-be      # no remote needed
-  mkdir -p ~/path/to/{hub}-be/{paper-drafts,paper-signals,digests,handoff}
-  → the sync script detects the missing upstream and skips push
-    automatically; local git history carries durability. Any store
-    name works — set BE_DIR (and HUB_DIR) env vars to your paths.
+Any store name/path works — set BE_DIR (and HUB_DIR) env vars to your paths.
 
-Key rule: knowledge/shared/ drafts stay local via .gitignore glob.
-Push snapshots to the companion store explicitly — never auto-push.
-handoff/ files bridge cloud session → local without exposing content.
+Invariant across ALL backends:
+  · methodology stays in the public mirror (single-source guard) — NEVER copied
+    into the store; the store holds only OUTPUTS, never a rule copy
+  · knowledge/shared/ drafts stay local via .gitignore glob
+  · push/ingest snapshots explicitly — never auto-push
+  · handoff/ files bridge cloud session → local without exposing content
 ```
+
 
 ---
 
@@ -417,11 +439,15 @@ install-wizard — Complete
    New skill proposal → PR:
      https://github.com/chrono-meta/forge-harness
 
-🔬 Developing FH itself? Set up a private companion store:
-   gh repo create {org}/{hub}-be --private   # paper drafts, experiment logs, handoffs
-   (or local-only: git init ~/path/{hub}-be — no remote; push is auto-skipped)
-   → public mirror holds methodology · private store holds research artifacts
-   → field projects (internal harness) can use the same dual-repo pattern
+🔬 Developing FH itself? Set up a durable PRIVATE companion store.
+   Backend is your choice — the store is a role, not a fixed tech (it holds
+   research artifacts; methodology stays in the public mirror):
+   · Obsidian user → point output path at your vault (zero new infra)
+   · gbrain / memory-brain → it ingests FH's emitted markdown
+   · neither (default) → gh repo create {org}/{hub}-be --private
+                         (or local-only: git init ~/path/{hub}-be — push auto-skipped)
+   → see install-wizard SKILL_detail §Mode-D-Companion-Setup for the full branch
+   → field projects (internal harness) can use the same dual-store pattern
 
 🔀 Don't want to lose your accumulated assets — fork as your own hub:
    Personal skills/rules/notes added directly to FH may be lost on FH updates.

@@ -86,9 +86,9 @@ If this is your first time with FH, confirm 3 things before install. All should 
 Fewer than 2 of 3 (first three) → Proceed with install but recommend using only core skills (`context-doctor`, `harness-doctor`) first.
 All 3 → Proceed in order: Step 0-B (token injection) → Step 0 (environment card) → Step 0-C (existing harness).
 
-**Mode D detected (FH developer/researcher)**: Guide companion-store setup before Step 1.
+**Mode D detected (FH developer/researcher)**: Guide companion-store setup before Step 1. **Ask the backend first** — the store is a role (durable private home for artifacts), not a fixed `*-be` git repo: Obsidian vault / gbrain-ingest / `*-be` git repo (default) all qualify. Do not assume the repo path.
 
-> **Detail**: See `SKILL_detail.md §Mode-D-Companion-Setup` — recommended public/private layout, remote-backed and local-only setup commands — read when Mode D is detected.
+> **Detail**: See `SKILL_detail.md §Mode-D-Companion-Setup` — backend-branching question (Obsidian / gbrain / *-be git default), remote-backed and local-only setup commands, cross-backend invariants — read when Mode D is detected.
 
 ### Step 0-B. Git Token Pre-injection (when repo creation/fork/push included)
 
