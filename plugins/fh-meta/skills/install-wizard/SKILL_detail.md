@@ -36,7 +36,8 @@ Q: Do you already run a durable knowledge store?
  │
  ├─ Run a queryable memory brain (gbrain / LLM-wiki)
  │    → your gbrain INGESTS the emitted markdown (`gbrain ingest <path>`).
- │      FH writes markdown to a staging path; the brain consumes it.
+ │      Set BE_DIR=/path/to/staging   (same env var as the other backends — FH
+ │      writes markdown there; your brain then `gbrain ingest`s that path).
  │      (A deeper FH→gbrain MCP integration is a future candidate — not wired today.)
  │
  └─ None of the above (DEFAULT) → a private *-be git repo
