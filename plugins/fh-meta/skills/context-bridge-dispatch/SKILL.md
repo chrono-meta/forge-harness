@@ -21,9 +21,11 @@ successor: agent-composer
 
 ## Content preserved at
 
-`plugins/fh-meta/skills/agent-composer/SKILL.md §Step 3-a`
+`plugins/fh-meta/skills/agent-composer/SKILL.md §Step 3-a` — the live successor.
 
-> **Detail**: See `SKILL_detail.md §Archive` — full original content preserved — read only for historical reference.
+> The original pre-merge content is preserved in git history (this stub's earlier revisions); the
+> shipped `SKILL_detail.md` archive was removed in the curator shrink (2026-06-16) as redundant with
+> git history. No live content lost — the functional content lives in agent-composer Step 3-a.
 
 ## Done When
 

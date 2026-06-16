@@ -141,7 +141,19 @@ All 6 items below must pass before committing a new SKILL.md. If any fails, fix 
 
 Skills without a Done When definition automatically qualify as harness-doctor L2 M-tier.
 Check-class declaration applies to **new** skills; existing skills backfill opportunistically
-(when next edited), not retroactively.
+(when next edited), not retroactively. **Trigger-accuracy probe backfill** follows the same
+opportunistic rule but scoped to **routing/gate skills only**: when an existing router/gate skill is
+edited (especially when its trigger phrases change), run steel-quench `Step 0.5 — Trigger-Accuracy
+Probe` on the changed trigger surface and record the fire-count — turning "do these triggers collide?"
+from a guess into a number. Not a retroactive sweep of all routers (that would be decorative
+over-work); it rides the edit that touches the router. **One-time baseline floor** (closes the
+never-edited-router gap — a stable router accumulates the most un-probed traffic): existing
+routing/gate skills get **one** baseline Step-0.5 probe at the next `harness-doctor` run (the 30-day
+cadence already enumerates skills), then opportunistic-on-edit thereafter — a single baseline pass,
+not a recurring sweep. **"routing/gate skill" (mechanical test)**: a skill whose *primary output is a
+dispatch decision or a pass/block verdict* — e.g. `agent-composer`, `goal-quench`, `asset-placement-gate`,
+`return-path-gate`, `phantom-quench` — NOT a skill that merely calls others as sub-steps (e.g.
+`harvest-loop`).
 
 ---
 
@@ -161,7 +173,17 @@ FH asset modified → Axis 1 (regression_guard.sh --pr {BRANCH})
       hook validates mechanically: below-floor blocks without below-floor-ack, and
       axis2-evidence must be non-vacuous — a recorded verdict/count, not "it ran". Honest
       scope: form + non-vacuity + auditability, NOT provenance — a fabricated marker is the
-      weekly audit's + operator's residual by design, judge-robustness swarm 2026-06-13)
+      weekly audit's + operator's residual by design, judge-robustness swarm 2026-06-13.
+      The below-floor-ack rubber-stamp is **structurally IRREDUCIBLE for an autonomous runner**: the
+      runner writes both the marker AND any transcript the hook could cross-check, so any in-boundary
+      check it can satisfy it can also forge (a runner-computed signature is false security). The one
+      genuine close needs a secret the runner does NOT hold — an **operator-present hard-close**: a
+      GPG-signed trailer **whose key requires a fresh interactive passphrase** (NOT an agent-cached
+      gpg-agent key, and NOT operator-git-identity alone — `user.email` is config the runner already
+      writes, forgeable, not a secret). The real guarantee is *uncached private-key access*, not commit
+      identity; optional, breaks full autonomy, use only when the operator is at the keyboard. Autonomous mode keeps the honest
+      residual + weekly-audit backstop — do NOT fake-close it. Gemini cross-analysis 2026-06-16 reached
+      this verdict independently, converging with the existing FH stance)
   → Axis 4 (/edit-manifest RECORD, today's entry in edit_manifest.yaml)
   → All 4 PASS → git commit allowed   |   Any FAIL → fix inline, re-run
 ```
