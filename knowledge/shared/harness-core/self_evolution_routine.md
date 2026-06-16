@@ -93,6 +93,15 @@ If `steel-quench`/`phantom-quench` are unavailable in the routine session, note
 `Axis N: skipped (skill unavailable)` — Axis 1 PASS alone unblocks a *draft* PR (Axes 2–3 are the
 operator's residual at merge review).
 
+**Skip-visibility at the handoff (load-bearing for honest HITL escalation).** When Axis 2
+(challenger / steel-quench) is skipped, the adversarial check did not run autonomously — it becomes
+the *merger's* responsibility. An intelligent hand-off must make that visible at the hand-off point,
+not bury it. So the draft PR opened by the weekly routine MUST carry a top-of-body label whenever
+Axis 2 was skipped: `⚠️ Axis 2 (adversarial/challenger) NOT RUN this routine — adversarial review is
+the merger's before merge.` A silent skip turns the draft PR into an unchallenged proposal wearing a
+"gate passed" coat; the label keeps the escalation honest. (Axis 2 *passing* needs no such label — the
+marker already records `axis2-engine`/`axis2-evidence`.)
+
 ## 5. Setup steps (operator, one-time)
 
 1. **Standing issue** — create one GitHub issue in `chrono-meta/forge-harness` titled
@@ -178,7 +187,9 @@ Task:
    - Axis 4: append a one-line predicted-impact entry to tracks/_meta/edit_manifest.yaml.
 6. Commit (the hook enforces the gate), push the claude/frontier-auto-* branch, and open a DRAFT pull
    request titled "frontier-auto: <one-line summary>" describing the signal it came from and the
-   predicted impact.
+   predicted impact. IF Axis 2 (challenger/steel-quench) was skipped (skill unavailable), the FIRST
+   line of the PR body MUST be: "⚠️ Axis 2 (adversarial/challenger) NOT RUN — adversarial review is
+   the merger's." Do not bury the skip — the merger has to know the proposal is unchallenged.
 7. Do NOT mark the PR ready, do NOT merge. STOP after opening the draft PR.
 ```
 
