@@ -43,10 +43,25 @@ edit history and negative-feedback buffer.
   predicted_impact: "users entering via phrase X will increase — estimate +1 session/week"
   predicted_measurable_by: "session start logs or user utterance pattern in next 2 sessions"
   validation_status: pending   # pending | verified | falsified | untestable
+  validation_type: judged      # mechanical (grep/count/git) | judged (cited observation) | untestable
+  baseline_value: null         # number, when a metric exists (mechanical)
+  measured_value: null         # filled at VERIFY
+  delta: null                  # measured_value - baseline_value, or null
+  match_score: null            # at VERIFY: 1.0 confirmed | 0.5 partial | 0.0 contradicted
   verified_at: null
-  verification_note: null
-  gate_decision: null   # accepted | rejected
+  verification_note: null      # one-line MEASURED outcome + cited evidence (never bare "seems better")
+  gate_decision: null   # accepted | redefine | rejected
 ```
+
+> **Status vocabulary is canonical and machine-greppable** — `validation_status` MUST be one of
+> `pending | verified | falsified | untestable`, never freeform prose. The verify pass (Step V1)
+> greps these literals; a freeform status like `"predicted — verify next session"` is **invisible to
+> the grep and silently never closes the loop** (the format-reconciliation bug fixed 2026-06-16 — put
+> the prose in `predicted_measurable_by`, keep `validation_status: pending`).
+>
+> `baseline_value` / `measured_value` / `delta` apply to **mechanical** entries only; judged and
+> untestable entries leave them `null`. **`match_score` is the gate input (Step V3) for all types** —
+> the numeric fields are a mechanical-entry audit detail, not a second gate signal.
 
 ## Trigger Conditions
 
@@ -105,14 +120,37 @@ that the edit rationale needs sharpening.
 **Step V1 — Load Pending Entries**
 
 ```bash
-grep -A20 "validation_status: pending" tracks/_meta/edit_manifest.yaml
+# canonical pending + legacy freeform "predicted ..." entries (transition: reconcile legacy to pending)
+# \b anchors the alternation so 'pending_review' / 'predicted_outcome' (non-canonical) still surface as legacy, not swept as pending
+grep -nA22 -E 'validation_status: *"?(predicted|pending)\b' tracks/_meta/edit_manifest.yaml
 ```
 
-Skip entries where `predicted_measurable_by` date has not yet passed.
+Skip entries where `predicted_measurable_by` date has not yet passed. **Reconcile any legacy
+freeform `validation_status: "predicted — ..."` entry to `pending` (move the prose into
+`predicted_measurable_by`) as you touch it — otherwise it stays invisible to future passes.**
+**Reconciliation completeness** (a half-reconciled entry stays unverifiable): when you touch a legacy
+entry, also backfill the fields a canonical entry needs — generate a missing `id`
+(`em-{date}-{slug}`), set `file:` from the edit's target, and set `validation_type` explicitly (default
+**mechanical** when `predicted_measurable_by` names a grep/count/git check; **judged** when it names a
+reviewer observation). A missing `validation_type` is not a silent default — name it, or the entry
+can't be scored consistently across passes.
 
 **Step V2 — Verify Each Entry**
 
-For each pending entry, check the evidence source specified in `predicted_measurable_by`:
+First classify the entry by `validation_type`, then collect evidence accordingly:
+
+- **mechanical** — prediction is a count/presence checkable by grep/git. Record `baseline_value` →
+  `measured_value` → `delta`. The check IS the evidence (non-vacuous by construction).
+- **judged** — prediction needs reviewer judgment. Requires **one concrete cited observation**
+  (file:line / a quoted signal), never a bare "seems better". No citation → stays `pending`, not verified.
+  **Non-Model Ground (the citation must be tool-confirmed, not asserted)**: the cited file:line MUST be
+  confirmed by an actual Grep/Read **in this verify pass** and the tool output (the matched line) pasted
+  into `verification_note` — a citation-shaped string asserted from memory is NOT evidence. An
+  unverifiable / un-pasted citation caps `match_score` at **0.5** (never 1.0). This is the same anchor
+  discipline as phantom-quench: a verdict rests on a surfaced span, not a claim that one exists.
+- **untestable** — no observable evidence source. Mark `untestable`, do not score.
+
+For each entry, check the evidence source specified in `predicted_measurable_by`:
 
 | Evidence Source | Check Method |
 |---|---|
@@ -120,6 +158,9 @@ For each pending entry, check the evidence source specified in `predicted_measur
 | Skill invocation count | Read `knowledge/shared/learnings/subagent_invocations_log.yaml` (create if absent) |
 | User friction signals | Grep `tracks/_meta/fh_signal_*.md` for related friction |
 | Git commit frequency | `git log --oneline --since={date} -- {file}` |
+
+Then score `match_score`: **1.0** = evidence clearly confirms the prediction · **0.5** = partial/ambiguous
+· **0.0** = contradicted or no-occurrence. Record the score + the cited evidence in `verification_note`.
 
 > **Circularity guard**: edit-manifest is invoked *by* harvest-loop (Step 0-c). To avoid a
 > circular evidence loop, edit-manifest must NOT use harvest-loop's own synthesis outputs
@@ -129,12 +170,13 @@ For each pending entry, check the evidence source specified in `predicted_measur
 
 **Step V3 — Apply Validation Gate**
 
-| Outcome | Gate Decision | Next Action |
+| `match_score` | status → Gate Decision | Next Action |
 |---|---|---|
-| Evidence confirms prediction | `verified` → `accepted` | No action needed |
-| Evidence contradicts prediction | `falsified` → `rejected` | Add to rejected-edits buffer; propose revert if regression |
-| No evidence yet | Keep `pending` | Re-check next session |
-| Untestable | `untestable` | Flag for human judgment |
+| ≥ 0.75 | `verified` → `accepted` | No action needed |
+| 0.25–0.75 | `verified`(partial) → `redefine` | Sharpen the prediction/edit; note what partially held |
+| ≤ 0.25 | `falsified` → `rejected` | Add to rejected-edits buffer; propose revert if regression |
+| no evidence / window not matured | keep `pending` | Re-check next session |
+| no evidence source | `untestable` | Flag for human judgment |
 
 **Step V4 — Rejected-Edits Buffer Report**
 
@@ -195,12 +237,18 @@ RECORD mode:
   + Untestable flag applied if vague prediction
 
 VERIFY mode:
-  All pending entries checked
-  + Gate decisions applied (accepted / rejected / pending)
+  All pending entries checked (canonical + legacy freeform reconciled to pending)
+  + validation_type classified (mechanical / judged / untestable)
+  + match_score recorded with cited evidence (mechanical: delta; judged: one cited observation)
+  + Gate decisions applied (accepted / redefine / rejected / pending)
   + Rejected-edits buffer reported
   + Manifest file updated via Edit
   + Human gate presented for any proposed reverts
 ```
+
+**Check class** (per `harness_6axis_framework.md §Axis 5`): the verify pass itself is *measured* for
+mechanical entries (delta is a number) and *judged* for judged entries — the judged path is kept
+non-vacuous by the **mandatory cited observation** (no citation → stays pending, never auto-verified).
 
 ## References
 
