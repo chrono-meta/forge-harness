@@ -85,7 +85,7 @@ Execution method · agent selection · recording location → infer and proceed 
 | "Do X" — target and completion criteria are clear | Clear | Immediately enter Step 0-b |
 | "Improve X" — improvement dimension unclear | Direction unclear | Ask for clarification |
 | "Something feels off" — diagnosis target unclear | Execution unclear → infer | Auto-dispatch harness-doctor |
-| "Run the pipeline" — trigger is clear | Clear | Run harvest-loop based on recent work |
+| "Wrap up / harvest this session" — trigger is clear | Clear | Run harvest-loop based on recent work ("run the pipeline" itself is ceded to pipeline-conductor — route end-to-end sweeps there, not here) |
 | No request — session context exists | Execution unclear → infer | Auto-compose based on CATALOG/MEMORY, then confirm |
 
 > **Detail**: See `SKILL_detail.md §Clarification` — 2-question format, 4-question structured confirmation, meta-prompting intervention — read when direction ambiguity requires a clarification block.
