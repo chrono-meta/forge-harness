@@ -123,11 +123,16 @@ escalating to full text). Two mechanical, judgment-free rules cover this:
    "section N", "Table N", "Figure N") → fetch full text **first**. Otherwise fetch `/abs/` first. (Do
    *not* pre-decide "is this a body-level mechanism?" — that is a salience-dependent judgment; the
    `§`-marker is the only mechanical signal, and the NONE-escalation below catches the rest.)
-2. **Abstract-NONE escalates** (the self-correcting backstop) — *any* `/abs/` fetch that returns
-   NONE/MENTIONS escalates once to full text before an Unsupported verdict (see Decision rules). A true
-   headline claim already returned ASSERTS on `/abs/`, so it never escalates; only a NONE does, and the
-   escalation is cheap insurance. This subsumes rule 1's misses — a body claim that *didn't* carry a `§`
-   marker still gets full text via its abstract-NONE.
+2. **Abstract NONE/MENTIONS escalates** (the self-correcting backstop) — *any* `/abs/` fetch that
+   returns **NONE or MENTIONS** escalates once to full text before an Unsupported verdict (see Decision
+   rules). A true headline claim already returned ASSERTS on `/abs/`, so it never escalates; only a
+   NONE/MENTIONS does, and the escalation is cheap insurance. (A MENTIONS on the abstract is the common
+   case — the body may ASSERT what the abstract only named; measured 2026-06-17 wild case 2604.25850 was
+   a /abs MENTIONS that became a full-text ASSERTS. A **NEGATES** does *not* escalate — it is
+   polarity-final: a body span asserting the same relation cannot coexist with an abstract that refutes
+   it; a *different, narrower* body claim is a citation-granularity error, still Unsupported, not an
+   escalation target.) This subsumes rule 1's misses — a body claim that *didn't* carry a `§` marker
+   still gets full text via its abstract NONE/MENTIONS.
 
 **HTML is a partial backfill — fall back, never Phantom.** arXiv HTML exists only for LaTeX-source
 papers (roughly post-2023) and some conversions fail, so `/html/{id}` can 404 for a perfectly real
@@ -186,15 +191,19 @@ Grounded: N / Unsupported: N / Unreachable: N / Phantom: N
 **Decision rules**:
 - Span labelled **ASSERTS** that expresses the claimed relation → **Grounded ✅** (record span).
 - Span labelled **NEGATES or MENTIONS** → **Unsupported 🟠** (a negating or merely-mentioning span is not
-  grounding — the false-Grounded trap).
+  grounding — the false-Grounded trap). **One exception — a MENTIONS from the abstract (`/abs/`) surface
+  escalates first** (per the NONE/MENTIONS escalation below) before being finalized: the body may ASSERT
+  what the abstract only mentioned. A **NEGATES** is final (the source refutes the claim — the body will
+  not undo it); a MENTIONS from a full-text surface is also final.
 - Fetch succeeded, content readable, span = NONE or off-claim → **Unsupported 🟠** (cited-but-not-verified).
-  **Surface-escalation first — abstract-NONE is the mechanical trigger (no judgment):** if the only
-  surface fetched was the abstract (`/abs/`), re-fetch full text (fall back `/html/{id}` → `/pdf/{id}`)
-  before classifying — *any* abstract-NONE escalates once, you do **not** first decide whether the claim
-  "looks body-level" (that judgment is the salience leak this rule removes). A body-supported claim must
-  not be failed on an abstract-only NONE. This is the second-surface escalation, **extended from
-  Unreachable to Unsupported-on-abstract** (2026-06-17 dogfood finding #2). Only after a full-text surface
-  *also* returns NONE/MENTIONS is the verdict Unsupported. (Single-pass: escalate once, then classify — no loop.)
+  **Surface-escalation first — an abstract NONE/MENTIONS is the mechanical trigger (no judgment):** if the
+  only surface fetched was the abstract (`/abs/`), re-fetch full text (fall back `/html/{id}` → `/pdf/{id}`)
+  before classifying — *any* abstract NONE/MENTIONS escalates once, you do **not** first decide whether the
+  claim "looks body-level" (that judgment is the salience leak this rule removes). A body-supported claim
+  must not be failed on an abstract-only NONE/MENTIONS. This is the second-surface escalation, **extended
+  from Unreachable to Unsupported-on-abstract** (2026-06-17 dogfood finding #2). Only after a full-text
+  surface *also* returns NONE/MENTIONS is the verdict Unsupported. (Single-pass: escalate once, then
+  classify — no loop.)
 - Identifier does not resolve on the **canonical** surface (`/abs/` 404, dead DOI, fabricated id) →
   **Phantom ❌**. A 404 on `/html/` or `/pdf/` while `/abs/` resolves is **surface-absence, not
   identifier-absence** — fall back per *Surface selection*, never Phantom.
