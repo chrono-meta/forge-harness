@@ -8,12 +8,16 @@ model: sonnet
 
 # edit-manifest — Predict-Verify Loop for Harness Edits
 
-> Implements two mechanisms from frontier harness research:
-> - **Change Manifest** (AHE, arXiv:2604.25850): every edit declares a falsifiable prediction;
->   the next iteration verifies it against actual outcomes.
-> - **Validation Gate** (SkillOpt, arXiv:2605.23904): candidate edits are accepted only when
->   the selection-split score strictly improves. Rejected edits are retained as negative
->   feedback for future proposals — not silently discarded.
+> Implements two mechanisms from frontier harness research, named as in their source papers (both terms
+> are the papers' own — verified 2026-06-17 against arXiv full text):
+> - **Change Manifest** (AHE, arXiv:2604.25850): each edit attaches a manifest entry declaring a
+>   falsifiable predicted impact (expected fixes + at-risk regressions); the next round intersects it
+>   with observed task-level deltas to produce a per-edit verdict. (Paper: "the Evolve Agent produces a
+>   change manifest…".)
+> - **Validation Gate** (SkillOpt, arXiv:2605.23904): a candidate is accepted only when its
+>   selection-split score is strictly greater than the current selection score (ties rejected); rejected
+>   edits are kept in an epoch-local buffer, not silently discarded. (Paper: "validation gate" /
+>   "held-out gate".)
 
 FH's regression_guard.sh catches backward regressions. edit-manifest closes the forward
 loop: did the edit actually improve what it claimed to improve?
@@ -201,7 +205,7 @@ Apply `verified_at`, `verification_note`, `gate_decision` to each resolved entry
 
 ## Validation Gate Logic
 
-Mirrors SkillOpt's selection-split gate:
+Mirrors SkillOpt's validation gate (the held-out gate over its selection-split score):
 
 ```
 IF verified evidence shows improvement:
@@ -253,6 +257,6 @@ non-vacuous by the **mandatory cited observation** (no citation → stays pendin
 ## References
 
 - Theoretical basis: AHE (arXiv:2604.25850) §4 change manifest + prediction falsifiability
-- Validation gate: SkillOpt (arXiv:2605.23904) §3.3 selection-split gate + rejected-edit buffer
+- Validation gate: SkillOpt (arXiv:2605.23904) §3.3 validation/held-out gate over the selection-split score + rejected-edit buffer
 - Integrates with: `harvest-loop` Step 0-c · `verify-bidirectional` · 3-axis auto-gate (CLAUDE.md)
 - Manifest file: `tracks/_meta/edit_manifest.yaml`

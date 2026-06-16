@@ -161,10 +161,10 @@ Polarity is load-bearing: a page saying "X does NOT hold" or "earlier work claim
 contains a span lexically matching the claim. Asking for the label keeps the *retriever* mechanical while
 surfacing the stance the *judge* needs — a NEGATES/MENTIONS span is **not** grounding.
 
-**Coinage at fetch time:** when the claim's key term is a known FH coinage (a name FH invented, not the
-paper's — e.g. "Change Manifest", "Validation Gate"), pass the *mechanism description* — not the coinage
-string — into the `<exact claim>` slot, so the retriever searches for the **relation**, not a label that
-isn't on the page. The Coinage-vs-source-term decision rule (below) then only adjudicates the returned
+**Coinage at fetch time:** when the claim's key term is a known FH coinage (a name FH invented that the
+source does *not* use — e.g. a label like "Drift Gate" for a mechanism the paper describes only in its
+own words), pass the *mechanism description* — not the coinage string — into the `<exact claim>` slot, so
+the retriever searches for the **relation**, not a label that isn't on the page. The Coinage-vs-source-term decision rule (below) then only adjudicates the returned
 span; it never has to overturn a NONE the prompt itself caused.
 
 **Span-evidence format** (a Grounded external verdict is invalid without this):
@@ -215,33 +215,39 @@ Grounded: N / Unsupported: N / Unreachable: N / Phantom: N
 - **Never** upgrade NONE to Grounded because a second model "thinks it's probably right" (agreement bias).
 
 **Coinage-vs-source-term (the external analogue of Step 2's format normalization — but *judged*, not
-mechanical).** FH sometimes attributes a *coined* name to an external source ("the paper's Change
-Manifest", "its Validation Gate") when the paper uses different words for the same mechanism. A name
+mechanical).** FH sometimes attributes a *coined* name to an external source (e.g. "the paper's Drift
+Gate") when the paper uses different words for the same mechanism. A name
 mismatch alone is not automatically Unsupported — but the path to rescuing it is **deliberately narrow**,
 because this is one rationalization away from the agreement-bias trap above. The failure direction must
 stay conservative (over-flag, never false-Grounded):
 
 - **Possessive/attributive phrasing is presumed a terminology claim.** "the paper's X", "its X",
   "X, per [paper]" → literal absence of the coinage on the source = **Unsupported 🟠**, *unless the FH
-  artifact separately states the underlying relation in non-coinage words* (so the mechanism is
-  independently legible without the label). A runner may **not** reclassify a bare "the paper's X" as a
-  mechanism claim on its own reading — the mechanism claim must already be spelled out **in the artifact**
-  before the span-judged path opens. (Closes the laundering move: relabeling a terminology claim as a
-  mechanism claim to save it.)
+  artifact separately states the underlying relation in non-coinage words* — "separately" means
+  **anywhere in the artifact, including an inline gloss of the coined term** (e.g. "**X** (the spec's
+  accept-only-on-improvement rule)"); proximity does not matter, only that the relation is stated in
+  non-coinage words, so the mechanism is independently legible without the label. A runner may **not**
+  reclassify a bare "the paper's X" (a coinage with *no* such gloss anywhere) as a mechanism claim on its
+  own reading — the mechanism claim must already be spelled out **in the artifact** before the span-judged
+  path opens. (Closes the laundering move: relabeling a terminology claim as a mechanism claim to save it.)
+  An inline gloss grants only *eligibility* for that path — Grounded still comes **only from the fetched
+  source span** (de-label test below), never from the gloss itself; a gloss the source does not support
+  is artifact-internal, fails de-label, and cannot launder a coinage into Grounded.
 - **When the mechanism IS spelled out, ground on the relation, not the string — mechanical de-label
   test:** blank out *both* labels (FH's coinage and the source's term); the span must still literally
   state the operative relation the claim asserts — the same inputs→outputs / the same conditional / the
   same action. If, with both names blanked, the span no longer states the claim, the equivalence was
-  reader-supplied → **Unsupported 🟠**. (2026-06-17 dogfood: SkillOpt's "validation score" /
-  "rejected-edit buffer" survives the de-label test for FH's "Validation Gate" claim — the span states
-  the accept-only-on-improvement relation in its own words.)
+  reader-supplied → **Unsupported 🟠**. (Worked shape: blank FH's coined label *and* the source's own
+  term; a fetched span that still literally states the operative relation — e.g. "accepted only when the
+  score strictly improves" — in the source's own words is Grounded; if the equivalence only holds once
+  you read FH's label back in, it was reader-supplied → Unsupported.)
 - **No self-granted Grounded on a contested match.** If the de-label test is contested rather than clean,
   the runner may **not** write Grounded — the *only* path to Grounded for a disputed term-match is
   **escalate to `/steel-quench` Wave 1** and let the isolated adversary surface the span or reject it.
   Default otherwise = Unsupported. (Removes the runner's discretion to self-select the lenient branch.)
 - **Recommended conservative resolution (publish-facing).** For a publish-facing citation the safer fix
-  is to require the artifact to **quote the paper's own term** ("what SkillOpt calls a 'validation
-  score'") instead of asserting FH's coinage as the paper's — removing the judgment entirely. Reserve the
+  is to require the artifact to **quote the source's own term** (e.g. "what the source itself calls X")
+  instead of asserting an unverified label as the source's — removing the judgment entirely. Reserve the
   judged de-label path for low-stakes internal claims; match effort to stakes.
 
 Unlike Step 2's value-format normalization (mechanical: `300s` ≡ `300 seconds`), coinage-vs-term is
