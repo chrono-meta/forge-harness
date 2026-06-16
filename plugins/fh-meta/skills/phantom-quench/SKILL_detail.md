@@ -106,11 +106,41 @@ literal span — never on a model's agreement.
 
 | Citation form | Resolved URL |
 |---|---|
-| `arXiv:NNNN.NNNNN` / `arXiv:NNNN.NNNNNvK` | `https://arxiv.org/abs/NNNN.NNNNN` |
+| `arXiv:NNNN.NNNNN` / `arXiv:NNNN.NNNNNvK` | `https://arxiv.org/abs/NNNN.NNNNN` (abstract — the **canonical identifier** surface). For a section-/body-cited claim, prefer full text **first**, falling back in order `https://arxiv.org/html/NNNN.NNNNN` → `https://arxiv.org/pdf/NNNN.NNNNN` → `/abs/` (HTML is a *partial* backfill — see *Surface selection* below) |
 | bare DOI `10.xxxx/...` | `https://doi.org/10.xxxx/...` |
 | `http(s)://...` | use as-is (HTTPS-upgrade handled by WebFetch) |
 | Named source, no URL ("paper X shows Y") | **one** `WebSearch` to locate the canonical URL → then WebFetch it. Do **not** verify against the search snippet alone — the snippet is not the source. |
 | version token `pkg x.y.z` | the package registry/release page (npm/PyPI/GitHub releases) for that exact version |
+
+**Surface selection — the abstract is the wrong surface for a §-cited mechanism.** The `/abs/` page
+carries only the abstract; a claim that cites a section or attributes a *named body-level mechanism* to
+the paper (e.g. "§4.2 stale-but-confident", "the paper's Change Manifest") returns NONE / MENTIONS on
+`/abs/` even when fully supported in the body — an **artificial Unsupported** (measured 2026-06-17
+in-the-wild dogfood: a `/abs/`-only fetch falsely flagged a body-supported claim; it resolved only after
+escalating to full text). Two mechanical, judgment-free rules cover this:
+
+1. **Mechanical first-surface trigger** — if the claim text carries a section/figure marker (`§N`,
+   "section N", "Table N", "Figure N") → fetch full text **first**. Otherwise fetch `/abs/` first. (Do
+   *not* pre-decide "is this a body-level mechanism?" — that is a salience-dependent judgment; the
+   `§`-marker is the only mechanical signal, and the NONE-escalation below catches the rest.)
+2. **Abstract-NONE escalates** (the self-correcting backstop) — *any* `/abs/` fetch that returns
+   NONE/MENTIONS escalates once to full text before an Unsupported verdict (see Decision rules). A true
+   headline claim already returned ASSERTS on `/abs/`, so it never escalates; only a NONE does, and the
+   escalation is cheap insurance. This subsumes rule 1's misses — a body claim that *didn't* carry a `§`
+   marker still gets full text via its abstract-NONE.
+
+**HTML is a partial backfill — fall back, never Phantom.** arXiv HTML exists only for LaTeX-source
+papers (roughly post-2023) and some conversions fail, so `/html/{id}` can 404 for a perfectly real
+paper. A 404 on `/html/` (or `/pdf/`) is **surface-absence, not identifier-absence**: fall back
+`/html/` → `/pdf/` → `/abs/`. Only a 404 on **`/abs/`** (the canonical identifier surface) is Phantom.
+
+**Anchor the full-text fetch.** Full text is large; pass the cited section number / mechanism term *into*
+the WebFetch prompt (`"…the span in §4.2 that states…"`) so the span search is anchored, not whole-paper
+— this makes the `§`-citation the retrieval anchor, not merely a routing flag, and guards against a long
+paper's relevant span falling outside the fetch model's attention (a full-text false-NONE).
+
+Reserve `/abs/` for claims the abstract itself states (headline numbers, the paper's stated contribution
+— e.g. a top-line stat like "39–77% factual support" is abstract-level and `/abs/` is correct).
 
 **WebFetch prompt template** (ask for a *span*, not a *verdict* — this keeps the anchor non-model):
 
@@ -125,6 +155,12 @@ Do not summarize, infer, or judge support — only quote a present span with its
 Polarity is load-bearing: a page saying "X does NOT hold" or "earlier work claimed X — we refute it"
 contains a span lexically matching the claim. Asking for the label keeps the *retriever* mechanical while
 surfacing the stance the *judge* needs — a NEGATES/MENTIONS span is **not** grounding.
+
+**Coinage at fetch time:** when the claim's key term is a known FH coinage (a name FH invented, not the
+paper's — e.g. "Change Manifest", "Validation Gate"), pass the *mechanism description* — not the coinage
+string — into the `<exact claim>` slot, so the retriever searches for the **relation**, not a label that
+isn't on the page. The Coinage-vs-source-term decision rule (below) then only adjudicates the returned
+span; it never has to overturn a NONE the prompt itself caused.
 
 **Span-evidence format** (a Grounded external verdict is invalid without this):
 
@@ -152,13 +188,56 @@ Grounded: N / Unsupported: N / Unreachable: N / Phantom: N
 - Span labelled **NEGATES or MENTIONS** → **Unsupported 🟠** (a negating or merely-mentioning span is not
   grounding — the false-Grounded trap).
 - Fetch succeeded, content readable, span = NONE or off-claim → **Unsupported 🟠** (cited-but-not-verified).
-- Identifier does not resolve at all (404 on a specific arXiv id, dead DOI, fabricated) → **Phantom ❌**.
+  **Surface-escalation first — abstract-NONE is the mechanical trigger (no judgment):** if the only
+  surface fetched was the abstract (`/abs/`), re-fetch full text (fall back `/html/{id}` → `/pdf/{id}`)
+  before classifying — *any* abstract-NONE escalates once, you do **not** first decide whether the claim
+  "looks body-level" (that judgment is the salience leak this rule removes). A body-supported claim must
+  not be failed on an abstract-only NONE. This is the second-surface escalation, **extended from
+  Unreachable to Unsupported-on-abstract** (2026-06-17 dogfood finding #2). Only after a full-text surface
+  *also* returns NONE/MENTIONS is the verdict Unsupported. (Single-pass: escalate once, then classify — no loop.)
+- Identifier does not resolve on the **canonical** surface (`/abs/` 404, dead DOI, fabricated id) →
+  **Phantom ❌**. A 404 on `/html/` or `/pdf/` while `/abs/` resolves is **surface-absence, not
+  identifier-absence** — fall back per *Surface selection*, never Phantom.
 - Identifier plausibly real but fetch blocked in this environment (paywall/403/timeout/cross-host) →
   **Unreachable ⏳** — provisional; note the limit, route to a second surface or the human gate; never auto-Phantom.
 - `WebFetch`/`WebSearch` **absent/disabled in the environment** (not one source — the capability) → Step 2-E
   cannot run: report "external grounding NOT PERFORMED — no fetch capability" and set verdict **ESCALATE**
   (do not mark every claim Unreachable + CONDITIONAL_PASS — that falsely implies grounding was attempted).
 - **Never** upgrade NONE to Grounded because a second model "thinks it's probably right" (agreement bias).
+
+**Coinage-vs-source-term (the external analogue of Step 2's format normalization — but *judged*, not
+mechanical).** FH sometimes attributes a *coined* name to an external source ("the paper's Change
+Manifest", "its Validation Gate") when the paper uses different words for the same mechanism. A name
+mismatch alone is not automatically Unsupported — but the path to rescuing it is **deliberately narrow**,
+because this is one rationalization away from the agreement-bias trap above. The failure direction must
+stay conservative (over-flag, never false-Grounded):
+
+- **Possessive/attributive phrasing is presumed a terminology claim.** "the paper's X", "its X",
+  "X, per [paper]" → literal absence of the coinage on the source = **Unsupported 🟠**, *unless the FH
+  artifact separately states the underlying relation in non-coinage words* (so the mechanism is
+  independently legible without the label). A runner may **not** reclassify a bare "the paper's X" as a
+  mechanism claim on its own reading — the mechanism claim must already be spelled out **in the artifact**
+  before the span-judged path opens. (Closes the laundering move: relabeling a terminology claim as a
+  mechanism claim to save it.)
+- **When the mechanism IS spelled out, ground on the relation, not the string — mechanical de-label
+  test:** blank out *both* labels (FH's coinage and the source's term); the span must still literally
+  state the operative relation the claim asserts — the same inputs→outputs / the same conditional / the
+  same action. If, with both names blanked, the span no longer states the claim, the equivalence was
+  reader-supplied → **Unsupported 🟠**. (2026-06-17 dogfood: SkillOpt's "validation score" /
+  "rejected-edit buffer" survives the de-label test for FH's "Validation Gate" claim — the span states
+  the accept-only-on-improvement relation in its own words.)
+- **No self-granted Grounded on a contested match.** If the de-label test is contested rather than clean,
+  the runner may **not** write Grounded — the *only* path to Grounded for a disputed term-match is
+  **escalate to `/steel-quench` Wave 1** and let the isolated adversary surface the span or reject it.
+  Default otherwise = Unsupported. (Removes the runner's discretion to self-select the lenient branch.)
+- **Recommended conservative resolution (publish-facing).** For a publish-facing citation the safer fix
+  is to require the artifact to **quote the paper's own term** ("what SkillOpt calls a 'validation
+  score'") instead of asserting FH's coinage as the paper's — removing the judgment entirely. Reserve the
+  judged de-label path for low-stakes internal claims; match effort to stakes.
+
+Unlike Step 2's value-format normalization (mechanical: `300s` ≡ `300 seconds`), coinage-vs-term is
+**judged** — Grounded only via a clean de-label span or a passed steel-quench escalation, never a
+reader's semantic equivalence assertion.
 
 ---
 
