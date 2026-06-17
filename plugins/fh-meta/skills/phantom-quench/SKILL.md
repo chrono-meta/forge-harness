@@ -1,6 +1,16 @@
 ---
 name: phantom-quench
-description: The grounding member of the quench series — extracts proper nouns, numerical values, and branching conditions from artifacts (TCs, analysis reports, design documents), back-traces them to declared source files — local files by literal grep, and external cited sources (arXiv/DOI/URL and version claims) by fetch-and-support-check (the Non-Model Ground pass: a claim is grounded only when its anchor is non-model — a grep hit or a literal span from a fetched source — never another model's agreement) — and marks anything not found as a Phantom Claim (ungrounded — present in the artifact but not traceable to a declared source; not a claim that it is necessarily false), and a cited source that exists but does not support the claim as Unsupported. If steel-quench attacks output patterns (self-declarations, cushion language), phantom-quench attacks input tracing (where did this come from?). Renamed from source-grounding-audit (2026-06-06, quench-series); the old name appears here so legacy references still route to this skill (alias stub directory removed 2026-06-12). Triggered by "phantom detection", "phantom-quench", "phantom claim", "hallucinated claim detection", "source back-trace", "source audit", "verify source", "TC evidence tracing", "where did this come from", "grounding audit", "source grounding audit", "false claim detection", "citation support check", "does the source support this claim", "cited but not verified", "claim to source".
+description: >-
+  Input-tracing grounding audit for artifacts such as test cases, analysis reports,
+  and design docs. Extracts proper nouns, numbers, citations, version claims, and
+  branching conditions, then back-traces each to declared local files by grep or to
+  external sources by fetch-and-support checks. Marks missing anchors as Phantom
+  Claims and cited-but-unsupporting anchors as Unsupported. A claim is grounded only
+  by non-model evidence: a local hit or literal source span, never another model's
+  agreement. Renamed from source-grounding-audit; old-name references still route
+  here. Triggered by: "phantom detection", "phantom claim", "source back-trace",
+  "where did this come from", "verify source", "does the source support this claim",
+  "grounding audit", "source grounding audit", "citation support check".
 user-invocable: true
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "WebFetch", "WebSearch"]
 model: sonnet

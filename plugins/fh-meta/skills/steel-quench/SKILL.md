@@ -1,7 +1,16 @@
 ---
 name: steel-quench
 description: >-
-  A meta-skill that concretizes a designer's anxiety into AI-driven all-angle challenger attacks (via fh-commons:quench-challenger) and shakes off flaws through defensive rounds. Systematically surfaces root weaknesses of near-complete projects wave by wave, guaranteeing near-human-review quality without direct human deep inspection. Wave 4 (Meta-Aware Adversary) is an advanced mode where the challenger uses its own AI nature — hallucination, context collapse, prompt injection, tool lock-in — as attack vectors. Wave-P3 (gate-passage re-attack) re-attacks an artifact on Coverage/Narrative/False-confidence right after an upstream gate declares PASS. Built-in fh-commons:quench-challenger agent outputs harness structure 6-axis attack+prescription pairs; after convergence, fh-meta:persona-innovator auto-extracts new patterns. Triggered by: "quench this", "devil's judgment", "all-angle review", "end-to-end verification", "steel quench", "deep pre-completion inspection", "shake out design anxiety", "attack from the root", "did it really pass?".
+  All-angle verification meta-skill for near-complete artifacts. Turns vague design
+  anxiety into structured challenger waves using fh-commons:quench-challenger, then
+  drives defense and convergence until root weaknesses, residual risks, and added
+  complexity are explicit. Covers standard attack/defense rounds, optional
+  Meta-Aware Adversary mode for AI-specific risks such as hallucination, context
+  collapse, prompt injection, and tool lock-in, and Wave-P3 re-attack after an
+  upstream gate declares PASS. Built-in outputs emphasize attack-plus-prescription
+  pairs and can feed fh-meta:persona-innovator after convergence. Triggered by:
+  "quench this", "devil's judgment", "all-angle review", "end-to-end verification",
+  "steel quench", "deep pre-completion inspection", "did it really pass?".
 user-invocable: true
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "WebSearch", "Agent"]
 model: opus

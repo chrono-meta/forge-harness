@@ -66,8 +66,13 @@ Classify failure type:
 | `NOT_FOUND` | 404 / tool not available | Server down / tool removed |
 | `MALFORMED` | Parse error on response | Schema mismatch / API change |
 | `RATE_LIMIT` | 429 / quota exceeded | Too many calls |
+| `ADMIN_GATED` | "instance admin approval required" / server pending org enablement / tool unavailable until approved | Capability exists; the **MCP mount** is gated behind instance/admin permission — not a transport failure. Retrying never recovers it (an admin must act) |
 
 If failure type cannot be determined: classify as `UNKNOWN`.
+
+> **`ADMIN_GATED` is not a retry case.** Distinguish *capability unavailable* from *MCP transport
+> unavailable*: when the block is an org/admin approval dependency, do not burn retries — route straight
+> to the lower-permission substitute in Step 4 (Priority 1b).
 
 ---
 
@@ -80,6 +85,11 @@ Count consecutive failures of the identified tool in the current session context
 | 1 | Log warning. Continue — *"MCP tool {name} failed once. Monitoring."* |
 | 2 | Escalate warning. Suggest checking server status. |
 | 3+ | **TRIP CIRCUIT** → output circuit open notice, block further calls to this tool |
+
+> **Non-transient types trip at count 1, not 3.** `ADMIN_GATED`, `AUTH`, and `NOT_FOUND` do not recover
+> on retry (an admin must act / credentials must change / the tool is gone), so counting to 3 only wastes
+> calls. On the first failure of one of these types, trip immediately and go to Step 4. The 1→2→3 ramp is
+> for *transient* types (`TIMEOUT`, `RATE_LIMIT`) where a later call may succeed.
 
 Circuit open notice format:
 ```
@@ -113,13 +123,21 @@ Log entry format:
 
 ### Step 4. Propose Alternatives
 
-Present 3 fallback options ranked by effort:
+Present the relevant fallback options ranked by effort (at least 3):
 
 | Priority | Alternative | When to Use |
 |---|---|---|
 | **1 — Substitute tool** | Use a different MCP tool or built-in tool that covers the same task | Tool-specific failure (NOT_FOUND, AUTH) |
+| **1b — Lower-permission API / workflow substitute** | The MCP mount is gated, but the underlying capability is usually still reachable through a member-scoped path: a Personal-Access-Token REST API call, or a workflow-automation runner. Before relying on it, confirm **credential scope** (a member-level token suffices?), **audit parity** (logged where the MCP path would log?), and **behavior gap** (what the MCP path does that this does not — e.g. natural-language workflow creation vs hand-written JSON). | `ADMIN_GATED` |
 | **2 — Degrade gracefully** | Skip the MCP step, note the gap, continue with available information | TIMEOUT / RATE_LIMIT |
 | **3 — Pause and retry** | Wait for server recovery (HALF-OPEN probe after cooldown) | Transient failure (TIMEOUT, RATE_LIMIT) |
+
+> **Gating carries over to the substitute** (cross-ref the external-MCP tool-gating rule
+> `mcp_tool_gating.md`). A REST/API or
+> workflow-automation tool adopted under Priority 1b is still an external-action surface: classify its
+> calls under the same ask/allow tiers — reads are `allow (untrusted-read)` only after behavior
+> confirmation; any write / send / delete / permission-change stays `ask`. Trading a gated MCP mount for
+> an ungated REST token does not lower the action's risk — only its permission barrier.
 
 Output format:
 ```
