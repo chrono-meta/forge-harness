@@ -506,7 +506,13 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc.)
   → ④ Memory hygiene — update stale entries + record new session findings
   → ④-b npm freshness — if any npm-shipped asset changed this session (the `package.json` `files[]`
        surface: skills · agents · README · AGENTS.md · CLAUDE.md · CHEATSHEET), **propose an npm
-       republish**: version bump + Pre-Publish Surface Gate (`/public-surface-audit` + `/marketplace-gate`
+       republish**: version bump — and the **same bump MUST propagate in lockstep to every
+       `.claude-plugin/plugin.json` + `.claude-plugin/marketplace.json` version** (single-source =
+       `package.json`). The Codex plugin loader keys its cache path on the *plugin.json* version
+       (`~/.codex/plugins/cache/forge-harness/{plugin}/{version}/`), so a frozen plugin.json serves
+       **stale cached skills to Codex/AGENTS.md users** even after content ships (this exact 3-way
+       drift — fh-meta 1.4.1/1.4.11 vs npm 1.4.32 — was found + fixed 2026-06-17). Then Pre-Publish
+       Surface Gate (`/public-surface-audit` + `/marketplace-gate`
        Check 5) + `npm publish` + **`git tag vX.Y.Z` on the bump commit + `git push origin vX.Y.Z`**
        (tag at publish time, in lockstep with the version — keeps git tags aligned with npmjs.com so
        Releases/Tags never drift). The npm-served README and shipped skills/agents freeze at publish

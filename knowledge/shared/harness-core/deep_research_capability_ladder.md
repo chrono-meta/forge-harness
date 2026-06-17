@@ -52,6 +52,39 @@ agent-harness papers" is both literature survey and AI/harness trend. Default to
 synthesis**; route to rung 3 (`frontier-digest`) only when the user explicitly wants the recurring
 HN/arxiv cadence digest, not a one-off topic survey.
 
+## Dual-Track Grounding — run the ladder as TWO tracks, harvest the disagreement
+
+The rungs above answer "what does the external world assert?" (an **open-frontier** track). FH already
+holds a second source of truth: **internally-grounded recall** — memory + CATALOG + past-session records
+(what we already established, with provenance). Running both and **comparing** them is a research-layer
+**partial analogue of Non-Model Ground** (`[[fh_propagation_nonmodel_ground]]`): the grounded track is a
+**time-decorrelated, provenance-bearing** anchor — written in a prior session against recorded sources,
+so the present session's agreement-bias cannot silently overwrite it. It is **not** a true non-model
+anchor (memory is model-written) — the independence is temporal + provenance, not lineage.
+
+```
+open track     = ladder rung 1/2 (deep-research / WebSearch)   →  what the frontier asserts now
+grounded track = memory + CATALOG + session recall             →  what we already established
+                         │ run independently (agent-composer can parallelize)
+                         ▼
+              contention-layer  (Track conflict / Step 1-b)
+   AGREE → corroboration (low signal)   DISAGREE → high signal   UNSUPPORTED → phantom-quench
+```
+
+**Why dual-track and not single deep-research**: a single track — however strong the model — can be
+confidently wrong with nothing to contradict it (agreement-bias). The grounded track is the
+time-decorrelated check. The disagreement, not either track alone, is the harvest trigger.
+
+**Routing semantics live in `contention-layer` Step 1-b — not here** (single source, no duplicate): the
+AGREE / DISAGREE / UNSUPPORTED outcomes, the "direction is judged" rule (stale → `memory-hygiene` vs
+publishable delta), and the **challenger-verify-before-act** pairing
+(`[[feedback_challenger_verify_before_act]]`, source-verify before rewriting either side) are defined
+operationally in that skill. This doc only routes the two tracks *into* it.
+
+This is an *application* of the ladder, not a new rung — the ladder still routes each track; contention-layer
+consumes the pair. Most valuable in **data-heavy field projects** (a large internal corpus to ground
+against) and in **Mode D** (frontier claims checked against the FH record).
+
 ## Honesty caveats (do not overclaim a research result)
 
 - **Quality is bounded by source access + model tier**, not by invoking the ladder. A blocked fetch or
