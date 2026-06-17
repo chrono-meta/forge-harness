@@ -1,0 +1,8 @@
+# public-surface-audit DEFAULTS (COMMITTED — universal, non-operator-private patterns only).
+# The gate loads this + the gitignored .public-surface-patterns (operator literals) so it is
+# NEVER fully blind, even on a fresh clone before the operator populates the gitignored override.
+# Put ONLY patterns that are safe to publish here (no real username/company/companion-store names).
+# NOTE: a pattern here must NOT match its own regex text, or committing this file self-blocks. The
+# /Users/ class below is safe — the literal '[' after /Users/ cannot match the class [a-z0-9_-].
+# Format: severity<TAB>regex
+MED	/Users/[a-z0-9_-]+/

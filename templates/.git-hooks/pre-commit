@@ -392,6 +392,102 @@ else
   echo "  ✅ PASS"
 fi
 
+# ── Confidentiality guard — public-surface scan on staged tracked content ─────
+# A commit to a PUBLIC repo is an effective PUBLISH of its content. The 4 axes above
+# verify STRUCTURAL integrity, not the confidentiality boundary — that is
+# public-surface-audit's job, and the prose trigger to run it was historically missed
+# on weaker-tier sessions (PR #109: a companion-store name + corp-context framing reached
+# a public PR; the Sonnet session's self-check trusted a PR comment over the file content).
+# This makes the confidentiality axis MECHANICAL *wherever the pattern source is configured*.
+#
+# Two-layer, mirroring public-surface-audit's own design: operator-private LITERALS live ONLY
+# in the GITIGNORED override; THIS SCRIPT NAMES NONE OF THEM. A COMMITTED *.defaults file carries
+# only universal, non-private patterns (absolute home paths) so the gate is NEVER fully blind even
+# before the operator populates the override. Scans the ADDED lines of staged TRACKED files
+# (gitignored paths are never staged → the public surface is exactly what is scanned).
+#
+# Honest scope: plaintext added lines only — encoded/obfuscated tokens are out of scope (weekly-audit
+# + operator residual). HIGH/MED substring patterns match WITHOUT word boundaries — author the gitignored
+# source with specific phrases to avoid in-word false matches. The '+++ b/<path>' diff header degrades to
+# '++ b/<path>' and is kept in the scanned body on purpose (also catches a leak in a new FILENAME).
+echo "[Confidentiality] public-surface scan (staged tracked content)..."
+PSA_DEFAULTS="$REPO_ROOT/.claude/rules/.public-surface-patterns.defaults"        # committed, universal
+PSA_OVERRIDE="${PSA_PATTERNS:-$REPO_ROOT/.claude/rules/.public-surface-patterns}" # gitignored, operator literals
+# Placeholder/example shapes — incl. path-embedded (documented example paths must pass, not block).
+PSA_PLACEHOLDER='^(<[a-z0-9_-]+>|\{[a-z_]+\}|EXAMPLE|dummy|changeme|REDACTED|xxxx|/Users/(EXAMPLE|yourname|\{[a-z_]+\}|<[a-z0-9_-]+>)/)$'
+psa_low_allowlisted() {  # files that legitimately name companion/wiring tokens (LOW only; HIGH/MED still block)
+  case "$1" in
+    .gitignore|scripts/sync-to-be.sh|.claude/rules/local_fh_context.md|templates/local_fh_context.md|templates/.claude/rules/*|templates/.git-hooks/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+# Active patterns = committed defaults + gitignored override (if present).
+PSA_STREAM=""
+[ -f "$PSA_DEFAULTS" ] && PSA_STREAM=$(cat "$PSA_DEFAULTS")
+if [ -f "$PSA_OVERRIDE" ]; then
+  PSA_STREAM="$PSA_STREAM"$'\n'"$(cat "$PSA_OVERRIDE")"
+else
+  echo "  ⚠️  operator pattern override absent — only committed defaults active (home paths)."
+  echo "     Populate .claude/rules/.public-surface-patterns (gitignored) for company-specific tokens"
+  echo "     (esp. the company env, where company-origin public PRs are authored)."
+fi
+if [ -z "$(printf '%s' "$PSA_STREAM" | grep -vE '^[[:space:]]*(#|$)' || true)" ]; then
+  echo "  ⚠️  no patterns loaded — confidentiality gate INACTIVE in this env."
+else
+  PSA_LEAK=0
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    added=$(git diff --cached -- "$f" 2>/dev/null | grep -E '^\+' | sed 's/^\+//' || true)
+    [ -z "$added" ] && continue
+    # Split-token backstop: TIGHT-join (no separator) so a token wrapped mid-word across added
+    # lines (e.g. "fh-\nbe" → "fh-be") is caught. Accepted residual (verified, not a missed fix):
+    # two whitespace-separated words can RARELY fuse into a spurious match — safe-direction (over-block)
+    # + PUBLIC_SURFACE_OK escape. A sentinel separator would close that fusion but RE-OPEN the split-catch
+    # (the more important case: real literals have no internal whitespace), so tight-join is deliberate.
+    joined=$(printf '%s' "$added" | tr -d '\n\r')
+    while IFS=$'\t' read -r sev regex; do
+      [ -z "$regex" ] && continue
+      case "$sev" in \#*) continue;; esac
+      per_line_hit=0
+      while IFS= read -r h; do
+        [ -z "$h" ] && continue
+        tok=$(printf '%s' "$h" | grep -oiE "$regex" | head -1)
+        printf '%s' "$tok" | grep -qiE "$PSA_PLACEHOLDER" && continue
+        if [ "$sev" = "LOW" ] && psa_low_allowlisted "$f"; then continue; fi
+        echo "  ❌ $sev leak — $f: '$tok' on the public surface"
+        PSA_LEAK=1; per_line_hit=1
+      done <<< "$(printf '%s\n' "$added" | grep -nIE "$regex" 2>/dev/null || true)"
+      # Split-token backstop: catch a token line-wrapped across added lines — only if the per-line
+      # pass found nothing for this pattern (avoids double-reporting the common single-line case).
+      if [ "$per_line_hit" -eq 0 ]; then
+        jtok=$(printf '%s' "$joined" | grep -oiE "$regex" 2>/dev/null | head -1 || true)
+        if [ -n "$jtok" ] && ! printf '%s' "$jtok" | grep -qiE "$PSA_PLACEHOLDER" \
+           && ! { [ "$sev" = "LOW" ] && psa_low_allowlisted "$f"; }; then
+          echo "  ❌ $sev leak (line-split) — $f: '$jtok' on the public surface"
+          PSA_LEAK=1
+        fi
+      fi
+    done <<< "$PSA_STREAM"
+  done <<< "$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null || true)"
+  if [ "$PSA_LEAK" -eq 1 ]; then
+    if [ "${PUBLIC_SURFACE_OK:-0}" = "1" ]; then
+      echo "  ⚠️  public-surface hit(s) allowed by PUBLIC_SURFACE_OK=1 (conscious, reviewed intent)"
+      # Audit trail (parity with below-floor-ack): record the override event (NOT the token) so the
+      # weekly audit can re-queue it. Gitignored log → no token re-leak into committed history.
+      echo "$(date +%Y-%m-%dT%H:%M:%S) PUBLIC_SURFACE_OK override — branch $BRANCH — review suppressed hit(s) above" \
+        >> "$REPO_ROOT/tracks/_meta/.psa_override_log" 2>/dev/null || true
+    else
+      echo "  Operator-private token reached the public surface. Generalize it"
+      echo "  (companion-store name → 'a private companion store'; corp-context → 'restricted/corp env';"
+      echo "   absolute home path → '~' or '{project}'), or PUBLIC_SURFACE_OK=1 git commit … for a"
+      echo "  deliberate, reviewed mention. Literal mapping lives in the gitignored pattern source."
+      FAILED=1
+    fi
+  else
+    echo "  ✅ PASS"
+  fi
+fi
+
 # ── Verdict ───────────────────────────────────────────────────────────────────
 echo ""
 echo "══════════════════════════════════════════════"

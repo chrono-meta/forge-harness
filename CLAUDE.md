@@ -281,13 +281,32 @@ not marketplace-gate alone:
 `LICENSE`/`README` contains a **private harness name or internal codename** · **module paths encode
 internal acronyms**.
 
-**Why no hook (honest)**: the irreversible action is `gh repo create --public` / a visibility flip, **not
-`git commit`** — and it usually happens in a **separate repo**, not forge-harness. The FH pre-commit hook
-cannot catch either. This gate is therefore **AI-behavioral** (proactive trigger below) **+ a portable
-checklist** (`templates/PRE-PUBLISH-CHECKLIST.md`) the operator runs on any repo, on any machine.
+**Hook coverage — two distinct actions (refined 2026-06-17)**:
+- **(a) repo-go-public** (`gh repo create --public` / a visibility flip) is irreversible and usually in a
+  **separate repo** — the FH pre-commit hook **cannot** catch it. That stays **AI-behavioral** (proactive
+  trigger below) **+ a portable checklist** (`templates/PRE-PUBLISH-CHECKLIST.md`), run on any repo/machine.
+- **(b) committing operator-private tokens into public-tracked content of THIS repo IS an effective
+  publish of that content** — and that the pre-commit hook **now catches mechanically**: a
+  **confidentiality scan** of staged tracked *added* lines against the gitignored
+  `.public-surface-patterns` (companion-store names · corp-context framing · home paths · company assets),
+  blocking HIGH/MED + non-allowlisted LOW drift; `PUBLIC_SURFACE_OK=1` overrides for a deliberate reviewed
+  mention. **Two-layer** (mirrors `/public-surface-audit`): the literal tokens live ONLY in the gitignored
+  source — CLAUDE.md and the hook name **only categories**, never the literals (they would leak what they
+  guard). This closes the gap where the prose publish-trigger was **missed on a weaker-tier session**
+  (PR #109: a companion-store name + corp-context framing reached a public PR; the Sonnet session trusted a
+  PR comment over the file content). The scan fires at commit time and is **tier-independent — but only as
+  strong as the loaded patterns**: a COMMITTED `.public-surface-patterns.defaults` (universal patterns:
+  home paths) keeps it from ever being fully blind, while the company-specific literals require the
+  GITIGNORED override to be populated in each authoring env (esp. the company env, where company-origin
+  public PRs are written; absent override → only defaults run, with a loud warning). **Honest scope**:
+  plaintext only (encoded tokens out of scope); a line-split backstop catches a token wrapped across
+  lines; `PUBLIC_SURFACE_OK=1` overrides and is logged to a gitignored audit trail for the weekly audit.
+  Residuals (split-encoding, override-not-populated, override abuse) are documented, not silent.
 
 > Origin: 2026-06-05 `phantom-gate` shipped public, then needed a private→de-company-scrub→re-public
-> round-trip (`fh_signal_2026-06-05_fh-direct`). PSA existed but nothing forced it pre-publish.
+> round-trip (`fh_signal_2026-06-05_fh-direct`). PSA existed but nothing forced it pre-publish. 2026-06-17
+> (PR #109): the commit-time half (b) became a mechanical hook after a weaker-tier session leaked a
+> companion-store name onto a public PR (`fh_signal_2026-06-17` Wave 4).
 
 ---
 
@@ -344,7 +363,7 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "where does this go", "asset location", "hub vs project", "placement" | `/asset-placement-gate` |
 | "add to marketplace", "OK to publish", "pre-publish check" | `/marketplace-gate` |
 | "did I leak anything", "public surface audit", "private token scan", "is my split clean", "check tracked files for private tokens" | `/public-surface-audit` |
-| "publish", "make public", "make this repo public", "go public", "gh repo create --public", "flip to public", "first public push", "publish the package", "npm publish", "twine upload" (publish intent — **proactive**, fire *before* the action) | **Pre-Publish Surface Gate** (see above → `/public-surface-audit` + `/marketplace-gate` Check 5 must PASS first) |
+| "publish", "make public", "make this repo public", "go public", "gh repo create --public", "flip to public", "first public push", "publish the package", "npm publish", "twine upload", **opening/updating a PR or pushing content to the public hub** (esp. company-origin) (publish intent — **proactive**, fire *before* the action; adding content to an already-public repo IS publishing that content) | **Pre-Publish Surface Gate** (see above → `/public-surface-audit` + `/marketplace-gate` Check 5 must PASS first). The commit-time half is now **hook-enforced** (mechanical confidentiality scan — see Pre-Publish Gate §Hook coverage (b)), so this proactive trigger is the salience layer over a mechanical floor. |
 | "delete the branch", "브랜치 삭제", "브랜치 정리", "clean up branches", "force-push", "rewrite history", "지워도 돼?" (destructive intent — **proactive**, fire *before* the action) | **Destructive-Op Gate** (see above → enumerate → recover → destroy; `templates/predelete_check.sh`) |
 | "look at this again", "is this right", "counterargument", "re-validate" | `/verify-bidirectional` |
 | "MCP failing", "tool keeps erroring", "circuit-breaker", "same error looping" | `/mcp-circuit-breaker` |
