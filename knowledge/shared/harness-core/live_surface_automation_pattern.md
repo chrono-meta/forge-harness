@@ -15,6 +15,9 @@ engine** (no-reinvention). The value FH adds is the *contract* below, not a new 
 This is the acceleration axis behind the "③ map-project acceleration" door's live-surface capability
 (`[[fh-live-surface-acceleration]]`). It was first validated on web (Playwright MCP); the 2026-06-14
 validation extended it to mobile (Android + iOS) and surfaced the two principles that make it work.
+A 2026-06-19 two-surface session then measured the **logged-in-web** (claude-in-chrome) and
+**native-desktop** (computer-use) lanes against the same six-primitive contract — splitting the web
+row into isolated vs logged-in and adding a native-desktop row (see Driver routing).
 
 ## The observe-act-verify contract (driver-agnostic)
 
@@ -37,12 +40,28 @@ bounds), the top candidate is acted on, and the post-action observation is check
 
 | surface | driver | note |
 |---|---|---|
-| web | Playwright MCP (Claude-usable) / Stagehand | generic-coding-agent usable — covers users without a proprietary browser-agent app |
+| web — isolated (no login) | Playwright MCP (Claude-usable) / Stagehand | isolated session, no operator cookies; generic-coding-agent usable — covers users without a proprietary browser-agent app |
+| web — logged-in (operator's authenticated session) | authenticated-session browser driver — currently claude-in-chrome (`/chrome`) | reaches SSO-behind SPAs the isolated lane can't; `find` → DOM element ref. Current-instance caveats in footnote † |
+| native desktop screen | screen-control driver — currently computer-use (screenshot + coordinate, vision channel) | reaches non-browser native app windows the browser lanes can't; `observe` is vision-coordinate, not an AX/DOM tree. ⚠️ local-session-bound (remote-control), no mobile; `input_text` unverified (5/6 — see note) |
 | Android (emulator **or** real device) | `adb` + `uiautomator dump` + `input tap` | same code path for both — see Portability below |
 | iOS simulator | `idb ui describe-all` + `idb ui tap` (idb-companion + fb-idb) | native AX tree |
 | hybrid WebView region | **vision channel** (screenshot + element detection) | native AX is blind here — see Hybrid rule |
 
 FH routes; it does not reimplement these. Drivers are pluggable; the contract is fixed.
+
+**Observe channel + measurement (2026-06-19).** computer-use fills `observe` via the **vision channel**
+(screenshot + coordinate) — the same channel the hybrid-WebView rule already mandates (below), now for
+native desktop; the browser and mobile drivers fill it with a structured tree (DOM ref / AX). Measured
+that session: claude-in-chrome closed **all six** primitives on both a no-login and an operator-logged-in
+surface; computer-use closed **five** (launch / screenshot / observe(vision) / tap / screen_signature) —
+`input_text` is keyboard-capable but was not exercised. The lanes cover **different surfaces, not
+redundant ones** — calculator success on computer-use does not imply chrome, and only chrome reaches the
+logged-in session.
+
+† **Current-instance caveats (point-in-time, not routing inputs).** claude-in-chrome and computer-use are
+built-in MCPs — verify presence via the `/mcp` UI, not `claude mcp list`. claude-in-chrome needs a direct
+first-party plan (unavailable on Bedrock/Vertex) and a per-site permission grant. Tool surface as measured
+2026-06-19: claude-in-chrome ~22, computer-use ~24 (counts drift across releases — not a routing input).
 
 ## ★ Principle 1 — Appium-less is the enabler
 
