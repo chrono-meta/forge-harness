@@ -113,6 +113,13 @@ Routing conclusion:
 
 After confirming routing path, auto-generate a new skill SKILL.md skeleton.
 
+> **Reuse — need-driven scaffold**: this skeleton is also the template for Full-Harness Mode's
+> field-asset scaffold (`auto_project_mapping.md §6`). There the entry is not a conflict but a
+> **skill-worthy recurring pattern** (3+ reps · `#skill-candidate` · `field-harvest`); set
+> `origin: field-scaffold` and replace `contention-parents` with the source pattern pointer. An
+> **agent** variant emits `.claude/agents/{name}.md` (`name`/`description`/`tools` + self-contained
+> prompt) instead of this SKILL.md frontmatter. The field team fills domain content; FH only scaffolds.
+
 ```markdown
 ---
 name: {slug}
