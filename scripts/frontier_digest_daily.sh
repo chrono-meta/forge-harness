@@ -23,7 +23,11 @@ fi
 
 cd "$FH_DIR"
 
-"$CLAUDE_BIN" -p \
+# --permission-mode acceptEdits: headless runs have no human to approve the Write, so the digest
+# Write to tracks/_meta/ was silently denied (claude still exits 0) — the runner fired daily but
+# persisted nothing. acceptEdits auto-accepts the file Write only (not arbitrary tool calls), which
+# is the minimal fix; read/fetch tools stay pre-approved via .claude/settings.json. (fixed 2026-06-19)
+"$CLAUDE_BIN" -p --permission-mode acceptEdits \
     "Run /frontier-digest for today ($(date +%Y-%m-%d)). Fetch latest signals from HN, arXiv, and GitHub. Save the digest to tracks/_meta/frontier_digest_${TODAY}.md." \
     >> "$LOG_FILE" 2>&1
 
