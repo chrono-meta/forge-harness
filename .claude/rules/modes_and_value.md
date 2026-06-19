@@ -63,6 +63,16 @@ When FH work runs in an **ephemeral, git-invoked environment** (Claude Code on t
 
 The handoff must be the obvious entry point a fresh local session lands on — its own file/comment carrying status + the single immediate next action + exact steps — not a footnote buried in a digest. **Never rely on gitignored / local-only files** (`.claude/settings.json`, and `tracks/_meta/*` unless you are Mode D with sync confirmed) for cross-session continuity in an ephemeral environment; they are wiped on reclaim. Mode D exception: gitignored local session data is auto-synced to the companion store via a Stop hook — durable for local-to-local continuity, but the sync hook itself does not run in cloud/ephemeral environments, so `handoff/` remains the correct channel there.
 
+### Session-start freshness — the card is a pointer, the committed store may be fresher (Mode D)
+
+At session start, after loading the companion store (or, for non-Mode-D users, the working-repo handoff), **check the store's newest *committed* work, not only the session card**. The companion store is a **durable git-committed repo** — distinct from the gitignored local mirror the paragraph above warns against; reading its commit history is safe *because* it is committed. A session card is written at one moment, but another environment or a later session can commit **newer** work to the store *after* that card. So **"pull is up-to-date" ≠ "I have seen the latest work."**
+
+- Concretely: compare the store's **newest commit date** to the card's date; if newer, read that content and reconcile it into the session plan/greeting *before* acting.
+- Precedence is **reconcile, not override**: newer-by-date content *triggers a read-and-reconcile* — it never silently wins over the card. The card may have been deliberately edited *after* a mechanical auto-sync commit (the card is written last in the close chain; the Stop hook fires on every stop), so **commit-recency ≠ authoring-authority**. When card and recent commits disagree, surface both and reconcile — do not let the newer timestamp auto-win.
+- Distinct from the Agent-View pre-read (in the hub `CLAUDE.md` §Session Wrap-up, which fires only in worktree/Agent-View sessions): this fires on **every** session start.
+
+*Salience note*: session-start prose, not hook-enforced (no SessionStart hook — `operational_adaptation.md` §Guards defers it, 2026-06-16); on a weaker tier it may silently not fire. Accepted, not silent — revisit if a target-tier sim measures a miss.
+
 **Single-source guard**: this methodology lives here in the public mirror. A companion store holds only the *outputs* that follow it (digests · signals · handoff files), never a copy of the rule.
 
 ---
