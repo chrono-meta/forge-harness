@@ -15,28 +15,53 @@ FH="${HUB_DIR:-$HOME/PycharmProjects/forge-harness}"
 BE="${BE_DIR:-$HOME/PycharmProjects/fh-be}"
 QUIET="${1:-}"
 
-# CC stores per-project memory under ~/.claude/projects/<path-with-slashes-as-dashes>/memory
-ENC=$(printf '%s' "$FH" | sed 's#/#-#g')
-MEM="$HOME/.claude/projects/${ENC}/memory"
+# CC stores per-project memory under ~/.claude/projects/<encoded-abs-path>/memory.
+# The encoding maps path separators (/ \ :) → '-', so it differs per OS, and git-bash's
+# posix path ($HOME=/c/...) does NOT match CC's native-path encoding on Windows (C:\… →
+# C--…). The dir therefore CANNOT be computed by sed-ing $FH — resolve it by globbing the
+# encoded tail (parent + project folder), which is identical on macOS and Windows.
+# (fh_signal 2026-06-19: Windows mis-encoded memory dir → Stop-hook never mirrored memory.)
+HAVE_RSYNC=0; command -v rsync >/dev/null 2>&1 && HAVE_RSYNC=1
+resolve_mem_dir() {
+  local root="$1" projects="$HOME/.claude/projects" tail d
+  [ -d "$projects" ] || return 0
+  tail="$(basename "$(dirname "$root")")-$(basename "$root")"   # e.g. PycharmProjects-forge-harness
+  for d in "$projects"/*"$tail"/; do [ -d "${d}memory" ] && { printf '%s' "${d}memory"; return 0; }; done
+  for d in "$projects"/*"$tail"/; do [ -d "$d" ] && { printf '%s' "${d}memory"; return 0; }; done
+  return 0
+}
+MEM="$(resolve_mem_dir "$FH")"
 
 log() { [ "$QUIET" = "--quiet" ] || echo "[sync-to-be] $*"; }
 
-TOTAL=0
+TOTAL=0   # files synced (rsync mode, countable)
+DIRTY=0   # cp-fallback mode can't count cheaply → mark work done, let git-diff gate decide
 
 # sync_dir SRC DST — append-only rsync (no --delete); skips silently if SRC missing.
 sync_dir() {
   local src="$1" dst="$2"
   [ -d "$src" ] || { log "skip (no source): $src"; return 0; }
   mkdir -p "$dst"
-  local out n
-  # capture separately so a no-match grep (exit 1) under pipefail can't kill the script
-  out=$(rsync -a --itemize-changes "$src/" "$dst/" \
-    --exclude='.gitkeep' \
-    --exclude='*.marker' \
-    --exclude='logs/') || true
-  n=$(printf '%s\n' "$out" | grep -c '^[>c]' || true)
-  TOTAL=$((TOTAL + n))
-  [ "$n" -eq 0 ] || log "$n file(s) synced → $dst"
+  if [ "$HAVE_RSYNC" -eq 1 ]; then
+    local out n
+    # capture separately so a no-match grep (exit 1) under pipefail can't kill the script
+    out=$(rsync -a --itemize-changes "$src/" "$dst/" \
+      --exclude='.gitkeep' \
+      --exclude='*.marker' \
+      --exclude='logs/') || true
+    n=$(printf '%s\n' "$out" | grep -c '^[>c]' || true)
+    TOTAL=$((TOTAL + n))
+    [ "$n" -eq 0 ] || log "$n file(s) synced → $dst"
+  else
+    # rsync absent (default Windows git-bash): tar-pipe mirror with the same excludes,
+    # no --delete (append-only). Source is canonical, so overwriting be's copy is correct.
+    if ( cd "$src" && tar cf - --exclude='.gitkeep' --exclude='*.marker' --exclude='logs' . ) \
+         | ( cd "$dst" && tar xf - ); then
+      DIRTY=1; log "mirrored (cp mode) → $dst"
+    else
+      log "mirror failed (cp mode) → $dst"
+    fi
+  fi
 }
 
 # sync_file SRC DSTDIR — append-only rsync of a single file; skips silently if SRC missing.
@@ -44,11 +69,19 @@ sync_file() {
   local src="$1" dstdir="$2"
   [ -f "$src" ] || { log "skip (no file): $src"; return 0; }
   mkdir -p "$dstdir"
-  local out n
-  out=$(rsync -a --itemize-changes "$src" "$dstdir/") || true
-  n=$(printf '%s\n' "$out" | grep -c '^[>c]' || true)
-  TOTAL=$((TOTAL + n))
-  [ "$n" -eq 0 ] || log "synced $(basename "$src") → $dstdir"
+  if [ "$HAVE_RSYNC" -eq 1 ]; then
+    local out n
+    out=$(rsync -a --itemize-changes "$src" "$dstdir/") || true
+    n=$(printf '%s\n' "$out" | grep -c '^[>c]' || true)
+    TOTAL=$((TOTAL + n))
+    [ "$n" -eq 0 ] || log "synced $(basename "$src") → $dstdir"
+  else
+    if cp -p "$src" "$dstdir/"; then
+      DIRTY=1; log "copied (cp mode) $(basename "$src") → $dstdir"
+    else
+      log "copy failed (cp mode) $(basename "$src") → $dstdir"
+    fi
+  fi
 }
 
 sync_dir  "$FH/tracks/_meta"   "$BE/tracks-meta"
@@ -63,7 +96,7 @@ cd "$BE"
 # Without this guard, set -e kills the script at `git add` with a noisy error
 # on every Stop-hook run (fh_signal_2026-06-10: companion-store portability).
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
-  log "companion store is not a git repo — mirror-only mode ($TOTAL file(s) synced, no commit/push)"
+  log "companion store is not a git repo — mirror-only mode ($([ "$HAVE_RSYNC" -eq 1 ] && echo "$TOTAL file(s) synced" || echo "cp-mode mirror done"), no commit/push)"
   exit 0
 }
 
@@ -82,7 +115,7 @@ maybe_push() {
   fi
 }
 
-if [ "$TOTAL" -eq 0 ]; then
+if [ "$TOTAL" -eq 0 ] && [ "$DIRTY" -eq 0 ]; then
   log "already up to date"
   maybe_push   # flush any commits a previous run couldn't push
   exit 0
