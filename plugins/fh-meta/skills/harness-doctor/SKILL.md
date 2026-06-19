@@ -40,6 +40,34 @@ Check current cwd harness file structure and determine if FH environment (tracks
 | `.claudeignore` | S-tier — context-doctor execution recommended |
 | `.claude/` directory | M-tier (when rule files exist) |
 
+### Step 2-E. L1-E — ETCLOVG Layer Coverage *(functional-layer lens — orthogonal to the file-presence table above)*
+
+A harness is not only files; it is **seven functional layers** (ETCLOVG — arXiv:2606.06324, a component
+taxonomy *orthogonal* to FH's 6-axis process model; cross-audit
+`tracks/_audit/session_2026_06_19_harnessfix-etclovg-cross-audit.md`). FH adopts only the **taxonomy as a
+coverage lens** — not the paper's scoring model. A **coverage checklist, not a mandate**: not every
+harness needs all seven (a read-only doc harness needs no Execution or Governance). For each layer ask
+"is there an asset covering it?"; surface gaps, let the human judge if each is real for *this* harness.
+
+| Layer | Covers | Typical FH asset | If the gap is judged real → priority hint |
+|---|---|---|---|
+| **E** Execution | isolated/reproducible env, bounded autonomy | Agent-dispatch isolation · goal-quench budget | advisory |
+| **T** Tooling | tool discovery / selection / gating | mcp_tool_gating · plugin-recommender | advisory |
+| **C** Context | what the model sees: card, memory, retrieval | session card · CATALOG · context-doctor | advisory |
+| **L** Lifecycle | loops, retries, orchestration, termination | agent-composer · goal-quench | advisory |
+| **O** Observability | traces / logs / cost to diagnose failures | subagent_invocations_log · audit logs · activity log | advisory |
+| **V** Verification | readiness · intermediate · final · regression checks | 4-axis gate (steel/phantom/regression_guard) | higher-stakes |
+| **G** Governance | permissions · approvals · audit trails | HITL gates · public-surface gate | higher-stakes |
+
+**Relationship to the Harness-Defect Taxonomy (below)**: ETCLOVG = *component coverage* (is the layer
+present?); the Defect Taxonomy = *failure modes* (is a present layer degrading?). Orthogonal — coverage vs health.
+
+**Check class**: judged (advisory) — the presence test is mechanical, but "is this gap real for this
+harness's purpose?" is a judged call, **paired** with the human review at Step 7's M-tier gate. **Never
+auto-tier a missing layer into the M/S/R report** — the priority column is a *hint only if a human
+confirms the gap*, never a verdict the report emits on its own; surface each gap tagged "(human-confirm)".
+(FH's own weak layer is **Observability** — retrospective audit only, no runtime layer; named in the cross-audit.)
+
 ### Step 3. L2 — Complexity Diagnosis
 
 | Check | Verdict |
@@ -185,6 +213,11 @@ coverage (laziness) · judged-pairing rule (bias) · pre-compaction completion l
 ### 🟩 R-tier (Recommended)
 
 ---
+## ETCLOVG Layer Coverage (L1-E)
+- Covered: [layers with an asset, e.g. E·T·C·L·V·G]
+- Gaps (surfaced, never auto-tiered — each "(human-confirm)"): [e.g. "O Observability (human-confirm) — retrospective audit only, no runtime layer"] or "full coverage"
+
+---
 ## L5 Pattern Analysis
 - Activity (L5-A): [list]
 - Context appropriateness (L5-B): [suspected misuse or "no issues"]
@@ -195,7 +228,7 @@ coverage (laziness) · judged-pairing rule (bias) · pre-compaction completion l
 - HIGH (spec-only — missing Done When): [list or "none"]
 - LOW (language patterns): [file: L{N}: "{text}" → {suggestion}]
 
-Diagnostic scope: L1~L3 [· L4 · L5 (FH only)] [· --lint]
+Diagnostic scope: L1 (+L1-E ETCLOVG coverage) ~L3 [· L4 · L5 (FH only)] [· --lint]
 ```
 
 M-tier 0 → output "Structure healthy. Maintaining simplification trend."
@@ -255,6 +288,7 @@ Verdict: ✅ CONSISTENT · 🟧 INCONSISTENT (fix before push) · 🟩 REVIEW (i
 | Stage | Completion |
 |---|---|
 | Step 7 M/S/R prescription report output | ✅ Diagnosis complete |
+| Step 2-E ETCLOVG coverage line in report (covered layers + gaps, or "full coverage") | ✅ Layer-coverage lens applied |
 | M-tier 0 + "Structure healthy" output | ✅ Diagnosis complete (no prescription needed) |
 | Step 8 weekly_audit section proposed | ✅ Integration proposal complete |
 | Step 9 Eval-First verdict output (when requested) | ✅ Promotion verdict complete |
