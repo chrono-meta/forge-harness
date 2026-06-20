@@ -135,11 +135,11 @@ Treat the adapter output as the isolated challenger result for Wave 1. This pres
 
 ---
 
-## Wave 1 — 5 Mandatory Attack Angles
+## Wave 1 — 6 Mandatory Attack Angles
 
 **Execution principles**: Attacks must be based on real code/files/configs — abstract criticism prohibited.
 Assign severity: **S** (immediate blocker) / **A** (required before deployment) / **B** (improvement recommended).
-Call **fh-commons:quench-challenger** in isolation first (6-axis structural attack); apply 5 angles in parallel.
+Call **fh-commons:quench-challenger** in isolation first (6-axis structural attack); apply 6 angles in parallel.
 
 Isolation can be achieved by Claude Code `Agent(...)` or by `fh-run --agent fh-commons:quench-challenger` under Codex. Do not run the challenger inline in the same reasoning pass when the attack result gates the defense.
 
@@ -150,6 +150,7 @@ Isolation can be achieved by Claude Code `Agent(...)` or by `fh-run --agent fh-c
 | 3 | **Bus factor** | "Single-person dependency — can it operate if that person is absent?" |
 | 4 | **Platform obsolescence** | "Does this structure survive when the external ecosystem expands or changes?" |
 | 5 | **Self-referential structure** | "Is there a closed circuit that evaluates itself by its own criteria?" |
+| 6 | **Gate-locality** | "Is every safety gate readable by the actor that must enforce it? Name any gate defined only in a file/layer the enforcing runtime never loads (e.g. a rule in a Claude-only `CLAUDE.md` that a Gemini/Codex orchestrator reading `AGENTS.md` never sees; a provenance check described in a doc but absent from the write path)." (see `knowledge/shared/harness-core/gate_locality_principle.md`) |
 
 **S-grade Immediate Human Gate**: If Wave 1 contains 1+ S-grade blocker → pause, surface options (a) proceed to Wave 2 / (b) human review first / (c) abort. Do not silently enter Wave 2 with unreviewed S-grade items.
 
