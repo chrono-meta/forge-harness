@@ -283,6 +283,21 @@ recommended only for harness-editing sessions. Details: `docs/OUTPUT_EVIDENCE.md
 
 If you use external CLIs (Gemini, Codex, `gh copilot`) as sidecars, their costs are billed to their own quota and not visible in CC's token display.
 
+### Hardware tiers (local sidecars are optional accelerators)
+
+FH needs **no local LLM** — the baseline is whatever runs Claude Code. Local models are *optional*, for
+the canary / cheap-breadth rungs only:
+
+| Tier | Spec | Runs locally | What it buys |
+|---|---|---|---|
+| **Minimum** | anything that runs Claude Code | nothing | full methodology + gates; operating FH is ~model-flat (Opus/Sonnet/Haiku 100/97/94) |
+| **Recommended** | laptop-class, ~16GB RAM | one 8B-class quantized model (e.g. an 8B / small Gemma) | a token-free **floor canary** (pre-screen before a metered sim) · offline triage · a cheap-breadth panel arm |
+| **Optional (heavy)** | ~24GB VRAM GPU | a 27–32B model | a *stronger* decorrelation canary |
+
+> Local tiers are **canaries, never the terminal verdict** — measured: the floor model missed a subtle
+> adversarial case the frontier caught (and even a 27–32B local scored 1/4 on it). They lower the *cost
+> of breadth*; the verdict stays frontier.
+
 ---
 
 ## Multi-Model Sidecar
