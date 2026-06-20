@@ -1,6 +1,6 @@
 ---
 name: persona-container-schema
-description: Canonical schema for synthesizing a simulation persona from a reusable container. sim-conductor and any persona-dispatch skill fill these slots instead of injecting an ad-hoc role directive. Defines the slots, crowd-scale stop rule, multi-LLM tier distribution, and the synthesize→validate→graduate lifecycle.
+description: Canonical schema for synthesizing a simulation persona from a reusable container. sim-conductor and any persona-dispatch skill fill these slots instead of injecting an ad-hoc role directive. Defines the slots, crowd-scale stop rule, multi-LLM tier distribution, the situation→group→skill dispatch binding (folded skill-container), and the synthesize→validate→graduate lifecycle.
 type: reference
 scope: meta-harness
 ---
@@ -79,6 +79,37 @@ the heavy-local tier is **never promoted to a gate** on this basis: **the termin
 stays frontier** — local tiers are canaries (decorrelation), not gates. (Consistent with
 `[[feedback_judge_robustness_mechanical_anchor]]` and the "Local AI is not Opus" finding — a stronger
 local model lowers the cost of *breadth*, it does not move the *verdict*.)
+
+## Dispatch — situation → group → skill (folded skill-container)
+
+`[[asset-placement-gate]]` routed a proposed standalone **skill-container** here (2026-06-20): FH 4-criteria
+**FAIL on ④ overlap** — the GROUP axis is derivable from existing slots and dispatch-planning overlaps
+`[[agent-composer]]`, so it does not earn a standalone asset (the same anti-decorative fold as §Sibling's
+skill-foundry). The one net-new sliver — the **runtime situation→group→skill binding** — folds here.
+
+**Group = personas sharing a capability-class**, read mechanically off existing slots (NOT a new taxonomy):
+
+| Group | derived from slot | bound skill (the dispatch target) | tier-floor |
+|---|---|---|---|
+| Relay | output-protocol = quote-only | verified-corpus quote (fail-closed) | any |
+| Lens / counsel | external-grounding = active | framed reflection + search-synthesize | frontier for the synthesis step |
+| Adversary | lifecycle = ephemeral, paired | quench / failure-mode generation | local OK (generation task-class) |
+| Guardian | output-protocol = verdict | classify-and-block (L2 semantic) | local screen → **frontier on the subtle class** |
+
+**Dispatch rule**: classify the incoming situation → route to its group → invoke that group's bound skill.
+The binding carries a **tier-floor per group**, not one global model — consistent with §Multi-LLM above.
+
+**Guardian tier-floor is measured** (the-bible red-team dogfood, 2026-06-20, signal in the companion store):
+on CLEAR keyword-evasion the local L2 (qwen3:32b) caught **11/11**, but on the SUBTLE/borderline class it
+collapsed to **1/4** while Gemini-3.5-Flash got 3/4 and GPT-5 / Opus-4.6 got 4/4 (0 false-positives
+across all). So the Guardian binding is *local-screen-then-frontier*: cheap local clears the easy class,
+the subtle residual needs frontier (and ultimately L3 human, per the L2-imperfect residual). A second probe
+reinforcing §Multi-LLM's single truncation-inversion point, same direction — local lowers the cost of
+breadth, frontier keeps the verdict on the cases that matter.
+
+**Done When** (skeleton — fold scope only): (1) each group is derivable from a slot, no new taxonomy
+*[mandatory-pass]* · (2) each group names exactly one bound skill *[mandatory-pass]* · (3) a tier-floor is
+stated, measured where claimed *[judged, pair: target-tier sim]*.
 
 ## Lifecycle — synthesize → simulate → validate → graduate
 
