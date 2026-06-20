@@ -114,13 +114,22 @@ sim-conductor's runner role) — this schema is the net-new asset, sim-conductor
 
 ## Sibling — skill-foundry (terminal-before-appification)
 
-*(Concept only — no built asset; the one net-new piece here is the inversion, kept for the graduation
-test above.)* The same lifecycle generalizes to **skills**, with one inversion: a persona is a
-low-trust simulation lens (ephemeral-and-many is the value); a skill is a governance asset whose value
-is being **trusted**. So a synthesized ("terminal-stage") skill is explicitly **provisional / ungated /
-unpublished**, used in-session, and **graduates only through the FH 6-item creation gate**. Authoring
-reuses `contention-layer` Step-4's skeleton. (Demonstrated 2026-06-20: the `persona-safety-sweep`
-provisional skill, kept local/gitignored, graduation-target = a sim-conductor preset.)
+The same lifecycle generalizes to **skills**, with one inversion that is the whole point: a persona is a
+low-trust simulation lens (ephemeral-and-many is the value); a skill is a governance asset whose value is
+being **trusted**. A persona's low trust bar is harmless (a wrong lens is a discarded run); a skill's is
+dangerous (a wrong instruction is trusted and reused). So a synthesized ("terminal-stage") skill is
+explicitly **provisional / ungated / unpublished** — its SKILL.md is marked `lifecycle: provisional` with
+an "ungated, in-session use only" banner so it cannot masquerade as a gate-passed skill.
+
+**Provisional convention** (salience-dependent, NOT hook-enforced — no checker scans `lifecycle:` today;
+it is a discipline, not a mechanical control): (1) used in the authoring session only — **not committed to
+a shared plugin or marketplace before graduation**; (2) **deleted if it never graduates** —
+build-and-keep-forever is the anti-pattern (the cheap-and-discarded discipline is the value); (3)
+**graduates only through the FH 6-item creation gate** (CLAUDE.md §New Skill Creation Pre-Commit Gate) +
+`[[asset-placement-gate]]` routing — HITL, never auto. Authoring reuses `contention-layer` Step-4's
+skeleton (`origin: skill-foundry`; drop/replace `contention-parents` with a `source-action:` pointer,
+mirroring that skeleton's field-scaffold reuse note). (Illustrative — *not* a committed artifact: a
+`persona-safety-sweep` provisional skill kept local/gitignored, graduation-target = a sim-conductor preset.)
 
 ## Provenance
 
