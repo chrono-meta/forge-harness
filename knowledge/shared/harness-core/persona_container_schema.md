@@ -15,11 +15,11 @@ scope: meta-harness
 > runner); it is what sim-conductor (and any persona-dispatch skill) **fills** instead of an ad-hoc
 > directive.
 >
-> **Consumer status (honesty — this doc is ahead of its consumer)**: UNBUILT as of 2026-06-20.
-> sim-conductor's live code still sources personas the old way (no `cost_tier` / `lifecycle` / graduate
-> step). If the sim-conductor extension (below) is not shipped by the next `harness-doctor` run (30-day
-> cadence), this doc is flagged for an explicit **run-or-write-off** decision — it does not orphan
-> silently (mirrors the `operational_adaptation.md` clocked-deferral pattern).
+> **Consumer status**: sim-conductor extension **SHIPPED 2026-06-20** (same session as this schema) —
+> Persona Discovery ② now fills these 6 slots instead of an ad-hoc directive; §Scale gained the Crowd
+> tier (16-cap lifted behind the marginal-coverage stop) + cost-tier routing; Step 5 adds the graduate
+> step with the admission test below. The A4 clocked write-off trigger is therefore **resolved** — this
+> doc has a live consumer.
 >
 > **Orthogonal to `tpa_schema.md`** (foreseeable-collision note): TPA profiles the **target** (what is
 > reviewed → which gates fire); this profiles the **persona** (who reviews). TPA's profile *drives*
@@ -103,14 +103,14 @@ Graduation is **optional and rare** — the analogue of "app-ification": a perso
 home only when it repeatedly proves itself. The cheap, dynamic, mostly-discarded synthesis is the
 point (cost-efficiency > build-and-demolish).
 
-## How a runner consumes this (sim-conductor extension — deliberate build, not yet shipped)
+## How a runner consumes this (sim-conductor extension — shipped 2026-06-20)
 
 `sim-conductor` is the runner that **fills** these slots instead of injecting an ad-hoc role directive.
-The planned extension (through the FH 4-axis + creation gate, HITL): sim-conductor reads this schema,
-lifts its 3–16 cap behind the marginal-coverage stop, assigns `cost tier` per persona for multi-LLM
-distribution, and adds the graduate step. Routing decided by `[[asset-placement-gate]]` (2026-06-20):
-**not a new forked skill** (≈60–70% overlap with sim-conductor's runner role) — this schema is the
-net-new asset, sim-conductor is extended to consume it.
+The shipped extension (through the FH 4-axis gate, HITL): sim-conductor's Persona Discovery ② reads this
+schema and fills the 6 slots; §Scale lifts its 3–16 cap behind the marginal-coverage stop (Crowd tier)
+and assigns `cost tier` per persona for multi-LLM distribution; Step 5 adds the graduate step. Routing
+decided by `[[asset-placement-gate]]` (2026-06-20): **not a new forked skill** (≈60–70% overlap with
+sim-conductor's runner role) — this schema is the net-new asset, sim-conductor is extended to consume it.
 
 ## Sibling — skill-foundry (terminal-before-appification)
 

@@ -9,7 +9,9 @@ model: opus
 # sim-conductor — Meta-Simulation Automation Orchestrator
 
 > Profiles target → derives personas → dispatches parallel agents → M/S/R triage → commit.
-> Personas are sourced installed-first → built-in fallback → external install. Scale: 3 to 16 by task complexity.
+> Personas are sourced installed-first → **filled from the persona-container schema** (6 slots, not an
+> ad-hoc directive) → external install. Scale: 3 to 16, extensible to a crowd behind the
+> marginal-coverage stop (§Scale).
 
 ## Invocation Triggers
 
@@ -97,12 +99,20 @@ Recommendation:
 
 #### Persona Discovery (after profile → before dispatch)
 
+> **Schema**: `knowledge/shared/harness-core/persona_container_schema.md` — the 6-slot persona-definition
+> container. ② below **fills** these slots (lens / internal-logic / external-grounding / output-protocol
+> / cost-tier / lifecycle) instead of injecting a shapeless directive. The container is what makes a
+> synthesized persona reproducible and cost-routable; the old "fallback palette" was undefined.
+
 After profiling, sim-conductor determines the needed perspective types, then maps each to the best available agent:
 
 ```
 For each needed perspective:
   ① Scan installed plugins + .claude/agents/ → exact match? → use it
-  ② Built-in fallback palette → approximate match? → inject as prompt directive
+  ② Fill the 6-slot persona container — lens · internal-logic · external-grounding · output-protocol
+       (= Step 1.5 parallax shape) · cost-tier · lifecycle → a defined, reproducible persona; the filled
+       container IS the dispatch prompt (replaces the old ad-hoc "fallback palette" directive). Assign
+       the cost-tier slot per §Scale cost-tier routing. [Schema: persona_container_schema.md]
   ③ GAP: no ①② match for a high-weight perspective
        → query /plugin-recommender: "find agents for [perspective] matching [artifact_type] context"
        → present: name · install command · estimated fit · token cost
@@ -113,8 +123,8 @@ Persona Discovery output:
 
 ```
 Persona Map:
-  beginner       → [installed agent: beginner] OR [ad-hoc directive]
-  challenger     → [installed agent: challenger] OR [ad-hoc directive]
+  beginner       → [installed agent: beginner] OR [filled 6-slot container]
+  challenger     → [installed agent: challenger] OR [filled 6-slot container]
   [profile-specific role] → ⚠️ GAP — plugin-recommender recommends: [X] (install? y/n)
 ```
 
@@ -203,7 +213,8 @@ sim-conductor does **not** run a fixed persona set. It derives needed perspectiv
 
 ```
 ① Installed first — scan installed plugins + .claude/agents/ for a matching persona/agent
-② Built-in fallback — inject role as prompt directive into general-purpose Agent (Path B)
+② Container fill — fill the 6-slot persona container for the standpoint; the filled container IS the
+     dispatch prompt into a general-purpose Agent (Path B — replaces the old ad-hoc role directive)
 ③ External fetch — chain to /plugin-recommender when ①② insufficient for high-stakes tasks
 ```
 
@@ -220,7 +231,7 @@ FH ships a coherent **user-mastery spectrum** as real, reusable agents (not prom
 
 > **Lineage**: `beginner` / `main-player` / `expert` are the FH-native frontier successors to the field deep-insight `user` group (newcomer / power-user) — re-derived to FH grade with embedded methodology + Done-When, not name-copied. `challenger` is the advanced form of the field `devil-advocate`. The former standalone skeptic standpoint is folded into `challenger` U1.
 
-**Ad-hoc roles** (② tier — prompt-directive fallback): when the profile demands a standpoint with no shipped agent (e.g. "security auditor", "non-native reader"), inject the role as a directive into a general-purpose Agent. Prefer ① shipped agents; use ② only for genuinely task-specific one-offs.
+**Ad-hoc roles** (② tier — container fill): when the profile demands a standpoint with no shipped agent (e.g. "security auditor", "non-native reader"), fill the 6-slot persona container for that standpoint — the filled container is the dispatch prompt. Prefer ① shipped agents; use ② only for genuinely task-specific one-offs.
 
 #### Scale
 
@@ -229,8 +240,30 @@ FH ships a coherent **user-mastery spectrum** as real, reusable agents (not prom
 | **Minimum** | 3 | Routine Area A — most task-relevant 3 perspectives |
 | **Extended** | 4–8 | High-stakes publish / external release |
 | **Full** | Up to 16 parallel | Pre-major-version / architecture review |
+| **Crowd** | 16+ — **no fixed cap; bounded by the marginal-coverage stop** | Only when the marginal-coverage stop has demonstrably **not** fired at 16 — i.e. persona #17 is still decorrelated and finding-productive. **Not** chosen by artifact size or audience count (Full already covers those); the stop, not a headcount, opens this tier |
 
-All personas run as **parallel Agents** — no sequential bottleneck. Use agent-composer Medium/Large fan-out for Extended/Full.
+**Crowd is output-driven, never a target** (per the container schema): the 16-cap lifts only behind the
+**marginal-coverage stop** — add a persona only if it is *decorrelated* (a distinct viewpoint, or — at
+crowd scale — a different model family) from those already running; **stop when the marginal new-finding
+rate → 0**. A crowd of identical-output personas is decorative (steel-quench Wave-1 angle #1). Do not
+name a headcount goal; the count is whatever the stop allows.
+
+**Cost-tier routing (the economy lever)** — each persona's `cost-tier` slot routes it to a model so
+breadth is cheap and the verdict stays trustworthy:
+- **floor-local / heavy-local** (e.g. a local Ollama sidecar) carry cheap *breadth* — extra decorrelated
+  standpoints at near-zero token cost. A heavier local (27–32B) is a stronger canary than a floor model,
+  but **on one probe, not a benchmark** (`[[persona-container-schema]]` §tier-distribution) — so a local
+  tier is a **canary, never the gate**.
+- **frontier** carries the **terminal verdict** — the M/S/R triage and any auto-commit decision stay
+  frontier. This is the same anchor as Step 0.6: local breadth *decorrelates*, it does not *decide*.
+- Cost-tier routing and the Step 0.6 cross-model gate are complementary, not duplicate: 0.6 *requires* a
+  non-session source for risk≥medium (blind-spot closure); cost-tier *distributes* breadth for economy.
+  A local-sidecar persona can satisfy both at once (cross-family **and** cheap), but only Step 0.6's
+  quoted-artifact rule lets it count as `external` coverage.
+
+All personas run as **parallel Agents** — no sequential bottleneck. Use agent-composer Medium/Large
+fan-out for Extended/Full; Crowd scale dispatches in decorrelated waves, re-checking the marginal-coverage
+stop between waves rather than firing all at once.
 
 **Simplification guard**: Routine internal audits → ② built-in fallback at Minimum scale. Chain to ③ only when a needed perspective has no ①② match, or stakes are high.
 
@@ -296,7 +329,7 @@ Persona composition adapts to `artifact_type` from Step 0.3 profile:
 | Prompt / config | `beginner` | challenger | Interpretation errors, implicit assumptions |
 | Auth / security-sensitive | challenger + Security-auditor† | `main-player` (Heavy) | Attack surface, privilege escalation |
 
-† Security-auditor = built-in fallback role (② tier) injected as prompt directive.
+† Security-auditor = ② tier — the 6-slot persona container filled for a security-auditor standpoint.
 
 All personas run in parallel. Findings = M/S/R → M-tier items fixed immediately.
 
@@ -356,6 +389,10 @@ positives erode reviewer trust.
 - Priority labels verbatim — Critical/Important/Suggestion carried as the persona set them.
 - No forced consensus or forced conflict — report Common opinions (2+ personas agree) and Conflicts
   (position A vs B, each with rationale) as-is. Feeds Step 2 M/S/R triage (M ← Critical or 2+ personas).
+- Cost-tier aware triage — a frontier-tier persona's verdict is terminal; a floor/heavy-local persona's
+  finding enters only as decorrelated **breadth** (it can raise a standpoint to `covered`, never solely
+  set an M-tier on its own). This enforces in the aggregator the §Scale "local breadth decorrelates, it
+  does not decide" lock — without it, a local canary's finding would drive triage identically to frontier.
 
 **Zero-coverage map (mandatory synthesizer output)** — the synthesizer must emit, mechanically, the set
 of standpoints that produced **no** finding, not only the ones that did (judge-robustness swarm,
@@ -438,6 +475,30 @@ first?"* and wait for the operator's go. `external`/`cross-session` coverage, or
 as normal. (This withdraws one privilege, not the run — the report and fixes still exist.)
 
 > **Detail**: See `SKILL_detail.md §PR-Bash` — branch creation bash, commit + push, gh pr create template — read when creating a PR.
+
+---
+
+## Step 5 — Graduate a Proven Persona (optional, rare)
+
+Most synthesized personas are **throwaway** — the run accelerated the work and the persona is discarded.
+A persona earns a permanent home only by passing the container schema's **admission test** (the analogue
+of "app-ification"; `[[persona-container-schema]]` §Lifecycle):
+
+| Check | Criterion | Class |
+|---|---|---|
+| **Recurrence** | surfaced **≥1 unique S/M finding** (one no other persona in the run produced) across **≥2 distinct targets** — not a one-off lucky fire | measured |
+| **Trust bar (skills only)** | if graduating into a *skill* rather than a project's persona set, additionally clears the **FH 6-item creation gate** | mandatory-pass |
+
+- **Pass → into a project's static set**: route the write through `asset-placement-gate` (expected
+  verdict: project-local) before writing the filled container to the project's persona file (e.g.
+  the-bible `core/personas.json`) — sim-conductor proposes the target, the placement gate confirms it,
+  the operator approves. A project-local asset, not an FH change, but the cross-boundary write is still gated.
+- **Pass → into a skill**: route through `asset-placement-gate` + the New-Skill creation gate (the
+  skill-foundry inversion — the trust bar is non-negotiable). This is **HITL**, never auto-graduated.
+- **Fail the recurrence check** → stays ephemeral. Do not graduate on a single run.
+
+Graduation is **never automatic** and is **out of scope for auto-commit** — it is a deliberate,
+operator-approved promotion. A clean simulation that graduated nothing is a normal, complete run.
 
 ---
 
