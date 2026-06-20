@@ -373,6 +373,8 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "research this deeply", "survey the literature", "comprehensive analysis", "deep research", "look this up thoroughly", "조사해줘", "리서치" (general topic research, not trend-scan) | **Deep-Research Capability Ladder** (`knowledge/shared/harness-core/deep_research_capability_ladder.md`) — route to the highest available rung: built-in `/deep-research` if present → else Claude `WebSearch`+`WebFetch` synthesis (tier-sensitive) → `/frontier-digest` only if it's AI/harness trend-scan. No-reinvention: FH routes, does not build a research engine. |
 | "orchestrate agents", "parallel dispatch", "combine skills", "multiple agents" | `/agent-composer` |
 | "run a simulation", "external user perspective", "internal audit", "quality check" | `/sim-conductor` |
+| "broaden the grounded corpus", "add another version of the corpus", "ingest the full source as the grounding axiom", "여러 버전으로 통째로 가져와" (verbatim-relay corpus expansion — fail-closed grounding, no generator) | `/corpus-grounding-expander` |
+| "broaden these personas", "what other voices fit this cast", "map these roles to a decision lens", "페르소나 후보군 더 넓혀" (persona seed → tiered judgment-mapped cast; pairs with `persona-innovator` for naming) | `/persona-roster-expander` |
 | "first install", "FH setup", "wizard", "install-wizard" | `/install-wizard` |
 | "connect a project", "map this project", "link to hub" | `auto_project_mapping.md` (mapping) |
 | "harness-ify this project", "full harness setup", "프로젝트 하네스화", "promote to full harness" | `auto_project_mapping.md §6` (Full-Harness Mode) |

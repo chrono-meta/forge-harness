@@ -182,7 +182,7 @@ All four movements ship. Temper was named before it was built — deliberately (
 two more signatures keep it running: `harvest-loop` (each session's lessons become permanent skills) and
 `agent-composer` (orchestrate the dispatch). The other skills wait until you need them — full list below.
 
-## 33 skills · 8 agents
+## 35 skills · 8 agents
 
 <details>
 <summary>Full asset activation check</summary>
@@ -208,6 +208,8 @@ two more signatures keep it running: `harvest-loop` (each session's lessons beco
 | `meta-prompt-builder` | Meta prompt design | "Write a prompt for the agent" |
 | `asset-placement-gate` | Hub vs project asset routing | "Should this be shared?" |
 | `cross-ecosystem-synergy-detection` | Cross-tool synergy finder | "Are my tools working together?" |
+| `corpus-grounding-expander` | Multi-version public-domain corpus → verified-axiom grounding store | "Broaden the grounded corpus" |
+| `persona-roster-expander` | Persona seed → tiered, judgment-mapped cast | "Broaden these personas" |
 | `convergence-loop` *(fh-commons)* | N-round convergence loops | "Single-pass seems suspicious" |
 | `token-budget-gate` *(fh-commons)* | Pre-task token cost estimate | "How expensive is this?" |
 | `mcp-circuit-breaker` *(fh-commons)* | MCP tool failure pattern detection | "MCP keeps failing" |
