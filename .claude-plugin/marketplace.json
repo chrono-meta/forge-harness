@@ -11,13 +11,13 @@
   "plugins": [
     {
       "name": "fh-meta",
-      "version": "1.4.34",
+      "version": "1.4.35",
       "description": "Hub meta-operations toolkit — 29 skills + 7 agents. New in 1.4.x: verify-axis check-class taxonomy (mandatory-pass/measured/judged), no-reinvention Tier-0 inventory, 7-class failure taxonomy, Destructive-Op Gate, Wave-T (Temper), tier-floor governance, Mode D Model Notice, FC consent lane, default-Sonnet guidance. New in 1.3.0: public-surface-audit, field-harvest Mode B auto-trigger, 4-axis gate scope ext. Validated cross-CLI: Claude Code, Codex, Gemini.",
       "source": "./plugins/fh-meta"
     },
     {
       "name": "fh-commons",
-      "version": "1.4.34",
+      "version": "1.4.35",
       "description": "Project-agnostic utility skills — 4 skills (convergence-loop · deliberation · mcp-circuit-breaker · token-budget-gate) + 1 agent (quench-challenger). Domain-independent utilities transplantable into any project.",
       "source": "./plugins/fh-commons"
     }
