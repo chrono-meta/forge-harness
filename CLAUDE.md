@@ -103,17 +103,17 @@ Simplification guard: trivial denials with one obvious fix → state block + sin
 
 **4-step summary**: ① Auto-read CLAUDE.md + CATALOG + session card + registry scan + UAP (`tracks/_meta/user_adaptation_profile.md`, if present — apply user-tuned defaults: preferred tier, suppressed proposals, muted nags; see §Operational Adaptation Loop) → ② One-line proposal (new user / exploratory / returning branches) → ③ 5-skill cascade (plugin-recommender → synergy → .claudeignore → model → verify) → ④ Approval + setup
 
-**Greeting branch + door skeleton (summary-level — applies even if the detail file read is skipped)**: the branch test is **mechanical local state — session files under `tracks/`** — never git log / CATALOG residue (a fresh clone carries full history but zero session files: it is a NEW install — origin: a fresh-clone sonnet sim rendered the returning menu off commit messages, `fh_signal_2026-06-11` FP8). Every variant opens with **🐿️ on its own line as the skeleton's first line** — the marker is part of the skeleton, one salience unit with the menu, not a separate rule.
+**Greeting branch + door skeleton (summary-level — applies even if the detail file read is skipped)**: the branch test is **mechanical local state — session files under `tracks/`** — never git log / CATALOG residue (a fresh clone carries full history but zero session files: it is a NEW install — origin: a fresh-clone sonnet sim rendered the returning menu off commit messages, `fh_signal_2026-06-11` FP8). Every variant opens with **🐿️ then an identity-revealing welcome line on the SAME line** (🐿️ is no longer alone on its own line), followed by the menu — one salience unit, not a separate rule. (Put a space after 🐿️; the exact count is **not significant** — a markdown renderer collapses multiple mid-line spaces to one — so the verifiable invariant is *same-line*, NOT a space count.) Welcome line by branch: new / exploratory = "Welcome to FH." · returning = "Welcome back to FH." · operator (FH-dev state) = "The FH operator — good to see you." (rendered in the user's language; the lid/onboarding-smoothness matters even though it is not the substance).
 
 - **New user** (no session files AND no mapped project tracks under `tracks/` — fresh clone/install; underscore meta dirs `_meta`/`_audit`/`_contrib` don't count): 2-door starter, never the returning menu —
 
-  > 🐿️
-  > *"Looks like you're new here! ① Create your first project (guided) · ② Map an existing project — and I can run `/install-wizard` to finish initial setup."*
+  > 🐿️  **Welcome to FH.** *Looks like you're new here! ① Create your first project (guided) · ② Map an existing project — and I can run `/install-wizard` to finish initial setup.*
 
 - **Returning user** (session files OR mapped project tracks exist): fixed 4-door menu —
 
-  > 🐿️
-  > *"① Map a project · ② Create a new project · ③ Accelerate a mapped project (work · Full-Harness · skills/agents/plugins) — {field candidates} · ④ Cross-project synergy"*
+  > 🐿️  **Welcome back to FH.** *① Map a project · ② Create a new project · ③ Accelerate a mapped project (work · Full-Harness · skills/agents/plugins) — {field candidates} · ④ Cross-project synergy*
+  >
+  > (When **FH-dev state exists** — the operator — the welcome line is **"The FH operator — good to see you."** in place of "Welcome back to FH.")
 
   Render conditions: ①②③ always (③'s candidates composed live) · ④ only when **2+ project tracks** exist (underscore meta dirs don't count) — synergy findings flow back into each project, and may *propose* an FH contribution (`/field-harvest` → `tracks/_contrib`) as an **outcome of findings, never a standing door**.
 
@@ -121,7 +121,7 @@ Simplification guard: trivial denials with one obvious fix → state block + sin
 
 Compose session-card candidates **into door ③ (field) and the 🔧 door (FH-dev)**, never as a raw priority dump that replaces the menu. An urgent open item (time-windowed handoff · blocking external deadline) outranks the menu; an explicit task utterance skips it entirely (see Guards below); cadence reminders (§Cadence Rules) ride below it, they don't displace it. Canonical source: `fh_detail_protocols.md` Step 2 — keep branch tests and door labels in sync.
 
-**Identity marker**: every greeting response (Step ②) opens with 🐿️ on its own line. It is embedded in both skeletons above (do not strip it when composing doors); the exploratory branch template carries it in `fh_detail_protocols.md` Step 2.
+**Identity marker**: every greeting response (Step ②) opens with 🐿️ then an identity-revealing welcome line **on the same line** (a space after 🐿️; exact count not significant — the renderer collapses it — the invariant is *same-line*, not 🐿️ alone) — new / exploratory = "Welcome to FH." · returning = "Welcome back to FH." · operator (FH-dev state) = "The FH operator — good to see you." It is embedded in all skeletons above (do not strip it when composing doors); the exploratory branch template (`fh_detail_protocols.md` Step 2) uses the "Welcome to FH." line.
 
 **Guards**: explicit task-entry utterance → skip onboarding · once per session · code/debug requests → start working directly · project routing is a suggestion, mention at most once
 **Metadata-is-not-intent guard**: the trigger is the user's **typed message only**. Session metadata — branch name (auto-derived from the first message, e.g. `claude/korean-greeting-*`), repo name, file paths — is **never** a task spec and never suppresses or redirects the greeting trigger. A bare greeting fires onboarding even when the branch name looks like a feature request; if the only "task" signal lives in metadata and not in what the user typed, treat the message as a greeting and run the greeting branch + door skeleton above.

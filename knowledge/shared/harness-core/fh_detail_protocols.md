@@ -46,25 +46,24 @@ Group by project → update `.claude/registry/LOCAL_SKILL_REGISTRY.md`. Propose 
 
 ### Step 2 — Active Proposal
 
-Identity marker: every greeting response opens with **🐿️** on its own line before the first sentence. This is FH's session-start signal — friendly, consistent, distinct. The marker is **part of each skeleton itself** (one salience unit with the menu — do not strip it when composing doors; mirrored in CLAUDE.md §Active Onboarding).
+Identity marker: every greeting response opens with **🐿️ then an identity-revealing welcome line on the same line** (a space after 🐿️; exact count not significant — the renderer collapses multiple mid-line spaces — the invariant is *same-line*, not 🐿️ alone) — new / exploratory = "Welcome to FH." · returning = "Welcome back to FH." · operator (FH-dev state) = "The FH operator — good to see you." This is FH's session-start signal — friendly, consistent, distinct; the onboarding-smoothness / lid matters even though it is not the substance. The marker + welcome are **part of each skeleton itself** (one salience unit with the menu — do not strip it when composing doors; mirrored in CLAUDE.md §Active Onboarding).
 
 **Branch test (mechanical — local state only)**: returning = session files exist (any `tracks/**/session_*.md` or `tracks/_meta/*.md` beyond `.gitkeep`) **OR** mapped project tracks exist (`tracks/{name}/` dirs — underscore meta dirs `_meta`/`_audit`/`_contrib` don't count; covers mapped-but-not-yet-synced users). **Never infer the branch from git log or CATALOG residue** — a fresh clone carries full commit history but zero session files: it is a NEW install (origin: fresh-clone sonnet sim rendered the returning menu off commit messages, `fh_signal_2026-06-11` FP8).
 
 **New user** (neither condition holds — fresh clone/install): 2-door starter, never the returning menu —
-> 🐿️
-> *"Looks like you're new here! ① Create your first project (guided) · ② Map an existing project — and I can run `/install-wizard` to finish initial setup."*
+> 🐿️  **Welcome to FH.** *Looks like you're new here! ① Create your first project (guided) · ② Map an existing project — and I can run `/install-wizard` to finish initial setup.*
 
 - **① Create your first project** → Step 3-0 (guided: name → `tracks/` → `.claudeignore` → cascade)
 - **② Map an existing project** → `auto_project_mapping.md`; after a successful mapping, offer the §6 Full-Harness promotion prompt
 - Either door: if initial setup looks incomplete (no hooks, no registry), offer `/install-wizard` once
 
 **Exploratory trigger** (`what is this` / `first time here`):
-> 🐿️
-> *"forge-harness is a tool hub for rapidly setting up Claude Code projects. It supports plugin recommendations, project setup, and harness diagnostics. What would you like to work on?"*
+> 🐿️  **Welcome to FH.** *forge-harness is a tool hub for rapidly setting up Claude Code projects. It supports plugin recommendations, project setup, and harness diagnostics. What would you like to work on?*
 
 **Returning user** (branch test above) — open with the fixed 4-door menu (the doors are stable; the contents are composed live). A summary copy lives in CLAUDE.md §Active Onboarding — keep branch tests and door labels in sync when editing:
-> 🐿️
-> *"What would you like to start? ① Map a project · ② Create a new project · ③ Accelerate a mapped project (work · Full-Harness · skills/agents/plugins) — {field candidates} · ④ Cross-project synergy"*
+> 🐿️  **Welcome back to FH.** *What would you like to start? ① Map a project · ② Create a new project · ③ Accelerate a mapped project (work · Full-Harness · skills/agents/plugins) — {field candidates} · ④ Cross-project synergy*
+>
+> (When **FH-dev state exists** — the operator — the welcome line is **"The FH operator — good to see you."** in place of "Welcome back to FH.")
 
 - **① Map a project** → routes to `auto_project_mapping.md`; after a successful mapping, offer the §6 Full-Harness promotion prompt
 - **② Create a new project** → Step 3-0 (new project setup)
