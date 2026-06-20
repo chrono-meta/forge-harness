@@ -3,6 +3,7 @@
 # Mirrors the irreplaceable private half so that: public repo + companion = one complete project.
 #   tracks/_meta    → <companion>/tracks-meta   (session meta, signals, manifests)
 #   tracks/_audit   → <companion>/tracks-audit  (sister-asset cross-audit records)
+#   tracks/the_bible → <companion>/tracks-the-bible (publish-candidate creative track, local-only/untracked)
 #   memory/         → <companion>/memory        (durable CC memory — else lost on machine reclaim)
 #   CLAUDE.local.md → <companion>/hub-owner     (operator-specific wiring)
 # Runs from a CC Stop hook (throttled) or manually.
@@ -84,8 +85,9 @@ sync_file() {
   fi
 }
 
-sync_dir  "$FH/tracks/_meta"   "$BE/tracks-meta"
-sync_dir  "$FH/tracks/_audit"  "$BE/tracks-audit"
+sync_dir  "$FH/tracks/_meta"      "$BE/tracks-meta"
+sync_dir  "$FH/tracks/_audit"     "$BE/tracks-audit"
+sync_dir  "$FH/tracks/the_bible"  "$BE/tracks-the-bible"   # publish-candidate creative track: local-only (untracked in public FH), watched in companion
 sync_dir  "$MEM"               "$BE/memory"
 sync_file "$FH/CLAUDE.local.md" "$BE/hub-owner"
 
