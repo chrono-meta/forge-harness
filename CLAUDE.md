@@ -227,6 +227,23 @@ post-compaction 2026-06-12). 2026-06-15+: headless `claude -p` draws from the ha
 subscription — prefer in-session Agent dispatch when the plan gate allows; take the headless fallback
 knowingly. Record sim results in the Axes 2–3 marker + sub-agent invocation log.
 
+**Floor-tier canary (optional pre-screen — token-free, *below* the Sonnet sim)**: a local model weaker
+than or comparable to Sonnet (e.g. `ollama run qwen3:8b` on the local host today; a cross-family local
+panel — qwen3.x:27b / gemma4:12b-qat / gpt-oss:20b / devstral — on a GPU host once its remote-exec path
+is live) can pre-screen a salience-dependent edit *before* the Sonnet dispatch is spent: a rule that
+fires correctly on the floor model is *evidence of* robustness below Sonnet (one floor sample, not proof
+— hold the asymmetric-skepticism discipline). Blind probe — feed the verbatim rule text + a scenario,
+demand a strict YES/NO + one-line reason, judge whether the rule fired (mechanism dogfood-verified
+2026-06-20: a local `qwen3:8b` correctly gated the public install-wizard local-LLM-offload item in both
+directions — a claim checkable against that skill — re-validating that day's salience-binding fix at a
+sub-Sonnet tier). **Canary, NOT gate**: a PASS adds cheap floor confidence and you still run the Sonnet
+sim; a FAIL never blocks alone — the opus orchestrator triages it as a *real salience gap* (fix the
+rule) vs a *floor-model quirk* (small-model loop/hallucination, per the public "Local AI is not Opus"
+finding + the cheap-oracle ceiling — a small model adds nothing where one grep already settles the
+check). The terminal verdict stays with the frontier (Sonnet sim + opus judge) — no judge-only path, no
+weak-local-judge regression of the judge-robustness principle (mechanical anchor over judge-only verdict).
+The cross-family-panel upgrade spec lives in the private companion store's `handoff/` design note.
+
 **Axis ownership** (each skill is already complete — orchestrator only coordinates):
 
 | Axis | Skill | What it catches |
