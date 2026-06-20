@@ -102,7 +102,7 @@ Pasting tokens directly in chat exposes them in conversation history; environmen
 
 *(Run after Step 0-A·B pre-checks. Output results as environment card, then continue to Step 0-C.)*
 
-CC runs the detection bash automatically (injection pre-flight scan → FH_DIR/CC_HUB_DIR → cwd project info → plugins → MCP → zshrc hook → optional framework detection), then outputs the environment card.
+CC runs the detection bash automatically (injection pre-flight scan → FH_DIR/CC_HUB_DIR → cwd project info → plugins → MCP → zshrc hook → optional framework detection → local LLM runtime, optional), then outputs the environment card.
 
 **Stop rule (behavioral)**: if `FH_DIR` is not set, output the bootstrap guidance and **do not proceed to subsequent Steps** — install FH first, then rerun.
 
@@ -135,7 +135,9 @@ Y (add integration plan items to Step 1) / N (add-only, keep existing rules) / S
 
 **[Prerequisite] install-doctor conflict diagnosis (only in environments without install history)**: if `~/.cc_sentinels/{project-name}_wizard_done` doesn't exist (first install), call `/install-doctor --plugin fh-meta` first. CONFLICT/WARNING items → add ❗ markers to Step 2 proposal list. Items the doctor already diagnosed (`FH plugin install` · `zshrc hook` · `.claudeignore`) → map results directly, skip re-diagnosis; all other items → check directly.
 
-Auto-check each item as PASS / MISS / FAIL. Check items: `.claudeignore` · `local_fh_context.md` · `zshrc hook` · `weekly_audit` freshness · `sentinel` setup · FH plugin install · `.git/info/exclude` · MCP plugin · `deep-insight` plugin (optional) · `fh_env_context.jsonc` · `phantom-gate` (Python + AI-output projects only) · domain pattern pack (optional, none ship by default).
+Auto-check each item as PASS / MISS / FAIL. Check items: `.claudeignore` · `local_fh_context.md` · `zshrc hook` · `weekly_audit` freshness · `sentinel` setup · FH plugin install · `.git/info/exclude` · MCP plugin · `deep-insight` plugin (optional) · `fh_env_context.jsonc` · `phantom-gate` (Python + AI-output projects only) · domain pattern pack (optional, none ship by default) · local-LLM offload (optional — surface ONLY if the Step 0 bash emitted the literal line `Local LLM runtime: detected`; absent that line, this item does not exist).
+
+**Local-LLM offload (conditional, recommend-only)**: when Step 0 detected a local LLM runtime (Ollama / LM Studio), surface one optional item — route to `/plugin-recommender` for local-model offload tooling. FH recommends, never rebuilds (no-reinvention). Two complementary offload shapes the user picks per workload: **input-side context routing** (a small local model returns line ranges, so the cloud model receives only the dense slices instead of whole files) and **output-side generation delegation** (the local model generates and self-reviews code while the frontier model decomposes and validates). The benefit is tier-dependent — largest in headless/scripted pipelines and on weaker cloud tiers; an interactive session already triages via targeted reads. Local models suit **bounded, well-specified** work (triage, codebase explanation, instructed maintenance), not long-horizon autonomous tasks where small models loop or hallucinate — so the frontier model keeps decomposition and validation. Skip silently when no local runtime is present.
 
 > **Detail**: See `SKILL_detail.md §Step1-Checks` — full check table with criteria and verification commands per item — read when executing Step 1.
 

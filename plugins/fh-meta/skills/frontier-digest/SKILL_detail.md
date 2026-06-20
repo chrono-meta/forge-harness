@@ -50,7 +50,15 @@ curl -s --max-time 10 -L "https://www.deeplearning.ai/the-batch/"
 
 Extract `"title":"..."` + `"slug":"issue-\d+"` pattern → URL: `https://www.deeplearning.ai/the-batch/{slug}/`. Max 5 items.
 
-Report progress: `📡 HN 15 items · arxiv 5 items · TLDR 5 items · Batch 5 items collected`
+### GeekNews — news.hada.io (RSS)
+
+```bash
+curl -s --max-time 8 "https://news.hada.io/rss/news"
+```
+
+Korean dev-news aggregator (HN-equivalent), AI-heavy. **The `/rss/news` path serves an Atom feed** (`<feed>`/`<entry>`, NOT RSS `<item>` — verified 2026-06-20: 50 `<entry>` elements, 0 `<item>`). Parse `<entry>` → `<title>` + `<link href>`; keep AI/agent/LLM/harness-relevant items only. `/rss/news` is a *general* dev-news feed, so if 0 AI-relevant items remain after filtering, **drop GeekNews from this run's progress line rather than padding to 5**. Endpoint verified HTTP 200 (2026-06-20); `/rss/new` and `/rss/topics` 404 — use `/rss/news`. Max 5 items.
+
+Report progress: `📡 HN 15 items · arxiv 5 items · TLDR 5 items · Batch 5 items · GeekNews 5 items collected`
 
 ---
 

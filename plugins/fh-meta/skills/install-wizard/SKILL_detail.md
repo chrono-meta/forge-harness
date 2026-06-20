@@ -128,6 +128,16 @@ FRAMEWORK=""
 for fw in streamlit django fastapi flask; do
   if grep -qi "$fw" requirements.txt pyproject.toml 2>/dev/null; then FRAMEWORK="$fw"; echo "Framework: $fw detected"; break; fi
 done
+
+# Local LLM runtime (optional) — gates the conditional local-offload recommendation in Step 1.
+# Ollama default :11434, LM Studio default :1234. Absence is the normal state (no offload item surfaced).
+# Confirm the RESPONSE SHAPE, not just any HTTP 200 — Ollama /api/tags returns {"models":...},
+# LM Studio /v1/models returns {"data":...}; this avoids a non-LLM service squatting the port.
+for url in http://localhost:11434/api/tags http://localhost:1234/v1/models; do
+  if curl -sf -m 1 "$url" 2>/dev/null | grep -q '"models"\|"data"'; then
+    echo "Local LLM runtime: detected ($url)"; break
+  fi
+done
 ```
 
 **Bootstrap guidance when FH_DIR is not set (stop immediately in Step 0):**
@@ -168,6 +178,7 @@ install-wizard — Environment Detection
   CC Hub:       {CC_HUB_DIR or not set}
   Plugins:      {installed plugin list}
   zshrc hook:   {present/absent}
+  Local LLM:    {runtime + url if detected — omit this row when none}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -251,6 +262,7 @@ Auto-check the following items based on detected environment. Each item classifi
 | `fh_env_context.jsonc` | `.claude/rules/fh_env_context.jsonc` exists | `ls .claude/rules/fh_env_context.jsonc` |
 | `phantom-gate` | **(Python + AI-output projects only)** `phantom-gate` present in `requirements.txt` / `pyproject.toml` | `grep "phantom.gate" requirements.txt pyproject.toml 2>/dev/null` |
 | `Domain pattern pack applied` | (optional — only when a `{framework}_patterns.md` pack is present; none ship by default) framework-specific pattern checks | `knowledge/shared/{framework}_patterns.md` check (skip if file absent — the normal default) |
+| `local-LLM offload` | (optional — only when Step 0 detected a local LLM runtime) recommend local-model offload tooling, recommend-only | route to `/plugin-recommender` (no install performed here; skip silently if no runtime detected) |
 
 ---
 

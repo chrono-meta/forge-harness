@@ -65,7 +65,7 @@ On **cadence-triggered** runs (7d), ask the operator one line before collecting:
 
 ## Step 1. Data Collection
 
-Collect from four sources (bash per source in §Collection-Bash):
+Collect from five sources (bash per source in §Collection-Bash):
 
 | Source | Method | Cap |
 |---|---|---|
@@ -73,10 +73,13 @@ Collect from four sources (bash per source in §Collection-Bash):
 | arxiv | export API, latest by submittedDate | 6 items |
 | TLDR AI | RSS, title + link | 5 items |
 | The Batch (deeplearning.ai) | HTML scraping, title + issue slug | 5 items |
+| GeekNews (news.hada.io) | Atom feed (`/rss/news` path), title + link, AI/agent/LLM-relevant | 5 items |
 
-Report progress: `📡 HN 15 items · arxiv 5 items · TLDR 5 items · Batch 5 items collected`
+Report progress: `📡 HN 15 items · arxiv 5 items · TLDR 5 items · Batch 5 items · GeekNews 5 items collected`
 
 > **Detail**: See `SKILL_detail.md §Collection-Bash` — curl commands per source with parsing notes — read when executing Step 1.
+
+**Knowledge-currency augment (on-demand, not weekly-scanned)**: distinct from the trend feeds above, these are fetched when a specific version/fact/spec needs confirming against the model's knowledge cutoff — `docs.anthropic.com` (official Claude/API docs · model IDs · pricing), arxiv (already a feed, also a currency target by ID), and Zenodo (research deposits incl. FH's own). Pull these into context for currency rather than scanning them for trends; in egress-restricted environments (e.g. a company network) route the fetch through the approved bridge (n8n), not a direct call.
 
 ---
 
