@@ -1,0 +1,30 @@
+# FH Operator Container (Track 2) — reproducible HEADLESS toolchain.
+# Goal: identical grep/sed/jq/bash/node/python/perl everywhere → kills BSD↔GNU WOMBAT
+#       (the count_check / phantom-quench gate-drift class). Tools only; NO data/code/auth baked.
+# Build (multi-arch for the M6+4090 cluster):
+#   docker buildx build --platform linux/arm64,linux/amd64 \
+#     -f templates/docker/Dockerfile.operator -t fh-operator:latest .
+# Run: see scripts/docker_phase0_verify.sh (mounts forge-harness, runs gates in-container).
+#
+# Scope: headless/file/gate work (bash · gates · codex exec · agy -p · yt-dlp · node CLIs ·
+#        quench/sim dispatch). NOT live-surface (claude-in-chrome / computer-use / Playwright-display
+#        are host-bound). NOT GPU serving (that is Track 1, 4090 node, separate image).
+FROM node:22-bookworm-slim
+
+# GNU baseline toolchain — the immutability core.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      git bash coreutils grep sed gawk jq perl python3 python3-pip \
+      ca-certificates curl ripgrep \
+    && rm -rf /var/lib/apt/lists/*
+
+# video-ingest Tier3 transcript path (kept updatable; warnings are non-blocking).
+RUN pip3 install --no-cache-dir --break-system-packages yt-dlp
+
+# Sidecar CLIs (codex / agy / gemini) and Claude Code are NOT installed here in Phase 0
+# (Phase 0 verifies gate immutability only). Their AUTH is always runtime-mounted, never baked.
+
+WORKDIR /work/forge-harness
+ENV FH_ROOT=/work/forge-harness \
+    HUB_DIR=/work/forge-harness \
+    BE_DIR=/work/companion-store
+ENTRYPOINT ["/bin/bash"]
