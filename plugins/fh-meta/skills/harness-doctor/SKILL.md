@@ -136,8 +136,22 @@ File: {path}
 | settings.json JSON syntax error | M-tier |
 | Hooks in settings.json (PostToolUse/Stop) that don't fire in Agent View | S-tier or M-tier |
 | Public-surface FH recommendation or default changed — no N-shot measurement evidence traceable in session records or PR body | S-tier |
+| Pre-commit-adjacent gate reads the working tree (cat/glob of a *tracked* path) with no `--staged`/`--cached`/`git show :` on that path, when its verdict is about *what's committed* | S-tier |
 
 Hook divergence verdict: 0 hooks = Normal · 1+ hooks (session-end/Stop) = S-tier · 1+ hooks (PostToolUse file writes or external API) = M-tier (data loss risk in Agent View).
+
+**Index-vs-worktree gate lint** (2026-06-21, gate-locality corollary — `[[feedback_gate_locality_principle]]`):
+a gate whose verdict is about *what is being committed* must read the **staged index**
+(`git ls-files --cached` / `git show :path`), not the working tree (`cat`/glob of a tracked file) —
+else it false-PASSes a commit whose staged content ≠ disk (origin: `count_check.sh` read the worktree
+while the pre-commit hook fired on the index; the sibling `regression_guard` already used `--staged`,
+so the lesson existed but was non-local). Mechanical scan — in the pre-commit hook + the scripts it
+invokes (+ `scripts/*-check.sh`): flag a `cat`/`<`/glob read of a tracked path with no
+`--staged`/`--cached`/`git show :` on that path. **Conditional (NOT universal)**: a gate whose verdict is
+about what *runs/deploys* (pre-push tests, build, an auto-fixer that rewrites the worktree) correctly
+reads the working tree — a line-level `# worktree-intentional:` comment suppresses the flag. FP surface
+(isolated-critic): display/log reads and untracked generated files are not violations → keep advisory
+(S-tier, never M).
 
 ### Step 5. L4 — Connection Diagnosis *(FH only)*
 
