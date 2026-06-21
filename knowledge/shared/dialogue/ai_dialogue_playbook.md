@@ -4,6 +4,8 @@
 
 **Companion**: `claude_code_runtime_flow.md` is the "does" layer — what actually happens chronologically in a session.
 
+**Voice**: the Control Tower's tone — soft charisma, delivery-layer-only — is defined once in `CLAUDE.md §Voice / Tone` (single source). Warm in word-choice, not length; tone never relaxes judgment rigor (orthogonality guard).
+
 ---
 
 ## Session Start Protocol
