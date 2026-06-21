@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # FH DLP security-filter (Docker Track 2, Phase 1b) — local-LLM redaction before frontier.
 #
+# STATUS (2026-06-21): RESEARCH ARTIFACT, not a load-bearing tool. There is no live workflow that
+# needs it — the operator uses frontier models on company-derived work deliberately, under enterprise
+# no-train terms (Gemini Enterprise / Anthropic API+Bedrock / Copilot Enterprise), so the "leak to a
+# training set" vector this guards is already closed by contract, and redaction does not change the
+# (orthogonal) company-policy question. Kept because the calibration it enabled is reusable research
+# (model recall: reasoning > param-count; local 32B sufficient). Invoke-only → zero standing cost.
+#
 # WHY: sending confidential RAW (payment-network architecture, internal IPs, account ids) straight
 # to a frontier model is a DLP leak. This filter routes RAW through a LOCAL Ollama model to produce
 # an ABSTRACTED version, and emits it ONLY if a mechanical literal scan confirms the must-redact

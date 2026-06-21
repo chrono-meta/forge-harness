@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # FH standing pre-frontier DLP gate (Docker Track 2, Phase 1b — wiring).
 #
+# STATUS (2026-06-21): RESEARCH ARTIFACT, not a load-bearing tool — see scripts/dlp-filter.sh header
+# (no live confidential→frontier workflow; enterprise no-train terms already close the leak vector).
+#
 # THE GATE: confidential RAW on stdin → local-LLM abstraction (dlp-filter, fail-closed) → ONLY on PASS
 # is the abstracted text handed to a FRONTIER command (codex / claude / any third-party model). If the
 # DLP filter blocks (a must-redact pattern survived), the frontier command is NEVER run and the raw
