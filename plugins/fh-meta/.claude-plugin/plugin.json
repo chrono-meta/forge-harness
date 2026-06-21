@@ -4,7 +4,7 @@
   "engines": {
     "claudeCode": ">=1.0.0"
   },
-  "description": "Hub meta-engineering toolkit — 31 skills + 7 agents. New in 1.4.37: corpus-grounding-expander + persona-roster-expander (field-harvested verbatim-relay capability skills). New in 1.3.0: public-surface-audit (git-tracked private-token leak scan), field-harvest Mode B session-end auto-trigger, 4-axis gate scope extension (docs/ + AGENTS.md). New in 1.2.0: pipeline-conductor (4-pipeline gated sweep), return-path-gate (chain closure audit), goal-quench (Stop hook + quality gate), steel-quench Wave 5 (multi-model sidecar challenger), 2-layer architecture docs, YAML validation script. Validated cross-CLI: Claude Code, Codex, Gemini.",
+  "description": "Hub meta-engineering toolkit — 33 skills + 7 agents. New in 1.4.39: auto-decorrelation (cross-family verifier sidecar recruitment, calibration-gated) + video-ingest (capability-routed video ingestion). New in 1.4.37: corpus-grounding-expander + persona-roster-expander (field-harvested verbatim-relay capability skills). New in 1.3.0: public-surface-audit (git-tracked private-token leak scan), field-harvest Mode B session-end auto-trigger, 4-axis gate scope extension (docs/ + AGENTS.md). New in 1.2.0: pipeline-conductor (4-pipeline gated sweep), return-path-gate (chain closure audit), goal-quench (Stop hook + quality gate), steel-quench Wave 5 (multi-model sidecar challenger), 2-layer architecture docs, YAML validation script. Validated cross-CLI: Claude Code, Codex, Gemini.",
   "author": {
     "name": "chrono-meta",
     "email": "chrono-meta@users.noreply.github.com"
