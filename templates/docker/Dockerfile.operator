@@ -20,8 +20,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # video-ingest Tier3 transcript path (kept updatable; warnings are non-blocking).
 RUN pip3 install --no-cache-dir --break-system-packages yt-dlp
 
-# Sidecar CLIs (codex / agy / gemini) and Claude Code are NOT installed here in Phase 0
-# (Phase 0 verifies gate immutability only). Their AUTH is always runtime-mounted, never baked.
+# Phase 1 sidecar CLI: codex (npm) — version-pinned for immutability. npm resolves the
+# linux-native optional binary per-arch at install, so in-image install is the CORRECT path
+# (a host macOS Mach-O codex binary could never run here — mount is a non-starter for native bins).
+# agy is host-bound (Mach-O native, no linux mount path); quench/sim are governor Agent dispatches
+# (host, option 1) — neither is containerized in Phase 1. AUTH is always runtime-mounted, never baked.
+RUN npm install -g @openai/codex@0.139.0
 
 WORKDIR /work/forge-harness
 ENV FH_ROOT=/work/forge-harness \
