@@ -18,6 +18,16 @@ Follow this protocol when the user requests "sync", "save session", or similar.
 | Lessons/feedback (learned from failures) | Repeating already-recorded content |
 | Roadmap/strategy change | Sessions with only exploration and no conclusion |
 
+**What-kind axis (Raw / Wiki / Conversation)** — orthogonal to the YES/NO above and to the
+location split (knowledge/ · tracks/ · memory/), this classifies the *processing stage*, which
+routes the destination: **Raw** = unprocessed capture (a pasted log, a fetched source) → stays in
+tracks/ or a companion store, not yet distilled · **Wiki** = distilled + `[[linked]]` knowledge →
+knowledge/ or memory/ (the compounding layer) · **Conversation** = dialogue/decision logs → tracks/
+session files. A Raw item is not yet a Wiki item; the distill step (Raw → Wiki) is where linking +
+the contradiction scan below earn their keep. (Imported from the 김효율 AX-Obsidian cross-audit,
+`tracks/_audit/session_2026_06_21_kim-hyoyul-ax-obsidian-wiki-harness.md` §4 — a crisper ingest
+schema than the location split alone.)
+
 ### Sync procedure
 
 ```

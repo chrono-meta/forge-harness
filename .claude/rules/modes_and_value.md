@@ -50,7 +50,7 @@ The companion store is a **role** (durable private home for drafts · signals ·
 | Backend | When | Consumption (FH just writes markdown to a target path) |
 |---|---|---|
 | **`*-be` git repo** (default) | Operator wants git-versioned state + Stop-hook auto-mirror | markdown committed to the private repo |
-| **Obsidian vault** | User already gardens knowledge in Obsidian | point the output path at the vault — Obsidian *is* markdown, so it's backlinked instantly, zero new infra (works today) |
+| **Obsidian vault** | User already gardens knowledge in Obsidian | point the output path at the vault — Obsidian *is* markdown, so it's backlinked instantly, zero new infra (works today). Its **graph view is a near-free Observability surface** — FH's self-named weak ETCLOVG layer (`harnessfix_etclovg_sister`): the compounding link structure becomes *visible* for this backend at no added cost (imported from the 김효율 AX-Obsidian cross-audit, `tracks/_audit/session_2026_06_21_kim-hyoyul-ax-obsidian-wiki-harness.md` §4). |
 | **LLM-wiki / gbrain** | User runs a queryable memory brain | the user's gbrain **ingests** the emitted markdown (`gbrain` ingest); a deeper FH→gbrain MCP integration is a future candidate, **not wired today** |
 
 **Invariant across all backends** (unchanged): methodology stays in the public mirror (single-source guard); the store holds only *outputs*, never a rule copy; no domain-work pollution of the reference asset. Backend is a setup-time choice; the role, guards, and ephemeral-handoff rule below are identical regardless of backend. Rationale + import/propagate ledger: `knowledge/shared/harness-core/companion_store_pluggable_cross_audit_2026-06-11.md`.
