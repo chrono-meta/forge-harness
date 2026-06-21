@@ -40,10 +40,6 @@ SRC="${1:-}"
 if [ "$SRC" = "-" ]; then RAW="$(cat)"; else RAW="$(cat "$SRC")"; fi
 [ -n "$RAW" ] || { echo "dlp-filter: empty input" >&2; exit 2; }
 
-# reachability check (fail-closed: cannot abstract → do NOT pass raw onward)
-curl -s --max-time 6 "http://${HOSTPORT}/api/tags" >/dev/null 2>&1 || {
-  echo "dlp-filter: Ollama unreachable at ${HOSTPORT} — refusing (raw never leaves)" >&2; exit 4; }
-
 PROMPT="You are a strict DLP redaction filter. Rewrite the text below so it preserves its TECHNICAL
 MEANING and STRUCTURE, but replace every concrete confidential identifier — API keys/tokens, internal
 hostnames, IP addresses, account numbers, person names, company-internal codenames — with a generic
@@ -52,12 +48,49 @@ placeholder of the form <REDACTED:type>. Do not add commentary. Output ONLY the 
 TEXT:
 ${RAW}"
 
-# build the request with jq (safe JSON encoding of the prompt), deterministic decoding.
-REQ="$(jq -n --arg m "$MODEL" --arg p "$PROMPT" \
-        '{model:$m, prompt:$p, stream:false, options:{temperature:0}}')"
-RESP="$(curl -s --max-time 120 "http://${HOSTPORT}/api/generate" -d "$REQ" 2>/dev/null)"
-OUT="$(printf '%s' "$RESP" | jq -r '.response // empty' 2>/dev/null)"
+# ── backend routing ─────────────────────────────────────────────────────────
+# MODEL prefixed 'openrouter/' → OpenRouter (OpenAI-compatible /chat/completions); else local Ollama.
+#
+# ⚠️ GOVERNANCE — the openrouter backend SENDS THE RAW TO A THIRD PARTY. That DEFEATS DLP for real
+# confidential data — it is the exact leak this filter exists to prevent. It is permitted ONLY as a
+# CALIBRATION ORACLE on FICTIONAL/synthetic samples (measuring how well a larger model abstracts).
+# For production DLP the backend MUST be a local model. dlp_calibration.sh uses fictional fixtures only.
+case "$MODEL" in
+  openrouter/*)
+    ORMODEL="${MODEL#openrouter/}"
+    [ -n "${OPENROUTER_API_KEY:-}" ] || {
+      echo "dlp-filter: openrouter backend needs OPENROUTER_API_KEY (runtime env) — refusing" >&2; exit 4; }
+    # reasoning toggle (OPENROUTER_REASONING, default off). Qwen3.5 are thinking models; their reasoning
+    # lives in a separate .reasoning field, so OFF keeps content non-empty + cheap + deterministic. ON
+    # gives a FAIR comparison vs a local model run in its natural thinking mode (needs a bigger
+    # max_tokens or reasoning eats the budget). max_tokens also bounds cost + dodges OpenRouter's
+    # "requires more credits — requested up to 65536 tokens" rejection.
+    if [ "${OPENROUTER_REASONING:-off}" = on ]; then
+      REQ="$(jq -n --arg m "$ORMODEL" --arg p "$PROMPT" \
+              '{model:$m, messages:[{role:"user",content:$p}], temperature:0, max_tokens:8192, reasoning:{enabled:true}}')"
+    else
+      REQ="$(jq -n --arg m "$ORMODEL" --arg p "$PROMPT" \
+              '{model:$m, messages:[{role:"user",content:$p}], temperature:0, max_tokens:1024, reasoning:{enabled:false}}')"
+    fi
+    RESP="$(curl -s --max-time 120 https://openrouter.ai/api/v1/chat/completions \
+              -H "Authorization: Bearer ${OPENROUTER_API_KEY}" -H "Content-Type: application/json" \
+              -d "$REQ" 2>/dev/null)"
+    OUT="$(printf '%s' "$RESP" | jq -r '.choices[0].message.content // empty' 2>/dev/null)"
+    ;;
+  *)
+    # local Ollama. reachability check (fail-closed: cannot abstract → do NOT pass raw onward).
+    curl -s --max-time 6 "http://${HOSTPORT}/api/tags" >/dev/null 2>&1 || {
+      echo "dlp-filter: Ollama unreachable at ${HOSTPORT} — refusing (raw never leaves)" >&2; exit 4; }
+    REQ="$(jq -n --arg m "$MODEL" --arg p "$PROMPT" \
+            '{model:$m, prompt:$p, stream:false, options:{temperature:0}}')"
+    RESP="$(curl -s --max-time 120 "http://${HOSTPORT}/api/generate" -d "$REQ" 2>/dev/null)"
+    OUT="$(printf '%s' "$RESP" | jq -r '.response // empty' 2>/dev/null)"
+    ;;
+esac
 [ -n "$OUT" ] || { echo "dlp-filter: model returned no abstraction — refusing (raw never leaves)" >&2; exit 4; }
+# thinking models can wrap reasoning in <think>…</think>; strip it so reasoning (which may restate
+# secrets) is never forwarded and never confuses the gate — only the final rewrite proceeds.
+OUT="$(printf '%s' "$OUT" | perl -0777 -pe 's/<think>.*?<\/think>//gs' 2>/dev/null)"
 
 # ── MECHANICAL GATE (the downstream-uncorrectable guard) ─────────────────────
 # A must-redact literal surviving into the abstraction = BLOCK. The output is withheld; raw never

@@ -19,40 +19,69 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1
 REPO="$PWD"; IMG="fh-operator:latest"
 HOSTPORT="${OLLAMA_HOST:-host.docker.internal:11434}"
 MODELS=(${1:-gemma4:12b-it-qat qwen3:32b})
+SET="${SET:-base}"   # base = obvious entities · hard = common-word codenames / name-only / generic vendors
+# source OpenRouter key (for openrouter/* models) from the local env file — never a tracked file.
+[ -f "$HOME/.fh-operator.env" ] && { set -a; . "$HOME/.fh-operator.env"; set +a; }
 
 command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1 || { echo "CALIB: docker/OrbStack not running"; exit 1; }
 
 # Held-out set. Each sample = NAME | TEXT | REDACT (listed/obvious) | ENTITIES (all confidential,
 # pipe-sep — recall is measured over the UNLISTED ones) | KEEP (meaning that must survive).
-NAMES=(  "A-literal"  "B-client+person"  "C-codename+team"  "D-contextual" )
-TEXTS=(
-  "The orders service uses key sk-TEST-abc123 at host svc.example.internal (192.0.2.7) for record rec-00012345."
-  "Project Borealis migrates the Northwind Traders account; escalations route to Dana Whitfield. Auth key sk-TEST-x1 from 198.51.100.4."
-  "The Atlas reconciliation engine syncs ledgers nightly; the Settlements Platform team owns the rollback path. Token sk-TEST-y2."
-  "Customer records sit unencrypted in the legacy Vault-2 cluster pending migration; the bypass flag is on for vendor Globex. Key sk-TEST-z3."
-)
-REDACTS=(
-  'sk-[A-Za-z0-9-]+|svc\.example\.internal|192\.0\.2\.[0-9]+|rec-[0-9]+'
-  'sk-[A-Za-z0-9-]+|198\.51\.100\.[0-9]+'
-  'sk-[A-Za-z0-9-]+'
-  'sk-[A-Za-z0-9-]+'
-)
-ENTITIES=(
-  ""                                  # A: nothing unlisted (sanity baseline)
-  "Borealis|Northwind|Dana Whitfield" # B: unlisted client + person + codename
-  "Atlas|Settlements Platform"        # C: unlisted internal system + team
-  "Vault-2|Globex"                    # D: unlisted internal cluster + vendor
-)
-KEEPS=( "orders|retr|record" "migrat|escalat" "reconcil|ledger|rollback" "legacy|migrat|bypass" )
+if [ "$SET" = hard ]; then
+  # HARD set — subtle entities that even 32B may miss: common-word codenames (read as nouns),
+  # first-name-only persons, generic-looking vendors/tenants. This is where a heavier model's
+  # autonomous recall would show value (32B saturates the base set at 7/7).
+  NAMES=( "H1-codename-heavy" "H2-deal+vendor" "H3-model+breach" "H4-channel+person" "H5-flag+tenant" "H6-ledger+partner" )
+  TEXTS=(
+    "The Cascade pipeline feeds the Mercury dashboard; ask Priya Nair before touching the Harbor config. key sk-TEST-h1."
+    "Quarterly figures for the Meridian deal ship to acme-bank via the Falcon connector; the Falcon retry budget is 5. key sk-TEST-h2."
+    "The Onyx model scores applicants; its training set includes the Westbrook breach records under NDA with vendor Stellar. key sk-TEST-h3."
+    "Route P0 incidents to the Lighthouse channel; Marcus owns the Tideway rollback runbook. key sk-TEST-h4."
+    "The Beacon flag toggles legacy auth for the Crestline tenant; disable before the audit. key sk-TEST-h5."
+    "Sync the Aurora ledger to the partner Greenfield nightly; Lena signs off on schema changes. key sk-TEST-h6."
+  )
+  REDACTS=( 'sk-[A-Za-z0-9-]+' 'sk-[A-Za-z0-9-]+' 'sk-[A-Za-z0-9-]+' 'sk-[A-Za-z0-9-]+' 'sk-[A-Za-z0-9-]+' 'sk-[A-Za-z0-9-]+' )
+  ENTITIES=(
+    "Cascade|Mercury|Priya Nair|Harbor"
+    "Meridian|acme-bank|Falcon"
+    "Onyx|Westbrook|Stellar"
+    "Lighthouse|Marcus|Tideway"
+    "Beacon|Crestline"
+    "Aurora|Greenfield|Lena"
+  )
+  KEEPS=( "pipeline|dashboard|config" "quarterly|connector|retr" "model|training|applicant" "incident|rollback|runbook" "legacy|auth|audit" "ledger|partner|schema" )
+else
+  NAMES=(  "A-literal"  "B-client+person"  "C-codename+team"  "D-contextual" )
+  TEXTS=(
+    "The orders service uses key sk-TEST-abc123 at host svc.example.internal (192.0.2.7) for record rec-00012345."
+    "Project Borealis migrates the Northwind Traders account; escalations route to Dana Whitfield. Auth key sk-TEST-x1 from 198.51.100.4."
+    "The Atlas reconciliation engine syncs ledgers nightly; the Settlements Platform team owns the rollback path. Token sk-TEST-y2."
+    "Customer records sit unencrypted in the legacy Vault-2 cluster pending migration; the bypass flag is on for vendor Globex. Key sk-TEST-z3."
+  )
+  REDACTS=(
+    'sk-[A-Za-z0-9-]+|svc\.example\.internal|192\.0\.2\.[0-9]+|rec-[0-9]+'
+    'sk-[A-Za-z0-9-]+|198\.51\.100\.[0-9]+'
+    'sk-[A-Za-z0-9-]+'
+    'sk-[A-Za-z0-9-]+'
+  )
+  ENTITIES=(
+    ""                                  # A: nothing unlisted (sanity baseline)
+    "Borealis|Northwind|Dana Whitfield" # B: unlisted client + person + codename
+    "Atlas|Settlements Platform"        # C: unlisted internal system + team
+    "Vault-2|Globex"                    # D: unlisted internal cluster + vendor
+  )
+  KEEPS=( "orders|retr|record" "migrat|escalat" "reconcil|ledger|rollback" "legacy|migrat|bypass" )
+fi
 
-echo "DLP calibration — host=$HOSTPORT  models: ${MODELS[*]}"
+echo "DLP calibration — set=$SET  host=$HOSTPORT  models: ${MODELS[*]}"
 echo "================================================================"
 for m in "${MODELS[@]}"; do
   tot_caught=0; tot_ent=0; blocks=0; overred=0
   echo ""; echo "### MODEL: $m"
   for i in "${!NAMES[@]}"; do
     raw=$(docker run --rm -v "$REPO":/work/forge-harness -w /work/forge-harness \
-            -e "OLLAMA_HOST=$HOSTPORT" -e "SAMP=${TEXTS[$i]}" "$IMG" \
+            -e "OLLAMA_HOST=$HOSTPORT" -e "OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}" \
+            -e "OPENROUTER_REASONING=${OPENROUTER_REASONING:-off}" -e "SAMP=${TEXTS[$i]}" "$IMG" \
             -c "printf '%s' \"\$SAMP\" | REDACT_PATTERNS='${REDACTS[$i]}' OLLAMA_MODEL='$m' bash scripts/dlp-filter.sh - ; echo __EX:\$?" 2>&1)
     ex=$(printf '%s' "$raw" | grep -oE '__EX:[0-9]+' | tail -1 | cut -d: -f2)
     body=$(printf '%s\n' "$raw" | grep -v '__EX:')
