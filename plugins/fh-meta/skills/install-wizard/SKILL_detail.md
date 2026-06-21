@@ -61,6 +61,51 @@ Invariant across ALL backends:
   · handoff/ files bridge cloud session → local without exposing content
 ```
 
+**Queryable-wiki scaffold (all backends — the store is a wiki, not a dump):** after BE_DIR is set,
+scaffold so the agent can *read the store well* (this is the recommended form's Observability answer —
+the agent queries the wiki, vs a visual graph). `INDEX.md` here is the **`CATALOG.md` read-first pattern
+applied to the store** (same semantics; named INDEX, not CATALOG, only to avoid two `CATALOG.md` across
+the public mirror + the private store):
+
+```bash
+# 1. INDEX.md — wiki home (read FIRST at session start). The section MAP is static (low rot);
+#    the volatile "latest" pointers are DERIVED at read time, never hand-maintained (a stale
+#    "latest" mis-routes the very read it exists to guide — worse than none).
+cat > "$BE_DIR/INDEX.md" <<'IDX'
+# <store> — Wiki Home (READ ME FIRST at session start)
+> Read this store AS a wiki (relevance-query the right section), not pull + file-dump.
+## How to read at session start
+1. This INDEX first → pick the section for the session intent.
+2. DERIVE the latest pointers live (do NOT trust a hand-written "latest" line):
+     ls -t paper-signals/ handoff/ digests/ 2>/dev/null | head
+   then open anything newer than the session card (card=pointer, store commit=truth).
+## Sections (static map)
+| Section | Holds | Read when |
+|---|---|---|
+| paper-signals/ | completed results + research signals | any measurement (check for a prior result first) |
+| handoff/ | cross-machine/session bridges (entry points, run recipes) | resuming work started elsewhere |
+| digests/ | frontier digests (cadence source) | cadence/frontier scan |
+| (add your sections) | | |
+IDX
+
+# 2. session-start read wiring → IDEMPOTENT append to the user's CLAUDE.local.md (grep-guarded
+#    so a re-run never duplicates it; this is a REAL write, not a note):
+WIRING="At session start: read \$BE_DIR/INDEX.md first; then ls -t paper-signals/ handoff/ digests/ and open anything newer than the session card (card=pointer, store commit=truth) — not only handoffs."
+grep -qF "read \$BE_DIR/INDEX.md first" "$HUB_DIR/CLAUDE.local.md" 2>/dev/null \
+  || printf '\n## Companion-store session-start read\n%s\n' "$WIRING" >> "$HUB_DIR/CLAUDE.local.md"
+```
+
+- **Raw / Wiki / Conversation ingest axis** (`sync_push_protocols.md`): classify each artifact by
+  processing stage — Raw (unprocessed capture) → stays raw; Wiki (distilled + `[[linked]]`) → the
+  compounding layer; Conversation (dialogue/decision log). The Raw→Wiki distill is where linking earns
+  its keep. Mention it so the store accumulates as a wiki, not a heap.
+- **Backend note**: for an **Obsidian** backend the graph view is the *visual* observability surface
+  (free for that backend); for the recommended **git `*-be`** form, observability is the agent querying
+  INDEX + sections (no visualization needed). gbrain ingests the same markdown.
+- **Salience caveat**: the CLAUDE.local.md session-start read is prose (no SessionStart hook) — on a weak
+  tier it may silently not fire. Accepted limitation (mirrors `operational_adaptation.md §Guards`);
+  revisit if a target-tier sim measures a miss.
+
 
 ---
 
