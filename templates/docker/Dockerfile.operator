@@ -27,6 +27,13 @@ RUN pip3 install --no-cache-dir --break-system-packages yt-dlp
 # (host, option 1) — neither is containerized in Phase 1. AUTH is always runtime-mounted, never baked.
 RUN npm install -g @openai/codex@0.139.0
 
+# Phase 1 sidecar CLI #2: agy (Antigravity) — cross-platform Linux build (operator-confirmed:
+# Ubuntu/Debian/CentOS + Windows + macOS; the heavy agent is cloud, the local client is cross-platform).
+# Installs the arch-correct linux binary to /root/.local/bin (install.sh auto-detects arm64/amd64 →
+# multi-arch safe). AUTH is runtime-mounted (~/.gemini), never baked. Headless: agy -p --model.
+RUN curl -fsSL https://antigravity.google/cli/install.sh | bash || echo "agy install non-fatal (offline build)"
+ENV PATH="/root/.local/bin:${PATH}"
+
 WORKDIR /work/forge-harness
 ENV FH_ROOT=/work/forge-harness \
     HUB_DIR=/work/forge-harness \

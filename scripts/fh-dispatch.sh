@@ -18,6 +18,10 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # e.g. CLAUDE.local.md / a private env file). No default path is baked in — keeps this public
 # script free of any operator-specific companion-store name or home path.
 BE="${BE_DIR:-}"
+# Optional agy (Antigravity) auth: agy's token is established by a one-time in-container OAuth login
+# persisted to a dir (it is Keychain-bound on macOS, so it cannot be mounted from the host — the
+# container keeps its OWN agy identity). Set AGY_AUTH_DIR to that persisted dir to enable agy dispatch.
+AGY="${AGY_AUTH_DIR:-}"
 
 command -v docker >/dev/null 2>&1 || { echo "fh-dispatch: docker not found — install/start OrbStack"; exit 1; }
 docker image inspect "$IMG" >/dev/null 2>&1 || {
@@ -35,11 +39,14 @@ CMD="$*"
 # ~/.npmrc) as Phase 1 grows.
 BE_MOUNT=()
 [ -n "$BE" ] && BE_MOUNT=(-v "$BE":/work/companion-store)
+AGY_MOUNT=()
+[ -n "$AGY" ] && AGY_MOUNT=(-v "$AGY":/root/.gemini)
 # Empty-array expansion is written bash-3.2-safe (macOS host bash + set -u): the
 # ${arr[@]+"${arr[@]}"} form expands to nothing when unset instead of erroring.
 docker run --rm \
   -v "$REPO":/work/forge-harness \
   -v "$HOME/.codex":/root/.codex \
   ${BE_MOUNT[@]+"${BE_MOUNT[@]}"} \
+  ${AGY_MOUNT[@]+"${AGY_MOUNT[@]}"} \
   -w /work/forge-harness \
   "$IMG" -c "$CMD"
