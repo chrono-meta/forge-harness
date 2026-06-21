@@ -548,13 +548,40 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc.)
        auto-publish.** Tag drift caveat: when a bump rides inside a functional commit (no explicit
        "bump" commit), tag *that* commit — otherwise the version ships to npm untagged (e.g. 1.4.4/1.4.5
        shipped untagged, backfilled 2026-06-08).
-  → ⑤ Card update ← ABSOLUTE LAST: must capture ①–④-b outcomes
+  → ④-c Handoff lifecycle (durable-artifact reconciliation — cross-machine continuity) — when a
+       durable **result artifact lands** this session, reconcile the *pointer* artifacts so a fresh
+       machine doesn't re-read pre-run state. **Trigger (mechanical hint, not pure judgment)**: a new
+       file matching a result/signal pattern (`*result*` · `*signal*` · `*_run_*`) written to your
+       companion store or `tracks/` this session — when unsure, diff `git status` + companion-store
+       mtime against session start. On a hit, do two things:
+       **(a) Stamp the run-handoff (④-c owns this write)** — any `"run this / start here"` run-handoff
+       whose result has now landed gets a header `STATUS: SUPERSEDED by <repo-relative-or-companion
+       path> (<date>)` (path resolvable from a fresh checkout; or retire the file). Not a
+       Destructive-Op — a one-line header edit, no deletion.
+       **(b) Flag the matching card carry item as resolved** — note it for ⑤ to act on. ⑤ **owns the
+       card write** (card-last guard): a finished run must not survive as a pending *carry/priority*
+       item — ⑤ removes it from the active carry list (recording it under "done this session" if the
+       card keeps a done log). ④-c does **not** edit the card itself (avoids a double-write / a
+       flip-vs-remove conflict with ⑤'s removal obligation) — it surfaces the resolution so ⑤ closes it.
+       **First-run no-op**: if no matching carry item or handoff exists, ④-c records nothing and
+       creates no artifact to supersede.
+       **Why its own step**: cross-machine continuity works only when *durable* artifacts are current —
+       the session that ran the work holds completion as **live context**, but a fresh machine inherits
+       only the durable card + handoff, never that live context (origin: 2026-06-21 — a Windows session
+       re-entered a finished A6 run as "to run" because the Mac session that ran it never retired the
+       NEXT_ACTION handoff / flagged the carry item; live context didn't transfer, the stale artifacts
+       did). The reader-side half — read *result* files at session start, not only handoffs — lives in
+       `modes_and_value.md` §Session-start freshness + each operator's local session-start binding.
+       **Salience-dependent** — prose, not hook-enforced; on a weaker tier may silently not fire.
+       Backstops: ⑤'s removal obligation + the reader-side result-file read. A hook-enforced writer-side
+       is a future hardening candidate, not built today (keep the surface thin).
+  → ⑤ Card update ← ABSOLUTE LAST: must capture ①–④-c outcomes
   → ⑥ Commit card + push
 ```
-**Card-last guard**: ①–④-b (incl. ①-b open-PR sweep) must ALL complete before ⑤ runs. Any new
-information produced during ①–④ (new commits from a merged self-PR, model changes, new findings)
-feeds INTO ⑤ — card is never written mid-sequence and then left open for more work to accumulate
-after it.
+**Card-last guard**: ①–④-c (incl. ①-b open-PR sweep, ④-c handoff lifecycle) must ALL complete before
+⑤ runs. Any new information produced during ①–④ (new commits from a merged self-PR, model changes,
+new findings, a carry item flipped to DONE) feeds INTO ⑤ — card is never written mid-sequence and
+then left open for more work to accumulate after it.
 
 **Mid-session card writes are drafts**: If a task (e.g., a calibration run) internally updates
 the card, that is a draft. The close chain always re-runs ⑤ to capture post-draft activities.
