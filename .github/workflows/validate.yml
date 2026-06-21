@@ -45,19 +45,12 @@ jobs:
 
       - name: Check skill count consistency
         run: |
-          echo "=== Checking skill counts ==="
-          FH_META_SKILLS=$(find plugins/fh-meta/skills -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
-          FH_META_AGENTS=$(find plugins/fh-meta/agents -mindepth 1 -maxdepth 1 -type f -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
-          FH_COMMONS_SKILLS=$(find plugins/fh-commons/skills -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
-          FH_COMMONS_AGENTS=$(find plugins/fh-commons/agents -mindepth 1 -maxdepth 1 -type f -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
-          echo "fh-meta: ${FH_META_SKILLS} skills, ${FH_META_AGENTS} agents"
-          echo "fh-commons: ${FH_COMMONS_SKILLS} skills, ${FH_COMMONS_AGENTS} agents"
-
-          DESCRIPTION=$(python3 -c "import json; p=json.load(open('plugins/fh-meta/.claude-plugin/plugin.json')); print(p['description'])")
-          echo "fh-meta description: $DESCRIPTION"
-
-          # Verify counts appear in description
-          if ! echo "$DESCRIPTION" | grep -q "${FH_META_SKILLS} skills"; then
-            echo "WARN: fh-meta description skill count may not match filesystem (${FH_META_SKILLS} skills on disk)"
-          fi
-          echo "PASS: skill count check complete"
+          echo "=== Checking skill counts (merge-boundary gate) ==="
+          # gate-locality close (fh_signal_2026-06-21): this step is the gate at the MERGE
+          # boundary — the path that actually broke (PR #111 merged green because the old
+          # step counted directories incl. deprecated and only WARNed). It now runs the SAME
+          # single-source check the local pre-commit hook + selfcheck/publish run, and FAILS
+          # hard on drift across all 5 declarations (plugin.json ×2 · marketplace.json ·
+          # README header · local_fh_context). count_check uses active-skill (non-deprecated)
+          # semantics, so it cannot pass on a directory miscount.
+          bash scripts/count_check.sh

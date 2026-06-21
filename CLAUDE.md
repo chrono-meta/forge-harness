@@ -520,6 +520,15 @@ harvest-loop Step 0-b uses this file as its source — relying on LLM memory aft
 ```
 Closing phrase detected ("wrap up", "done", "good work", "end session", etc.)
   → ① Check git diff + unpushed commits (status snapshot)
+  → ①-b Open-PR sweep — `gh pr list --author @me --state open` (+ `gh search prs --author @me
+       --state open` for cross-repo). Classify, **surface-not-auto**: a **self-mergeable** PR
+       (operator's own repo, checks green) → *propose merge now* (never auto-merge — HITL); an
+       **awaiting-external** PR (other repos / corp review) → *surface for tracking only*. Why here:
+       the harness's "마감" ≠ the operator's "마감" — a self-authored PR (PR #111) sat open across
+       sessions with un-integrated skills + count drift because no close step surfaced it. Pairs with
+       the count-consistency check (which now runs at BOTH the local pre-commit hook AND the plugins/**
+       PR-CI merge boundary): the sweep surfaces the PR → merging it → the count-check catches any
+       drift at the merge (fh_signal_2026-06-21, gate-locality paired fix).
   → ② If FH assets changed: harvest-loop
   → ③ Sync local/gitignored session state to your durable companion store, if you keep one
   → ④ Memory hygiene — update stale entries + record new session findings
@@ -542,9 +551,10 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc.)
   → ⑤ Card update ← ABSOLUTE LAST: must capture ①–④-b outcomes
   → ⑥ Commit card + push
 ```
-**Card-last guard**: ①–④-b must ALL complete before ⑤ runs. Any new information produced
-during ①–④ (new commits, model changes, new findings) feeds INTO ⑤ — card is never
-written mid-sequence and then left open for more work to accumulate after it.
+**Card-last guard**: ①–④-b (incl. ①-b open-PR sweep) must ALL complete before ⑤ runs. Any new
+information produced during ①–④ (new commits from a merged self-PR, model changes, new findings)
+feeds INTO ⑤ — card is never written mid-sequence and then left open for more work to accumulate
+after it.
 
 **Mid-session card writes are drafts**: If a task (e.g., a calibration run) internally updates
 the card, that is a draft. The close chain always re-runs ⑤ to capture post-draft activities.

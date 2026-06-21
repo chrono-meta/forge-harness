@@ -488,6 +488,38 @@ else
   fi
 fi
 
+# ── Count-consistency shift-left (gated on a skills-dir add/remove) ───────────
+# The skill/agent count-consistency check historically lived ONLY at the publish
+# boundary (scripts/selfcheck.sh via prepublishOnly). But the actor that BREAKS it —
+# a commit that adds/removes a skill dir — acts here, at commit time. So a skill-adding
+# PR could merge with stale counts undetected until the next publish (fh_signal_2026-06-21:
+# the gate-locality gap that PR #111 itself tripped — it added 2 skills without updating
+# the 4 count declarations and merged green). Shift the check left: run the
+# count-consistency slice WHEN a SKILL.md is added/removed/renamed under plugins/*/skills/.
+# Gated so ordinary commits stay cheap; reuses scripts/count_check.sh (same logic selfcheck
+# uses — single source, no reinvention). NOT the whole of selfcheck (that is a broad
+# publish-readiness check; keep the hook light).
+SKILL_CHANGE=$(git diff --cached --name-status --diff-filter=ADR 2>/dev/null \
+  | grep -E 'plugins/[^/]+/skills/[^/]+/SKILL\.md' || true)
+if [ -n "$SKILL_CHANGE" ]; then
+  echo "[Count] skills-dir add/remove staged — count-consistency check..."
+  CCHECK="$REPO_ROOT/scripts/count_check.sh"
+  CCOUT="$(mktemp 2>/dev/null || echo /tmp/fh_count_check.$$)"
+  if [ ! -f "$CCHECK" ]; then
+    echo "  ⚠️  SKIP — scripts/count_check.sh not found"
+  elif bash "$CCHECK" --staged >"$CCOUT" 2>&1; then
+    echo "  ✅ PASS (declared counts match the staged index)"
+  else
+    echo "  ❌ FAIL — declared skill/agent counts drift from the filesystem:"
+    grep -E '^(FAIL|COUNT-CHECK)' "$CCOUT" | sed 's/^/     /'
+    echo "     A skill was added/removed without updating every count declaration."
+    echo "     Update: plugin.json · marketplace.json · README header · local_fh_context.md"
+    echo "     (run: bash scripts/count_check.sh — same check selfcheck/publish runs)"
+    FAILED=1
+  fi
+  rm -f "$CCOUT"
+fi
+
 # ── Verdict ───────────────────────────────────────────────────────────────────
 echo ""
 echo "══════════════════════════════════════════════"
