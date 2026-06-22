@@ -58,6 +58,14 @@ cheap signal accumulation; weekly = one considered proposal.
   (gitignored) and never committed to the methodology tree.
 - **Cost ceiling.** Both arms run `WebSearch`/`WebFetch`. Daily draws subscription usage and counts
   against the per-account routine daily cap; keep the daily prompt to collection-only.
+- **Cite-verify (PR #112 lesson, 2026-06-22) — do not weaken.** Any citation / source / version claim
+  the weekly change *introduces into an FH asset* (distinct from citing the signal URL) must be
+  WebSearch-verified before commit. Unverifiable → omit it or mark `(unverified)`; never ship a
+  plausible-sounding but unchecked citation. **Origin**: a weekly run added a fabricated "O'Reilly AI
+  Agents Stack 2026" citation (+ an over-specific "~32K" threshold) that reached draft PR #112; the
+  merger caught it via WebSearch (real source = Chroma 2025), but **Axis 3 phantom-quench is
+  "if available"** in the routine sandbox, so the prompt must enforce cite-verify directly — the gate
+  cannot be relied on for it.
 
 ## 4. The 4-axis gate inside the weekly routine
 
@@ -178,6 +186,13 @@ Task:
    doubt, no-op.
 4. If you have one improvement, implement it minimally on a NEW branch named
    claude/frontier-auto-<today's date>.
+   **CITE-VERIFY (mandatory — distinct from step 3's signal URL):** if your change introduces ANY
+   citation, source name, version, benchmark number, or "per <source> <year>" claim INTO an FH asset,
+   WebSearch-verify it FIRST. If you cannot confirm the exact source, OMIT it or write "(unverified)" —
+   never ship a plausible-but-unchecked citation. A fabricated citation in an FH asset is a phantom;
+   Axis 3 (phantom-quench) may be skipped in this sandbox, so this step does NOT depend on the gate.
+   (This guard exists because a prior run shipped a fabricated "O'Reilly AI Agents Stack 2026" cite to
+   PR #112 — real source was Chroma 2025.)
 5. Run the FH 4-axis gate before committing:
    - git config core.hooksPath templates/.git-hooks && chmod +x templates/.git-hooks/pre-commit
    - bash templates/regression_guard.sh --pr "$(git branch --show-current)"   (Axis 1, must PASS)

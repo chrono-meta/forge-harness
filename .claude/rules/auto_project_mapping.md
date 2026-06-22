@@ -70,6 +70,23 @@ Basic mapping (steps 1–5) registers a project *lightly* (tracks/ + a starter C
 
 **Triggers**: "harness-ify this project", "full harness setup", "프로젝트 하네스화", "promote to full harness", or an opt-in prompt offered right after a basic mapping (*"Promote {project} to a full harness now?"*).
 
+**Harness litmus (pre-check — component lens, complements the 6-axis process lens)**: before promoting,
+sanity-check the candidate actually *operates as (or will operate as) a runtime harness*, not a static
+codebase. A runtime harness has four conditions (sister-asset, sanguinekim 2026 — cross-audit
+`tracks/_audit/session_2026_06_22_sanguinekim-harness-definition.md`):
+
+| # | Condition | Litmus question |
+|---|---|---|
+| 1 | **Loop** (infer→act→observe) | Does it iterate, or emit one response and stop? |
+| 2 | **Tool interface** | Can it *modify* the environment, not just read? |
+| 3 | **Context management** | Does it *select* what to feed back, not just truncate at overflow? |
+| 4 | **Control** (verify + guardrails) | Are there checks that hold *independent of model cooperation*? |
+
+This is a *should-we-even-harness-ify* gate, not an install: 0–1 conditions met → the project isn't yet
+an agentic harness, so full-harness assets are premature (note it, offer light mapping only). 2+ met (or
+clearly intended) → proceed. The component lens is orthogonal to FH's 6-axis (process); FH adds the
+governance depth to condition 4 (mechanical-anchor / 4-axis gate) — the litmus just confirms the *shape*.
+
 **Installs (each item approval-gated · never overwrite — propose skip/merge if it exists · all from `templates/`):**
 
 | # | Item | Source → target | Effect |
