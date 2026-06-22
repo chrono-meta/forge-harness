@@ -81,8 +81,8 @@ When context is near the limit and you want to *preserve state* rather than rese
 □ Switching to a different track/project
 □ Error debugging has gone long and noise has accumulated
 □ Previous attempts are unrelated to current work
-□ Session is approaching ~32K tokens of context (context rot onset — performance degrades
-  measurably at this threshold even in 1M-window models; O'Reilly AI Agents Stack 2026)
+□ Context has grown large (context rot — measurable quality degradation as input length grows,
+  well before the window fills; threshold varies by model/task. Chroma 2025 context-rot research)
 ```
 
 → Recommend immediate `/clear` and restart in fresh context.
@@ -213,7 +213,7 @@ Also activates when an external user expresses without token/context terminology
 | "Seems like it keeps re-reading the same thing" | Repeated full-read detected | Step 2 (burst pattern) |
 | "Answers get weird as the session gets longer" | Accumulated context noise | Step 3 (/clear recommended) |
 | "Context is getting full", "context meter is high" | Approaching context limit | Step 3 — propose Wrap-then-Compact pattern |
-| "context engineering", "doing context engineering", "context rot setting in" | 2026 industry term for context discipline (O'Reilly / Anthropic) | Step 2 + Step 3 |
+| "context engineering", "doing context engineering", "context rot setting in" | 2026 industry term for context discipline (Chroma 2025 / Anthropic) | Step 2 + Step 3 |
 
 ## Three-Doctor Loop Integration
 
