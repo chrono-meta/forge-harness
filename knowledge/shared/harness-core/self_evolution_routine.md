@@ -110,6 +110,27 @@ the merger's before merge.` A silent skip turns the draft PR into an unchallenge
 "gate passed" coat; the label keeps the escalation honest. (Axis 2 *passing* needs no such label — the
 marker already records `axis2-engine`/`axis2-evidence`.)
 
+**Merge-side citation residual (auto-PR cite floor — 2026-06-22 harvest-loop).** §3's cite-verify is
+the *generator-side* half; this is the *merger-side* redundancy. Because the routine sandbox runs
+phantom-quench only "if available" (line above) and **no CI job runs phantom-quench at the merge
+boundary** (the merge-time mechanical gates are `regression-guard.yml` Axis 1 + `validate.yml`
+token/JSON/count only), the citation check on an auto-authored (`claude/`-branch) PR is the **merger's
+explicit, non-skippable residual** — not a mechanical gate. *Honest scope: this is judged prose, not a
+CI check.* Obligation: before merging any auto-authored PR that **adds a citation / URL / version
+claim**, run phantom-quench on that citation surface (or WebSearch-verify it directly); a fabricated
+citation reaching `main` is the failure this closes (origin: PR #112's "O'Reilly AI Agents Stack 2026"
+phantom — the human merger was the only catch).
+
+> **Measured-trigger → CI escalation (do not build the CI gate speculatively).** One occurrence (PR
+> #112) is N=1, below `operations.md`'s N=3 recurrence threshold for instrumenting a defect class as a
+> CI probe. So the fix today is the prose residual above, **not** a workflow. **If an auto-PR phantom
+> citation recurs (N≥2 toward N=3)**, escalate to a real mechanical gate: a CI job (extend
+> `validate.yml` or a new workflow) that greps `claude/`-branch PR diffs for added citation tokens and
+> **fails** unless phantom-quench evidence is attached. Until that recurrence is measured, a prose
+> checklist is the right weight — calling it "mechanical" now would be the gate-locality error in
+> reverse (a decorative gate nobody's traffic justifies). See `[[measurement-integrity-checklist]]` for
+> the sibling "instrument-before-trusting" discipline.
+
 ## 5. Setup steps (operator, one-time)
 
 1. **Standing issue** — create one GitHub issue in `chrono-meta/forge-harness` titled
