@@ -246,6 +246,14 @@ post-compaction 2026-06-12). 2026-06-15+: headless `claude -p` draws from the ha
 subscription — prefer in-session Agent dispatch when the plan gate allows; take the headless fallback
 knowingly. Record sim results in the Axes 2–3 marker + sub-agent invocation log.
 
+**Measurement-integrity pre-flight** (when the sim/dispatch is a *cross-model measurement* — pinned to
+a specific tier, comparing model behaviors, or feeding a paper/published claim): consult
+`knowledge/shared/harness-core/measurement-integrity-checklist.md` first — pin the **display name** not
+a slug (silent fallback to a weaker model is a measured failure), take **reps ≥ 3** on any
+borderline/contested verdict (single draw = noise), and use a **discriminating** identity probe (a
+generic "OK" proves nothing about which model answered). The instrument must be verified before the
+measurement is trusted.
+
 **Floor-tier canary (optional pre-screen — token-free, *below* the Sonnet sim)**: a local model weaker
 than or comparable to Sonnet (e.g. `ollama run qwen3:8b` on the local host today; a cross-family local
 panel — qwen3.x:27b / gemma4:12b-qat / gpt-oss:20b / devstral — on a GPU host once its remote-exec path
