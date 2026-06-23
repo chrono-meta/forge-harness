@@ -11,13 +11,13 @@
   "plugins": [
     {
       "name": "fh-meta",
-      "version": "1.4.41",
+      "version": "1.4.42",
       "description": "Hub meta-operations toolkit — 33 skills + 7 agents. New in 1.4.41: context-doctor 2026 trigger vocab (context engineering/rot/collapse) + phantom-citation hardening; hub measurement-integrity-checklist (cross-model measurement pre-flight: display-name pin/reps≥3/discriminating probe). New in 1.4.40: install-wizard queryable-wiki scaffold (INDEX + session-start read + R/W/C ingest). New in 1.4.39: auto-decorrelation (cross-family verifier sidecar recruitment) + video-ingest (capability-routed video ingestion). New in 1.4.x: verify-axis check-class taxonomy (mandatory-pass/measured/judged), no-reinvention Tier-0 inventory, 7-class failure taxonomy, Destructive-Op Gate, Wave-T (Temper), tier-floor governance, Mode D Model Notice, FC consent lane, default-Sonnet guidance. New in 1.3.0: public-surface-audit, field-harvest Mode B auto-trigger, 4-axis gate scope ext. Validated cross-CLI: Claude Code, Codex, Gemini.",
       "source": "./plugins/fh-meta"
     },
     {
       "name": "fh-commons",
-      "version": "1.4.41",
+      "version": "1.4.42",
       "description": "Project-agnostic utility skills — 4 skills (convergence-loop · deliberation · mcp-circuit-breaker · token-budget-gate) + 1 agent (quench-challenger). Domain-independent utilities transplantable into any project.",
       "source": "./plugins/fh-commons"
     }
