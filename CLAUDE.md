@@ -426,6 +426,8 @@ Self-healing is not only FH-self-dev (Mode D 4-axis) and reactive (`verify-bidir
 
 ## Agent Dispatch Operation (FH cwd-Based)
 
+> **Runtime authority (canonical):** one explicit governor per context + capability-routed sidecars; sidecar findings are evidence candidates, not terminal verdicts, until source-closed by the governor *via a mechanical anchor* — never governor agreement alone. CC=action/governor · Codex=repo-grounded audit sidecar · Gemini/agy=breadth/multimodal sidecar · other runtimes=portable `AGENTS.md` entrypoint only. Full doctrine + Maintenance-Cost Rule: `knowledge/shared/harness-core/multi_model_sidecar_strategy.md §Runtime Authority`.
+
 Default operation is a **standard interactive session**. Agent dispatch (single or parallel) is used when the task warrants it — not as a default mode. Three execution paths:
 
 | Path | Situation | Method |
