@@ -160,19 +160,14 @@ All 6 items below must pass before committing a new SKILL.md. If any fails, fix 
 
 Skills without a Done When definition automatically qualify as harness-doctor L2 M-tier.
 Check-class declaration applies to **new** skills; existing skills backfill opportunistically
-(when next edited), not retroactively. **Trigger-accuracy probe backfill** follows the same
-opportunistic rule but scoped to **routing/gate skills only**: when an existing router/gate skill is
-edited (especially when its trigger phrases change), run steel-quench `Step 0.5 — Trigger-Accuracy
-Probe` on the changed trigger surface and record the fire-count — turning "do these triggers collide?"
-from a guess into a number. Not a retroactive sweep of all routers (that would be decorative
-over-work); it rides the edit that touches the router. **One-time baseline floor** (closes the
-never-edited-router gap — a stable router accumulates the most un-probed traffic): existing
-routing/gate skills get **one** baseline Step-0.5 probe at the next `harness-doctor` run (the 30-day
-cadence already enumerates skills), then opportunistic-on-edit thereafter — a single baseline pass,
-not a recurring sweep. **"routing/gate skill" (mechanical test)**: a skill whose *primary output is a
-dispatch decision or a pass/block verdict* — e.g. `agent-composer`, `goal-quench`, `asset-placement-gate`,
-`return-path-gate`, `phantom-quench` — NOT a skill that merely calls others as sub-steps (e.g.
-`harvest-loop`).
+(when next edited), not retroactively. **Obligation (always-loaded):** a **routing/gate skill** (primary
+output = a dispatch decision or pass/block verdict) owes a **one-time `Step 0.5` baseline trigger-probe**
+at the next `harness-doctor` run **and a re-probe whenever its trigger phrases change** — not optional for
+that skill class, and not a retroactive sweep of all routers.
+
+> **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §New-Skill-Backfill` — the
+> probe mechanics (fire-count procedure), the baseline-floor rationale, and the mechanical "routing/gate
+> skill" test — read when editing a router/gate skill.
 
 ---
 
@@ -188,21 +183,14 @@ No user request is needed — this is a mandatory autonomous step, not a proposa
 FH asset modified → Axis 1 (regression_guard.sh --pr {BRANCH})
   → Axis 2 (/steel-quench) → Axis 3 (/phantom-quench)
   → marker: tracks/_meta/.axes_23_passed_{branch}_{date}.marker
-     (structured — required fields: axis2-engine / axis2-model / floor-status / axis2-evidence;
-      hook validates mechanically: below-floor blocks without below-floor-ack, and
-      axis2-evidence must be non-vacuous — a recorded verdict/count, not "it ran". Honest
-      scope: form + non-vacuity + auditability, NOT provenance — a fabricated marker is the
-      weekly audit's + operator's residual by design, judge-robustness swarm 2026-06-13.
-      The below-floor-ack rubber-stamp is **structurally IRREDUCIBLE for an autonomous runner**: the
-      runner writes both the marker AND any transcript the hook could cross-check, so any in-boundary
-      check it can satisfy it can also forge (a runner-computed signature is false security). The one
-      genuine close needs a secret the runner does NOT hold — an **operator-present hard-close**: a
-      GPG-signed trailer **whose key requires a fresh interactive passphrase** (NOT an agent-cached
-      gpg-agent key, and NOT operator-git-identity alone — `user.email` is config the runner already
-      writes, forgeable, not a secret). The real guarantee is *uncached private-key access*, not commit
-      identity; optional, breaks full autonomy, use only when the operator is at the keyboard. Autonomous mode keeps the honest
-      residual + weekly-audit backstop — do NOT fake-close it. Gemini cross-analysis 2026-06-16 reached
-      this verdict independently, converging with the existing FH stance)
+     (required fields: axis2-engine / axis2-model / floor-status / axis2-evidence;
+      hook validates mechanically: below-floor blocks without below-floor-ack, and axis2-evidence
+      must be non-vacuous — a recorded verdict/count, not "it ran". Marker scope is form +
+      non-vacuity + auditability, NOT provenance — a fabricated marker is the weekly-audit + operator
+      residual by design, do NOT fake-close it.
+      → **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Marker-Irreducibility`
+        — why the below-floor-ack is structurally irreducible for an autonomous runner + the
+        operator-present GPG hard-close option — read when auditing or attempting to harden the marker.)
   → Axis 4 (/edit-manifest RECORD, today's entry in edit_manifest.yaml)
   → All 4 PASS → git commit allowed   |   Any FAIL → fix inline, re-run
 ```
@@ -236,15 +224,11 @@ path, exempt)? For salience-dependent changes, verify with a **blind simulation 
 only at opus-tier or above. A below-floor orchestrator does not silently skip: it runs the sim or asks
 the operator (one line), mirroring §Floor governance.
 
-If `model:`-pinned dispatch is unavailable (plan/billing gate), fall back to a cross-session headless
-run (`claude -p "<trigger>" --model <tier>` in the target cwd) — stronger isolation, zero instruction
-contamination. **Saturation disguise (N=2, 2026-06-11/12)**: the same "Usage credits required for 1M
-context" error also fires when the *session* is near context saturation, not the plan gate — in a
-long-running session, compact (flush handoff state to disk first) and retry the dispatch once before
-concluding the gate is closed (identical opus-pinned dispatch failed pre-compaction, succeeded
-post-compaction 2026-06-12). 2026-06-15+: headless `claude -p` draws from the hard-capped credit pool, not the
-subscription — prefer in-session Agent dispatch when the plan gate allows; take the headless fallback
-knowingly. Record sim results in the Axes 2–3 marker + sub-agent invocation log.
+Record sim results in the Axes 2–3 marker + sub-agent invocation log.
+
+> **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Sim-Dispatch-Fallback` — the
+> headless `claude -p --model` fallback when in-session model-pin is unavailable, the saturation-disguise
+> retry (compact-then-retry once), and the credit-pool caveat — read when a model-pinned dispatch fails.
 
 **Measurement-integrity pre-flight** (when the sim/dispatch is a *cross-model measurement* — pinned to
 a specific tier, comparing model behaviors, or feeding a paper/published claim): consult
@@ -254,22 +238,15 @@ borderline/contested verdict (single draw = noise), and use a **discriminating**
 generic "OK" proves nothing about which model answered). The instrument must be verified before the
 measurement is trusted.
 
-**Floor-tier canary (optional pre-screen — token-free, *below* the Sonnet sim)**: a local model weaker
-than or comparable to Sonnet (e.g. `ollama run qwen3:8b` on the local host today; a cross-family local
-panel — qwen3.x:27b / gemma4:12b-qat / gpt-oss:20b / devstral — on a GPU host once its remote-exec path
-is live) can pre-screen a salience-dependent edit *before* the Sonnet dispatch is spent: a rule that
-fires correctly on the floor model is *evidence of* robustness below Sonnet (one floor sample, not proof
-— hold the asymmetric-skepticism discipline). Blind probe — feed the verbatim rule text + a scenario,
-demand a strict YES/NO + one-line reason, judge whether the rule fired (mechanism dogfood-verified
-2026-06-20: a local `qwen3:8b` correctly gated the public install-wizard local-LLM-offload item in both
-directions — a claim checkable against that skill — re-validating that day's salience-binding fix at a
-sub-Sonnet tier). **Canary, NOT gate**: a PASS adds cheap floor confidence and you still run the Sonnet
-sim; a FAIL never blocks alone — the opus orchestrator triages it as a *real salience gap* (fix the
-rule) vs a *floor-model quirk* (small-model loop/hallucination, per the public "Local AI is not Opus"
-finding + the cheap-oracle ceiling — a small model adds nothing where one grep already settles the
-check). The terminal verdict stays with the frontier (Sonnet sim + opus judge) — no judge-only path, no
-weak-local-judge regression of the judge-robustness principle (mechanical anchor over judge-only verdict).
-The cross-family-panel upgrade spec lives in the private companion store's `handoff/` design note.
+**Floor-tier canary (optional pre-screen — token-free, *below* the Sonnet sim)**: a local model ≤ Sonnet
+can blind-pre-screen a salience-dependent edit *before* the Sonnet dispatch is spent. **Canary, NOT gate**:
+a PASS adds cheap floor confidence and you still run the Sonnet sim; a FAIL never blocks alone. The terminal
+verdict stays with the frontier (Sonnet sim + opus judge) — **no judge-only path**, no weak-local-judge
+regression of the judge-robustness principle (mechanical anchor over judge-only verdict).
+
+> **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Floor-Tier-Canary` — the local
+> model/panel options, the blind-probe procedure, dogfood evidence, and the FAIL-triage (real salience gap
+> vs floor-model quirk) — read when running a floor canary.
 
 **Axis ownership** (each skill is already complete — orchestrator only coordinates):
 
@@ -325,32 +302,18 @@ not marketplace-gate alone:
 `LICENSE`/`README` contains a **private harness name or internal codename** · **module paths encode
 internal acronyms**.
 
-**Hook coverage — two distinct actions (refined 2026-06-17)**:
-- **(a) repo-go-public** (`gh repo create --public` / a visibility flip) is irreversible and usually in a
-  **separate repo** — the FH pre-commit hook **cannot** catch it. That stays **AI-behavioral** (proactive
-  trigger below) **+ a portable checklist** (`templates/PRE-PUBLISH-CHECKLIST.md`), run on any repo/machine.
-- **(b) committing operator-private tokens into public-tracked content of THIS repo IS an effective
-  publish of that content** — and that the pre-commit hook **now catches mechanically**: a
-  **confidentiality scan** of staged tracked *added* lines against the gitignored
-  `.public-surface-patterns` (companion-store names · corp-context framing · home paths · company assets),
-  blocking HIGH/MED + non-allowlisted LOW drift; `PUBLIC_SURFACE_OK=1` overrides for a deliberate reviewed
-  mention. **Two-layer** (mirrors `/public-surface-audit`): the literal tokens live ONLY in the gitignored
-  source — CLAUDE.md and the hook name **only categories**, never the literals (they would leak what they
-  guard). This closes the gap where the prose publish-trigger was **missed on a weaker-tier session**
-  (PR #109: a companion-store name + corp-context framing reached a public PR; the Sonnet session trusted a
-  PR comment over the file content). The scan fires at commit time and is **tier-independent — but only as
-  strong as the loaded patterns**: a COMMITTED `.public-surface-patterns.defaults` (universal patterns:
-  home paths) keeps it from ever being fully blind, while the company-specific literals require the
-  GITIGNORED override to be populated in each authoring env (esp. the company env, where company-origin
-  public PRs are written; absent override → only defaults run, with a loud warning). **Honest scope**:
-  plaintext only (encoded tokens out of scope); a line-split backstop catches a token wrapped across
-  lines; `PUBLIC_SURFACE_OK=1` overrides and is logged to a gitignored audit trail for the weekly audit.
-  Residuals (split-encoding, override-not-populated, override abuse) are documented, not silent.
+**Hook coverage — two distinct actions**: **(a) repo-go-public** (`gh repo create --public` / visibility
+flip) is irreversible and usually in a **separate repo** — the pre-commit hook **cannot** catch it, so it
+stays **AI-behavioral** (proactive trigger below) **+ a portable checklist** (`templates/PRE-PUBLISH-CHECKLIST.md`).
+**(b) committing operator-private tokens into public-tracked content of THIS repo IS an effective publish** —
+caught mechanically by the pre-commit **confidentiality scan** (staged added lines vs the gitignored
+`.public-surface-patterns`; HIGH/MED block, `PUBLIC_SURFACE_OK=1` overrides + logs). Tier-independent but
+**only as strong as the loaded patterns** (committed `.defaults` keep it non-blind; company literals need
+the gitignored override populated per env).
 
-> Origin: 2026-06-05 `phantom-gate` shipped public, then needed a private→de-company-scrub→re-public
-> round-trip (`fh_signal_2026-06-05_fh-direct`). PSA existed but nothing forced it pre-publish. 2026-06-17
-> (PR #109): the commit-time half (b) became a mechanical hook after a weaker-tier session leaked a
-> companion-store name onto a public PR (`fh_signal_2026-06-17` Wave 4).
+> **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Pre-Publish-Hook-Coverage` — the
+> two-layer pattern (literals only in the gitignored source), honest scope + residuals, and the PR #109
+> (`fh_signal_2026-06-17` Wave 4) / phantom-gate origin — read when configuring or auditing the scan.
 
 ---
 
@@ -548,63 +511,33 @@ harvest-loop Step 0-b uses this file as its source — relying on LLM memory aft
 Closing phrase detected ("wrap up", "done", "good work", "end session", etc.)
   → ① Check git diff + unpushed commits (status snapshot)
   → ①-b Open-PR sweep — `gh pr list --author @me --state open` (+ `gh search prs --author @me
-       --state open` for cross-repo). Classify, **surface-not-auto**: a **self-mergeable** PR
-       (operator's own repo, checks green) → *propose merge now* (never auto-merge — HITL); an
-       **awaiting-external** PR (other repos / corp review) → *surface for tracking only*. Why here:
-       the harness's "마감" ≠ the operator's "마감" — a self-authored PR (PR #111) sat open across
-       sessions with un-integrated skills + count drift because no close step surfaced it. Pairs with
-       the count-consistency check (which now runs at BOTH the local pre-commit hook AND the plugins/**
-       PR-CI merge boundary): the sweep surfaces the PR → merging it → the count-check catches any
-       drift at the merge (fh_signal_2026-06-21, gate-locality paired fix).
+       --state open` cross-repo). Classify, **surface-not-auto**: **self-mergeable** PR (own repo,
+       checks green) → *propose merge now* (never auto-merge — HITL); **awaiting-external** →
+       *surface for tracking only*. (Origin PR#111 + count-consistency pairing → §detail below.)
   → ② If FH assets changed: harvest-loop
   → ③ Sync local/gitignored session state to your durable companion store, if you keep one
   → ④ Memory hygiene — update stale entries + record new session findings
-  → ④-b npm freshness — if any npm-shipped asset changed this session (the `package.json` `files[]`
-       surface: skills · agents · README · AGENTS.md · CLAUDE.md · CHEATSHEET), **propose an npm
-       republish**: version bump — and the **same bump MUST propagate in lockstep to every
-       `.claude-plugin/plugin.json` + `.claude-plugin/marketplace.json` version** (single-source =
-       `package.json`). The Codex plugin loader keys its cache path on the *plugin.json* version
-       (`~/.codex/plugins/cache/forge-harness/{plugin}/{version}/`), so a frozen plugin.json serves
-       **stale cached skills to Codex/AGENTS.md users** even after content ships (this exact 3-way
-       drift — fh-meta 1.4.1/1.4.11 vs npm 1.4.32 — was found + fixed 2026-06-17). Then Pre-Publish
-       Surface Gate (`/public-surface-audit` + `/marketplace-gate`
-       Check 5) + `npm publish` + **`git tag vX.Y.Z` on the bump commit + `git push origin vX.Y.Z`**
-       (tag at publish time, in lockstep with the version — keeps git tags aligned with npmjs.com so
-       Releases/Tags never drift). The npm-served README and shipped skills/agents freeze at publish
-       time, so updating FH assets without republishing leaves the package stale. **Propose, don't
-       auto-publish.** Tag drift caveat: when a bump rides inside a functional commit (no explicit
-       "bump" commit), tag *that* commit — otherwise the version ships to npm untagged (e.g. 1.4.4/1.4.5
-       shipped untagged, backfilled 2026-06-08).
-  → ④-c Handoff lifecycle (durable-artifact reconciliation — cross-machine continuity) — when a
-       durable **result artifact lands** this session, reconcile the *pointer* artifacts so a fresh
-       machine doesn't re-read pre-run state. **Trigger (mechanical hint, not pure judgment)**: a new
-       file matching a result/signal pattern (`*result*` · `*signal*` · `*_run_*`) written to your
-       companion store or `tracks/` this session — when unsure, diff `git status` + companion-store
-       mtime against session start. On a hit, do two things:
-       **(a) Stamp the run-handoff (④-c owns this write)** — any `"run this / start here"` run-handoff
-       whose result has now landed gets a header `STATUS: SUPERSEDED by <repo-relative-or-companion
-       path> (<date>)` (path resolvable from a fresh checkout; or retire the file). Not a
-       Destructive-Op — a one-line header edit, no deletion.
-       **(b) Flag the matching card carry item as resolved** — note it for ⑤ to act on. ⑤ **owns the
-       card write** (card-last guard): a finished run must not survive as a pending *carry/priority*
-       item — ⑤ removes it from the active carry list (recording it under "done this session" if the
-       card keeps a done log). ④-c does **not** edit the card itself (avoids a double-write / a
-       flip-vs-remove conflict with ⑤'s removal obligation) — it surfaces the resolution so ⑤ closes it.
-       **First-run no-op**: if no matching carry item or handoff exists, ④-c records nothing and
-       creates no artifact to supersede.
-       **Why its own step**: cross-machine continuity works only when *durable* artifacts are current —
-       the session that ran the work holds completion as **live context**, but a fresh machine inherits
-       only the durable card + handoff, never that live context (origin: 2026-06-21 — a Windows session
-       re-entered a finished A6 run as "to run" because the Mac session that ran it never retired the
-       NEXT_ACTION handoff / flagged the carry item; live context didn't transfer, the stale artifacts
-       did). The reader-side half — read *result* files at session start, not only handoffs — lives in
-       `modes_and_value.md` §Session-start freshness + each operator's local session-start binding.
-       **Salience-dependent** — prose, not hook-enforced; on a weaker tier may silently not fire.
-       Backstops: ⑤'s removal obligation + the reader-side result-file read. A hook-enforced writer-side
-       is a future hardening candidate, not built today (keep the surface thin).
+  → ④-b npm freshness — if any npm-shipped asset changed (`package.json` `files[]`: skills · agents ·
+       README · AGENTS.md · CLAUDE.md · CHEATSHEET), **propose republish**: version bump **in lockstep**
+       across `package.json` + every `.claude-plugin/plugin.json` + `marketplace.json` (single-source =
+       `package.json`) → Pre-Publish gate → `npm publish` → `git tag vX.Y.Z` at publish. **Propose, don't
+       auto-publish.** (Why lockstep — Codex caches on plugin.json version — + tag-drift caveat → §detail below.)
+  → ④-c Handoff lifecycle (cross-machine continuity) — when a durable **result artifact lands** this
+       session (mechanical hint: a new `*result*`/`*signal*`/`*_run_*` file in your companion store or
+       `tracks/`), do two things: **(a) ④-c stamps** any `"run this/start here"` run-handoff whose
+       result landed with `STATUS: SUPERSEDED by <path> (<date>)` (one-line edit, not a Destructive-Op);
+       **(b) flag the matching card carry item resolved for ⑤** — ⑤ owns the card write (card-last
+       guard), ④-c never edits the card. **First-run no-op** if no matching handoff/carry exists.
+       (Why-its-own-step origin + ownership split + salience/backstops → §detail below.)
   → ⑤ Card update ← ABSOLUTE LAST: must capture ①–④-c outcomes
   → ⑥ Commit card + push
 ```
+
+> **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md` — `§Session-Close-npm-Freshness`
+> (④-b: Codex cache-path drift, the 3-way drift example, tag-drift caveat) · `§Session-Close-Handoff-Lifecycle`
+> (④-c: why-its-own-step origin, ownership split, salience/backstops) · `§Open-PR-Sweep-Origin` (①-b) — read
+> when executing that close step.
+
 **Card-last guard**: ①–④-c (incl. ①-b open-PR sweep, ④-c handoff lifecycle) must ALL complete before
 ⑤ runs. Any new information produced during ①–④ (new commits from a merged self-PR, model changes,
 new findings, a carry item flipped to DONE) feeds INTO ⑤ — card is never written mid-sequence and
