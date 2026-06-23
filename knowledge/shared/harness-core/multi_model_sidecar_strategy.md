@@ -116,6 +116,43 @@ Use the strongest available model as orchestrator; delegate subsidiary tasks to 
 
 This combination can be freely mixed across CLIs — e.g., Gemini Pro orchestrating with Claude Haiku as sidecar, or CC Opus orchestrating with Gemini Flash. FH methodology works regardless of which combination is chosen.
 
+## Runtime Authority — single governor + routed sidecars
+
+> **Canonical doctrine (single source — runtime files point here, do not restate per-runtime).** The
+> main/governor runtime is **context-specific and must be explicit**. Other models are
+> **capability-routed sidecars** unless a document explicitly defines a limited-runtime entrypoint.
+> **Sidecar findings are evidence candidates, not terminal verdicts, until source-closed by the governor
+> *via a mechanical anchor* (a local hit / literal source span / passing gate) — never governor agreement
+> alone** (the no-judge-only-path / mechanical-anchor principle, CLAUDE.md §FH Improvement 4-Axis Auto-Gate).
+
+FH is a **multi-runtime harness with explicit runtime authority**, not Claude-only:
+
+| Runtime | Authority | Fit task-class (aggressive *within* it, not blanket) |
+|---|---|---|
+| **Claude Code** | default **action/governor** — Claude-native automation, hooks, agents, MCP writeback, terminal verdict | orchestration · design-depth · synthesis · the writeback/commit path |
+| **Codex** | **audit / repo-grounded sidecar** | file reads · grep/source-close · diff & patch · gate execution · phantom/backtrace (`fh-run` / `codex exec`). **NOT** discovery/design-depth — below-floor there |
+| **Gemini / agy** | **breadth / multimodal sidecar** | wide alt-generation · multimodal/video/image · exploratory critique · non-code artifacts. Outputs stay **source candidates** until grounded |
+| **Other runtimes** | **portable entrypoint only** (`AGENTS.md`) | apply FH methodology via adapter; do **not** inherit Claude-native automation or writeback authority unless explicitly scoped |
+
+A sidecar is recruited where it adds *decorrelated* value; its ceiling is still set by the governor — the
+harness lifts a model to its own ceiling, it does not move it ([[feedback_harness_ceiling_principle]]).
+"Aggressive" Codex/Gemini use is bounded by the fit task-class above, never a blanket main-seat swap.
+
+**Maintenance-Cost Rule** — a compatibility layer is cheap as a *thin entrypoint*, expensive when it
+*duplicates canonical knowledge*. The test:
+
+| Pattern | Cost | Verdict |
+|---|---|---|
+| Runtime-specific `AGENTS.md` with capability routing + stop lines | Low | ✅ Good |
+| Sidecar-invocation docs pointing to canonical skills/agents | Low | ✅ Good |
+| Generated wrappers with drift checks | Medium | Use only if a need is proven |
+| Manual copies of agent/skill bodies per runtime | High | ✗ Avoid |
+| "Every model can be main" governance language | High (hidden) | ✗ Avoid |
+
+Keep canonical assets **single-source**: the method/agent/skill body lives once; runtime-specific files
+only describe *what auto-loads · what does not · allowed operations · handoff/sidecar invocation · hard
+stop lines*.
+
 ## Scope vs steel-quench Wave 5
 
 This document is the **rationale layer** (why sidecars, when, what value, what boundaries). `steel-quench/SKILL.md` Wave 5 (Multi-Team Adversarial Panel) is the **implementation layer** — the runnable team-formation + parallel-dispatch + cross-team-synthesis steps. They are not redundant: a skill cites this doc for *why* and *when*; Wave 5 (and any other caller) owns the *how*. If the how appears in two places, Wave 5 is canonical and this doc defers to it.
