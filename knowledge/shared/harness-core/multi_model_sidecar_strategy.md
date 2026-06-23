@@ -648,3 +648,4 @@ Missing any layer = compression risk. (Path conventions adapt per project — se
 - A sister-harness `sidecar-orchestrator` SKILL.md (2026-06-01) — gh copilot + corporate endpoint + 3-tier fallback + 3-layer persistence
 - arXiv:2605.26302 AgingBench — compression aging defense rationale
 - `hybrid_orchestration_architecture_roadmap.md` — proposed (not-yet-implemented) architecture direction that would generalize this sidecar strategy into a hybrid orchestration engine
+- **Sister asset** — `ponytail` (github DietrichGebert/ponytail@dedc97c; "lazy senior dev" minimal-code field skill, 14-host portable `AGENTS.md` + thin adapters) converges on the portable-`AGENTS.md`-as-entrypoint + thin-adapter distribution this doc codifies (portable-AGENTS.md is itself a recognized 2026 standard — convergence, not provably independent derivation). Cross-audit: `tracks/_audit/session_2026_06_24_ponytail-lazy-senior-dev.md`

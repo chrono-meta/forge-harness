@@ -45,6 +45,11 @@ mechanical assertion**: the measurement harness records the *verified* model ide
 the requested slug. Prose discipline is sufficient for internal dogfooding; a published claim earns the
 mechanical log.
 
+> **External dogfood (a second, field-layer instance — n=1 external, a signal not a settled frontier):**
+> the sister skill `ponytail` ships a runnable instance of the precondition behind all three modes —
+> a `--selftest` that proves each instrument (`good===true && bad===false`) before any API spend, and
+> two caught instrument contaminations. Detail + pinned citations: `tracks/_audit/session_2026_06_24_ponytail-lazy-senior-dev.md` §2-C (single source).
+
 ---
 
 **Origin** (2026-06-22 harvest-loop): three failure modes observed across the-bible L2 model panel
