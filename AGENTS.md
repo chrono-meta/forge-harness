@@ -53,7 +53,7 @@ forge-harness is structured as two distinct layers:
 | Layer | Contents | AI compatibility |
 |---|---|---|
 | **Methodology layer** (model-agnostic) | `tracks/`, `knowledge/`, `SKILL.md` documents, session protocols | Any AI model |
-| **Automation layer** (Claude-native) | `.claude/agents/`, hooks, slash commands, `CLAUDE.md` rules | Claude Code only |
+| **Automation layer** (Claude-native) | `plugins/*/agents/` (plugin channel — FH's own agents, auto-loaded when the plugin is enabled), hooks, slash commands, `CLAUDE.md` rules; `.claude/agents/` is the field-project local/override slot, unused by FH itself | Claude Code only |
 
 Agents in this registry belong to the **Automation layer**. Skills (in `plugins/`) straddle both layers — their methodology is model-agnostic, but their invocation mechanism is Claude Code-native.
 
@@ -100,7 +100,7 @@ For complex multi-step tasks, run `/agent-composer` first to plan which agents t
 
 ## Codex Compatibility (beta)
 
-The methodology layer (`tracks/`, `knowledge/`, `SKILL.md` docs) is Codex-compatible beta. Any AI model can follow skill workflows by reading SKILL.md files directly; the automation layer (hooks, `.claude/agents/`, `/model`) is Claude Code-native and requires manual adaptation.
+The methodology layer (`tracks/`, `knowledge/`, `SKILL.md` docs) is Codex-compatible beta. Any AI model can follow skill workflows by reading SKILL.md files directly; the automation layer (hooks, plugin-channel agents under `plugins/*/agents/`, `/model`) is Claude Code-native and requires manual adaptation. FH's own agents are auto-loaded via the plugin channel when the plugin is enabled — `.claude/agents/` is the field-project override slot, not where FH ships its agents. Non-Claude runtimes use this `AGENTS.md`, `plugins/*/agents/*.md`, and `scripts/fh-run.sh` to apply the same methodology via adapter.
 
 ### Entry point for Codex users
 
