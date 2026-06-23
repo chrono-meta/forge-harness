@@ -1,6 +1,6 @@
 {
   "name": "@chrono-meta/fh-gate",
-  "version": "1.4.41",
+  "version": "1.4.42",
   "description": "FH runtime adapters — run FH governance, skills, and agents via Claude or Codex with machine-parseable gates.",
   "license": "MIT",
   "keywords": [
@@ -61,7 +61,8 @@
     "plugins/fh-meta/agents",
     "plugins/fh-commons/skills",
     "plugins/fh-commons/agents",
-    "knowledge/shared/harness-core/fh_integration_contract.md",
+    "knowledge/shared/harness-core",
+    "knowledge/shared/dialogue",
     "README.md"
   ]
 }

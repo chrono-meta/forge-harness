@@ -272,8 +272,8 @@ multimodal "comprehensive read"** as a terminal verdict — a video claim (times
 *claim*, cross-checked on a second surface (e.g. Codex clicking the timestamp, or a caption grep)
 before it anchors a decision (`cross_runtime_routing` debate-loop; judge-robustness "judged →
 mechanical"). claude-video is the *executor* FH lacked; FH's cross-check discipline is the
-*governance* claude-video has no equivalent for — compose, don't trust. (Sister-asset intake:
-`fh-be/paper-signals/sister_2026-06-15_claude-video.md`.)
+*governance* claude-video has no equivalent for — compose, don't trust. (Sister-asset intake
+recorded in the private companion store's sister-asset signals.)
 
 ### Tier-floor resolution — the model dimension (added 2026-06-10)
 
