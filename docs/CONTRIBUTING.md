@@ -8,7 +8,7 @@ If you'd like to make forge-harness better, pull requests are welcome.
 |---|---|
 | **New skill** | You've discovered a repeating pattern and want to turn it into a skill |
 | **Improve existing skill** | Bug fix, external environment adaptation, adding triggers |
-| **Add agent** | New persona (`.claude/agents/` or `plugins/.../agents/`) |
+| **Add agent** | New persona (canonical: `plugins/*/agents/`; `.claude/agents/` only for project-local override) |
 | **Templates** | Common files to add under `templates/` |
 | **Documentation** | README, skill description refinement, typo fixes |
 | **Field pattern harvest** | Proposing a pattern discovered in real use as a skill (see `/field-harvest`) |
@@ -43,7 +43,7 @@ into shared knowledge/skills — your session becomes compound interest for ever
 ## PR Rules (Short Version)
 
 1. **New skill** → Create `plugins/fh-meta/skills/{name}/SKILL.md` + add version line to `plugins/fh-meta/CHANGELOG.md`
-2. **New agent** → Register in both `.claude/agents/{name}.md` + `plugins/fh-meta/agents/{name}.md`
+2. **New agent** → Register the canonical file under `plugins/fh-meta/agents/{name}.md` (or `plugins/fh-commons/agents/{name}.md` for commons), then update `AGENTS.md` + `.claude/registry/agent_cards.json`. Use `.claude/agents/{name}.md` only for project-local / non-plugin override agents.
 3. **Description must be plain text** — no markdown bold, emphasis words, version mentions, or embedded names (removes self-marketing tone)
 4. **Simplification guard** — verify that existing assets cannot cover the use case before creating something new
 5. **External environment adaptation section** — recommend explicitly noting `Mode A/C` branches in skills and agents

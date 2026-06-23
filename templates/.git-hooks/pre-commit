@@ -520,6 +520,59 @@ if [ -n "$SKILL_CHANGE" ]; then
   rm -f "$CCOUT"
 fi
 
+# ── Detail-pointer resolution (staged markdown) ──────────────────────────────
+# skill-splitter governance-semantic split relocates execution-detail to on-demand files,
+# linked by imperative `**Detail**: See `<path> §Section`` pointers. phantom-quench (Axis 3)
+# verifies these only WHEN RUN — the marker merely ATTESTS it ran, so a §header rename or file
+# move silently breaks a pointer between manual runs (B#3, fh_signal 2026-06-23 CLAUDE.md split).
+# Make the pointer-resolution slice MECHANICAL at commit: every Detail pointer in a staged .md
+# must resolve to a `## §Section` header in a referenced *.md (sibling- or repo-relative). Bound
+# to `**Detail**: See` blocks → no false-positive on general §cross-refs.
+MD_STAGED=$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null | grep -E '\.md$' || true)
+if [ -n "$MD_STAGED" ]; then
+  echo "[Pointers] Detail-pointer resolution (staged markdown)..."
+  PTR_FAIL=0; PTR_CHECKED=0
+  for f in $MD_STAGED; do
+    [ -f "$REPO_ROOT/$f" ] || continue
+    fdir="$(cd "$REPO_ROOT/$(dirname "$f")" && pwd)"
+    blocks="$(awk '
+      inblk && /^>/ { blk=blk" "$0; next }
+      inblk { print blk; inblk=0; blk="" }
+      /\*\*Detail\*\*: See/ { blk=$0; inblk=1; next }
+      END { if(inblk) print blk }
+    ' "$REPO_ROOT/$f")"
+    [ -z "$blocks" ] && continue
+    while IFS= read -r block; do
+      [ -z "$block" ] && continue
+      bpaths="$(printf '%s\n' "$block" | grep -oE '[A-Za-z0-9_./-]+\.md' | sort -u)"
+      bsecs="$(printf '%s\n' "$block" | grep -oE '§[A-Za-z0-9_-]+' | sed 's/§//' | sort -u)"
+      [ -z "$bsecs" ] && continue
+      for s in $bsecs; do
+        PTR_CHECKED=$((PTR_CHECKED+1)); hit=0
+        for p in $bpaths; do
+          for cand in "$fdir/$p" "$REPO_ROOT/$p" "$p"; do
+            if [ -f "$cand" ] && grep -qE "^## §${s}([[:space:]]|\$)" "$cand"; then hit=1; break; fi
+          done
+          [ "$hit" = 1 ] && break
+        done
+        if [ "$hit" = 0 ]; then
+          echo "  ❌ $f: Detail pointer §$s has no '## §$s' header in [$(echo $bpaths)]"
+          PTR_FAIL=1
+        fi
+      done
+    done <<PTR_EOF
+$blocks
+PTR_EOF
+  done
+  if [ "$PTR_FAIL" -eq 1 ]; then
+    echo "     A relocated detail section was renamed/moved without updating its pointer."
+    echo "     Fix the §header or the pointer so every '**Detail**: See ... §X' resolves."
+    FAILED=1
+  else
+    echo "  ✅ PASS ($PTR_CHECKED pointer(s) resolve)"
+  fi
+fi
+
 # ── Verdict ───────────────────────────────────────────────────────────────────
 echo ""
 echo "══════════════════════════════════════════════"
