@@ -49,6 +49,11 @@ git ls-files | grep -iE '<internal-acronym>'
 
 - **NOT CONFIGURED ≠ CLEAN.** If PSA reports NOT CONFIGURED, the pattern source is missing — set it up
   (empty file = explicit "nothing to protect"). A missing scan is not a clean bill of health.
+- **Tooling-down = fail-CLOSED, not a free skip.** Publish is an irreversible surface, so if a gate's
+  tool is **applicable but unavailable** (skill uninstalled, command errors, backend unreachable), that
+  is **not** a pass — do a **manual-equivalent pass** or take an **explicit operator override**, never
+  silent-proceed. (A gate is only legitimately skipped when *genuinely not-applicable* — e.g. a
+  code-security pass on a repo that ships no code; grep the file list, don't assert "docs-only".)
 - **Generated artifacts count.** An exported HTML/PDF carrying a username is a real public-surface leak —
   fix = regenerate from a sanitized source, not hand-edit.
 
