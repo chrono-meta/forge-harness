@@ -274,6 +274,40 @@ unknown) and surface **one line** — then proceed, never block:
 inviolable; a pin is not a cap — tier-floor resolution §Floor governance) · field-project operation
 sessions (no FH asset modification) never see this notice — the Sonnet default stays friction-free.
 
+## Irreversibility Gates — Surface-Class Degrade Invariant (shared spine of the two gates below)
+
+The two gates that follow (Pre-Publish, Destructive-Op) guard **irreversible surfaces**. The floor they
+share is a single rule about *which direction a gate degrades* when its own mechanical tooling is
+unavailable (skill uninstalled, script errors, backend unreachable):
+
+- **Irreversible surface** (publish · delete · history-rewrite) → **fail-CLOSED.** An *applicable* check
+  whose tooling is down does **not** become a free skip — it **blocks** the action. The only ways past:
+  a **manual-equivalent pass** or an **explicit operator override** (e.g. the logged `PUBLIC_SURFACE_OK=1`
+  channel), never silent-proceed.
+- **Reversible surface** (the 4-axis *commit* gate above) → **degrade-to-advisory** (don't-block). Its
+  `Axis N: skipped (skill unavailable) → proceed` is correct *there* precisely because a commit is
+  re-committable. (The shipped callable `scripts/fh-gate.sh` is also a review surface — note it signals
+  exit-10 *harness-error*, a distinct non-pass, not a silent degrade-to-pass.)
+
+**Applicability is mechanical, not self-judged** — else an agent under ship pressure self-labels a
+code-shipping repo "docs-only" to convert fail-closed into a free skip. A check is *not-applicable* only
+when the surface genuinely lacks its target (e.g. the code-security pass is N/A iff the publishable file
+list ships no source/executable file — **grep the file list, don't assert "docs-only"**).
+*Applicable-but-tooling-down* is never not-applicable.
+
+A gate guarding an irreversible boundary that silently proceeds when its tooling is down is **fail-open**
+— by this floor's definition, not a gate. (The same reflex already ships piecewise — `mcp_tool_gating
+§unlisted → ask (fail-closed)`, corpus-grounding's fail-closed-no-generator — this section names the
+floor they share.)
+
+**Salience residual**: both irreversible surfaces are explicitly **un-hookable** (the pre-commit hook
+cannot catch a separate-repo go-public or a branch delete — they stay AI-behavioral), so this fail-closed
+direction is **prose, not hook-enforced** — a real weak-model fail-open risk, not a silent one. Backstop:
+the portable `templates/PRE-PUBLISH-CHECKLIST.md` carries the tooling-down item as a human-readable gate,
+and the direction is target-tier-sim'd (Sonnet) before it is relied on.
+
+---
+
 ## Pre-Publish Surface Gate (Irreversibility Gate — Publish, not Commit)
 
 **Order invariant: scrub before publish, never publish-then-scrub.** Public exposure is effectively
@@ -291,8 +325,11 @@ not marketplace-gate alone:
 1. `/public-surface-audit` — operator-private token scan (real username, corp asset names, home paths)
 2. `/marketplace-gate` Check 5 — broad public safety (API keys, internal domains, license)
 3. `/security-review` (built-in, when the repo ships executable code) — code-security pass on the
-   publishable surface; complements 1–2 which scan tokens/metadata, not code behavior. Skip note
-   (`skipped: docs-only repo` or `skipped: built-in unavailable`) if not applicable
+   publishable surface; complements 1–2 which scan tokens/metadata, not code behavior. Skip only when
+   **genuinely not-applicable** (`skipped: docs-only repo` — surface ships no code). When code *does*
+   ship, `skipped: built-in unavailable` is **not** a free skip: per the Surface-Class Degrade Invariant
+   above this is an applicable-but-tooling-down case on an irreversible surface → **fail-CLOSED** (run a
+   manual security pass or take an explicit operator override before publishing; never silent-proceed)
 
 > Routing vs the rows below: `/marketplace-gate` alone = "is this ready to **list on a marketplace**?";
 > `/public-surface-audit` alone = reactive "did I leak a token?"; **this gate** = the *act of going
@@ -335,6 +372,10 @@ force-push, scrub of tracked history, bulk deletion of session records / tracks 
    **before** anything is deleted. This step exists because the loss class is silent — run it at the
    strongest available tier (floor semantics, §Tier-floor); a below-floor pass is provisional.
 3. **Destroy** only what passed — REVIEW blocks a scripted delete chain (script exits 1).
+
+**Degrade direction**: per the Surface-Class Degrade Invariant above, if `predelete_check.sh` is missing
+or errors, this irreversible surface **fails closed** — enumerate by hand or take an explicit operator
+override; a tooling-down enumerate step never silently degrades into "just delete it."
 
 > Origin: 2026-06-10 branch cleanup — pre-deletion enumeration recovered a parallel session's card
 > (weekly-audit completion + #88 merge state) that existed **only on an unmerged branch** with zero
