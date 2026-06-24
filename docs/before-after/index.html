@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<!--
+  before/after — bare agent vs FH-gated agent (growth-lesson driver #2: a visible before/after)
+  Inherits the livedeck convention (not a fork): reads same-origin ./data.json only; zero external
+  deps (no CDN / fonts / API); inline CSS+JS+SVG. Network-isolation invariant: if it renders when
+  served locally with the network off, it transcribes to a network-isolated GitHub Pages as-is.
+  Data swap = one file (data.json). Honesty kept: over-build=null + the governor caveats are shown.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bare agent vs FH-gated agent — before/after</title>
+<style>
+  :root{--bg:#f4f1ea;--card:#fff;--ink:#222;--muted:#777;--line:#e6e1d6;--bad:#c0392b;--good:#1f8a4c;--term:#1d2330;}
+  *{box-sizing:border-box;} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;background:var(--bg);color:var(--ink);}
+  header{background:#f7c948;padding:18px 24px;}
+  h1{margin:0;font-size:20px;} h1 .sq{font-size:22px;}
+  .sub{color:#7a5c00;font-size:13px;margin-top:4px;}
+  .honesty{background:#fff7df;border:1px solid #f0dca0;color:#7a5c00;font-size:12px;margin:12px 24px 0;padding:8px 12px;border-radius:8px;}
+  .meta{color:var(--muted);font-size:12px;padding:6px 24px;}
+  .wrap{padding:0 24px 36px;}
+  .task{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:16px;}
+  .task h2{font-size:15px;margin:0 0 2px;}
+  .task .gate{font-size:11px;color:var(--muted);margin-bottom:2px;}
+  .task .cmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#444;background:#faf8f2;border:1px solid var(--line);border-radius:6px;padding:4px 8px;display:inline-block;margin:6px 0 12px;}
+  .cols{display:flex;gap:14px;flex-wrap:wrap;}
+  .col{flex:1 1 320px;min-width:280px;}
+  .arm{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+  .pill{font-size:11px;font-weight:700;color:#fff;border-radius:999px;padding:3px 10px;}
+  .pill.bad{background:var(--bad);} .pill.good{background:var(--good);}
+  .score{font-size:13px;font-weight:700;} .score.bad{color:var(--bad);} .score.good{color:var(--good);}
+  .bars{display:flex;gap:3px;margin-left:auto;}
+  .bars i{width:14px;height:10px;border-radius:2px;background:#e3ddcf;display:inline-block;}
+  .bars i.on-bad{background:var(--bad);} .bars i.on-good{background:var(--good);}
+  pre.term{background:var(--term);color:#dfe6f2;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.5;border-radius:8px;padding:12px 14px;margin:0;overflow-x:auto;white-space:pre-wrap;word-break:break-word;min-height:150px;}
+  pre.term .del{color:#ff8a80;} pre.term .ok{color:#9be29b;} pre.term .prompt{color:#8ab4ff;} pre.term .dim{color:#8893a8;}
+  .verdict{font-size:12px;margin-top:8px;padding:8px 10px;border-radius:8px;}
+  .verdict.bad{background:#fbeae8;color:#7d2a20;border:1px solid #f0c4bd;}
+  .verdict.good{background:#e8f5ec;color:#155f35;border:1px solid #bfe3cc;}
+  .dim-label{font-size:11px;color:var(--muted);margin:10px 0 0;}
+  .caveats{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:16px;}
+  .caveats h2{font-size:13px;margin:0 0 8px;}
+  .caveats li{font-size:12px;color:#555;line-height:1.6;margin-bottom:5px;}
+  .err{padding:24px;color:#b00;}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="sq">🐿️</span> <span id="title">bare agent vs FH-gated agent</span></h1>
+  <div class="sub" id="subtitle"></div>
+</header>
+<div class="honesty" id="honesty"></div>
+<div class="meta" id="meta"></div>
+<div class="wrap" id="wrap"><div class="err">loading data.json…</div></div>
+
+<script>
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function colorize(lines){
+  return lines.map(function(l){
+    var e = esc(l);
+    if(/Deleted|published|never scanned/.test(l)) e = '<span class="del">'+e+'</span>';
+    else if(/clean|DRY RUN|nothing deleted|nothing live|no matches/.test(l)) e = '<span class="ok">'+e+'</span>';
+    else if(/confirm|Type '|_$/.test(l)) e = '<span class="prompt">'+e+'</span>';
+    else if(/^\s*\(/.test(l)) e = '<span class="dim">'+e+'</span>';
+    return e;
+  }).join("\n");
+}
+function bars(score, kind){
+  var h = '';
+  for(var i=0;i<5;i++){ h += '<i class="'+(i<score?('on-'+kind):'')+'"></i>'; }
+  return '<span class="bars" title="'+score+'/5 reps">'+h+'</span>';
+}
+function arm(a, kind){
+  var cls = kind==='bad'?'bad':'good';
+  return ''
+    + '<div class="arm"><span class="pill '+cls+'">'+esc(a.label)+'</span>'
+    + '<span class="score '+cls+'">'+esc(a.scoreText)+'</span>'+bars(a.score, cls)+'</div>'
+    + '<pre class="term">'+colorize(a.terminal)+'</pre>'
+    + '<div class="verdict '+cls+'">'+esc(a.verdict)+'</div>';
+}
+function render(d){
+  document.getElementById('title').textContent = d.title;
+  document.getElementById('subtitle').textContent = d.subtitle;
+  document.getElementById('honesty').textContent = '⚖︎ ' + d.honesty;
+  document.getElementById('meta').textContent = 'updated ' + d.updated + ' · reps=' + d.reps + '/arm/task · isolated-agent measurement';
+  var wrap = document.getElementById('wrap'); wrap.innerHTML = '';
+  d.tasks.forEach(function(t){
+    var el = document.createElement('div'); el.className='task';
+    el.innerHTML = '<div class="gate">'+esc(t.gate)+'</div><h2>'+esc(t.name)+'</h2>'
+      + '<span class="cmd">'+esc(t.command)+'</span>'
+      + '<div class="dim-label">measured dimension: '+esc(t.dimension)+'</div>'
+      + '<div class="cols"><div class="col">'+arm(t.bare,'bad')+'</div>'
+      + '<div class="col">'+arm(t.fh,'good')+'</div></div>';
+    wrap.appendChild(el);
+  });
+  var c = document.createElement('div'); c.className='caveats';
+  c.innerHTML = '<h2>Honesty caveats (over-claim guard)</h2><ul>'
+    + d.caveats.map(function(x){return '<li>'+esc(x)+'</li>';}).join('') + '</ul>';
+  wrap.appendChild(c);
+}
+fetch('./data.json').then(function(r){return r.json();}).then(render).catch(function(e){
+  document.getElementById('wrap').innerHTML = '<div class="err">failed to load data.json: '+esc(String(e))+'</div>';
+});
+</script>
+</body>
+</html>

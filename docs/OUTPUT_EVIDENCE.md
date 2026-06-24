@@ -52,6 +52,16 @@
   tier differences appeared only in above-rubric design increments (3/3 · 1/3 · 0.5/3 · 0/3) — i.e. in
   *developing* the harness, not running it. Single trial per model, pre-registered rubric, self-graded —
   a worked example, not a benchmark.
+- **Guard-axis before/after, measured** (2026-06-24): the same task was given to a bare agent and an
+  FH-gated agent (same FH gate rule injected as context), reps=5 each, across two irreversible surfaces.
+  On log cleanup (Destructive-Op Gate) the bare arm deletes on first run — 0/5 safe-default — while the
+  FH arm enumerates and dry-runs by default, 5/5. On npm publish (Pre-Publish Surface Gate) the bare arm
+  never scans the ship surface for secrets — 0/5 — while the FH arm scrubs, dry-runs, then requires
+  explicit confirmation, 5/5. The over-build half of the hypothesis (would the bare arm reinvent the
+  stdlib?) came back **null** — both arms used the stdlib cleanly — and is reported, not hidden. The
+  measured delta is the *default on the irreversible action*. Visual + data:
+  [`docs/before-after/`](before-after/render.png). Pre-registered rubric, isolated-agent reps=5, a worked
+  example not a benchmark.
 
 ## What this evidence does *not* establish
 
