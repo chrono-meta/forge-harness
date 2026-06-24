@@ -137,6 +137,8 @@ Information buried in the middle of a long context window suffers measurable acc
 
 When auditing CLAUDE.md / MEMORY.md in Step 5, check tier placement too: a critical rule sitting mid-file is a placement defect even if the file is within its line budget.
 
+**Measured anchor — select what to feed back, don't truncate at overflow.** *Less Context, Better Agents* (arXiv:2606.10209) measures this: pruning the fed-back context to the last 5 tool-call/response pairs raises **complete itemization to 79.0%** (vs 71.0% keeping full history, 8.0% naive truncation) while cutting total token use to 535,274; adding summarization reaches **91.6%**. Evidence that selective retention beats a blind `/compact` or overflow truncation — measured on agent tool-call history (a runtime analogue of the L1/L2/L3 tiering above, not a direct test of it).
+
 ## Compression Pass
 
 Optional step, run when context is large (e.g. after Step 5 flags a bloated file, or an L3 doc is long but must be loaded). This goes **beyond** `.claudeignore` — `.claudeignore` blocks files from loading; compression shrinks content that does need to load. LLMLingua-style compression is reported to reach ~100K→20K token reductions with minimal loss on long retrieved context (see `../../../../knowledge/shared/harness-core/harness_frontier_diagnosis_2026-06-02.md` Provenance).
