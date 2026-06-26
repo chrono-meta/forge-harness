@@ -82,8 +82,19 @@ diff_is_substantive() {
 STAGED=$(git diff --cached --name-only 2>/dev/null || true)
 
 # Always-heavy by path (any change is a full gate).
+# scripts/*.sh included (2026-06-26, fh_signal fh-gate-structured-verdict): FH's scripts/
+# dir holds the governance/enforcement engines (fh-gate.sh, below_floor_scan.sh,
+# dlp-filter.sh, …) — the gate's OWN tooling. Leaving it ungated was a gate-locality
+# seam: the engine that enforces the 4-axis could itself ship unverified. Gated broadly,
+# not by an allowlist, so a NEW gate script cannot silently slip in ungated (the drift
+# that would re-open the seam). Scope is `scripts/*.sh` BY CONVENTION (all current gate
+# engines are .sh under scripts/): a governance script with another extension (.py) or
+# placed elsewhere (bin/) is NOT auto-caught and must be hand-gated — broaden this term
+# if that changes. Axis 1 (regression_guard) skips non-markdown, so the live effect on a
+# script is Axes 2-3 (adversarial design + phantom), NOT behavioral regression — that is
+# covered downstream (selfcheck.sh / count_check.sh at publish), not by this commit gate.
 HEAVY=$(echo "$STAGED" \
-  | grep -E "(SKILL\.md|\.claude/rules/|templates/|CLAUDE\.md)" || true)
+  | grep -E "(SKILL\.md|\.claude/rules/|templates/|CLAUDE\.md|^scripts/.*\.sh$)" || true)
 
 # Carve-out candidates: knowledge/ docs, docs/*.md, AGENTS.md. Heavy only if substantive.
 CARVEOUT=$(echo "$STAGED" \
