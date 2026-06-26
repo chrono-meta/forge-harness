@@ -10,6 +10,13 @@
 > harness). Origin of this checklist: `phantom-gate` shipped public, then needed a private →
 > de-company-scrub → re-public round-trip. The scrub happened *post*-publish. This checklist inverts that.
 
+> **Companion check — structure, not leak (값 스크럽 ≠ 구조 동일):** the inverse risk to the above — when
+> the artifact was *built against a de-id / MOCK proxy* and you now drop it into the **real target**, verify
+> its structural assumptions (column taxonomy, join / exclude rules, schema shape) against **one real-target
+> sample** *before* drop-in. A scrubbed proxy can match on values yet diverge in shape, silently producing
+> wrong output. `found→extend` (read the real target, don't overwrite blind) is the mechanism. This guards
+> *malfunction*, not disclosure — orthogonal to the leak scan below, run both.
+
 ## When it applies
 
 Any first-time public action:
