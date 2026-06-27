@@ -25,7 +25,8 @@
   "scripts": {
     "prepare": "chmod +x bin/fh-gate.js bin/fh-run.js bin/fh-goal.js scripts/fh-gate.sh scripts/fh-run.sh scripts/fh-goal.sh",
     "test": "bash scripts/selfcheck.sh",
-    "prepublishOnly": "bash scripts/selfcheck.sh"
+    "prepublishOnly": "bash scripts/selfcheck.sh && bash scripts/public_surface_scan_files.sh",
+    "release": "bash scripts/public_surface_scan_files.sh && npm publish"
   },
   "engines": {
     "node": ">=16"
