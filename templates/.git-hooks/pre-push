@@ -1,0 +1,175 @@
+#!/usr/bin/env bash
+# FH Destructive-Op Gate — Pre-Push Hook
+#
+# Mechanically enforces the Destructive-Op Gate (CLAUDE.md) for the *git-side*
+# irreversible surfaces the **pre-commit** hook cannot see, because they happen at
+# push time, not commit time:
+#   • remote branch deletion       (git push origin --delete X  /  git push origin :X)
+#   • tag / notes ref deletion      (git push origin :refs/tags/vX)
+#   • FORCE / non-fast-forward push (history rewrite — git push -f)
+#   • implicit deletes from         git push --mirror / --prune
+#
+# What it is and is NOT (honest scope):
+#   • It closes the **honest-weak-model** gap: an agent that simply *forgot* the prose
+#     gate is now stopped by a mechanical block. That is the real, common win.
+#   • It does NOT close the **injected/adversarial** gap: an agent under instruction can
+#     set DESTRUCTIVE_OP_OK=1 or --no-verify (any client-side hook is bypassable, and
+#     this hook is readable). The actual mechanical floor for the adversarial case is
+#     **server-side branch protection** (GitHub "Restrict deletions" / "Restrict force
+#     pushes"). This hook is the honest-model floor; branch protection is the hard floor.
+#   • It covers only git pushes FROM a hook-installed repo. Non-git irreversible ops
+#     (separate-repo `gh repo create --public`, visibility flip, `npm publish`) are
+#     genuinely un-hookable → prose + templates/PRE-PUBLISH-CHECKLIST.md.
+#
+# FH-internal infra: activated only via `core.hooksPath=templates/.git-hooks`, not
+# installed into field projects.
+#
+# Degrade direction: irreversible surface → fail-CLOSED. Missing tooling / unresolvable
+# base / unfetched remote tip → BLOCK (never silently allow). Verified: no fail-open path.
+#
+# Override (explicit, logged — mirrors the pre-commit PUBLIC_SURFACE_OK channel):
+#   DESTRUCTIVE_OP_OK=1 git push …   ← use AFTER enumerate + recover are done.
+#
+# Install (one-time, from repo root):
+#   git config core.hooksPath templates/.git-hooks
+#   chmod +x templates/.git-hooks/pre-push
+#
+# git passes on stdin, one line per ref:  <local_ref> <local_sha> <remote_ref> <remote_sha>
+
+set -uo pipefail
+
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || true)
+[ -z "$REPO_ROOT" ] && { echo "  ❌ pre-push: not in a git repo — fail-closed (block)"; exit 1; }
+ZERO="0000000000000000000000000000000000000000"
+BASE="${FH_DESTRUCTIVE_BASE:-origin/main}"
+
+DEL_BRANCHES=""   # space-separated "refs/heads/X|<tip-sha>" pairs (bash-3.2 safe: no assoc array)
+DEL_OTHER=""      # refs/tags/* refs/notes/* etc. being deleted
+FORCED_REFS=""
+UNCLASSIFIED=""   # force-check impossible (remote tip not fetched)
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ -z "${remote_ref:-}" ] && continue
+  if [ "$local_sha" = "$ZERO" ]; then
+    # local side zero → this refspec DELETES remote_ref
+    case "$remote_ref" in
+      refs/heads/*) DEL_BRANCHES="$DEL_BRANCHES ${remote_ref}|${remote_sha}" ;;
+      *)            DEL_OTHER="$DEL_OTHER $remote_ref" ;;
+    esac
+  elif [ "${remote_sha:-$ZERO}" != "$ZERO" ]; then
+    # updating an existing remote ref. Fast-forward iff remote_sha is an ancestor of
+    # local_sha. First confirm remote_sha is present locally — if not, we cannot
+    # classify (fail-closed, but say so accurately rather than mislabel as FORCE).
+    if ! git cat-file -e "${remote_sha}^{commit}" 2>/dev/null; then
+      UNCLASSIFIED="$UNCLASSIFIED $remote_ref"
+    elif ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+      FORCED_REFS="$FORCED_REFS $remote_ref"
+    fi
+  fi
+  # remote_sha == ZERO → creating a new branch (not destructive) → ignore
+done
+
+# Nothing destructive and nothing unclassifiable → ordinary ff push / new branch → allow.
+if [ -z "$DEL_BRANCHES$DEL_OTHER$FORCED_REFS$UNCLASSIFIED" ]; then
+  exit 0
+fi
+
+# ── Explicit, logged operator acknowledgment (enumerate+recover done out-of-band) ──
+if [ "${DESTRUCTIVE_OP_OK:-0}" = "1" ]; then
+  echo "  ⚠️  FH Destructive-Op Gate: allowed by DESTRUCTIVE_OP_OK=1 (conscious, gated intent)"
+  LOG="$REPO_ROOT/tracks/_meta/.destructive_op_override_log"
+  if mkdir -p "$REPO_ROOT/tracks/_meta" 2>/dev/null && \
+     printf '%s DESTRUCTIVE_OP_OK override — del:%s other:%s forced:%s unclassified:%s\n' \
+       "$(date +%Y-%m-%dT%H:%M:%S)" "${DEL_BRANCHES:-none}" "${DEL_OTHER:-none}" \
+       "${FORCED_REFS:-none}" "${UNCLASSIFIED:-none}" >> "$LOG" 2>/dev/null; then
+    :
+  else
+    echo "  ⚠️  (override could not be logged to $LOG — proceeding, but this override is UNRECORDED)"
+  fi
+  exit 0
+fi
+
+echo "══════════════════════════════════════════════"
+echo " ⛔ FH Destructive-Op Gate (pre-push)"
+echo "══════════════════════════════════════════════"
+
+BLOCK=0
+
+# ── Force / non-ff pushes: always block (a rewrite always loses the old commits) ──
+for r in $FORCED_REFS; do
+  echo "  FORCE / non-fast-forward (history rewrite): $r"
+  echo "    → take a bundle backup first:  git bundle create backup.bundle --all"
+  BLOCK=1
+done
+
+# ── Unclassifiable (remote tip not fetched): fail-closed, accurate message ──
+for r in $UNCLASSIFIED; do
+  echo "  CANNOT CLASSIFY (remote tip not fetched): $r"
+  echo "    → run 'git fetch' so a force-push can be distinguished from a fast-forward, then re-push."
+  BLOCK=1
+done
+
+# ── Tag / notes deletes: block + ref-specific note (predelete_check walks branches only) ──
+for r in $DEL_OTHER; do
+  echo "  DELETE (non-branch ref): $r"
+  echo "    → tags/notes carry no unique paths but may be external anchors (a release tag, a"
+  echo "      published note). Confirm nothing references it before deleting."
+  BLOCK=1
+done
+
+# ── Branch deletes: per-ref verdict (SAFE auto-allows; CHECK/REVIEW block) ──
+# Makes the enumerate load-bearing instead of decorative: a fully-merged branch (nothing
+# unique lost) passes; a branch with unique paths or commits off base is held.
+if [ -n "$DEL_BRANCHES" ]; then
+  if ! git rev-parse --verify --quiet "$BASE" >/dev/null 2>&1; then
+    echo "  ⚠️  base '$BASE' unresolvable — cannot verify SAFE → all branch deletes BLOCKED (fail-closed)."
+    echo "      (set FH_DESTRUCTIVE_BASE=<ref> or fetch the base, then re-push.)"
+    for r in $DEL_BRANCHES; do echo "  DELETE (branch, unverified): $r"; done
+    BLOCK=1
+  else
+    BASE_BRANCH="${BASE#*/}"   # origin/main → main (the integration branch name)
+    for pair in $DEL_BRANCHES; do
+      r="${pair%%|*}"; tip="${pair##*|}"
+      # Deleting the integration branch itself is never "SAFE" — it is trivially "merged into
+      # itself" (n=0, uniq=0) and would auto-pass. Guard it explicitly.
+      if [ "$r" = "refs/heads/${BASE_BRANCH}" ] || [ "$r" = "refs/heads/master" ] || [ "$r" = "refs/heads/main" ]; then
+        echo "  DELETE (branch): $r — PROTECTED: this is the integration branch → BLOCKED (never auto-SAFE)"
+        BLOCK=1; continue
+      fi
+      if [ "$tip" = "$ZERO" ] || ! git cat-file -e "${tip}^{commit}" 2>/dev/null; then
+        echo "  DELETE (branch): $r — tip not local, cannot verify → BLOCKED (fail-closed)"
+        BLOCK=1; continue
+      fi
+      n=$(git rev-list --count "$BASE..$tip" 2>/dev/null || echo "?")
+      uniq=$(comm -23 \
+              <(git ls-tree -r --name-only "$tip"  2>/dev/null | sort) \
+              <(git ls-tree -r --name-only "$BASE" 2>/dev/null | sort) | grep -c . || true)
+      if [ "${uniq:-0}" -gt 0 ] 2>/dev/null; then
+        echo "  DELETE (branch): $r — REVIEW: $uniq unique path(s), $n commit(s) off $BASE → recover BEFORE deleting"
+        BLOCK=1
+      elif [ "${n:-0}" != "0" ]; then
+        echo "  DELETE (branch): $r — CHECK: $n commit(s) off $BASE, 0 unique paths → judged content look first"
+        echo "    (a shared file may hold NEWER content, e.g. an unmerged session card — the silent-loss class)"
+        BLOCK=1
+      else
+        echo "  DELETE (branch): $r — SAFE: fully merged into $BASE, nothing unique lost → allowed"
+      fi
+    done
+  fi
+fi
+
+if [ "$BLOCK" -eq 0 ]; then
+  echo ""
+  echo "  ✅ all destructive refs verified SAFE (fully merged) — allowing push."
+  exit 0
+fi
+
+echo ""
+echo "  Gate order: enumerate → recover (integrate live un-merged state to the base) → destroy."
+echo "  This hook is the honest-model floor (it stops a forgotten gate). The hard floor for an"
+echo "  adversarial/injected agent is SERVER-SIDE branch protection (GitHub: Restrict deletions /"
+echo "  Restrict force pushes) — a client-side hook is bypassable by design."
+echo ""
+echo "  When enumerate + recover are done, the OPERATOR re-pushes with the explicit acknowledgment:"
+echo "      DESTRUCTIVE_OP_OK=1 git push …"
+exit 1

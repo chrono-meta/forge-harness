@@ -177,7 +177,7 @@ that skill class, and not a retroactive sweep of all routers.
 the 4-axis verification chain runs **automatically before the first commit** of that session.
 No user request is needed — this is a mandatory autonomous step, not a proposal.
 
-**Commit gate**: `git commit` on FH asset changes is hard-blocked by `templates/.git-hooks/pre-commit` until all required axes PASS. Hook installation (one-time): `git config core.hooksPath templates/.git-hooks && chmod +x templates/.git-hooks/pre-commit`
+**Commit gate**: `git commit` on FH asset changes is hard-blocked by `templates/.git-hooks/pre-commit` until all required axes PASS. Hook installation (one-time): `git config core.hooksPath templates/.git-hooks && chmod +x templates/.git-hooks/pre-commit templates/.git-hooks/pre-push` (the same `core.hooksPath` also activates the **pre-push** Destructive-Op gate — see that section below).
 
 ```
 FH asset modified → Axis 1 (regression_guard.sh --pr {BRANCH})
@@ -300,11 +300,16 @@ A gate guarding an irreversible boundary that silently proceeds when its tooling
 §unlisted → ask (fail-closed)`, corpus-grounding's fail-closed-no-generator — this section names the
 floor they share.)
 
-**Salience residual**: both irreversible surfaces are explicitly **un-hookable** (the pre-commit hook
-cannot catch a separate-repo go-public or a branch delete — they stay AI-behavioral), so this fail-closed
-direction is **prose, not hook-enforced** — a real weak-model fail-open risk, not a silent one. Backstop:
-the portable `templates/PRE-PUBLISH-CHECKLIST.md` carries the tooling-down item as a human-readable gate,
-and the direction is target-tier-sim'd (Sonnet) before it is relied on.
+**Salience residual** (corrected 2026-06-27 — the surfaces split, they are not uniformly un-hookable):
+the **pre-commit** hook cannot catch either irreversible surface *at commit time*. But "pre-commit can't"
+≠ "no hook can": the **Destructive-Op git surface** (remote branch delete · force/non-ff push) fires at
+*push* time and **is** caught — `templates/.git-hooks/pre-push` now mechanically enforces the enumerate
+(see §Destructive-Op Gate). What stays **genuinely un-hookable** is the **Pre-Publish go-public surface**
+(a separate-repo `gh repo create --public` / visibility flip / `npm publish` — not a push from this repo,
+so no hook of this repo sees it): for *that* surface the fail-closed direction is still **prose, not
+hook-enforced** — a real weak-model fail-open risk, not a silent one. Backstop for the prose half: the
+portable `templates/PRE-PUBLISH-CHECKLIST.md` carries the tooling-down item as a human-readable gate, and
+the direction is target-tier-sim'd (Sonnet) before it is relied on.
 
 ---
 
@@ -373,9 +378,30 @@ force-push, scrub of tracked history, bulk deletion of session records / tracks 
    strongest available tier (floor semantics, §Tier-floor); a below-floor pass is provisional.
 3. **Destroy** only what passed — REVIEW blocks a scripted delete chain (script exits 1).
 
+**Mechanical floor (pre-push hook — git-side surfaces)**: for the surfaces that happen at *push* time
+— **remote branch/ref deletion** and **force / non-fast-forward push** (history rewrite) —
+`templates/.git-hooks/pre-push` enforces this gate **mechanically**, not just as prose. It detects the
+destructive refspec on stdin (delete = local SHA all-zeros; force = remote SHA not an ancestor of local),
+runs a **per-ref verdict** (branch delete: SAFE = fully merged → allowed · CHECK = commits off base, 0
+unique paths → blocked for a judged look · REVIEW = unique paths → blocked for recovery; force/non-ff and
+tag/notes deletes always block) and **blocks** unless `DESTRUCTIVE_OP_OK=1` (an explicit, logged operator
+acknowledgment — used *after* enumerate + recover) is set. The verdict is load-bearing (a merged-branch
+cleanup passes; a silent-loss CHECK does not), so this is the enumerate as a mechanical floor, not prose.
+**What it does and does NOT close (honest)**: it closes the **honest-weak-model** gap — an agent that
+simply *forgot* the prose gate is now mechanically stopped. It does **not** close the **injected/adversarial**
+gap: an agent under instruction can set the override or `--no-verify`, and a client-side hook is readable
+and bypassable by design. The hard floor for the adversarial case is **server-side branch protection**
+(GitHub *Restrict deletions* / *Restrict force pushes*) — this hook is the honest-model floor, branch
+protection is the hard floor. **Scope**: covers only git pushes *from a hook-installed repo*; the non-git
+irreversible surfaces (separate-repo `gh repo create --public`, visibility flip, `npm publish`) are
+genuinely un-hookable and stay prose + `PRE-PUBLISH-CHECKLIST.md`. **Portability**: bash-3.2 safe (macOS
+default `/bin/bash`); the original draft used a bash-4 associative array that crashed fail-OPEN on 3.2 —
+caught in test, a portability defect class worth noting.
+
 **Degrade direction**: per the Surface-Class Degrade Invariant above, if `predelete_check.sh` is missing
-or errors, this irreversible surface **fails closed** — enumerate by hand or take an explicit operator
-override; a tooling-down enumerate step never silently degrades into "just delete it."
+or errors, this irreversible surface **fails closed** — the pre-push hook blocks (enumerate by hand or
+take the explicit `DESTRUCTIVE_OP_OK=1` override); a tooling-down enumerate step never silently degrades
+into "just delete it."
 
 > Origin: 2026-06-10 branch cleanup — pre-deletion enumeration recovered a parallel session's card
 > (weekly-audit completion + #88 merge state) that existed **only on an unmerged branch** with zero
