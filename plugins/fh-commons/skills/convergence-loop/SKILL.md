@@ -153,3 +153,15 @@ Setup complete (gate name, pass criteria, max rounds confirmed)
 + Convergence declared (all items pass for 2 consecutive rounds) or escalation triggered
 + Per-round result table output
 ```
+
+## External anchor (independent convergence)
+
+arXiv:2606.27009 (*Semantic Early-Stopping for Iterative LLM Agent Loops*, 2026-06-25, verified
+2026-06-27) externally validates this skill's core thesis — **stop on convergence, not a fixed
+iteration cap** — measuring −38% tokens vs fixed caps when stopping is *judge-free* (consecutive draft
+embeddings stop changing in meaning). **Sharpening, not blind validation**: the same paper finds
+*quality-gated* stopping (a judge call each round) counterproductive due to judging cost, and that an
+oracle picking the best round beats any stopping rule — so the harder problem is *which* round was
+best, not *when* to stop. Implication for this skill's judge/checklist-gated rounds: per-round
+verification cost is real; prefer a cheap convergence signal where one exists, and keep `max rounds N`
+bounded.

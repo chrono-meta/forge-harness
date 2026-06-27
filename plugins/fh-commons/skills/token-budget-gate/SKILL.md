@@ -173,3 +173,15 @@ Calibration data improves future estimates for the same task type (no model trai
 
 **Downstream**:
 - No mandatory chain — gate verdict is the output; task execution follows user decision
+
+---
+
+## External anchor (independent convergence)
+
+arXiv:2606.27009 (*Semantic Early-Stopping for Iterative LLM Agent Loops*, 2026-06-25, verified
+2026-06-27) measures **−38% tokens** by stopping iterative agent loops on semantic convergence instead
+of a fixed iteration cap — external evidence that the largest avoidable spend in loop-shaped work is
+*over-iteration*, the cost class this gate exists to flag. Caveat (provenance-honest): the same paper
+found *judge-gated* stopping counterproductive (judging cost outweighs the saving), so the saving is
+real only when the convergence signal is cheap. Pairs with `convergence-loop` (the stop-rule side of
+the same finding).
