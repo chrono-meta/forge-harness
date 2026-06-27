@@ -304,10 +304,12 @@ floor they share.)
 the **pre-commit** hook cannot catch either irreversible surface *at commit time*. But "pre-commit can't"
 ≠ "no hook can": the **Destructive-Op git surface** (remote branch delete · force/non-ff push) fires at
 *push* time and **is** caught — `templates/.git-hooks/pre-push` now mechanically enforces the enumerate
-(see §Destructive-Op Gate). What stays **genuinely un-hookable** is the **Pre-Publish go-public surface**
-(a separate-repo `gh repo create --public` / visibility flip / `npm publish` — not a push from this repo,
-so no hook of this repo sees it): for *that* surface the fail-closed direction is still **prose, not
-hook-enforced** — a real weak-model fail-open risk, not a silent one. Backstop for the prose half: the
+(see §Destructive-Op Gate). **`npm publish`** is likewise caught — `scripts/public_surface_scan_files.sh`
+wired into `prepublishOnly` scans the published file set at the registry boundary (see §Pre-Publish Hook
+coverage (c)). What stays **genuinely un-hookable** is only the **separate-repo go-public surface**
+(`gh repo create --public` / visibility flip / first push to a new public remote — not an npm or git op
+against this repo, so no hook here sees it): for *that* surface the fail-closed direction is still **prose,
+not hook-enforced** — a real weak-model fail-open risk, not a silent one. Backstop for the prose half: the
 portable `templates/PRE-PUBLISH-CHECKLIST.md` carries the tooling-down item as a human-readable gate, and
 the direction is target-tier-sim'd (Sonnet) before it is relied on.
 
@@ -344,14 +346,26 @@ not marketplace-gate alone:
 `LICENSE`/`README` contains a **private harness name or internal codename** · **module paths encode
 internal acronyms**.
 
-**Hook coverage — two distinct actions**: **(a) repo-go-public** (`gh repo create --public` / visibility
-flip) is irreversible and usually in a **separate repo** — the pre-commit hook **cannot** catch it, so it
-stays **AI-behavioral** (proactive trigger below) **+ a portable checklist** (`templates/PRE-PUBLISH-CHECKLIST.md`).
-**(b) committing operator-private tokens into public-tracked content of THIS repo IS an effective publish** —
-caught mechanically by the pre-commit **confidentiality scan** (staged added lines vs the gitignored
-`.public-surface-patterns`; HIGH/MED block, `PUBLIC_SURFACE_OK=1` overrides + logs). Tier-independent but
-**only as strong as the loaded patterns** (committed `.defaults` keep it non-blind; company literals need
-the gitignored override populated per env).
+**Hook coverage — three distinct actions**: **(a) repo-go-public** (`gh repo create --public` / visibility
+flip / first push to a new public remote) is irreversible and usually in a **separate repo** — no hook of
+*this* repo can catch it, so it stays **AI-behavioral** (proactive trigger below) **+ a portable checklist**
+(`templates/PRE-PUBLISH-CHECKLIST.md`). **(b) committing operator-private tokens into public-tracked content
+of THIS repo IS an effective publish** — caught mechanically by the pre-commit **confidentiality scan**
+(staged added lines vs the gitignored `.public-surface-patterns`; HIGH/MED block, `PUBLIC_SURFACE_OK=1`
+overrides + logs). **(c) `npm publish`** is **mechanically gated against the loaded patterns, on the `npm` CLI path with scripts
+enabled** by `scripts/public_surface_scan_files.sh` (wired into `prepublishOnly`; also `npm run release` runs
+it *outside* the lifecycle). It scans the **full content of the exact npm-published file set** (`npm pack
+--dry-run`) — *not* just a commit diff — so a token committed before the scan existed, or carried in a
+`files[]` entry, is caught at the registry boundary (HIGH/MED block, `PUBLIC_SURFACE_OK=1` override + log;
+fail-closed if patterns/file-set unresolved, if the parse looks partial, **or if the gitignored operator
+override is absent** — defaults-only would otherwise green-PASS a HIGH company literal on a fresh clone / CI).
+**Named residuals (it is a denylist on the npm CLI, not a universal secret-scanner)**: (i) `npm publish
+--ignore-scripts` / a CI `.npmrc ignore-scripts=true` / `pnpm`/`yarn publish` **skip the lifecycle hook** —
+route publishes through `npm run release` or an explicit CI scan step; (ii) it scans only the **loaded
+patterns**, so an **un-patterned secret shape** (an API key the patterns don't describe) still ships; (iii) on
+a runner without the gitignored override it is defaults-only unless populated. So of the Pre-Publish surface,
+**(b) commit-time and (c) npm-publish are mechanized** (with the residuals above); only **(a) separate-repo
+go-public stays genuinely un-hookable** (prose + checklist).
 
 > **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Pre-Publish-Hook-Coverage` — the
 > two-layer pattern (literals only in the gitignored source), honest scope + residuals, and the PR #109
@@ -392,9 +406,10 @@ simply *forgot* the prose gate is now mechanically stopped. It does **not** clos
 gap: an agent under instruction can set the override or `--no-verify`, and a client-side hook is readable
 and bypassable by design. The hard floor for the adversarial case is **server-side branch protection**
 (GitHub *Restrict deletions* / *Restrict force pushes*) — this hook is the honest-model floor, branch
-protection is the hard floor. **Scope**: covers only git pushes *from a hook-installed repo*; the non-git
-irreversible surfaces (separate-repo `gh repo create --public`, visibility flip, `npm publish`) are
-genuinely un-hookable and stay prose + `PRE-PUBLISH-CHECKLIST.md`. **Portability**: bash-3.2 safe (macOS
+protection is the hard floor. **Scope**: covers only git pushes *from a hook-installed repo* (`npm publish`
+is mechanized separately via `prepublishOnly` — see §Pre-Publish Hook coverage (c)); the remaining non-git
+surface — a separate-repo `gh repo create --public` / visibility flip — is genuinely un-hookable and stays
+prose + `PRE-PUBLISH-CHECKLIST.md`. **Portability**: bash-3.2 safe (macOS
 default `/bin/bash`); the original draft used a bash-4 associative array that crashed fail-OPEN on 3.2 —
 caught in test, a portability defect class worth noting.
 
