@@ -157,6 +157,27 @@ had never wired into the innovator.)
   **bar it from any asset-insertion recommendation** — it may appear only as a caveated sister-link.
   (FH's phantom-citation discipline pulled forward from verify-time to ideation-intake.) The frontier
   is hype-dense; an uncited number is noise until sourced.
+- **H1-b — Source-credibility tier (PILOT, axis A, 2026-06-27 — measured, not yet a fixed floor).**
+  "Has a citation" ≠ "a recognized source" (operator: live data grows insight *only* from "검증되고
+  인정받는 소스"). Tier every citation: **T1** = peer-reviewed / DOI / a recognized venue or standards
+  body (arXiv-with-citations · OWASP/NIST · an established conference); **T2** = a named practitioner or
+  a maintained project (identifiable author · live repo · non-anonymous); **T3** = unvetted (blog /
+  forum / SNS) — usable only as a **pointer to verify**, never the terminal anchor. A quantified claim
+  anchored *only* by T3 stays `SPECULATIVE` (same bar as no citation). Mechanical pairing: the cited
+  source is **live-fetched and supports the claim** (phantom-quench — the mechanical anchor; a T3
+  mis-labelled T1 still must pass it), and its **tier is named** in the output. *Check class: judged
+  (the tier label) — pair: phantom-quench on the cited source; the SPECULATIVE bar degrades to the
+  phantom-quench verdict, not to the tier label alone.*
+  **Status — rule now, promotion apparatus deliberately NOT built (cross-family-reviewed 2026-06-27).**
+  H1-b is in force as a rule today. It does **not** claim a measured-promotion path yet, because the honest
+  promotion metric is **anchor-tier rate**, which the `operations.md` 60% gate does **not** measure (that
+  gate measures *proposal-acceptance* — a different quantity; reusing it here would be the exact H4
+  forced-fit this agent warns against), and `subagent_invocations_log.yaml` has **no `anchor_tier` field**
+  for any consumer to aggregate. So promoting H1-b to a hardened floor — and only *then* expanding to axes
+  B (decorrelated synthesis) / C (operator-taste calibration) / D — first requires **building a real
+  anchor-tier counter** (schema field + an aggregator), which is deferred until the rule has earned it
+  (evidence-threshold: don't wire the meter before the rule proves worth measuring). Self-application:
+  H1-b is subject to H3 — its own promotion is the evaluator's verdict, never the innovator's.
 - **H2 — Dedup-grep before naming.** Before proposing any name or frame, Grep/Read the *live target
   asset* (the actual SKILL / rules / CLAUDE.md row the concept would land in), not your memory of it.
   If the discriminator already exists there, drop the candidate — you were about to reinvent it.

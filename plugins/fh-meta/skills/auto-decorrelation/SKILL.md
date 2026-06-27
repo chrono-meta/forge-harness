@@ -74,6 +74,20 @@ diversity vs the orchestrator** (orchestrator = Claude/opus → recruit GPT or G
   surfaces a one-line `token-budget-gate` ask per run (*"recruiting codex (~N) — proceed?"*) unless the
   operator has set `paid_auto: true` in the UAP. One-time feature-consent ≠ consent to this spend now.
 - Dispatch via `agent-composer` (no re-implementation of dispatch).
+- **Liveness / hang-catch (mandatory — a hung sidecar never notifies).** A backgrounded CLI that hangs
+  (stuck on a sandbox/file-tool prompt, auth, or network) **does not exit**, so the background-completion
+  signal *never fires* — passive waiting is the wrong model and silently stalls the run (observed
+  2026-06-27: a `codex exec` that asked to read repo files hung at 0-output with no session log, and the
+  turn waited on a notification that could not come). So **bound it actively, never wait open-endedly**:
+  - Set an explicit timeout on every sidecar call (`timeout N …` or the dispatch tool's timeout).
+  - Watch a **progress signal**, not just process-alive: output bytes growing **and** the CLI's own
+    session/log advancing (e.g. `~/.codex/sessions/<today>`). 0 output **and** no session created after a
+    short bound (≈2–3 min for codex/agy) = **hung, not slow** → kill and recover, do not keep waiting.
+  - **Recover, don't stall**: kill → diagnose (a file-tool/sandbox hang is the common cause) → retry with
+    the **robust pattern** — inline the needed file content into the prompt via **stdin** so the sidecar
+    needs no file tools (verified fix 2026-06-27: `{ instructions; cat file1; cat file2; } | codex exec -`
+    succeeded where reading-files-itself hung) — or degrade to single-session with a recorded note.
+  This is the sidecar twin of `mcp-circuit-breaker` (stop a stuck external call instead of hanging on it).
 
 ## Step 5 — Role split + source-grounded acceptance (S-2)
 
