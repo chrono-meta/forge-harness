@@ -27,6 +27,20 @@ operator is at the keyboard. Autonomous mode keeps the honest residual + weekly-
 fake-close it. Gemini cross-analysis 2026-06-16 reached this verdict independently, converging with the
 existing FH stance.
 
+**External anchor (verified 2026-06-27): Open Agent Passport (OAP), arXiv:2603.20953** ("Before the Tool
+Call: Deterministic Pre-Action Authorization for Autonomous AI Agents", Uchibeke, 2026-03; Apache-2.0,
+DOI 10.5281/zenodo.18901596) intercepts tool calls before execution and emits a **cryptographically
+signed audit record** (median 53ms; 0% vs 74.6% social-engineering success under restrictive vs
+permissive policy). It is independent convergence on the *direction* the GPG hard-close gestures at —
+**crypto-signed provenance over runner self-attestation** — and a peer-grade anchor for the
+fabricated-marker residual. **Caveat (FH's point still stands):** OAP's signature is only as strong as
+its key custody — if the signing key is held by the same runtime being audited, it is the same
+"runner-computed signature = false security" failure named above. So OAP corroborates the *crypto-audit
+direction*, not a dissolution of the irreducibility argument: the genuine close still needs an
+*operator-held, uncached* key. Sister cross-link only — FH does not adopt runtime pre-action
+interception (a different mechanism from the commit-time marker); this anchor strengthens the case for
+the existing GPG-option residual, it does not mandate new infra.
+
 ---
 
 ## §Sim-Dispatch-Fallback
