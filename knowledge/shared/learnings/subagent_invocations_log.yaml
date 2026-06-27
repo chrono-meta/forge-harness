@@ -114,3 +114,27 @@
   agent: general-purpose (inherit opus)
   outcome: accepted
   note: "VERDICT (peak-of-transition): 'layer an LLM/agent on an existing Appium suite' frontier DOES exist + mainstream — appium/appium-mcp (official, v1.85.7 2026-06-16) + BrowserStack selfHeal. The field tool = strong independent CONVERGENCE not lead = credential. Narrow lead axes: (a) hybrid-app context-switch domain, (b) non-model data verification + strategy→execution bridge. Sandbox: a public hybrid demo app mappable externally; the real in-corp sandbox needs a handoff."
+- date: 2026-06-27
+  task: "persona-innovator v0.3 Mode-F autonomous run on the-bible (H1-b pilot dogfood — strengthen naming/frames + measure anchor-tier)"
+  agent: fh-meta:persona-innovator (inherit opus, v0.3 H1-b)
+  self_contained_prompt: yes
+  outcome: accepted
+  note: "3 naming candidates (Contested-Ground Ceiling / Flip-as-FLAG / Counter-Voice Pairing) + 5 external signals tiered T1/T2/T3. Anchor-tier: 2 T1-live / 2 T1venue-T2grounded / 1 T3-BARRED (bar fired on tempting 76%/91% vendor stat). KEY: tier ⊥ grounded-this-run. Self-floors H1/H1-b/H2/H3/H4 run as declared steps. Signal: fh-be paper-signals/h1b_pilot_anchor_tier_thebible_2026-06-27.md"
+- date: 2026-06-27
+  task: "challenger adversarial gate on innovator the-bible outputs (no-judge-only-path closure on 3 highest-value claims)"
+  agent: fh-meta:challenger (inherit opus)
+  self_contained_prompt: yes
+  outcome: accepted
+  note: "CLAIM1 OWASP credential SURVIVES-WITH-FIX (1c HIGH chat-path-vs-credential overclaim, 1b MED control-shape) · CLAIM2 Contested-Ground Ceiling SURVIVES-WITH-FIX (2d HIGH dangerous 'absolution=SAFE' compression STANDS; 2c phantom = challenger info-gap FP, governor source-closed to _redteam_l2_70b.py) · CLAIM3 H1-b 80% principle SOUND/number REFUTED (self-graded). Bottom line: nothing lands in PUBLIC the-bible without operator sign-off (publish-class fail-closed)."
+- date: 2026-06-27
+  task: "persona-innovator v0.3 Mode-F round 2 on the-bible (crisis/L2 layers; H1-b pilot run #2)"
+  agent: fh-meta:persona-innovator (inherit opus, v0.3 H1-b)
+  self_contained_prompt: yes
+  outcome: partial
+  note: "3 names (Wide-Net Tier/Bilateral Gate/Unsafe-Dominant Merge) + §3 typed-verdict-channel upgrade recommendation (H2 dedup vs FH typed-verdict-channel = sister-not-dup). H1-b run#2: 3/3 load-bearing claims T1-live (100%, applied round-1 F1 orthogonality), T3-bar fired once (diverted to arXiv primary). DEFECT: quoted 3 OWASP LLM01 control names that are PHANTOM (not real headings) → fh_signal_2026-06-27_innovator-h1-quoted-string-phantom."
+- date: 2026-06-27
+  task: "challenger adversarial gate on innovator round-2 outputs (typed-channel code rec + OWASP LLM01 doc + 3 names)"
+  agent: fh-meta:challenger (inherit opus)
+  self_contained_prompt: yes
+  outcome: accepted
+  note: "A typed-channel SURVIVES-WITH-FIX (A3 threat-shape forced-fit: spoofer-controls-channel[FH] vs spoofer-controls-fenced-data[bible]; A4 closure narrow not 'finished arc'; A5 haiku --json-schema reliability untested→gate merge). B OWASP LLM01 names PHANTOM S-grade→governor source-closed real headings→drafted correct. C1/C3 SURVIVE, C2 Bilateral Gate w/ dormant-stub fix. Nothing pushes without operator sign-off."
