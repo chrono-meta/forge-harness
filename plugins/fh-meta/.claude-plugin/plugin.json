@@ -1,6 +1,6 @@
 {
   "name": "fh-meta",
-  "version": "1.4.44",
+  "version": "1.4.45",
   "engines": {
     "claudeCode": ">=1.0.0"
   },
