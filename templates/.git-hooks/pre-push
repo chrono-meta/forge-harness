@@ -42,8 +42,13 @@ REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || true)
 [ -z "$REPO_ROOT" ] && { echo "  ❌ pre-push: not in a git repo — fail-closed (block)"; exit 1; }
 ZERO="0000000000000000000000000000000000000000"
 BASE="${FH_DESTRUCTIVE_BASE:-origin/main}"
+# All ancestry/reachability checks below must ignore local `git replace`/graft objects — a graft can
+# falsify merge-base/rev-list/ls-tree to make a divergent force look fast-forward or an unmerged branch
+# look SAFE (cross-family audit 2026-06-27, reproduced). Export here so every git call in the hook honors it.
+export GIT_NO_REPLACE_OBJECTS=1
 
-DEL_BRANCHES=""   # space-separated "refs/heads/X|<tip-sha>" pairs (bash-3.2 safe: no assoc array)
+DEL_BRANCHES=""   # space-separated "<tip-sha>|refs/heads/X" pairs — SHA first so a '|' that is LEGAL in a
+                  # ref name (git check-ref-format allows it) cannot corrupt the split (bash-3.2 safe).
 DEL_OTHER=""      # refs/tags/* refs/notes/* etc. being deleted
 FORCED_REFS=""
 UNCLASSIFIED=""   # force-check impossible (remote tip not fetched)
@@ -53,18 +58,25 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   if [ "$local_sha" = "$ZERO" ]; then
     # local side zero → this refspec DELETES remote_ref
     case "$remote_ref" in
-      refs/heads/*) DEL_BRANCHES="$DEL_BRANCHES ${remote_ref}|${remote_sha}" ;;
+      refs/heads/*) DEL_BRANCHES="$DEL_BRANCHES ${remote_sha}|${remote_ref}" ;;
       *)            DEL_OTHER="$DEL_OTHER $remote_ref" ;;
     esac
   elif [ "${remote_sha:-$ZERO}" != "$ZERO" ]; then
-    # updating an existing remote ref. Fast-forward iff remote_sha is an ancestor of
-    # local_sha. First confirm remote_sha is present locally — if not, we cannot
-    # classify (fail-closed, but say so accurately rather than mislabel as FORCE).
-    if ! git cat-file -e "${remote_sha}^{commit}" 2>/dev/null; then
-      UNCLASSIFIED="$UNCLASSIFIED $remote_ref"
-    elif ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
-      FORCED_REFS="$FORCED_REFS $remote_ref"
-    fi
+    # updating an existing remote ref.
+    case "$remote_ref" in
+      refs/tags/*)
+        # Any update to an EXISTING tag is a forced move of a published/external anchor — destructive
+        # regardless of ancestry (a descendant retag passes the merge-base FF test but is still a force).
+        FORCED_REFS="$FORCED_REFS $remote_ref" ;;
+      *)
+        # Branch update: fast-forward iff remote_sha is an ancestor of local_sha. Confirm remote_sha is
+        # present locally first — if not, cannot classify (fail-closed, say so rather than mislabel FORCE).
+        if ! git cat-file -e "${remote_sha}^{commit}" 2>/dev/null; then
+          UNCLASSIFIED="$UNCLASSIFIED $remote_ref"
+        elif ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+          FORCED_REFS="$FORCED_REFS $remote_ref"
+        fi ;;
+    esac
   fi
   # remote_sha == ZERO → creating a new branch (not destructive) → ignore
 done
@@ -127,9 +139,9 @@ if [ -n "$DEL_BRANCHES" ]; then
     for r in $DEL_BRANCHES; do echo "  DELETE (branch, unverified): $r"; done
     BLOCK=1
   else
-    BASE_BRANCH="${BASE#*/}"   # origin/main → main (the integration branch name)
+    BASE_BRANCH="${BASE##*/}"  # last path component: origin/main / refs/remotes/origin/main / refs/heads/main → main
     for pair in $DEL_BRANCHES; do
-      r="${pair%%|*}"; tip="${pair##*|}"
+      tip="${pair%%|*}"; r="${pair#*|}"   # SHA is before the first '|' (hex, no '|'); ref is everything after
       # Deleting the integration branch itself is never "SAFE" — it is trivially "merged into
       # itself" (n=0, uniq=0) and would auto-pass. Guard it explicitly.
       if [ "$r" = "refs/heads/${BASE_BRANCH}" ] || [ "$r" = "refs/heads/master" ] || [ "$r" = "refs/heads/main" ]; then

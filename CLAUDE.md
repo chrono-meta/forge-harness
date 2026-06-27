@@ -257,6 +257,17 @@ regression of the judge-robustness principle (mechanical anchor over judge-only 
 | Forward | `phantom-quench` | Phantom references, paths that don't exist, stale external links |
 | Record | `edit-manifest` RECORD | Logs predicted impact — closes the predict-verify loop for future harvest-loop |
 
+**Cross-family complement (Axis 2, autonomous when consented)**: `steel-quench` dispatches in-session at the
+session tier — **same family** as the governor, so it shares the governor's blind spots. For a **load-bearing**
+change (gates · irreversible-surface code · doctrine), `auto-decorrelation` is the standing cross-family
+verifier: when the configured sidecar panel is discoverable it recruits ≥1 **different-family** auditor (per
+the UAP mapping — e.g. `codex` `gpt-5.5`/xhigh for repo-grounded code/security, `agy`/Gemini for breadth) and
+degrades honestly to single-session when none is. **Autonomous once the operator has consented** (one-time,
+in the UAP — `[[user_adaptation_profile]]`); the governor keeps the terminal verdict and **source-grounds**
+every sidecar finding before acting on it (`[[feedback_judge_robustness_mechanical_anchor]]`). Dogfood
+2026-06-27: a cross-family pass caught a HIGH execution-side-effect blind spot the same-family reviewers +
+the target-tier sim all shared — the decorrelation value made concrete.
+
 ### Mode D Model Notice (fires once, at the same trigger as this gate)
 
 The moment FH self-development work begins (= the gate's own activation trigger: an FH asset is about
@@ -363,7 +374,9 @@ override is absent** — defaults-only would otherwise green-PASS a HIGH company
 --ignore-scripts` / a CI `.npmrc ignore-scripts=true` / `pnpm`/`yarn publish` **skip the lifecycle hook** —
 route publishes through `npm run release` or an explicit CI scan step; (ii) it scans only the **loaded
 patterns**, so an **un-patterned secret shape** (an API key the patterns don't describe) still ships; (iii) on
-a runner without the gitignored override it is defaults-only unless populated. So of the Pre-Publish surface,
+a runner without the gitignored override it is defaults-only unless populated; (iv) it scans **working-tree
+content, not the final tarball bytes** — benign here (content-neutral lifecycle: prepare=chmod, no prepack)
+but re-open if a content-generating publish lifecycle is added (cross-family audit 2026-06-27). So of the Pre-Publish surface,
 **(b) commit-time and (c) npm-publish are mechanized** (with the residuals above); only **(a) separate-repo
 go-public stays genuinely un-hookable** (prose + checklist).
 

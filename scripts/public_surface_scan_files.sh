@@ -49,8 +49,19 @@ PSA_STREAM=""
 [ -f "$PSA_DEFAULTS" ] && PSA_STREAM=$(cat "$PSA_DEFAULTS")
 OVERRIDE_PRESENT=0
 if [ -f "$PSA_OVERRIDE" ]; then
-  PSA_STREAM="$PSA_STREAM"$'\n'"$(cat "$PSA_OVERRIDE")"
-  OVERRIDE_PRESENT=1
+  # Fail-OPEN guard (cross-family audit 2026-06-27): an override that EXISTS but is unreadable, or reads
+  # empty, must NOT set OVERRIDE_PRESENT=1 — otherwise the absent-override fail-closed block below is
+  # skipped while cat contributed nothing, and HIGH operator literals scan clean. Only count the override
+  # as present when a readable, non-empty read actually contributed patterns.
+  if [ -r "$PSA_OVERRIDE" ]; then
+    _ov="$(cat "$PSA_OVERRIDE" 2>/dev/null || true)"
+    if [ -n "$(printf '%s' "$_ov" | grep -vE '^[[:space:]]*(#|$)' || true)" ]; then
+      PSA_STREAM="$PSA_STREAM"$'\n'"$_ov"
+      OVERRIDE_PRESENT=1
+    fi
+  else
+    echo "  ⚠️  override exists but is UNREADABLE — treated as absent (fail-closed below)."
+  fi
 fi
 if [ -z "$(printf '%s' "$PSA_STREAM" | grep -vE '^[[:space:]]*(#|$)' || true)" ]; then
   # No patterns at all on an irreversible surface → fail-closed (unless override).
@@ -81,6 +92,12 @@ if [ "$OVERRIDE_PRESENT" -eq 0 ]; then
   fi
 fi
 
+# Named residual (cross-family audit 2026-06-27, deferred): this scans the WORKING-TREE content of the
+# packed file list, not the final tarball bytes. A content-generating publish lifecycle (prepack/prepare
+# that writes files AFTER this prepublishOnly scan) could ship bytes this never saw, and a path containing
+# a newline would mis-split the list. The robust fix is to scan the actual `npm pack` tarball; deferred
+# because THIS package's lifecycle is content-neutral (prepare = chmod only, no prepack). Re-open if a
+# content-generating lifecycle is ever added.
 # ── Resolve the exact npm-published file set (fail-closed if unresolved OR partial) ──
 FILES=$(npm pack --dry-run --json 2>/dev/null \
   | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{JSON.parse(s)[0].files.forEach(f=>console.log(f.path))}catch(e){process.exit(3)}})' 2>/dev/null || true)
@@ -99,6 +116,22 @@ if ! printf '%s\n' "$FILES" | grep -qx "package.json"; then
   echo "     Fail-closed (possible npm --json shape change). Verify npm pack output or PUBLIC_SURFACE_OK=1."
   exit 1
 fi
+
+# ── Validate every regex BEFORE scanning (cross-family audit 2026-06-27) ──
+# A malformed ERE makes `grep -E` exit ≥2 (error), which the scan's `2>/dev/null || true` swallows as a
+# silent no-hit — that detector is then disabled and LEAK stays 0 (fail-OPEN). On an irreversible surface
+# a broken detector is NOT "clean": fail-closed unless explicitly overridden.
+while IFS=$'\t' read -r sev regex; do
+  [ -z "$regex" ] && continue
+  case "$sev" in \#*) continue;; esac
+  printf '' | grep -aoiE "$regex" >/dev/null 2>&1
+  if [ "$?" -ge 2 ]; then
+    echo "  ❌ invalid pattern (regex error) — detector disabled: [$sev] '$regex'"
+    [ "${PUBLIC_SURFACE_OK:-0}" = "1" ] && { echo "  ⚠️  proceeding by PUBLIC_SURFACE_OK=1 (a detector is broken)"; break; }
+    echo "     Fail-closed: a broken detector cannot certify clean. Fix the pattern or PUBLIC_SURFACE_OK=1."
+    exit 1
+  fi
+done <<< "$PSA_STREAM"
 
 # ── Scan full content of each published file ──
 LEAK=0
