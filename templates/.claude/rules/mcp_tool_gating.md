@@ -43,6 +43,19 @@ never its *evidence*: assign a non-ask tier only after confirming what the tool 
 does (docs, schema, observed effect). A tool whose behavior you can't confirm defaults to
 **ask regardless of how read-only its name sounds**.
 
+**Intent-taxonomy as the classification key (hardening direction).** "Confirm what the tool
+*does*" is sharper when the *doing* is mapped to a small **effect taxonomy** — e.g.
+`filesystem_delete` · `network_outbound` · `lang_exec` · `payment` — rather than reasoned ad-hoc per
+tool. **Escalation-only, never de-escalation**: the taxonomy makes the floor *safer* — a tool whose
+name reads harmless (`fetch_status`) but whose effect-category is dangerous (`network_outbound`) is
+raised to **ask** by its category even before its name is in the table. It must **never** run the
+other way: an unlisted tool is **not** auto-lowered to allow because its category *looks* read-only —
+the §2 "unlisted → ask, confirm behavior first" floor is unchanged for de-escalation (the category is
+evidence you confirmed, not a guess that skips confirmation). Independent-convergence sister: `nah`
+(github.com/manuelschipper/nah) maps tool calls to exactly such an intent taxonomy instead of
+command-name allow/deny lists. Use the taxonomy as the §3 Note column's behavior-confirmation
+vocabulary; names stay the table's *key*, the confirmed category is its *evidence*.
+
 ## 1.5. Mounted-server instruction block — inbound injection scan
 
 §1 governs not trusting tool *results*; this governs the server's **own instruction block**.
