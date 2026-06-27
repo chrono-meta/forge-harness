@@ -65,6 +65,24 @@ Therefore:
 
 ---
 
+## Autonomy Ladder — how unattended a loop may run (orthogonal to the budget modes)
+
+The core/pro/max modes above key on **budget**. This ladder keys on a different axis — **how much human approval gates each action** — for a *recurring or unattended* loop (the autonomous-loop / `/loop` case), not a one-shot /goal. **Climbing a rung here changes *oversight*, never budget — the two never move together.** (Distilled 2026-06-27 from the "Loop Engineering" sister-asset's "training-mode dry-run → graduated autonomy"; cross-audit `tracks/_audit/session_2026_06_27_loop-engineering-silbal.md`.)
+
+Three rungs, climbed one at a time:
+
+| Rung | What runs | Human role |
+|---|---|---|
+| **① dry-run** | run once manually; observe outputs; **no irreversible actions** | reads every output |
+| **② step-approval** | each action is HITL-gated before it fires | approves per action |
+| **③ unattended** | the loop runs on its own | reviews after the fact |
+
+- **Graduation threshold (measured):** a loop climbs one rung only after **K consecutive clean rounds across a 2+ session/run window** — the *2+ window* reuses `operations.md`'s promotion-window discipline (`accepted ≥ 60%` / recurrence `N=3`). **`K=2` is a provisional default, not yet calibrated** — no loop-run data exists yet; revisit once it does (same honesty as this SKILL's `N=10` budget baseline). "Clean" = the round's Done-When passed **AND** a positive downstream verdict (pipeline-conductor / sidecar = CLEAN) — *not merely* the absence of a governor-catch, so a quieter or weaker governor cannot manufacture graduation. *Check class: measured (clean-round count is mechanical).*
+- **Irreversible carve-out (non-negotiable — the FH increment over the video):** any action whose effect **cannot be undone within the loop** — not only the two examples (Destructive-Op delete/rewrite · Pre-Publish go-public) but **any irreversible side-effecting write** (an MCP `ask`-tier send, a payment, an outbound publish) — **never reaches rung ③**. Membership is the **mechanical surface test** of CLAUDE.md's Surface-Class Degrade Invariant + `mcp_tool_gating` (grep the action surface; do **not** self-label), not a match against the two examples. Such actions stay at rung ② (HITL) **permanently**, regardless of clean-round count. The video graduates a loop to fully unattended; FH caps graduation at the irreversible boundary. *Check class: judged — pair: a target-tier blind sim per CLAUDE.md §Target-tier sim gate (run 2026-06-27, Sonnet, PASS — a remote-branch-delete loop correctly held at rung ② despite 4 clean rounds). **Prose-enforced, not hook-enforced** — accepted residual, named not silent.*
+- **Demotion (fail toward oversight, with a liveness floor):** any governor-catch, failed Done-When, or correction **resets the clean-round counter and drops the loop one rung** — autonomy is earned per-window, surrendered on the first miss, never sticky. A failed **dry-run (①)** has no lower rung: it **blocks graduation and surfaces to the operator**, it does not demote. A loop that **flips promote/demote ≥ `N=3` times in a window** (reusing operations.md's recurrence-escalation) is a noisy boundary — **freeze at the lower rung and surface**, do not keep oscillating.
+
+---
+
 ## Triggers
 
 - `/goal-quench`
