@@ -25,6 +25,17 @@ The forge-harness maintains **a reference asset identity** — user entry and ex
 - Mode D: **Mandatory companion-store setup guidance** (backend pluggable — `*-be` repo · Obsidian vault · gbrain LLM-wiki; see *Pluggable backends* below). Public mirror = methodology only. Private store layout: `paper-drafts/` · `paper-signals/` · `digests/` · `handoff/` · `tracks-meta/`. `handoff/` files bridge cloud session → local session. `tracks-meta/` receives gitignored local session data via a sync hook (e.g. a CC Stop hook) so sync is automatic after setup. Field projects can use the same dual-repo pattern.
 - In any mode: do not accumulate user personal work in the harness directory itself (protect reference asset identity)
 
+### Scope boundary — delivery surface is routed, not built
+
+A self-improving agent's **delivery surface** (always-on messaging reach — Telegram / Slack / Discord
+as a daily-driver channel, a standalone gateway process) is a *channel*, not methodology. FH is Claude
+Code native and **deliberately does not build a messaging gateway or a self-running daemon**: messaging
+reach is routed via a messaging MCP (`recommended_plugins.md`), and recurring automation stays a
+**proposal/cadence surface, not a daemon** (`self_evolution_routine.md` §8). This is a chosen boundary,
+not a missing feature — FH's differentiator is *governed* self-evolution (the 4-axis gate), and a
+delivery channel adds reach without adding governance. (Recorded 2026-06-27 from the Hermes Agent
+sister-asset cross-audit, `tracks/_contrib/session_2026_06_27_hermes-agent-nous-self-improving-cross-audit.md`.)
+
 ---
 
 ## Companion-Store Recommendation + Ephemeral-Environment Handoff

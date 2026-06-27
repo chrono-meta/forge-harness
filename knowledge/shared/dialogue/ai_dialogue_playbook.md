@@ -15,7 +15,9 @@
 3. **Returning user**: AI proposes top 3 priorities from session card + cadence overdue notices
 4. **New user**: 2-sentence FH intro → project connect offer
 
-**Don't front-load**: avoid dumping context manually. FH auto-reads the right files. Start with intent, not background.
+**Don't front-load** *background* (front-load = pre-dumping context before stating intent): avoid dumping project context manually. FH auto-reads the right files. Start with intent, not background.
+
+**Do front-load *specifics***: for the immediate task, paste the concrete artifact — the full error traceback, the exact file path, the failing input — rather than describing it. This is not a contradiction of the line above: FH auto-reads *background* context, but it cannot guess the *specific* traceback/path the current task hinges on; pasting it directly removes a round-trip. (Sister-asset import, Hermes Agent cross-audit 2026-06-27.)
 
 ---
 
@@ -43,6 +45,8 @@ Hub CLAUDE.md (hub common principles) — highest
 Lower levels cannot override higher. Conflicts → higher scope wins.
 
 **AI contribution model**: AI proposes (drafts all changes, prepares commits, creates PR draft) — user approves final push/PR. Human-in-the-loop is non-negotiable for shared repos.
+
+**Explaining the gate to a no-hook user (staged approve/deny framing)**: Mode A/B/D users get the gate mechanically (pre-commit hook + 4-axis). A **Mode C** user (plugin/skill only, no hook) gets no mechanical enforcement — so explain the *same* HITL as a **staged write**: an auto-generated change is *staged*, surfaced for an explicit approve/deny, and only then committed. The vocabulary travels even when the hook doesn't. (Sister-asset import of Hermes' `write_approval` framing, cross-audit 2026-06-27 — wording only; FH's mechanism is unchanged and stronger.)
 
 ---
 
