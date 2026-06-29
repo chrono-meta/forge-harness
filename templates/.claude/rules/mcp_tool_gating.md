@@ -31,6 +31,16 @@ server's own tool annotations (`readOnlyHint` / `destructiveHint`). Measured rea
 servers routinely ship **no annotations at all**, so hint-driven auto-approval cannot
 distinguish an irreversible send from a harmless list call.
 
+**External validation (2026)**: The Agentjacking attack class — forged Sentry MCP events
+tricking Claude Code into executing attacker-controlled code via prompt injection through a
+mounted server's tool output — was documented in June 2026
+([The New Stack, 2026-06-17](https://thenewstack.io/agentjacking-sentry-mcp-attack/)),
+confirming the concrete exploit path this rule guards. Formal MCP security research
+corroborates the root cause: the MCP-38 threat taxonomy (arXiv:2603.18063) and
+"A Formal Security Framework for MCP-Based AI Agents" (arXiv:2604.05969) both confirm
+that tool selection is mediated via free-form natural language at inference time —
+server annotations are not a reliable trust signal by design, not by implementation gap.
+
 **Prefer the host's native per-tool permission config as the enforcement** — e.g. Claude
 Code `permissions` entries for `mcp__{server}__{tool}` — so the gate is mechanical. This
 file defines *what* to gate (the tier table) and is the portable fallback for hosts
