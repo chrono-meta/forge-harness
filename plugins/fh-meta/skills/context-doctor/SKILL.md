@@ -1,6 +1,6 @@
 ---
 name: context-doctor
-description: Reduces token waste in Claude Code sessions. Scans projects to automatically generate .claudeignore files, and guides on over-read files and /clear timing. In hub environments, regularly audits bloated CLAUDE.md/MEMORY.md/memory/*.md files and proposes compression. Usable standalone without a hub clone.
+description: Reduces token waste in Claude Code sessions across two axes — context footprint (auto-generates .claudeignore, guides over-read files and /clear timing) and command output (routes to a command-output proxy/hook such as rtk to trim verbose CLI stdout). In hub environments, regularly audits bloated CLAUDE.md/MEMORY.md/memory/*.md files and proposes compression. Usable standalone without a hub clone.
 user-invocable: true
 allowed-tools: ["Read", "Write", "Bash", "Glob", "Grep"]
 model: sonnet
@@ -14,10 +14,13 @@ complexity_routing:
 
 # context-doctor — Token Efficiency Diagnosis + Automatic Prescription
 
-Diagnoses the 3 main causes of session token waste and prescribes immediate remedies:
+Diagnoses the main causes of session token waste and prescribes immediate remedies:
 1. No `.claudeignore` → unnecessary files loaded wholesale into context
 2. Repeated full reads of large files → paying the same cost N times
 3. Not using `/clear` after direction changes → continuing work with accumulated noise
+4. Verbose CLI output → every `git`/`ls`/build/test call floods context with stdout (a *different* layer from 1–3 — see §Command-Output Reduction)
+
+**Two reduction axes — keep them distinct.** Causes 1–3 are the **context-footprint** axis (what gets read *into* context: files, history). Cause 4 is the **command-output** axis (tokens produced *by* the tools you run). `.claudeignore` cannot touch command output, and a command-output proxy cannot touch file reads — they are complementary, not substitutes.
 
 **Standalone install** — this skill works normally with plugin install only, without cloning the full meta-harness.
 
@@ -154,6 +157,19 @@ Keep it reversible: compress the *working copy* in context, not the source of tr
 
 > **Detail**: See `SKILL_detail.md §Headroom` — external tooling option (redundancy-category targeting, integration surfaces, caveats) — read when executing a compression pass and considering tooling.
 
+## Command-Output Reduction (the command-output axis)
+
+The reductions above all act on the **context-footprint** axis (files, history read *into* context). They do nothing for the **command-output** axis: the stdout of every shell call. A single `git log`, `npm test`, `ls -R`, or build run can dump thousands of tokens per call, and an agent makes dozens of calls per session — often the *largest* single token sink, and invisible to `.claudeignore`.
+
+**Remedy = route to a command-output proxy/filter (mechanical, not a skill step).** The durable fix is a **Claude Code hook that rewrites verbose commands through a token-reducing proxy** — transparent (0 prompt-side overhead, the agent does not have to remember to invoke it). This is enforcement-by-hook, which the harness prefers over a prose habit: an agent cannot forget a hook.
+
+**Recommended tool — `rtk` (Rust Token Killer)**, a CLI proxy that filters dev-command output (the tool reports ~60–90% savings on dev operations), wired via a Claude Code hook so `git status` → `rtk git status` happens automatically.
+- ⚠️ **Name collision**: there is an unrelated `reachingforthejack/rtk` (Rust Type Kit). Verify you have the Token-Killer build — `rtk gain` (token-savings analytics) should work; if it errors with "command not found", the wrong binary is installed.
+- **No-reinvention**: FH **routes to** this tool, it does not rebuild a token-killer. Install + hook wiring live in the user's own config (global `CLAUDE.md` / `settings.json`), never reimplemented here.
+- **Tool-agnostic fallback**: if `rtk` is unavailable, the same axis is served by any output-trimming pattern — pipe verbose commands through `head`/`tail`/`--quiet`/`--oneline`, or prefer narrow flags (`git log --oneline -N` over bare `git log`). Recommend these per-call when no proxy is installed.
+
+**Prescription order**: confirm whether a command-output proxy/hook is installed (e.g. `which rtk`). Absent → recommend installing one (or the per-call fallback flags above) as the complement to `.claudeignore`. Present → note it and move on. Like the rest of this skill, this is a **diagnosis + recommendation**, not an auto-install.
+
 ## External User Environment Adaptation
 
 | Environment | Behavior |
@@ -201,6 +217,7 @@ Explicit invocation (`/context-doctor`) always runs regardless of suppress state
 - "token waste", "session is slow", "reading the whole file", "claudeignore", "context cleanup"
 - "context diet", "memory audit", "CLAUDE.md is heavy", "MEMORY.md size"
 - "context engineering", "context rot", "context collapse"
+- "command output is huge", "verbose output", "rtk", "token killer", "trim command output"
 
 ### Natural Language Triggers (activates without internal vocabulary)
 
@@ -216,6 +233,7 @@ Also activates when an external user expresses without token/context terminology
 | "Answers get weird as the session gets longer" | Accumulated context noise | Step 3 (/clear recommended) |
 | "Context is getting full", "context meter is high" | Approaching context limit | Step 3 — propose Wrap-then-Compact pattern |
 | "context engineering", "doing context engineering", "context rot setting in" | 2026 industry term for context discipline (Chroma 2025 / Anthropic) | Step 2 + Step 3 |
+| "every git command dumps a wall of text", "the build output eats my context" | Verbose command output flooding context | §Command-Output Reduction (route to proxy/hook) |
 
 ## Three-Doctor Loop Integration
 
