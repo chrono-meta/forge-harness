@@ -104,9 +104,58 @@ git rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
 
 # Push any commits ahead of upstream. Offline-safe: never aborts the script,
 # so a failed push just leaves commits queued for the next run to flush.
+#
+# Concurrent-writer safety: two environments (e.g. company laptop + external
+# machine) can write this store the same day. Without integrating the remote
+# first, the second pusher's push is rejected non-fast-forward and — because
+# the old code logged that as "offline?" — the commits piled up silently and
+# never landed until a manual pull. So: fetch, and if behind, rebase local
+# sync commits onto the remote BEFORE pushing. fetch-first lets us tell a
+# genuinely-offline run (fetch fails) from a behind-remote run (fetch ok).
+#
+# We rebase ONLY when the working tree is clean, and deliberately do NOT use
+# --autostash: an autostash pop-conflict completes the rebase but leaves the
+# tree conflict-markered with the stash orphaned, and `rebase --abort` is then
+# a no-op that can't recover it (the next run's `git add` would commit the
+# garbage). A dirty tree just means the caller hasn't finished committing —
+# hold the push and let the next run reconcile, preserving the old safe
+# non-destructive behavior. (Hardened after an adversarial Axis-2 pass, 2026-07-01.)
 maybe_push() {
   git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1 || {
     log "no upstream set for companion store — skipping push"; return 0; }
+  # Clean up any rebase left half-done by a killed prior run (Stop hook can be
+  # terminated mid-rebase); otherwise a later behind==0 run would push on an
+  # inconsistent HEAD.
+  rebase_in_progress() {
+    [ -d "$(git rev-parse --git-path rebase-merge 2>/dev/null)" ] \
+      || [ -d "$(git rev-parse --git-path rebase-apply 2>/dev/null)" ]; }
+  if rebase_in_progress; then
+    git rebase --abort 2>/dev/null || true
+    if rebase_in_progress; then
+      # abort couldn't clear it (corrupt/partial state) — do NOT push on an
+      # inconsistent HEAD; bail fail-closed and let the operator resolve.
+      log "an interrupted rebase could not be auto-aborted — resolve manually: cd \"$BE\" && git status"
+      return 0
+    fi
+    log "cleaned up an interrupted rebase from a prior run"
+  fi
+  if git fetch --quiet 2>/dev/null; then
+    local behind
+    behind=$(git rev-list --count '..@{u}' 2>/dev/null || echo 0)
+    if [ "$behind" -gt 0 ]; then
+      if ! { git diff --quiet && git diff --cached --quiet; }; then
+        log "$behind remote commit(s) + uncommitted changes — holding push, next run will reconcile"
+        return 0
+      fi
+      if git pull --rebase --quiet 2>/dev/null; then
+        log "rebased onto $behind remote commit(s) from another env before push"
+      else
+        git rebase --abort 2>/dev/null || true
+        log "REBASE CONFLICT with remote (concurrent edit of a shared file) — resolve manually: cd \"$BE\" && git pull --rebase"
+        return 0
+      fi
+    fi
+  fi
   local ahead
   ahead=$(git rev-list --count '@{u}..' 2>/dev/null || echo 0)
   [ "$ahead" -gt 0 ] || return 0
