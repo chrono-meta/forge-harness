@@ -138,3 +138,33 @@
   self_contained_prompt: yes
   outcome: accepted
   note: "A typed-channel SURVIVES-WITH-FIX (A3 threat-shape forced-fit: spoofer-controls-channel[FH] vs spoofer-controls-fenced-data[bible]; A4 closure narrow not 'finished arc'; A5 haiku --json-schema reliability untested→gate merge). B OWASP LLM01 names PHANTOM S-grade→governor source-closed real headings→drafted correct. C1/C3 SURVIVE, C2 Bilateral Gate w/ dormant-stub fix. Nothing pushes without operator sign-off."
+- date: 2026-07-03
+  skill: auto-decorrelation (codex gpt-5.5 xhigh, cross-family)
+  context: the-bible L1 mechanical safety-floor adversarial audit (3 surfaces)
+  target: the-bible/core grounding_gate*.py + normalization.py + gate_runtime/gate_cli
+  outcome: accepted
+  note: 3 HIGH (citation-metadata-gated grounding, English crisis coverage gap, shipped wrapper can't reach v4/v5 hardening → homoglyph/encoded crisis PASSES) + 7 MEDIUM. All HIGH empirically confirmed live. Codex ran genuinely (not echo).
+- date: 2026-07-03
+  context: "FH item-1 Field-Harness Load-Bearing Change Gate — 4-axis dogfood (gate's own rule applied to itself)"
+  agent: fh-meta:challenger (opus, at-floor)
+  self_contained_prompt: yes
+  outcome: accepted
+  note: "Axis2 steel-quench on the new gate: 1S+3M+2R, all fixed. S#1 trigger 'mechanical/not self-judged' overclaim (self-referential defect — gate grants the discretion it removes). M#2 script-verified false-clean on bash (own pre-push trigger category). M#3 per-fix regression test not a required convergence sub-condition. M#4 Probe C misses headline `tok in text`. R#5 wording overlap w/ Irreversibility gates (no fall-between). R#6 lint 0 catches in n=7 (efficacy unproven)."
+- date: 2026-07-03
+  context: "FH item-1 gate — Axis3 phantom-quench"
+  agent: Explore (isolated, read-only)
+  self_contained_prompt: yes
+  outcome: accepted
+  note: "0 hard phantoms across CLAUDE.md gate section + knowledge doc + fh_signal. auto-decorrelation confirmed real (plugins/fh-meta/skills/). 1 soft-link [[user_adaptation_profile]] (tracks file, not memory slug) → repointed to plain path."
+- date: 2026-07-03
+  context: "FH item-1 gate — target-tier salience sim"
+  agent: claude (model:sonnet, blind)
+  self_contained_prompt: yes
+  outcome: accepted
+  note: "Strong PASS. Sonnet field session w/ the rule + a planted verdict-fn change (`expected in observed`): fired the gate before merge, refused silent-merge on '머지하자', caught the substring smell (expected='OK'⊂'NOT OK' → default-toward-PASS), chose fail-closed degrade when no sidecar. Salience holds at field tier."
+- date: 2026-07-03
+  skill: auto-decorrelation (codex gpt-5.5 high, cross-family DOGFOOD)
+  context: "FH item-1 gate — Axis2 cross-family on the gate doctrine itself + convergence re-verify"
+  target: "CLAUDE.md §Field-Harness Load-Bearing Change Gate + knowledge detail doc + degrade_direction_scan.sh"
+  outcome: accepted
+  note: "2 HIGH (fail-open degrade — gate inherited auto-decorrelation's silent same-family fallback = the SAME correlated signature the gate catches) + 2 MED (trigger overclaim, under-coverage) + 1 LOW. All fixed; re-verify: 'H1/H2 fail-open degrade CLOSED'. The gate found its own default-toward-proceed hole — dogfood value made concrete."

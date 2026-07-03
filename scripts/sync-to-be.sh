@@ -3,7 +3,7 @@
 # Mirrors the irreplaceable private half so that: public repo + companion = one complete project.
 #   tracks/_meta    → <companion>/tracks-meta   (session meta, signals, manifests)
 #   tracks/_audit   → <companion>/tracks-audit  (sister-asset cross-audit records)
-#   tracks/the_bible → <companion>/tracks-the-bible (publish-candidate creative track, local-only/untracked)
+#   tracks/the_bible → <companion>/tracks/the_bible (mapped project — nested; projects nest, only hub-meta _meta/_audit flatten)
 #   memory/         → <companion>/memory        (durable CC memory — else lost on machine reclaim)
 #   CLAUDE.local.md → <companion>/hub-owner     (operator-specific wiring)
 # Runs from a CC Stop hook (throttled) or manually.
@@ -87,7 +87,7 @@ sync_file() {
 
 sync_dir  "$FH/tracks/_meta"      "$BE/tracks-meta"
 sync_dir  "$FH/tracks/_audit"     "$BE/tracks-audit"
-sync_dir  "$FH/tracks/the_bible"  "$BE/tracks-the-bible"   # publish-candidate creative track: local-only (untracked in public FH), watched in companion
+sync_dir  "$FH/tracks/the_bible"  "$BE/tracks/the_bible"    # mapped project — NESTED under tracks/ (like livedeck; projects nest, only hub-meta _meta/_audit flatten): local-only (untracked in public FH), watched in companion
 sync_dir  "$MEM"               "$BE/memory"
 sync_file "$FH/CLAUDE.local.md" "$BE/hub-owner"
 
@@ -173,7 +173,7 @@ if [ "$TOTAL" -eq 0 ] && [ "$DIRTY" -eq 0 ]; then
 fi
 
 # Commit in the companion store
-git add tracks-meta/ tracks-audit/ memory/ hub-owner/ 2>/dev/null || git add -A
+git add tracks-meta/ tracks-audit/ tracks/ memory/ hub-owner/ 2>/dev/null || git add -A
 if git diff --cached --quiet; then
   log "nothing new to commit in companion store"
   maybe_push
