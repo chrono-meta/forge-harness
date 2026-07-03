@@ -52,6 +52,18 @@
   tier differences appeared only in above-rubric design increments (3/3 · 1/3 · 0.5/3 · 0/3) — i.e. in
   *developing* the harness, not running it. Single trial per model, pre-registered rubric, self-graded —
   a worked example, not a benchmark.
+- **Model-tier flattening — Sonnet 5 replication** (2026-07-03): the same 구동 (rule-application)
+  battery, re-anchored on all three current tiers in one session — Opus 4.8 / **Sonnet 5** / Haiku 4.5
+  each scored **16/16**; both traps and both gate-class carve-out directions passed on every tier.
+  Sonnet 5 ties Opus 4.8 on operation, supporting the Sonnet-default doctrine. Honest caveat: the battery
+  **ceilinged** this run (Haiku 4.5 also 16/16, up from 15/16 on 2026-06-10) because the CATALOG format
+  rule was supplied in-prompt, removing the format-discipline nit that separated tiers before — so this
+  confirms parity-at-ceiling, it does **not** re-measure a tier spread. The tier-separating axis is
+  above-rubric design depth (not run here — and, by the two structural laws in README §Model setup,
+  same-generation tier order there is fixed by design, not something a replication needs to re-confirm).
+  Measurement-integrity items applied: display-name pin (partial — Agent-tool binding, family-
+  discriminated self-report), reps≥3 (not triggered — zero borderline verdicts), discriminating-probe
+  (failed at instrument level — ceiling — flagged, not hidden). Single-session, pre-registered rubric.
 - **Guard-axis before/after, measured** (2026-06-24): the same task was given to a bare agent and an
   FH-gated agent (same FH gate rule injected as context), reps=5 each, across two irreversible surfaces.
   On log cleanup (Destructive-Op Gate) the bare arm deletes on first run — 0/5 safe-default — while the
