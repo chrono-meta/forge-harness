@@ -286,7 +286,7 @@ pinned stronger model is recommended only for harness-editing sessions.
 This is stated as an **invariant, not a per-model leaderboard**. Two structural laws, neither of which a
 new release overturns:
 
-1. **Operation (구동) flattens across tiers** — the rules-in-context do the work, so every tier ceilings
+1. **Operation flattens across tiers** — the rules-in-context do the work, so every tier ceilings
    on rule-application (Sonnet 5 tied Opus 4.8 at the battery ceiling in a 2026-07-03 replication).
 2. **Depth (design increments) is tier-ordered, and the order is fixed *within a generation*** — a lower
    tier never overtakes the higher of the **same** generation (tiers are priced to be worth it, so the
