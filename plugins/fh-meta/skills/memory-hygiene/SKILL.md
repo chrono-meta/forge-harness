@@ -9,8 +9,17 @@ model: sonnet
 # memory-hygiene — Stale Memory Detection and Re-Verification
 
 > Addresses the "stale-but-confident" failure mode: verified information that silently drifts
-> while remaining highly ranked in retrieval — identified as a critical harness failure mode
+> while remaining highly ranked in retrieval — identified as a harness failure mode
 > in *Scaling the Harness in Agentic AI* (arXiv:2605.26112).
+>
+> **Sister asset**: arXiv:2607.01935 (*A-TMA: Decoupling State-Aware Memory Failures in Long-Term
+> Agent Memory*, Shi/Tang/Tung 2026) names this exact class "ghost memory" — outdated / current /
+> transitional facts intermixing during retrieval — and benchmarks it (LTP; conflict-accuracy +0.240,
+> temporal-F1 0.03→0.17 on LoCoMo with a bank-maintenance layer). It is the tighter external frame for
+> what memory-hygiene detects: this skill is the FH-native *detection + archival* pass over the same
+> failure A-TMA formalizes at the retrieval layer. (Source-verified 2026-07-03; a broader bounded-memory
+> testbed, arXiv:2607.02255 AgenticSTS, was considered and set aside — it targets context-assembly, not
+> staleness, so it is not the sister here.)
 
 FH is an online-first harness. Its memory entries point to live external resources (GitHub
 repos, arXiv records, Zenodo DOIs, monitoring routines). These drift faster than in

@@ -141,6 +141,40 @@ Treat the adapter output as the isolated challenger result for Wave 1. This pres
 
 ---
 
+## Step 0.6 — Verdict-Invariance Probe (load-bearing judged gates only · measured)
+
+> **Sibling of Step 0.5**: Step 0.5 measures whether a skill *fires* on the right utterances; Step 0.6 measures whether a judged gate's *verdict* rests on behavior or on the rubric's phrasing. Cross-family review (auto-decorrelation) lowers correlation between judges but does not test groundedness — two decorrelated families can be swayed by the same wording artifact. This probe converts "is this verdict grounded?" from judged to **measured**: hold the behavior fixed, paraphrase the rubric, count flips.
+
+> **External frame**: content-preserving policy rewrites flip up to 9.1% of LLM safety-judge verdicts above baseline jitter — 18–43% of those flips on *unambiguous* cases (arXiv:2605.06161, *Beyond Accuracy: Policy Invariance as a Reliability Test for LLM Safety Judges*, Weng/Feng/Xie 2026). The instrument here is a flip-count over fixture×paraphrase runs, not that paper's benchmark — the anchor grounds the invariance framing, not a drop-in metric.
+
+**Fires only when** the target is a **load-bearing judged gate** — a rubric whose verdict is a gate enum (PASS/FAIL/BLOCK/allow/deny) **AND whose verdict gates a consequential action** (a FAIL actually blocks a publish/delete/merge, changes a safety outcome, or guards an irreversible surface). The same scope as the Field-Harness Load-Bearing Change Gate. **The enum shape is necessary but not sufficient** (target-tier sim, 2026-07-03): a cosmetic judged Done-When that merely *uses* PASS/FAIL vocabulary but gates nothing consequential ("does the description read well — PASS/FAIL") is **not** load-bearing — confirm a real downstream consequence before firing, or the probe over-fires on gate-shaped-but-inert rubrics. **One-time baseline per gate; re-probe only when the gate's rubric prose changes** (mirror of Step 0.5's re-probe rule). It does **not** fire on ordinary judged Done-When conditions, advisory checks, or prose-only edits that leave the rubric untouched — note `Step 0.6: skipped (not a load-bearing judged-gate rubric change)` and proceed. A gate whose verdict is already bound to a mechanical assertion (fixture test, exit code) has no discretion to probe — skip with that note.
+
+**Procedure** (rides shipped machinery — no new harness, benchmark, or daemon):
+1. **Fixtures**: take 2–3 **unambiguous** behavior fixtures — at least one clear-PASS and one clear-FAIL. Reuse the mechanical regression fixtures the gate already ships (the Field-Harness gate's convergence sub-condition requires them); author minimal ones only if absent, and ship them with the gate afterward.
+2. **Paraphrase**: generate **K=5 semantics-preserving rewrites** of the rubric prose (reorder clauses, synonym-swap, restructure lists — never add/remove a criterion). Generate the set **cross-family via auto-decorrelation** so the paraphrase distribution is not same-family-biased; degrade honestly to same-family with a logged note if no sidecar is reachable.
+3. **Dispatch**: run the gate's verdict on each fixture × each paraphrase (plus the original rubric) through the target-tier sim already used by the 4-axis gate — isolated Agent, `model:` pinned to the tier the gate must survive on; the author session does not judge its own rubric.
+4. **Metric**: count verdict flips on the unambiguous fixtures. Report as measured: `verdict-invariance: <flips>/<fixtures×K> runs flipped (gate: <name> · tier: <model>)`.
+5. **Record**: write the flip-count into the Axis-2 marker's `axis2-evidence` field (non-vacuous by construction — a count, not "it ran") and emit a one-line **Judge Card** alongside the gate: `judge-card: <gate> · flip-rate <n>/<runs> · fixtures <ids> · <date>`. The card is the baseline the re-probe rule compares against.
+
+**Threshold + verdict mapping** (measured):
+
+| Measured | Verdict | Severity |
+|---|---|---|
+| ≥1 flip on an unambiguous fixture | **ungrounded** — the verdict tracks phrasing, not behavior; the rubric leaks discretion | S (load-bearing by scope definition) |
+| 0 flips across all fixture×paraphrase runs | invariance PASS (measured, not guessed) | — |
+
+**Remediation** (on FAIL, before the gate is trusted): either **bind a fixture-based mechanical assertion** (the fixture that flipped becomes a regression test the verdict must satisfy regardless of prose), or **narrow/shorten the rubric prose** until the re-probe stops flipping. Both moves remove discretion from the prose — the ratchet direction is always toward less judged surface, not more rubric.
+
+**Check class**: measured. **Adversarial pairing** (the probe's own soft spot is "were the paraphrases actually semantics-preserving?" — a corrupted paraphrase manufactures flips): paired by (a) **ambiguity control** — flips are counted only on unambiguous fixtures, where a semantics-changing rewrite would move both fixtures coherently rather than flipping one, and (b) **cross-family paraphrase generation** — the rewrite set is not authored by the family whose verdict is under test. No judge-only path: the terminal artifact is a count over dispatched runs.
+
+**Honest residual (named)**: the probe proves the verdict is **invariant to wording**, not that it is **correct** — a gate can be robustly, invariantly wrong. Correctness stays with fixture ground-truth and the human PR gate; Step 0.6 removes one failure class (phrasing-dependence), it does not certify the rubric.
+
+**Simplicity note** (earned-complexity check, Wave-1 angle #1 applied to itself): net-new surface = a fixture-paraphrase procedure + one threshold. Everything else is already shipped — steel-quench dispatch, the 4-axis target-tier sim, the Axis-2 marker field, auto-decorrelation, and the mechanical fixtures load-bearing gates already owe. Cost converges to zero: baseline once per gate, re-probe only on rubric prose change. Each FAIL's remediation shrinks judged prose or adds a mechanical anchor — the harness gets simpler under measurement, not more decorated.
+
+> **Origin**: proposed by an autonomous innovator scan (Mode F, 2026-07-03), designed by a Fable-5 sidecar, source-verified (2605.06161 numerics confirmed verbatim) before adoption. Orthogonal to today's cross-family gate: that lowers judge *correlation*, this measures verdict *groundedness*.
+
+---
+
 ## Wave 1 — 6 Mandatory Attack Angles
 
 **Execution principles**: Attacks must be based on real code/files/configs — abstract criticism prohibited.
