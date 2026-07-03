@@ -138,6 +138,35 @@ A sidecar is recruited where it adds *decorrelated* value; its ceiling is still 
 harness lifts a model to its own ceiling, it does not move it ([[feedback_harness_ceiling_principle]]).
 "Aggressive" Codex/Gemini use is bounded by the fit task-class above, never a blanket main-seat swap.
 
+### Vendor-native harness — the main layer stays multi-CLI, never Copilot-consolidated
+
+The harness-depth thesis has a **per-vendor corollary**: a frontier model realizes its *highest effective
+capability inside its own vendor-native CLI/harness* — Claude in Claude Code, GPT in the Codex CLI, Gemini
+in Antigravity — because each vendor tunes its full agentic loop (infer→act→observe + tools + context +
+control) for its own model. A **universal router that wraps all of them** (GitHub Copilot) is a *thin*
+surface with no vendor-native harness depth, so routing any model through it **strips the native-harness
+buff and degrades that model's realized intelligence** — not just Claude's. This makes the earlier
+"router shell" row (Copilot / Gemini CLI / Codex CLI as one class) **too coarse**: the *native* CLIs
+(`codex`, `agy`/Antigravity) are full vendor harnesses and belong at their fit task-class above; only the
+*cross-vendor* router (Copilot) is the thin surface.
+
+**Consequences (design-locked):**
+- **Main orchestration stays as-is** — FH pipeline + each vendor's native agent (Claude Code + Codex +
+  Antigravity), each on its own subscription/CLI. The synergy of that native-multi-CLI layer outweighs any
+  cost-consolidation Copilot offers; do **not** collapse the main layer into one router.
+- **Copilot's proper position = a harness-less sidecar** — lightweight inline autocomplete + simple Q&A.
+  It is *not* an orchestration layer and *not* the preferred cross-family access when native CLIs reach.
+- **Never route a model through Copilot when its native CLI is reachable** — copilot-Claude ⟪ native CC,
+  copilot-GPT ⟪ native Codex, copilot-Gemini ⟪ native Antigravity (harness depth + no decorrelation gain
+  if same family as governor + usage-credit cost).
+- **The one legitimate Copilot cross-family use is egress-bounded** — in a *restricted corporate network*
+  where the native `codex`/`agy` CLIs cannot reach out, Copilot's **enterprise Pro+ catalog** becomes the
+  fallback *access* path to non-Claude frontier families (GPT/Gemini) for a one-shot decorrelation call —
+  still a sidecar, never the main seat (company-env panel: [[reference_corp_env_decorrelation_panel]]).
+  On a personal machine with a *free* Copilot tier this cross-family value does not even exist — free tier
+  is autocomplete/QA only, which is exactly its demoted role. (Derived 2026-07-03, operator + cross-vendor
+  Gemini concurrence; extends the governor=native-CC point to every vendor.)
+
 **Maintenance-Cost Rule** — a compatibility layer is cheap as a *thin entrypoint*, expensive when it
 *duplicates canonical knowledge*. The test:
 
