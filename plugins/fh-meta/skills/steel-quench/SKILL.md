@@ -112,6 +112,12 @@ Treat the adapter output as the isolated challenger result for Wave 1. This pres
 
 > **Import origin** (sister-asset cross-audit 2026-06-14, `tracks/_audit/session_2026_06_14_official-plugins-cross-audit.md`): skill-creator + plugin-dev/skill-reviewer measure trigger accuracy **empirically**; FH's skill gate ("3+ NL triggers") and steel-quench's trigger-collision attack are **judged**, not measured. This probe converts that one verdict to **measured** — the mechanical-anchor discipline (a terminal trigger verdict should rest on a count, not an inference: the W4-4 question applied to the skill's own description).
 
+> **External frame**: treating a trigger/prompt phrase set as a first-class artifact that needs a
+> coverage criterion analog to code coverage is the position argued in arXiv:2607.02057, *Prompt
+> Coverage Adequacy*. FH's instrument here is a fire-count over should-fire / near-miss phrases,
+> not that paper's attention-based test-suite coverage — the anchor grounds the coverage-adequacy
+> framing, not a drop-in metric.
+
 **Fires only when** `artifact_type = skill_md` (Step 0.3 canonical enum, `tpa_schema.md` — i.e. a SKILL.md) AND the **trigger surface** changed. *Trigger surface* = exactly the `description:` YAML field **plus** the `## Triggers` / `## Trigger Phrases` section (and nothing else — a body-wave or procedure edit with both of those untouched does **not** fire it). Any other artifact has no trigger surface — note `Step 0.5: skipped (not a skill_md trigger change)` and proceed.
 
 **Procedure** (prose-scale — FH routes + governs, it does **not** rebuild skill-creator's eval engine; no Python harness, no vector store):

@@ -83,6 +83,13 @@ When AI generates artifacts without reading the source, those artifacts look lik
 | **Partial reading** | Source partially read, rest filled in with inference | A |
 | **Reconstruction contamination** | Source was read but LLM modified values/conditions during paraphrase | A |
 
+> **External anchor**: *package hallucination* — an LLM emitting a non-existent or invalid
+> package name, which an attacker can then register under the hallucinated name as a supply-chain
+> vector — is a documented instance of the Phantom Claim class (arXiv:2607.02052, *Mitigating
+> Package Hallucinations in Large Language Models via Model Editing*). That work mitigates the failure inside the
+> model; phantom-quench catches the same class at the artifact surface by back-tracing each
+> referenced name to a declared source.
+
 ---
 
 ## Execution Steps

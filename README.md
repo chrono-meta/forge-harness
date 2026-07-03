@@ -276,12 +276,28 @@ dispatch's own `model` parameter; the session model/plan-mode does **not** propa
 > *self-development* is where tier depth measurably pays (design-increment finding), while operation
 > does not. Sub-agent token costs are CC-visible in the session jsonl under `message.model`.
 
-**Measured, not asserted** (2026-06-10, worked example): on a 30-point blind rule-application battery,
-*operating* FH was nearly model-flat — Opus 4.8 / Sonnet 4.6 / Haiku 4.5 scored **100 / 97 / 94** against
-a top-tier anchor at 100, with the rules in context doing most of the work. The tiers separated only on
-above-rubric *design* increments (developing the harness, not running it) — which is why the default is
-Sonnet with **tier-floored dispatch** covering the depth-sensitive turns, and a pinned stronger model is
-recommended only for harness-editing sessions. Details: `docs/OUTPUT_EVIDENCE.md` §Validation signals.
+**Measured, not asserted** (worked examples): on a blind rule-application battery, *operating* FH is
+near model-flat — **every Claude tier measured scores 94–100%** (Fable, Opus 4.8, Sonnet 4.6 and 5,
+Haiku 4.5); the few lost points are format discipline, never a trap or gate-class miss. The tiers
+separate only on above-rubric *design* increments (developing the harness, not running it) — which is
+why the default is Sonnet with **tier-floored dispatch** covering the depth-sensitive turns, and a
+pinned stronger model is recommended only for harness-editing sessions.
+
+This is stated as an **invariant, not a per-model leaderboard**. Two structural laws, neither of which a
+new release overturns:
+
+1. **Operation (구동) flattens across tiers** — the rules-in-context do the work, so every tier ceilings
+   on rule-application (Sonnet 5 tied Opus 4.8 at the battery ceiling in a 2026-07-03 replication).
+2. **Depth (design increments) is tier-ordered, and the order is fixed *within a generation*** — a lower
+   tier never overtakes the higher of the **same** generation (tiers are priced to be worth it, so the
+   vendor keeps them ordered). *Across* generations a newer lower-tier model can surpass an older
+   higher-tier one (Sonnet 5 ≥ Opus 4.8 on operation is exactly this cross-generation case) — but the
+   current top tier of any generation still wins its own depth turns.
+
+So the doctrine is permanent, not perishable: **default to the mid tier for operation; escalate to the
+current top tier for depth.** Re-measurement is warranted only when a new model becomes a field-main
+*candidate* (a one-time cross-generation threshold check), never to re-confirm same-generation tier order
+— that is guaranteed by design. Details + dated runs: `docs/OUTPUT_EVIDENCE.md` §Validation signals.
 
 If you use external CLIs (Gemini, Codex, `gh copilot`) as sidecars, their costs are billed to their own quota and not visible in CC's token display.
 
@@ -292,7 +308,7 @@ the canary / cheap-breadth rungs only:
 
 | Tier | Spec | Runs locally | What it buys |
 |---|---|---|---|
-| **Minimum** | anything that runs Claude Code | nothing | full methodology + gates; operating FH is ~model-flat (Opus/Sonnet/Haiku 100/97/94) |
+| **Minimum** | anything that runs Claude Code | nothing | full methodology + gates; operating FH is ~model-flat across every tier tested (94–100%) |
 | **Recommended** | laptop-class, ~16GB RAM | one 8B-class quantized model (e.g. an 8B / small Gemma) | a token-free **floor canary** (pre-screen before a metered sim) · offline triage · a cheap-breadth panel arm |
 | **Optional (heavy)** | ~24GB VRAM GPU | a 27–32B model | a *stronger* decorrelation canary |
 
