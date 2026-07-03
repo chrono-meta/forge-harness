@@ -285,6 +285,69 @@ unknown) and surface **one line** — then proceed, never block:
 inviolable; a pin is not a cap — tier-floor resolution §Floor governance) · field-project operation
 sessions (no FH asset modification) never see this notice — the Sonnet default stays friction-free.
 
+## Field-Harness Load-Bearing Change Gate (cross-family, pre-merge)
+
+The 4-axis gate above fires on **FH asset** changes. But the correlated blind spot it guards —
+*"when a verdict surface cannot mechanically ground its judgment, it defaults toward PASS instead
+of safe-fail"* — is **model-family-level, not FH-specific**. It lives in any load-bearing code the
+AI writes, including **mapped field projects** (qasp · the-bible · pmh). FH is the meta-harness:
+accelerating a field harness *to FH grade* means the field's load-bearing changes get the **same
+cross-family adversarial gate** as FH's own assets. Not doing so is the exact gap that shipped **9
+default-toward-PASS holes across 3 harnesses undetected** (measured 2026-07-03). Root principle:
+**prose-specified verdict logic grants discretion; discretion's degrade direction is unconstrained
+(→ optimistic PASS); same-family reviewers share the author's optimistic reading and miss it.**
+
+**Trigger (per changed file — grep-assisted, salience-dependent, no field hook)**: an AI-authored
+change to a **load-bearing field surface** — a function returning a **verdict/gate enum or exit code** (PASS/FAIL/BLOCK/allow/deny),
+an **irreversible-op** path (publish/delete/history-rewrite), or a **safety invariant** (the-bible
+L1 floor, qasp verdict-binding, a pre-push/pre-commit hook). File+symbol based (grep the diff for a
+verdict-enum return / gate exit / safety-marked function) — but a **strong-advisory grep trigger,
+not a hook**: the FH pre-commit gate is FH-internal and deliberately never installed into field
+projects, so an agent under merge pressure can still under-trigger (unmarked safety logic,
+boolean-return gate helpers, config-driven allow/deny, shell/CI irreversible paths escape the grep).
+The under-trigger residual is named honestly in the detail doc — it is not claimed to be airtight.
+
+**Gate (before merge, not after)**:
+1. **Degrade-direction lint** (mechanical pre-screen — `scripts/degrade_direction_scan.sh`): flags
+   fall-through / `except` / `.get(default)` / unknown-branch landing on a **permissive** value.
+   **Advisory review surface, NOT a hard gate** — grep-heuristic, FP-tolerant; a hit = *"prove this
+   isn't default-toward-PASS"*, never a solo block (exit 2 = advisory). Points attention; the
+   cross-family review decides. (Portable field copy: `templates/degrade_direction_scan.sh`.)
+2. **Cross-family adversarial review** (`auto-decorrelation` → ≥1 different-family auditor, e.g.
+   `codex` gpt-5.5/high for repo-grounded verdict code) — the same standing verifier the 4-axis
+   gate uses for load-bearing FH changes, now on field load-bearing changes. Governor keeps the
+   terminal verdict + **source-grounds** every finding (mechanical anchor over agreement).
+3. **Confirm→fix→re-verify loop** until CONVERGED (no reachable false-PASS / false-CONFIRMED /
+   masked-FAIL / crash-where-safe-fail). **Each fix ships a mechanical regression test reproducing
+   the closed hole** — the anchor leg is a *required* convergence sub-condition, not incidental: two
+   decorrelated models agreeing is still judgment (mechanical anchor over agreement). Documented
+   recall-limits of a deliberately-precise no-judge oracle (separator-negation, positional multiset
+   masking) are **not** blockers.
+
+*(Role deconfliction: this gate reviews **field code being authored**; the Irreversibility gates
+below gate **the act** of publish/delete/rewrite — disjoint by role and by location, no double-gate.)*
+
+**Degrade direction — cross-family unavailable is NOT a silent same-family pass** (the gate's own
+standard, dogfood-caught 2026-07-03): if no different-family auditor is reachable, the gate does
+**not** fall back to same-family review and proceed — that inherits `auto-decorrelation`'s general
+*silent-degrade / never-hard-fail*, which is **fail-OPEN** for a load-bearing pre-merge surface
+(the gate's entire value is decorrelation; same-family review shares the author's blind spot). It
+marks the change **NOT-CONVERGED** and either blocks the autonomous merge / asks the operator, or
+proceeds only under an **explicit, logged same-family-only acknowledgment** — never a silent
+same-family pass. This **overrides** the delegated skill's default degrade for this surface,
+consistent with §Irreversibility Surface-Class Degrade Invariant (applicable-but-tooling-down ≠ free skip).
+
+**Residency**: sanitize company code (redact vendor/domain literals) before any external-family
+dispatch; domain data never leaves. **Autonomy**: autonomous once the operator has consented (UAP),
+same as the FH cross-family complement. **In autonomous loops** (innovator loop-engineering ·
+`/goal` · cluster orchestration): this gate is **part of the delegated pipeline**, not an
+afterthought — a load-bearing field change produced autonomously runs the lint → cross-family →
+converge loop *before* it is Done. Autonomy floor (§Floor governance): the skip/run judgment is
+trusted only at opus-tier+; below-floor runs the review or asks, never silently skips.
+
+> **Detail** (discretion principle · 4-face signature · gate mechanics · n=7 qasp evidence):
+> `knowledge/shared/harness-core/field_verdict_crossfamily_gate.md`.
+
 ## Irreversibility Gates — Surface-Class Degrade Invariant (shared spine of the two gates below)
 
 The two gates that follow (Pre-Publish, Destructive-Op) guard **irreversible surfaces**. The floor they
@@ -482,6 +545,7 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "I don't know what to build", "how should I approach this", "organize this for me", "clarify this", "정리해줘" (ambiguous request before dispatch) | `/deep-clarify` |
 | "memory feels bloated", "clean up memory", "memory too large", "memory hygiene" | `/memory-hygiene` |
 | "ready to PR", "about to push", "merge this", "PR 올려줘", FH asset changed in session | 4-axis auto-gate (see above — runs automatically, no proposal needed) |
+| **field verdict/gate/safety/irreversible code changed** in a mapped project (function returning a verdict enum / gate exit code / safety-invariant · publish/delete/history path) — **proactive, before merge** | **Field-Harness Load-Bearing Change Gate** (see above → degrade-lint → cross-family review → converge; same rigor as FH assets, applied to field code) |
 
 **Guard**: Do not propose a skill that is already running. One signal = one-line proposal (no pressure). Before proposing, consult the UAP (§Operational Adaptation Loop): a skill the user has rejected 3+ times is **suppressed**, not re-proposed.
 For per-skill utterance patterns, see the relevant `SKILL.md §Trigger Phrases` section.
