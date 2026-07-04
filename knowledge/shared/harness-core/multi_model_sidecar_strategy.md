@@ -167,6 +167,35 @@ buff and degrades that model's realized intelligence** — not just Claude's. Th
   is autocomplete/QA only, which is exactly its demoted role. (Derived 2026-07-03, operator + cross-vendor
   Gemini concurrence; extends the governor=native-CC point to every vendor.)
 
+### Batch-judging corollary — the native harness is for interactive/agentic work, not batch scoring
+
+The vendor-native harness gives a model its highest capability for **interactive, agentic** tasks
+(repo-grounded audit, multi-step design, tool-use) — but that *same* agentic loop is a **liability for
+high-volume batch judging**: a deterministic verdict emitted over N fixtures, where there is nothing for a
+tool-use loop to do. Measured 2026-07-04 (H1 verdict-invariance run): the native `codex exec` spins a full
+agentic session per judge (hooks + reasoning ≈ an order of magnitude more tokens than a bare completion),
+and native `agy -p` (once its headless permission-wait is cleared) returns *agentic prose* — a "Summary of
+Work" — rather than a parseable last-line verdict. Both **complete**, but at a cost/parse profile wrong for
+batch.
+
+So the dispatch splits by *shape of the task*, not just by family:
+
+- **Batch cross-family judging** (steel-quench Step 0.6 verdict-invariance, auto-decorrelation over many
+  items, any fixed-fixture flip count) → **clean completion APIs** (OpenRouter, model pinned by
+  *display-name* + `served`-field silent-route check) **+ free local** (a 4090 ollama endpoint). Clean,
+  cheap, parseable, per-call pinnable. *Caveat*: a local thinking model needs a large enough output budget
+  or it truncates inside `<think>` and emits an empty verdict — a config axis, not a capacity limit.
+- **Interactive / agentic verification** (repo-grounded catching, the divergence audits where cross-family
+  disagreement *localizes* a bug) → the **native CLIs** (`codex`, `agy`/Antigravity), where the harness
+  earns its overhead.
+
+This is **not** a contradiction of the harness-depth thesis — it *is* it. The harness lifts capability
+exactly where judgment + tools + iteration matter; for a one-shot self-contained verdict the loop has no
+work, so its depth becomes pure cost. Pick the naked API for batch scoring, the native harness for agentic
+audit. (Derived 2026-07-04, operator + H1 measurement; the batch-side dual of the vendor-native thesis
+above. The native-harness Gemini path via `agy` is headless-usable again once tool-permission auto-proceed
+is set — see [[reference_agy_model_catalog]] for the pin/permission mechanics.)
+
 **Maintenance-Cost Rule** — a compatibility layer is cheap as a *thin entrypoint*, expensive when it
 *duplicates canonical knowledge*. The test:
 
