@@ -73,11 +73,11 @@ wc -l memory/MEMORY.md 2>/dev/null
 # memory/*.md files exceeding 30K
 find memory -name "*.md" -size +30k 2>/dev/null | xargs wc -l | sort -rn | head -10
 
-# SKILL.md files > 300 lines with no SKILL_detail.md (skill-splitter candidates)
+# SKILL.md files > 300 lines with no SKILL_detail.md (salience-splitter candidates)
 find plugins -name "SKILL.md" 2>/dev/null | while read f; do
   lines=$(wc -l < "$f")
   detail=$(dirname "$f")/SKILL_detail.md
-  [ "$lines" -gt 300 ] && [ ! -f "$detail" ] && echo "[skill-splitter candidate] $f ($lines lines)"
+  [ "$lines" -gt 300 ] && [ ! -f "$detail" ] && echo "[salience-splitter candidate] $f ($lines lines)"
 done
 ```
 

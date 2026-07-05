@@ -214,7 +214,7 @@ two more signatures keep it running: `harvest-loop` (each session's lessons beco
 | `token-budget-gate` *(fh-commons)* | Pre-task token cost estimate | "How expensive is this?" |
 | `mcp-circuit-breaker` *(fh-commons)* | MCP tool failure pattern detection | "MCP keeps failing" |
 | `quench-challenger` *(fh-commons)* | Adversarial pressure-test agent | "Challenge this with a devil" |
-| *(+ additional assets)* | marketplace-gate · contention-layer · edit-manifest · fact-checker · goal-quench · hub-persona-auditor · install-doctor · memory-hygiene · persona-innovator · prompt-regression · public-surface-audit · skill-splitter | |
+| *(+ additional assets)* | marketplace-gate · contention-layer · edit-manifest · fact-checker · goal-quench · hub-persona-auditor · install-doctor · memory-hygiene · persona-innovator · prompt-regression · public-surface-audit · salience-splitter | |
 
 | Active count | Diagnosis |
 |:---:|---|
@@ -233,7 +233,7 @@ two more signatures keep it running: `harvest-loop` (each session's lessons beco
 | Gate / Guard | `token-budget-gate` · `asset-placement-gate` · `marketplace-gate` |
 | Discovery | `plugin-recommender` · `cross-ecosystem-synergy-detection` · `frontier-digest` · `verify-bidirectional` |
 | Content / Simulation | `sim-conductor` · `apex-review` · `meta-prompt-builder` · `deep-clarify` |
-| Setup | `install-wizard` · `hub-cc-pr-reviewer` · `skill-splitter` |
+| Setup | `install-wizard` · `hub-cc-pr-reviewer` · `salience-splitter` |
 
 > **Full phrasebook** — every skill + agent with its one-line definition and the plain-language phrase
 > that triggers it: [`CHEATSHEET.md` §12](CHEATSHEET.md#12-skills--agents--what-each-does-and-what-to-say).

@@ -137,7 +137,7 @@ FAIL routing: First FAIL → 1 re-synthesis allowed. FAIL after re-synthesis →
 
 ### Step 6 — Curator Lifecycle Review
 
-**6-1 SKILL.md Lifecycle**: 30+ day unused → [STALE] candidate. `pinned: true` → never touch. ≥70% overlap → merge candidate suggestion. **> 300 lines AND no `SKILL_detail.md`** → propose `/skill-splitter` (governance-semantic split — not compression; the grew-through-harvest pattern is a natural split trigger).
+**6-1 SKILL.md Lifecycle**: 30+ day unused → [STALE] candidate. `pinned: true` → never touch. ≥70% overlap → merge candidate suggestion. **> 300 lines AND no `SKILL_detail.md`** → propose `/salience-splitter` (governance-semantic split — not compression; the grew-through-harvest pattern is a natural split trigger).
 
 **6-1-a Archive-candidate auto-tag**: When 0 invocations in 30 days detected (cross-check `tracks/_meta/skill_usage.md`), auto-append `#archive-candidate` tag to that skill's CATALOG.md entry. No file deletion — tag only. User reviews tagged entries at next session start.
 

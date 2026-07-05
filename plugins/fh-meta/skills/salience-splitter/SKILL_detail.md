@@ -1,10 +1,10 @@
 ---
-name: skill-splitter-detail
-description: Detail reference for skill-splitter — content classification algorithm, pointer format variants, verification checklist. Load when executing a specific step.
+name: salience-splitter-detail
+description: Detail reference for salience-splitter — content classification algorithm, pointer format variants, verification checklist. Load when executing a specific step.
 load: on-demand
 ---
 
-# skill-splitter — Detail Reference
+# salience-splitter — Detail Reference
 
 > Load when executing a specific step. SKILL.md contains the core principle, step overview, pointer format requirement, and Done When.
 
@@ -70,13 +70,13 @@ Behavioral rules always pass this test (even if rarely triggered, the consumer n
 ### Standard pointer (single section reference)
 
 ```markdown
-> **Detail**: See `SKILL_detail.md §SectionName` — [one-line description of what's there] — read when [specific condition that triggers need].
+> **Detail**: See `SKILL_detail.md §<SectionName>` — [one-line description of what's there] — read when [specific condition that triggers need].
 ```
 
 ### Multi-item pointer (several related sections)
 
 ```markdown
-> **Detail**: See `SKILL_detail.md §SectionName-A` (bash scripts) · `§SectionName-B` (format templates) — read when executing this step.
+> **Detail**: See `SKILL_detail.md §<SectionName-A>` (bash scripts) · `§<SectionName-B>` (format templates) — read when executing this step.
 ```
 
 ### Pointer placement rules
@@ -96,7 +96,7 @@ Advisory (risky — consumer may skip):
 
 Imperative (required form):
 ```
-"> **Detail**: See `SKILL_detail.md §Step6-Detail` — bash for STALE detection, memory scan, skill usage leaderboard — read when executing Step 6."
+"> **Detail**: See `SKILL_detail.md §<Step6-Detail>` — bash for STALE detection, memory scan, skill usage leaderboard — read when executing Step 6."
 ```
 
 The imperative form includes:

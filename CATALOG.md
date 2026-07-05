@@ -177,7 +177,7 @@ CC built-ins utilization imports (operator-approved; video claims verified 9/13 
 ### 2026-06-10 | forge-harness | #ingest-gate, #contradiction-scan, #crossref-lint, #llm-wiki, #karpathy
 **File:** .claude/rules/sync_push_protocols.md (+ harness-doctor SKILL.md, probes.md)
 Karpathy LLM-Wiki sister-audit imports (operator-approved; convergence case n=5, citable primary source): I1 — contradiction scan as Sync step 3 (ingest gate, judged + verify-bidirectional pair): new knowledge grepped against existing claims before indexing, conflicts flagged in both files, old-claim removal is HITL. I2 — harness-doctor L4 knowledge cross-ref lint: no CATALOG entry = S-tier index orphan, no inbound ref = R-tier orphan page. Probes G-SYNC-01/G-LINT-01 added (30 total).
-- Decision: scale escape (W1) deliberately NOT built — watch-item with trigger (CATALOG hundreds of entries / repeated search misses); operator-preferred first remedy = skill-splitter-style CATALOG split-mapping, RAG hybrid only after that.
+- Decision: scale escape (W1) deliberately NOT built — watch-item with trigger (CATALOG hundreds of entries / repeated search misses); operator-preferred first remedy = salience-splitter-style CATALOG split-mapping, RAG hybrid only after that.
 - Open: npm republish (harness-doctor SKILL.md shipped) — folded into the open 1.4.8 handoff.
 
 ### 2026-06-10 | forge-harness | #golden-probes, #offline-eval, #doc-code-coupling, #anthropic-4layer
@@ -282,7 +282,7 @@ Post-merge micro R-tier cleanup: corrected two prompt-regression probe expectati
 
 ### 2026-06-03 | forge-harness | #goal-quench, #skill-evolution, #mode-ladder, #sidecar-routing
 **File:** plugins/fh-meta/skills/goal-quench/SKILL.md
-Evolved goal-quench into a fluid core→pro→max mode ladder. Core: token-budget-gate + pipeline-conductor --quick; pro: +context-doctor +agent-composer; max: +plugin-recommender +cross-ecosystem-synergy-detection. Phase-1 budget verdict auto-recommends mode. Ran full-harness dogfood sweep (33 skills): fixed phantom refs, dead blocks, stale agent forks (4 deleted), trigger collision, and 3 skill-splitter splits.
+Evolved goal-quench into a fluid core→pro→max mode ladder. Core: token-budget-gate + pipeline-conductor --quick; pro: +context-doctor +agent-composer; max: +plugin-recommender +cross-ecosystem-synergy-detection. Phase-1 budget verdict auto-recommends mode. Ran full-harness dogfood sweep (33 skills): fixed phantom refs, dead blocks, stale agent forks (4 deleted), trigger collision, and 3 salience-splitter splits.
 - Decision: RED tier reframed as max-mode decomposition on-ramp, not hard block
 
 ### 2026-06-02 | _audit | sister-asset, token-efficiency, compression, headroom
