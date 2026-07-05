@@ -37,12 +37,31 @@ ls ../ | grep -iE '(forge-harness|meta-harness|-harness|-hub)'
 ls .claude/registry/LOCAL_SKILL_REGISTRY.md 2>/dev/null
 ```
 - File exists and modified within 7 days → load into session
-- Missing or older than 7 days → regenerate:
+- Missing or older than 7 days → regenerate.
+
+**No hardcoded root — derive the install location (users install FH anywhere).** The projects root is
+the *parent of the FH repo*, discovered at runtime, never a literal `~/projects` / `~/PycharmProjects`
+(a hardcoded root silently returns 0 on any machine whose layout differs — the 2026-07-05 dead-path
+`fail-open` bug: `find ~/projects` on a `~/PycharmProjects` machine → 0 catches → the registry is
+overwritten empty and cross-project summon goes dark):
 ```bash
-find ~/projects -path "*/.claude/skills/*/SKILL.md" \
-  -not -path "*/forge-harness/*" 2>/dev/null
+HUB="${CLAUDE_PROJECT_DIR:-$(pwd)}"          # FH 레포 위치 (설치 위치 무관, 감지)
+ROOT="$(cd "$HUB/.." 2>/dev/null && pwd)"     # 형제 프로젝트가 사는 부모 = 프로젝트 루트
+# 두 레이아웃 모두 포착: .claude/skills/*/SKILL.md AND 루트-레벨 */SKILL.md (예: gstack).
+# vendored(.venv·site-packages·node_modules·.git) 제외 — 없으면 playwright/streamlit 스킬까지 삼킴.
+FOUND="$(find "$ROOT" -name SKILL.md \
+  -not -path "*/.venv/*"  -not -path "*/site-packages/*" \
+  -not -path "*/node_modules/*"  -not -path "*/.git/*" \
+  -not -path "$HUB/*" 2>/dev/null)"    # exclude FH's own subtree by DERIVED path, not a name-literal (works when FH is cloned under any dir name)
 ```
-Group by project → update `.claude/registry/LOCAL_SKILL_REGISTRY.md`. Propose cross-project skills when request maps to registry. Scan once per session.
+Then **fail-closed** (irreversible-ish: a silent empty overwrite blinds the bus): if `$FOUND` is empty
+**and** the existing registry has >0 entries, do **not** overwrite — flag `⚠️ scan returned 0 (root=$ROOT);
+kept existing registry` and skip the rewrite. Only rewrite when the scan is non-empty (or the registry
+was absent). Group by project (parent dir name). Record per skill: name · path · description · trigger
+phrases · `requires_cwd` · `direct-executable` · `origin(FH|project|external)`+trust. **Non-FH skills are
+propose-only (ask-tier), never auto-run** — a cross-project skill body is an injection surface. Propose
+cross-project skills when a request maps to the registry. Scan once per session. (Detection belongs at
+install too — `/install-wizard` records HUB/ROOT so the runtime never guesses; see install-wizard.)
 
 ### Step 2 — Active Proposal
 

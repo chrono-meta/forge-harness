@@ -26,7 +26,7 @@
 
 set -uo pipefail
 
-FH="${HUB_DIR:-$HOME/PycharmProjects/forge-harness}"
+FH="${HUB_DIR:-${CLAUDE_PROJECT_DIR:-$HOME/projects/forge-harness}}"
 BE="${BE_DIR:-}"   # companion-store path — supplied by the gitignored hook registration; no public default.
 
 # Non-Mode-D / no companion store → silent no-op (this is the majority path for public users).

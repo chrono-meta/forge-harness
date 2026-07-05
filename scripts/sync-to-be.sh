@@ -12,9 +12,16 @@
 
 set -euo pipefail
 
-FH="${HUB_DIR:-$HOME/PycharmProjects/forge-harness}"
-BE="${BE_DIR:-$HOME/PycharmProjects/fh-be}"
+FH="${HUB_DIR:-${CLAUDE_PROJECT_DIR:-$HOME/projects/forge-harness}}"
+BE="${BE_DIR:-$FH/../fh-be}"          # companion = documented sibling of the hub (derive with $FH, not a pinned literal)
 QUIET="${1:-}"
+
+# Hub-identity guard (fail-closed): $FH is context-derived (CLAUDE_PROJECT_DIR), and this is the
+# WRITE/push path. Refuse to mirror if $FH is not actually the FH hub — e.g. the Stop hook is
+# registered globally, or CLAUDE_PROJECT_DIR points at a field project — else a wrong project's
+# memory / CLAUDE.local.md would be pushed into the companion store. (Axis-2 challenger 2026-07-05 [B].)
+head -1 "$FH/CLAUDE.md" 2>/dev/null | grep -q "forge-harness — Persistent Knowledge Hub" \
+  || { echo "[sync-to-be] refuse: \$FH ($FH) is not the FH hub — abort" >&2; exit 0; }
 
 # CC stores per-project memory under ~/.claude/projects/<encoded-abs-path>/memory.
 # The encoding maps path separators (/ \ :) → '-', so it differs per OS, and git-bash's
@@ -26,7 +33,7 @@ HAVE_RSYNC=0; command -v rsync >/dev/null 2>&1 && HAVE_RSYNC=1
 resolve_mem_dir() {
   local root="$1" projects="$HOME/.claude/projects" tail d
   [ -d "$projects" ] || return 0
-  tail="$(basename "$(dirname "$root")")-$(basename "$root")"   # e.g. PycharmProjects-forge-harness
+  tail="$(basename "$(dirname "$root")")-$(basename "$root")"   # e.g. projects-forge-harness
   for d in "$projects"/*"$tail"/; do [ -d "${d}memory" ] && { printf '%s' "${d}memory"; return 0; }; done
   for d in "$projects"/*"$tail"/; do [ -d "$d" ] && { printf '%s' "${d}memory"; return 0; }; done
   return 0
