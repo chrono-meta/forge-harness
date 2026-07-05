@@ -52,18 +52,18 @@ This is the operator's **"원본 반영 가치"** criterion made mechanical. Spl
 - **HITL** — escalation to FH origin goes through `field-harvest`'s existing PR-approval gate; no autonomous commit to the shared repo (`feedback_no_personal_commit_to_shared_repo`).
 - **Salience / tier dependence** — this loop is prose-driven, not hook-enforced. On a weaker model the READ side (apply-at-session-start) may silently not fire even when a UAP exists. This is an accepted limitation, not a silent one: it is the reason the change ships with a target-tier blind sim (per CLAUDE.md §Target-tier sim gate). A hook-enforced READ is a future hardening candidate, deliberately not built today (keep the surface thin).
 
-  **Deliberated 2026-06-16 (decision: DEFER, with a measured revisit-trigger).** The right mechanism is
-  *not* the git pre-commit hook (the READ fires at session-start / proposal-time, which is not a git
-  event) but a Claude Code **SessionStart hook** that surfaces the UAP. The tier-asymmetric federation
-  (a weak Bedrock company node where prose READ most plausibly silently fails — see
-  `[[company_env_fh_dual_asset]]`) raises the urgency, but the failure mode is *low-stakes* (a preference
-  not applied — suppressed proposal / default tier — not a correctness or safety miss). Per FH's own
-  "don't build infra speculatively / a harness gets simpler over time" discipline, the decision is to
-  **defer the SessionStart hook** and make the deferral *measured, not assumed*: **revisit-trigger =** a
-  target-tier (Sonnet/Bedrock) blind sim that *demonstrably* shows the READ failing to fire when a UAP
-  exists. Build the hook only if that sim measures a real miss; until then the prose READ + target-tier
-  sim discipline stands. **Trigger has a clock** (so it can't defer-by-inaction): the revisit sim rides
-  the next target-tier sim already required by any Bedrock/company-node UAP-affecting change (CLAUDE.md
-  §Target-tier sim gate); if no such change occurs within the `harness-doctor` 30-day cadence,
-  harness-doctor flags this deferral for an explicit run-or-writeoff decision. (Affirms the defer with an
-  explicit, *clocked* trigger — not building on a guess, not deferring forever.)
+  **Deliberated 2026-06-16 (decision: DEFER) → BUILT 2026-07-05 (revisit-trigger fired on a real miss).**
+  The right mechanism is *not* the git pre-commit hook (the READ fires at session-start / proposal-time,
+  which is not a git event) but a Claude Code **SessionStart hook**. The 2026-06-16 deferral set a
+  **measured revisit-trigger** (build only when a real miss is observed, not on a guess). That trigger
+  **fired 2026-07-05**: an opus-tier session opened with an immediate qasp task, the prose session-start
+  companion load silently did not fire, and the agent operated on stale local memory (stale agy version;
+  missed the standing origin-model-sidecar instruction). This was a *production* miss, stronger evidence
+  than the deferral's target-tier-sim bar — so the hook is now built: **`scripts/fh_session_load.sh`**,
+  registered operator-local in `.claude/settings.local.json` SessionStart. It pulls the companion store
+  and emits a freshness delta (files newer than the session card + INDEX live pointers) into turn-0
+  context, *before* the first user message is processed — closing the task-first-entry salience gap
+  mechanically. Note the miss was **not** low-stakes as the 2026-06-16 note predicted (it produced wrong
+  recommendations, not just an unapplied preference), which is what tipped defer → build. Prose READ
+  remains the semantic layer (read + reconcile); the hook is the mechanical floor
+  (`[[feedback_judge_robustness_mechanical_anchor]]` — mechanical anchor over salience).

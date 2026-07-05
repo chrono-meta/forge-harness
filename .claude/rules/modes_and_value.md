@@ -82,7 +82,16 @@ At session start, after loading the companion store (or, for non-Mode-D users, t
 - Precedence is **reconcile, not override**: newer-by-date content *triggers a read-and-reconcile* — it never silently wins over the card. The card may have been deliberately edited *after* a mechanical auto-sync commit (the card is written last in the close chain; the Stop hook fires on every stop), so **commit-recency ≠ authoring-authority**. When card and recent commits disagree, surface both and reconcile — do not let the newer timestamp auto-win.
 - Distinct from the Agent-View pre-read (in the hub `CLAUDE.md` §Session Wrap-up, which fires only in worktree/Agent-View sessions): this fires on **every** session start.
 
-*Salience note*: session-start prose, not hook-enforced (no SessionStart hook — `operational_adaptation.md` §Guards defers it, 2026-06-16); on a weaker tier it may silently not fire. Accepted, not silent — revisit if a target-tier sim measures a miss.
+*Salience → mechanical (upgraded 2026-07-05)*: this load is prose (salience-dependent), and its
+known failure mode is **task-first entry** — when the operator opens a session with an immediate task,
+the prose load silently does not fire and the agent runs on stale local memory (measured miss
+2026-07-05: stale sidecar-tool version + missed origin-model-sidecar instruction, both because the
+companion-store pull was skipped on task-first entry). The mechanical backstop is now built: a **SessionStart hook**
+(`scripts/fh_session_load.sh`, registered operator-local in `.claude/settings.local.json`) fires the
+companion pull + freshness delta **before turn 0, regardless of what the user types first**. Prose
+remains the semantic layer (read + reconcile); the hook guarantees the pull + surfaces what is newer
+than the card. (This resolves the `operational_adaptation.md` §Guards deferred-hook decision — its
+measured revisit-trigger fired.)
 
 **Single-source guard**: this methodology lives here in the public mirror. A companion store holds only the *outputs* that follow it (digests · signals · handoff files), never a copy of the rule.
 
