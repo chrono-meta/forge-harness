@@ -1,7 +1,7 @@
 ---
 name: goal-quench
 description: >-
-  Wraps /goal with a tiered safety + orchestration ladder. core (default): a token budget gate (pre-run estimate), mid-run budget thresholds, and an automatic post-run quality verification via pipeline-conductor — closing /goal's two gaps (Haiku evaluates completion, pipeline-conductor evaluates correctness). pro: adds context-doctor token reduction and agent-composer goal decomposition. max: adds plugin-recommender capability-gap fill and cross-ecosystem-synergy-detection pre-validation. The Phase-1 budget verdict auto-recommends the mode. Triggered by "goal with quality gate", "safe goal", "goal-quench", "orchestrate this goal", or before running /goal on high-stakes tasks.
+  Wraps /goal with a tiered safety + orchestration ladder. core (default): a token budget gate (pre-run estimate), mid-run budget thresholds, and an automatic post-run quality verification via pipeline-conductor — closing /goal's two gaps (Haiku evaluates completion, pipeline-conductor evaluates correctness). pro: adds context-doctor token reduction and agent-composer goal decomposition. max: adds internal-first capability-gap fill (LOCAL_SKILL_REGISTRY skill-bus scan → plugin-recommender external search → auto_project_mapping map/cluster) and cross-ecosystem-synergy-detection pre-validation. The Phase-1 budget verdict auto-recommends the mode. Triggered by "goal with quality gate", "safe goal", "goal-quench", "orchestrate this goal", or before running /goal on high-stakes tasks.
 user-invocable: true
 allowed-tools: ["Read", "Write", "Bash", "Grep"]
 model: sonnet
@@ -39,7 +39,7 @@ goal-quench is a ladder, not a fixed shape. The default (**core**) is the narrow
 |---|---|---|---|
 | **core** (default) | budget gate + mid-run thresholds + post-run quality gate | token-budget-gate, pipeline-conductor --quick | budget GREEN / YELLOW |
 | **pro** | token-reduction pre-pass + goal decomposition into Waves | + context-doctor, agent-composer | budget ORANGE |
-| **max** | capability-gap fill + synergy pre-validation before the run | + plugin-recommender, cross-ecosystem-synergy-detection | budget RED |
+| **max** | **internal-first** capability-gap fill (skill-bus scan → external → map/cluster) + synergy pre-validation | + LOCAL_SKILL_REGISTRY scan, plugin-recommender, cross-ecosystem-synergy-detection, auto_project_mapping | budget RED |
 
 Each mode is a **superset** of the one before it — pro does everything core does, plus more. Nothing in core is removed by escalating.
 
@@ -105,6 +105,7 @@ The clean-streak graduation above governs **unattended-no-review** operation (ru
 - "goal-quench", before any long /goal session
 - `/goal-quench --pro`, `/goal-quench --max`, "orchestrate this goal", "decompose this goal", "optimize then run this goal"
 - "this goal is too big for one run", "find a tool for this goal if FH lacks one" (→ max mode)
+- "assemble capabilities for this project", "develop project X with everything FH has", "what can FH + tools do for this project", "use all of FH's and others' sharp parts on this" (→ max mode, **project-dev capability-assembly** entry — internal skill-bus scan first, then external gap-fill, then map+cluster; token-efficient, non-expert-friendly)
 - Automatically proposed when user mentions `/goal` on tasks estimated > 15K tokens
 - Mode is auto-recommended by the Phase-1 budget verdict (GREEN/YELLOW → core, ORANGE → pro, RED → max)
 
@@ -190,14 +191,16 @@ goal-quench does **not** re-implement agent-composer's gates — its destructive
 
 > **Detail**: See `SKILL_detail.md §Queue-Format` — queue file format, plan-ready output text, sidecar `.active` fields — read when writing the queue (Step B) or the sidecar fields (Step D).
 
-### Step C — plugin-recommender + synergy pre-validation · max only
+### Step C — capability fill: internal-first, then external · max only
 
-Triggered only when agent-composer Step 0.2 reports a capability **GAP** (`fit_score < 0.5` on a required-weight sub-task):
-1. `plugin-recommender` searches FH + Codex + Claude Code marketplaces for a fitting skill/agent.
-2. For each candidate, `cross-ecosystem-synergy-detection` pre-validates fit + overlap **before anything is installed**.
-3. User decides: install / skip / general-purpose fallback (agent-composer's degraded-composition rule applies — `⚠️ degraded: [role]`).
+Triggered only when agent-composer Step 0.2 reports a capability **GAP** (`fit_score < 0.5` on a required-weight sub-task). Fill order is **internal before external** — honors no-reinvention (use FH's + sibling projects' sharp parts before installing anything), and cheaper **on an internal hit** (a local registry read ≪ an external marketplace search; on an internal *miss* the scan is added overhead before the same external path):
 
-max mode never installs anything silently — discovery and synergy-check are surfaced for approval first.
+1. **Internal scan first.** Run the `LOCAL_SKILL_REGISTRY` scan / Cross-Project Skill Bus (the runtime-root-derived scan under `.claude/registry/`) to check whether an existing **FH meta-skill or a sibling-project skill** already fills the gap. **Trust-gated dispatch** (the fields the registry carries are *consumed*, not just surfaced): an **FH meta-skill** hit → propose directly (Agent + Context Card, no install, token-cheap); a **non-FH sibling** hit → if `trust≠trusted` OR `writes≠read-only` → **ask-tier HITL before dispatch** (never propose-directly — sibling code is an injection surface), else propose. **Degrade direction**: if `.claude/registry/` is missing/malformed, treat as an internal-miss and **fall through to external (step 2), warn** — never silently skip capability fill (that drops the GAP sub-task unnoticed; capability-fill is a reversible surface → advisory-degrade per the Surface-Class Degrade Invariant).
+2. **External only if internal has nothing.** `plugin-recommender` searches FH + Codex + Claude Code marketplaces + external repos for a fitting skill/agent; `cross-ecosystem-synergy-detection` pre-validates fit + overlap **before anything is installed**.
+3. User decides: use-internal / install-external / skip / general-purpose fallback (agent-composer's degraded-composition rule applies — `⚠️ degraded: [role]`).
+4. **Approved external capability → map + cluster (deferred to session close).** An adopted external skill or a newly-relevant sibling project is registered via `auto_project_mapping` — but that write **edits CLAUDE.md's track-mapping table and creates `tracks/{project}/` (an FH-asset change that trips the 4-axis auto-gate and shifts the onboarding is-mapped signal — [[feedback_tracks_dir_is_mapped_signal]])**, so it is **deferred to session close**, not run mid-`/goal`-loop: it passes the 4-axis gate as its own change instead of interrupting the run. The **next** run then discovers the capability internally at step 1 — the loop compounds.
+
+max mode never installs or maps anything silently — internal hit, external discovery, synergy-check, and mapping are all surfaced for approval first.
 
 ### Step D — scope-driven sidecar configuration · pro + max
 
@@ -308,8 +311,10 @@ After each goal-quench run, append a calibration entry to `tracks/_meta/goal_que
 - `token-budget-gate` — Phase 1 cost estimation (all modes)
 - `context-doctor` — Phase 1.5 Step A token-reduction pre-pass (pro + max)
 - `agent-composer` — Phase 1.5 Step B goal decomposition into Waves (pro + max)
-- `plugin-recommender` — Phase 1.5 Step C capability-gap fill (max only, GAP-triggered)
+- `LOCAL_SKILL_REGISTRY` scan / Cross-Project Skill Bus — Phase 1.5 Step C internal-first scan (max only, GAP-triggered, before external)
+- `plugin-recommender` — Phase 1.5 Step C external capability-gap fill (max only, GAP-triggered, only if no internal hit)
 - `cross-ecosystem-synergy-detection` — Phase 1.5 Step C pre-validation of discovered candidates (max only)
+- `auto_project_mapping` — Phase 1.5 Step C map/cluster of an adopted external capability (max only, approval-gated, deferred to session close)
 - `pipeline-conductor` — Phase 3 quality gate (`--quick` for core/pro, `--full` for max; called by Stop hook)
 - `field-harvest` — capture calibration data as reusable pattern after 10 runs
 
@@ -321,7 +326,9 @@ After each goal-quench run, append a calibration entry to `tracks/_meta/goal_que
 Phase 1: token-budget-gate verdict output + mode resolved (core default, or pro/max via budget verdict / explicit flag)
 + .claude/goal-quench.active written (with mode: field) + thresholds injected
 + If pro/max: Phase 1.5 ran — context-doctor pre-pass + agent-composer plan;
-  max additionally: GAP-triggered plugin-recommender + cross-ecosystem-synergy-detection pre-validation
+  max additionally: GAP-triggered internal LOCAL_SKILL_REGISTRY scan FIRST (trust-gated dispatch);
+  plugin-recommender + cross-ecosystem-synergy pre-validation ONLY if no internal hit;
+  auto_project_mapping map/cluster deferred to session close only if an external capability was adopted (each surfaced for approval)
 + Phase 3 (on next response after /goal): .pending file detected + pipeline-conductor run
   (--quick for core/pro, --full for max)
 + Verification verdict output (CLEAN/PENDING/BLOCKED/ESCALATE)
