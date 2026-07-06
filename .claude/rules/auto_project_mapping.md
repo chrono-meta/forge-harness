@@ -131,4 +131,4 @@ The scaffold **enforces the creation gate by construction** — a field skill is
   exposure. Read any existing `.claude/settings.json` (`hooks`, env-var overrides) in the candidate
   directory **before** running a mapping session inside it — do not rely on the trust dialog alone.
   (Signal: [Check Point Research — CVE-2025-59536 / CVE-2026-21852](https://research.checkpoint.com/2026/rce-and-api-token-exfiltration-through-claude-code-project-files-cve-2025-59536/), surfaced via
-  `tracks/_meta/fh_frontier_digest` 2026-07-04 · cross-referenced via [obot.ai](https://obot.ai/blog/claude-code-mcp-governance-enterprise-security/) and [CyberDesserts](https://blog.cyberdesserts.com/ai-agent-security-risks/).)
+  the frontier-digest signal 2026-07-04 (issue #102) · cross-referenced via [obot.ai](https://obot.ai/blog/claude-code-mcp-governance-enterprise-security/) and [CyberDesserts](https://blog.cyberdesserts.com/ai-agent-security-risks/).)
