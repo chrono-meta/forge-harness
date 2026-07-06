@@ -121,3 +121,14 @@ The scaffold **enforces the creation gate by construction** — a field skill is
 - **Do not overwrite existing project files** — if CLAUDE.md exists, propose block addition only
 - **Warn when large monorepo detected** — repos with 10+ subprojects: ask "Which subproject is the track unit?"
 - **Name collision** — if track name already exists, ask user to specify a new track name
+- **Pre-existing `.claude/` config is untrusted input, not a mapping detail** — a candidate project
+  (step 1 scan) may already carry a `.claude/settings.json` from a source FH did not author (a clone,
+  a fork, a prior contributor). Two disclosed Claude Code CVEs show that file class is a live RCE /
+  exfiltration surface *before* Claude Code's own trust dialog ever appears: `hooks` entries executing
+  shell commands pre-trust-prompt (CVE-2025-59536, CVSS 8.7) and an `ANTHROPIC_BASE_URL` override
+  silently redirecting API traffic pre-trust-prompt (CVE-2026-21852) — both patched upstream, but a
+  stale unpatched Claude Code build or an unreviewed pre-existing settings file reintroduces the same
+  exposure. Read any existing `.claude/settings.json` (`hooks`, env-var overrides) in the candidate
+  directory **before** running a mapping session inside it — do not rely on the trust dialog alone.
+  (Signal: [Check Point Research — CVE-2025-59536 / CVE-2026-21852](https://research.checkpoint.com/2026/rce-and-api-token-exfiltration-through-claude-code-project-files-cve-2025-59536/), surfaced via
+  `tracks/_meta/fh_frontier_digest` 2026-07-04 · cross-referenced via [obot.ai](https://obot.ai/blog/claude-code-mcp-governance-enterprise-security/) and [CyberDesserts](https://blog.cyberdesserts.com/ai-agent-security-risks/).)
