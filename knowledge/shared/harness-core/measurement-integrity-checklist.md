@@ -71,3 +71,9 @@ ambiguity). Sister findings: [[feedback_correlated_blindspot_union_over_majority
 served over an internal NVFP4-quantized deployment vs an OpenRouter relay gave +0.21 vs +0.08
 effect-size delta — quantifying that "same model name ⇒ same measurement" is false. Provenance +
 generalizable finding: [[reference_measurement_serving_path_variance]].
+
+**External corroboration** (2026-07): the local-LLM community independently reports the same hazard —
+practitioners conflate "running model X" with running a *pruned/quantized derivative* of X (aggressive
+low-bit quantization + expert pruning measurably degrade long-context quality while the model *name* is
+unchanged). This is a general measurement pitfall, not FH-specific: a leaderboard or replication that
+pins only the display name silently compares different instruments across serving paths.
