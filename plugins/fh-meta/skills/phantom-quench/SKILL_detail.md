@@ -344,3 +344,60 @@ Next actions:
 **Evidence Record**
 
 - **Verified in practice**: TC generation without reading source files → steel-quench passes → phantom-quench back-trace detects numerous Phantoms (notifications vs. push notifications, version names vs. non-enrolled, bottom sheet vs. screen navigation). **Procedure**: Read sources in order then regenerate → replace with source-based TCs. **Recurrence prevention**: Source gate implementation — FileNotFoundError if required source files absent. steel-quench misses this because: outputs look logically sound so pattern attacks cannot identify Phantoms — only source back-tracing can detect them.
+
+---
+
+## §Step2-7-Detail — Split-Pair Bidirectional Integrity Procedure
+
+Runs when the audit target is a split pair (`SKILL.md` + sibling `SKILL_detail.md`, or any doc with
+`§`-pointers into a sibling detail file). Two greps, both mandatory:
+
+```bash
+SKILL="path/to/SKILL.md"
+DETAIL="$(dirname "$SKILL")/SKILL_detail.md"
+[ -f "$DETAIL" ] || { echo "n/a — no sibling SKILL_detail.md (not a split pair)"; exit 0; }
+
+# FORWARD (phantom): every '§X' pointer in SKILL.md must resolve to a '## §X' header in the detail file.
+# Placeholder guard: a skill that DOCUMENTS pointer syntax (like this one) contains meta-examples
+# (§X, §SectionName, §Section). Skip them — they are prose, not real pointers. Heuristic: a real
+# section name is multi-char AND not a known meta-placeholder.
+echo "── forward: pointer → section ──"
+grep -oE 'SKILL_detail\.md §[A-Za-z0-9._-]+' "$SKILL" | sed -E 's/.*§//' | sort -u | while IFS= read -r sec; do
+  case "$sec" in X|Y|Z|N|SectionName|Section|Name) continue;; esac   # documentation placeholders
+  if grep -qE "^## §${sec}([[:space:]]|$)" "$DETAIL"; then
+    echo "  OK      §$sec"
+  else
+    echo "  PHANTOM §$sec — pointer resolves to no section (grade A)"
+  fi
+done
+
+# REVERSE (orphan): every '## §X' section in the detail file must have >=1 inbound pointer from SKILL.md.
+echo "── reverse: section → pointer ──"
+grep -oE '^## §[A-Za-z0-9._-]+' "$DETAIL" | sed -E 's/^## §//' | sort -u | while IFS= read -r sec; do
+  if grep -qE "SKILL_detail\.md §${sec}([[:space:]]|\`|$|,|\.)" "$SKILL"; then
+    echo "  OK     §$sec"
+  else
+    echo "  ORPHAN §$sec — detail section no pointer reaches (grade A: dead weight / maintenance trap)"
+  fi
+done
+```
+
+**Output table**:
+
+```
+Split-pair integrity — {SKILL.md} ↔ {SKILL_detail.md}
+  Forward (pointer→section): {N} pointers, {P} phantom
+  Reverse (section→pointer): {M} sections, {O} orphan
+  Verdict: CLEAN (P=0 && O=0) | DEFECT ({P} phantom + {O} orphan — grade A each)
+```
+
+**Prescription per finding**:
+- **PHANTOM pointer** → either add the missing `## §X` section to the detail file, or fix/remove the
+  pointer in SKILL.md (whichever matches intent — usually the section was renamed or never written).
+- **ORPHAN section** → decide by governance-semantic criterion: if the content is genuinely detail-tier,
+  add an imperative pointer from SKILL.md at the point of removal; if the content is *also still inline*
+  in SKILL.md (the duplicate-copy defect), delete the orphan from the detail file — do not leave both.
+
+**Why grade A (not B)**: a phantom pointer sends a consumer agent to nothing (execution breaks); an
+orphan section is content the always-loaded file can never route to, so it silently rots out of sync with
+the inline version. Both are reference-integrity failures on the split surface, not cosmetic.
