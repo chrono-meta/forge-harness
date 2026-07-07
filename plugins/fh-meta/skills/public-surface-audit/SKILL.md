@@ -103,38 +103,16 @@ literal private token.
 
 ## Step 3. Scan
 
-For each pattern in Step 1, grep the tracked set, then drop allowlisted hits.
-
-```bash
-cd "$REPO_PATH" || exit 1
-# Build the tracked-file list once.
-git ls-files > /tmp/_psa_tracked.txt
-
-# Load your real patterns from the gitignored source (one "severity<TAB>regex" per line).
-PATTERN_SRC="${PSA_PATTERNS:-.claude/rules/.public-surface-patterns}"
-# Absent file ≠ CLEAN. An absent file is unconfigured (silent-failure risk); an EMPTY file is an
-# explicit "no tokens to protect" → CLEAN. Distinguish the two.
-[ -e "$PATTERN_SRC" ] || { echo "⚪ NOT CONFIGURED: no pattern source at $PATTERN_SRC. Create it (empty = explicit CLEAN) before trusting any verdict. Not scanning."; exit 2; }
-
-# One grep pass per pattern row; the regex comes from the file, never hardcoded here.
-while IFS=$'\t' read -r severity regex; do
-  [ -z "$regex" ] && continue
-  grep -nIE "$regex" $(cat /tmp/_psa_tracked.txt) 2>/dev/null | sed "s/^/[$severity] /"
-done < "$PATTERN_SRC"
-```
-
-For each pattern, run `grep -nIE "<regex>" $(git ls-files)`:
-- `-n` → line numbers (required for `file:line` output)
-- `-I` → skip binary files
-- `-E` → extended regex (alternation in the pattern table)
-
-Then remove any hit whose `file` + matched `token` is on the Step 2 allowlist. Do this for **every**
+For each pattern in Step 1, grep the tracked set, then drop allowlisted hits. Do this for **every**
 pattern row before producing the report — do not stop at the first HIT.
 
-**Binary / generated carve-out**: `-I` already skips binaries. Additionally note (do not auto-suppress)
-hits inside generated artifacts (e.g. `paper/*.html` exported from a private source) — these are real
-leaks on the public surface and must be reported, but the fix is "regenerate from a sanitized source",
-not "edit the HTML by hand". Flag them with a `(generated artifact)` note.
+**Binary / generated carve-out**: skip binaries. Additionally note (do not auto-suppress) hits inside
+generated artifacts (e.g. `paper/*.html` exported from a private source) — these are real leaks on the
+public surface and must be reported, but the fix is "regenerate from a sanitized source," not "edit the
+HTML by hand." Flag them with a `(generated artifact)` note.
+
+> **Detail**: See `SKILL_detail.md §Step3-Scan-Script` — the grep-per-pattern bash implementation,
+> flag reference (`-n`/`-I`/`-E`) — read when executing this step.
 
 ---
 
@@ -151,22 +129,12 @@ reports):
   `changeme`, `REDACTED`, `xxxx`, AWS-doc keys like `AKIAIOSFODNN7EXAMPLE`). A high-entropy *example* is
   not a secret.
 
-```bash
-# FP-hygiene tests the MATCHED TOKEN only — never the whole line. A line-level `grep -v` would
-# suppress a real leak that merely *mentions* an example (e.g. `user=<realname> # see EXAMPLE.md`),
-# violating PSA's "allowlist tight" rule. So extract the matched span per hit and drop it only when
-# the span is *entirely* a placeholder/example (anchored ^…$).
-PLACEHOLDER='^(<[a-z0-9_-]+>|\{project\}|EXAMPLE|dummy|changeme|REDACTED|xxxx)$'
-grep -nIE "$regex" $(cat /tmp/_psa_tracked.txt) 2>/dev/null | while IFS= read -r hit; do
-  tok=$(printf '%s' "$hit" | grep -oiE "$regex" | head -1)
-  printf '%s' "$tok" | grep -qiE "$PLACEHOLDER" && continue   # token IS a placeholder → drop
-  printf '%s\n' "$hit"
-done
-```
-
 This differs from the Step 2 allowlist: Step 2 suppresses by **file::token legitimacy**, Step 3b by
 **token value-shape**. Both run — Step 2 then Step 3b. Keep it tight (PSA's "allowlist tight" rule): if a
 token only *contains* an example substring but is otherwise a real private value, it still reports.
+
+> **Detail**: See `SKILL_detail.md §Step3b-FP-Hygiene-Script` — the token-shape-only extraction bash
+> implementation (never line-level) — read when executing this step.
 
 ---
 
@@ -178,45 +146,24 @@ tracked leak. For each expected-private path, `git check-ignore -v` reports whet
 by which layer** (committed `.gitignore` · local `.git/info/exclude` · global `core.excludesFile`). A
 path that resolves to no ignore rule is a MISS — surface it before it is ever `git add`ed.
 
-```bash
-# Expected-private set = conventional FH local-only files, EXTENDED with any `# private-path: <path>`
-# lines the operator added to the gitignored pattern source (self-extends per repo — not a frozen
-# operator snapshot). Built one-path-per-line + while-read so it is portable across bash AND zsh
-# (zsh does not word-split an unquoted variable, so `for f in $VAR` would break). A non-existent file
-# is skipped; an all-absent set emits n/a, never a silent pass.
-present=$({ printf '%s\n' CLAUDE.local.md .claude/rules/.public-surface-patterns \
-             .claude/rules/local_fh_context.md tracks/_meta/user_adaptation_profile.md
-           grep -E '^# private-path:' .claude/rules/.public-surface-patterns 2>/dev/null \
-             | sed -E 's/^# private-path:[[:space:]]*//'; } \
-         | awk 'NF' | sort -u | while IFS= read -r f; do [ -e "$f" ] && printf '%s\n' "$f"; done)
-[ -z "$present" ] && echo "n/a (no expected-private files present in this repo — add '# private-path:' lines to the pattern source if any exist)"
-printf '%s\n' "$present" | while IFS= read -r f; do
-  [ -z "$f" ] && continue
-  # Tracked status is tested FIRST: a file can match an ignore rule yet still be force-added
-  # (`git add -f`) — the exact ignored-but-committed mechanism behind the PR #109 leak. Tracked wins,
-  # so an ignored-but-committed file reports TRACKED (not a false-clean OK).
-  if git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
-    echo "TRACKED $f (already committed — Step 3 scans its contents; un-track if it must be private: git rm --cached)"
-  elif rule=$(git check-ignore -v "$f" 2>/dev/null); then
-    echo "OK      $f → ignored by [$rule]"
-  else
-    echo "MISS    $f (exists, NOT ignored, NOT tracked — one 'git add .' from a leak; add an ignore rule)"
-  fi
-done
-```
-
 - **OK** — ignored; the report names which layer covers it (operator-private files should resolve to
   `.git/info/exclude` or `.gitignore`, never end up tracked).
 - **MISS** — exists but no ignore rule covers it → counts as **🟠 MED** in the Step 4 verdict (a latent
   leak, not yet a breach).
 - **TRACKED** — already committed: Step 3 scans its *contents*; this also flags it for un-tracking if it
-  was meant to be private.
+  was meant to be private. Tracked status is tested **before** ignore status — a file can match an
+  ignore rule yet still be force-added (`git add -f`), the exact ignored-but-committed mechanism behind
+  the PR #109 leak, so TRACKED must win over a false-clean OK.
 
 Why this is the safeguard for **gitignore mistakes** (a wrong assumption about what is ignored):
 `.gitignore` is committed/shared, `.git/info/exclude` is local/personal, and a global `core.excludesFile`
 ignores across all repos — `git check-ignore -v` is the one command that says *which* rule (if any)
 applies, so an "I thought it was ignored" error surfaces here instead of in a public PR (the PR #109
 class of leak). Diagnostic-only: this step never writes — it reports, the operator adds the ignore rule.
+
+> **Detail**: See `SKILL_detail.md §Step3c-Ignore-Verification-Script` — the expected-private-path
+> enumeration + `git check-ignore`/`git ls-files --error-unmatch` bash implementation, bash/zsh
+> portability note — read when executing this step.
 
 ---
 

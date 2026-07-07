@@ -3,11 +3,32 @@
 # Git internals
 .git/
 
+# OS / editor
+.DS_Store
+.idea/
+
 # Local-only directories (mirrors .gitignore)
 context/
 tracks/
 .claude/memory/
+.claude-octopus/
+.playwright-mcp/
+
+# Vendored dependencies / generated builds
+node_modules/
+dist/
+build/
+coverage/
+.next/
+target/
+.gradle/
+__pycache__/
+.pytest_cache/
+.venv/
+*.egg-info/
 
 # Temp / logs
 *.log
 *.tmp
+*.lock
+*-playwright-demo.png
