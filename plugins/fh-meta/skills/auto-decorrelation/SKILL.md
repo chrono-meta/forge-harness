@@ -100,11 +100,20 @@ Local 4090 = **canary tier** (evidence-of, never terminal verdict).
 
 ## Step 6 — Degrade ladder (the intelligent scale-down)
 
+**Consent branch first — declined ≠ degraded** (`[[capability_escalation_consent]]`): if the UAP has
+`sidecar_consent: declined`, do **not** probe/recruit — route straight to **Tier-3 CC-only sub-agent
+verification** (multiple isolated Claude sub-agents, isolation-decorrelation) as a **first-class chosen
+mode**, with an honest *same-family* note but **no "reduced value / degraded" framing** — the user chose
+this floor. `unset` → ask-once at first load-bearing need (accept → proceed; decline → record + this
+branch). Only proceed to the discovery ladder below when consent is `accepted`.
+
 1. frontier cross-family CLI present → recruit it (decorrelated, at-floor) — best.
 2. only local 4090 present → canary pre-screen + in-session opus governor (canary, not full decorrelation).
 3. nothing present → in-session same-family + **honest below-floor/same-family note** (residual named).
 
-Env non-determinism (CLI presence varies) → **silent degrade, never hard-fail**.
+Env non-determinism (CLI presence varies) → **silent degrade, never hard-fail**. Distinguish this
+**unavailable-but-wanted** case (consent given, panel down → degrade-with-note; for a *load-bearing corp*
+surface, fail-closed per `local_pmh_context.md`) from the **declined** case above (chosen floor, first-class).
 
 ## Step 7 — Output
 

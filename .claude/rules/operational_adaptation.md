@@ -17,6 +17,10 @@ This loop fills that gap. It is deliberately thin: it **reuses** existing parts 
 **Records behavioral preferences ONLY** — never domain work content (protects reference-asset identity):
 - **Skill-proposal outcomes** — per skill: `accepted` / `rejected` / `sustained` with counts (same 4-category vocabulary as `operations.md`).
 - **Preferred execution tier** (S/M/L/XL), language, working cadence.
+- **Capability-escalation consent** — `sidecar_consent` + `floorup_consent` (`accepted`/`declined`/`unset`),
+  per the **Capability-Escalation Consent Protocol** (`knowledge/shared/harness-core/capability_escalation_consent.md`).
+  Settled at onboarding (install-wizard) or ask-once at first need; `declined` → route to the floor
+  (Sonnet / Tier-3 CC-only sub-agent as a *first-class* mode), surface as recommendation only, **never re-nag**.
 - **Recurring friction points** (aggregated from `fh_signal_*`).
 - **Muted nags** — cadence reminders the user repeatedly declines.
 
@@ -24,7 +28,7 @@ This loop fills that gap. It is deliberately thin: it **reuses** existing parts 
 
 Runs at field-session close, **riding `field-harvest` Mode B** — no new trigger, never an interception. One pass per session.
 
-- **READ** (session start / proposal time): apply UAP — suppress a skill proposal rejected 3+ times (an `accepted` record carries **no** positive auto-action — the skill simply stays surfaced; do not auto-run on acceptance), default to the preferred tier, mute cadence nags the user always declines. (Tier note: the UAP tier default is a session-depth setting; the Mode D model notice is model-only + advisory and never overrides it.)
+- **READ** (session start / proposal time): apply UAP — suppress a skill proposal rejected 3+ times (an `accepted` record carries **no** positive auto-action — the skill simply stays surfaced; do not auto-run on acceptance), default to the preferred tier, mute cadence nags the user always declines, and **apply capability-escalation consent** (`sidecar_consent`/`floorup_consent` `declined` → route to the Sonnet / Tier-3 floor, recommend-only, no re-nag; `unset` → ask-once at first need per the consent protocol). (Tier note: the UAP tier default is a session-depth setting; the Mode D model notice is model-only + advisory and never overrides it.)
 - **WRITE** (session close): update outcome counts + new friction points.
 
 ## Generalization gate → reverse-PR funnel
