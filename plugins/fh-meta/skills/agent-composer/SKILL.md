@@ -157,6 +157,13 @@ agent-composer — Composition Plan
 Execute? (Y: run all / E: edit then run / N: cancel)
 ```
 
+Optionally name the composition's shape in the plan header (`Composition pattern: {name}`) so the
+operator recognizes the structure at a glance — a recognition aid, not a routing input.
+
+> **Detail**: See `SKILL_detail.md §Composition-Pattern-Labels` — the six revfactory-vocabulary labels
+> (Pipeline / Fan-out-in / Expert Pool / Producer-Reviewer / Supervisor / Hierarchical) mapped to the
+> existing FH constructs they name — read when labeling a plan header.
+
 ---
 
 ## Step 2.5 — Model Routing Decision (complexity_routing)

@@ -462,3 +462,25 @@ agent-composer also acts as Curator — surveys existing agents/skills/assets an
 - **External positioning**: Independent convergence with hermes-agent (Nous Research) curator.py pattern
 
 > Architecture basis: Anthropic [Harness Design for Long-Running Apps](https://www.anthropic.com/engineering/harness-design-long-running-apps) — single agent ($9, fails) vs. multi-agent harness ($200, perfect). Cost gap justified by quality gap.
+
+---
+
+## §Composition-Pattern-Labels — revfactory Team-Pattern Vocabulary (naming only)
+
+Optional recognition labels for the `Composition pattern: {name}` line in the Step 2 plan header.
+Borrowed from the revfactory/harness team-pattern vocabulary (sister-asset cross-audit
+`tracks/_audit/session_2026_07_07_revfactory-harness.md`, 2026-07-07). **Each label names an FH
+construct that already exists** — this is a vocabulary import, not a new dispatch mechanism
+(no-reinvention). Use a label only when it fits cleanly; a bespoke composition needs no forced label.
+
+| Pattern label | = existing FH construct |
+|---|---|
+| **Pipeline** | sequential Waves, each consuming the prior's fan-in (Wave 0→1→2) |
+| **Fan-out-in** | parallel Wave 1 split → Step 4 fan-in integration |
+| **Expert Pool** | Step 0.2 capability-fit routing to specialist agents |
+| **Producer-Reviewer** | a generating agent + an adversarial reviewer (`challenger` / Critic) |
+| **Supervisor** | one orchestrator/governor delegates then integrates (the default here) |
+| **Hierarchical** | nested supervisors — cluster orchestration (memory `project_fh_cluster_orchestration`) |
+
+This is a recognition aid, not a routing input — the actual plan still comes from Steps 0.2–2. If a
+composition matches none of the six, omit the label rather than stretching one to fit.
