@@ -285,6 +285,12 @@ unknown) and surface **one line** — then proceed, never block:
 inviolable; a pin is not a cap — tier-floor resolution §Floor governance) · field-project operation
 sessions (no FH asset modification) never see this notice — the Sonnet default stays friction-free.
 
+> **Related — capability-escalation consent**: whether a session actually *escalates* to a stronger
+> model or a cross-family sidecar (not just this advisory notice) is governed separately by
+> `knowledge/shared/harness-core/capability_escalation_consent.md` — the negotiated-consent protocol
+> (UAP `sidecar_consent`/`floorup_consent`) that decides ask-once vs. no-surprise floor-up/sidecar use.
+> This notice is the passive advisory; that doc is the active escalation gate.
+
 ## Field-Harness Load-Bearing Change Gate (cross-family, pre-merge)
 
 The 4-axis gate above fires on **FH asset** changes. But the correlated blind spot it guards —
