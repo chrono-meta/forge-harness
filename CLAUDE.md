@@ -354,6 +354,41 @@ trusted only at opus-tier+; below-floor runs the review or asks, never silently 
 > **Detail** (discretion principle · 4-face signature · gate mechanics · n=7 qasp evidence):
 > `knowledge/shared/harness-core/field_verdict_crossfamily_gate.md`.
 
+## Field-Harness Diagnostic — "진단해줘 / 개선해줘" on a mapped project (compose → rank → HITL)
+
+The gate above fires on a **specific field code change**. This is its **on-demand pull sibling**: when
+the operator, working in a mapped project, asks to *diagnose* or *improve* the harness itself ("진단해줘",
+"개선해줘", "check this project"), don't hand-pick one skill — **compose the checks FH already has into a
+single ranked diagnostic list and get per-item approval.** The value is that the operator asks once and
+the harness surfaces *everything* worth fixing, ranked, instead of the operator having to know which of a
+dozen skills to invoke. Every fix is HITL — the diagnostic **proposes**, never auto-edits.
+
+**Composition (no-reinvention — every row is an existing check; the diagnostic only *routes and ranks*):**
+
+| Lens | Existing check | Catches (real examples from 2026-07-08) |
+|---|---|---|
+| **Confidentiality / leak** | `/public-surface-audit` (incl. Step 3c ignore-verification) | a hardcoded internal API host literal in a SKILL body; a `local_*_context.md` that is **tracked** when it should be gitignored (the gitignore-mistake class) |
+| **Split integrity** | `/phantom-quench` **Step 2.7** (bidirectional) | orphan detail sections + phantom pointers in a SKILL.md ↔ SKILL_detail.md pair |
+| **Token / salience** | salience-split candidates (`/context-doctor` · `/salience-splitter` targets) | oversized always-loaded SKILL.md / CLAUDE.md — trim candidates |
+| **Structure** | `/harness-doctor` (L1–L4) | orphaned/redundant/decorative units, missing Done-When, ≥70% overlap |
+| **Verdict/gate degrade** | `scripts/degrade_direction_scan.sh` | a field verdict/gate helper that degrades toward permissive (advisory pre-screen) |
+
+**Output**: one ranked list, `M` (must-fix) / `S` (should-fix) / `R` (recommended) — same tiering as
+harness-doctor — each item stating *lens · file:line · one-line fix*. **Then HITL**: the operator approves
+per item (or a batch); an approved fix routes to the owning skill's normal path (and, if it is itself a
+load-bearing field change, through the Load-Bearing Change Gate above). **Nothing is auto-fixed** — the
+diagnostic's job is the *intelligent list*, the human's job is the *go*.
+
+**Guards**: (a) fires on a **project-level** "진단/개선" ask, not a single-file edit request (those go
+straight to the relevant skill); (b) **once per ask** — not a per-turn nag; (c) **company residency** —
+run leak/confidentiality lenses locally, sanitize before any cross-family dispatch, and *surface*
+company-sensitive findings (tracked company hosts, git-history rewrites) for operator decision rather
+than auto-fixing them (dogfood 2026-07-08: the `local_pmh_context.md` tracked-company-hosts finding was
+surfaced, not auto-untracked — history rewrite is the operator's call); (d) **autonomy floor** — the
+compose/rank judgment is trusted at opus-tier+; below-floor, run the individual checks and present raw
+rather than silently skipping a lens. Scale to the ask: a quick "뭐 고칠 거 있어?" runs the cheap
+mechanical lenses (leak · split · token); "제대로 진단해줘" runs all five + harness-doctor depth.
+
 ## Irreversibility Gates — Surface-Class Degrade Invariant (shared spine of the two gates below)
 
 The two gates that follow (Pre-Publish, Destructive-Op) guard **irreversible surfaces**. The floor they
@@ -552,6 +587,7 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "memory feels bloated", "clean up memory", "memory too large", "memory hygiene" | `/memory-hygiene` |
 | "ready to PR", "about to push", "merge this", "PR 올려줘", FH asset changed in session | 4-axis auto-gate (see above — runs automatically, no proposal needed) |
 | **field verdict/gate/safety/irreversible code changed** in a mapped project (function returning a verdict enum / gate exit code / safety-invariant · publish/delete/history path) — **proactive, before merge** | **Field-Harness Load-Bearing Change Gate** (see above → degrade-lint → cross-family review → converge; same rigor as FH assets, applied to field code) |
+| **"진단해줘", "개선해줘", "diagnose this", "improve this harness", "check this project", "audit this project"** — said while working **in a mapped project** (not a single-file ask) | **Field-Harness Diagnostic** (see §Field-Harness Diagnostic below → compose existing checks into one ranked M/S/R list → HITL approval per item, nothing auto-fixed) |
 
 **Guard**: Do not propose a skill that is already running. One signal = one-line proposal (no pressure). Before proposing, consult the UAP (§Operational Adaptation Loop): a skill the user has rejected 3+ times is **suppressed**, not re-proposed.
 For per-skill utterance patterns, see the relevant `SKILL.md §Trigger Phrases` section.
