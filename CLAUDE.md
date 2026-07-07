@@ -389,6 +389,45 @@ compose/rank judgment is trusted at opus-tier+; below-floor, run the individual 
 rather than silently skipping a lens. Scale to the ask: a quick "뭐 고칠 거 있어?" runs the cheap
 mechanical lenses (leak · split · token); "제대로 진단해줘" runs all five + harness-doctor depth.
 
+## Onboarding / Acceleration Autopilot — "새 프로젝트 · 하네스 작성 · 가속화" (discover → compose → rank → install-HITL)
+
+The **install-direction twin of the Field-Harness Diagnostic**: same `compose → rank → HITL` engine, but
+it decides *what to install/wire* instead of *what to fix*. When the operator enters an onboarding /
+acceleration door (returning-menu ①②③: "새 프로젝트", "하네스 작성/작성해줘", "이 프로젝트 가속화",
+"harness-ify", "accelerate this project"), don't hand-run one skill — **auto-discover the local state,
+let the innovator center a recommend cascade, produce a ranked install plan, and gate every install.**
+
+**Flow:**
+
+1. **Phase 0 — State Audit + branch (auto-discovery)**: read the target's existing `.claude/agents|skills`,
+   `CLAUDE.md`, mapped `tracks/`, **locally-connected sibling repos** (the env-delta SessionStart hook already
+   emits "N unmapped sibling repos"), and the `LOCAL_SKILL_REGISTRY` + stack/language. Then **branch**:
+   *new-build* (no prior harness) · *extend-existing* (harness present → found→extend, never fork) ·
+   *maintain* (mature harness → route to the Field-Harness Diagnostic instead). This audit-and-branch pre-step
+   is imported from the revfactory/harness Phase-0 State Audit (sister-audit 2026-07-07) — it tightens FH's
+   found→extend reflex and is the "이미 로컬에 연결돼 있으면 자동 탐색" mechanism.
+2. **Innovator-centered recommend**: `persona-innovator` centers the cascade (Mode I on acceleration / Mode F
+   on FH-dev), composing `plugin-recommender` (Tier 0 platform → Tier 1 official → Tier 2/3) +
+   `cross-ecosystem-synergy-detection` (locally-connected skills worth wiring) + inferred technical level
+   (conversation-cue read, also imported from revfactory) to shape *what* and *how much*.
+3. **Ranked install plan**: one list, `M`/`S`/`R`, each item = *what · why · source (Tier 0 built-in / Tier 1
+   official / local sibling / FH scaffold) · exact install command*. No-reinvention: an official/built-in that
+   covers the need ranks above a net-new scaffold.
+4. **Install — HITL, non-overwriting**: per-item approval; **never clobber an existing `.claude/`** (propose
+   merge/skip if present — this is FH's edge over revfactory's post-plan auto-write and harness-100's raw
+   `cp`). Any generated/installed FH asset runs the **4-axis gate**; a field scaffold runs
+   `asset-placement-gate` + `steel-quench`. **"끝까지 해줘 / 자율로 완주" → full-autonomy**: run the whole
+   plan under the `/goal-quench` budget+quality gate (token cost accepted by the operator), still
+   non-overwriting and still gated per asset — autonomy removes the per-item *prompt*, never the *gate*.
+
+**Guards**: (a) **non-overwriting is inviolable** — the one thing both revfactory surfaces get wrong; FH
+proposes merge, never clobbers; (b) **no-reinvention** — Tier 0/1 first, scaffold only what adds governance;
+(c) **company residency** — discovery of a company sibling repo surfaces it, does not auto-map/leak it;
+(d) **autonomy floor** — the discover/rank judgment is trusted at opus-tier+; below-floor, present the raw
+recommend and ask; (e) **once per door-entry**, not a per-turn nag. This is the door ③ (accelerate) engine
+and the new-project/harness-write path made autonomous — the operator asks once and the harness discovers,
+ranks, and (on request) installs everything worth wiring.
+
 ## Irreversibility Gates — Surface-Class Degrade Invariant (shared spine of the two gates below)
 
 The two gates that follow (Pre-Publish, Destructive-Op) guard **irreversible surfaces**. The floor they
@@ -588,6 +627,7 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "ready to PR", "about to push", "merge this", "PR 올려줘", FH asset changed in session | 4-axis auto-gate (see above — runs automatically, no proposal needed) |
 | **field verdict/gate/safety/irreversible code changed** in a mapped project (function returning a verdict enum / gate exit code / safety-invariant · publish/delete/history path) — **proactive, before merge** | **Field-Harness Load-Bearing Change Gate** (see above → degrade-lint → cross-family review → converge; same rigor as FH assets, applied to field code) |
 | **"진단해줘", "개선해줘", "diagnose this", "improve this harness", "check this project", "audit this project"** — said while working **in a mapped project** (not a single-file ask) | **Field-Harness Diagnostic** (see §Field-Harness Diagnostic below → compose existing checks into one ranked M/S/R list → HITL approval per item, nothing auto-fixed) |
+| **"새 프로젝트", "하네스 작성해줘", "이 프로젝트 가속화", "harness-ify this", "accelerate this project"** — an onboarding/acceleration door (returning-menu ①②③) | **Onboarding / Acceleration Autopilot** (see §Onboarding / Acceleration Autopilot below → Phase 0 auto-discover + branch → innovator-centered recommend → ranked install plan → HITL per item, non-overwriting; "끝까지 자율로" → full-autonomy under /goal-quench gate) |
 
 **Guard**: Do not propose a skill that is already running. One signal = one-line proposal (no pressure). Before proposing, consult the UAP (§Operational Adaptation Loop): a skill the user has rejected 3+ times is **suppressed**, not re-proposed.
 For per-skill utterance patterns, see the relevant `SKILL.md §Trigger Phrases` section.
