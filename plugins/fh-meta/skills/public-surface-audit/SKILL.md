@@ -169,27 +169,16 @@ class of leak). Diagnostic-only: this step never writes — it reports, the oper
 
 ## Step 4. Report
 
-```
-public-surface-audit — Operator-Private Token Scan
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Target: {REPO_PATH}   |   Tracked files scanned: {N}
+Report per-hit `file:line → matched token [class]` grouped by severity, then the overall verdict.
+**Verdict thresholds** (behavioral — these define the gate):
 
-  🔴 HIGH  ({count})
-    {file}:{line}  →  {matched token}   [class: username | company asset]
-  🟠 MED   ({count})
-    {file}:{line}  →  {matched token}   [class: absolute home path | ignore-MISS (Step 3c)]
-  🟡 LOW   ({count})
-    {file}:{line}  →  {matched token}   [class: companion-store | private wiring]
+- ⚪ **NOT CONFIGURED** — pattern source absent (nothing scanned — NOT a clean result; set up first)
+- 🟢 **CLEAN** — pattern source present (incl. empty), 0 HIGH + 0 MED + 0 LOW (after allowlist)
+- 🟡 **REVIEW** — 0 HIGH + 0 MED, LOW-only (drift, not a breach)
+- 🔴 **LEAK** — 1+ HIGH or 1+ MED (block publish / fix before commit)
 
-  Allowlist-suppressed: {count} hit(s) (legitimate references — not leaks)
-
-  Verdict:
-    ⚪ NOT CONFIGURED — pattern source absent (nothing scanned — NOT a clean result; set up first)
-    🟢 CLEAN        — pattern source present (incl. empty), 0 HIGH + 0 MED + 0 LOW (after allowlist)
-    🟡 REVIEW       — 0 HIGH + 0 MED, LOW-only (drift, not a breach)
-    🔴 LEAK         — 1+ HIGH or 1+ MED (block publish / fix before commit)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
+> **Detail**: See `SKILL_detail.md §Report-Template` — the full human-report ASCII layout (severity
+> buckets, allowlist-suppressed line) — read when formatting the Step 4 report.
 
 Per HIGH/MED hit, append a one-line prescription:
 - **HIGH (username/company)** — move the line to `CLAUDE.local.md` (or regenerate the artifact from a
@@ -211,17 +200,8 @@ By default PSA prints the Step 4 human report. With `--json`, emit a machine-par
 **pre-publish / pre-push hook can gate on counts mechanically** — turning PSA from advisory into
 enforceable (FH's "enforcement is a hook, not a prompt" principle). Imported from `gstack-redact --json`.
 
-```json
-{
-  "target": "{REPO_PATH}",
-  "tracked_files": 0,
-  "findings": [
-    {"file": "path", "line": 42, "token": "<matched>", "severity": "HIGH", "class": "username"}
-  ],
-  "counts": {"HIGH": 0, "MED": 0, "LOW": 0, "suppressed": 0},
-  "verdict": "CLEAN"
-}
-```
+> **Detail**: See `SKILL_detail.md §JSON-Schema` — the `--json` output object shape (findings array,
+> counts, verdict field) — read when emitting or parsing the machine verdict.
 
 `verdict` is one of `CLEAN | REVIEW | LEAK | NOT_CONFIGURED` (same thresholds as Step 4). **`verdict` is
 authoritative — never gate on `counts` alone**: a counts-only check (`HIGH==0 && MED==0`) misreads
@@ -288,10 +268,9 @@ Verdict: **CLEAN** (0 tokens after allowlist) | **REVIEW** (LOW-only — drift, 
 
 ## Sister-Asset Provenance
 
-Step 3b (FP hygiene) and Step 5 (`--json`) were imported from **garrytan/gstack** `gstack-redact`
-(`lib/redact-engine.ts`) during a hands-on sister-asset cross-audit (2026-06-06; see
-`tracks/_audit/session_2026_06_06_gstack_sister_handson.md`). They are adapted to PSA's operator-IP
-ontology — `gstack-redact`'s generic secret/PII classes (AWS / PEM / JWT / hostname) stay out of PSA's
-scope (orthogonal coverage: PSA = operator-IP leak, redact = generic secret). The reverse direction
-(PSA's operator private-codename + bare-username classes, which `gstack-redact` structurally cannot
-detect) is a candidate contribution back to gstack.
+Step 3b (FP hygiene) and Step 5 (`--json`) were imported from **garrytan/gstack** `gstack-redact` during
+a 2026-06-06 sister-asset cross-audit.
+
+> **Detail**: See `SKILL_detail.md §Sister-Asset-Provenance` — the full import provenance (source file,
+> ontology adaptation, orthogonal-coverage rationale, reverse-contribution candidate) — read when tracing
+> or extending the gstack-redact lineage.
