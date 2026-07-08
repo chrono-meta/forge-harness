@@ -182,3 +182,26 @@ freshness + each operator's local session-start binding.
 **Salience-dependent** — prose, not hook-enforced; on a weaker tier may silently not fire. Backstops: ⑤'s
 removal obligation + the reader-side result-file read. A hook-enforced writer-side is a future hardening
 candidate, not built today (keep the surface thin).
+
+## §Mode-D-Model-Notice
+
+The moment FH self-development work begins (= the gate's own activation trigger: an FH asset is about
+to be modified), check the **session model** (self-identity; if the runtime withholds it, treat as
+unknown) and surface **one line** — then proceed, never block:
+
+- Model known and opus-tier or above → no notice (already optimal).
+- Model known and below opus-tier → *"이 작업은 FH 자체개발(Mode D)입니다 — 가용 최강 모델 핀을
+  권장합니다 (`/model opus` 이상; 측정 근거: README §Model setup). 그대로 진행해도 floored
+  디스패치가 깊이 턴을 커버하지만, 세션-레벨 설계 깊이는 핀이 좌우합니다."*
+- Model unknown (runtime withholds identity) → static fallback: *"FH 자체개발 작업입니다 — 세션
+  모델이 opus 이상이 아니라면 핀 전환을 권장합니다 (`/model opus`+)."*
+
+**Guards**: once per session · advisory only — **never switch the session model** (human override is
+inviolable; a pin is not a cap — tier-floor resolution §Floor governance) · field-project operation
+sessions (no FH asset modification) never see this notice — the Sonnet default stays friction-free.
+
+> **Related — capability-escalation consent**: whether a session actually *escalates* to a stronger
+> model or a cross-family sidecar (not just this advisory notice) is governed separately by
+> `knowledge/shared/harness-core/capability_escalation_consent.md` — the negotiated-consent protocol
+> (UAP `sidecar_consent`/`floorup_consent`) that decides ask-once vs. no-surprise floor-up/sidecar use.
+> This notice is the passive advisory; that doc is the active escalation gate.
