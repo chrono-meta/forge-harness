@@ -95,6 +95,22 @@ sync_file() {
 sync_dir  "$FH/tracks/_meta"      "$BE/tracks-meta"
 sync_dir  "$FH/tracks/_audit"     "$BE/tracks-audit"
 sync_dir  "$FH/tracks/the_bible"  "$BE/tracks/the_bible"    # mapped project — NESTED under tracks/ (like livedeck; projects nest, only hub-meta _meta/_audit flatten): local-only (untracked in public FH), watched in companion
+
+# Extra local-only project tracks to mirror are listed in a LOCAL, gitignored file
+# ($FH/.fh-be-tracks.local — one track dir-name per line, # comments allowed). This keeps
+# non-public track NAMES (e.g. company assets) OUT of this committed script: the list owns
+# "what to mirror", this script is pure transport. local tracks/<name> <-> be tracks/<name>.
+EXTRA_LIST="${FH_BE_TRACKS_FILE:-$FH/.fh-be-tracks.local}"
+if [ -f "$EXTRA_LIST" ]; then
+  while IFS= read -r _t || [ -n "$_t" ]; do
+    _t="${_t%%#*}"                                   # strip inline comment
+    _t="$(printf '%s' "$_t" | tr -d '[:space:]')"    # trim all whitespace
+    [ -n "$_t" ] || continue
+    case "$_t" in */*|.|..|..*) log "skip (unsafe track name): $_t"; continue;; esac
+    sync_dir "$FH/tracks/$_t" "$BE/tracks/$_t"
+  done < "$EXTRA_LIST"
+fi
+
 sync_dir  "$MEM"               "$BE/memory"
 sync_file "$FH/CLAUDE.local.md" "$BE/hub-owner"
 
