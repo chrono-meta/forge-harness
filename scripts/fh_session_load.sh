@@ -79,6 +79,35 @@ $(find "$d" -type f -name '*.md' -maxdepth 2 2>/dev/null)
 EOF
 done
 
+# 3b) Handoff/signal STATUS map — mtime-INDEPENDENT (patched 2026-07-10).
+#     WHY: the NEWER-than-card list (step 3) has a permanent blind spot — a status stamp
+#     (DONE/SUPERSEDED/RESOLVED) can land in the companion store, then the card gets rewritten
+#     WITHOUT reconciling that item; from then on the stamped file is "older than the card"
+#     forever and step 3 never surfaces it again. (Measured miss 2026-07-10: a Qwen heavy
+#     handoff stamped DONE 07-09 stayed listed as "awaiting RUN" in the card through a later
+#     card rewrite — company sessions push results to the companion store but never run the
+#     local close chain, so the card's ⑤ update is the ONLY reconcile point and it was prose.)
+#     FIX: emit ALL frontmatter status lines from handoff/ + paper-signals/ every session,
+#     regardless of mtime, so the turn-0 agent can mechanically cross-check card carry items.
+STATUS_MAP=""
+for sub in handoff paper-signals; do
+  d="$BE/$sub"
+  [ -d "$d" ] || continue
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    s="$(head -15 "$f" 2>/dev/null | grep -iE '^ *status:' | head -1 | sed 's/^ *//')"
+    [ -n "$s" ] || continue
+    # Match on the status VALUE's leading word only — a substring match anywhere in the line
+    # false-positives on prose like "Remaining for DONE:" inside a PARTIAL status.
+    v="$(printf '%s' "$s" | sed -E 's/^[Ss][Tt][Aa][Tt][Uu][Ss]: *//')"
+    case "$v" in
+      DONE*|SUPERSEDED*|RESOLVED*|CLOSED*) STATUS_MAP="${STATUS_MAP}  - ${f#$BE/} → ${s}\n" ;;
+    esac
+  done <<EOF
+$(find "$d" -type f -name '*.md' -maxdepth 2 2>/dev/null)
+EOF
+done
+
 # 4) INDEX.md live pointers (the operator's wiki TOC — read-first per CLAUDE.local.md).
 INDEX_HEAD=""
 if [ -f "$BE/INDEX.md" ]; then
@@ -93,6 +122,11 @@ fi
     printf "%b" "$NEWER"
   else
     echo "   (no companion files newer than the session card)"
+  fi
+  if [ -n "$STATUS_MAP" ]; then
+    echo "── handoff/signal STATUS map (mtime-independent — closed items) ──"
+    printf "%b" "$STATUS_MAP"
+    echo "→ CROSS-CHECK: any item above that the session card still lists as open/awaiting = stale card line. Fix it in this session's card update (⑤)."
   fi
   if [ -n "$INDEX_HEAD" ]; then
     echo "── INDEX.md live pointers ──"
