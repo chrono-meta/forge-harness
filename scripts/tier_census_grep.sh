@@ -40,7 +40,9 @@ for f in "$@"; do
   if echo x | grep -P 'x' >/dev/null 2>&1; then
     grep -nPi "$PATTERN" "$f" || echo "   (0 candidates)"
   else
-    perl -ne 'print "$.:$_" if /\b(opus|sonnet|haiku|fable)\b|\bfloor(-status|-tier|s)?\b|\btiers?\b|(^|[^a-zA-Z])model:/i' "$f" || true
+    # 0-hit에도 "(0 candidates)"를 찍는다 — GNU 분기와 출력 대칭 (pmh-parity 포트가 잡은 갭, 역이식 2026-07-10)
+    hits=$(perl -ne 'print "$.:$_" if /\b(opus|sonnet|haiku|fable)\b|\bfloor(-status|-tier|s)?\b|\btiers?\b|(^|[^a-zA-Z])model:/i' "$f")
+    if [ -n "$hits" ]; then printf '%s\n' "$hits"; else echo "   (0 candidates)"; fi
   fi
 done
 
