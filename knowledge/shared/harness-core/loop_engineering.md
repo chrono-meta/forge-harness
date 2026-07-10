@@ -27,7 +27,9 @@ construction, the same by-construction pattern as the gate-compliant skeleton.
 
 ## FH loop inventory — legs, enforcement class, measured gaps
 
-Census 2026-07-10 — micro/session/weekly rows: cross-family codex gpt-5.5 xhigh repo audit, source-verified; quarterly/substrate rows: governor self-assessment (no external census yet — R-tier revisit). MECH = hook /
+Census 2026-07-10, all rows cross-family source-verified (codex gpt-5.5 — xhigh for micro/session/
+weekly, high for quarterly/substrate; the substrate row's original governor self-assessment was
+4/5 REFUTED by the external pass — the census discipline earning its keep). MECH = hook /
 script / exit-code (tier-independent); PROSE = salience-dependent (Sonnet-floor risk surface).
 
 | Loop | initiate | complete | validate | halt | persist |
@@ -35,8 +37,8 @@ script / exit-code (tier-independent); PROSE = salience-dependent (Sonnet-floor 
 | **Micro** — goal-quench | MECH (`.active` state) | mixed (Done-When explicit; `/goal` invocation manual) | MECH (`.pending` + pipeline-conductor gate) | **PROSE** (mid-run thresholds instructional) | MECH (calibration record) |
 | **Session** — close chain ①–⑥ | PROSE (closing-phrase trigger) | PROSE (card-last ordering) | mixed (git/PR inputs mech, synthesis remembered) | PROSE (no budget/stop guard) | PROSE→**MECH improving** (companion-store sync script + SessionStart STATUS map, 2026-07-10) |
 | **Weekly** — harvest-loop / audit cycle | PROSE (proposal at session start) | PROSE (self-reported Done-When) | mixed (`below_floor_scan.sh` exit code; rest hand-gathered) | mixed (critic retry cap 1; no global budget) | PROSE (audit file by hand) |
-| **Quarterly** — maturity roadmap | PROSE | PROSE (phase gates defined, checked manually) | PROSE | n/a (calendar-bounded) | PROSE (roadmap doc) |
-| **Substrate** — self-adaptation mission | PROSE (substrate-version jump trigger) | PROSE | 4-axis gate on removals (MECH at commit) | n/a | memory + signals |
+| **Quarterly** — maturity roadmap | PROSE (~90d cadence, no auto-detection) | PROSE (phase gates, checked manually) | PROSE (basis-path obligations, no anchor bundle) | **PROSE** (transition deferral / Phase-regression guards exist — hub_maturity_roadmap §6.1 — prose, NOT n/a) | PROSE (roadmap doc, no canonical state file) |
+| **Substrate** — self-adaptation mission | mixed (real initiators = routine schedules + context-entry proposals; a dedicated "substrate-version jump" detector does NOT exist — closest is `scripts/tier_census_grep.sh`) | PROSE (routine terminal states are prompt-following) | mixed (weekly change runs the 4-axis gate — marker form MECH at commit; removal approval prose/HITL) | PROSE (one-proposal-per-week · deferred-draft-PR fallback · stop-after-PR — guards exist, all prose, NOT n/a) | mixed (GitHub issue comments + draft PRs are the durable spine, plus gate markers/edit-manifest/fh_signals — not "memory") |
 
 **Reading the map**: the 4-axis auto-gate is FH's only all-MECH loop (initiate=hook detect,
 complete=all-axes-or-block, halt=missing-marker-fails, persist=marker+manifest) — and it is also
@@ -68,6 +70,8 @@ instrument: the next slip finds its leg pre-diagnosed.
 | Weekly-audit scaffold + data-gather script | a weekly audit missed or hand-gathered wrong window data |
 | harvest-loop Step 0-b/0-c evidence check | a harvest run misses completed items despite `fh_completed_*` existing |
 | goal-quench mid-run checkpoint files (70/85/95%) | a /goal run blows through a threshold unnoticed |
+| Substrate-jump detector (model/tool/version delta scan — the "substrate-version jump trigger" is currently a phantom: no detector exists) | a substrate change (new model family, CC major version) ships and FH misses its shed/advance pass |
+| Quarterly maturity checker (`quarterly_maturity_check.sh` — criterion status + §6.1 BLOCKED emit) | a quarterly re-diagnosis is missed >90d or a phase transition skips the simplification checklist |
 
 ## Done When (for a new/changed autonomous path)
 

@@ -36,8 +36,9 @@ markers) — never silently drop a capability.
 
 ## The defect class: tier-gated capability
 
-When auditing (harness-doctor, weekly audit, or a dedicated census), classify every model-tier
-reference:
+When auditing (harness-doctor, weekly audit, or a dedicated census), enumerate candidates with
+`bash scripts/tier_census_grep.sh <files>` (word-boundary patterns + N/A-sense hints — mechanized
+2026-07-10 after a probe's naive grep false-positived on "fron**tier**"), then classify every hit:
 
 | Class | Shape | Verdict |
 |---|---|---|
