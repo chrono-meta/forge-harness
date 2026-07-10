@@ -33,6 +33,13 @@ markers) — never silently drop a capability.
   → SessionStart hook), the tone salience gap (2026-07-08 → recorded, prompt-layer), the
   card-reconcile blind spot (2026-07-10 → mtime-independent STATUS map in the hook). The doctrine
   is a name for what the fix pattern already was.
+- **The value does not vanish at the top tier — the harness complements the strongest model too**
+  (operator observation, 2026-07-10, same-day measured): a Sonnet blind probe caught a SIGPIPE
+  silent-death defect in a script the top-tier session had just written (5/5 repro), and the new
+  close-chain checker blocked that same top-tier session's card-last violation twice on its first
+  day. Structure-enforcing checks are tier-blind by construction — so the harness raises the floor
+  for weak models *and* guards the ceiling for strong ones. Weak-model benefit is the larger term
+  (H1), top-tier benefit is the existence proof that the harness is not scaffolding-only.
 
 ## The defect class: tier-gated capability
 
