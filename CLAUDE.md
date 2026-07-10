@@ -38,6 +38,7 @@ Four foundational assets for hub operations. **Mandatory pre-reference** before 
 | `knowledge/shared/harness-core/hub_compounding_loop.md` | Feedback automation | Weekly/monthly/quarterly cycles. Axis-6 Compounding automation |
 | `knowledge/shared/dialogue/ai_dialogue_playbook.md` | Dialogue principles (should) | Session start, token efficiency, rule hierarchy, amplifier/coach dual mode |
 | `knowledge/shared/dialogue/claude_code_runtime_flow.md` | Runtime behavior (does) | Chronological flow during a session · sub-agent delegation flowchart |
+| `knowledge/shared/harness-core/sonnet_floor_doctrine.md` | Canonical invariant | **Sonnet-Floor**: base ops 100% Sonnet-runnable · tier-gated capability = defect · escalation = dispatch (consent-gated), never substrate. Loop companion: `loop_engineering.md` |
 
 ## Voice / Tone — Soft Charisma (delivery layer only)
 
@@ -209,11 +210,14 @@ a session *following prose instructions* (salience-dependent — rules, onboardi
 trigger behavior), or is it mechanically enforced (hooks, scripts — tier-independent, normal 4-axis
 path, exempt)? For salience-dependent changes, verify with a **blind simulation in an isolated Agent**
 (no main-session reasoning inherited — isolation is the FH mechanism that keeps the sim honest) with
-`model:` pinned to the tier the change must survive on. Application strength scales with context:
+`model:` pinned to the tier the change must survive on — **default sim tier = Sonnet** (the base
+floor every FH behavior must survive on, `sonnet_floor_doctrine.md`). Application strength scales
+with context:
 - **Mode D (FH self-dev) — near-mandatory**: any salience-dependent FH asset change runs the sim
-  before Done. Mandatory without exception when the change fixes a behavioral miss *observed* on a
-  specific tier — sim at that same tier (the verification tier must match the failure tier; fixing on
-  a stronger model and verifying by review alone leaves "does it fire on the weaker tier?" unanswered).
+  before Done, at Sonnet by default. Mandatory without exception when the change fixes a behavioral
+  miss *observed* on a specific tier — sim at that same tier, even below Sonnet (the verification
+  tier must match the failure tier; fixing on a stronger model and verifying by review alone leaves
+  "does it fire on the weaker tier?" unanswered).
 - **Field harness assets (templates/ propagated via Full-Harness Mode) — conditional**: sim at the
   default field tier (Sonnet) when the behavior is load-bearing (gates, onboarding, destructive/publish
   paths); skip with a one-line note for low-stakes prose.
@@ -221,8 +225,9 @@ path, exempt)? For salience-dependent changes, verify with a **blind simulation 
   (hook logic, scripts, file moves — tier-independent by construction).
 
 **Autonomy floor**: the skip/run *judgment* on conditional cases is itself depth-sensitive — trust it
-only at opus-tier or above. A below-floor orchestrator does not silently skip: it runs the sim or asks
-the operator (one line), mirroring §Floor governance.
+only at opus-tier or above. A below-floor orchestrator does not silently skip — and does not stall:
+its default is to RUN the sim (the conservative branch needs no trust); it asks the operator only when
+no runnable path exists (run-first, ask-last — sonnet_floor_doctrine.md §Autonomy at Sonnet).
 
 Record sim results in the Axes 2–3 marker + sub-agent invocation log.
 
@@ -241,8 +246,9 @@ measurement is trusted.
 **Floor-tier canary (optional pre-screen — token-free, *below* the Sonnet sim)**: a local model ≤ Sonnet
 can blind-pre-screen a salience-dependent edit *before* the Sonnet dispatch is spent. **Canary, NOT gate**:
 a PASS adds cheap floor confidence and you still run the Sonnet sim; a FAIL never blocks alone. The terminal
-verdict stays with the frontier (Sonnet sim + opus judge) — **no judge-only path**, no weak-local-judge
-regression of the judge-robustness principle (mechanical anchor over judge-only verdict).
+verdict stays with the **Sonnet-or-higher governor bound to a mechanical anchor** (an opus judge is the
+dispatch-recommended strengthener, not a requirement — `sonnet_floor_doctrine.md`) — **no judge-only path**,
+no weak-local-judge regression of the judge-robustness principle (mechanical anchor over judge-only verdict).
 
 > **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Floor-Tier-Canary` — the local
 > model/panel options, the blind-probe procedure, dogfood evidence, and the FAIL-triage (real salience gap
@@ -272,7 +278,8 @@ the target-tier sim all shared — the decorrelation value made concrete.
 
 When FH self-dev begins (an FH asset is about to change), check the **session model** and surface **one
 line**, then proceed — never block, **never switch the model** (human override inviolable): opus-tier+ →
-no notice · below-opus → recommend `/model opus`+ · unknown → static fallback recommend. Once per session;
+no notice · below-opus → **dispatch-first recommend** (keep Sonnet + route depth turns to sidecar/opus
+dispatch; `/model opus` pin = secondary — `sonnet_floor_doctrine.md`) · unknown → static fallback recommend. Once per session;
 field-project (non-FH-asset) sessions never see it. Whether a session actually *escalates* (not just this
 advisory) is governed separately by `capability_escalation_consent.md`.
 
@@ -338,7 +345,8 @@ same as the FH cross-family complement. **In autonomous loops** (innovator loop-
 `/goal` · cluster orchestration): this gate is **part of the delegated pipeline**, not an
 afterthought — a load-bearing field change produced autonomously runs the lint → cross-family →
 converge loop *before* it is Done. Autonomy floor (§Floor governance): the skip/run judgment is
-trusted only at opus-tier+; below-floor runs the review or asks, never silently skips.
+trusted only at opus-tier+; below-floor RUNS the review by default (run-first, ask-last — asks only
+when no runnable path exists), never silently skips (sonnet_floor_doctrine.md §Autonomy at Sonnet).
 
 > **Detail** (discretion principle · 4-face signature · gate mechanics · n=7 qasp evidence):
 > `knowledge/shared/harness-core/field_verdict_crossfamily_gate.md`.
@@ -361,7 +369,7 @@ dozen skills to invoke. Every fix is HITL — the diagnostic **proposes**, never
 | **Token / salience** | salience-split candidates (`/context-doctor` · `/salience-splitter` targets) | oversized always-loaded SKILL.md / CLAUDE.md — trim candidates |
 | **Structure** | `/harness-doctor` (L1–L4) | orphaned/redundant/decorative units, missing Done-When, ≥70% overlap |
 | **Verdict/gate degrade** | `scripts/degrade_direction_scan.sh` | a field verdict/gate helper that degrades toward permissive (advisory pre-screen) |
-| **Loop-readiness** (황민호 loop-eng 5-question lens, 2026-07-10) | *Loop-runtime axis — net-new vs Structure* (harness-doctor scans static form; this scans whether the path closes a loop). **Mechanical grep**: `/goal-quench`·`/loop` wiring present · check-class token declared. **Judged**: is the persisted state (card/handoff/memory) actually reloaded · is the declared check-class anchored, not judged-only · does the path halt. Done-When *presence* → see Structure row (no double-grep). **Adversarial pair** (for the judged sub-checks — decorrelated, behavior-vs-checklist): a target-tier blind sim that *runs* the path and observes whether it halts + persists, rather than re-checklisting it (the harness litmus shares this lens's axis, so it is a co-lens, not the adversary). | an agent path that *runs but doesn't loop*: no completion criterion (Done-When absent), judged-only validation with no anchor, no halt/budget guard (runaway/cost), or no state carried to the next run — the 5 questions (initiate · complete · validate · halt · persist) with 0 answers |
+| **Loop-readiness** (황민호 loop-eng 5-question lens, 2026-07-10 — detail home: `loop_engineering.md`, incl. the FH loop inventory + design-time discipline) | *Loop-runtime axis — net-new vs Structure* (harness-doctor scans static form; this scans whether the path closes a loop). **Mechanical grep**: `/goal-quench`·`/loop` wiring present · check-class token declared. **Judged**: is the persisted state (card/handoff/memory) actually reloaded · is the declared check-class anchored, not judged-only · does the path halt. Done-When *presence* → see Structure row (no double-grep). **Adversarial pair** (for the judged sub-checks — decorrelated, behavior-vs-checklist): a target-tier blind sim that *runs* the path and observes whether it halts + persists, rather than re-checklisting it (the harness litmus shares this lens's axis, so it is a co-lens, not the adversary). | an agent path that *runs but doesn't loop*: no completion criterion (Done-When absent), judged-only validation with no anchor, no halt/budget guard (runaway/cost), or no state carried to the next run — the 5 questions (initiate · complete · validate · halt · persist) with 0 answers |
 
 **Output**: one ranked list, `M` (must-fix) / `S` (should-fix) / `R` (recommended) — same tiering as
 harness-doctor — each item stating *lens · file:line · one-line fix*. **Then HITL**: the operator approves

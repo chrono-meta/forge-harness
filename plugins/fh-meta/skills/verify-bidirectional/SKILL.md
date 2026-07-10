@@ -10,7 +10,7 @@ complexity_routing:
   escalate_when:
     - full_revalidation
     - high_stakes
-    - fail_verdict   # AI recommendation was wrong → baseline overwrite is high-stakes, never stay at sonnet
+    - fail_verdict   # AI recommendation was wrong → baseline overwrite is high-stakes: at Sonnet, bind the overwrite to a mechanical anchor (diff review + source re-check) and RECOMMEND an opus/sidecar dispatch (consent-gated) — Sonnet+anchor is a legitimate path (sonnet_floor_doctrine.md), silent judged-only overwrite is not
 ---
 
 # verify-bidirectional — Bidirectional Self-Validation Automation

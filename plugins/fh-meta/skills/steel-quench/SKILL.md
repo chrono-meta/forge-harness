@@ -13,7 +13,7 @@ description: >-
   "steel quench", "deep pre-completion inspection", "did it really pass?".
 user-invocable: true
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "WebSearch", "Agent"]
-model: opus
+model-note: session-inherit — Sonnet base is first-class (sonnet_floor_doctrine.md); depth-critical judged steps route to dispatch (opus agent / cross-family sidecar, consent-gated), never a substrate requirement
 ---
 
 # steel-quench — All-Angle Verification Meta-Skill

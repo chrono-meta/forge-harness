@@ -175,6 +175,10 @@ priority: high|medium|low
 
 **forge-harness is not meant to use more tokens** — standard tier delivers meaningful improvements while minimizing token usage.
 
+> Terminology guard: the S/M/L/XL **execution tier is a token-depth budget, NOT a model tier** — it is
+> orthogonal to the Sonnet-floor / model-floor axis (`sonnet_floor_doctrine.md`); an XL run on Sonnet and
+> an S run on Opus are both legal combinations.
+
 ```yaml
 EXECUTION_TIER: standard   # light / standard / full / max
 ```

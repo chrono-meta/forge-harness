@@ -3,7 +3,7 @@ name: apex-review
 description: Reviews a technical proposal from the perspective of organizational decision-makers (CTO, technical lead, QA lead, conference reviewers, etc.) and generates an HTML presentation deck. Outputs approval gate results per persona and connects to sim-conductor for improvement suggestions.
 user-invocable: true
 allowed-tools: ["Read", "Write", "Bash", "Agent"]
-model: opus
+model-note: session-inherit — Sonnet base is first-class (sonnet_floor_doctrine.md); depth-critical judged steps route to dispatch (opus agent / cross-family sidecar, consent-gated), never a substrate requirement
 ---
 
 # apex-review — Decision-Maker Review Layer

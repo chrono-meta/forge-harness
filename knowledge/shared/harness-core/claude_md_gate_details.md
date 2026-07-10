@@ -69,10 +69,13 @@ demand a strict YES/NO + one-line reason, judge whether the rule fired (mechanis
 directions — a claim checkable against that skill — re-validating that day's salience-binding fix at a
 sub-Sonnet tier).
 
-**FAIL-triage**: a FAIL never blocks alone — the opus orchestrator triages it as a *real salience gap* (fix
-the rule) vs a *floor-model quirk* (small-model loop/hallucination, per the public "Local AI is not Opus"
-finding + the cheap-oracle ceiling — a small model adds nothing where one grep already settles the check).
-The terminal verdict stays with the frontier (Sonnet sim + opus judge) — no judge-only path, no
+**FAIL-triage**: a FAIL never blocks alone — the orchestrator (whatever tier is driving; the triage
+judgment is *trusted* at opus+ and run-or-ask below, per §Floor governance) triages it as a *real
+salience gap* (fix the rule) vs a *floor-model quirk* (small-model loop/hallucination, per the public
+"Local AI is not Opus" finding + the cheap-oracle ceiling — a small model adds nothing where one grep
+already settles the check). The terminal verdict stays with the **Sonnet-or-higher governor bound to a
+mechanical anchor** (Sonnet sim verdict + the anchor evidence; an opus judge is the *dispatch-recommended*
+strengthener, not a requirement — Sonnet-Floor Doctrine 2026-07-10) — no judge-only path, no
 weak-local-judge regression of the judge-robustness principle (mechanical anchor over judge-only verdict).
 The cross-family-panel upgrade spec lives in the private companion store's `handoff/` design note.
 
@@ -190,11 +193,15 @@ to be modified), check the **session model** (self-identity; if the runtime with
 unknown) and surface **one line** — then proceed, never block:
 
 - Model known and opus-tier or above → no notice (already optimal).
-- Model known and below opus-tier → *"이 작업은 FH 자체개발(Mode D)입니다 — 가용 최강 모델 핀을
-  권장합니다 (`/model opus` 이상; 측정 근거: README §Model setup). 그대로 진행해도 floored
-  디스패치가 깊이 턴을 커버하지만, 세션-레벨 설계 깊이는 핀이 좌우합니다."*
+- Model known and below opus-tier → **dispatch-first** (Sonnet-Floor Doctrine 2026-07-10 — the
+  primary recommendation keeps the Sonnet substrate and routes depth to dispatch; a session pin is
+  the *secondary* option): *"이 작업은 FH 자체개발(Mode D)입니다 — Sonnet 그대로 진행하면서 깊이
+  턴(적대검증·설계리뷰)은 사이드카/opus 디스패치로 커버하는 걸 권장합니다(동의 게이트:
+  capability_escalation_consent). 세션 전체가 설계-깊이 중심이면 차선으로 `/model opus` 핀도
+  가능합니다."*
 - Model unknown (runtime withholds identity) → static fallback: *"FH 자체개발 작업입니다 — 세션
-  모델이 opus 이상이 아니라면 핀 전환을 권장합니다 (`/model opus`+)."*
+  모델이 opus 미만이면 깊이 턴을 디스패치로 커버하세요(권장); 설계-깊이 세션이면 `/model opus`
+  핀이 차선입니다."*
 
 **Guards**: once per session · advisory only — **never switch the session model** (human override is
 inviolable; a pin is not a cap — tier-floor resolution §Floor governance) · field-project operation

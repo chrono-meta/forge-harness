@@ -3,7 +3,7 @@ name: meta-prompt-builder
 description: Generates structured prompts to send to each agent in an agent dispatch plan. Triggered by "write the instructions", "what do I say to the agent?", "write the prompt for me", "meta-prompt-builder". Bridges agent-composer (which agents) and prompt content (what to say). Uses Goal/Context/Constraints/Done When structure.
 user-invocable: true
 allowed-tools: ["Read", "Bash", "Glob", "Grep"]
-model: opus
+model-note: session-inherit — Sonnet base is first-class (sonnet_floor_doctrine.md); depth-critical judged steps route to dispatch (opus agent / cross-family sidecar, consent-gated), never a substrate requirement
 ---
 
 # meta-prompt-builder — Prompt Delegation Skill

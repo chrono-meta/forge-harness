@@ -3,7 +3,7 @@ name: deliberation
 description: Multi-perspective synthesis structure — Innovator (propose) → Devil-Advocate (challenge) → Mediator (synthesize) 3-layer execution. Outputs conditional verdicts without binary win/loss. Activates on "deliberation", "battle this out", "weigh the pros and cons", "review from multiple angles", "which side is right?". Optional deep-insight persona jurors for domain-specific views. Designed for design decisions, skill proposals, and architectural choices.
 user-invocable: true
 allowed-tools: ["Read", "Bash", "Agent"]
-model: opus
+model-note: session-inherit — Sonnet base is first-class (sonnet_floor_doctrine.md); depth-critical judged steps route to dispatch (opus agent / cross-family sidecar, consent-gated), never a substrate requirement
 origin: fh-meta
 ---
 

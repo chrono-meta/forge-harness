@@ -396,7 +396,11 @@ because it has opus?". A floor is satisfied by the chosen engine's **strongest f
 **Human override is inviolable — and a pin is not a cap**: if the operator pins a session default
 (stronger or weaker), FH follows it for **session turns**; floors govern FH's **own sub-agent
 dispatches** and a session pin does not lower them — that separation *is* the Sonnet-main +
-Opus-dispatch doctrine (pinned-sonnet sessions still dispatch floored agents at opus).
+Opus-dispatch doctrine (pinned-sonnet sessions still dispatch floored agents at opus). Canonical
+axiom + defect-class + prescription ladder: `sonnet_floor_doctrine.md` (2026-07-10) — this section
+remains the operating mechanics (F1/F2, floor governance) under that axiom; SKILL.md hard `model:`
+pins were retired the same day (session-inherit + dispatch recommendation), agent-side dispatch
+floors unchanged.
 
 **Field depth-escalation (the upward complement)**: floors push *dispatches* up automatically, but
 main-thread depth on a field session has no floor — so the templates bundle carries a Field

@@ -212,7 +212,16 @@ fi
 #                      runner controls everything the hook can see). This field makes the marker
 #                      auditable (the audit can check the recorded verdict against reality) and
 #                      catches the realistic failure: a vacuous "trust me, it ran" marker.
-#   floor-status: at-floor | above-floor | below-floor   (floor = opus, PR #86)
+#   floor-status: at-floor | above-floor | sonnet-floor | below-floor
+#                     (judged-depth floor = opus, PR #86; BASE floor = sonnet —
+#                      Sonnet-Floor Doctrine 2026-07-10: a Sonnet inline pass is
+#                      first-class for base commits when it carries a mechanical
+#                      anchor line (axis2-anchor:) and it auto-enters the weekly
+#                      re-validation queue; sub-Sonnet stays below-floor + ack)
+#   axis2-anchor: <mechanical evidence grounding the Sonnet judged verdict — a
+#                  regression test, lint/scan output, probe count; required iff
+#                  floor-status: sonnet-floor (judged depth at Sonnet is weaker,
+#                  so the anchor leg is the compensating requirement)>
 #   below-floor-ack: "<verbatim operator approval utterance>" — <reason>
 #                     ← required iff floor-status: below-floor; the quoted span is
 #                       mandatory (rubber-stamp hardening, 2026-06-13). This narrows
@@ -249,6 +258,23 @@ validate_marker_floor() {
   case "$fs" in
     at-floor|above-floor)
       : ;;
+    sonnet-floor)
+      # Sonnet-Floor Doctrine (2026-07-10): Sonnet inline is first-class for BASE
+      # commits — no operator ack — but the judged verdict is weaker at Sonnet, so
+      # a mechanical anchor line is the compensating requirement, and the marker
+      # auto-enters the weekly re-validation queue (below_floor_scan.sh, R-tier).
+      if ! grep -qE '^[[:space:]]*axis2-anchor:[[:space:]]*[^[:space:]]' "$m"; then
+        echo "  ❌ SONNET-FLOOR pass without mechanical anchor"
+        echo "     floor-status: sonnet-floor requires an axis2-anchor: line naming the"
+        echo "     mechanical evidence that grounds the judged verdict (regression test,"
+        echo "     scan output, probe count). Judged-only at Sonnet is not gate-PASS."
+        echo "     Alternatives: dispatch the audit (sidecar / opus agent → at-floor),"
+        echo "     or record the anchor you ran."
+        return 1
+      fi
+      echo "  ⚠️  sonnet-floor pass accepted (base floor met; anchored — provisional"
+      echo "     for judged depth: weekly audit re-queues sonnet-floor markers, R-tier)"
+      ;;
     below-floor)
       if ! grep -qE '^[[:space:]]*below-floor-ack:[[:space:]]*[^[:space:]]' "$m"; then
         echo "  ❌ BELOW-FLOOR adversarial pass without operator ack"
@@ -275,7 +301,7 @@ validate_marker_floor() {
       ;;
     *)
       echo "  ❌ MARKER FORMAT — invalid floor-status: '$fs'"
-      echo "     Allowed: at-floor | above-floor | below-floor"
+      echo "     Allowed: at-floor | above-floor | sonnet-floor | below-floor"
       return 1
       ;;
   esac
@@ -320,9 +346,18 @@ validate_marker_floor() {
   case "$fs" in
     at-floor|above-floor)
       if echo "$model" | grep -qiE 'sonnet|haiku'; then
-        echo "  ❌ MODEL/FLOOR MISMATCH — axis2-model: $model cannot be $fs (floor=opus)"
-        echo "     Set floor-status: below-floor (+ below-floor-ack: if operator-accepted),"
-        echo "     or re-run Axis 2 at ≥ floor (dispatch quench-challenger at opus)."
+        echo "  ❌ MODEL/FLOOR MISMATCH — axis2-model: $model cannot be $fs (judged-depth floor=opus)"
+        echo "     Sonnet inline → floor-status: sonnet-floor (+ axis2-anchor:); sub-Sonnet →"
+        echo "     below-floor (+ below-floor-ack:); or dispatch Axis 2 at ≥ floor."
+        return 1
+      fi
+      ;;
+    sonnet-floor)
+      # sonnet-floor is Sonnet's own lane — a sub-Sonnet tier claiming it is the
+      # same mislabel class the at-floor check catches (haiku cannot ride the lane).
+      if ! echo "$model" | grep -qiE 'sonnet'; then
+        echo "  ❌ MODEL/FLOOR MISMATCH — axis2-model: $model cannot be sonnet-floor"
+        echo "     sonnet-floor is for Sonnet-tier passes only; sub-Sonnet → below-floor + ack."
         return 1
       fi
       ;;

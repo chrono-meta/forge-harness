@@ -30,8 +30,33 @@ if [ ! -d "$MARKER_DIR" ]; then
   exit 0
 fi
 
+SONNET_PENDING=0
 for m in "$MARKER_DIR"/.axes_23_passed_*.marker; do
   [ -e "$m" ] || continue
+  # sonnet-floor lane (Sonnet-Floor Doctrine 2026-07-10): anchored Sonnet passes are
+  # first-class at commit time but provisional for judged depth — queued here as
+  # R-tier (advisory re-validation), distinct from below-floor's S-tier hard queue.
+  if grep -qE '^[[:space:]]*floor-status:[[:space:]]*sonnet-floor' "$m"; then
+    name=$(basename "$m")
+    rerun=$(grep -m1 -E '^[[:space:]]*floor-rerun:' "$m" \
+            | sed -E 's/^[[:space:]]*floor-rerun:[[:space:]]*//' || true)
+    writeoff=$(grep -m1 -E '^[[:space:]]*floor-writeoff:' "$m" \
+               | sed -E 's/^[[:space:]]*floor-writeoff:[[:space:]]*//' || true)
+    if [ -n "$rerun" ]; then
+      echo "✅ RESOLVED (re-run)   $name — floor-rerun: $rerun"
+    elif [ -n "$writeoff" ]; then
+      echo "✅ RESOLVED (writeoff) $name — floor-writeoff: $writeoff"
+    else
+      SONNET_PENDING=$((SONNET_PENDING + 1))
+      anchor=$(grep -m1 -E '^[[:space:]]*axis2-anchor:' "$m" \
+               | sed -E 's/^[[:space:]]*axis2-anchor:[[:space:]]*//' || true)
+      echo "🟨 R-tier re-validate  $name (sonnet-floor)"
+      echo "     axis2-anchor: ${anchor:-<missing>}"
+      echo "     action: re-run judged depth at >= opus or via sidecar dispatch when"
+      echo "             available, append 'floor-rerun: ...' — or 'floor-writeoff: ...'"
+    fi
+    continue
+  fi
   grep -qE '^[[:space:]]*floor-status:[[:space:]]*below-floor' "$m" || continue
   TOTAL=$((TOTAL + 1))
   name=$(basename "$m")
@@ -57,6 +82,10 @@ for m in "$MARKER_DIR"/.axes_23_passed_*.marker; do
   fi
 done
 
-echo "── below-floor markers: $TOTAL total, $PENDING pending ──"
+echo "── below-floor markers: $TOTAL total, $PENDING pending (S-tier) ──"
+echo "── sonnet-floor markers pending re-validation: $SONNET_PENDING (R-tier, advisory) ──"
+# Exit semantics unchanged: only below-floor (S-tier) hard-fails the scan.
+# sonnet-floor pendings are advisory — reported, never exit-blocking (doctrine:
+# Sonnet base is first-class; the queue exists so residuals terminate, not decorate).
 [ "$PENDING" -gt 0 ] && exit 1
 exit 0

@@ -32,7 +32,7 @@ Three platform facts shape the design below:
     → post the digest as a COMMENT on the standing Issue "🛰️ Frontier Digest Log"
     → no repo commit, no PR   (cheap, ephemeral-safe)
 
-[Weekly Routine]  (schedule: weekly, model: OPUS — required, see §4 floor note)
+[Weekly Routine]  (schedule: weekly, model: opus preferred / sonnet first-class, see §4 floor note)
   ① read the last 7 days of comments on the "🛰️ Frontier Digest Log" issue
   ② persona-innovator Mode F — gap + external-frontier scan against current FH assets
   ③ pick AT MOST ONE concrete, scoped improvement candidate (or none — "no proposal this week" is valid)
@@ -79,17 +79,22 @@ bash templates/regression_guard.sh --pr "$(git branch --show-current)"   # Axis 
 # Axis 4 edit-manifest RECORD → append today's predicted-impact line to tracks/_meta/edit_manifest.yaml
 ```
 
-**Floor note — why the weekly routine MUST be opus (load-bearing).** The pre-commit hook cross-checks
-the marker's `axis2-model` against `floor-status`: a `sonnet`/`haiku` model claiming `at-floor` or
-`above-floor` is **rejected**, and `below-floor` is rejected too **unless** a `below-floor-ack:` line
-quotes a live operator utterance. A routine runs with **no human online**, so there is no utterance to
-quote — meaning a Sonnet weekly run **cannot legally pass the gate and cannot commit**. That dead-end
-is itself a hazard: under "produce a draft PR" pressure a session may improvise an unsanctioned escape
-(fabricate an ack, mislabel the floor, `--no-verify`). **Pin the weekly routine to opus** so the
-honest marker is `floor-status: at-floor` and the gate passes unattended. (If opus is ever unavailable
-in routines, the sanctioned fallback is: do **not** commit — attach the proposed patch to a draft PR
-opened via the GitHub tools as a diff in the PR body / a patch file, bypassing the local hook, and
-label it `gate: deferred — opus re-run needed` for the operator. Never `--no-verify`.)
+**Floor note — dispatch-first, Sonnet first-class (re-semanticized 2026-07-10, Sonnet-Floor
+Doctrine).** The pre-commit hook cross-checks the marker's `axis2-model` against `floor-status`.
+The routine's honest, unattended paths in preference order:
+1. **Dispatch the Axis-2 audit** (cross-family sidecar or an opus sub-agent, consent permitting) —
+   marker is `floor-status: at-floor` with the dispatched engine recorded; strongest and preferred.
+2. **Opus inline** (when the routine session itself runs at opus) — `at-floor`, as before.
+3. **Sonnet inline** — first-class, no operator utterance needed: `floor-status: sonnet-floor` +
+   an `axis2-anchor:` line naming the mechanical evidence that grounds the judged verdict (a
+   regression test, scan output, probe count). The marker auto-enters the weekly re-validation
+   queue (`below_floor_scan.sh`, R-tier advisory). The old dead-end — "a Sonnet run cannot legally
+   commit, so it improvises an escape" — is gone *because* the sanctioned lane exists; the anchor
+   requirement is what keeps the lane from being a free pass.
+Sub-Sonnet tiers remain `below-floor` + operator ack (a routine with no human online genuinely
+cannot pass there — that residual is intended). If no anchor can be produced at Sonnet either, the
+fallback stays: do **not** commit — attach the patch to a draft PR opened via the GitHub tools,
+label it `gate: deferred — floor re-run needed`. Never `--no-verify`.
 
 **Marker carve-out (the one sanctioned `tracks/**` write).** The two gate files
 (`tracks/_meta/.axes_23_passed_*.marker` and `tracks/_meta/edit_manifest.yaml`) live under gitignored

@@ -94,7 +94,7 @@ When context is near the limit and you want to *preserve state* rather than rese
 
 | Current task | Recommended | Command |
 |---|---|---|
-| Complex design decisions · architecture review | Opus | `/model opus` |
+| Complex design decisions · architecture review | Opus — dispatch-first: package into an opus/sidecar agent dispatch (consent-gated); session pin secondary | dispatch · or `/model opus` |
 | Code writing · file editing · refactoring | Sonnet (default) | — |
 | Simple file lookup · short Q&A | Haiku | `/model haiku` |
 

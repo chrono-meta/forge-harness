@@ -3,7 +3,7 @@ name: auto-decorrelation
 description: Recruits cross-family verifier sidecars (codex, agy, local 4090 over Tailscale) for adversarial verification of load-bearing changes, maximizing model-family diversity against the orchestrator. Mechanically discovers the available sidecar panel, recruits at least one cross-family verifier when present, and degrades gracefully when none are. The governor (Claude) keeps the terminal verdict; sidecar findings must be source-grounded before acceptance. Opt-in via one-time consent, stored in the UAP; fires only on load-bearing changes. Triggered by "recruit a cross-family check", "decorrelate this verification", "use the idle sidecars to verify", "auto-decorrelation".
 user-invocable: true
 allowed-tools: ["Read", "Bash", "Grep", "Glob"]
-model: opus
+model-note: session-inherit — Sonnet base is first-class (sonnet_floor_doctrine.md); depth-critical judged steps route to dispatch (opus agent / cross-family sidecar, consent-gated), never a substrate requirement
 ---
 
 # auto-decorrelation — Cross-Family Verifier Recruitment

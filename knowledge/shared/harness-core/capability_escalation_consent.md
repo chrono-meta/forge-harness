@@ -123,3 +123,10 @@ to offload exec cost off the paid API entirely. The protocol turns hard-won econ
   protocol never flips the model itself.
 - **Sonnet floor is a floor, not a ceiling** — declined-floor-up still escalates *within* Sonnet's
   harness depth (sub-agents, good structure); it does not cap capability, only cost/trust surface.
+
+---
+
+> **Canonical axiom cross-ref (2026-07-10)**: the "Sonnet floor is first-class, not degraded" stance
+> this protocol operationalizes is now named — `sonnet_floor_doctrine.md` (base ops 100% Sonnet;
+> tier-gated capability = defect; escalation = dispatch, consent-gated **here**). This file remains
+> the consent mechanics home; the doctrine node does not restate them.

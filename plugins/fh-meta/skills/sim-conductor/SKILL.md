@@ -3,7 +3,7 @@ name: sim-conductor
 description: Autonomously runs external user reaction simulations, internal audits, ideation scans, artifact validation, and quality reviews. Profiles the target artifact first, then derives task-appropriate personas, dispatches them as parallel agents, classifies findings into M/S/R tiers, and completes the pipeline through to commit automatically.
 user-invocable: true
 allowed-tools: ["Read", "Write", "Bash", "Grep", "Glob", "Agent"]
-model: opus
+model-note: session-inherit — Sonnet base is first-class (sonnet_floor_doctrine.md); depth-critical judged steps route to dispatch (opus agent / cross-family sidecar, consent-gated), never a substrate requirement
 ---
 
 # sim-conductor — Meta-Simulation Automation Orchestrator

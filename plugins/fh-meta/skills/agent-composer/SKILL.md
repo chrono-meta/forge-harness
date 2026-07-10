@@ -3,7 +3,7 @@ name: agent-composer
 description: Reads the current work context and plans the optimal agent dispatch. Clarifies direction with 1-2 questions when unclear; infers and proceeds immediately when execution path is unclear. Runs an automatic recording gate after each Wave completes. Triggered by "compose agents", "which agent should I use?", "run in parallel", or "agent-composer".
 user-invocable: true
 allowed-tools: ["Read", "Bash", "Glob", "Grep"]
-model: opus
+model-note: session-inherit — Sonnet base is first-class (sonnet_floor_doctrine.md); depth-critical judged steps route to dispatch (opus agent / cross-family sidecar, consent-gated), never a substrate requirement
 ---
 
 # agent-composer — Agent Composition Layer

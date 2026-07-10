@@ -3,7 +3,7 @@ name: install-wizard
 description: Run when setting up a new project for the first time or onboarding after installing FH (first setup, initial configuration, onboarding start, configure project, help me set up). Performs environment detection → gap diagnosis → item-by-item suggestions → user approval → execution → acceleration baseline setup in sequence. Use --dry-run to output diagnosis report only (bg dispatch compatible).
 user-invocable: true
 allowed-tools: ["Read", "Write", "Bash", "Glob", "Grep", "Edit"]
-model: opus
+model-note: session-inherit — Sonnet base is first-class (sonnet_floor_doctrine.md); depth-critical judged steps route to dispatch (opus agent / cross-family sidecar, consent-gated), never a substrate requirement
 category: Composability Gate
 ---
 
