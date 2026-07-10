@@ -136,4 +136,8 @@ fi
   echo "it fires even when the first user message is a task. Do not treat 'pulled' as 'read'."
 } 2>/dev/null
 
+# 6) Substrate-jump detection (structure-enforcing — version drift lives outside any session's
+#    context boundary; silent when nothing changed). Detector, never a gate.
+[ -x "$FH/scripts/substrate_jump_detector.sh" ] && bash "$FH/scripts/substrate_jump_detector.sh" "$FH" 2>/dev/null
+
 exit 0

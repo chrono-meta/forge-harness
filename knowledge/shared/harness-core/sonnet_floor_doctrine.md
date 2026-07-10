@@ -90,6 +90,27 @@ Sonnet medium-high effort, not merely available-if-a-human-answers. Two rules ma
   surface-class rules and do not scale down with tier — a Sonnet loop gets the same hard walls,
   not softer ones.
 
+## What survives model evolution — the durable-mechanization criterion (operator insight, 2026-07-10)
+
+Sidecar dispatch is the *cheap* way to chase LLM evolution (swap the engine, keep the harness), and
+internal mechanization could chase capability gaps forever — so which mechanization is worth
+building? Split by **what the mechanization compensates for**:
+
+| Class | Compensates for | Fate as models improve | Examples |
+|---|---|---|---|
+| **Capability-compensating** | the model being *weak* — reasoning depth, salience, attention discipline | **evaporates** — scaffolding to shed (`[[feedback_frontier_substrate_self_adaptation]]`); build only on measured misses, keep cheap to delete | salience splits · turn-0 imperatives · word-boundary grep discipline (partially — see note) |
+| **Structure-enforcing** | what a *perfect* model still cannot see or is still incentivized to fumble: information outside the context boundary (cross-machine state, version drift), ordering invariants across ephemeral contexts, ship-pressure optimism, irreversible surfaces | **permanent** — model evolution never fixes "the card lives on another machine" or "the runner controls what the hook sees" | STATUS map (machine boundary) · card-last check (ordering invariant) · substrate-jump detector (out-of-context drift) · fail-closed gates · consent floors |
+
+**The test question when proposing mechanization: "would an infinitely strong model still miss
+this?"** Yes → structure-enforcing, build it, it compounds. No → capability-compensating, prefer
+dispatch first, mechanize only on a measured miss, and tag it shed-eligible (the substrate loop's
+shed/advance pass is its consumer).
+
+*Note on determinism*: some capability-class tools survive anyway because they are **cheaper and
+deterministic** (a grep never has an attention lapse and costs nothing) — determinism is a second
+survival axis, orthogonal to capability. A deterministic check that replaces a per-session judged
+step keeps paying even when the model no longer needs the help.
+
 ## Done When (for any change citing this doctrine)
 
 - No availability-gate remains in the touched surface *(check class: measured — tier-reference

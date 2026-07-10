@@ -33,7 +33,12 @@ Code native and **deliberately does not build a messaging gateway or a self-runn
 reach is routed via a messaging MCP (`recommended_plugins.md`), and recurring automation stays a
 **proposal/cadence surface, not a daemon** (`self_evolution_routine.md` §8). This is a chosen boundary,
 not a missing feature — FH's differentiator is *governed* self-evolution (the 4-axis gate), and a
-delivery channel adds reach without adding governance. (Recorded 2026-06-27 from the Hermes Agent
+delivery channel adds reach without adding governance. **The positive half of the boundary
+(operator doctrine, 2026-07-10): development's birthplace is code and the terminal — FH builds no UI
+*because* it is terminal-native, and in exchange every non-UI axis (gates, loops, tier-floor
+reliability, token/speed efficiency, cross-harness routing) must be strong. That strength is the
+condition that lets a UI-less meta-harness embrace other harnesses and orchestrate them at
+optimized token cost and speed — the boundary is an identity, funded by excellence everywhere else.** (Recorded 2026-06-27 from the Hermes Agent
 sister-asset cross-audit, `tracks/_contrib/session_2026_06_27_hermes-agent-nous-self-improving-cross-audit.md`.)
 
 ---

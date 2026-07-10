@@ -780,7 +780,8 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc.)
 > when executing that close step.
 
 **Card-last guard**: ①–④-c (incl. ①-b open-PR sweep, ④-c handoff lifecycle) must ALL complete before
-⑤ runs. Any new information produced during ①–④ (new commits from a merged self-PR, model changes,
+⑤ runs. **Mechanical floor**: `bash scripts/session_close_check.sh` before ⑥ —
+exit 1 (card-last violated / required close artifact missing) blocks the push step until fixed. Any new information produced during ①–④ (new commits from a merged self-PR, model changes,
 new findings, a carry item flipped to DONE) feeds INTO ⑤ — card is never written mid-sequence and
 then left open for more work to accumulate after it.
 
