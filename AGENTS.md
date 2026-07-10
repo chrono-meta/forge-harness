@@ -138,8 +138,8 @@ echo "Apply the following skill to the artifact below." | \
 
 | Tier | Definition | Examples |
 |---|---|---|
-| **M1 — Full** | All phases run without CC-native dependencies — no Stop hook, no `.claude/agents/` dispatch, no `/model` | `token-budget-gate`, `asset-placement-gate`, `phantom-quench`, `deep-clarify`, `deliberation`, `convergence-loop` |
-| **M2 — Partial** | Core workflow runs; CC-native phases require manual adaptation or skip | `steel-quench` (Wave 1–3 ✅; quench-challenger agent = manual), `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop` (git scan phase ✅; PR auto-proposal = manual) |
+| **M1 — Full** | All phases run without CC-native dependencies — no Stop hook, no `.claude/agents/` dispatch, no `/model` | `token-budget-gate`, `asset-placement-gate`, `phantom-quench`, `deep-clarify`, `convergence-loop` |
+| **M2 — Partial** | Core workflow runs; CC-native phases require manual adaptation or skip | `deliberation` (Mediator/Jury Agent steps = manual), `steel-quench` (Wave 1–3 ✅; quench-challenger agent = manual), `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop` (git scan phase ✅; PR auto-proposal = manual) |
 | **M3 — CC-only** | Requires CC Stop hook or session-scoped agent dispatch; methodology reference only | `goal-quench` (Phase 3 Stop hook), `hub-cc-pr-reviewer` (CC session context), `install-wizard` (settings.json write) |
 
 **M2 adaptation pattern**: when a step references `Agent(subagent_type=...)` or a slash command, substitute with `fh-run` (preferred) or a direct `codex exec` call reading the sub-agent's SKILL.md — same workflow, different runtime.

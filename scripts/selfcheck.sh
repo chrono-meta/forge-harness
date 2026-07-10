@@ -25,6 +25,11 @@ for f in bin/*.js; do
   check "node --check $f" node --check "$f"
 done
 
+# Codex adapter drift: the thin Codex runtime must keep reading canonical FH
+# skill/agent surfaces without silently accepting Claude-native primitives as
+# Codex-native.
+check "fh-codex-doctor --strict" bash -c 'node bin/fh-codex-doctor.js --strict >/dev/null'
+
 # Bash surface: npm-shipped scripts + local bin wrappers + gate-chain infra
 for f in scripts/*.sh bin/fh-gate bin/fh-run bin/fh-goal \
          templates/regression_guard.sh templates/temper_check.sh templates/predelete_check.sh templates/.git-hooks/pre-commit; do
@@ -43,26 +48,28 @@ if ! bash scripts/count_check.sh; then
   fail=1
 fi
 
-# Referenced-path existence: backtick-quoted repo-relative file refs in the always-loaded
-# governance surface (CLAUDE.md + .claude/rules/*.md) must exist. Phantom-reference class
-# recurred N>=3 in the 2026-06-11 audit window (operations.md _scanner.sh, claude-chrono path,
-# stale templates ref) — instrument-not-habit. Globs/placeholders/{vars} are excluded by the
-# filter; tracks/ is machine-local and deliberately out of scope. Gitignored refs (e.g.
-# `.claude/settings.json` named in prose *about* gitignored files) are skipped — they exist
-# locally but not on a fresh clone, and "must exist" here means "must ship".
-while IFS= read -r p; do
-  if git check-ignore -q "$p" 2>/dev/null; then
-    echo "SKIP  ref-path (gitignored): $p"
-  elif [ -f "$p" ]; then
-    echo "PASS  ref-path: $p"
-  else
-    echo "FAIL  ref-path: $p — referenced in CLAUDE.md/.claude/rules but missing"
-    fail=1
-  fi
-done < <(grep -hoE '\`[^\` ]+\`' CLAUDE.md .claude/rules/*.md 2>/dev/null \
-  | sed 's/\`//g' \
-  | grep -E '^(knowledge|templates|scripts|docs|plugins|\.claude)/[^*{}<>$]+\.(md|sh|ya?ml|jsonc|json)$' \
-  | sort -u)
+# Referenced-path existence is a source-tree check. The npm package intentionally
+# ships a narrower runtime surface, so package-mode selfcheck skips this section.
+if [ -d ".claude/rules" ]; then
+  # Backtick-quoted repo-relative file refs in the always-loaded governance surface
+  # (CLAUDE.md + .claude/rules/*.md) must exist. Phantom-reference class recurred
+  # N>=3 in the 2026-06-11 audit window — instrument-not-habit.
+  while IFS= read -r p; do
+    if git check-ignore -q "$p" 2>/dev/null; then
+      echo "SKIP  ref-path (gitignored): $p"
+    elif [ -f "$p" ]; then
+      echo "PASS  ref-path: $p"
+    else
+      echo "FAIL  ref-path: $p — referenced in CLAUDE.md/.claude/rules but missing"
+      fail=1
+    fi
+  done < <(grep -hoE '\`[^\` ]+\`' CLAUDE.md .claude/rules/*.md 2>/dev/null \
+    | sed 's/\`//g' \
+    | grep -E '^(knowledge|templates|scripts|docs|plugins|\.claude)/[^*{}<>$]+\.(md|sh|ya?ml|jsonc|json)$' \
+    | sort -u)
+else
+  echo "SKIP  ref-path (package mode: .claude/rules absent)"
+fi
 
 if [ "$fail" -ne 0 ]; then
   echo "SELFCHECK: FAIL"

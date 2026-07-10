@@ -2,7 +2,7 @@
 
 > Status: **beta**. This document is beta-removal condition #2 (see `AGENTS.md` → Codex Compatibility → Beta removal conditions). It lists what works, what breaks, and what to expect when applying forge-harness (FH) methodology through OpenAI Codex (`codex exec`) instead of Claude Code.
 
-FH is a 2-layer system: a **methodology layer** (`tracks/`, `knowledge/`, `SKILL.md` docs) that is model-agnostic, and an **automation layer** (Claude Code hooks, `.claude/agents/`, `/model`, settings.json) that is Claude-native. Codex users run the methodology layer by reading `SKILL.md` files directly; automation steps either run through runtime adapters (`fh-gate`, `fh-run`) or require manual substitution.
+FH is a 2-layer system: a **methodology layer** (`tracks/`, `knowledge/`, `SKILL.md` docs) that is model-agnostic, and an **automation layer** (Claude Code hooks, plugin-channel agents under `plugins/*/agents/`, field-project overrides under `.claude/agents/`, `/model`, settings.json) that is Claude-native. Codex users run the methodology layer by reading `SKILL.md` files directly; automation steps either run through runtime adapters (`fh-gate`, `fh-run`) or require manual substitution.
 
 ## Validated invocation pattern
 
@@ -65,6 +65,20 @@ Resolution order:
 | `--agent plugin:name` | `plugins/plugin/agents/name.md` first |
 | `--unit path` | explicit file path |
 
+### `fh-codex-doctor`
+
+`fh-codex-doctor` is the drift detector for the thin Codex adapter boundary. It reads the canonical
+FH skill/agent files plus the documented M1/M2/M3 tier table, then reports which surfaces are
+Codex-native, adapter-required, Claude-native, or unclassified:
+
+```bash
+npx --package @chrono-meta/fh-gate fh-codex-doctor --strict
+```
+
+Use it before promoting a new Codex automation path. Unknown Claude-native primitives fail closed as
+"manual adaptation required" instead of being treated as compatible by default. When run from an FH
+checkout it scans the current working tree; outside a checkout it scans the installed package.
+
 ### `fh-goal`
 
 Codex has native goal/session features. Use those directly when they fit. `fh-goal` is not a replacement for Codex goal; it is a non-interactive wrapper for "run backend task, then run FH governance on changed files":
@@ -92,7 +106,7 @@ Both ran end-to-end with no Claude-native dependency. The M1 tier claim holds fo
 When `codex exec` runs **inside this repo**, FH's Claude-native git/Stop/PostToolUse hooks attempt to fire and emit `hook: Stop Failed` / `hook: PostToolUse Failed` lines interleaved with output. These are **harmless to the skill result** — the skill's verdict is produced correctly — but they are visible noise. Running from a directory **without** FH's `.claude/settings.json` (the normal Codex-user case) avoids them entirely. Filter with `grep -vE "^hook:"` if needed.
 
 ### 2. M2 skills need manual agent substitution
-M2 skills (`steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop`) have a core workflow that runs under Codex, but any step that dispatches `Agent(subagent_type=...)` or a slash command must be replaced by `fh-run` or a direct `codex exec` call reading the sub-agent's `SKILL.md`/agent `.md` — same workflow, different runtime (the "M2 adaptation pattern" in `AGENTS.md`). Example: `steel-quench` Waves 1–3 run; the `quench-challenger` agent step becomes `fh-run --agent fh-commons:quench-challenger`.
+M2 skills (`deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop`) have a core workflow that runs under Codex, but any step that dispatches `Agent(subagent_type=...)` or a slash command must be replaced by `fh-run` or a direct `codex exec` call reading the sub-agent's `SKILL.md`/agent `.md` — same workflow, different runtime (the "M2 adaptation pattern" in `AGENTS.md`). Example: `steel-quench` Waves 1–3 run; the `quench-challenger` agent step becomes `fh-run --agent fh-commons:quench-challenger`.
 
 ### 3. M3 skills do not run automatically under Codex
 M3 skills (`goal-quench` Phase-3 Stop hook, `hub-cc-pr-reviewer` CC session context, `install-wizard` settings.json write) require Claude-Code-native runtime and are **methodology reference only** under Codex unless a dedicated adapter exists. Use Codex's native goal/session features for goal control, and use `fh-gate` after completion for FH quality gating.
@@ -107,8 +121,8 @@ The sibling pattern for Gemini is `gemini -p "$(cat <skill+artifact>)"`. Outside
 
 | Tier | Under Codex | Action |
 |---|---|---|
-| **M1** | Runs fully | `cat SKILL.md artifact \| codex exec -m gpt-5.5 -` |
-| **M2** | Core runs; agent/slash steps via adapter | Substitute each dispatch with `fh-run` or a direct `codex exec` on the sub-agent's `.md` |
+| **M1** | Runs fully (`token-budget-gate`, `asset-placement-gate`, `phantom-quench`, `deep-clarify`, `convergence-loop`) | `cat SKILL.md artifact \| codex exec -m gpt-5.5 -` |
+| **M2** | Core runs; agent/slash steps via adapter (`deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop`) | Substitute each dispatch with `fh-run` or a direct `codex exec` on the sub-agent's `.md` |
 | **M3** | Does not run automatically | Use native Codex session features where available; otherwise read as methodology reference or use a dedicated adapter |
 
 ## Beta removal — remaining (external-blocked)

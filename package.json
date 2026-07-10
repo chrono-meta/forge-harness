@@ -20,10 +20,11 @@
   "bin": {
     "fh-gate": "bin/fh-gate.js",
     "fh-run": "bin/fh-run.js",
-    "fh-goal": "bin/fh-goal.js"
+    "fh-goal": "bin/fh-goal.js",
+    "fh-codex-doctor": "bin/fh-codex-doctor.js"
   },
   "scripts": {
-    "prepare": "chmod +x bin/fh-gate.js bin/fh-run.js bin/fh-goal.js scripts/fh-gate.sh scripts/fh-run.sh scripts/fh-goal.sh",
+    "prepare": "chmod +x bin/fh-gate.js bin/fh-run.js bin/fh-goal.js bin/fh-codex-doctor.js scripts/fh-gate.sh scripts/fh-run.sh scripts/fh-goal.sh",
     "test": "bash scripts/selfcheck.sh",
     "prepublishOnly": "bash scripts/selfcheck.sh && bash scripts/public_surface_scan_files.sh",
     "release": "bash scripts/public_surface_scan_files.sh && npm publish"
@@ -45,10 +46,13 @@
   },
   "files": [
     "AGENTS.md",
+    ".claude-plugin/marketplace.json",
     "CATALOG.md",
     "CHEATSHEET.md",
     "CLAUDE.md",
+    ".claude/registry/agent_cards.json",
     "docs/CONTRIBUTING.md",
+    "bin/fh-codex-doctor.js",
     "bin/fh-gate.js",
     "bin/fh-run.js",
     "bin/fh-goal.js",
@@ -57,9 +61,13 @@
     "scripts/fh-gate.sh",
     "scripts/fh-run.sh",
     "scripts/fh-goal.sh",
+    "scripts/count_check.sh",
     "scripts/selfcheck.sh",
+    "templates/local_fh_context.md",
+    "plugins/fh-meta/.claude-plugin/plugin.json",
     "plugins/fh-meta/skills",
     "plugins/fh-meta/agents",
+    "plugins/fh-commons/.claude-plugin/plugin.json",
     "plugins/fh-commons/skills",
     "plugins/fh-commons/agents",
     "knowledge/shared/harness-core",

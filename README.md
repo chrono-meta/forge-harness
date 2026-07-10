@@ -95,7 +95,7 @@ forge-harness is structured as **two distinct layers**:
 | Layer | Contents | AI compatibility |
 |---|---|---|
 | **Methodology layer** | `tracks/`, `knowledge/`, `SKILL.md` docs, session protocols | Any AI model |
-| **Automation layer** | `.claude/agents/`, hooks, slash commands, `CLAUDE.md` rules | Claude Code only |
+| **Automation layer** | `plugins/*/agents/` (FH agents), `.claude/agents/` (field-project overrides), hooks, slash commands, `CLAUDE.md` rules | Claude Code only |
 
 The methodology layer is the portable core — persistent hub, accumulating learnings, curating cross-project knowledge. The automation layer makes it frictionless when running Claude Code.
 
@@ -148,6 +148,17 @@ For direct skill or agent execution outside Claude Code, use `fh-run`:
 FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run --skill phantom-quench --file docs/foo.md
 FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run --agent fh-commons:quench-challenger --file plugins/fh-meta/skills/foo/SKILL.md
 ```
+
+To check whether a changed FH skill/agent surface still has a clean Codex adapter path, run:
+
+```bash
+npx --package @chrono-meta/fh-gate fh-codex-doctor --strict
+```
+
+`fh-codex-doctor` scans the canonical skill/agent registry and reports which units are Codex-native,
+adapter-required, Claude-native, or unclassified. It is a drift detector for the thin adapter boundary;
+it does not try to clone the Claude Code automation layer. When run from an FH checkout it scans the
+current working tree; outside a checkout it scans the installed package.
 
 For Codex-primary work, keep using Codex's native goal/session features when available. `fh-goal` is only a portable wrapper for one-off non-interactive runs that should be followed by FH governance:
 
