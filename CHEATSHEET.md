@@ -197,6 +197,7 @@ FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-gate   # Codex backend (d
 # Run a skill or agent doc through a backend, outside Claude Code
 npx --package @chrono-meta/fh-gate fh-run --skill <name>
 npx --package @chrono-meta/fh-gate fh-goal "<goal text>"      # goal runner
+npx --package @chrono-meta/fh-gate fh-codex-doctor --strict  # Codex adapter drift check
 ```
 
 | Knob | Values | Effect |
