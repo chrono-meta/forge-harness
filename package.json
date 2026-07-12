@@ -72,6 +72,7 @@
     "plugins/fh-commons/agents",
     "knowledge/shared/harness-core",
     "knowledge/shared/dialogue",
+    "knowledge/shared/rules",
     "README.md",
     "README.ko.md",
     "README.zh.md",

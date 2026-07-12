@@ -16,7 +16,7 @@ load: on-demand
 
 ```bash
 # Priority 1: Read FH auto_project_mapping.md
-cat .claude/rules/auto_project_mapping.md 2>/dev/null | grep -E "path:|project:" | head -10
+cat knowledge/shared/rules/auto_project_mapping.md 2>/dev/null | grep -E "path:|project:" | head -10
 
 # Priority 2: Auto-discover git repos in common development directories
 find "$HOME/projects" "$HOME/dev" "$HOME/workspace" "$HOME/PycharmProjects" \

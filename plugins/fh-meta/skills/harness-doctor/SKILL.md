@@ -78,8 +78,20 @@ confirms the gap*, never a verdict the report emits on its own; surface each gap
 | 15+ `##` sections in CLAUDE.md | S-tier warning |
 | SKILL.md > 300 lines AND no `SKILL_detail.md` | S-tier — propose `/salience-splitter` (governance-semantic split, not compression) |
 | Rules files unreferenced in CLAUDE.md | R-tier |
+| Always-loaded footprint (CLAUDE.md + every `.claude/rules/*.md` lacking `paths:` frontmatter) > 40k chars | S-tier — relocate detail rules to a non-loaded dir (e.g. `knowledge/shared/rules/`), pointers stay in CLAUDE.md |
+| Always-loaded footprint > 80k chars | M-tier — same prescription, mandatory |
+| **Pointer-illusion**: a CLAUDE.md "detail/detailed procedure" pointer whose target is itself an always-loaded `.claude/rules/*.md` | S-tier — the split saves zero context (rules/ auto-loads regardless); move the target out of auto-load, keep the pointer |
 | weekly_audit 14~30 days elapsed | S-tier |
 | weekly_audit 30+ days elapsed | M-tier |
+
+Always-loaded + pointer-illusion checks are mechanical (found 2026-07-12 — FH itself shipped ~50k chars of rules/ behind "detail pointers" that saved nothing; the meta-harness blind spot this row closes):
+
+```bash
+# always-loaded footprint (chars): CLAUDE.md + rules files with no paths: frontmatter
+T=$(wc -c < CLAUDE.md 2>/dev/null); for f in .claude/rules/*.md; do [ -f "$f" ] || continue; head -5 "$f" | grep -q '^paths:' || T=$((T + $(wc -c < "$f"))); done; echo "always-loaded: $T chars"
+# pointer-illusion: CLAUDE.md pointers targeting still-auto-loaded rules files
+grep -oE '\.claude/rules/[a-z_]+\.md' CLAUDE.md | sort -u | while read p; do [ -f "$p" ] && echo "ILLUSION: $p (pointed-to AND always-loaded)"; done
+```
 
 ### Step 3-L. Language Lint (`--lint` mode only)
 

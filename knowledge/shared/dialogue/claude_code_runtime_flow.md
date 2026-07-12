@@ -167,4 +167,4 @@ Throughout the session, when conversation signals match the table in CLAUDE.md:
 - `ai_dialogue_playbook.md` — The "should" layer (principles)
 - `harness_6axis_framework.md` — Full 6-axis decision tree
 - `hub_compounding_loop.md` — Session close → harvest-loop → weekly cycle
-- `.claude/rules/operations.md` — Sub-agent invocation log format + weekly scanner
+- `knowledge/shared/rules/operations.md` — Sub-agent invocation log format + weekly scanner

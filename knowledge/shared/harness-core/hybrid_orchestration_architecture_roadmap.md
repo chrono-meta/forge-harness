@@ -118,7 +118,7 @@ harness probes the live environment on-the-fly via the Tier 1→2→3 protocol a
 path. All probes failing → safe descent to Tier 3 (main model handles it).
 
 **5.3 Zero-Config standalone self-reliance** — the key requirement for **Mode C** (plugin/skill
-copied without the full framework, see `.claude/rules/modes_and_value.md`). With no
+copied without the full framework, see `knowledge/shared/rules/modes_and_value.md`). With no
 `config.json`, the module must **not error** — it switches to Zero-Config standalone mode and
 JIT-probes for whatever local tools exist, then proceeds quietly. Falls back to Tier 3 if none.
 
@@ -191,6 +191,6 @@ component tagged ❌ Proposed above so this roadmap can never be mistaken for cu
 
 - `knowledge/shared/harness-core/multi_model_sidecar_strategy.md` — shipped sidecar mechanism + fallback chain (this roadmap extends, does not replace, it)
 - `plugins/fh-meta/skills/install-wizard/SKILL.md` — current install behavior (the topology extension would build on this)
-- `.claude/rules/modes_and_value.md` — Mode C (plugin/skill-only) that Zero-Config self-reliance targets
-- `.claude/rules/operations.md` — sub-agent boundary rules the built-in-injection item must respect
+- `knowledge/shared/rules/modes_and_value.md` — Mode C (plugin/skill-only) that Zero-Config self-reliance targets
+- `knowledge/shared/rules/operations.md` — sub-agent boundary rules the built-in-injection item must respect
 - `plugins/fh-meta/skills/frontier-digest/SKILL.md` — live source for current model capability/benchmark comparison (do not freeze numbers here)

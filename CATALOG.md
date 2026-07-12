@@ -89,7 +89,7 @@ Cloud session (Mode D, ext): new field template — external-MCP tool gating wit
 - Decision: prefer host-native per-tool permission config as enforcement; this template = what-to-gate + portable fallback. §6 install row is conditional (MCP present); the proactive mount-intent trigger is the load-bearing path.
 
 ### 2026-06-11 | forge-harness | #identity-marker, #door-skeleton, #target-tier-sim, #below-floor-consumer, #false-control-kill
-**File:** CLAUDE.md §Active Onboarding (+ fh_detail_protocols.md, scripts/below_floor_scan.sh, .claude/rules/operations.md)
+**File:** CLAUDE.md §Active Onboarding (+ fh_detail_protocols.md, scripts/below_floor_scan.sh, knowledge/shared/rules/operations.md)
 Cloud session (Mode D): 🐿️ marker folded into the returning-user door skeleton — one salience unit with the menu, closing the sonnet-sim marker-drop residual (`fh_signal_2026-06-11`); verified by blind sonnet Agent sim PASS (verification tier = failure tier; in-session model-pinned dispatch available in cloud, no headless fallback needed). 6/15 billing one-line amendment rode the same CLAUDE.md edit (no churn commit). below_floor_scan.sh ships as the standing consumer the pre-commit hook promised ("weekly audit re-queues below-floor markers") but never had — resolution via `floor-rerun:`/`floor-writeoff:` marker appends, wired as weekly Phase 1.5 step 2.
 - Decision: ack rubber-stamp (card item 4) closed via route-around — build the re-run consumer, leave the ack untouched (per opus-challenger verdict on the reverted regex attempt).
 - Decision: opus challenger PASS 0S+3B — marker-append/hook-collision replicated CLEAN; P9 check: "builds the control, not paper-over".
@@ -161,7 +161,7 @@ Backlog cleanup (cloud session 2): goal-quench phantom vocab fixed — "steel-qu
 - Open: npm 1.4.8 republish ships plugin.json/README/SKILL.md count+phantom fixes (folded into the open laptop handoff).
 
 ### 2026-06-10 | forge-harness | #credit-economy, #operator-intake, #lightweight-triage, #frontier-digest
-**File:** plugins/fh-meta/skills/frontier-digest/SKILL.md (+ .claude/rules/sister_asset_protocol.md)
+**File:** plugins/fh-meta/skills/frontier-digest/SKILL.md (+ knowledge/shared/rules/sister_asset_protocol.md)
 Credit-economy engine run #2 formalization (operator-approved; this session = manual run #2: 7 walled sources → 8 audits → 15 same-day gate-passed imports, 2 human corrections): R1 — frontier-digest Step 0.5 operator-intake asks for walled-channel sources (YouTube/LinkedIn/X, machine-403) on cadence runs only, skippable, try wall-bypass (WebSearch + secondary) first. R2 — sister protocol lightweight path: dedup-hit/no-increment sources get a one-paragraph entry, full cross-audits reserved for A/B-tier.
 - Decision: the operator stays the wide-net sensor for walled channels by design (human = scarce oracle), the machine owns endurance (triage→gate cycles); intake cost discipline keeps the wide net wide.
 - Follow-up (same day): Step 0.5 video-harvest ladder — Tier 1 sidecar (codex / Gemini-route, agentic = approval-mode first) → Tier 3 Claude+yt-dlp transcript → operator floor; laptop verification trio handed off. First applied instance of the capability-probe principle.
@@ -187,7 +187,7 @@ CC built-ins utilization imports (operator-approved; video claims verified 9/13 
 - Decision: built-in beats plugin install at ~80% coverage; FH native beats built-in only when it adds governance.
 
 ### 2026-06-10 | forge-harness | #ingest-gate, #contradiction-scan, #crossref-lint, #llm-wiki, #karpathy
-**File:** .claude/rules/sync_push_protocols.md (+ harness-doctor SKILL.md, probes.md)
+**File:** knowledge/shared/rules/sync_push_protocols.md (+ harness-doctor SKILL.md, probes.md)
 Karpathy LLM-Wiki sister-audit imports (operator-approved; convergence case n=5, citable primary source): I1 — contradiction scan as Sync step 3 (ingest gate, judged + verify-bidirectional pair): new knowledge grepped against existing claims before indexing, conflicts flagged in both files, old-claim removal is HITL. I2 — harness-doctor L4 knowledge cross-ref lint: no CATALOG entry = S-tier index orphan, no inbound ref = R-tier orphan page. Probes G-SYNC-01/G-LINT-01 added (30 total).
 - Decision: scale escape (W1) deliberately NOT built — watch-item with trigger (CATALOG hundreds of entries / repeated search misses); operator-preferred first remedy = salience-splitter-style CATALOG split-mapping, RAG hybrid only after that.
 - Open: npm republish (harness-doctor SKILL.md shipped) — folded into the open 1.4.8 handoff.
@@ -283,7 +283,7 @@ PR #64: Added scope-driven sidecar routing (Step D) to goal-quench Phase 1.5: ta
 - Decision: overhead multiplier documented as empirical calibration constant; sidecar routing is scope-signal-driven, not mode-locked
 
 ### 2026-06-03 | forge-harness | #goal-quench, #non-coercive, #companion-store, #ephemeral-handoff
-**File:** .claude/rules/modes_and_value.md
+**File:** knowledge/shared/rules/modes_and_value.md
 Formalized two non-coercive guidances: companion-store recommendation conditioned on accumulating context into meta-harness without a local fork; ephemeral-environment handoff rule made mode-agnostic (Mode D → companion-store handoff/, all others → committed note or PR comment in working repo).
 - Decision: single-source preserved — rule lives in public mirror; companion store holds only outputs, never a rule copy
 

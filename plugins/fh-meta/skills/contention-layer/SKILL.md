@@ -1,6 +1,6 @@
 ---
 name: contention-layer
-description: When two skills, agents, or independent research tracks produce conflicting verdicts on the same output, reads the conflict as a signal rather than an error and harvests new skill candidates or insight deltas. Also accepts a Dual-Track Grounding conflict — an open-frontier research track vs an internally-grounded recall track disagreeing — as a research-layer partial analogue of Non-Model Ground (the grounded track is a time-decorrelated anchor, not a non-model one). Routes skills born from contention to fh-meta if they are meta-layer, to commons plugin if project-agnostic, or to field harvest if domain-specific. Triggered by "two skills conflict", "they produce different conclusions", "contention-layer", "contention harvest", "open vs grounded contradiction", "research tracks disagree".
+description: When two skills, agents, or independent research tracks produce conflicting verdicts on the same output, reads the conflict as a signal rather than an error and harvests new skill candidates or insight deltas — including a Dual-Track Grounding conflict (open-frontier track vs internally-grounded recall track disagreeing). Routes skills born from contention to fh-meta (meta-layer), the commons plugin (project-agnostic), or field harvest (domain-specific). Triggered by "two skills conflict", "they produce different conclusions", "contention-layer", "contention harvest", "open vs grounded contradiction", "research tracks disagree".
 user-invocable: true
 allowed-tools: ["Read", "Bash", "Grep", "Write"]
 model: sonnet

@@ -1,6 +1,6 @@
 ---
 name: harvest-loop
-description: A self-evolution pipeline that runs automatically after field sessions end. field-harvest (pattern extraction) → contention-layer (collision signals) → [Agent(subagent_type="challenger") + persona-innovator parallel] → synthesizer (challenger/innovator collision harvest) → Critic isolated Agent (SAGE automated critique) → harness-doctor (health check) → verify-bidirectional (consistency validation) → curator (skill lifecycle management) — 8 steps. Session learnings are automatically absorbed back into the FH ecosystem so the harness evolves on its own. In the main development environment, runs automatically at session end. For external FH users, proposes execution first. Triggered by "session harvest", "learning absorption", "fh evolution", or "harvest-loop". (The phrase "run the pipeline" is ceded to pipeline-conductor to avoid a trigger collision — for end-to-end verification sweeps use pipeline-conductor.)
+description: An 8-step self-evolution pipeline that runs after field sessions end (field-harvest → contention-layer → challenger + persona-innovator → synthesizer → Critic agent → harness-doctor → verify-bidirectional → curator), absorbing session learnings back into the FH ecosystem. Runs automatically at session end in the main dev environment; proposes execution first for external users. Triggered by "session harvest", "learning absorption", "fh evolution", or "harvest-loop". (The phrase "run the pipeline" is ceded to pipeline-conductor — use that for end-to-end verification sweeps.)
 user-invocable: true
 allowed-tools: ["Read", "Write", "Bash", "Grep", "Glob", "Agent"]
 model-note: session-inherit — Sonnet base is first-class (sonnet_floor_doctrine.md); depth-critical judged steps route to dispatch (opus agent / cross-family sidecar, consent-gated), never a substrate requirement
@@ -40,7 +40,7 @@ Step 0 (Regression Guard) + Step 1 (field-harvest) + Step 2 (contention-layer) +
 Session end
     │
 [Step 0-a] FH asset change detection → auto-quench
-    │  git diff --name-only HEAD | grep -E "SKILL\.md|\.claude/rules/|templates/|CLAUDE\.md"
+    │  git diff --name-only HEAD | grep -E "SKILL\.md|\.claude/rules/|knowledge/shared/rules/|templates/|CLAUDE\.md"
     │  → 1+ FH assets changed: run full 3-axis gate
     │  → No changes: proceed to Step 0-b immediately
     │

@@ -200,7 +200,7 @@ Output the confirmation block (file path + commit hash + push offer — format i
 
 ## Step 5-B.1. UAP Update (Operational Adaptation Loop)
 
-> Rule: `.claude/rules/operational_adaptation.md`
+> Rule: `knowledge/shared/rules/operational_adaptation.md`
 
 At field-session close, update the **User Adaptation Profile** (`tracks/_meta/user_adaptation_profile.md`, local/gitignored — skip silently if absent or in an ephemeral/cloud session):
 

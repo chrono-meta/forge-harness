@@ -2,7 +2,7 @@
 # FH 4-Axis Gate Pre-Commit Hook
 #
 # Blocks git commit when FH assets are staged unless all required axes have passed.
-# Full gate (all 4 axes): SKILL.md · .claude/rules/ · templates/ · CLAUDE.md
+# Full gate (all 4 axes): SKILL.md · .claude/rules/ · knowledge/shared/rules/ · templates/ · CLAUDE.md
 #                         + substantive knowledge/ · docs/*.md · AGENTS.md
 # Lightweight gate (Axis 1+4 only): CATALOG.md · tracks/ · prose-only carve-out docs
 #
@@ -102,11 +102,11 @@ STAGED=$(git diff --cached --name-only 2>/dev/null || true)
 # inheritance #111/#117). If pure-doc agent .md edits over-friction in practice, add a substantive
 # carve-out like CARVEOUT below.
 HEAVY=$(echo "$STAGED" \
-  | grep -E "(SKILL\.md|\.claude/rules/|templates/|CLAUDE\.md|^scripts/.*\.sh$|^plugins/[^/]+/agents/.*\.md$|^\.claude/agents/.*\.md$)" || true)
+  | grep -E "(SKILL\.md|\.claude/rules/|^knowledge/shared/rules/|templates/|CLAUDE\.md|^scripts/.*\.sh$|^plugins/[^/]+/agents/.*\.md$|^\.claude/agents/.*\.md$)" || true)
 
 # Carve-out candidates: knowledge/ docs, docs/*.md, AGENTS.md. Heavy only if substantive.
 CARVEOUT=$(echo "$STAGED" \
-  | grep -E "(^knowledge/.*\.md$|^docs/.*\.md$|(^|/)AGENTS\.md$)" || true)
+  | grep -E "(^knowledge/.*\.md$|^docs/.*\.md$|(^|/)AGENTS\.md$)" | grep -v "^knowledge/shared/rules/" || true)
 
 # Always-light by path.
 LIGHT=$(echo "$STAGED" \

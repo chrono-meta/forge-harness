@@ -206,4 +206,4 @@ constellations + the convergent/divergent split — all at prose scale, no new s
 - `crucible_mode.md` — this doc was itself forged crucible-style (operator seed → literature melt → grounded rebirth)
 - `memory-hygiene` (skill) — staleness pass; link-evolution (A-MEM) and the §D.8 store-side injection filter live here
 - `plugins/fh-meta/agents/persona-innovator` (the fh-meta agent) — the divergent-mode consumer this substrate unlocks
-- `.claude/rules/operational_adaptation.md` — the UAP is itself intent-recalled; shared tier-dependence rationale
+- `knowledge/shared/rules/operational_adaptation.md` — the UAP is itself intent-recalled; shared tier-dependence rationale

@@ -80,11 +80,11 @@ fi
 
 # Discover changed files
 if [ "$STAGED_MODE" -eq 1 ]; then
-  CHANGED=$(git diff --cached --name-only -- 'plugins/*/skills/*/SKILL.md' '.claude/rules/*.md' 'CLAUDE.md' 'templates/*.md' 2>/dev/null)
+  CHANGED=$(git diff --cached --name-only -- 'plugins/*/skills/*/SKILL.md' '.claude/rules/*.md' 'knowledge/shared/rules/*.md' 'CLAUDE.md' 'templates/*.md' 2>/dev/null)
 elif [ -z "$HEAD_REF" ]; then
-  CHANGED=$(git diff --name-only "$BASE_REF" -- 'plugins/*/skills/*/SKILL.md' '.claude/rules/*.md' 'CLAUDE.md' 'templates/*.md' 2>/dev/null)
+  CHANGED=$(git diff --name-only "$BASE_REF" -- 'plugins/*/skills/*/SKILL.md' '.claude/rules/*.md' 'knowledge/shared/rules/*.md' 'CLAUDE.md' 'templates/*.md' 2>/dev/null)
 else
-  CHANGED=$(git diff --name-only "$BASE_REF" "$HEAD_REF" -- 'plugins/*/skills/*/SKILL.md' '.claude/rules/*.md' 'CLAUDE.md' 'templates/*.md' 2>/dev/null)
+  CHANGED=$(git diff --name-only "$BASE_REF" "$HEAD_REF" -- 'plugins/*/skills/*/SKILL.md' '.claude/rules/*.md' 'knowledge/shared/rules/*.md' 'CLAUDE.md' 'templates/*.md' 2>/dev/null)
 fi
 
 if [ -z "$CHANGED" ]; then
