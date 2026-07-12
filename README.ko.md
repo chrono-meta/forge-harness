@@ -263,7 +263,7 @@ forge-harness는 프로젝트를 강철처럼 다룹니다 — 그리고 이 은
 `agent-composer`(디스패치를 오케스트레이션). 나머지 스킬은 필요해질 때까지 기다립니다 — 전체 목록은
 아래에.
 
-## 39 skills · 8 agents
+## 37 skills · 8 agents
 
 <details>
 <summary>전체 자산 활성화 확인</summary>
