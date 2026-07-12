@@ -122,11 +122,21 @@ Project B  ──→  connect hub in CLAUDE.md
 
 ## What makes it a harness, not a toolbox
 
-Scale is the point. A **skill, agent, or plugin** is a tool. A **harness** is a level up — a *star*:
+Start with what a harness *is for*: it reads your **intent** and forges it into a **machined form** — rules
+an AI reliably follows, or deterministic code that needs no model at all. You give intent and insight; the
+harness shapes them into something executable; you approve; it becomes machinery. The payoff is
+**less trial-and-error on the human side**: the request → feedback → regenerate loop doesn't disappear, it
+*relocates* — into the harness, run in parallel by agents and sidecars — so your time drops and your
+attention is spent only where a change is irreversible.
+
+Scale is the second point. A **skill, agent, or plugin** is a tool. A **harness** is a level up — a *star*:
 one project's tools, rules, gates, and memory bound into a single working body. **forge-harness is the
 solar system those stars live in** — it holds many harnesses in one gravity well, keeps them in orbit (a
-shared floor, no drift), and lets them evolve together instead of scattering. That is the goal it is built
-toward. In practice the gravity comes from four things:
+shared floor, no drift), and lets them evolve together instead of scattering. And the system is a
+*nursery*, not just a container: FH can run a field harness **in simulation inside its own sandbox** —
+expensive per run, cheaper in total, because the trial-and-error pools in one place and compounds — and
+when the simulation holds, it **emits** the project as an independent, specialized harness. That is the
+goal it is built toward. In practice the gravity comes from four things:
 
 **① Assemble** — FH runs a *cluster* of harnesses at optimized token cost and hands you the right one for
 the project. You don't wire up skills one by one; you get a **harness** — its plugins, skills, and agents
