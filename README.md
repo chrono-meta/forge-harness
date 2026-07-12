@@ -11,8 +11,12 @@
 </p>
 
 <p align="center">
+  <b>English</b> · <a href="README.ko.md">한국어</a> · <a href="README.zh.md">中文</a> · <a href="README.ja.md">日本語</a>
+</p>
+
+<p align="center">
   <b>Forge your Claude Code projects — pass them through, they come out faster.</b><br>
-  A practitioner's meta-harness: it raises each project's <b>floor</b> (harness-ify the setup)<br>and <b>ceiling</b> (accelerate the work), then compounds the gains across your whole portfolio.
+  A practitioner's <b>meta-harness</b> — the solar system your project harnesses live in.<br>It raises each project's <b>floor</b> (harness-ify the setup) and <b>ceiling</b> (accelerate the work), then compounds the gains across your whole portfolio.
 </p>
 
 <p align="center">
@@ -83,7 +87,7 @@ cd ~/projects/{your-project} && claude
 
 > 🚪 **New here / just want the skills?** Start with the opinionated front door —
 > [`templates/starter_profile.md`](templates/starter_profile.md): one install command, a curated
-> first-five skills, and a zero-install governance gate (`npx … fh-gate`). The other 28 skills wait
+> first-five skills, and a zero-install governance gate (`npx … fh-gate`). The other skills wait
 > until you need them.
 
 ---
@@ -113,6 +117,44 @@ forge-harness/   ← the hub (persistent brain)
 Project A  ──→  connect hub in CLAUDE.md
 Project B  ──→  connect hub in CLAUDE.md
 ```
+
+---
+
+## What makes it a harness, not a toolbox
+
+Scale is the point. A **skill, agent, or plugin** is a tool. A **harness** is a level up — a *star*:
+one project's tools, rules, gates, and memory bound into a single working body. **forge-harness is the
+solar system those stars live in** — it holds many harnesses in one gravity well, keeps them in orbit (a
+shared floor, no drift), and lets them evolve together instead of scattering. That is the goal it is built
+toward. In practice the gravity comes from four things:
+
+**① Assemble** — FH runs a *cluster* of harnesses at optimized token cost and hands you the right one for
+the project. You don't wire up skills one by one; you get a **harness** — its plugins, skills, and agents
+included — assembled to fit.
+
+**② Forge** *(the quality gate)* — every change earns its way through adversarial · phantom · regression
+gates. This is not "check more." It is a **responsibility router**: as automation rises, human sign-offs
+get fewer but heavier, so the gate spends your attention only where a change is *irreversible*. Quality is
+the lever; the speed is the result.
+
+**③ Sidecar** — capability itself stays on the frontier. FH dispatches across multiple LLMs (Claude,
+Codex, Gemini, local) so raw power is never tied to one model or one generation. The point is *not*
+patching each model's weak spots — that scaffolding dies as models improve. It is **riding the frontier's
+evolution**: shed what the substrate now does natively, absorb what it ships next. Decorrelation is
+today's trust lever (a cross-family panel beats a single model's ceiling); co-evolution is the structure.
+
+**④ Self-evolving loop** — the harness gets better without being rebuilt, in two directions: **outward**,
+where each session's lessons compound into the hub so the next project starts faster, and **inward**,
+where it catches and repairs *its own* defects (the 4-axis gate, bidirectional verify, per-user
+adaptation).
+
+The whole thing is a division of labor: **raw capability is the model's; assembly, trust, and evolution
+are the harness's.**
+
+> **Self-healing here isn't a claim — it's in the commit log.** This very README's voice rules were fixed
+> mid-session by FH catching its own drift: a tone miss → diagnosis → a cross-family challenger that
+> attacked *its own first fix* → re-fix → floor-tier re-verification → memory update. A harness repairing
+> its own defect, on the record — not a slogan.
 
 ---
 
@@ -193,7 +235,7 @@ All four movements ship. Temper was named before it was built — deliberately (
 two more signatures keep it running: `harvest-loop` (each session's lessons become permanent skills) and
 `agent-composer` (orchestrate the dispatch). The other skills wait until you need them — full list below.
 
-## 37 skills · 8 agents
+## 39 skills · 8 agents
 
 <details>
 <summary>Full asset activation check</summary>
@@ -349,8 +391,10 @@ Claude-side token cost does not increase when the extra reviewer is an external 
 
 ## Research
 
-> **FH v1.0 paper** — [Zenodo](https://zenodo.org/records/20397566) (DOI: 10.5281/zenodo.20397566) · arXiv in review.
-> Documents 2-layer design, 6-axis framework, 4-agent orchestration, and compounding loop with empirical evidence.
+> **FH papers** — the methodology below is documented, not just asserted:
+> - **v1.0 — methodology** · [Zenodo](https://zenodo.org/records/20397566) (DOI 10.5281/zenodo.20397566). 2-layer design, 6-axis framework, 4-agent orchestration, and the compounding loop, with empirical evidence.
+> - **cs.SE companion — governance-gate methodology** · **published** [Zenodo](https://zenodo.org/records/20680081) (DOI 10.5281/zenodo.20680081 · latest v1.1 10.5281/zenodo.20740038 · CC-BY-4.0) · arXiv submitted (cs.SE, in moderation).
+> - **cs.AI companion — "Governance Dividend"** · in preparation.
 
 External convergence:
 - ["Dive into Claude Code: The Design Space of Today's and Future AI Agent Systems"](https://arxiv.org/abs/2604.14228) — arXiv April 2026

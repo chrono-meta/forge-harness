@@ -1,0 +1,432 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/chrono-meta/forge-harness/main/docs/banner.png" alt="forge-harness — 프로젝트를 벼려 통과시키면, 더 빠르게 나온다. 품질이 지렛대이고, 속도는 그 결과다." width="680">
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e.svg" alt="MIT License"></a>
+  <a href="https://zenodo.org/records/20397566"><img src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20397566-blue.svg" alt="DOI"></a>
+  <img src="https://img.shields.io/badge/Claude_Code-compatible-a855f7.svg" alt="Claude Code">
+  <a href="https://github.com/chrono-meta/forge-harness/issues/72"><img src="https://img.shields.io/badge/Codex-beta_·_help_validate-f59e0b.svg" alt="Codex-compatible beta — help validate (issue #72)"></a>
+  <a href="https://www.npmjs.com/package/@chrono-meta/fh-gate"><img src="https://img.shields.io/npm/v/@chrono-meta/fh-gate.svg?color=cb3837" alt="npm"></a>
+</p>
+
+<p align="center">
+  <a href="README.md">English</a> · <b>한국어</b> · <a href="README.zh.md">中文</a> · <a href="README.ja.md">日本語</a>
+</p>
+
+<p align="center">
+  <b>당신의 Claude Code 프로젝트를 벼려서 — 통과시키면, 더 빠르게 나옵니다.</b><br>
+  실무자의 <b>메타하네스</b> — 당신의 프로젝트 하네스들이 사는 태양계.<br>각 프로젝트의 <b>바닥(floor)</b>을 올리고(설정을 하네스화) <b>천장(ceiling)</b>을 올린 뒤(작업을 가속), 그 이득을 포트폴리오 전체에 복리로 쌓습니다.
+</p>
+
+<p align="center">
+  <b>품질이 지렛대이고, 속도는 그 결과입니다.</b> 모든 변경은 게이트를 통과해 제 값을 증명합니다 —<br>적대(adversarial) · 팬텀(phantom) · 회귀(regression) — 그리고 <i>그것</i>이 다음 변경을 더 빠르게 만듭니다.
+</p>
+
+<p align="center">
+  <i>포크하세요. 이름을 바꾸세요. 당신의 것으로 만드세요.</i>
+</p>
+
+<p align="center">
+  <img src="docs/pillars.svg" alt="FORK · ADAPT · COLLABORATE · EMPOWER" width="680">
+</p>
+
+<p align="center">
+  <a href="docs/ETHOS.md"><b>원칙</b></a> ·
+  <a href="docs/WHY.md"><b>존재 이유</b></a> ·
+  <a href="docs/OUTPUT_EVIDENCE.md"><b>증거</b></a> ·
+  <a href="CHEATSHEET.md"><b>사용법</b></a>
+</p>
+
+---
+
+| 이런 이유로 왔다면… | forge-harness가 해결합니다 |
+|---|---|
+| 세션이 끝나면 맥락이 사라진다 | 영속 `tracks/` — 어디서든 이어서 재개 |
+| 프로젝트마다 같은 설정을 반복한다 | 허브에 한 번 연결하면 모든 프로젝트가 공유 |
+| 팀의 AI 노하우가 사람 머릿속에만 있다 | 코드로 박아 모두가 공유 |
+| 작업이 쌓일수록 AI가 *더 나아지길* 원한다 | 스킬과 패턴이 세션을 거듭하며 복리로 쌓임 |
+| AI가 생성한 코드에 거버넌스 층이 필요하다 | `fh-gate`가 어떤 코딩 에이전트든 생성-후 게이트로 감쌈 |
+
+> **이 문서는 사람을 위한 것입니다.** AI 운영 규칙 → `CLAUDE.md` · 명령어 레퍼런스 → `CHEATSHEET.md`
+
+---
+
+## 2분 만에 시작하기
+
+**전제 조건**: Claude Code CLI — `claude --version`으로 확인
+
+```bash
+# 1. 플러그인 설치
+claude plugin marketplace add https://github.com/chrono-meta/forge-harness.git
+claude plugin install -s user fh-meta@forge-harness
+
+# 2. 허브 클론
+git clone https://github.com/chrono-meta/forge-harness.git ~/forge-harness
+cd ~/forge-harness
+
+# 3. 세션 시작
+claude
+```
+
+> ✅ Claude가 `CLAUDE.md`를 읽고, 어떤 프로젝트를 연결할지 또는 어떤 작업을 시작할지 묻습니다.
+> **"프로젝트 연결해줘"** 라고 하면 → 허브가 `../`를 스캔해 `.git` 디렉터리를 찾고 `tracks/{project}/`를 생성합니다.
+
+**플러그인만 (클론 없이):**
+```bash
+claude plugin marketplace add https://github.com/chrono-meta/forge-harness.git  # 최초 1회
+claude plugin install -s user fh-meta@forge-harness
+cd ~/projects/{your-project} && claude
+```
+
+> ⚠️ **플러그인-only는 부분 시너지입니다.** 스킬과 에이전트는 얻지만 **Layer 1**은 얻지 못합니다 —
+> `CLAUDE.md` 거버넌스(능동 온보딩, 4축 게이트, 모드 분기)와 복리 맥락(`tracks/` 메모리 축적,
+> `harvest-loop` 학습)이 빠집니다. 각 스킬은 고립돼서도 동일하게 작동하지만, 빠지는 것은 그것들을
+> 세션에 걸쳐 복리로 만드는 오케스트레이션입니다. 도구만이 아니라 전체 세트를 원하면 허브를
+> 클론하세요(위 참조).
+
+> 🚪 **처음 왔거나 스킬만 원하나요?** 의견이 담긴 정문에서 시작하세요 —
+> [`templates/starter_profile.md`](templates/starter_profile.md): 설치 명령 하나, 엄선된
+> 첫 5개 스킬, 그리고 무설치 거버넌스 게이트(`npx … fh-gate`). 나머지 스킬은 필요해질 때까지 기다립니다.
+
+---
+
+## 무엇인가
+
+forge-harness는 **두 개의 뚜렷한 층**으로 구성됩니다:
+
+| 층 | 내용 | AI 호환성 |
+|---|---|---|
+| **방법론 층** | `tracks/`, `knowledge/`, `SKILL.md` 문서, 세션 프로토콜 | 모든 AI 모델 |
+| **자동화 층** | `plugins/*/agents/` (FH 에이전트), `.claude/agents/` (필드-프로젝트 오버라이드), 훅, 슬래시 명령, `CLAUDE.md` 규칙 | Claude Code 전용 |
+
+방법론 층은 이식 가능한 핵심입니다 — 영속 허브, 학습 축적, 프로젝트 간 지식 큐레이션. 자동화 층은 Claude Code에서 이것을 마찰 없이 돌아가게 합니다.
+
+**이것이 서 있는 자리 (2026):** "하네스 엔지니어링"은 이제 공개 패러다임이며 — 기본적인 에이전트
+오케스트레이션은 빠르게 표준 인프라로 상품화되고 있습니다. FH는 그 배관(plumbing)에 아무것도 걸지
+않습니다. FH의 영속 층은 *상품화되지 않는 것*입니다: 거버넌스 게이트(적대 · 팬텀 · 회귀), 드리프트
+통제, 그리고 프로젝트 간 복리 루프. 라우팅과 디스패치는 수단이고, **게이트와 루프가 자산입니다.**
+
+```
+forge-harness/   ← 허브 (영속 두뇌)
+├── knowledge/   → 모든 프로젝트가 공유
+└── tracks/      → 프로젝트별 작업 기록
+
+Project A  ──→  CLAUDE.md에서 허브 연결
+Project B  ──→  CLAUDE.md에서 허브 연결
+```
+
+---
+
+## 도구 상자가 아니라 하네스인 이유
+
+스케일이 핵심입니다. **스킬 · 에이전트 · 플러그인**은 하나의 도구입니다. **하네스**는 한 급 위 —
+하나의 *별(star)*입니다: 한 프로젝트의 도구 · 규칙 · 게이트 · 기억이 하나의 작동하는 몸으로 묶인 것.
+**forge-harness는 그 별들이 사는 태양계입니다** — 여러 하네스를 하나의 중력계에 담아, 궤도에
+잡아두고(공통 바닥, 드리프트 없음), 흩어지는 대신 함께 진화하게 합니다. 이것이 지향하는 목표입니다.
+실제로 그 중력은 네 가지에서 나옵니다:
+
+**① 조립(Assemble)** — FH는 하네스의 *클러스터*를 최적 토큰 비용으로 운용하며, 프로젝트에 맞는
+하네스를 손에 쥐어줍니다. 스킬을 하나하나 배선하는 게 아니라, **하네스**를 — 그 플러그인 · 스킬 ·
+에이전트까지 포함해 — 맞춰 조립한 채로 받습니다.
+
+**② 벼림(Forge)** *(품질 게이트)* — 모든 변경은 적대 · 팬텀 · 회귀 게이트를 통과해 제 값을
+증명합니다. 이것은 "더 많이 검사"가 아닙니다. **책임 라우터**입니다: 자동화가 늘수록 사람의 도장은
+줄고 개당 무게는 커지므로, 게이트는 당신의 주의를 *되돌릴 수 없는* 지점에만 씁니다. 품질이
+지렛대이고, 속도는 그 결과입니다.
+
+**③ 사이드카(Sidecar)** — 능력 자체는 프런티어에 둡니다. FH는 여러 LLM(Claude, Codex, Gemini,
+로컬)에 디스패치해 raw 능력이 하나의 모델이나 하나의 세대에 묶이지 않게 합니다. 핵심은 각 모델의
+약점을 *기계적으로 메꾸는 것이 아닙니다* — 그런 스캐폴딩은 모델이 강해지면 죽은 코드가 됩니다.
+핵심은 **프런티어의 진화에 함께 타는 것**입니다: substrate가 이제 네이티브로 해주는 것은 벗어버리고,
+새로 내놓는 것은 흡수합니다. 탈상관(decorrelation)은 *지금의* 신뢰 지렛대이고(크로스패밀리 패널이
+단일 모델의 천장을 넘어섭니다), 공진화(co-evolution)가 구조입니다.
+
+**④ 자기진화 루프(Self-evolving loop)** — 하네스는 재구축 없이 더 나아집니다, 두 방향으로:
+**밖으로**, 매 세션의 교훈이 허브에 복리로 쌓여 다음 프로젝트가 더 빨리 시작하고, **안으로**,
+*자기 자신의* 결함을 잡아 고칩니다(4축 게이트, 양방향 검증, 사용자별 적응).
+
+전체는 하나의 분업입니다: **raw 능력은 모델의 것, 조립 · 신뢰 · 진화는 하네스의 것.**
+
+> **여기서 셀프힐링은 주장이 아니라 — 커밋 로그에 있습니다.** 바로 이 README의 목소리 규칙이
+> 세션 도중 FH가 자기 드리프트를 잡아 고쳐졌습니다: 톤 미스 → 진단 → 자기 첫 수정안까지 공격한
+> 크로스패밀리 challenger → 재수정 → 바닥-티어 재검증 → 메모리 반영. 하네스가 자기 결함을 스스로
+> 고친 실례 — 슬로건이 아니라 기록입니다.
+
+---
+
+## 작동하는 이유
+
+AI와 긴 공동 저작 세션을 거치고 나면, 당신과 AI는 같은 맥락을 공유합니다 — 그리고 같은 맹점도
+공유합니다. 가질 가치가 있는 리뷰어는 당신의 추론을 한 번도 본 적 없는 리뷰어입니다. 손으로도
+얻을 수 있습니다: 작업을 비어 있는 새 채팅에 붙여넣으면 됩니다. FH는 그 귀찮은 일을 명령 하나의
+루틴으로 바꿔줄 뿐입니다.
+
+- **사이드카 / 에이전트 디스패치** → 당신 세션의 맥락이 전혀 없는 리뷰어
+- **steel-quench · phantom-quench** → 그 냉정한 검토를, 필요할 때 바로
+
+모델에 구애받지 않습니다: 한 AI와 함께 만들고, 냉정한 검토는 다른 어떤 AI로든 돌립니다. 원래
+세션에 없었던 쪽이 당신의 냉정한 리뷰어입니다 — 이것은 모델 순위 매기기가 아닙니다.
+
+**FH가 주장하지 않는 것:** 냉정한 검토는 당신 베이스 모델 자체의 능력이지, FH가 추가하는 탐지
+엔진이 아닙니다 — 새 인스턴스에 평범한 프롬프트를 넣어도 상당 부분 같은 일을 합니다. FH의 가치는
+더 좁고 정직합니다: 실제 실무에서 나온 방법을 취해, 그 독립 검토를 *건너뛰는 귀찮은 일* 대신
+*루틴*으로 만듭니다. 방법론은 복사 가능하며, FH가 패키징하는 것은 비밀 소스가 아니라 워크플로입니다.
+
+---
+
+## AI 생성 코드를 위한 거버넌스 층
+
+FH는 어떤 코딩 에이전트(OpenCode, Codex 등)든 **생성-후 거버넌스 게이트**로 감쌉니다.
+
+```bash
+npx --package @chrono-meta/fh-gate fh-gate                    # 기본: Claude 백엔드
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-gate   # Codex 백엔드
+FH_BACKEND=auto npx --package @chrono-meta/fh-gate fh-gate "src/foo.ts" full
+# → FH_GATE_VERDICT: PASS | PENDING | BLOCKED | ESCALATE
+```
+
+`fh-gate`는 두 런타임에 동일한 FH 거버넌스 프롬프트를 씁니다. `FH_BACKEND=claude`는 `claude --print`를, `FH_BACKEND=codex`는 `codex exec`를 실행하며, `FH_BACKEND=auto`는 두 CLI가 모두 있으면 Codex를 우선합니다.
+
+Claude Code 밖에서 스킬이나 에이전트를 직접 실행하려면 `fh-run`을 씁니다:
+
+```bash
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run --skill phantom-quench --file docs/foo.md
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-run --agent fh-commons:quench-challenger --file plugins/fh-meta/skills/foo/SKILL.md
+```
+
+변경된 FH 스킬/에이전트 표면이 여전히 깨끗한 Codex 어댑터 경로를 갖는지 확인하려면:
+
+```bash
+npx --package @chrono-meta/fh-gate fh-codex-doctor --strict
+```
+
+`fh-codex-doctor`는 정본 스킬/에이전트 레지스트리를 스캔해 어떤 유닛이 Codex-네이티브인지, 어댑터가
+필요한지, Claude-네이티브인지, 미분류인지 보고합니다. 얇은 어댑터 경계의 드리프트 탐지기이며, Claude
+Code 자동화 층을 복제하려 들지 않습니다. FH 체크아웃에서 실행하면 현재 작업 트리를, 밖에서 실행하면
+설치된 패키지를 스캔합니다.
+
+Codex-주도 작업에서는 가능한 한 Codex의 네이티브 goal/session 기능을 계속 쓰세요. `fh-goal`은 FH
+거버넌스가 뒤따라야 하는 일회성 비대화 실행을 위한 이식용 래퍼일 뿐입니다:
+
+```bash
+FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-goal --prompt "Implement X and update tests" --gate quick
+```
+
+더 넓은 FH 자동화 층은 여전히 서브에이전트 · 훅 · 슬래시 명령을 위해 Claude Code에 의존합니다. 이식
+경로는 공유 문서 + 런타임 어댑터이지, 별도의 Codex 포크와 Claude 포크가 아닙니다.
+
+**권장 자세 — Claude Code를 오케스트레이터로, 나머지를 사이드카로.** FH의 자동화 층(자동 발동 훅,
+서브에이전트 디스패치, 온보딩, 메모리)은 Claude-Code-네이티브이므로, 가장 완전한 경험은 **Claude
+Code를 메인 오케스트레이터로 두고 Gemini, Codex, 또는 Antigravity(`agy`)를 능동적으로 쓰는
+사이드카**로 돌리는 것입니다. **비-CC 런타임을 메인 에이전트로** 돌릴 수도 있습니다 —
+`fh-gate`/`fh-run`을 통해 전체 방법론 층과 M1 스킬은 유지되지만, 오토파일럿 층은 얻지 못합니다:
+훅이 자동 발동하지 않고, M2 에이전트-디스패치 단계는 어댑터(또는 대화형 승인)가 필요하며, M3
+스킬은 참조용입니다. 이것은 의도된 두 층 경계이지 메꿔야 할 갭이 아닙니다. 런타임별 상세:
+[`docs/codex-compat.md`](docs/codex-compat.md) (티어별)와
+[`multi_model_sidecar_strategy.md`](knowledge/shared/harness-core/multi_model_sidecar_strategy.md)
+(사이드카 엔진, 2026-06-18 EOL 시점의 Gemini→`agy` 승계 포함).
+
+**실증 결과 (2026-05-31)**: OpenCode의 AI-생성 `permission/arity.ts`(163줄, CI 초록)에 적용.
+현재 게이트 의미론은 이를 BLOCKED로 분류합니다: CI가 못 잡은 A급 발견 2건(허용목록의 짧은-토큰
+오버플로, arity 테이블에서 빠진 executor 도구).
+
+전체 스펙: [`fh_integration_contract.md`](knowledge/shared/harness-core/fh_integration_contract.md)
+
+---
+
+## 대장간(The forge)
+
+forge-harness는 프로젝트를 강철처럼 다룹니다 — 그리고 이 은유는 장식이 아니라 문자 그대로입니다.
+작업은 형태를 잡고, 공격으로 단단해지며, 그렇게 살아남았기에 비로소 더 빠르게 출하됩니다.
+
+| 공정 | 무슨 일이 일어나나 | 명령 |
+|---|---|---|
+| **벼림(Forge)** | 날것의 프로젝트를 하네스로 형태 잡기 — 바닥을 올림 | `install-wizard`, "이 프로젝트 하네스화" |
+| **담금질(Quench)** | 공격으로 단단하게 — 냉정한 검토가 건전한 것만 남김 | `steel-quench` · `phantom-quench` |
+| **뜨임(Temper)** | 단단해진 자산에서 취성(brittleness)을 다시 빼냄 | `steel-quench` Wave-T · `templates/temper_check.sh` |
+| → **가속(Accelerate)** | 대장간을 살아남은 칼날은 더 빠르게 벤다 | `goal-quench` — *Pass → Accelerate* |
+
+네 공정 모두 출하됩니다. 뜨임(Temper)은 만들어지기 *전에* 이름부터 붙였고 — 의도적으로(참조:
+[`ETHOS.md`](docs/ETHOS.md#the-forge)) — 측정 실행이 검증한 뒤에 출하됐습니다. 대장간 주위에서 두
+시그니처가 더 돌아갑니다: `harvest-loop`(매 세션의 교훈이 영구 스킬이 됨)와
+`agent-composer`(디스패치를 오케스트레이션). 나머지 스킬은 필요해질 때까지 기다립니다 — 전체 목록은
+아래에.
+
+## 39 skills · 8 agents
+
+<details>
+<summary>전체 자산 활성화 확인</summary>
+
+| 자산 | 역할 | 트리거 |
+|---|---|---|
+| `steel-quench` | 전방위 적대 검증 | "담금질 돌려", "뿌리부터 공격해" |
+| `phantom-quench` | 팬텀 주장 탐지 + 소스 역추적 | "소스 검증", "그라운딩 감사" |
+| `harvest-loop` | 세션 종료 학습 → 진화 파이프라인 | "세션 수확" |
+| `agent-composer` | 최적 에이전트 디스패치 설계 | "병렬로 돌려", "어떤 에이전트?" |
+| `sim-conductor` | 메타-시뮬레이션 오케스트레이터 | "외부 사용자 관점" |
+| `context-doctor` | 토큰 효율 + `.claudeignore` | "세션이 느려", "컨텍스트 정리" |
+| `harness-doctor` | 하네스 구조 진단 | "내 Claude 설정 점검" |
+| `pipeline-conductor` | 4축 품질 게이트 (후방/적대/전방/기록) | "품질 게이트 돌려" |
+| `field-harvest` | 필드 패턴을 허브로 역전파 | "이거 재사용할 수 있겠다" |
+| `frontier-digest` | HN + arXiv → 실행 가능한 통찰 | "AI 트렌드 다이제스트" |
+| `hub-cc-pr-reviewer` | 자동 PR 리뷰 | "이 PR 리뷰해" |
+| `verify-bidirectional` | 결정 역검증 | "그게 맞아?", "다시 확인해" |
+| `deep-clarify` | 소크라테스식 요구사항 명료화 | "뭘 만들지 모르겠어" |
+| `install-wizard` | 초기 온보딩 | "처음 설정" |
+| `plugin-recommender` | 플러그인 추천 | "이거에 좋은 도구 있어?" |
+| `apex-review` | 경영진 관점 품질 리뷰 | "이거 버틸까?" |
+| `meta-prompt-builder` | 메타 프롬프트 설계 | "에이전트에게 줄 프롬프트 써줘" |
+| `asset-placement-gate` | 허브 vs 프로젝트 자산 라우팅 | "이거 공유해야 하나?" |
+| `cross-ecosystem-synergy-detection` | 도구 간 시너지 탐지 | "내 도구들이 함께 작동하나?" |
+| `corpus-grounding-expander` | 다중 버전 공공-도메인 코퍼스 → 검증-공리 그라운딩 스토어 | "그라운딩 코퍼스 넓혀" |
+| `persona-roster-expander` | 페르소나 시드 → 티어별 판단-매핑 캐스트 | "이 페르소나들 넓혀" |
+| `convergence-loop` *(fh-commons)* | N-라운드 수렴 루프 | "단일 패스가 의심스러워" |
+| `token-budget-gate` *(fh-commons)* | 작업 전 토큰 비용 추정 | "이거 얼마나 비싸?" |
+| `mcp-circuit-breaker` *(fh-commons)* | MCP 도구 실패 패턴 탐지 | "MCP가 계속 실패해" |
+| `quench-challenger` *(fh-commons)* | 적대적 압박-테스트 에이전트 | "악마로 이걸 공격해" |
+| *(+ 추가 자산)* | marketplace-gate · contention-layer · edit-manifest · fact-checker · goal-quench · hub-persona-auditor · install-doctor · memory-hygiene · persona-innovator · prompt-regression · public-surface-audit · salience-splitter | |
+
+| 활성 개수 | 진단 |
+|:---:|---|
+| **28+** | 고급 — agent-composer + sim-conductor + steel-quench + pipeline-conductor 연쇄 |
+| **10–27** | 활성화 단계 — 미체크 자산을 점진적으로 켜기 |
+| **0–9** | 초기 단계 — `install-wizard`로 시작 |
+
+**하려는 일로 스킬 찾기:**
+
+| 클러스터 | 스킬 |
+|---|---|
+| 검증 | `steel-quench` · `phantom-quench` · `convergence-loop` · `prompt-regression` · `return-path-gate` |
+| 오케스트레이션 | `agent-composer` · `pipeline-conductor` · `goal-quench` · `deliberation` |
+| 진단 | `harness-doctor` · `context-doctor` · `install-doctor` · `mcp-circuit-breaker` |
+| 수확 / 학습 | `harvest-loop` · `field-harvest` · `edit-manifest` · `memory-hygiene` |
+| 게이트 / 가드 | `token-budget-gate` · `asset-placement-gate` · `marketplace-gate` |
+| 발견 | `plugin-recommender` · `cross-ecosystem-synergy-detection` · `frontier-digest` · `verify-bidirectional` |
+| 콘텐츠 / 시뮬레이션 | `sim-conductor` · `apex-review` · `meta-prompt-builder` · `deep-clarify` |
+| 설정 | `install-wizard` · `hub-cc-pr-reviewer` · `salience-splitter` |
+
+> **전체 표현집** — 모든 스킬 + 에이전트와 그 한 줄 정의, 그리고 이를 발동하는 평이한 표현:
+> [`CHEATSHEET.md` §12](CHEATSHEET.md#12-skills--agents--what-each-does-and-what-to-say).
+
+</details>
+
+---
+
+## 모델 설정
+
+Claude Code는 작업 복잡도로 모델을 자동 선택하지 않습니다 — 이것은 한 번 설정합니다.
+
+```bash
+/model sonnet   # 권장 기본값 — FH가 필요한 곳에는 스스로 더 강한 모델을 디스패치
+```
+
+| 명령 | 누가 무엇을 실행 | 최적 용도 |
+|---|---|---|
+| `/model sonnet` | Sonnet 세션; FH가 선언된 바닥(floor)에서 상위-티어 서브에이전트 디스패치 | **FH 기본값** — 운용 + 일상 개발 |
+| `/model opus` | Opus가 전부 처리 | 하네스-편집 세션(Mode D) · 매 턴 최대 깊이 |
+| `/model opusplan` | Opus가 *계획* · Sonnet이 실행 *(Opus가 관여할 때)* | 비용 의식적 일상 코딩 — 주의사항 참조 |
+
+**왜 이제 Sonnet 기본값이 통하나**: 측정 결과(아래 §Model setup evidence note 참조), FH *운용*은 거의
+모델-평탄합니다 — 맥락에 든 규칙이 대부분의 일을 합니다. 여전히 더 강한 모델이 필요한 것은 깊이에
+민감한 소수의 턴이고, FH는 그것을 스스로 처리합니다: **일부 스킬과 에이전트는 모델-티어 바닥을
+선언**하며(예: `quench-challenger`는 opus에 바닥), 환경이 닿을 수 있으면 그 바닥 티어의
+서브에이전트로 디스패치됩니다 — 당신의 세션 모델은 건드리지 않습니다. **FH는 절대 당신의 세션
+모델을 바꾸지 않습니다**: 손으로 설정한 기본값은 그대로 따르고, 바닥은 FH 자신의 서브에이전트
+디스패치에만 적용됩니다. 환경이 바닥보다 낮게 상한이 걸리면(예: Sonnet-only API 라우팅), 바닥이
+걸린 자산은 여전히 가용한 최선 티어로 실행되며 출력에 명시적 `below-floor` 플래그를 답니다 —
+열화된 전달은 보이게, 절대 조용히 넘어가지 않습니다(티어-바닥 해석:
+`knowledge/shared/harness-core/multi_model_sidecar_strategy.md §Tier-floor`).
+
+**`opusplan` 주의사항(측정됨)**: Opus 관여는 **보장되지 않습니다** — 측정한 10턴 실행에서 Opus를
+**0**턴 썼습니다(CC가 "plan-mode"로 분류하는 턴이 적음). 매 턴 Opus를 원하면 `/model opus`로
+고정하세요(후속 실행에서 22/22턴 Opus). **서브에이전트 디스패치** 모델은 디스패치 자체의 `model`
+파라미터로 정해집니다; 세션 모델/plan-mode는 서브에이전트로 전파되지 **않습니다**.
+
+> **역할별**: FH 운용(필드 프로젝트, 게이트, 일상 개발) → `/model sonnet` + 바닥이 에스컬레이션하게
+> 두기. 하네스 자체 편집(Mode D) → 가진 가장 강한 모델을 고정 — 하네스 *자기개발*은 티어 깊이가
+> 측정 가능하게 값을 치르는 곳이고(설계-증분 발견), 운용은 그렇지 않습니다. 서브에이전트 토큰
+> 비용은 세션 jsonl의 `message.model`에서 CC로 볼 수 있습니다.
+
+**주장이 아니라 측정** (실측 예): 블라인드 규칙-적용 배터리에서 FH *운용*은 거의 모델-평탄합니다 —
+**측정한 모든 Claude 티어가 94–100%** (Fable, Opus 4.8, Sonnet 4.6과 5, Haiku 4.5); 잃은 소수 점수는
+포맷 규율이지 함정이나 게이트-급 미스가 아닙니다. 티어가 갈리는 것은 루브릭-초과 *설계* 증분뿐(하네스를
+개발하는 것이지 운용하는 것이 아님) — 그래서 기본값이 **티어-바닥 디스패치**로 깊이-민감 턴을 덮는
+Sonnet이고, 고정된 더 강한 모델은 하네스-편집 세션에만 권장됩니다.
+
+이것은 **불변식으로 진술되며, 모델별 리더보드가 아닙니다.** 새 릴리스가 뒤집지 못하는 두 구조 법칙:
+
+1. **운용은 티어에 걸쳐 평탄해진다** — 맥락의 규칙이 일을 하므로 모든 티어가 규칙-적용에서 천장에
+   닿습니다(2026-07-03 재현에서 Sonnet 5가 배터리 천장에서 Opus 4.8과 동률).
+2. **깊이(설계 증분)는 티어-순서이며, 그 순서는 *한 세대 안에서* 고정된다** — 낮은 티어가 **같은**
+   세대의 높은 티어를 결코 추월하지 못합니다(티어는 값어치 있게 가격이 매겨지므로 벤더가 순서를
+   유지). *세대를 가로질러* 새로운 낮은-티어 모델이 오래된 높은-티어를 넘어설 수는 있습니다(운용에서
+   Sonnet 5 ≥ Opus 4.8이 바로 이 세대-교차 경우) — 하지만 어느 세대든 현재 최상위 티어는 여전히
+   자기 깊이 턴을 이깁니다.
+
+그래서 독트린은 영속적이지 상하지 않습니다: **운용은 중간 티어를 기본값으로; 깊이는 현재 최상위
+티어로 에스컬레이션.** 재측정이 정당한 것은 새 모델이 필드-메인 *후보*가 될 때뿐(일회성 세대-교차
+임계 확인)이지, 같은-세대 티어 순서를 재확인하려는 것이 아닙니다 — 그건 설계로 보장됩니다. 상세 +
+날짜별 실행: `docs/OUTPUT_EVIDENCE.md` §Validation signals.
+
+외부 CLI(Gemini, Codex, `gh copilot`)를 사이드카로 쓰면, 그 비용은 각자의 쿼터로 청구되고 CC의 토큰 표시에는 보이지 않습니다.
+
+### 하드웨어 티어 (로컬 사이드카는 선택적 가속기)
+
+FH는 **로컬 LLM이 필요 없습니다** — 기준선은 Claude Code를 돌리는 무엇이든입니다. 로컬 모델은
+*선택*이며, 카나리아 / 저가-폭넓음 단계에만 쓰입니다:
+
+| 티어 | 사양 | 로컬 실행 | 무엇을 얻나 |
+|---|---|---|---|
+| **최소** | Claude Code를 돌리는 무엇이든 | 없음 | 전체 방법론 + 게이트; FH 운용은 측정한 모든 티어에서 ~모델-평탄(94–100%) |
+| **권장** | 랩톱급, ~16GB RAM | 8B급 양자화 모델 하나(예: 8B / 소형 Gemma) | 토큰-무료 **바닥 카나리아**(비용 드는 sim 전 사전-스크린) · 오프라인 트리아지 · 저가-폭넓음 패널 팔 |
+| **선택(헤비)** | ~24GB VRAM GPU | 27–32B 모델 | *더 강한* 탈상관 카나리아 |
+
+> 로컬 티어는 **카나리아이지 최종 판정이 절대 아닙니다** — 측정: 바닥 모델은 프런티어가 잡은 미묘한
+> 적대 케이스를 놓쳤습니다(27–32B 로컬조차 그 케이스에서 1/4). 로컬은 *폭넓음의 비용*을 낮출 뿐,
+> 판정은 프런티어에 남습니다.
+
+---
+
+## 멀티모델 사이드카
+
+Gemini, Codex, 또는 `gh copilot`을 Claude 옆에서 독립 리뷰어로 돌립니다. 핵심은 **맥락 격리**입니다:
+작업을 함께 만들지 *않은* 리뷰어는 그 거품(froth)에 냉정합니다 — 협업 *바깥*에 앉은 이가, 이제 공유된
+결과의 옹호자가 된 공동-저자가 매끄럽게 지나친 것을 잘 잡습니다. 대칭적이며 모델-순위가 아닙니다:
+Gemini와 함께 만들면 새 Claude가 그 거품을 잡고, Claude와 함께 만들면 새 사이드카가 Claude의 거품을 잡습니다.
+
+한 내부 사례 연구에서, 리뷰어를 층층이 쌓자 점점 더 많은 이슈가 드러났습니다 — 단일 세션-내 패스가
+놓친 항목을 세션-간 페르소나가 잡았고, 외부-CLI 리뷰어가 Claude 페르소나들이 공유한 맹점 몇 개를
+드러냈습니다. 이를 벤치마크가 아니라 **실측 예**로 다루세요: 이득은 작업 복잡도와 산출물을 얼마나
+공동-창작했는지에 비례해 커지며, 격리된 리뷰어는 트리아지해야 할 오탐(false positive)도 더합니다.
+주어진 작업에서 순 이득이 값어치 있는지는 경험적이고 사용마다 다른 질문입니다.
+
+리뷰어가 외부 CLI일 때 Claude-쪽 토큰 비용은 늘지 않습니다 — 각자의 쿼터로 청구됩니다.
+
+---
+
+## 연구(Research)
+
+> **FH 논문** — 아래 방법론은 주장만이 아니라 문서화돼 있습니다:
+> - **v1.0 — 방법론** · [Zenodo](https://zenodo.org/records/20397566) (DOI 10.5281/zenodo.20397566). 2층 설계, 6축 프레임워크, 4-에이전트 오케스트레이션, 그리고 복리 루프를 실증 증거와 함께.
+> - **cs.SE companion — 거버넌스-게이트 방법론** · **게재됨** [Zenodo](https://zenodo.org/records/20680081) (DOI 10.5281/zenodo.20680081 · 최신 v1.1 10.5281/zenodo.20740038 · CC-BY-4.0) · arXiv 제출됨(cs.SE, 모더레이션 중).
+> - **cs.AI companion — "Governance Dividend"** · 준비 중.
+
+외부 수렴:
+- ["Dive into Claude Code: The Design Space of Today's and Future AI Agent Systems"](https://arxiv.org/abs/2604.14228) — arXiv 2026년 4월
+- ["Code as Agent Harness"](https://arxiv.org/abs/2605.18747) — arXiv 2026년 5월
+- Stanford IRIS Lab: ["Meta-Harness"](https://arxiv.org/abs/2603.28052) — 4배 적은 토큰으로 +7.7pts
+
+---
+
+## 더 알아보기
+
+| 리소스 | 목적 |
+|---|---|
+| [`CLAUDE.md`](CLAUDE.md) | AI 운영 규칙 + 동기화/푸시 프로토콜 |
+| [`CHEATSHEET.md`](CHEATSHEET.md) | 전체 명령어 레퍼런스 |
+| [`AGENTS.md`](AGENTS.md) | 런타임 에이전트 스펙 |
+| [`CATALOG.md`](CATALOG.md) | 과거 작업 검색 인덱스 |
+| [`CONTRIBUTING.md`](docs/CONTRIBUTING.md) | 스킬과 패턴 기여 방법 |
+| [`tracks/_contrib/`](tracks/_contrib/README.md) | **동의 레인** — 비식별화된 작업 세션 공유; 레포가 로컬만이 아니라 운영자들에 걸쳐 복리로 쌓임 |
+| [`fh_integration_contract.md`](knowledge/shared/harness-core/fh_integration_contract.md) | 거버넌스 게이트 스펙 |
