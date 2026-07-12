@@ -16,7 +16,7 @@
 
 <p align="center">
   <b>Forge your Claude Code projects — pass them through, they come out faster.</b><br>
-  A practitioner's <b>meta-harness</b> — the solar system your project harnesses live in.<br>It raises each project's <b>floor</b> (harness-ify the setup) and <b>ceiling</b> (accelerate the work), then compounds the gains across your whole portfolio.
+  A practitioner's <b>meta-harness</b> — the galaxy your project harnesses live in.<br>It raises each project's <b>floor</b> (harness-ify the setup) and <b>ceiling</b> (accelerate the work), then compounds the gains across your whole portfolio.
 </p>
 
 <p align="center">
@@ -131,7 +131,7 @@ attention is spent only where a change is irreversible.
 
 Scale is the second point. A **skill, agent, or plugin** is a tool. A **harness** is a level up — a *star*:
 one project's tools, rules, gates, and memory bound into a single working body. **forge-harness is the
-solar system those stars live in** — it holds many harnesses in one gravity well, keeps them in orbit (a
+galaxy those stars live in** — it holds many harnesses in one gravity well, keeps them in orbit (a
 shared floor, no drift), and lets them evolve together instead of scattering. And the system is a
 *nursery*, not just a container: FH can run a field harness **in simulation inside its own sandbox** —
 expensive per run, cheaper in total, because the trial-and-error pools in one place and compounds — and

@@ -21,6 +21,17 @@ Running Claude Code in this project activates **Control Tower** mode.
 
 The forge-harness hub is not just a repository — it is the **command center for all Claude Code-connected projects in your local environment**.
 
+**Doctrine (2026-07-12, operator-forged)**: a harness **machinizes intent** — it reads the human's
+intent and forges it into a machined form (AI-followable rules or deterministic code), via
+`intent → forge → agreement (HITL) → machinery`. Its payoff is relocating trial-and-error off the human
+(into the harness, run in parallel), so human time drops and attention routes to irreversible points.
+FH is the **meta-harness and nursery**: it incubates field harnesses (projects *and* new capabilities of
+existing harnesses) in its own sandbox — expensive per run, cheaper in total because trial-and-error
+pools and compounds — and **emits** them as independent specialized harnesses (shipped today as
+scaffold + approval machinery; the full chamber flow is the named target). Over other harnesses it
+operates in two modes: **compose** (cluster strengths) ∪ **disrupt** (melt and reforge via crucible;
+core invariants never melt). Full doctrine: `knowledge/shared/harness-core/harness_incubator_doctrine.md`.
+
 | Layer | Role | Representative Assets |
 |---|---|---|
 | **① Control Tower** | Coordinates all connected projects and **drives harness-ification across them** — decides *which* projects to harness and *when*, propagates harness assets to each, and feeds their synced learnings into the hub's compounding loop. The *how* (rules · gates · 6-axis) is executed via the Core Axis. Command HQ, not a passive registry. | `.claude/rules/auto_project_mapping.md` (mapping + **Full-Harness Mode**) · `harvest-loop` (compounding loop) · `templates/` (project-harness bundle) · `CATALOG.md` |
@@ -413,7 +424,14 @@ let the innovator center a recommend cascade, produce a ranked install plan, and
    `CLAUDE.md`, mapped `tracks/`, **locally-connected sibling repos** (the env-delta SessionStart hook already
    emits "N unmapped sibling repos"), and the `LOCAL_SKILL_REGISTRY` + stack/language. Then **branch**:
    *new-build* (no prior harness) · *extend-existing* (harness present → found→extend, never fork) ·
-   *maintain* (mature harness → route to the Field-Harness Diagnostic instead). This audit-and-branch pre-step
+   *maintain* (mature harness → route to the Field-Harness Diagnostic instead).
+   **new-build sub-branch — simulate-first (incubator doctrine)**: judge the project's character before
+   building. Clear · small · low failure-cost → build immediately (current flow). Uncertain · exploratory ·
+   failure-expensive → **recommend simulate-first**: run the project as a simulation inside the FH chamber
+   (harness-unit sandbox) and *emit* the initial project only after the simulation holds — one-line
+   recommendation, operator decides (HITL; never forced). Same branch applies to a **new capability of an
+   existing harness** (incubate in the chamber, then transplant). Rationale + economics:
+   `knowledge/shared/harness-core/harness_incubator_doctrine.md §3`. This audit-and-branch pre-step
    is imported from the revfactory/harness Phase-0 State Audit (sister-audit 2026-07-07) — it tightens FH's
    found→extend reflex and is the "이미 로컬에 연결돼 있으면 자동 탐색" mechanism.
 2. **Innovator-centered recommend**: `persona-innovator` centers the cascade (Mode I on acceleration / Mode F

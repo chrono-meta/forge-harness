@@ -1,0 +1,139 @@
+# Harness Incubator Doctrine — intent machinization, the nursery, and compose ∪ disrupt
+
+> Crystallized 2026-07-12 from an operator insight session ("the day FH stepped forward").
+> This is the *why* underneath the four pillars in `README.md §What makes it a harness, not a toolbox`.
+> Always-loaded summary: `CLAUDE.md §Identity`. Operating unit: `harness_6axis_framework.md`.
+
+## 1. What a harness is — intent machinization
+
+A harness is a platform that **reads a human's intent and forges it into a machined form**: either
+*AI-salience* (rules and prompts an AI reliably follows) or *deterministic code* (hooks, scripts, gates
+that need no model at all). Building a project IS machinizing human intent; a harness **accelerates and
+amplifies** that machinization.
+
+The trajectory is always the same four steps:
+
+```
+intent (human) → forge into an executable form (AI) → agreement (HITL) → machinery
+```
+
+**Agreement is a load-bearing gate, not a courtesy** — machinizing an unagreed intent hardens the wrong
+thing. The HITL step sits immediately *before* machinization for exactly this reason.
+
+### Trial-and-error relocates; it does not disappear
+
+The harness's payoff is **less trial-and-error on the human side** — the request → feedback → regenerate
+loop is skipped. But the loop is not deleted; it **relocates into the harness**, where agents and
+sidecars run it in parallel. Two gains, not one:
+
+1. Trial-and-error the human **does not perform** → human time drops.
+2. Trial-and-error the harness runs **in parallel** → wall-clock drops versus sequential human retries.
+
+What is freed is not only time but **attention** — and the quality gate (the responsibility-router
+pillar) re-spends that freed attention only where a change is *irreversible*. "Time down + attention
+routed to what matters" is the complete form of harness acceleration, and it is what "quality is the
+lever; speed is the result" cashes out to.
+
+## 2. The scale ladder — tool < star < galaxy
+
+| Unit | What it is |
+|---|---|
+| skill / agent / plugin | a tool |
+| **harness** (field harness) | a *star* — one project's tools, rules, gates, and memory bound into a single working body, purpose-built (e.g. a coding harness specialized for one product domain) |
+| **meta-harness** (FH) | the *galaxy* the stars live in — and a **nursery**, not just a container |
+
+A meta-harness is "a harness for building harnesses." Under a given theme it can machinize anything —
+which is why its unit of work is the harness, not the skill.
+
+## 3. The nursery — FH as field-harness incubator and simulator
+
+FH's dual role:
+
+- **Primary — build and emit**: forge a field harness and release it as an independent, specialized
+  unit. What ships today is the **scaffold + approval machinery** (Full-Harness Mode in
+  `auto_project_mapping.md §6`, gate-compliant field scaffolds); the full simulate-then-emit chamber
+  flow is the *named target*, practiced to date as dogfooding a capability inside FH and then landing
+  it in the field repo.
+- **Contingency — act as the field harness itself**: run the whole of FH (harness-unit, not
+  skill-unit) as a sandbox simulator for a project. Expensive per run — that is the price of a
+  general-purpose chamber.
+
+**Completeness requirement**: a nursery that can birth any star must hold every element. "Everything a
+field-harness simulator needs must be possible inside FH" — multi-model dispatch, tooling, live-surface
+operation, gates. This is an *aspiration that directs capability assembly* (what `goal-quench`'s
+assembly ladder points at), not a claim of current completeness.
+
+**The economics (why expensive-per-run is cheap-in-total):**
+
+```
+Option A: build N field harnesses separately, each doing its own trial-and-error
+          → the same errors are repeated N times; learning is never shared
+Option B: incubate each field project inside the FH chamber
+          → trial-and-error pools in ONE place and compounds (the self-evolving loop)
+          → each next project inherits the previous learning → total trial-and-error shrinks
+```
+
+FH's sandbox unit cost is higher (general-purpose overhead), but total portfolio cost is *expected* to
+be lower — when reuse amortizes the chamber overhead. Honest trade-off: it is expensive *until
+emission*; the emitted harness is specialized and cheap, and the learning stays in FH. **Evidence grade
+(stated honestly)**: this economics is a *design argument plus n=1*, not a measured comparison — the
+counterfactual (building the same capability standalone) was never run, so "cheaper in total" is a
+**named bet**, the same treatment the disrupt path gets in §4(c); residual risk: one-off projects that
+never recur may not amortize. Empirical grounding for the *capability* (not the cost comparison): a
+field QA harness's acts 2–3 arc (2026-07, private) — its live-run capability was forged inside the FH
+chamber, then landed in the field repo.
+
+**Minimal execution skeleton (when the operator accepts simulate-first)**: the procedure is currently
+*judged/ad-hoc*, standardization deferred to a second real occurrence (measured-trigger, per the
+evidence-threshold build discipline): ① open a chamber workspace (a worktree or `tracks/{project}-sim/`
+— never a real project repo); ② scope the run through `goal-quench`'s budget gate (chamber runs are the
+expensive path — cap them); ③ drive the simulation with existing FH assets (dispatch, gates, live
+surfaces as needed); ④ the emit judgment — "the simulation holds" — is a *judged* call paired with the
+run's own mechanical evidence (tests passing, gate verdicts, reproduced flows), decided **with the
+operator (HITL)**; ⑤ on emit, route through Full-Harness Mode / field scaffolds as usual.
+
+**Incubation unit — projects AND features**: incubation applies not only to new projects but to **new
+capabilities of an existing harness**. A field harness's self-development is itself run inside the
+meta-harness chamber first, then transplanted — the nursery forges new layers for existing stars, not
+only new stars. Same economics.
+
+**Simulate-first entry**: when a new project is uncertain, exploratory, or failure-expensive, the
+recommended path is *simulate inside the chamber first, then emit the initial model* — not
+build-immediately. (Wired as a recommendation branch in `CLAUDE.md §Onboarding / Acceleration
+Autopilot`; build-immediately remains correct for clear, small, low-failure-cost projects.)
+
+## 4. Compose ∪ disrupt — two operating modes over other harnesses
+
+| Mode | What | FH mechanism |
+|---|---|---|
+| **Compose** (additive) | cluster leading harnesses, gather their strengths at optimized token cost | sidecar / multi-harness orchestration |
+| **Disrupt** (transformative) | dismantle them into parts, overcome-and-adopt their weak points into FH or a target field harness; self-destruct and reassemble to go where others cannot | **crucible mode** (`crucible_mode.md`) — total-ingest → melt via steel/phantom-quench → identity-bond → reforge; **core invariants never melt** |
+
+Theory anchor (an operator-supplied analogy drawing on Clayton Christensen's disruptive-innovation
+thesis): disruptive technology tends to emerge from re-purposing existing parts
+for unintended uses — crude and inefficient at first, then growing fast along a dimension incumbents
+overlooked. Mapped here: "re-purposed parts" = other harnesses dismantled into components;
+"the overlooked dimension" = the direction others cannot go. Companion criterion,
+**fitness-for-purpose**: equipment that is well-made but would not survive *this* dragon is better
+re-forged from scratch than patched.
+
+Honest boundaries: (a) core invariants (floors, gates, identity) are never melted; (b)
+overcome-and-adopt is curation with license/provenance respect, never wholesale copying; (c) the
+disruptive path *looks inferior early* — running it is a deliberate bet, named as such.
+
+## 5. Sidecar corollary — ride the evolution, don't patch the weak spots
+
+Mechanically patching each frontier model's current weaknesses produces scaffolding that dies as models
+improve (the weakness itself disappears). FH's sidecar layer is therefore built to **co-evolve**: shed
+what the substrate now does natively (`feedback: frontier substrate self-adaptation`), absorb what it
+ships next, and use cross-family decorrelation as *today's* trust lever (composition beats a single
+model's ceiling — see `multi_model_sidecar_strategy.md`). Capability is the model's; assembly, trust,
+and evolution are the harness's.
+
+## Done When (doctrine doc — reference asset)
+
+- The four-pillar README section, `CLAUDE.md §Identity`, and this doc tell one consistent story
+  (no contradicting claims). *Check class: judged; pair: contradiction scan on ingest
+  (`sync_push_protocols.md` step 3).*
+- Every mechanism named here points at a real, existing asset (Full-Harness Mode, crucible_mode,
+  goal-quench, multi_model_sidecar_strategy). *Check class: mandatory-pass (phantom scan).*
