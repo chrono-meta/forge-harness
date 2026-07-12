@@ -105,5 +105,5 @@ Fields: friction point, FH registration candidate, status (pending hub review).
 ## Related
 
 - `harness_6axis_framework.md` — Axis 6 is the "Improve" step that feeds into this loop
-- `.claude/rules/operations.md` — Sub-agent invocation log, weekly audit scanner detail
-- `.claude/rules/sync_push_protocols.md` — Session Sync Protocol (how learnings enter the loop)
+- `knowledge/shared/rules/operations.md` — Sub-agent invocation log, weekly audit scanner detail
+- `knowledge/shared/rules/sync_push_protocols.md` — Session Sync Protocol (how learnings enter the loop)

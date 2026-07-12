@@ -45,15 +45,28 @@ _mtime() { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null || echo 0;
 #      simply does not advance (no merge commit, no conflict state left behind) and we say so.
 export GIT_TERMINAL_PROMPT=0
 export GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new}"
+
+# Hard wall-clock deadline on the ONLY network step. ConnectTimeout bounds the handshake, but a
+# slow/stalled TRANSFER after connect has no bound — measured 2026-07-12: SessionStart worst-case
+# 17.5s with 2 hook-timeout kills, all attributable to the fetch. perl-alarm is the portable
+# watchdog (macOS ships no coreutils `timeout`); on overrun the fetch dies and the offline branch
+# reports honestly. FH_FETCH_DEADLINE overrides (seconds). If perl is absent the wrapper degrades
+# to running the command with NO deadline — a missing watchdog must never become a permanently
+# skipped fetch misreported as "offline" (challenger catch 2026-07-12).
+if command -v perl >/dev/null 2>&1; then
+  _deadline() { perl -e 'alarm shift @ARGV; exec @ARGV' "$@"; }
+else
+  _deadline() { shift; "$@"; }
+fi
 PULL_NOTE=""
-if git -C "$BE" fetch --quiet >/dev/null 2>&1; then
+if _deadline "${FH_FETCH_DEADLINE:-8}" git -C "$BE" fetch --quiet >/dev/null 2>&1; then
   if git -C "$BE" merge --ff-only --quiet >/dev/null 2>&1; then
     PULL_NOTE="fetched + fast-forwarded"
   else
     PULL_NOTE="fetched but NOT fast-forward (companion diverged — read local + newest remote)"
   fi
 else
-  PULL_NOTE="fetch skipped (offline — read local state)"
+  PULL_NOTE="fetch skipped (offline or deadline hit — read local state)"
 fi
 
 # 2) Session card date (the pointer the operator's close chain writes last).

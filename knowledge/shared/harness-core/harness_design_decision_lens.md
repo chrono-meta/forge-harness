@@ -105,4 +105,4 @@ it informs — no judge-only path.
 ## Related
 - `harness_6axis_framework.md` — the lifecycle framework this lens complements (Core principle: thickness; Axis 5: check-class taxonomy)
 - `tracks/_audit/session_2026_06_14_wikidocs-deep-sweep.md` — the governor-closed cross-audit this harvest came from
-- `.claude/rules/auto_project_mapping.md` — Full-Harness Mode, where thickness/permission bets are placed per project
+- `knowledge/shared/rules/auto_project_mapping.md` — Full-Harness Mode, where thickness/permission bets are placed per project

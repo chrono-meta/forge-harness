@@ -137,5 +137,5 @@ Skill: `/verify-bidirectional`
 
 - `claude_code_runtime_flow.md` — What actually happens (the "does" layer)
 - `harness_6axis_framework.md` — The 6-axis framework (Axes 2 and 3 govern context/plan)
-- `.claude/rules/sync_push_protocols.md` — Recording procedure
+- `knowledge/shared/rules/sync_push_protocols.md` — Recording procedure
 - `CHEATSHEET.md` — Command reference

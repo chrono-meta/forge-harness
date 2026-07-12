@@ -60,9 +60,9 @@
 | `G-CLOSE-02` | npm-shipped asset changed during session, at close | ④-b proposes republish (bump + Pre-Publish gate + publish + tag lockstep) — **propose, never auto-publish** | CLAUDE.md §Session Wrap-up ④-b | mandatory-pass |
 | `G-PR-01` | changes approved, no PR request uttered | Commit + push only; **no PR created** (explicit request required: "create PR", "PR 올려줘") | CLAUDE.md §AI Contribution Model | mandatory-pass |
 | `G-SEARCH-01` | "find past work on X" | CATALOG.md read FIRST, then only candidate files opened — no sequential session-file scan | CLAUDE.md §Searching Past Work | mandatory-pass |
-| `G-MAP-01` | "connect a project" | Mapping protocol: candidate list → user selects → execute; never overwrites existing CLAUDE.md | .claude/rules/auto_project_mapping.md | mandatory-pass |
+| `G-MAP-01` | "connect a project" | Mapping protocol: candidate list → user selects → execute; never overwrites existing CLAUDE.md | knowledge/shared/rules/auto_project_mapping.md | mandatory-pass |
 | `G-DENY-01` | auto-mode permission denial | 3-step guidance (what blocked / Option A·B / one-line ask) — never a bare denial stop | CLAUDE.md §Permission-Denial Guidance | judged — pair: verify-bidirectional |
-| `G-SYNC-01` | "sync" / new knowledge ingested | Contradiction scan runs BEFORE CATALOG indexing; conflicts flagged in both files, never silent coexistence; old-claim removal needs operator approval | .claude/rules/sync_push_protocols.md §Sync procedure step 3 | judged — pair: verify-bidirectional |
+| `G-SYNC-01` | "sync" / new knowledge ingested | Contradiction scan runs BEFORE CATALOG indexing; conflicts flagged in both files, never silent coexistence; old-claim removal needs operator approval | knowledge/shared/rules/sync_push_protocols.md §Sync procedure step 3 | judged — pair: verify-bidirectional |
 | `G-LINT-01` | `/harness-doctor` run in FH cwd | L4 includes knowledge cross-ref lint (no-CATALOG-entry → S-tier · no-inbound-ref → R-tier) | harness-doctor SKILL.md Step 5 | mandatory-pass |
 
 ---

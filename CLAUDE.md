@@ -34,7 +34,7 @@ core invariants never melt). Full doctrine: `knowledge/shared/harness-core/harne
 
 | Layer | Role | Representative Assets |
 |---|---|---|
-| **① Control Tower** | Coordinates all connected projects and **drives harness-ification across them** — decides *which* projects to harness and *when*, propagates harness assets to each, and feeds their synced learnings into the hub's compounding loop. The *how* (rules · gates · 6-axis) is executed via the Core Axis. Command HQ, not a passive registry. | `.claude/rules/auto_project_mapping.md` (mapping + **Full-Harness Mode**) · `harvest-loop` (compounding loop) · `templates/` (project-harness bundle) · `CATALOG.md` |
+| **① Control Tower** | Coordinates all connected projects and **drives harness-ification across them** — decides *which* projects to harness and *when*, propagates harness assets to each, and feeds their synced learnings into the hub's compounding loop. The *how* (rules · gates · 6-axis) is executed via the Core Axis. Command HQ, not a passive registry. | `knowledge/shared/rules/auto_project_mapping.md` (mapping + **Full-Harness Mode**) · `harvest-loop` (compounding loop) · `templates/` (project-harness bundle) · `CATALOG.md` |
 | **② Frontier → Org Propagation** | Proactively applies global AI/harness frontier thinking and **translates it for your organization**. | `knowledge/shared/harness-core/harness_frontier_diagnosis_*.md` · `knowledge/{your-org}/` |
 | **③ AI Collaboration Guide** | Accumulates and distributes best practices for token efficiency and dialogue methodology — "how to ask, delegate, and record". | `CHEATSHEET.md` · `knowledge/shared/dialogue/ai_dialogue_playbook.md` · `MEMORY.md` intent-based + associative recall (`knowledge/shared/dialogue/memory_intent_recall.md`) |
 | **Core Axis** | **Harness Engineering (How)** — the methodology and practice axis that realizes the three layers above. The 6-axis framework is the operating unit. **A harness is a means, not an end** — Field harness: "simpler over time" (complexity = warning signal). Meta-harness: *optimize*, not necessarily simplify — complexity earns its scope; red flags are orphaned, redundant, and decorative units, not complexity itself. | `harness_6axis_framework.md` · `hub_compounding_loop.md` · `claude_code_runtime_flow.md` · `.claude/agents/` (sub-agents) |
@@ -84,7 +84,7 @@ leaked into the judgment layer and the response is wrong, not warm.
 
 ## New Project Onboarding
 
-> Detailed procedure: `.claude/rules/auto_project_mapping.md` (5-step mapping + §6 Full-Harness Mode)
+> Detailed procedure: `knowledge/shared/rules/auto_project_mapping.md` (5-step mapping + §6 Full-Harness Mode)
 
 1. `mkdir tracks/{project_name}/` — track name = project root name
 2. Hub common principles outrank project rules (scope hierarchy)
@@ -197,7 +197,7 @@ that skill class, and not a retroactive sweep of all routers.
 
 ## FH Improvement 4-Axis Auto-Gate (Self-Verification Orchestrator)
 
-**Whenever the AI modifies FH assets** (SKILL.md · `.claude/rules/*.md` · `templates/` · `CLAUDE.md` · substantive `knowledge/` docs · substantive `docs/*.md` · `AGENTS.md` — see Substantive carve-out below),
+**Whenever the AI modifies FH assets** (SKILL.md · `.claude/rules/*.md` · `knowledge/shared/rules/*.md` (relocated protocol rules — always full-gate, NOT under the knowledge carve-out) · `templates/` · `CLAUDE.md` · substantive `knowledge/` docs · substantive `docs/*.md` · `AGENTS.md` — see Substantive carve-out below),
 the 4-axis verification chain runs **automatically before the first commit** of that session.
 No user request is needed — this is a mandatory autonomous step, not a proposal.
 
@@ -668,6 +668,7 @@ At session start, determine the last run time from history files and auto-propos
 |---|---|---|
 | `/frontier-digest` | `tracks/_meta/frontier_digest_*.md` | Propose at session start if 7+ days since last run |
 | `/harness-doctor` | `tracks/_meta/*harness_doctor*.md` | Propose at session start if 30+ days since last run |
+| Weekly audit (`/harvest-loop` lightweight) | `tracks/_audit/weekly_audit_*.md` | Propose at session start if 7+ days since last run (incl. `below_floor_scan.sh` step — detail: `knowledge/shared/rules/operations.md`) |
 
 > A cadence reminder the user has repeatedly declined is **muted** per the UAP (see the loop below) — don't re-nag.
 
@@ -684,7 +685,7 @@ Some proposals are not *time*-overdue — they fire **once when a specific work 
 
 ## Operational Adaptation Loop — User-Tuned Self-Optimization
 
-> Detail: `.claude/rules/operational_adaptation.md`
+> Detail: `knowledge/shared/rules/operational_adaptation.md`
 
 Self-healing is not only FH-self-dev (Mode D 4-axis) and reactive (`verify-bidirectional`). A **standing, per-user operational loop** tunes FH behavior to the individual during normal field use, and escalates **only generalizable** learnings to the `field-harvest` → FH-origin PR funnel — idiosyncratic taste stays local (drift guard).
 
@@ -710,6 +711,11 @@ Default operation is a **standard interactive session**. Agent dispatch (single 
 **Forbidden responses**: *"I can't do that — I'm not in that project's cwd"* — self-check Agent dispatch first.
 
 Mapped paths: check `auto_project_mapping.md` or `find ~/projects -maxdepth 1 -type d` for actuals.
+
+**Invocation log obligation (always-loaded — do not rely on recall)**: immediately after any custom
+sub-agent invocation, append to `knowledge/shared/learnings/subagent_invocations_log.yaml` (8 fields ·
+outcome: `accepted`/`partial`/`rejected`/`sustained` — `sustained` = decided NOT to invoke, also recorded).
+This feeds the 60/40 promotion gate + UAP loop; detail: `knowledge/shared/rules/operations.md`.
 
 ### Context Card — Required Format for Dispatch
 ```
@@ -751,11 +757,11 @@ Tiers: S=light(~5K) · M=standard(~15K, FH default) · L=full(~30K) · XL=max(~6
 
 **Current: Beta → External Validation Achieved** — v1.0 formal release conditions: additional external install evidence + at least 1 external PR.
 
-> Usage modes (A/B/C) + what-you-get (Layer 1/2) details: `.claude/rules/modes_and_value.md`
+> Usage modes (A/B/C) + what-you-get (Layer 1/2) + **ephemeral-session handoff rule** (leave a surfaced handoff in a durable location before an ephemeral/cloud session ends): `knowledge/shared/rules/modes_and_value.md`
 
 ## Auto Project Mapping Protocol
 
-> Detailed procedure: `.claude/rules/auto_project_mapping.md` (5-step mapping + §6 Full-Harness Mode)
+> Detailed procedure: `knowledge/shared/rules/auto_project_mapping.md` (5-step mapping + §6 Full-Harness Mode)
 
 When the user requests **"connect a project"** · **"link to hub"** · **"map this project"** · **"scan parent directory and connect"**, follow the `auto_project_mapping.md` protocol. When they request **"harness-ify this project"** · **"full harness setup"** · **"프로젝트 하네스화"** (or accept the post-mapping promotion prompt), run **§6 Full-Harness Mode** — installs project-local harness assets (session rules · context filter · env card) from `templates/`, approval-gated and non-overwriting. (The FH self-gate is FH-internal and is not installed into projects.)
 
@@ -829,17 +835,17 @@ Card update is NOT a sub-step of harvest-loop — even if harvest-loop is skippe
 
 ## Session Sync / Knowledge Push Protocol
 
-> Detailed procedure: `.claude/rules/sync_push_protocols.md`
+> Detailed procedure: `knowledge/shared/rules/sync_push_protocols.md`
 
 When the user requests "sync", "save session", etc., follow the `sync_push_protocols.md` protocol. CATALOG.md format, tag conventions, and track mapping are also referenced in that file.
 
 ## Sister Asset Protocol
 
-> Detailed procedure (3 steps · restrictions · branch sync): `.claude/rules/sister_asset_protocol.md`
+> Detailed procedure (3 steps · restrictions · branch sync): `knowledge/shared/rules/sister_asset_protocol.md`
 
 When a sibling asset on the same topic is discovered (internal team or external frontier), follow `sister_asset_protocol.md`. Keep the detection threshold low — the goal is to close awareness gaps.
 
 ## Operations Reference
 
-> CATALOG.md format · tag conventions: `.claude/rules/sync_push_protocols.md`
-> Sub-agent operations · weekly improvement cycle · maturity 3-phase roadmap: `.claude/rules/operations.md`
+> CATALOG.md format · tag conventions: `knowledge/shared/rules/sync_push_protocols.md`
+> Sub-agent operations · weekly improvement cycle · maturity 3-phase roadmap: `knowledge/shared/rules/operations.md`

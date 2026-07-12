@@ -9,7 +9,7 @@ originProject: forge-harness
 
 # Hermes Agent ↔ FH — Self-Improving Agent Cross-Audit
 
-> Sister-asset protocol activation (`.claude/rules/sister_asset_protocol.md`). Trigger: operator
+> Sister-asset protocol activation (`knowledge/shared/rules/sister_asset_protocol.md`). Trigger: operator
 > shared a LinkedIn post (esperer) — "Hermes Agent 잘 쓰는 법" — which distills Hermes Agent's
 > official *Tips & Best Practices* doc into Korean. Same territory as FH/PMH: a self-improving agent
 > with persistent memory + autonomous skill creation + skill self-improvement.

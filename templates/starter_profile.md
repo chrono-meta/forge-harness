@@ -5,7 +5,7 @@
 > install command, a curated first-five skills, and a zero-install governance gate. Pick up the
 > rest later if you want it.
 >
-> This is **Mode C** (see `.claude/rules/modes_and_value.md`): you install the plugin/skills only,
+> This is **Mode C** (see `knowledge/shared/rules/modes_and_value.md`): you install the plugin/skills only,
 > you do **not** clone the hub. That trade-off is spelled out under *What Mode C does not include*.
 
 ---

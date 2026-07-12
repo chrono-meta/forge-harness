@@ -109,4 +109,4 @@ increment; the chained skills are all ALREADY-HAVE.
 - `harness_6axis_framework.md` — Axis 5 (the heat) + Axis 6 (the rebirth); Core principle (the core)
 - `harness_design_decision_lens.md` — harness-thickness bet (how thick the unmeltable core should be)
 - `feedback_frontier_expectation_anchoring` (memory) — the anti-bubble anchoring the core enforces
-- `.claude/rules/operational_adaptation.md` — reforge-by-operator channel (verify-bidirectional)
+- `knowledge/shared/rules/operational_adaptation.md` — reforge-by-operator channel (verify-bidirectional)

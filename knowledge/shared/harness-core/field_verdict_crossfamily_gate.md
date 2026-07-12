@@ -111,7 +111,7 @@ row + the operator's proactive framing, not by the grep alone.
 
 **Residency** — sanitize company code (redact vendor/domain literals) before any external-family
 dispatch; domain data never leaves. **Autonomy** — autonomous once the operator has consented in
-the UAP (`tracks/_meta/user_adaptation_profile.md`, defined in `.claude/rules/operational_adaptation.md`),
+the UAP (`tracks/_meta/user_adaptation_profile.md`, defined in `knowledge/shared/rules/operational_adaptation.md`),
 same as the FH cross-family complement.
 
 ## 5. Field evidence — qasp verdict-binding sweep, 2026-07-03 (n=7)

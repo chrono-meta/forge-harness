@@ -128,7 +128,7 @@ Lower levels cannot override higher. AI contribution → PR proposal only (no di
 - `hub_compounding_loop.md` — Axis 6 automation (weekly/monthly/quarterly cycles)
 - `ai_dialogue_playbook.md` — Axis 2 dialogue principles (how to ask, delegate, record)
 - `claude_code_runtime_flow.md` — Axis 4 runtime behavior (chronological session flow)
-- `.claude/rules/operations.md` — Sub-agent operations, weekly cycle detail
+- `knowledge/shared/rules/operations.md` — Sub-agent operations, weekly cycle detail
 
 **External sibling (independent convergence)**
 
