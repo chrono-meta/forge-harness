@@ -433,8 +433,9 @@ let the innovator center a recommend cascade, produce a ranked install plan, and
    declares this; the routing trigger reached measured-baseline 2026-07-13, the run *skeleton* awaits its
    2nd real chamber run, evidence-gated). So today this branch = a one-line HITL recommendation, then
    fall back to Full-Harness Mode §6 for the actual onboarding; it does **not** execute a live chamber
-   simulation and must not be presented as a working capability. Same branch applies to a **new capability of an
-   existing harness** (incubate in the chamber, then transplant). Rationale + economics:
+   simulation and must not be presented as a working capability. The same branch applies to a **new capability
+   of an existing harness** — the incubate-in-chamber-then-transplant flow is likewise the *future target /
+   manual dogfood*, not an executable capability today. Rationale + economics:
    `knowledge/shared/harness-core/harness_incubator_doctrine.md §3`. This audit-and-branch pre-step
    is imported from the revfactory/harness Phase-0 State Audit (sister-audit 2026-07-07) — it tightens FH's
    found→extend reflex and is the "이미 로컬에 연결돼 있으면 자동 탐색" mechanism.
@@ -799,10 +800,12 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc.)
   → ③ Sync local/gitignored session state to your durable companion store, if you keep one
   → ④ Memory hygiene — update stale entries + record new session findings
   → ④-b npm freshness — if any npm-shipped asset changed (`package.json` `files[]`: skills · agents ·
-       knowledge/ · docs/ · README · AGENTS.md · CLAUDE.md · CHEATSHEET): **first a Codex-entrypoint drift check** (mechanical
-       grep, ~0 cost) — does the changed CLAUDE.md/knowledge topic touch a section mirrored in `AGENTS.md`
-       / `docs/codex-compat.md` (both files[]-shipped Codex entry points)? sync it, else record
-       `drift:none`. Version lockstep invalidates the plugin.json *cache* but is **orthogonal** to
+       knowledge/ · docs/ · README · AGENTS.md · CLAUDE.md · CHEATSHEET · CATALOG.md): **first a Codex-entrypoint
+       drift check** — the script (`session_close_check.sh`) auto-*fires a candidate reminder* by cheap grep
+       (file co-occurrence, not topical parity), then **you judge**: does the changed CLAUDE.md/knowledge topic
+       actually mirror a section in `AGENTS.md` / `docs/codex-compat.md` (both files[]-shipped Codex entry
+       points)? sync it, else record `drift:none`. The grep flags; it does not determine — the parity call is
+       judged. Version lockstep invalidates the plugin.json *cache* but is **orthogonal** to
        entry-point *content* — a version-only bump can ship a stale Codex entry point (gate-locality,
        Codex side). Then **propose republish**: version bump **in lockstep**
        across `package.json` + every `.claude-plugin/plugin.json` + `marketplace.json` (single-source =
