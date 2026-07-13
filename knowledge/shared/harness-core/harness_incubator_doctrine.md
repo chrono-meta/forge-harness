@@ -85,12 +85,30 @@ chamber, then landed in the field repo.
 
 **Minimal execution skeleton (when the operator accepts simulate-first)**: the procedure is currently
 *judged/ad-hoc*, standardization deferred to a second real occurrence (measured-trigger, per the
-evidence-threshold build discipline): ① open a chamber workspace (a worktree or `tracks/{project}-sim/`
-— never a real project repo); ② scope the run through `goal-quench`'s budget gate (chamber runs are the
-expensive path — cap them); ③ drive the simulation with existing FH assets (dispatch, gates, live
-surfaces as needed); ④ the emit judgment — "the simulation holds" — is a *judged* call paired with the
-run's own mechanical evidence (tests passing, gate verdicts, reproduced flows), decided **with the
-operator (HITL)**; ⑤ on emit, route through Full-Harness Mode / field scaffolds as usual.
+evidence-threshold build discipline): ① open a chamber workspace (a worktree or `tracks/_chamber/{project}/`
+— never a real project repo; the underscore prefix rides the onboarding carve-out for meta dirs
+(any `tracks/_*` dir — general rule, stated as such in the branch tests), so a **chamber run** never
+registers as a mapped project and never pollutes the returning-menu door counts — a
+`tracks/{project}-sim/` path would); ② scope the run through `goal-quench`'s budget
+gate (chamber runs are the expensive path — cap them); ③ drive the simulation with existing FH assets
+(dispatch, gates, live surfaces as needed); ④ the **Emission Gate** — the emit judgment "the simulation
+holds" — is a *judged* call paired with the run's own mechanical evidence (tests passing, gate verdicts,
+reproduced flows), decided **with the operator (HITL)**; ⑤ on emit, route through Full-Harness Mode /
+field scaffolds as usual (`auto_project_mapping.md §6` — that mode is also this chamber's emit terminus).
+
+*Vocabulary reservation (term hygiene, not standardization)*: a run of this skeleton is a **chamber
+run** — going forward, run/workspace/log labels use "chamber" for incubation and keep "sim/simulation"
+for *verification* sims (target-tier blind sim, sim-conductor persona sims). Established names are
+grandfathered, not renamed: the Autopilot branch stays **simulate-first**, and this section's
+"simulation holds" phrasing stands — the reservation governs new labels (grep keys), not existing
+doctrine prose. The Emission Gate and chamber-run labels exist so a second real occurrence is
+recoverable from logs; the procedure itself stays evidence-gated as above.
+*Routing baseline (measured)*: the Autopilot's simulate-first routing branch passed a Step 0.5
+trigger-accuracy probe 2026-07-13 — 10/10 blind Sonnet sims (5 should-fire incl. 2 borderline, 5
+should-not-fire incl. 3 borderline near-misses), 0 malformed verdicts. Scope honestly: an
+authored-case baseline (single-draw per case; reps waived per measurement-integrity since every
+first draw matched expected — see the 2026-07-13 subagent-invocations log entry), not a calibrated
+accuracy estimate.
 
 **Incubation unit — projects AND features**: incubation applies not only to new projects but to **new
 capabilities of an existing harness**. A field harness's self-development is itself run inside the

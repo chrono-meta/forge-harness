@@ -66,7 +66,7 @@ Mapping complete: N projects
 
 Basic mapping (steps 1–5) registers a project *lightly* (tracks/ + a starter CLAUDE.md + hub link). **Full-Harness Mode adds the project-local harness assets** — identity ① (Control Tower) propagating harness structure to a connected project; the *how* is executed via the Core Axis.
 
-**Scope**: target *mapped* projects only. For FH-self setup / acceleration baseline (zshrc, sentinels, the FH self-gate) use `/install-wizard` — do **not** run §6 on the FH hub itself. **Prerequisite**: the project is already mapped (steps 1–5); §6 is strictly additive.
+**Scope**: target *mapped* projects only. For FH-self setup / acceleration baseline (zshrc, sentinels, the FH self-gate) use `/install-wizard` — do **not** run §6 on the FH hub itself. **Prerequisite**: the project is already mapped (steps 1–5); §6 is strictly additive. This mode is also the **emit terminus of a chamber run** — a simulate-first incubation that holds routes here on emit (`harness_incubator_doctrine.md §3` Minimal execution skeleton ⑤).
 
 **Triggers**: "harness-ify this project", "full harness setup", "프로젝트 하네스화", "promote to full harness", or an opt-in prompt offered right after a basic mapping (*"Promote {project} to a full harness now?"*).
 
@@ -121,6 +121,7 @@ The scaffold **enforces the creation gate by construction** — a field skill is
 - **Do not overwrite existing project files** — if CLAUDE.md exists, propose block addition only
 - **Warn when large monorepo detected** — repos with 10+ subprojects: ask "Which subproject is the track unit?"
 - **Name collision** — if track name already exists, ask user to specify a new track name
+- **Underscore prefix reserved** — a track name must not start with `_`: `tracks/_*` is the meta/chamber namespace the onboarding branch tests exclude from project counts (`_meta`/`_audit`/`_contrib`/`_chamber`…). Mapping a project as `tracks/_foo/` would make it invisible to the menu — rename (e.g. strip the underscore) before mapping
 - **Pre-existing `.claude/` config is untrusted input, not a mapping detail** — a candidate project
   (step 1 scan) may already carry a `.claude/settings.json` from a source FH did not author (a clone,
   a fork, a prior contributor). Two disclosed Claude Code CVEs show that file class is a live RCE /

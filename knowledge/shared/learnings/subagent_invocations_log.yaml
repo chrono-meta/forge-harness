@@ -168,3 +168,15 @@
   target: "CLAUDE.md §Field-Harness Load-Bearing Change Gate + knowledge detail doc + degrade_direction_scan.sh"
   outcome: accepted
   note: "2 HIGH (fail-open degrade — gate inherited auto-decorrelation's silent same-family fallback = the SAME correlated signature the gate catches) + 2 MED (trigger overclaim, under-coverage) + 1 LOW. All fixed; re-verify: 'H1/H2 fail-open degrade CLOSED'. The gate found its own default-toward-proceed hole — dogfood value made concrete."
+- date: 2026-07-13
+  skill: fh-meta:persona-innovator (Mode F, context-entry Mode D)
+  context: "FH self-dev autonomous session — incubator/simulate-first axis gap+naming+frontier scan"
+  target: harness_incubator_doctrine.md + CLAUDE.md §Autopilot
+  outcome: accepted
+  note: "6 signals. Adopted: #1 tracks/{project}-sim/ collides with is-mapped signal → tracks/_chamber/{project}/ (real defect, 1-line fix) · #2 'chamber run' vocab reservation · #4 §6 emit-terminus back-pointer · #5 'Emission Gate' name. Deferred (evidence-gated record-only): #3 resumable chamber state (OpenAI Agents SDK) · #6 GenEnv difficulty-alignment sister-anchor."
+- date: 2026-07-13
+  context: "Step 0.5 Trigger-Accuracy Probe — simulate-first routing branch (judged→measured)"
+  agent: "design=Agent(model:fable) · runners=10× Agent(model:sonnet, blind, isolated, typed verdict)"
+  self_contained_prompt: yes
+  outcome: accepted
+  note: "10/10 correct (5 should-FIRE incl. borderline small-but-exploratory + small-sounding-but-refund-bot; 5 should-NO-FIRE incl. large-but-clear CRUD, simulation-as-topic, scary-word-but-reversible). 0 malformed. All first draws matched expected → no reps needed per measurement-integrity. Baseline recorded in doctrine §3."
