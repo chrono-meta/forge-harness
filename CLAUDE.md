@@ -204,7 +204,7 @@ No user request is needed — this is a mandatory autonomous step, not a proposa
 **Commit gate**: `git commit` on FH asset changes is hard-blocked by `templates/.git-hooks/pre-commit` until all required axes PASS. Hook installation (one-time): `git config core.hooksPath templates/.git-hooks && chmod +x templates/.git-hooks/pre-commit templates/.git-hooks/pre-push` (the same `core.hooksPath` also activates the **pre-push** Destructive-Op gate — see that section below).
 
 ```
-FH asset modified → Axis 1 (regression_guard.sh --pr {BRANCH})
+FH asset modified → Axis 1 (templates/regression_guard.sh --pr {BRANCH})
   → Axis 2 (/steel-quench) → Axis 3 (/phantom-quench)
   → marker: tracks/_meta/.axes_23_passed_{branch}_{date}.marker
      (required fields: axis2-engine / axis2-model / floor-status / axis2-evidence;
@@ -281,7 +281,7 @@ no weak-local-judge regression of the judge-robustness principle (mechanical anc
 
 | Axis | Skill | What it catches |
 |---|---|---|
-| Backward | `regression_guard.sh` | Critical section loss, broken refs, syntax errors, line reduction |
+| Backward | `templates/regression_guard.sh` | Critical section loss, broken refs, syntax errors, line reduction |
 | Adversarial | `steel-quench` | Trigger phrase collisions, design attack surface, over-engineered steps |
 | Forward | `phantom-quench` | Phantom references, paths that don't exist, stale external links |
 | Record | `edit-manifest` RECORD | Logs predicted impact — closes the predict-verify loop for future harvest-loop |
@@ -427,9 +427,13 @@ let the innovator center a recommend cascade, produce a ranked install plan, and
    *maintain* (mature harness → route to the Field-Harness Diagnostic instead).
    **new-build sub-branch — simulate-first (incubator doctrine)**: judge the project's character before
    building. Clear · small · low failure-cost → build immediately (current flow). Uncertain · exploratory ·
-   failure-expensive → **recommend simulate-first**: run the project as a simulation inside the FH chamber
-   (harness-unit sandbox) and *emit* the initial project only after the simulation holds — one-line
-   recommendation, operator decides (HITL; never forced). Same branch applies to a **new capability of an
+   failure-expensive → **flag simulate-first as an option (not yet a live capability)**: doctrine says
+   such a project *should* be chamber-simulated before emit — but **the chamber run+emit machinery is a
+   named target, not implemented** (no `_chamber` runner in scripts/plugins/hooks; doctrine §3 self-
+   declares this; the routing trigger reached measured-baseline 2026-07-13, the run *skeleton* awaits its
+   2nd real chamber run, evidence-gated). So today this branch = a one-line HITL recommendation, then
+   fall back to Full-Harness Mode §6 for the actual onboarding; it does **not** execute a live chamber
+   simulation and must not be presented as a working capability. Same branch applies to a **new capability of an
    existing harness** (incubate in the chamber, then transplant). Rationale + economics:
    `knowledge/shared/harness-core/harness_incubator_doctrine.md §3`. This audit-and-branch pre-step
    is imported from the revfactory/harness Phase-0 State Audit (sister-audit 2026-07-07) — it tightens FH's
@@ -795,10 +799,15 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc.)
   → ③ Sync local/gitignored session state to your durable companion store, if you keep one
   → ④ Memory hygiene — update stale entries + record new session findings
   → ④-b npm freshness — if any npm-shipped asset changed (`package.json` `files[]`: skills · agents ·
-       README · AGENTS.md · CLAUDE.md · CHEATSHEET), **propose republish**: version bump **in lockstep**
+       knowledge/ · docs/ · README · AGENTS.md · CLAUDE.md · CHEATSHEET): **first a Codex-entrypoint drift check** (mechanical
+       grep, ~0 cost) — does the changed CLAUDE.md/knowledge topic touch a section mirrored in `AGENTS.md`
+       / `docs/codex-compat.md` (both files[]-shipped Codex entry points)? sync it, else record
+       `drift:none`. Version lockstep invalidates the plugin.json *cache* but is **orthogonal** to
+       entry-point *content* — a version-only bump can ship a stale Codex entry point (gate-locality,
+       Codex side). Then **propose republish**: version bump **in lockstep**
        across `package.json` + every `.claude-plugin/plugin.json` + `marketplace.json` (single-source =
        `package.json`) → Pre-Publish gate → `npm publish` → `git tag vX.Y.Z` at publish. **Propose, don't
-       auto-publish.** (Why lockstep — Codex caches on plugin.json version — + tag-drift caveat → §detail below.)
+       auto-publish.** (Why lockstep — Codex caches on plugin.json version — + drift-check + tag-drift caveat → §detail below.)
   → ④-c Handoff lifecycle (cross-machine continuity) — when a durable **result artifact lands** this
        session (mechanical hint: a new `*result*`/`*signal*`/`*_run_*` file in your companion store or
        `tracks/`), do two things: **(a) ④-c stamps** any `"run this/start here"` run-handoff whose

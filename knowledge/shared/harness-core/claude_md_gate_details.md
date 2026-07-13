@@ -159,6 +159,26 @@ package stale. **Tag drift caveat**: when a bump rides inside a functional commi
 commit), tag *that* commit — otherwise the version ships to npm untagged (e.g. 1.4.4/1.4.5 shipped
 untagged, backfilled 2026-06-08).
 
+**Entry-point content drift (④-b drift-check — orthogonal to the version cache above).** The plugin.json
+version keys the *cache path*, so bumping it forces Codex to refetch — that closes the **stale-cache**
+axis. It does **not** close a second, orthogonal axis: `AGENTS.md` / `docs/codex-compat.md` are the
+Codex-user entry points, and their *prose* must mirror whatever CLAUDE.md/knowledge change triggered the
+republish. A version-only bump invalidates the cache yet still serves an AGENTS.md that never absorbed the
+change — **version fresh, entry point stale** (the Codex-side face of `[[feedback_gate_locality_principle]]`:
+a gate/pointer is only as fresh as the surface the actor actually reads). So ④-b greps whether the changed
+topic touches a mirrored AGENTS.md/codex-compat section → sync it, else record `drift:none`. Mechanical
+grep, ~0 cost. **Mechanically *emitted*, judged-*determined* (honest scope)**:
+`scripts/session_close_check.sh` ④-b-drift auto-fires a drift-*candidate* warning when a shipped
+CLAUDE.md/knowledge path changed but the Codex entry points (`AGENTS.md`/`docs/codex-compat`) did not.
+What is mechanized is the *reminder* — it no longer depends on the runner remembering to look (that half
+of the old "prose-only" gap is closed). What is **not** mechanized is the *parity determination*: the
+script tests file **co-occurrence**, not topical parity, so it (a) can false-positive when the changed
+path doesn't actually mirror an entry-point section, and (b) can false-negative if AGENTS.md was touched
+for an unrelated reason in the same tag range. So the runner still judges each candidate (sync it, else
+record `drift:none`) — the script flags, it does not *catch*. Origin: 2026-07-13 the close chain
+lockstep-bumped v1.4.56/57 but only an operator question ("코덱스 호환성도 자동?") confirmed AGENTS.md was
+clean — the chain never auto-checked it (`fh_signal_2026-07-13_self-dev` S3).
+
 ---
 
 ## §Session-Close-Handoff-Lifecycle

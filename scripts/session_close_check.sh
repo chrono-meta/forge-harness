@@ -56,12 +56,27 @@ if [ "$COMMITS_TODAY" -gt 0 ] && [ ! -f "$FC" ]; then
   FAIL=1
 fi
 
-# ④-b npm freshness — files[] assets changed since last version tag → republish owed
+# ④-b npm freshness — files[] assets changed since last version tag → republish owed.
+# Patterns are NARROWED to the actually-shipped subpaths (package.json files[]): knowledge/ ships only
+# shared/{harness-core,dialogue,rules}; docs/ ships only {codex-compat,CONTRIBUTING,pillars}. A broad
+# ^knowledge/ / ^docs/ over-matched git-tracked-but-UNshipped files (e.g. knowledge/shared/learnings/
+# subagent_invocations_log.yaml, which changes almost every self-dev session) → guaranteed per-session
+# false positive that trains the runner to ignore the line (Axis-2 challenger catch 2026-07-13).
+SHIP_RE='^(plugins/|knowledge/shared/(harness-core|dialogue|rules)/|docs/(codex-compat|CONTRIBUTING|pillars)|README|AGENTS\.md|CLAUDE\.md|CHEATSHEET|CATALOG\.md)'
 LAST_TAG=$(git -C "$FH" describe --tags --abbrev=0 2>/dev/null || true)
 if [ -n "$LAST_TAG" ] && [ -f "$FH/package.json" ]; then
-  if git -C "$FH" diff --name-only "$LAST_TAG"..HEAD 2>/dev/null \
-       | grep -qE '^(plugins/|README|AGENTS\.md|CLAUDE\.md|CHEATSHEET)'; then
+  CHANGED_SINCE_TAG=$(git -C "$FH" diff --name-only "$LAST_TAG"..HEAD 2>/dev/null)
+  if printf '%s\n' "$CHANGED_SINCE_TAG" | grep -qE "$SHIP_RE"; then
     echo "⚠️  ④-b npm-shipped assets changed since $LAST_TAG — propose lockstep republish (never auto)"
+  fi
+  # ④-b-drift: auto-FIRE a drift-CANDIDATE reminder (not a parity verdict). If a shipped CLAUDE.md/knowledge
+  # path changed but the Codex entry points (AGENTS.md / docs/codex-compat.md) did NOT co-change, flag it.
+  # HONEST SCOPE: this tests file co-occurrence, not topical parity — it can false-positive (changed path
+  # doesn't mirror an entry-point section) or false-negative (AGENTS.md touched for an unrelated reason).
+  # The reminder is mechanized; the drift DETERMINATION stays judged (runner syncs or records drift:none).
+  if printf '%s\n' "$CHANGED_SINCE_TAG" | grep -qE '^(CLAUDE\.md|knowledge/shared/(harness-core|dialogue|rules)/)' \
+     && ! printf '%s\n' "$CHANGED_SINCE_TAG" | grep -qE '^(AGENTS\.md|docs/codex-compat)'; then
+    echo "⚠️  ④-b drift candidate: shipped CLAUDE.md/knowledge changed but AGENTS.md/docs/codex-compat did not — JUDGE Codex entry-point parity (sync, or record drift:none if genuinely unaffected)"
   fi
 fi
 
