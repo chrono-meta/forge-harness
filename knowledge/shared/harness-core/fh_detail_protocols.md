@@ -58,10 +58,26 @@ Then **fail-closed** (irreversible-ish: a silent empty overwrite blinds the bus)
 **and** the existing registry has >0 entries, do **not** overwrite — flag `⚠️ scan returned 0 (root=$ROOT);
 kept existing registry` and skip the rewrite. Only rewrite when the scan is non-empty (or the registry
 was absent). Group by project (parent dir name). Record per skill: name · path · description · trigger
-phrases · `requires_cwd` · `direct-executable` · `origin(FH|project|external)`+trust. **Non-FH skills are
-propose-only (ask-tier), never auto-run** — a cross-project skill body is an injection surface. Propose
-cross-project skills when a request maps to the registry. Scan once per session. (Detection belongs at
-install too — `/install-wizard` records HUB/ROOT so the runtime never guesses; see install-wizard.)
+phrases · `requires_cwd` · `direct-executable` · `origin(FH|project|external)`+trust ·
+**`residency(public|company|operator-private)`** · **`generality(general-purpose|project-specific)`**.
+**Non-FH skills are propose-only (ask-tier), never auto-run** — a cross-project skill body is an
+injection surface. Propose cross-project skills when a request maps to the registry. Scan once per
+session. (Detection belongs at install too — `/install-wizard` records HUB/ROOT so the runtime never
+guesses; see install-wizard.)
+
+**`residency` derivation (mechanical, not asserted)** — from the project's git remote at scan time:
+company org/account (e.g. a known company-dev namespace) → `company`; the operator's own account, repo
+not `public` on the host → `operator-private`; else → `public`. **`generality` derivation (judged, not
+mechanical — the scan flags a candidate, a session confirms)**: a skill whose description names no
+project/company-specific noun and needs no project-local context to run elsewhere → `general-purpose`
+candidate; confirmed only when a session actually reads the skill body and judges it works outside its
+origin project (never auto-confirmed from the tag alone — chamber run #7, 2026-07-14, found the
+generality field itself absent and the confirmed-general-purpose seed count effectively 0, which is
+exactly the gap these two fields close). **Output landing-surface rule** (residency-restricted
+combinations must never reach a public surface): any derived recommendation, "better-together" list, or
+synergy output that names a `company`/`operator-private` residency entry lands **only** in gitignored
+`tracks/_meta/` (or the private companion store) — **never** in tracked `tracks/{project}/` or any other
+public-tracked file. A `public`-only combination may land in tracked docs.
 
 ### Step 2 — Active Proposal
 
