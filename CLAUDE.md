@@ -427,15 +427,18 @@ let the innovator center a recommend cascade, produce a ranked install plan, and
    *maintain* (mature harness → route to the Field-Harness Diagnostic instead).
    **new-build sub-branch — simulate-first (incubator doctrine)**: judge the project's character before
    building. Clear · small · low failure-cost → build immediately (current flow). Uncertain · exploratory ·
-   failure-expensive → **flag simulate-first as an option (not yet a live capability)**: doctrine says
-   such a project *should* be chamber-simulated before emit — but **the chamber run+emit machinery is a
-   named target, not implemented** (no `_chamber` runner in scripts/plugins/hooks; doctrine §3 self-
-   declares this; the routing trigger reached measured-baseline 2026-07-13, the run *skeleton* awaits its
-   2nd real chamber run, evidence-gated). So today this branch = a one-line HITL recommendation, then
-   fall back to Full-Harness Mode §6 for the actual onboarding; it does **not** execute a live chamber
-   simulation and must not be presented as a working capability. The same branch applies to a **new capability
-   of an existing harness** — the incubate-in-chamber-then-transplant flow is likewise the *future target /
-   manual dogfood*, not an executable capability today. Rationale + economics:
+   failure-expensive → **flag simulate-first as an option**: doctrine says such a project *should* be
+   chamber-simulated before emit. The chamber **run orchestration is now wired** (`scripts/chamber_run.sh`
+   — an intent-driven, resumable 7-step runner: budget-entry cap, ≥3-blind-persona gate, Emission Gate,
+   G4 ledger auto-append; run #3 exercised it 2026-07-14). But a **live one-command autonomous
+   simulate→EMIT of a field harness is NOT yet a capability**: step-4 persona dispatch is human/Claude-driven
+   (bash cannot spawn the isolated Agents — the honest muscle boundary), the EMIT terminus is HITL, and
+   **EMIT has never fired — the ledger's real runs are 2/2 KILL** (the chamber to date *screens*, it has not
+   *birthed*). So today this branch = a one-line HITL recommendation to run the chamber (`chamber_run.sh`),
+   then fall back to Full-Harness Mode §6 for the actual onboarding; the runner gates and records a
+   human-driven run — it must **not** be presented as a push-button autonomous emit. The same branch applies
+   to a **new capability of an existing harness** — the incubate-in-chamber-then-transplant flow is likewise
+   run-orchestrated but not autonomously emitting today. Rationale + economics:
    `knowledge/shared/harness-core/harness_incubator_doctrine.md §3`. This audit-and-branch pre-step
    is imported from the revfactory/harness Phase-0 State Audit (sister-audit 2026-07-07) — it tightens FH's
    found→extend reflex and is the "이미 로컬에 연결돼 있으면 자동 탐색" mechanism.
