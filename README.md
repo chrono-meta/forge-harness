@@ -224,6 +224,19 @@ The broader FH automation layer still depends on Claude Code for sub-agents, hoo
 
 **Empirical result (2026-05-31)**: Applied to OpenCode's AI-generated `permission/arity.ts` (163 lines, CI green). Current gate semantics classify this as BLOCKED: 2 A-grade findings CI didn't catch (short-token overflow in allowlist, executor tools absent from arity table).
 
+**Does the method actually add anything? A measured check (2026-07-14).** We held the model fixed at a
+mid-tier floor and varied only the review *method*, on unseen gate snippets with planted *default-toward-PASS*
+(fail-open) holes. On eight subtle holes — authored by two other models so the test set wasn't tuned to our
+method — a plain review caught 5/8 (and two of those "catches" were the wrong bug, i.e. false confidence);
+the same model with FH's degrade-direction lens caught 6/8 with zero false alarms. The honest part: **both
+single-model lanes missed the same two holes** (a falsy error-sentinel, and a separator-negation parse). A
+different model family, same lens, caught both — so the FH *stack* (lens + cross-family + a mechanical
+pre-screen) reaches 8/8. The takeaway isn't a headline score; it's that the value comes from the
+**decorrelated stack**, because even a well-prompted single model has a correlated blind spot that only a
+different family closes. The two missed classes are now caught mechanically (a lint pre-screen), one layer
+earlier. Small sample (single draw); reps and harder holes are the stated next step. Method + full result:
+[`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md).
+
 Full spec: [`fh_integration_contract.md`](knowledge/shared/harness-core/fh_integration_contract.md)
 
 ---

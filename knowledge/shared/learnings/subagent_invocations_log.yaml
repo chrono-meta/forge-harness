@@ -204,3 +204,9 @@
   target: "Autonomous Initiative routing table — does a novice-vocabulary intent fire the right skill/gate without naming it, on the Sonnet floor"
   outcome: accepted
   note: "should-fire 7.5/8 (94%) + false-fire 0/2. HITs: cross-project-skill-bus, pre-publish-gate, destructive-op(predelete ACTUALLY RAN → 3 REVIEW branches, caught unmerged goal-quench branch via memory cross-ref), frontier-digest(surfaced today's launchd digest, no re-run, +GRACE sister catch), deep-clarify ×2, context-doctor, field-harness-diagnostic. no-fire correct on 2 trivial edits (no skill spam). ONLY miss P2: simulate-first(incubator entry) absorbed into deep-clarify on textbook uncertain+failure-expensive utterance — identity-2 weakest trigger, measured. n=1 borderline → reps≥3 follow-up. Artifact: tracks/_meta/identity_audit_2026-07-14.md."
+- date: 2026-07-14
+  skill: "dominance HARD benchmark — Fable+Codex(hole authors, decorrelated) + 20× claude -p sonnet blind lanes + codex cross-family"
+  context: "materialize 'forward direction' — subtler fail-open holes to show decisive dominance; operator: 패이블 gpt로 열어젖혀라, fh/pmh/docs 반영"
+  target: "governance craft dominance + degrade_direction_scan probes E/F"
+  outcome: accepted
+  note: "8 subtle holes (Fable 4 + Codex 4, test-set author ≠ method = decorrelated). plain 5/8 (2 distractor mis-ID) · degrade-lens 6/8 0-FP · both Sonnet lanes missed f2(falsy-sentinel)+c3(sep-negation) · cross-family codex caught both → STACK 8/8. Finding: dominance is architectural (decorrelated stack, not single lens). MATERIALIZED: degrade_direction_scan.sh probes E+F catch f2+c3 mechanically, 0-FP on FH scripts, templates synced. Reflected: dominance artifact round-2, ship_readiness_gate, README, AX qasp_실증이력, pmh 실증상세."

@@ -89,6 +89,24 @@ for f in "${FILES[@]}"; do
   done < <(grep -nE '^[[:space:]]*(if|elif|return|assert|while)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+in[[:space:]]+[A-Za-z_][A-Za-z0-9_.]*[[:space:]]*[:)]?[[:space:]]*$' "$f" 2>/dev/null \
            | grep -vE '\bfor\b|in range|in enumerate|not in' \
            | grep -vE '\b(verdict|present|ground|state|match|expected)\w*\b')
+
+  # Probe E — negated-falsy guard returning permissive (dominance-benchmark round-2 f2 class): an error
+  # SENTINEL (None / {} / "" / []) is falsy, so `if not X: return <PASS>` treats "the check errored / never
+  # ran" identically to "the check ran and found nothing clean". Distinguish errored from clean before allowing.
+  while IFS= read -r ln; do
+    emit "$f" "$ln" "E:falsy-sentinel→PASS" "negated-falsy guard returns permissive — a falsy error sentinel (None/{}/'') masquerades as 'clean'; a gate must distinguish 'errored/absent' from 'verified clean'"
+  done < <(grep -nE -A2 '^[[:space:]]*if[[:space:]]+not[[:space:]]+[A-Za-z_][A-Za-z0-9_.]*[[:space:]]*:' "$f" 2>/dev/null \
+           | grep -E "return[[:space:]]+$PASS([[:space:],)]|$)" | grep -oE '^[0-9]+' | sort -u | sed 's/$/:/')
+
+  # Probe F — positional field-select from a split result feeding a decision (round-2 c3 class): taking the
+  # decision from `parts[-1]`/`parts[0]` of an attacker-influenceable split lets a crafted field (e.g. a
+  # signed DENY whose free-form comment ends "::ALLOW") negate the verdict. Validate structure, don't select by position.
+  if grep -qE '\.r?split\(' "$f" 2>/dev/null; then
+    while IFS= read -r m; do
+      emit "$f" "${m%%:*}" "F:split-positional-verdict" "decision taken by position ([-1]/[0]) from a split result — an attacker-controlled trailing/leading field can negate the verdict; validate structure, don't select by position"
+    done < <(grep -nE '\[[[:space:]]*-?[01][[:space:]]*\]' "$f" 2>/dev/null \
+             | grep -iE 'decision|verdict|allow|deny|approv|grant|status|result|policy')
+  fi
 done
 
 echo "----"
