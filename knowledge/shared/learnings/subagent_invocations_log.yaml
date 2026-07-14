@@ -216,3 +216,9 @@
   target: "incubator identity ② — first real EMIT vs disciplined KILL"
   outcome: accepted
   note: "VERDICT KILL (strongest-evidence of 5 runs). expert web + local semgrep(auto/security-audit/python/default)=0/8 → niche real (CWE-636/OWASP-A10:2025, no packaged rule). challenger sourced re-wrap (2 copies diff=14 lines all comments, logic byte-identical). DECISIVE: authored AST semgrep rule pack, ran on 111 real qasp-dev files → 5/5 FALSE-POSITIVE (skip-if-empty contracts, config toggle, content predicate). 'if not x: return permissive' is ubiquitous-benign; real-hole vs benign-absence is SEMANTIC not syntactic. ∴ valuable capability = judgment (scan∪cross-family lens), not artifact — can't npm publish a judgment. EMIT stays 0/5. MEASURED screening criterion for future candidates: net-new ∧ artifact-shaped ∧ real-code-precision-adequate; 0/5 cleared all three. Reflected: identity_audit ②, chamber ledger run #5, AX qasp/pmh 소개서."
+- date: 2026-07-14
+  skill: "target-tier blind Sonnet sim (isolated general-purpose Agent) — Envelope-Boundary Discipline verification"
+  context: "operator named the anti-normalization discipline 'the real evolution point'; new always-loaded CLAUDE.md rule needs target-tier sim (salience-dependent, Mode D near-mandatory)"
+  target: "does the reinvention-reflex counterweight fire on boundary cases + not over-trigger on genuine reinvention"
+  outcome: accepted
+  note: "2/2 correct discrimination. MSG-A (boundary-crossing meta-insight ~ asset-placement-gate) → HOLD-AND-TEST (resisted normalizing, held as net-new counterweight). MSG-B (genuine steel-quench reinvention) → NORMALIZE (pointed to existing skill, asked what's missing first). Rule fires on boundary AND preserves legitimate no-reinvention. Shipped CLAUDE.md §Envelope-Boundary Discipline (PR #138), memory feedback_reinvention_reflex_normalization_counterweight."
