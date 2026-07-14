@@ -90,6 +90,11 @@ fi
 STOP='^(that|this|from|into|over|when|what|will|your|there|their|then|than|with|chamber|candidate|skill|agent|tool|does|done|after|before|which|about|through)$'
 _sig() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9가-힣' ' ' | tr -s ' ' '\n' \
          | awk 'length($0)>=4' | grep -vE "$STOP" | sort -u; }
+# kill-side signature for the seen-filter: keeps 2+ char tokens (a slug's meaningful short tokens like
+# "qa"/"ui" are dropped by _sig's ≥4 filter → an all-short slug yields an EMPTY sig → kkn=0 → the old
+# match never fired → a KILLed candidate re-entered the queue SILENTLY, Axis-2 MED-3b). Drops stopwords only.
+_ksig() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9가-힣' ' ' | tr -s ' ' '\n' \
+          | awk 'length($0)>=2' | grep -vE "$STOP" | sort -u; }
 
 # --- LAYER 2: dedup by greedy jaccard clustering ---
 # cluster files: $WORK/cluster.N holds "source<TAB>desc" lines; $WORK/sig.N holds the union keyword sig.
@@ -118,6 +123,24 @@ while IFS=$'\t' read -r label desc; do
   fi
 done < "$RAW"
 
+# --- seen-filter: pull already-KILLed candidates from the G4 run ledger so a re-listed marker for a
+# candidate the chamber already killed does NOT re-enter the main queue (the run-#3 real-use gap). It is
+# EXCLUDED from the ranked queue but SURFACED in a trailing section (re-emit trigger visibility — a KILL
+# is revisitable once its measured observation lands, so we don't silently erase it). Degrade: no ledger
+# → no seen-filter (fail-visible; equals the pre-seen behavior, safe). ---
+LEDGER="$FH/tracks/_chamber/INDEX.md"
+KILLED="$WORK/killed"; : > "$KILLED"
+if [ -f "$LEDGER" ]; then
+  # KILL rows: a run-log table data row (`| #N | date | candidate | VERDICT | ... |`) whose VERDICT
+  # field ($5) says KILL. Scope the KILL test to the verdict field — NOT a whole-line grep, which would
+  # match "kill" inside "skill" in any row's carry-text (Axis-2 HIGH-1: an EMIT row folding a sliver
+  # "into goal-quench skill" would be misread as KILL). Candidate = $4; strip backticks/asterisks/space.
+  awk -F'|' '$0 ~ /^\| *#/ && NF>=5 && toupper($5) ~ /KILL/ {print $4}' "$LEDGER" 2>/dev/null \
+    | sed 's/[`*]//g; s/^ *//; s/ *$//' | grep -v '^$' >> "$KILLED"
+fi
+NKILL=$(grep -c . "$KILLED" 2>/dev/null); NKILL=${NKILL:-0}
+SEENOUT="$WORK/seen_out"; : > "$SEENOUT"
+
 # --- LAYER 2: rank each cluster = source-diversity*2 + frequency; then screen for reinvention ---
 RANKED="$WORK/ranked"; : > "$RANKED"
 c=1
@@ -127,6 +150,32 @@ while [ "$c" -le "$NC" ]; do
   srcs=$(cut -f1 "$WORK/cluster.$c" | sort -u | paste -sd, -)
   rep=$(head -1 "$WORK/cluster.$c" | cut -f2-)
   score=$(( ndiv * 2 + freq ))
+  # seen-filter: does this candidate match an already-KILLed ledger entry? Two decorrelated tests, either
+  # sufficient: (1) kill-name keyword recall ≥60% (the common multi-token case); (2) normalized-substring
+  # fallback — the flattened slug (alnum-only, ≥5 chars) appearing in the flattened candidate — which
+  # closes the all-short-token silent-re-entry hole (MED-3b) that recall alone leaves open. Residual
+  # (documented, accepted): a paraphrased re-listing (router→routing) can still under-recall (MED-4), and
+  # a generic slug can over-exclude — but over-exclusion is VISIBLE in the SEEN-KILLED section (operator
+  # catches a wrong match), whereas silent re-entry was invisible. Visible-imprecise ≻ silent-miss.
+  if [ "$NKILL" -gt 0 ]; then
+    _ksig "$rep" > "$WORK/repsig"
+    repflat=$(printf '%s' "$rep" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9')
+    seen_match=""
+    while IFS= read -r kname; do
+      [ -z "$kname" ] && continue
+      _ksig "$kname" > "$WORK/ksig"
+      kkn=$(grep -c . "$WORK/ksig" 2>/dev/null || true); kkn=${kkn:-0}
+      matched=0; [ "$kkn" -gt 0 ] && matched=$(comm -12 "$WORK/ksig" "$WORK/repsig" 2>/dev/null | grep -c . || true)
+      kpct=0; [ "$kkn" -gt 0 ] && kpct=$(( matched * 100 / kkn ))
+      kflat=$(printf '%s' "$kname" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9')
+      if [ "$kkn" -gt 0 ] && [ "$kpct" -ge 60 ]; then seen_match="$kname"; break; fi
+      if [ "${#kflat}" -ge 5 ] && printf '%s' "$repflat" | grep -qF "$kflat"; then seen_match="$kname"; break; fi
+    done < "$KILLED"
+    if [ -n "$seen_match" ]; then
+      printf '%s\t%s\n' "$seen_match" "$rep" >> "$SEENOUT"
+      c=$((c+1)); continue
+    fi
+  fi
   # reinvention first-pass on the representative description. Capture BOTH the verdict AND the matched
   # anchor the screener already emits ("top asset overlap: X") so a DUPLICATE-CANDIDATE is ACTIONABLE
   # ("DUP:skill:goal-quench") instead of a uniform non-discriminating flag (Axis-2 challenger Axis-5).
@@ -156,4 +205,19 @@ echo ""
 echo "NOTE: SCORE = source-diversity×2 + frequency. REINVENTION is a first-pass flag (DUPLICATE-CANDIDATE"
 echo "= HITL KILL review, not auto-drop). Uncertainty/failure-cost stay JUDGED — operator picks which"
 echo "survivors actually enter the chamber (goal-quench budget gate + HITL). This tool ranks; it never admits."
+
+# seen-filter trailing section: candidates the G4 ledger already KILLed are shown here (NOT in the ranked
+# queue) so a re-listed marker does not silently re-enter the chamber, yet the KILL stays visible (a KILL
+# is revisitable once its re-emit trigger lands — see the run's EMISSION_VERDICT for that condition).
+if [ -s "$SEENOUT" ]; then
+  echo ""
+  echo "SEEN-KILLED — excluded from the queue (G4 ledger $LEDGER already KILLed these):"
+  while IFS=$'\t' read -r kn rep; do
+    [ -z "$rep" ] && continue
+    echo "  · \"$rep\"  ↔ killed as \"$kn\"  (재등재 스킵; re-emit only when that run's trigger condition is met)"
+  done < "$SEENOUT"
+elif [ ! -f "$LEDGER" ]; then
+  echo ""
+  echo "SEEN-FILTER: skipped — no G4 ledger at $LEDGER (fail-visible; no seen-exclusion applied this run)."
+fi
 exit 0

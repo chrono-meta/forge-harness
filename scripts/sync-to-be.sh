@@ -94,6 +94,7 @@ sync_file() {
 
 sync_dir  "$FH/tracks/_meta"      "$BE/tracks-meta"
 sync_dir  "$FH/tracks/_audit"     "$BE/tracks-audit"
+sync_dir  "$FH/tracks/_chamber"   "$BE/tracks-chamber"   # incubation chamber runs (INTENT/SIM_NOTES/verdict/INDEX ledger) — local-only (gitignored in public FH), made durable + cross-machine here
 sync_dir  "$FH/tracks/the_bible"  "$BE/tracks/the_bible"    # mapped project — NESTED under tracks/ (like livedeck; projects nest, only hub-meta _meta/_audit flatten): local-only (untracked in public FH), watched in companion
 
 # Extra local-only project tracks to mirror are listed in a LOCAL, gitignored file

@@ -93,8 +93,11 @@ registers as a mapped project and never pollutes the returning-menu door counts 
 gate (chamber runs are the expensive path — cap them); ③ drive the simulation with existing FH assets
 (dispatch, gates, live surfaces as needed); ④ the **Emission Gate** — the emit judgment "the simulation
 holds" — is a *judged* call paired with the run's own mechanical evidence (tests passing, gate verdicts,
-reproduced flows), decided **with the operator (HITL)**; ⑤ on emit, route through Full-Harness Mode /
-field scaffolds as usual (`auto_project_mapping.md §6` — that mode is also this chamber's emit terminus).
+reproduced flows), decided **with the operator (HITL)**; ⑤ on emit, route by candidate class: a **field
+harness** goes through Full-Harness Mode / field scaffolds (`auto_project_mapping.md §6` — that mode is
+this chamber's field emit terminus); an **FH-internal utility** (a skill/script/rule, not a standalone
+field harness) instead routes through the **New-Skill Pre-Commit gate + `asset-placement-gate`** (the
+same gate every FH asset passes). KILL emits nothing — the workspace stays as the evidence record.
 
 *Vocabulary reservation (term hygiene, not standardization)*: a run of this skeleton is a **chamber
 run** — going forward, run/workspace/log labels use "chamber" for incubation and keep "sim/simulation"

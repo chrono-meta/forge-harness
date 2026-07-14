@@ -749,6 +749,8 @@ Based on LOCAL_SKILL_REGISTRY (Step 1-c), **propose and connect skills from othe
 
 **Method**: create `tracks/_meta/fh_signal_{YYYY-MM-DD}_{source}.md` (1 file/session, append if same date+source). Structural candidates only — exclude typos and in-session-resolved issues.
 
+**Chamber-candidate hook (feeds the discovery pipeline)**: when a signal is an *incubatable capability or project* (uncertain / exploratory / failure-expensive / high-reinvention-risk — a chamber-run candidate, not just a fix), add a `CHAMBER-CANDIDATE: <one-line description>` line to the signal file. `scripts/chamber_candidate_collect.sh` greps that convention across the 6 sources (harness-doctor · harvest-loop · fh-signal · field-harvest · frontier-digest · uap), dedups/ranks, screens for reinvention, and skips anything the G4 ledger already KILLed. Adoption is incremental — the queue is honestly sparse until sources emit the marker; the collector measures the real volume.
+
 ## Execution Tier Settings
 
 > **Full tier table + config**: `knowledge/shared/harness-core/fh_detail_protocols.md` — read when selecting a non-default tier.
