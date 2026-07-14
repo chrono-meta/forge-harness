@@ -99,6 +99,20 @@ this chamber's field emit terminus); an **FH-internal utility** (a skill/script/
 field harness) instead routes through the **New-Skill Pre-Commit gate + `asset-placement-gate`** (the
 same gate every FH asset passes). KILL emits nothing — the workspace stays as the evidence record.
 
+**EMIT-worthiness — the measured screening criterion (run #5, 2026-07-14)**: five chamber runs, EMIT 0/5,
+all KILL. Run #5 (`degrade-lint`) measured *why* the chamber has not birthed, and the finding is a reusable
+screen: a candidate is emit-worthy only if it clears **all three** of — (1) **net-new** (not a reinvention
+of an existing FH/official asset, nor a cosmetic re-wrap of code that already ships — runs #2–#4 died here);
+(2) **artifact-shaped** (a tool/script/rule that stands alone, *not* a judgment-method — run #5's genuine
+niche was real, but its value lived in a scan∪cross-family *lens*, i.e. an LLM judgment, which cannot be
+`npm publish`ed); (3) **real-code-precision-adequate** (its mechanical form, measured on real external code,
+does not cry-wolf — run #5's rule scored 5/5 false-positive on 111 real files because the fail-open shape is
+syntactically identical to ubiquitous-benign skip-if-empty code; the real/benign split is semantic, not
+grep-able). 0/5 candidates cleared all three. This is not "keep trying" — it is a **pre-screen for future
+candidates**: a KILL that fails (1) or (2) is cheap to predict; only (3) needs a measurement leg (semgrep
+baseline + real-repo FP run), which run #5 established as the decisive test. The chamber's honest value to
+date remains *screening* — preventing reinventions and low-precision births — not yet *birthing*.
+
 *Vocabulary reservation (term hygiene, not standardization)*: a run of this skeleton is a **chamber
 run** — going forward, run/workspace/log labels use "chamber" for incubation and keep "sim/simulation"
 for *verification* sims (target-tier blind sim, sim-conductor persona sims). Established names are
