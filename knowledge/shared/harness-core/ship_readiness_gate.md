@@ -43,14 +43,25 @@ composed-in). You never concede the craft; you equip for the domain. So the domi
 **craft** (does FH out-govern / out-build any alternative on unseen ground?), and composition applies to the
 **gear** (which specialist harness to bolt on for this domain's micro-work).
 
-**First dominance result (governance craft, 2026-07-14)** — `tracks/_meta/dominance_benchmark_2026-07-14.md`.
-Model held fixed at the Sonnet floor; only the harness *method* varied. On unseen gate code with planted
-fail-open holes: FH's degrade-direction method **5/5 (100%, 0 false-positive)** vs a plain no-lens review
-**3/5 (1 missed fail-open + 1 false-alarm on correct code)**. The harness took the same floor-tier model from
-60%→100% — dominance isolated as *method*, not model. Honest scope: obvious fail-opens are caught by both;
-the harness's decisive win is concentrated on the **subtle** hole (attention held on the degrade direction)
-and on **not crying wolf** on correct fail-closed code. A true AlexNet-scale blowout needs subtler holes —
-which is exactly the diagnostic direction (where the gap does NOT yet widen tells us where to sharpen).
+**Dominance result (governance craft, 2026-07-14)** — `tracks/_meta/dominance_benchmark_2026-07-14.md`.
+Model held fixed at the Sonnet floor; only the harness *method* varied. Two rounds:
+- **Round 1 (5 easy holes)**: FH degrade-lens **5/5 (0 FP)** vs plain review **3/5** (1 miss + 1 false-alarm).
+  Honest read: obvious fail-opens are caught by both — the lens's edge showed only on the subtle hole and
+  in not crying wolf. Not a blowout; it pointed to harder holes as the real test.
+- **Round 2 (8 subtle holes, authored by Fable + Codex — decorrelated from the method under test)**: plain
+  review **5/8** (and 2 of its "catches" were distractor mis-identifications = false confidence, worse than
+  a clean miss); degrade-lens **6/8, 0 FP**; and critically **both single Sonnet lanes missed the same 2
+  holes** (a falsy-error-sentinel return, and a separator-negation parse). A **cross-family (Codex) lane
+  with the same lens caught both** — the correlated blind spot inside one model family, closed only by a
+  *different* family. **FH stack (degrade-lens ∪ cross-family) = 8/8, 0 FP.**
+
+The load-bearing finding is architectural, not a headline number: **dominance comes from the decorrelated
+stack (`degrade-lint ∪ cross-family ∪ mechanical-anchor`), not from any single clever reviewer** — even a
+well-prompted floor model has a correlated blind spot that only a different family closes. This is the
+*empirical* basis for why FH is a stack, not a prompt. And the two blind-spot classes round 2 exposed were
+**immediately mechanized** — `degrade_direction_scan.sh` probes E (falsy-sentinel→PASS) and F
+(split-positional-verdict) now flag both at the pre-lens layer (0 false-positive on the FH codebase), so the
+correlated miss is caught one layer earlier. Forward direction: more such classes, and reps≥3 to fix the numbers.
 
 **Gate consequence**: each 🟢 identity should carry not just an existence artifact (n≥1) but, where a
 competitor exists, a **dominance result** — a measured head-to-head where our harness catches / completes /
