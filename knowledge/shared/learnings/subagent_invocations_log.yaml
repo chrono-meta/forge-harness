@@ -210,3 +210,9 @@
   target: "governance craft dominance + degrade_direction_scan probes E/F"
   outcome: accepted
   note: "8 subtle holes (Fable 4 + Codex 4, test-set author ≠ method = decorrelated). plain 5/8 (2 distractor mis-ID) · degrade-lens 6/8 0-FP · both Sonnet lanes missed f2(falsy-sentinel)+c3(sep-negation) · cross-family codex caught both → STACK 8/8. Finding: dominance is architectural (decorrelated stack, not single lens). MATERIALIZED: degrade_direction_scan.sh probes E+F catch f2+c3 mechanically, 0-FP on FH scripts, templates synced. Reflected: dominance artifact round-2, ship_readiness_gate, README, AX qasp_실증이력, pmh 실증상세."
+- date: 2026-07-14
+  skill: "chamber run #5 degrade-lint EMIT attempt — 4 blind cross-family personas (beginner/main-player Sonnet, challenger Fable, expert Sonnet+websearch) + decisive semgrep measurement leg"
+  context: "operator: '②는 이상론으로 남는다 — 이걸 실제로 돌려보고 채운 후에 하는 건 불가능?' → genuinely attempt an EMIT (degrade-scanner as independent npm CLI), let the chamber decide honestly"
+  target: "incubator identity ② — first real EMIT vs disciplined KILL"
+  outcome: accepted
+  note: "VERDICT KILL (strongest-evidence of 5 runs). expert web + local semgrep(auto/security-audit/python/default)=0/8 → niche real (CWE-636/OWASP-A10:2025, no packaged rule). challenger sourced re-wrap (2 copies diff=14 lines all comments, logic byte-identical). DECISIVE: authored AST semgrep rule pack, ran on 111 real qasp-dev files → 5/5 FALSE-POSITIVE (skip-if-empty contracts, config toggle, content predicate). 'if not x: return permissive' is ubiquitous-benign; real-hole vs benign-absence is SEMANTIC not syntactic. ∴ valuable capability = judgment (scan∪cross-family lens), not artifact — can't npm publish a judgment. EMIT stays 0/5. MEASURED screening criterion for future candidates: net-new ∧ artifact-shaped ∧ real-code-precision-adequate; 0/5 cleared all three. Reflected: identity_audit ②, chamber ledger run #5, AX qasp/pmh 소개서."

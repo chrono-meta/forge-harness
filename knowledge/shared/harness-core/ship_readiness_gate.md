@@ -84,9 +84,23 @@ Score with the same triangulation the 2026-07-14 audit used — no single-source
 The formal release tag is **independent of the npm package version**. The npm version (currently in the
 `1.4.x` range) is the **plugin-cache lockstep number** — it bumps on every shipped-asset change so Codex/
 marketplace cache-invalidate; it is not a maturity claim. The **formal identity-maturity release starts at
-`v0.1.0`** and advances only when the ship-readiness gate goes all-green. `v0.1.0` = "the first release
-whose every identity is proven, not aspirational." Do not conflate the two counters; a high npm number does
-not make the harness `v1.0`.
+`v0.1.0`**. Do not conflate the two counters; a high npm number does not make the harness mature.
+
+**The `0.x` ↔ `1.0` mapping (refined 2026-07-14, informed operator decision).** Semver `0.x` explicitly
+means *early / not-yet-complete*, so the formal track maps cleanly onto the identity gate:
+- **`v0.1.0` = the first formal-release baseline.** It is tagged when the harness has a *proven core*
+  (≥1 identity 🟢 by real artifact) and an *honest, evidence-scored status for the rest* — NOT when every
+  identity is green. `v0.1.0` makes **no all-green claim**; its release notes carry the real per-identity
+  status (🟢/🟡/🔴). This is the baseline *from which* all-green is tracked, not the all-green ship itself.
+- **`v1.0.0` = the all-green ship.** The original "ship only when every identity is 🟢" condition maps to
+  **v1.0.0**, not v0.1.0. A 🟡/🔴 blocks *v1.0*, and names exactly what real run is missing — it does not
+  block the honest v0.1.0 baseline.
+
+This refinement resolves the tension of tagging a baseline while identities are still maturing: `0.x` is
+*designed* to carry an incomplete-but-honest status. What it must never do is **lie** — a v0.x tag whose
+notes claim more green than the audit shows is the defect the gate exists to prevent. The operator, shown
+the non-all-green status (③⑤ 🟢, ④ 🟡, ①② 🔴), elected to tag `v0.1.0` as this honest baseline; the
+decision is logged here and the tag's notes state the real status.
 
 ## FH's own status (2026-07-14) — NOT yet all-green
 
@@ -96,16 +110,19 @@ not make the harness `v1.0`.
 | ⑤ | 증폭자 (amplifier) | 🟢 GREEN | short-intent→literature-grounding→ultimate-doc real instances; rules-diet −18.2k measured; intent-routing probe 94% (below) |
 | ④ | 프런티어→조직 전파 | 🟡 YELLOW | frontier-digest launchd auto + AX submission docs both real, but digest→org never closed as ONE pipeline |
 | ① | 멀티하네스 클러스터 (연속경유) | 🔴 RED | mapping/routing materials work, but continuous relay channel + external-harness recommend are "not built yet" (source-admitted); cluster-wizard parked |
-| ② | 프로젝트 인큐베이터 (챔버 EMIT) | 🔴 RED | chamber ran 3×, but **EMIT 0× (2/2 KILL)** — the chamber *screens*, has not *birthed*. Runner wired, autonomous emit is not |
+| ② | 프로젝트 인큐베이터 (챔버 EMIT) | 🔴 RED | chamber ran **5×, EMIT 0× (5 KILL)**. run #5 (2026-07-14) *measured* why it hasn't birthed: all 5 candidates were either **reinventions** (#2 sim-conductor, #3 G4/resume, #4 steel-quench) or a **non-artifact judgment-method** (#5 degrade-lint — a genuine niche, but the mechanical rule scored **5/5 false-positive on 111 real qasp files**; the valuable capability is scan∪cross-family *judgment*, which cannot be shipped as a standalone tool). A real EMIT needs **net-new ∧ artifact-shaped ∧ real-code-precision-adequate** — 0/5 cleared all three. Runner wired; the gap is a candidate, not the pipe |
 
 **Cross-cutting measured (intent-based autonomous completion)**: blind floor-tier Sonnet trigger-accuracy
 probe (n=10, 2026-07-14): **should-fire 7.5/8 (94%), false-fire 0/2**. One weak trigger (simulate-first /
 incubator entry absorbed into deep-clarify) — the identity-② weakness surfaces in routing too.
 
-**Verdict**: FH is **not shippable as v0.1.0 yet** — ①② are RED, ④ is YELLOW. The formal `v0.1.0` tag is
-reserved for the moment all five go 🟢. What's blocking is **real runs, not wiring**: ①'s live 2-node
-orchestration, ②'s first EMIT-worthy chamber run, ④'s closed digest→org pipeline. Each remedy is a run
-that leaves an artifact, tracked in `tracks/_meta/identity_audit_*.md`.
+**Verdict (2026-07-14)**: FH is tagged **`v0.1.0` = honest baseline**, not all-green. ③⑤ are 🟢, ④ 🟡,
+①② 🔴 — the `v0.1.0` notes state exactly this and make no all-green claim (per the refined 0.x↔1.0 mapping
+above). **`v1.0.0` remains the all-green target.** What blocks v1.0 is **real runs, not wiring**: ①'s live
+2-node orchestration, ②'s first *net-new ∧ artifact-shaped ∧ precision-adequate* chamber candidate (the
+measured criterion from run #5), ④'s closed digest→org pipeline. Each remedy is a run that leaves an
+artifact, tracked in `tracks/_meta/identity_audit_*.md`. The honest baseline is publishable *because* 0.x
+carries an incomplete status by design; forcing a green it hasn't earned would be the theater the gate bars.
 
 ## For a field harness (e.g. pmh, qasp)
 Same gate, its own identities. A field harness ships to its team when its identity checklist is all-green,
