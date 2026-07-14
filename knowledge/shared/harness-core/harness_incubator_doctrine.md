@@ -99,19 +99,27 @@ this chamber's field emit terminus); an **FH-internal utility** (a skill/script/
 field harness) instead routes through the **New-Skill Pre-Commit gate + `asset-placement-gate`** (the
 same gate every FH asset passes). KILL emits nothing — the workspace stays as the evidence record.
 
-**EMIT-worthiness — the measured screening criterion (run #5, 2026-07-14)**: five chamber runs, EMIT 0/5,
-all KILL. Run #5 (`degrade-lint`) measured *why* the chamber has not birthed, and the finding is a reusable
-screen: a candidate is emit-worthy only if it clears **all three** of — (1) **net-new** (not a reinvention
-of an existing FH/official asset, nor a cosmetic re-wrap of code that already ships — runs #2–#4 died here);
+**EMIT-worthiness — the measured screening criterion (runs #5–#6, 2026-07-14)**: six chamber runs, EMIT
+0/6, all KILL. A candidate is emit-worthy only if it clears **all four** of — (1) **net-new** (not a
+reinvention of an existing FH/official asset, nor a cosmetic re-wrap of code that already ships — runs
+#2–#4 died here, and run #6 partially here too — its core was already conceived in a parked FH signal);
 (2) **artifact-shaped** (a tool/script/rule that stands alone, *not* a judgment-method — run #5's genuine
 niche was real, but its value lived in a scan∪cross-family *lens*, i.e. an LLM judgment, which cannot be
-`npm publish`ed); (3) **real-code-precision-adequate** (its mechanical form, measured on real external code,
-does not cry-wolf — run #5's rule scored 5/5 false-positive on 111 real files because the fail-open shape is
-syntactically identical to ubiquitous-benign skip-if-empty code; the real/benign split is semantic, not
-grep-able). 0/5 candidates cleared all three. This is not "keep trying" — it is a **pre-screen for future
-candidates**: a KILL that fails (1) or (2) is cheap to predict; only (3) needs a measurement leg (semgrep
-baseline + real-repo FP run), which run #5 established as the decisive test. The chamber's honest value to
-date remains *screening* — preventing reinventions and low-precision births — not yet *birthing*.
+`npm publish`ed); (3) **real-code/real-data-precision-adequate** (its mechanical form, measured on real
+external inputs, does not cry-wolf — run #5's rule scored 5/5 false-positive on 111 real files; run #6's
+heuristic scored 14/22 false-fire on a real sibling-folder scan); (4) **hub-state-independent** (run #6,
+new axis — a capability whose value structurally depends on hub-held state, e.g. the curated registry +
+company-residency knowledge, is not a standalone-first candidate: run #6's `harness-orchestrator` hit
+private/company repos it structurally could not know to suppress, because residency knowledge lives only
+in the hub. Contrast with fh-commons's 4 skills, which graduated cleanly to portable precisely because they
+never depended on hub state). 0/6 candidates cleared all four. This is not "keep trying" — it is a
+**pre-screen for future candidates**, cheapest-to-costliest: (1)/(2)/(4) are cheap to predict from the
+candidate's own design (does it need hub-only knowledge to work correctly?); only (3) needs a measurement
+leg (a real-input precision run), which runs #5–#6 established as the decisive test. The chamber's honest
+value to date remains *screening* — preventing reinventions, low-precision births, and premature
+standalone graduations — not yet *birthing*. **Graduation order** (run #6's positive finding): a
+hub-state-dependent capability graduates hub-internal → proven in use → THEN extracted portable, never
+speculated standalone-first — the only path every successfully-portable FH asset actually took.
 
 *Vocabulary reservation (term hygiene, not standardization)*: a run of this skeleton is a **chamber
 run** — going forward, run/workspace/log labels use "chamber" for incubation and keep "sim/simulation"
