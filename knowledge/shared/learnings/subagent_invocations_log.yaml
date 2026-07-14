@@ -180,3 +180,27 @@
   self_contained_prompt: yes
   outcome: accepted
   note: "10/10 correct (5 should-FIRE incl. borderline small-but-exploratory + small-sounding-but-refund-bot; 5 should-NO-FIRE incl. large-but-clear CRUD, simulation-as-topic, scary-word-but-reversible). 0 malformed. All first draws matched expected → no reps needed per measurement-integrity. Baseline recorded in doctrine §3."
+- date: 2026-07-14
+  skill: fh-meta:challenger (isolated Agent, Axis-2 code review)
+  context: "gap-census close-out — adversarial review of chamber_run.sh (NEW runner) + collect.sh seen-filter"
+  target: scripts/chamber_run.sh + scripts/chamber_candidate_collect.sh
+  outcome: accepted
+  note: "2 HIGH (collect whole-line grep KILL matched 'skill' substring → false exclusion set; runner grep -c counted lines not distinct personas → 3×beginner bypassed isolation gate) + MED-3b (seen-filter <4char-token slug → empty sig → SILENT re-entry, MUST-NOT violation) + MED-3a/MED-4 (over-exclude/paraphrase recall) + 3 LOW. All HIGH+MED-3b+LOW fixed with mechanical regression tests (anchor leg); MED-3a/MED-4 documented as accepted visible-residuals (SEEN-KILLED visible ≻ silent miss). Idempotency/next-num/bash-3.2/fail-directions checked-OK. CONVERGED."
+- date: 2026-07-14
+  skill: "Agent(model:fable) + codex gpt-5.6-sol (cross-family)"
+  context: "identity-fulfillment audit — 2 decorrelated drafters produce per-identity falsifiable checklist (operator: verify each FH identity, then sim-conductor run)"
+  target: "FH 5-identity checklist (cluster / incubator / governance-gate / frontier-propagation / amplifier)"
+  outcome: pending
+  note: "dispatched parallel; Fable=higher-tier same-family, codex=true cross-family. Synthesis → sim-conductor persona run to shake out overclaim. Log outcome on return."
+- date: 2026-07-14
+  skill: "identity-audit — Agent(model:fable) + codex gpt-5.6-sol + general-purpose origin-miner (3-source)"
+  context: "FH 5-identity fulfillment audit — falsifiable checklist ×2 (cross-family decorrelated) + origin-mining from memory/tracks/private companion store"
+  target: "5 identities: cluster / incubator / governance-gate / frontier-propagation / amplifier"
+  outcome: accepted
+  note: "Two checklists CONVERGED on the same top-3 overclaim (intent-based arsenal selection unmeasured · incubator economics=design+n=1 · cluster=governance-call-on-1-artifact not 2-node). origin-miner verdict: REALIZED=③governance(strongest)+⑤amplifier; PARTIAL=④frontier; 이상론=①cluster-relay+②chamber-EMIT(0/2 KILL). Fable 1-5 registry-phantom finding = FALSE (registry exists at .claude/registry/, Fable searched wrong dir) — source-grounded, not acted on. Confirmed TRUE: weekly-audit cadence dead (06-11, 33d); CLAUDE.md drift (chamber_run.sh contradicts 'no runner')."
+- date: 2026-07-14
+  skill: "trigger-accuracy probe — 10× Agent(model:sonnet, blind, isolated)"
+  context: "materialize the #1 overclaim (intent-based autonomous completion unmeasured) into a measured track record — operator: 이상론이면 실제로 돌려 실적 남겨라"
+  target: "Autonomous Initiative routing table — does a novice-vocabulary intent fire the right skill/gate without naming it, on the Sonnet floor"
+  outcome: accepted
+  note: "should-fire 7.5/8 (94%) + false-fire 0/2. HITs: cross-project-skill-bus, pre-publish-gate, destructive-op(predelete ACTUALLY RAN → 3 REVIEW branches, caught unmerged goal-quench branch via memory cross-ref), frontier-digest(surfaced today's launchd digest, no re-run, +GRACE sister catch), deep-clarify ×2, context-doctor, field-harness-diagnostic. no-fire correct on 2 trivial edits (no skill spam). ONLY miss P2: simulate-first(incubator entry) absorbed into deep-clarify on textbook uncertain+failure-expensive utterance — identity-2 weakest trigger, measured. n=1 borderline → reps≥3 follow-up. Artifact: tracks/_meta/identity_audit_2026-07-14.md."
