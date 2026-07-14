@@ -478,6 +478,10 @@ let the innovator center a recommend cascade, produce a ranked install plan, and
 **Guards**: (a) **non-overwriting is inviolable** — the one thing both revfactory surfaces get wrong; FH
 proposes merge, never clobbers; (b) **no-reinvention** — Tier 0/1 first, scaffold only what adds governance;
 (c) **company residency** — discovery of a company sibling repo surfaces it, does not auto-map/leak it;
+promoted to a machine field (`residency` on the skill registry, `fh_detail_protocols.md §1-c`) so any
+derived recommendation naming a `company`/`operator-private` entry lands only in gitignored `tracks/_meta/`
+or the private companion store, never a tracked public file (chamber run #7, 2026-07-14 — the guard was
+prose-only and the field didn't exist);
 (d) **autonomy floor** — the discover/rank judgment is trusted at opus-tier+; below-floor, present the raw
 recommend and ask; (e) **once per door-entry**, not a per-turn nag. This is the door ③ (accelerate) engine
 and the new-project/harness-write path made autonomous — the operator asks once and the harness discovers,
