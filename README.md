@@ -224,6 +224,16 @@ The broader FH automation layer still depends on Claude Code for sub-agents, hoo
 
 **Empirical result (2026-05-31)**: Applied to OpenCode's AI-generated `permission/arity.ts` (163 lines, CI green). Current gate semantics classify this as BLOCKED: 2 A-grade findings CI didn't catch (short-token overflow in allowlist, executor tools absent from arity table).
 
+**Does the method actually add anything? A small measured check (2026-07-14).** On five unseen gate/verdict
+snippets — four with a planted *default-toward-PASS* (fail-open) hole, one correct-but-tempting control —
+we held the model fixed at a mid-tier floor and varied only the review *method*. A plain review caught 3/5
+(it missed the subtlest fail-open, distracted by a flashier secondary bug, and raised a false alarm on the
+correct control). The same model with FH's degrade-direction lens caught 5/5 with zero false alarms. The
+honest read: obvious fail-opens get caught either way — the method's value shows up on the *subtle* hole and
+in *not* crying wolf on correct code, and the gap is a method effect, not a bigger model. It is a small
+sample (n=5, single draw), and a decisive margin would need harder holes; we publish the number as-is rather
+than a rounder one. Method + reproduction: [`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md).
+
 Full spec: [`fh_integration_contract.md`](knowledge/shared/harness-core/fh_integration_contract.md)
 
 ---
