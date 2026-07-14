@@ -109,20 +109,26 @@ decision is logged here and the tag's notes state the real status.
 | ③ | 거버넌스 게이트 (governance) | 🟢 GREEN | pre-commit/pre-push physically block; moat measured 3–4 family blind (HITL 8/8 ABSENT); cross-family caught a real companion-store-name leak 2026-07-14 (fail-closed) |
 | ⑤ | 증폭자 (amplifier) | 🟢 GREEN | short-intent→literature-grounding→ultimate-doc real instances; rules-diet −18.2k measured; intent-routing probe 94% (below) |
 | ④ | 프런티어→조직 전파 | 🟡 YELLOW | frontier-digest launchd auto + AX submission docs both real, but digest→org never closed as ONE pipeline |
-| ① | 멀티하네스 클러스터 (연속경유) | 🔴 RED | mapping/routing materials work, but continuous relay channel + external-harness recommend are "not built yet" (source-admitted); cluster-wizard parked |
-| ② | 프로젝트 인큐베이터 (챔버 EMIT) | 🔴 RED | chamber ran **5×, EMIT 0× (5 KILL)**. run #5 (2026-07-14) *measured* why it hasn't birthed: all 5 candidates were either **reinventions** (#2 sim-conductor, #3 G4/resume, #4 steel-quench) or a **non-artifact judgment-method** (#5 degrade-lint — a genuine niche, but the mechanical rule scored **5/5 false-positive on 111 real qasp files**; the valuable capability is scan∪cross-family *judgment*, which cannot be shipped as a standalone tool). A real EMIT needs **net-new ∧ artifact-shaped ∧ real-code-precision-adequate** — 0/5 cleared all three. Runner wired; the gap is a candidate, not the pipe |
+| ① | 멀티하네스 클러스터 | 🟡 PARTIAL | routing runs for real — 17 nodes mapped, sidecar-orchestrator, Skill Bus routing qasp/dashboard/stockbattle (so NOT 🔴 ideal-only). Missing: continuous 2-node relay channel + external-harness recommend (cluster-wizard parked) → 🟡 not 🟢 |
+| ② | 프로젝트 인큐베이터 | 🟡 PARTIAL | incubation is running — **stockbattle is being incubated now** (S1 built, mid-flight) + qasp/pmh spin-out precedent + scaffold-emit shipped (doctrine: "emit shipped today as scaffold+approval; the chamber flow is the named target"). What's still 0 is the **formal chamber simulate-then-emit** mechanism (5 runs, 5 KILL — run #5 *measured* the emit-worthiness criterion: net-new ∧ artifact-shaped ∧ real-code-precision-adequate, 0/5 cleared all three). That mechanism is ONE path of ②, not the whole identity → 🔴 was too narrow; incubation runs but no closed emit-via-incubation yet → 🟡 |
 
 **Cross-cutting measured (intent-based autonomous completion)**: blind floor-tier Sonnet trigger-accuracy
 probe (n=10, 2026-07-14): **should-fire 7.5/8 (94%), false-fire 0/2**. One weak trigger (simulate-first /
 incubator entry absorbed into deep-clarify) — the identity-② weakness surfaces in routing too.
 
-**Verdict (2026-07-14)**: FH is tagged **`v0.1.0` = honest baseline**, not all-green. ③⑤ are 🟢, ④ 🟡,
-①② 🔴 — the `v0.1.0` notes state exactly this and make no all-green claim (per the refined 0.x↔1.0 mapping
-above). **`v1.0.0` remains the all-green target.** What blocks v1.0 is **real runs, not wiring**: ①'s live
-2-node orchestration, ②'s first *net-new ∧ artifact-shaped ∧ precision-adequate* chamber candidate (the
-measured criterion from run #5), ④'s closed digest→org pipeline. Each remedy is a run that leaves an
-artifact, tracked in `tracks/_meta/identity_audit_*.md`. The honest baseline is publishable *because* 0.x
-carries an incomplete status by design; forcing a green it hasn't earned would be the theater the gate bars.
+**Verdict (2026-07-14, ①② corrected)**: FH is tagged **`v0.1.0` = honest baseline**, not all-green. ③⑤ are
+🟢, ①②④ 🟡, **none 🔴** — the `v0.1.0` notes state this and make no all-green claim (per the refined 0.x↔1.0
+mapping above). **`v1.0.0` remains the all-green target.** What blocks v1.0 is **closing the 🟡s**: ①'s
+continuous 2-node relay channel, ②'s first closed emit-via-incubation (formal chamber first EMIT — criterion
+measured in run #5 — or a chamber-incubated spin-out closing), ④'s closed digest→org pipeline. Each remedy
+is a run that leaves an artifact, tracked in `tracks/_meta/identity_audit_*.md`.
+
+> **①② correction (2026-07-14)**: an earlier pass marked ①② 🔴 by collapsing each identity onto its most
+> advanced *single mechanism* — ② onto the formal chamber EMIT (0/5), ① onto the continuous-relay channel.
+> That contradicts the doctrine (emit is "shipped today as scaffold+approval; the chamber is the named
+> target") and the live reality (routing runs; **stockbattle is being incubated now**; qasp/pmh spun out).
+> An identity whose broad path *runs* is not 🔴 ideal-only. Both are 🟡: running, not yet closed. Lesson:
+> do not score an identity by its hardest sub-mechanism — that reads a live-but-incomplete path as zero.
 
 ## For a field harness (e.g. pmh, qasp)
 Same gate, its own identities. A field harness ships to its team when its identity checklist is all-green,
