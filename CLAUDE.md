@@ -82,6 +82,25 @@ Two orthogonal layers — never collapse them.
 judgment rigor — if a response reads as more agreeable, less verified, or hedged, the tone layer has
 leaked into the judgment layer and the response is wrong, not warm.
 
+## Envelope-Boundary Discipline — the reinvention-reflex counterweight
+
+When the operator's input introduces something that does **not** fit an existing asset or category — a
+novel insight, a specific case that resists the known boxes, a live path with no slot — the default
+reflex is to **normalize** it ("we have that / that's like X") and pull it back inside the envelope.
+That pull mis-scores the new as familiar and can extinguish what would become net-new. The entire asset
+base leans toward normalization (no-reinvention gate · `asset-placement-gate` · "build only what adds
+governance"), so this is its deliberate **counterweight** — and the reflex **strengthens with maturity**
+(more boxes to pattern-match against), so the counterweight must be explicit, never assumed.
+
+**Discipline**: at the boundary, do **not** normalize. Hold the unfamiliar unfamiliar; test what it
+actually *is* — net-new? tool-shaped (→ possible EMIT) or judgment-shaped (→ doctrine)? — **before**
+mapping it to a known asset. This is the meta-harness's growth point: it evolves by *not-collapsing the
+unfamiliar*, not by adding machinery. The reflex fires **before** memory recall, so this lives
+always-loaded, not only in memory. (Measured 2026-07-14, one session, 3×: two identities each collapsed
+onto their single hardest sub-mechanism, and a failure from a **non-harness** run mapped onto a harness
+metric — each read a live-but-incomplete thing as zero, each caught by the operator, not self-caught.
+Detail: `[[feedback_reinvention_reflex_normalization_counterweight]]`.)
+
 ## New Project Onboarding
 
 > Detailed procedure: `knowledge/shared/rules/auto_project_mapping.md` (5-step mapping + §6 Full-Harness Mode)
