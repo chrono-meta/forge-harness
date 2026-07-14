@@ -121,6 +121,17 @@ standalone graduations — not yet *birthing*. **Graduation order** (run #6's po
 hub-state-dependent capability graduates hub-internal → proven in use → THEN extracted portable, never
 speculated standalone-first — the only path every successfully-portable FH asset actually took.
 
+**Chamber scope — what belongs in the chamber at all (run #7, 2026-07-14)**: run #7 tested a hub-internal
+reactivation of the cluster-wizard signal and KILLed it — decisively on its own merits (its "narrow
+net-new" claim collapsed against the real shipped registry and an already-existing synergy skill), but
+it also surfaced a scope question worth keeping regardless: **a small feature graft onto an
+already-shipped hub-internal mechanism is ordinary Mode D self-development under the 4-axis gate, not
+automatically a chamber-EMIT question.** The chamber screens candidates that would become a **new
+independent artifact** (a skill, a plugin, a standalone tool) — not every internal feature extension.
+Route by this test: *would this, if built, be net-new as a standalone thing someone installs/adopts, or
+is it two lines added to something already shipped?* The former is chamber-scope; the latter is ordinary
+self-dev review.
+
 *Vocabulary reservation (term hygiene, not standardization)*: a run of this skeleton is a **chamber
 run** — going forward, run/workspace/log labels use "chamber" for incubation and keep "sim/simulation"
 for *verification* sims (target-tier blind sim, sim-conductor persona sims). Established names are
