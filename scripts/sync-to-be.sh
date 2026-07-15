@@ -92,7 +92,38 @@ sync_file() {
   fi
 }
 
+# ── Machine-scoped files ──────────────────────────────────────────────────────
+# Most of what we mirror is machine-AGNOSTIC (signals, audits, memory topic files: every
+# machine writes the same content, and append-only rsync merges them harmlessly). Two files
+# are NOT: each hub clone keeps its OWN edit_manifest.yaml and its OWN memory index, because
+# they describe THAT machine's local state. Mirroring them to one shared path makes every
+# machine silently overwrite the others' backup — measured 2026-07-15: three machines synced
+# the same day and fh-be's manifest ended up 135 entries (one machine) while another held 175,
+# with no file actually lost but the backup rendered ambiguous. So these two are keyed by
+# machine. The session CARD is deliberately NOT keyed — it is the shared cross-machine handoff
+# ("next session = <machine>"); splitting it would kill the function it exists for.
+#
+# FH_MACHINE_ID: set it in your local env to name the machine. Default = a short digest of the
+# hostname — stable, and non-identifying (a raw hostname commonly embeds the operator's name).
+machine_id() {
+  if [ -n "${FH_MACHINE_ID:-}" ]; then
+    printf '%s' "$FH_MACHINE_ID" | tr -cd '[:alnum:]_-' | cut -c1-32; return 0
+  fi
+  local h
+  h=$(hostname -s 2>/dev/null || hostname 2>/dev/null || printf 'unknown')
+  printf 'm%s' "$(printf '%s' "$h" | shasum 2>/dev/null | cut -c1-8)"
+}
+MID="$(machine_id)"
+[ -n "$MID" ] || MID="unknown"
+
 sync_dir  "$FH/tracks/_meta"      "$BE/tracks-meta"
+# ...then re-home the two machine-scoped files out of the shared namespace.
+if [ -f "$FH/tracks/_meta/edit_manifest.yaml" ]; then
+  mkdir -p "$BE/tracks-meta/manifests"
+  cp "$FH/tracks/_meta/edit_manifest.yaml" "$BE/tracks-meta/manifests/$MID.yaml" \
+    && log "manifest → tracks-meta/manifests/$MID.yaml (machine-scoped)"
+  rm -f "$BE/tracks-meta/edit_manifest.yaml"   # shared copy retired; history keeps every machine's
+fi
 sync_dir  "$FH/tracks/_audit"     "$BE/tracks-audit"
 sync_dir  "$FH/tracks/_chamber"   "$BE/tracks-chamber"   # incubation chamber runs (INTENT/SIM_NOTES/verdict/INDEX ledger) — local-only (gitignored in public FH), made durable + cross-machine here
 sync_dir  "$FH/tracks/the_bible"  "$BE/tracks/the_bible"    # mapped project — NESTED under tracks/ (like livedeck; projects nest, only hub-meta _meta/_audit flatten): local-only (untracked in public FH), watched in companion
@@ -113,6 +144,15 @@ if [ -f "$EXTRA_LIST" ]; then
 fi
 
 sync_dir  "$MEM"               "$BE/memory"
+# memory TOPIC files are machine-agnostic and merge fine (203/203 identical across machines,
+# measured 2026-07-15). The INDEX is not: it lists only what THIS machine's memory dir holds,
+# so a shared MEMORY.md is whichever machine synced last and can never cover the union.
+if [ -f "$MEM/MEMORY.md" ]; then
+  mkdir -p "$BE/memory/_index"
+  cp "$MEM/MEMORY.md" "$BE/memory/_index/$MID.md" \
+    && log "memory index → memory/_index/$MID.md (machine-scoped)"
+  rm -f "$BE/memory/MEMORY.md"                 # shared copy retired; history keeps every machine's
+fi
 sync_file "$FH/CLAUDE.local.md" "$BE/hub-owner"
 
 cd "$BE"
