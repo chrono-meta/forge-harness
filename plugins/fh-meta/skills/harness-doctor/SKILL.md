@@ -70,28 +70,127 @@ confirms the gap*, never a verdict the report emits on its own; surface each gap
 
 ### Step 3. L2 — Complexity Diagnosis
 
+**Scope the instrument first — field vs meta** (CLAUDE.md §Identity Core Axis): a **field harness** must get
+"simpler over time" (complexity = warning signal), so raw size is a real signal there. A **meta-harness**
+(the FH hub itself) *optimizes* rather than simplifies — **complexity earns its scope**, and the doctrine's
+red flags are **orphaned, redundant, and decorative units, not size**. Applying the field rule to a
+meta-harness produces a false M-tier on healthy growth.
+
+**Scope is mechanical, never self-declared** — else any repo dodges the line rows by calling itself meta
+(the self-label loophole CLAUDE.md already names for "docs-only" at the Irreversibility gate). A target is
+**meta** iff its root holds **all three**: `tracks/` **and** `knowledge/` **and** `plugins/` (Step 1's FH-environment
+test). Anything else is **field** — including a repo that merely *contains* skills or a `.claude/` dir:
+
+**The test is rooted at the TARGET, never at cwd.** FH's own default mode diagnoses a field project
+*without* switching cwd (CLAUDE.md §Agent Dispatch — "Direct edit … no cwd switch needed"), so a bare
+`[ -d tracks ]` run from the hub misclassifies **every** field target as meta and silently deletes the
+field rows — a permissive misread reachable through the harness's own recommended workflow. Always pass
+the target path explicitly:
+
+```bash
+# meta iff all three exist AT THE TARGET ROOT — otherwise field. TARGET is required, never implied by cwd.
+TARGET="${1:?pass the target root explicitly — cwd is not the target}"
+[ -d "$TARGET/tracks" ] && [ -d "$TARGET/knowledge" ] && [ -d "$TARGET/plugins" ] \
+  && echo "scope: meta ($TARGET)" || echo "scope: field ($TARGET)"
+```
+
+Scope is a **coarse instrument-selector, not a security boundary**: `[ -d ]` tests existence, not contents,
+so three empty dirs would flip field→meta. That is acceptable here (the operator names the target; there is
+no adversary picking it) — but it means scope must never gate anything that matters on its own, only *which
+size instrument* is read. The footprint rows below apply to **both** scopes and are the actual verdict.
+
 | Check | Verdict |
 |---|---|
-| CLAUDE.md ~100 lines | Normal (project) / FH threshold: 500 lines |
-| CLAUDE.md 100~200 lines | S-tier warning |
-| CLAUDE.md 200+ lines | M-tier — separation or reduction needed |
-| 15+ `##` sections in CLAUDE.md | S-tier warning |
+| **Field/project** CLAUDE.md 100~200 lines | S-tier warning |
+| **Field/project** CLAUDE.md 200+ lines | M-tier — separation or reduction needed |
+| **Field/project** 15+ `##` sections in CLAUDE.md | S-tier warning |
+| **Meta-harness (FH hub)** CLAUDE.md — raw line / section count | **Not a verdict.** Judge by the always-loaded footprint rows below (char-based = actual token cost) + the doctrine's red flags (orphaned · redundant · decorative). Report the count as context only |
+| **Meta-harness** growth since last run: decompose into *new sections* vs *existing-section growth* (mechanical — diff `##` section names + line counts vs the prior run's commit; **first run / no prior commit → report both as n/a, no tier**) | **Tier is decided by the two counts alone**: **S-tier iff existing-section growth > new-section growth** (the file is thickening faster than it is gaining capability); otherwise advisory, no tier. Report both numbers **and** the new sections' names — the names are *reporting output for the human*, never an input to the tier. Do not judge "was this growth capability-bearing?" per line |
 | SKILL.md > 300 lines AND no `SKILL_detail.md` | S-tier — propose `/salience-splitter` (governance-semantic split, not compression) |
 | Rules files unreferenced in CLAUDE.md | R-tier |
-| Always-loaded footprint (CLAUDE.md + every `.claude/rules/*.md` lacking `paths:` frontmatter) > 40k chars | S-tier — relocate detail rules to a non-loaded dir (e.g. `knowledge/shared/rules/`), pointers stay in CLAUDE.md |
-| Always-loaded footprint > 80k chars | M-tier — same prescription, mandatory |
+| Always-loaded footprint > 40k chars (see scan below for what counts) | S-tier — **lever depends on where the chars live**: rules/detail still auto-loading → relocate to a non-loaded dir (e.g. `knowledge/shared/rules/`), pointers stay in CLAUDE.md · narrative inside CLAUDE.md → `/salience-splitter` · **behavioral content only, nothing left to relocate** → capability-level (merge/retire a governance unit) |
+| Always-loaded footprint > 80k chars | M-tier — same lever selection, mandatory, **and never self-discharged** (see below) |
 | **Pointer-illusion**: a CLAUDE.md "detail/detailed procedure" pointer whose target is itself an always-loaded `.claude/rules/*.md` | S-tier — the split saves zero context (rules/ auto-loads regardless); move the target out of auto-load, keep the pointer |
 | weekly_audit 14~30 days elapsed | S-tier |
 | weekly_audit 30+ days elapsed | M-tier |
 
+**Per-unit ≠ aggregate — do not slide between them.** "Every section earns its scope" (the per-unit
+doctrine test) and "the always-loaded total is affordable" (the budget test) are **different questions, and
+both can be true at once**. A meta-harness can pass the red-flag test on every single section and still be
+over its footprint budget. So a per-unit PASS never discharges the footprint rows — and conversely, a
+footprint M-tier is *not* evidence that some section failed to earn its scope. When footprint is over
+budget but every unit earns its scope, the remaining lever is **capability-level** — merge or retire a
+governance unit — **not** a salience split, which by construction only moves narrative and returns ~nothing
+when the content is behavioral.
+
+**No M-tier in this skill is ever self-discharged — not just the footprint one.** "The cost is priced /
+accepted", "it's all necessary", "over budget but fine" are **not** verdicts this skill may reach on its
+own: an M-tier stands in the report and is closed only by an explicit operator acknowledgment logged to
+`tracks/_meta/` (same shape as any other logged override). This is **row-agnostic on purpose** — the
+rationale (a run under ship pressure prices away the one row that fired) is not specific to footprint, so
+scoping the prohibition to a single row would leave every other M-tier open to the same silent PASS. That
+is the default-toward-PASS class `field_verdict_crossfamily_gate.md` exists to catch, committed inside the
+diagnostic that names it. **Report it; do not price it.**
+
+> Origin (2026-07-15, dogfood): a run read FH's CLAUDE.md at 891 lines, fired the raw-count M-tier, and
+> prescribed `/salience-splitter`. Measurement inverted both halves: **+244 of the +381 30-day growth (64%)
+> was 6 new governance sections**, each behavioral and salience-passing (two — Voice/Tone, Envelope-Boundary —
+> had been *promoted* to always-loaded precisely because memory-only placement made them miss), and actually
+> running the splitter on 4 sections yielded **−27 lines / −3.2k chars (−3.7%)** — confirming salience-splitter's
+> own Target Selection rule ("splitting a file with only behavioral content adds structure without governance
+> value"). The **footprint** row meanwhile fired M-tier correctly and had been M since 06-15. Two rows measured
+> the same property; the worse instrument drove the verdict. The line-count rows are now field-scoped.
+
 Always-loaded + pointer-illusion checks are mechanical (found 2026-07-12 — FH itself shipped ~50k chars of rules/ behind "detail pointers" that saved nothing; the meta-harness blind spot this row closes):
 
 ```bash
-# always-loaded footprint (chars): CLAUDE.md + rules files with no paths: frontmatter
-T=$(wc -c < CLAUDE.md 2>/dev/null); for f in .claude/rules/*.md; do [ -f "$f" ] || continue; head -5 "$f" | grep -q '^paths:' || T=$((T + $(wc -c < "$f"))); done; echo "always-loaded: $T chars"
-# pointer-illusion: CLAUDE.md pointers targeting still-auto-loaded rules files
-grep -oE '\.claude/rules/[a-z_]+\.md' CLAUDE.md | sort -u | while read p; do [ -f "$p" ] && echo "ILLUSION: $p (pointed-to AND always-loaded)"; done
+# always-loaded footprint (chars). Counts every file the session loads before turn 1:
+#   CLAUDE.md + CLAUDE.local.md + rules files lacking paths: frontmatter + their DIRECT @-imports.
+# EVERY path is rooted at $TARGET — the same root the scope test used. Reading from cwd instead
+# measures whichever harness you happen to be standing in (usually the hub, while diagnosing a
+# field target) — a wrong-target measurement that reports the hub's number as the target's.
+TARGET="${1:?pass the target root explicitly — cwd is not the target}"
+T=0
+for f in "$TARGET/CLAUDE.md" "$TARGET/CLAUDE.local.md"; do
+  [ -f "$f" ] && T=$((T + $(wc -c < "$f")))
+done
+# find | while, not a glob: an unmatched glob aborts under zsh, and a here-string of "" still yields
+# one empty line -> head -5 "" errors and the sum breaks. A scan that dies mid-run reports a LOW
+# number (= toward PASS), so guard the empty case explicitly.
+while IFS= read -r f; do
+  [ -n "$f" ] || continue
+  head -5 "$f" | grep -q '^paths:' || T=$((T + $(wc -c < "$f")))
+done < <(find "$TARGET/.claude/rules" -name '*.md' 2>/dev/null)
+# DIRECT @-imports only (not transitive — a nested import chain is a named residual below).
+# Resolve against the IMPORTING FILE's own dir first, then ~/.claude/. SUM into T — never
+# print-and-ask-the-reader-to-add: a scan that delegates arithmetic re-introduces the judgment
+# it exists to remove, and the omission points toward PASS.
+for f in "$TARGET/CLAUDE.md" "$TARGET/CLAUDE.local.md"; do
+  [ -f "$f" ] || continue
+  d=$(dirname "$f")
+  for i in $(grep -oE '^@[A-Za-z0-9_./-]+' "$f" 2>/dev/null | sed 's/^@//'); do
+    for c in "$d/$i" "$HOME/.claude/$i"; do
+      [ -f "$c" ] && { T=$((T + $(wc -c < "$c"))); echo "  +import $c: $(wc -c < "$c") chars"; break; }
+    done
+  done
+done
+echo "always-loaded TOTAL ($TARGET): $T chars"
+# Verdict: the HIGHEST tripped threshold wins — 80k supersedes 40k. Reporting only the
+# S-tier row while >80k is a silent FAIL->CONDITIONAL_PASS downgrade.
+[ "$T" -gt 80000 ] && echo "  => M-tier (>80k)" || { [ "$T" -gt 40000 ] && echo "  => S-tier (>40k)" || echo "  => footprint ok"; }
+# pointer-illusion: CLAUDE.md pointers targeting still-auto-loaded rules files (any filename shape)
+grep -oE '\.claude/rules/[A-Za-z0-9_./-]+\.md' "$TARGET/CLAUDE.md" 2>/dev/null | sort -u | while read -r p; do
+  [ -f "$TARGET/$p" ] && echo "ILLUSION: $p (pointed-to AND always-loaded)"
+done
 ```
+
+**Named residuals of this scan** (all documented, none silent): **transitive imports are not followed** —
+an import chain `CLAUDE.md → A.md → B.md` counts A but not B, so a deep chain under-counts *toward PASS*;
+**`head -5 … grep '^paths:'`** is a proxy, not a frontmatter parser — an incidental early `paths:` line
+falsely excludes an always-loaded rule (toward PASS), while a `paths:` below line 5 over-counts (toward
+FAIL, the safe direction); and the scope test reads directory *existence*, so three empty dirs flip
+field→meta (acceptable: the operator names the target, and the footprint rows apply to **both** scopes
+regardless — but it does skip the field-only line rows).
 
 ### Step 3-L. Language Lint (`--lint` mode only)
 

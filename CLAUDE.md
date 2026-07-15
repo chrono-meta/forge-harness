@@ -277,20 +277,20 @@ Record sim results in the Axes 2–3 marker + sub-agent invocation log.
 > headless `claude -p --model` fallback when in-session model-pin is unavailable, the saturation-disguise
 > retry (compact-then-retry once), and the credit-pool caveat — read when a model-pinned dispatch fails.
 
-**Measurement-integrity pre-flight** (when the sim/dispatch is a *cross-model measurement* — pinned to
-a specific tier, comparing model behaviors, or feeding a paper/published claim): consult
-`knowledge/shared/harness-core/measurement-integrity-checklist.md` first — pin the **display name** not
-a slug (silent fallback to a weaker model is a measured failure), take **reps ≥ 3** on any
-borderline/contested verdict (single draw = noise), and use a **discriminating** identity probe (a
-generic "OK" proves nothing about which model answered). The instrument must be verified before the
-measurement is trusted.
+**Measurement-integrity pre-flight**: when the sim/dispatch is a *cross-model measurement* (pinned to a
+tier, comparing model behaviors, or feeding a published claim), **the instrument must be verified before
+the measurement is trusted**.
+
+> **Detail**: See `knowledge/shared/harness-core/measurement-integrity-checklist.md` — pin the display
+> name not a slug (silent fallback to a weaker model is a measured failure) · reps ≥ 3 on any
+> borderline/contested verdict (single draw = noise) · use a discriminating identity probe (a generic
+> "OK" proves nothing about which model answered) — read **before** running any cross-model measurement.
 
 **Floor-tier canary (optional pre-screen — token-free, *below* the Sonnet sim)**: a local model ≤ Sonnet
-can blind-pre-screen a salience-dependent edit *before* the Sonnet dispatch is spent. **Canary, NOT gate**:
-a PASS adds cheap floor confidence and you still run the Sonnet sim; a FAIL never blocks alone. The terminal
-verdict stays with the **Sonnet-or-higher governor bound to a mechanical anchor** (an opus judge is the
-dispatch-recommended strengthener, not a requirement — `sonnet_floor_doctrine.md`) — **no judge-only path**,
-no weak-local-judge regression of the judge-robustness principle (mechanical anchor over judge-only verdict).
+can blind-pre-screen a salience-dependent edit before the Sonnet dispatch is spent. **Canary, NOT gate**:
+a PASS adds cheap floor confidence and you still run the Sonnet sim; a FAIL never blocks alone. The
+terminal verdict stays with the **Sonnet-or-higher governor bound to a mechanical anchor** — **no
+judge-only path**, no weak-local-judge regression of the judge-robustness principle.
 
 > **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Floor-Tier-Canary` — the local
 > model/panel options, the blind-probe procedure, dogfood evidence, and the FAIL-triage (real salience gap
@@ -308,13 +308,14 @@ no weak-local-judge regression of the judge-robustness principle (mechanical anc
 **Cross-family complement (Axis 2, autonomous when consented)**: `steel-quench` dispatches in-session at the
 session tier — **same family** as the governor, so it shares the governor's blind spots. For a **load-bearing**
 change (gates · irreversible-surface code · doctrine), `auto-decorrelation` is the standing cross-family
-verifier: when the configured sidecar panel is discoverable it recruits ≥1 **different-family** auditor (per
-the UAP mapping — e.g. `codex` `gpt-5.5`/xhigh for repo-grounded code/security, `agy`/Gemini for breadth) and
-degrades honestly to single-session when none is. **Autonomous once the operator has consented** (one-time,
-in the UAP — `[[user_adaptation_profile]]`); the governor keeps the terminal verdict and **source-grounds**
-every sidecar finding before acting on it (`[[feedback_judge_robustness_mechanical_anchor]]`). Dogfood
-2026-06-27: a cross-family pass caught a HIGH execution-side-effect blind spot the same-family reviewers +
-the target-tier sim all shared — the decorrelation value made concrete.
+verifier: it recruits ≥1 **different-family** auditor when the sidecar panel is discoverable, and degrades
+honestly to single-session when none is. **Autonomous once the operator has consented** (one-time, in the
+UAP — `[[user_adaptation_profile]]`); the governor keeps the terminal verdict and **source-grounds** every
+sidecar finding before acting on it (`[[feedback_judge_robustness_mechanical_anchor]]`).
+
+> **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Cross-Family-Complement` — the
+> UAP sidecar mapping (which family for which task class) and the 2026-06-27 dogfood evidence — read when
+> recruiting or configuring a cross-family auditor.
 
 ### Mode D Model Notice (fires once, at the same trigger as this gate)
 
@@ -334,22 +335,17 @@ advisory) is governed separately by `capability_escalation_consent.md`.
 The 4-axis gate above fires on **FH asset** changes. But the correlated blind spot it guards —
 *"when a verdict surface cannot mechanically ground its judgment, it defaults toward PASS instead
 of safe-fail"* — is **model-family-level, not FH-specific**. It lives in any load-bearing code the
-AI writes, including **mapped field projects** (qasp · the-bible · pmh). FH is the meta-harness:
-accelerating a field harness *to FH grade* means the field's load-bearing changes get the **same
-cross-family adversarial gate** as FH's own assets. Not doing so is the exact gap that shipped **9
-default-toward-PASS holes across 3 harnesses undetected** (measured 2026-07-03). Root principle:
-**prose-specified verdict logic grants discretion; discretion's degrade direction is unconstrained
-(→ optimistic PASS); same-family reviewers share the author's optimistic reading and miss it.**
+AI writes, including **mapped field projects** (qasp · the-bible · pmh), so those changes get the
+**same cross-family adversarial gate** as FH's own assets. Root principle: **prose-specified verdict
+logic grants discretion; discretion's degrade direction is unconstrained (→ optimistic PASS);
+same-family reviewers share the author's optimistic reading and miss it.**
 
 **Trigger (per changed file — grep-assisted, salience-dependent, no field hook)**: an AI-authored
 change to a **load-bearing field surface** — a function returning a **verdict/gate enum or exit code** (PASS/FAIL/BLOCK/allow/deny),
 an **irreversible-op** path (publish/delete/history-rewrite), or a **safety invariant** (the-bible
 L1 floor, qasp verdict-binding, a pre-push/pre-commit hook). File+symbol based (grep the diff for a
-verdict-enum return / gate exit / safety-marked function) — but a **strong-advisory grep trigger,
-not a hook**: the FH pre-commit gate is FH-internal and deliberately never installed into field
-projects, so an agent under merge pressure can still under-trigger (unmarked safety logic,
-boolean-return gate helpers, config-driven allow/deny, shell/CI irreversible paths escape the grep).
-The under-trigger residual is named honestly in the detail doc — it is not claimed to be airtight.
+verdict-enum return / gate exit / safety-marked function) — a **strong-advisory grep trigger, not a
+hook**, so under-trigger is a real residual, not an airtight claim.
 
 **Gate (before merge, not after)**:
 1. **Degrade-direction lint** (mechanical pre-screen — `scripts/degrade_direction_scan.sh`): flags
@@ -372,14 +368,11 @@ The under-trigger residual is named honestly in the detail doc — it is not cla
 below gate **the act** of publish/delete/rewrite — disjoint by role and by location, no double-gate.)*
 
 **Degrade direction — cross-family unavailable is NOT a silent same-family pass** (the gate's own
-standard, dogfood-caught 2026-07-03): if no different-family auditor is reachable, the gate does
-**not** fall back to same-family review and proceed — that inherits `auto-decorrelation`'s general
-*silent-degrade / never-hard-fail*, which is **fail-OPEN** for a load-bearing pre-merge surface
-(the gate's entire value is decorrelation; same-family review shares the author's blind spot). It
-marks the change **NOT-CONVERGED** and either blocks the autonomous merge / asks the operator, or
-proceeds only under an **explicit, logged same-family-only acknowledgment** — never a silent
-same-family pass. This **overrides** the delegated skill's default degrade for this surface,
-consistent with §Irreversibility Surface-Class Degrade Invariant (applicable-but-tooling-down ≠ free skip).
+standard): if no different-family auditor is reachable, the gate marks the change **NOT-CONVERGED**
+and either blocks the autonomous merge / asks the operator, or proceeds only under an **explicit,
+logged same-family-only acknowledgment**. This **overrides** the delegated skill's default
+silent-degrade for this surface, consistent with §Irreversibility Surface-Class Degrade Invariant
+(applicable-but-tooling-down ≠ free skip).
 
 **Residency**: sanitize company code (redact vendor/domain literals) before any external-family
 dispatch; domain data never leaves. **Autonomy**: autonomous once the operator has consented (UAP),
@@ -390,8 +383,11 @@ converge loop *before* it is Done. Autonomy floor (§Floor governance): the skip
 trusted only at opus-tier+; below-floor RUNS the review by default (run-first, ask-last — asks only
 when no runnable path exists), never silently skips (sonnet_floor_doctrine.md §Autonomy at Sonnet).
 
-> **Detail** (discretion principle · 4-face signature · gate mechanics · n=7 qasp evidence):
-> `knowledge/shared/harness-core/field_verdict_crossfamily_gate.md`.
+> **Detail**: See `knowledge/shared/harness-core/field_verdict_crossfamily_gate.md` — the discretion
+> principle, the four-faces failure signature, why same-family review misses it, the gate mechanics,
+> the n=7 qasp field evidence incl. the **9 default-toward-PASS holes across 3 harnesses** (measured
+> 2026-07-03), the named under-trigger residuals, and autonomous-loop baking — read when applying or
+> auditing this gate.
 
 ## Field-Harness Diagnostic — "진단해줘 / 개선해줘" on a mapped project (compose → rank → HITL)
 
@@ -559,32 +555,23 @@ not marketplace-gate alone:
 `LICENSE`/`README` contains a **private harness name or internal codename** · **module paths encode
 internal acronyms**.
 
-**Hook coverage — three distinct actions**: **(a) repo-go-public** (`gh repo create --public` / visibility
-flip / first push to a new public remote) is irreversible and usually in a **separate repo** — no hook of
-*this* repo can catch it, so it stays **AI-behavioral** (proactive trigger below) **+ a portable checklist**
-(`templates/PRE-PUBLISH-CHECKLIST.md`). **(b) committing operator-private tokens into public-tracked content
-of THIS repo IS an effective publish** — caught mechanically by the pre-commit **confidentiality scan**
-(staged added lines vs the gitignored `.public-surface-patterns`; HIGH/MED block, `PUBLIC_SURFACE_OK=1`
-overrides + logs). **(c) `npm publish`** is **mechanically gated against the loaded patterns, on the `npm` CLI path with scripts
-enabled** by `scripts/public_surface_scan_files.sh` (wired into `prepublishOnly`; also `npm run release` runs
-it *outside* the lifecycle). It scans the **full content of the exact npm-published file set** (`npm pack
---dry-run`) — *not* just a commit diff — so a token committed before the scan existed, or carried in a
-`files[]` entry, is caught at the registry boundary (HIGH/MED block, `PUBLIC_SURFACE_OK=1` override + log;
-fail-closed if patterns/file-set unresolved, if the parse looks partial, **or if the gitignored operator
-override is absent** — defaults-only would otherwise green-PASS a HIGH company literal on a fresh clone / CI).
-**Named residuals (it is a denylist on the npm CLI, not a universal secret-scanner)**: (i) `npm publish
---ignore-scripts` / a CI `.npmrc ignore-scripts=true` / `pnpm`/`yarn publish` **skip the lifecycle hook** —
-route publishes through `npm run release` or an explicit CI scan step; (ii) it scans only the **loaded
-patterns**, so an **un-patterned secret shape** (an API key the patterns don't describe) still ships; (iii) on
-a runner without the gitignored override it is defaults-only unless populated; (iv) it scans **working-tree
-content, not the final tarball bytes** — benign here (content-neutral lifecycle: prepare=chmod, no prepack)
-but re-open if a content-generating publish lifecycle is added (cross-family audit 2026-06-27). So of the Pre-Publish surface,
-**(b) commit-time and (c) npm-publish are mechanized** (with the residuals above); only **(a) separate-repo
-go-public stays genuinely un-hookable** (prose + checklist).
+**Hook coverage — three distinct actions, two of them mechanized**:
+
+| Action | Enforcement |
+|---|---|
+| **(a) repo-go-public** (`gh repo create --public` · visibility flip · first push to a new public remote) | **Un-hookable** — separate repo, no hook here sees it. Stays **AI-behavioral** (the proactive trigger below) + the portable `templates/PRE-PUBLISH-CHECKLIST.md`. |
+| **(b) committing operator-private tokens into public-tracked content of THIS repo** (= an effective publish of that content) | **Mechanized** — pre-commit confidentiality scan, staged added lines vs the gitignored `.public-surface-patterns`. HIGH/MED block; `PUBLIC_SURFACE_OK=1` overrides + logs. |
+| **(c) `npm publish`** | **Mechanized** — `scripts/public_surface_scan_files.sh` via `prepublishOnly`, scanning the full content of the exact published file set. HIGH/MED block; same override + log; fail-closed on unresolved patterns/file-set. |
+
+So only **(a) stays genuinely un-hookable** — that is where this gate's prose is the only floor, which is
+why the proactive trigger matters. (b) and (c) are denylists on their own paths, **not** universal
+secret-scanners: they carry named residuals.
 
 > **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Pre-Publish-Hook-Coverage` — the
-> two-layer pattern (literals only in the gitignored source), honest scope + residuals, and the PR #109
-> (`fh_signal_2026-06-17` Wave 4) / phantom-gate origin — read when configuring or auditing the scan.
+> two-layer pattern (literals only in the gitignored source), honest scope, the full named-residual list for
+> (b) and (c) (`--ignore-scripts` / non-npm clients · un-patterned secret shapes · override-not-populated ·
+> worktree-vs-tarball bytes), and the PR #109 (`fh_signal_2026-06-17` Wave 4) / phantom-gate origin — read
+> when configuring or auditing the scan, or before relying on it as a floor.
 
 ---
 
@@ -607,36 +594,22 @@ force-push, scrub of tracked history, bulk deletion of session records / tracks 
    strongest available tier (floor semantics, §Tier-floor); a below-floor pass is provisional.
 3. **Destroy** only what passed — REVIEW blocks a scripted delete chain (script exits 1).
 
-**Mechanical floor (pre-push hook — git-side surfaces)**: for the surfaces that happen at *push* time
-— **remote branch/ref deletion** and **force / non-fast-forward push** (history rewrite) —
-`templates/.git-hooks/pre-push` enforces this gate **mechanically**, not just as prose. It detects the
-destructive refspec on stdin (delete = local SHA all-zeros; force = remote SHA not an ancestor of local),
-runs a **per-ref verdict** (branch delete: SAFE = fully merged → allowed · CHECK = commits off base, 0
-unique paths → blocked for a judged look · REVIEW = unique paths → blocked for recovery; force/non-ff and
-tag/notes deletes always block) and **blocks** unless `DESTRUCTIVE_OP_OK=1` (an explicit, logged operator
-acknowledgment — used *after* enumerate + recover) is set. The verdict is load-bearing (a merged-branch
-cleanup passes; a silent-loss CHECK does not), so this is the enumerate as a mechanical floor, not prose.
-**What it does and does NOT close (honest)**: it closes the **honest-weak-model** gap — an agent that
-simply *forgot* the prose gate is now mechanically stopped. It does **not** close the **injected/adversarial**
-gap: an agent under instruction can set the override or `--no-verify`, and a client-side hook is readable
-and bypassable by design. The hard floor for the adversarial case is **server-side branch protection**
-(GitHub *Restrict deletions* / *Restrict force pushes*) — this hook is the honest-model floor, branch
-protection is the hard floor. **Scope**: covers only git pushes *from a hook-installed repo* (`npm publish`
-is mechanized separately via `prepublishOnly` — see §Pre-Publish Hook coverage (c)); the remaining non-git
-surface — a separate-repo `gh repo create --public` / visibility flip — is genuinely un-hookable and stays
-prose + `PRE-PUBLISH-CHECKLIST.md`. **Portability**: bash-3.2 safe (macOS
-default `/bin/bash`); the original draft used a bash-4 associative array that crashed fail-OPEN on 3.2 —
-caught in test, a portability defect class worth noting.
+**Mechanical floor (pre-push hook — git-side surfaces)**: at *push* time, **remote branch/ref deletion**
+and **force / non-fast-forward push** are enforced **mechanically** by `templates/.git-hooks/pre-push` —
+it runs the per-ref verdict above and **blocks** unless `DESTRUCTIVE_OP_OK=1` (an explicit, logged operator
+acknowledgment, used *after* enumerate + recover). It closes the **honest-weak-model** gap (a forgotten
+prose gate is now stopped); it does **not** close the injected/adversarial one — the hard floor there is
+**server-side branch protection**. Non-git surfaces are out of its scope.
 
 **Degrade direction**: per the Surface-Class Degrade Invariant above, if `predelete_check.sh` is missing
 or errors, this irreversible surface **fails closed** — the pre-push hook blocks (enumerate by hand or
 take the explicit `DESTRUCTIVE_OP_OK=1` override); a tooling-down enumerate step never silently degrades
 into "just delete it."
 
-> Origin: 2026-06-10 branch cleanup — pre-deletion enumeration recovered a parallel session's card
-> (weekly-audit completion + #88 merge state) that existed **only on an unmerged branch** with zero
-> unique paths: exactly the CHECK class, invisible to "is it merged?" intuition. Deletion without the
-> gate destroys live state without anyone noticing.
+> **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Destructive-Op-Hook-Coverage`
+> — the per-ref verdict mechanics, what the hook does/does not close (honest scope + adversarial residual),
+> the bash-3.2 portability defect class, and the 2026-06-10 origin incident — read when auditing or
+> configuring the pre-push gate.
 
 ---
 
