@@ -103,9 +103,79 @@ pass/block verdict* — e.g. `agent-composer`, `goal-quench`, `asset-placement-g
 
 ---
 
+## §Cross-Family-Complement
+
+Execution detail for CLAUDE.md §FH Improvement 4-Axis Auto-Gate → *Cross-family complement*. The rule
+that a load-bearing change recruits ≥1 different-family auditor, that it is autonomous once consented,
+and that the governor keeps the terminal verdict + source-grounds every finding — all stay in CLAUDE.md.
+
+**Sidecar mapping (per the UAP)** — pick by task class, not by preference:
+
+| Task class | Recruit | Why |
+|---|---|---|
+| Repo-grounded code / security audit | `codex` (`gpt-5.5`, xhigh) | reads the actual tree; strongest on verdict-code logic |
+| Breadth / multimodal / frontier scan | `agy` (Gemini) | wide recall, video + image ingest |
+| Batch / free-tier arm | local 4090 over Tailscale | no token cost; weaker judge — anchor it |
+
+**Degrade**: when no different-family auditor is reachable, say so and fall back to single-session — but
+note the exception in §Field-Harness Load-Bearing Change Gate, where an unreachable cross-family panel is
+**NOT-CONVERGED** rather than a silent same-family pass (that surface is pre-merge and irreversible-adjacent).
+
+**Dogfood evidence (2026-06-27)**: a cross-family pass caught a HIGH execution-side-effect blind spot that
+the same-family reviewers **and** the target-tier sim all shared. That is the decorrelation value made
+concrete: the miss was not a depth failure (the sim ran at the right tier) but a *correlation* failure —
+every reviewer in the Claude family read the change the same optimistic way. Decorrelation is the only
+lever that moves a correlated blind spot; more same-family review does not.
+
+---
+
+## §Destructive-Op-Hook-Coverage
+
+Execution detail for CLAUDE.md §Destructive-Op Gate. The **order invariant** (enumerate → recover →
+destroy), the **3 steps**, the `DESTRUCTIVE_OP_OK=1` override, and the **fail-closed degrade direction**
+stay in CLAUDE.md — they are load-bearing every session. What follows is the mechanics + honest scope.
+
+**Per-ref verdict (pre-push hook)**: the hook detects the destructive refspec on stdin — *delete* = local
+SHA all-zeros; *force* = remote SHA not an ancestor of local — then judges each ref:
+
+| Ref state | Verdict | Hook action |
+|---|---|---|
+| Branch delete, fully merged | SAFE | allowed |
+| Branch delete, commits off base + 0 unique paths | CHECK | **blocked** — needs a judged content look |
+| Branch delete, unique paths present | REVIEW | **blocked** — recovery mandatory |
+| Force / non-ff push | — | **always blocked** |
+| Tag / notes delete | — | **always blocked** |
+
+The verdict is load-bearing, not decorative: a merged-branch cleanup passes, a silent-loss CHECK does not.
+This is the enumerate step as a mechanical floor rather than prose.
+
+**What it does and does NOT close (honest)**: it closes the **honest-weak-model** gap — an agent that
+simply *forgot* the prose gate is now mechanically stopped. It does **not** close the
+**injected/adversarial** gap: an agent under instruction can set the override or pass `--no-verify`, and a
+client-side hook is readable and bypassable by design. The hard floor for the adversarial case is
+**server-side branch protection** (GitHub *Restrict deletions* / *Restrict force pushes*) — this hook is
+the honest-model floor, branch protection is the hard floor.
+
+**Scope**: covers only git pushes *from a hook-installed repo*. `npm publish` is mechanized separately via
+`prepublishOnly` (see §Pre-Publish-Hook-Coverage (c)); the remaining non-git surface — a separate-repo
+`gh repo create --public` / visibility flip — is genuinely un-hookable and stays prose +
+`PRE-PUBLISH-CHECKLIST.md`.
+
+**Portability defect class**: the hook is bash-3.2 safe (macOS default `/bin/bash`). The original draft
+used a bash-4 associative array that crashed **fail-OPEN** on 3.2 — caught in test. Worth naming: a
+portability break in a gate degrades toward permissive unless the gate is written to fail closed on its
+own errors.
+
+**Origin (2026-06-10 branch cleanup)**: pre-deletion enumeration recovered a parallel session's card
+(weekly-audit completion + #88 merge state) that existed **only on an unmerged branch** with zero unique
+paths — exactly the CHECK class, and invisible to "is it merged?" intuition. Deletion without the gate
+destroys live state without anyone noticing. This is why the loss class is called *silent*.
+
+---
+
 ## §Pre-Publish-Hook-Coverage
 
-**Hook coverage — two distinct actions (refined 2026-06-17)**:
+**Hook coverage — three distinct actions** (refined 2026-06-17 for (a)/(b); (c) added 2026-06-27):
 - **(a) repo-go-public** (`gh repo create --public` / a visibility flip) is irreversible and usually in a
   **separate repo** — the FH pre-commit hook **cannot** catch it. That stays **AI-behavioral** (proactive
   trigger) **+ a portable checklist** (`templates/PRE-PUBLISH-CHECKLIST.md`), run on any repo/machine.
@@ -126,6 +196,23 @@ pass/block verdict* — e.g. `agent-composer`, `goal-quench`, `asset-placement-g
   plaintext only (encoded tokens out of scope); a line-split backstop catches a token wrapped across
   lines; `PUBLIC_SURFACE_OK=1` overrides and is logged to a gitignored audit trail for the weekly audit.
   Residuals (split-encoding, override-not-populated, override abuse) are documented, not silent.
+- **(c) `npm publish`** — mechanically gated by `scripts/public_surface_scan_files.sh`, wired into
+  `prepublishOnly` (`npm run release` also runs it *outside* the lifecycle). Unlike (b) it scans the
+  **full content of the exact npm-published file set** (`npm pack --dry-run`), *not* a commit diff — so a
+  token committed **before the scan existed**, or carried in a `files[]` entry, is still caught at the
+  registry boundary. HIGH/MED block; `PUBLIC_SURFACE_OK=1` overrides + logs. **Fail-closed** when patterns
+  or the file set are unresolved, when the parse looks partial, **or when the gitignored operator override
+  is absent** — defaults-only would otherwise green-PASS a HIGH company literal on a fresh clone or CI runner.
+
+**Named residuals for (c)** — it is a denylist **on the npm CLI path with scripts enabled**, not a
+universal secret-scanner:
+
+| # | Residual | Mitigation |
+|---|---|---|
+| i | `npm publish --ignore-scripts`, a CI `.npmrc` with `ignore-scripts=true`, or `pnpm`/`yarn publish` **skip the lifecycle hook entirely** | route publishes through `npm run release`, or add an explicit CI scan step |
+| ii | scans only the **loaded patterns** — an **un-patterned secret shape** (an API key the patterns don't describe) still ships | pattern coverage is the limit; pair with a real secret-scanner if that shape matters |
+| iii | on a runner without the gitignored override it is **defaults-only** unless populated | populate the override in each authoring env (esp. the company env) |
+| iv | scans **working-tree content, not the final tarball bytes** | benign today (content-neutral lifecycle: prepare=chmod, no prepack) — **re-open if a content-generating publish lifecycle is added** (cross-family audit 2026-06-27) |
 
 > Origin: 2026-06-05 `phantom-gate` shipped public, then needed a private→de-company-scrub→re-public
 > round-trip (`fh_signal_2026-06-05_fh-direct`). PSA existed but nothing forced it pre-publish. 2026-06-17
