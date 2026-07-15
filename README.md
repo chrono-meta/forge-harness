@@ -131,12 +131,13 @@ attention is spent only where a change is irreversible.
 
 Scale is the second point. A **skill, agent, or plugin** is a tool. A **harness** is a level up — a *star*:
 one project's tools, rules, gates, and memory bound into a single working body. **forge-harness is the
-galaxy those stars live in** — it holds many harnesses in one gravity well, keeps them in orbit (a
-shared floor, no drift), and lets them evolve together instead of scattering. And the system is a
-*nursery*, not just a container: FH can run a field harness **in simulation inside its own sandbox** —
-expensive per run, cheaper in total, because the trial-and-error pools in one place and compounds — and
-when the simulation holds, it **emits** the project as an independent, specialized harness. That is the
-goal it is built toward. In practice the gravity comes from four things:
+galaxy those stars live in**: it binds many harnesses onto a shared floor to prevent drift, and lets
+them evolve together instead of scattering.
+
+This galaxy is more than a container. FH can run a field harness **in simulation inside its own
+sandbox** — expensive per run, cheaper in total, because the trial-and-error pools in one place and
+compounds — and when the simulation holds, it **emits** the project as an independent, specialized
+harness. That is the goal it is built toward. In practice it works in four ways:
 
 **① Assemble** — FH runs a *cluster* of harnesses at optimized token cost and hands you the right one for
 the project. You don't wire up skills one by one; you get a **harness** — its plugins, skills, and agents
