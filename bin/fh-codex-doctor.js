@@ -117,15 +117,25 @@ function extractBacktickNames(line) {
   return names;
 }
 
+// The tier table IS this doctor's instrument. If it cannot be read or parsed, every skill
+// comes back documentedTier=null, no M1 rule can ever fire, findings is empty, and the report
+// says OK with --strict exiting 0 — a broken instrument reporting "no violations". An
+// unreadable source (permissions, wrong root) and a parse yielding zero rows (the table's
+// markdown drifted, e.g. bold dropped from `| **M1 |`) both land there, so both are reported
+// as an instrument failure rather than a clean bill of health.
 function documentedTiers(root) {
   const sources = [
     path.join(root, 'AGENTS.md'),
   ];
   const tiers = new Map();
   const evidence = [];
+  const sourceErrors = [];
   for (const source of sources) {
     const text = maybeReadText(source);
-    if (!text) continue;
+    if (!text) {
+      sourceErrors.push(`${rel(root, source)}: missing or unreadable`);
+      continue;
+    }
     const lines = text.split('\n');
     lines.forEach((line, index) => {
       const tierMatch = line.match(/\|\s*\*\*(M[123])\b/);
@@ -137,7 +147,12 @@ function documentedTiers(root) {
       }
     });
   }
-  return { tiers, evidence };
+  if (tiers.size === 0 && sourceErrors.length === 0) {
+    sourceErrors.push(
+      `${rel(root, sources[0])}: readable but yielded 0 tier rows — the tier table format drifted`
+    );
+  }
+  return { tiers, evidence, sourceErrors };
 }
 
 function compatDocTierMentions(root, skillNames) {
@@ -333,7 +348,13 @@ function buildReport(root) {
   }
 
   return {
-    status: findings.some((f) => f.severity === 'HIGH') ? 'DRIFT' : 'OK',
+    // INSTRUMENT_ERROR outranks both: without a tier table this run measured nothing, and
+    // "measured nothing" must not be reported as OK (nor as DRIFT, which would claim a
+    // finding it never made).
+    status: docs.sourceErrors.length > 0
+      ? 'INSTRUMENT_ERROR'
+      : findings.some((f) => f.severity === 'HIGH') ? 'DRIFT' : 'OK',
+    instrumentErrors: docs.sourceErrors,
     root,
     counts,
     agentCards: loadAgentCards(root),
@@ -410,6 +431,16 @@ function main() {
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   } else {
     printText(report);
+  }
+  // An instrument failure is not a passing run. It exits non-zero unconditionally — not only
+  // under --strict — because the failure mode it guards is precisely a caller reading exit 0
+  // as "no drift" when nothing was measured. 10 = harness error, distinct from 1 = drift found.
+  if (report.status === 'INSTRUMENT_ERROR') {
+    for (const err of report.instrumentErrors) {
+      process.stderr.write(`ERROR: tier source unusable — ${err}\n`);
+    }
+    process.stderr.write('  Nothing was classified, so no drift could be detected. Failing closed.\n');
+    process.exit(10);
   }
   if (args.strict && report.counts.findings.HIGH > 0) {
     process.exit(1);

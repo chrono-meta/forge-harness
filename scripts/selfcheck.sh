@@ -48,25 +48,55 @@ if ! bash scripts/count_check.sh; then
   fail=1
 fi
 
+# Behavioural regressions on the verdict surface. Syntax checks above prove the scripts parse;
+# these prove the gate still fails CLOSED on the holes confirmed open in v1.4.59 (model verdict
+# contradicting its own findings, FH_TIMEOUT reaching command position, dry-run readable as
+# PASS, an unperformed review reported as a verdict, a forgeable plaintext evidence fence).
+# Wired here so `npm test` and prepublishOnly both run them: a publish must not be able to
+# ship a gate that has quietly reopened one of them.
+if [ -f scripts/test_fh_gate_regressions.sh ]; then
+  if ! bash scripts/test_fh_gate_regressions.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  fh-gate regressions: scripts/test_fh_gate_regressions.sh missing"
+  fail=1
+fi
+
 # Referenced-path existence is a source-tree check. The npm package intentionally
 # ships a narrower runtime surface, so package-mode selfcheck skips this section.
 if [ -d ".claude/rules" ]; then
   # Backtick-quoted repo-relative file refs in the always-loaded governance surface
   # (CLAUDE.md + .claude/rules/*.md) must exist. Phantom-reference class recurred
   # N>=3 in the 2026-06-11 audit window — instrument-not-habit.
-  while IFS= read -r p; do
-    if git check-ignore -q "$p" 2>/dev/null; then
-      echo "SKIP  ref-path (gitignored): $p"
-    elif [ -f "$p" ]; then
-      echo "PASS  ref-path: $p"
-    else
-      echo "FAIL  ref-path: $p — referenced in CLAUDE.md/.claude/rules but missing"
-      fail=1
-    fi
-  done < <(grep -hoE '\`[^\` ]+\`' CLAUDE.md .claude/rules/*.md 2>/dev/null \
+  # Extract first, then count. Streaming the extractor straight into the loop meant an
+  # extractor that produced nothing (CLAUDE.md absent, 2>/dev/null swallowing a grep error,
+  # the backtick convention changing) ran the loop zero times, printed nothing, and left
+  # fail=0 → SELFCHECK: PASS. The check would have silently ceased to exist while still
+  # reporting a pass — the same shape count_check.sh:71 already guards against with its
+  # impossible-zero rule. fh-meta always has refs; zero means the instrument broke.
+  _refs=$(grep -hoE '\`[^\` ]+\`' CLAUDE.md .claude/rules/*.md 2>/dev/null \
     | sed 's/\`//g' \
     | grep -E '^(knowledge|templates|scripts|docs|plugins|\.claude)/[^*{}<>$]+\.(md|sh|ya?ml|jsonc|json)$' \
     | sort -u)
+  if [ -z "$_refs" ]; then
+    echo "FAIL  ref-path: extractor produced 0 refs — the scan broke, it did not pass"
+    fail=1
+  else
+    while IFS= read -r p; do
+      [ -z "$p" ] && continue
+      if git check-ignore -q "$p" 2>/dev/null; then
+        echo "SKIP  ref-path (gitignored): $p"
+      elif [ -f "$p" ]; then
+        echo "PASS  ref-path: $p"
+      else
+        echo "FAIL  ref-path: $p — referenced in CLAUDE.md/.claude/rules but missing"
+        fail=1
+      fi
+    done <<REFS
+$_refs
+REFS
+  fi
 else
   echo "SKIP  ref-path (package mode: .claude/rules absent)"
 fi

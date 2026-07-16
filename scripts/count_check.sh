@@ -74,7 +74,14 @@ if [ "$meta_sk" -eq 0 ]; then
 fi
 
 count_check() { # count_check <label> <file> <expected-string>
-  if read_tree "$2" | grep -q "$3"; then
+  # Containment, not equality, was the bug: every expected string starts with a digit, so a
+  # stale "16 skills + 2 agents" CONTAINS "6 skills + 2 agents" and a plain `grep -q` reported
+  # PASS while the count had actually drifted. Guard the boundaries so a longer number cannot
+  # satisfy a shorter one, and escape the expected text (it carries `+` and `(` `)`, which are
+  # ERE metacharacters) so it is matched as the literal it is meant to be.
+  local esc
+  esc=$(printf '%s' "$3" | sed 's/[][\.*^$+?(){}|\\/]/\\&/g')
+  if read_tree "$2" | grep -qE "(^|[^0-9])${esc}([^0-9]|\$)"; then
     echo "PASS  count: $1"
   else
     echo "FAIL  count: $1 — expected \"$3\" in $2 (actual: fh-meta ${meta_sk}sk/${meta_ag}ag, fh-commons ${com_sk}sk/${com_ag}ag)"
