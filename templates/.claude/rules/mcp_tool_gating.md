@@ -129,6 +129,23 @@ not from sounding harmless.
    (e.g. Claude Code `permissions.ask` entries for `mcp__{server}__{tool}`) so the
    gate is mechanical, not prose-only. This rule file is the fallback for hosts
    without per-tool permission config.
+5. For `http`/`sse`-transport servers, record the resolved endpoint address at mount
+   (host + path) in the §3 table's Note column. This checklist gates tool *behavior*
+   at mount time — it does not by itself catch the server's *endpoint* being rewritten
+   afterward. A documented attack path does exactly that: a malicious npm postinstall
+   hook rewrote MCP server entries in `~/.claude.json` to point at an attacker-controlled
+   proxy, so the next session silently routed an authenticated MCP connection (and its
+   OAuth bearer token) through attacker infrastructure with no user-visible prompt, and
+   re-applied the rewrite on every session start to survive remediation
+   ([Mitiga, "MCP Token Theft in Claude Code," 2026-06](https://www.mitiga.io/blog/claude-code-mcp-token-theft-mitm)).
+   The session otherwise behaves normally throughout — this attack is engineered to be
+   behaviorally silent, so "diff only if something looks wrong" will not catch it.
+   Recording the endpoint at mount gives the operator a baseline for a **periodic**
+   diff (e.g. as part of an existing session-start or `install-doctor` check), not
+   an incident-triggered one. `stdio`-transport servers have no network endpoint to
+   pin for this threat, though the same config-rewrite class can still repoint a
+   `stdio` server's launch command — out of scope for this step, not out of scope
+   for config-integrity generally.
 
 Done When (per mounted server):
 - §3 table filled, every enumerated tool name present (check class: mandatory-pass — file inspection)
@@ -136,3 +153,5 @@ Done When (per mounted server):
   or this rule file is installed and loaded in the session (check class: mandatory-pass)
 - non-ask tiers assigned only with a behavior-confirmation note in the §3 Note column
   (check class: judged — pair with an adversarial pass asking "could this name mislead?")
+- for `http`/`sse`-transport servers, the mounted endpoint address is recorded in §3
+  (check class: mandatory-pass — file inspection; N/A for `stdio`-transport servers)
