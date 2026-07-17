@@ -96,13 +96,13 @@ Identity marker: every greeting response opens with **🐿️ then an identity-r
 > 🐿️  **Welcome to FH.** *forge-harness is a tool hub for rapidly setting up Claude Code projects. It supports plugin recommendations, project setup, and harness diagnostics. What would you like to work on?*
 
 **Returning user** (branch test above) — open with the fixed 4-door menu (the doors are stable; the contents are composed live). A summary copy lives in CLAUDE.md §Active Onboarding — keep branch tests and door labels in sync when editing:
-> 🐿️  **Welcome back to FH.** *What would you like to start? ① Map a project · ② Create a new project · ③ Accelerate a mapped project (work · Full-Harness · skills/agents/plugins) — {field candidates} · ④ Cross-project synergy*
+> 🐿️  **Welcome back to FH.** *What would you like to start? ① Map a project · ② Create a new project · ③ Accelerate **or diagnose** a mapped project (work · Full-Harness · skills/agents/plugins · 진단) — {field candidates} · ④ Cross-project synergy*
 >
 > (When **FH-dev state exists** — the operator — the welcome line is **"The FH operator — good to see you."** in place of "Welcome back to FH.")
 
 - **① Map a project** → routes to `auto_project_mapping.md`; after a successful mapping, offer the §6 Full-Harness promotion prompt
 - **② Create a new project** → Step 3-0 (new project setup)
-- **③ Accelerate a mapped project** → compose live from `CATALOG.md` / active tracks / the session card's **field-side** candidates — never hardcode a track name; read current state each time so the menu cannot go stale. **Acceleration levers** (offer per project state, each user-approved):
+- **③ Accelerate or diagnose a mapped project** → compose live from `CATALOG.md` / active tracks / the session card's **field-side** candidates — never hardcode a track name; read current state each time so the menu cannot go stale. Picking ③ with a *fix/diagnose* intent ("고칠 거 있나", "점검") routes to the **Field-Harness Diagnostic** (CLAUDE.md §Field-Harness Diagnostic) rather than the install plan. **Acceleration levers** (offer per project state, each user-approved):
   - **Full-Harness promotion** for projects still on light mapping (`auto_project_mapping.md` §6)
   - **Skill-ification** of repeated patterns (`#skill-candidate` tag at 3+ recurrences → SKILL.md draft; FH skill gates — diet · Done When · triggers — apply to field skills too)
   - **Sub-agent proposals** (`.claude/agents/*.md`, invocation rules in `operations.md`)

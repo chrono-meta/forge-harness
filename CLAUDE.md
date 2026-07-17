@@ -173,7 +173,7 @@ Simplification guard: trivial denials with one obvious fix → state block + sin
 
 - **Returning user** (session files OR mapped project tracks exist): fixed 4-door menu —
 
-  > 🐿️  **Welcome back to FH.** *① Map a project · ② Create a new project · ③ Accelerate a mapped project (work · Full-Harness · skills/agents/plugins) — {field candidates} · ④ Cross-project synergy*
+  > 🐿️  **Welcome back to FH.** *① Map a project · ② Create a new project · ③ Accelerate **or diagnose** a mapped project (work · Full-Harness · skills/agents/plugins · 진단) — {field candidates} · ④ Cross-project synergy*
   >
   > (When **FH-dev state exists** — the operator — the welcome line is **"The FH operator — good to see you."** in place of "Welcome back to FH.")
 
@@ -568,7 +568,7 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | Conversation Signal Keywords | Proposed Skill |
 |---|---|
 | "plugin", "what tool should I use", "install", "recommend" (tool exploration) | `/plugin-recommender` |
-| "context is getting long", "token limit", "/clear", "slow", "context" (burden) | `/context-doctor` |
+| "context is getting long", "token limit", "/clear", "slow", "context", "토큰 아깝다" (burden already felt — retrospective; future-cost estimates go to `/token-budget-gate`) | `/context-doctor` |
 | "wrap up this week", "review", "audit", "weekly", "retrospective" | `/harvest-loop` |
 | "pull this into FH", "reverse-harvest", "worth keeping", "harvest pattern", "field pattern" | `/field-harvest` |
 | "용광로모드", "crucible mode", "absorb this whole corpus", "throw everything in", "re-forge FH identity", "melt this down" (total-immersion absorption, not cherry-pick — esp. a whole corpus on a core FH axis, or a frontier showcase risking FOMO) | `knowledge/shared/harness-core/crucible_mode.md` (read it, run the chain: total-ingest → steel-quench/phantom-quench melt → governor identity-bonding → sim/persona reforge → field-harvest rebirth; the core invariants stay unmeltable) |
@@ -591,6 +591,8 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "did I leak anything", "public surface audit", "private token scan", "is my split clean", "check tracked files for private tokens" | `/public-surface-audit` |
 | "publish", "make public", "make this repo public", "go public", "gh repo create --public", "flip to public", "first public push", "publish the package", "npm publish", "twine upload", **opening/updating a PR or pushing content to the public hub** (esp. company-origin) (publish intent — **proactive**, fire *before* the action; adding content to an already-public repo IS publishing that content) | **Pre-Publish Surface Gate** (see above → `/public-surface-audit` + `/marketplace-gate` Check 5 must PASS first). The commit-time half is now **hook-enforced** (mechanical confidentiality scan — see Pre-Publish Gate §Hook coverage (b)), so this proactive trigger is the salience layer over a mechanical floor. |
 | "delete the branch", "브랜치 삭제", "브랜치 정리", "clean up branches", "force-push", "rewrite history", "지워도 돼?" (destructive intent — **proactive**, fire *before* the action) | **Destructive-Op Gate** (see above → enumerate → recover → destroy; `templates/predelete_check.sh`) |
+| **"새 기능 검증해줘", "test this feature", "이 TC 확인해줘" — verifying the user's PRODUCT/feature (not FH itself)** | **Route to the mapped field harness first** (Cross-Project Skill Bus / registry) — the field harness owns product verification. The harness-verification rows in this table (`verify-bidirectional` · `prompt-regression` · `sim-conductor` · `pipeline-conductor`) verify the *harness*, and must not shadow a product-verification ask (a field project's *harness assets* — its skills/rules — still use those FH verification rows) |
+| "지난주에 뭐 했지", "what did we do last week", "예전에 이거 한 적 있나" (recall intent) | §Searching Past Work (CATALOG-first) — read CATALOG.md, then open only candidate files |
 | "look at this again", "is this right", "counterargument", "re-validate" | `/verify-bidirectional` |
 | "MCP failing", "tool keeps erroring", "circuit-breaker", "same error looping" | `/mcp-circuit-breaker` |
 | "add this MCP server", "mount this MCP", "mcp.json에 추가", "connect this tool server" (external-MCP mount intent — **proactive**, fire *before* first tool call; mount intent only — a failing/erroring mounted server is `/mcp-circuit-breaker`'s row above) | `templates/.claude/rules/mcp_tool_gating.md` (name-keyed ask/allow table — never trust server annotations or names; fill §3 at mount time) |

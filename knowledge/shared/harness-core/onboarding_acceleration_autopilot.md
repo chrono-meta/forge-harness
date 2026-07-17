@@ -76,6 +76,7 @@ install plan, and gate every install.**
   present the raw recommend and ask.
 - **(e) Once per door-entry** — not a per-turn nag.
 
-This is the door ③ (accelerate) engine and the new-project/harness-write path made autonomous —
+This is the door ③ (accelerate; a *diagnose* intent on the same door routes to the Field-Harness
+Diagnostic instead) engine and the new-project/harness-write path made autonomous —
 the operator asks once and the harness discovers, ranks, and (on request) installs everything worth
 wiring.
