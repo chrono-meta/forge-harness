@@ -91,9 +91,10 @@ claude plugin install -s user fh-meta@forge-harness
 cd ~/projects/{your-project} && claude
 ```
 
-> ⚠️ **Plugin-only is partial synergy.** You get the skills and agents, but **not** the methodology
-> layer's orchestration — the `CLAUDE.md` governance (active onboarding, the 4-axis gate, mode
-> branching) and the compounding context (`tracks/` memory accumulation, `harvest-loop` learning).
+> ⚠️ **Plugin-only is partial synergy.** You get the skills and agents, but **not** the hub-side
+> orchestration — the `CLAUDE.md` governance (active onboarding, the 4-axis gate, mode branching;
+> automation layer) and the compounding context (`tracks/` memory accumulation, `harvest-loop`
+> learning; methodology layer).
 > Each skill runs the same in isolation; what's missing is the orchestration that makes them compound
 > across sessions. Clone the hub (above) when you want the full set, not just the tools.
 
