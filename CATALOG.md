@@ -440,6 +440,10 @@ v1.2 release complete (PR #1–#5): harvest-loop Step 0, agent-composer worktree
 
 <!-- Time-independent reference documents -->
 
+### 2026-07-17 | pattern | multi-harness-evolution-loop, usability-axis, devolution-check, operator-forged
+**File:** `knowledge/shared/harness-core/multi_harness_evolution_loop.md`
+Operator-forged 5-phase loop (structure audit → persona usability → fix → devolution check until CONVERGED → settle) composing existing FH checks across a harness cluster. Doctrine: usability ("does speech reach") is a first-class diagnostic axis; improvement without a devolution check is half a loop. n=1 evidence 2026-07-17; skill-ification gated on n≥2.
+
 ### 2026-07-17 | detail-layer | claude-md-gates, on-demand-detail, salience-split (backfill)
 **File:** `knowledge/shared/harness-core/claude_md_gate_details.md`
 On-demand detail home for CLAUDE.md gate sections (4-axis marker irreducibility, sim-dispatch fallback, floor-tier canary, cross-family complement, Mode D notice, pre-publish/destructive-op hook coverage, session-close steps) — read when executing or auditing the pointed gate.
