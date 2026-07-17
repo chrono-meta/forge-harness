@@ -565,40 +565,37 @@ into "just delete it."
 At any point during a session, when the following signals are detected, propose the relevant skill in one line.
 Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?"`
 
+> **Row diet (2026-07-17, Step 0.5 probe 13/18)**: rows whose skill frontmatter `description` already
+> catches the utterance at high confidence were removed — platform-native skill matching owns those
+> (plugin-recommender · harness-doctor · synergy · frontier-digest · sim-conductor · install-wizard ·
+> asset-placement-gate · marketplace-gate · public-surface-audit · verify-bidirectional ·
+> mcp-circuit-breaker · token-budget-gate · salience-splitter — the last one earned removal by a
+> description strengthening in the same change, not by its original description). This table keeps only: **proactive
+> safety gates** (publish · destructive · MCP-mount) · **non-skill protocol routes** (gates, doctrine
+> sections, deep-research ladder) · **disambiguators and weak-description rows**. Before adding a row
+> back, probe whether the description alone catches it.
+
 | Conversation Signal Keywords | Proposed Skill |
 |---|---|
-| "plugin", "what tool should I use", "install", "recommend" (tool exploration) | `/plugin-recommender` |
 | "context is getting long", "token limit", "/clear", "slow", "context", "토큰 아깝다" (burden already felt — retrospective; future-cost estimates go to `/token-budget-gate`) | `/context-doctor` |
 | "wrap up this week", "review", "audit", "weekly", "retrospective" | `/harvest-loop` |
 | "pull this into FH", "reverse-harvest", "worth keeping", "harvest pattern", "field pattern" | `/field-harvest` |
 | "용광로모드", "crucible mode", "absorb this whole corpus", "throw everything in", "re-forge FH identity", "melt this down" (total-immersion absorption, not cherry-pick — esp. a whole corpus on a core FH axis, or a frontier showcase risking FOMO) | `knowledge/shared/harness-core/crucible_mode.md` (read it, run the chain: total-ingest → steel-quench/phantom-quench melt → governor identity-bonding → sim/persona reforge → field-harvest rebirth; the core invariants stay unmeltable) |
-| "harness is complex", "too many skills", "check structure", "harness" | `/harness-doctor` |
 | "review this PR", "check diff", "code review" | code diff → built-in `/code-review`·`/review` · FH-asset coherence → `/hub-cc-pr-reviewer` (role split) |
 | "keep watching X", "poll this", "check every N minutes", recurring WATCH item | built-in `/loop` (interval runner) — pair with the WATCH list, don't hand-poll |
-| "are these in sync", "synergy", "can these integrate", "any overlap" | `/cross-ecosystem-synergy-detection` |
-| "latest trends", "frontier", "external resources" | `/frontier-digest` |
 | "research this deeply", "survey the literature", "comprehensive analysis", "deep research", "look this up thoroughly", "조사해줘", "리서치" (general topic research, not trend-scan) | **Deep-Research Capability Ladder** (`knowledge/shared/harness-core/deep_research_capability_ladder.md`) — route to the highest available rung: built-in `/deep-research` if present → else Claude `WebSearch`+`WebFetch` synthesis (tier-sensitive) → `/frontier-digest` only if it's AI/harness trend-scan. No-reinvention: FH routes, does not build a research engine. |
 | "orchestrate agents", "parallel dispatch", "combine skills", "multiple agents" | `/agent-composer` |
-| "run a simulation", "external user perspective", "internal audit", "quality check" | `/sim-conductor` |
 | "broaden the grounded corpus", "add another version of the corpus", "ingest the full source as the grounding axiom", "여러 버전으로 통째로 가져와" (verbatim-relay corpus expansion — fail-closed grounding, no generator) | `/corpus-grounding-expander` |
 | "broaden these personas", "what other voices fit this cast", "map these roles to a decision lens", "페르소나 후보군 더 넓혀" (persona seed → tiered judgment-mapped cast; pairs with `persona-innovator` for naming) | `/persona-roster-expander` |
-| "first install", "FH setup", "wizard", "install-wizard" | `/install-wizard` |
 | "connect a project", "map this project", "link to hub" | `auto_project_mapping.md` (mapping) |
 | "harness-ify this project", "full harness setup", "프로젝트 하네스화", "promote to full harness" | `auto_project_mapping.md §6` (Full-Harness Mode) |
 | "check install", "verify setup", "confirm install", "install-doctor" | `/install-doctor` |
-| "where does this go", "asset location", "hub vs project", "placement" | `/asset-placement-gate` |
-| "add to marketplace", "OK to publish", "pre-publish check" | `/marketplace-gate` |
-| "did I leak anything", "public surface audit", "private token scan", "is my split clean", "check tracked files for private tokens" | `/public-surface-audit` |
 | "publish", "make public", "make this repo public", "go public", "gh repo create --public", "flip to public", "first public push", "publish the package", "npm publish", "twine upload", **opening/updating a PR or pushing content to the public hub** (esp. company-origin) (publish intent — **proactive**, fire *before* the action; adding content to an already-public repo IS publishing that content) | **Pre-Publish Surface Gate** (see above → `/public-surface-audit` + `/marketplace-gate` Check 5 must PASS first). The commit-time half is now **hook-enforced** (mechanical confidentiality scan — see Pre-Publish Gate §Hook coverage (b)), so this proactive trigger is the salience layer over a mechanical floor. |
 | "delete the branch", "브랜치 삭제", "브랜치 정리", "clean up branches", "force-push", "rewrite history", "지워도 돼?" (destructive intent — **proactive**, fire *before* the action) | **Destructive-Op Gate** (see above → enumerate → recover → destroy; `templates/predelete_check.sh`) |
 | **"새 기능 검증해줘", "test this feature", "이 TC 확인해줘" — verifying the user's PRODUCT/feature (not FH itself)** | **Route to the mapped field harness first** (Cross-Project Skill Bus / registry) — the field harness owns product verification. The harness-verification rows in this table (`verify-bidirectional` · `prompt-regression` · `sim-conductor` · `pipeline-conductor`) verify the *harness*, and must not shadow a product-verification ask (a field project's *harness assets* — its skills/rules — still use those FH verification rows) |
 | "지난주에 뭐 했지", "what did we do last week", "예전에 이거 한 적 있나" (recall intent) | §Searching Past Work (CATALOG-first) — read CATALOG.md, then open only candidate files |
-| "look at this again", "is this right", "counterargument", "re-validate" | `/verify-bidirectional` |
-| "MCP failing", "tool keeps erroring", "circuit-breaker", "same error looping" | `/mcp-circuit-breaker` |
 | "add this MCP server", "mount this MCP", "mcp.json에 추가", "connect this tool server" (external-MCP mount intent — **proactive**, fire *before* first tool call; mount intent only — a failing/erroring mounted server is `/mcp-circuit-breaker`'s row above) | `templates/.claude/rules/mcp_tool_gating.md` (name-keyed ask/allow table — never trust server annotations or names; fill §3 at mount time) |
-| "token budget", "how expensive", "estimate tokens", "will this cost a lot" | `/token-budget-gate` |
 | "did my rule change break anything", "regression check", "test harness changes" | `/prompt-regression` |
-| "SKILL.md too large", "split this skill", "skill is bloated", "skill file too long" | `/salience-splitter` |
 | "review for the team", "CTO review", "decision-maker", "share with leadership", "approval deck" | `/apex-review` |
 | "run full pipeline", "verify everything", "end-to-end sweep", "chain all verifications" | `/pipeline-conductor` |
 | "help me write a prompt", "build a prompt", "improve this prompt", "prompt template" | `/meta-prompt-builder` |

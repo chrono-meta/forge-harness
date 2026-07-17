@@ -440,6 +440,10 @@ v1.2 release complete (PR #1–#5): harvest-loop Step 0, agent-composer worktree
 
 <!-- Time-independent reference documents -->
 
+### 2026-07-17 | fh-meta | fh, hub-map, slash-command, discoverability, router-demotion-phase-a
+**File:** `plugins/fh-meta/skills/fh/SKILL.md`
+New skill: /fh renders the hub map (door menu + starter set + top phrases) on demand without a greeting — discoverability for task-first sessions. Renders from canonical sources (CLAUDE.md skeleton, starter_profile, CHEATSHEET), never forks a copy. Router-demotion Phase A alongside the trigger-table row diet (Step 0.5 probe 13/18 → 13 frontmatter-covered rows removed).
+
 ### 2026-07-17 | pattern | multi-harness-evolution-loop, usability-axis, devolution-check, operator-forged
 **File:** `knowledge/shared/harness-core/multi_harness_evolution_loop.md`
 Operator-forged 5-phase loop (structure audit → persona usability → fix → devolution check until CONVERGED → settle) composing existing FH checks across a harness cluster. Doctrine: usability ("does speech reach") is a first-class diagnostic axis; improvement without a devolution check is half a loop. n=1 evidence 2026-07-17; skill-ification gated on n≥2.

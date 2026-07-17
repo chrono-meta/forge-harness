@@ -275,7 +275,9 @@ All four movements ship. Temper was named before it was built — deliberately (
 two more signatures keep it running: `harvest-loop` (each session's lessons become permanent skills) and
 `agent-composer` (orchestrate the dispatch). The other skills wait until you need them — full list below.
 
-## 37 skills · 8 agents
+## 38 skills · 8 agents
+
+> Count = non-deprecated skills (deprecated redirect stubs — kept only for old-name routing — excluded).
 
 <details>
 <summary>Full asset activation check</summary>
