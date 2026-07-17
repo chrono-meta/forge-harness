@@ -72,6 +72,18 @@ claude
 > ✅ Claude reads `CLAUDE.md` and asks what project to connect or what task to start.
 > Say **"Connect a project"** → hub scans `../`, finds `.git` directories, creates `tracks/{project}/`.
 
+**Your first 15 minutes** — what success looks like, and what to do with it:
+
+1. You'll know setup worked when a greeting ("hi") shows the 🐿️ door menu, and "Connect a project"
+   creates `tracks/{your-project}/`.
+2. Then grab an immediate win in the same session: say **"accelerate this project"** (ranked plan of
+   skills/plugins worth wiring, install-gated) or **"run /context-doctor"** (token-waste scan).
+3. One honest note: FH's core payoff is **compounding** — session records, harvested learnings,
+   cross-session memory. It shows from **session 2 onward**. Day one gives you the menu, the
+   acceleration plan, and governance gates; don't judge the compounding on day one.
+
+Unfamiliar words on the way? → [`knowledge/shared/GLOSSARY.md`](knowledge/shared/GLOSSARY.md).
+
 **Plugin only (no clone):**
 ```bash
 claude plugin marketplace add https://github.com/chrono-meta/forge-harness.git  # once
@@ -79,16 +91,20 @@ claude plugin install -s user fh-meta@forge-harness
 cd ~/projects/{your-project} && claude
 ```
 
-> ⚠️ **Plugin-only is partial synergy.** You get the skills and agents, but **not** Layer 1 — the
-> `CLAUDE.md` governance (active onboarding, the 4-axis gate, mode branching) and the compounding
-> context (`tracks/` memory accumulation, `harvest-loop` learning). Each skill runs the same in
-> isolation; what's missing is the orchestration that makes them compound across sessions. Clone the
-> hub (above) when you want the full set, not just the tools.
+> ⚠️ **Plugin-only is partial synergy.** You get the skills and agents, but **not** the hub-side
+> orchestration — the `CLAUDE.md` governance (active onboarding, the 4-axis gate, mode branching;
+> automation layer) and the compounding context (`tracks/` memory accumulation, `harvest-loop`
+> learning; methodology layer).
+> Each skill runs the same in isolation; what's missing is the orchestration that makes them compound
+> across sessions. Clone the hub (above) when you want the full set, not just the tools.
 
-> 🚪 **New here / just want the skills?** Start with the opinionated front door —
-> [`templates/starter_profile.md`](templates/starter_profile.md): one install command, a curated
-> first-five skills, and a zero-install governance gate (`npx … fh-gate`). The other skills wait
-> until you need them.
+**Which entry path is for you?**
+
+| You are… | Start with |
+|---|---|
+| Solo dev, one project, just trying it | [`templates/starter_profile.md`](templates/starter_profile.md) — one command, curated first-five skills |
+| Multiple projects, want the compounding hub | Clone the hub (quickstart above) |
+| CI / non-Claude runtime, gates only | `npx @chrono-meta/fh-gate` (zero-install governance gate) |
 
 ---
 
@@ -221,7 +237,7 @@ FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-goal --prompt "Implement 
 
 The broader FH automation layer still depends on Claude Code for sub-agents, hooks, and slash commands. The portable path is shared documents plus runtime adapters, not separate Codex and Claude forks.
 
-**Recommended posture — Claude Code as orchestrator, others as sidecars.** FH's automation layer (auto-firing hooks, sub-agent dispatch, onboarding, memory) is Claude-Code-native, so the fullest experience runs **Claude Code as the main orchestrator with Gemini, Codex, or Antigravity (`agy`) as actively-used sidecars**. You can also run a **non-CC runtime as your main agent** — you keep the full methodology layer and M1 skills through `fh-gate`/`fh-run`, but you do **not** get the autopilot layer: hooks don't auto-fire, M2 agent-dispatch steps need the adapter (or interactive approval), and M3 skills are reference-only. This is a deliberate two-layer boundary, not a gap to be closed. Per-runtime detail: [`docs/codex-compat.md`](docs/codex-compat.md) (tier-by-tier) and [`multi_model_sidecar_strategy.md`](knowledge/shared/harness-core/multi_model_sidecar_strategy.md) (sidecar engines, including the Gemini→`agy` succession at the 2026-06-18 EOL).
+**Recommended posture — Claude Code as orchestrator, others as sidecars.** FH's automation layer (auto-firing hooks, sub-agent dispatch, onboarding, memory) is Claude-Code-native, so the fullest experience runs **Claude Code as the main orchestrator with Gemini, Codex, or Antigravity (`agy`) as actively-used sidecars**. You can also run a **non-CC runtime as your main agent** — you keep the full methodology layer and M1 skills (M1 = runs on any runtime as written; M2 = needs agent dispatch; M3 = Claude-Code-native — the portability tiers detailed in [`docs/codex-compat.md`](docs/codex-compat.md)) through `fh-gate`/`fh-run`, but you do **not** get the autopilot layer: hooks don't auto-fire, M2 agent-dispatch steps need the adapter (or interactive approval), and M3 skills are reference-only. This is a deliberate two-layer boundary, not a gap to be closed. Per-runtime detail: [`docs/codex-compat.md`](docs/codex-compat.md) (tier-by-tier) and [`multi_model_sidecar_strategy.md`](knowledge/shared/harness-core/multi_model_sidecar_strategy.md) (sidecar engines, including the Gemini→`agy` succession at the 2026-06-18 EOL).
 
 **Empirical result (2026-05-31)**: Applied to OpenCode's AI-generated `permission/arity.ts` (163 lines, CI green). Current gate semantics classify this as BLOCKED: 2 A-grade findings CI didn't catch (short-token overflow in allowlist, executor tools absent from arity table).
 
@@ -259,7 +275,9 @@ All four movements ship. Temper was named before it was built — deliberately (
 two more signatures keep it running: `harvest-loop` (each session's lessons become permanent skills) and
 `agent-composer` (orchestrate the dispatch). The other skills wait until you need them — full list below.
 
-## 37 skills · 8 agents
+## 38 skills · 8 agents
+
+> Count = non-deprecated skills (deprecated redirect stubs — kept only for old-name routing — excluded).
 
 <details>
 <summary>Full asset activation check</summary>

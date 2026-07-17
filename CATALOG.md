@@ -440,6 +440,62 @@ v1.2 release complete (PR #1–#5): harvest-loop Step 0, agent-composer worktree
 
 <!-- Time-independent reference documents -->
 
+### 2026-07-17 | fh-meta | fh, hub-map, slash-command, discoverability, router-demotion-phase-a
+**File:** `plugins/fh-meta/skills/fh/SKILL.md`
+New skill: /fh renders the hub map (door menu + starter set + top phrases) on demand without a greeting — discoverability for task-first sessions. Renders from canonical sources (CLAUDE.md skeleton, starter_profile, CHEATSHEET), never forks a copy. Router-demotion Phase A alongside the trigger-table row diet (Step 0.5 probe 13/18 → 13 frontmatter-covered rows removed).
+
+### 2026-07-17 | pattern | multi-harness-evolution-loop, usability-axis, devolution-check, operator-forged
+**File:** `knowledge/shared/harness-core/multi_harness_evolution_loop.md`
+Operator-forged 5-phase loop (structure audit → persona usability → fix → devolution check until CONVERGED → settle) composing existing FH checks across a harness cluster. Doctrine: usability ("does speech reach") is a first-class diagnostic axis; improvement without a devolution check is half a loop. n=1 evidence 2026-07-17; skill-ification gated on n≥2.
+
+### 2026-07-17 | detail-layer | claude-md-gates, on-demand-detail, salience-split (backfill)
+**File:** `knowledge/shared/harness-core/claude_md_gate_details.md`
+On-demand detail home for CLAUDE.md gate sections (4-axis marker irreducibility, sim-dispatch fallback, floor-tier canary, cross-family complement, Mode D notice, pre-publish/destructive-op hook coverage, session-close steps) — read when executing or auditing the pointed gate.
+
+### 2026-07-17 | gate | field-verdict, cross-family, degrade-direction, load-bearing (backfill)
+**File:** `knowledge/shared/harness-core/field_verdict_crossfamily_gate.md`
+Canonical detail of the Field-Harness Load-Bearing Change Gate — discretion principle, four-faces failure signature, gate mechanics, n=7 qasp evidence (9 default-toward-PASS holes across 3 harnesses), under-trigger residuals, autonomous-loop baking.
+
+### 2026-07-17 | detail-layer | field-diagnostic, compose-rank-hitl, six-lenses
+**File:** `knowledge/shared/harness-core/field_harness_diagnostic.md`
+Detail home for the Field-Harness Diagnostic (CLAUDE.md summary section) — full six-lens composition table incl. loop-readiness mechanics + adversarial pairing, 2026-07-08 dogfood examples, guard rationale.
+
+### 2026-07-17 | detail-layer | onboarding-autopilot, phase0-audit, simulate-first, install-hitl
+**File:** `knowledge/shared/harness-core/onboarding_acceleration_autopilot.md`
+Detail home for the Onboarding / Acceleration Autopilot (CLAUDE.md summary section) — full Phase-0 branch logic incl. chamber/simulate-first honesty boundary, revfactory provenance, guard evidence (chamber run #7).
+
+### 2026-06-20 | principle | gate-locality, multi-runtime, judge-robustness (backfill 2026-07-17)
+**File:** `knowledge/shared/harness-core/gate_locality_principle.md`
+Gate-locality principle — a safety gate must live where the enforcing actor actually reads it; a gate defined where the actor never loads is decorative, not enforced. Origin of the AGENTS.md vs CLAUDE.md inheritance-gap fix (PR#111).
+
+### 2026-07-17 | rule | operational-adaptation, uap, user-tuning, generalization-gate (backfill)
+**File:** `knowledge/shared/rules/operational_adaptation.md`
+Standing per-user operational loop — User Adaptation Profile (UAP) mechanics, proposal outcome tracking, suppression/muting rules, and the generalization gate routing idiosyncratic vs generalizable learnings.
+
+### 2026-07-17 | dialogue | memory-recall, intent-based, associative, wiki-links (backfill)
+**File:** `knowledge/shared/dialogue/memory_intent_recall.md`
+Intent-based + associative memory recall — keyword → intent + 1-hop [[link]] graph traversal over memory files, index-first to avoid graph-walk explosion.
+
+### 2026-07-17 | schema | persona-container, sim-conductor, dispatch-binding (backfill)
+**File:** `knowledge/shared/harness-core/persona_container_schema.md`
+Canonical schema for synthesizing a simulation persona from a reusable container — slots, crowd-scale stop rule, multi-LLM tier distribution, situation→group→skill dispatch binding, and the synthesize→validate→graduate lifecycle. sim-conductor and any persona-dispatch skill fill these slots.
+
+### 2026-07-17 | consent | capability-escalation, dispatch-not-substrate, hitl (backfill)
+**File:** `knowledge/shared/harness-core/capability_escalation_consent.md`
+Consent protocol governing when a session may escalate capability — escalation = dispatch (consent-gated), never substrate switch; pairs with sonnet_floor_doctrine.
+
+### 2026-06-11 | cross-audit | companion-store, pluggable, gbrain, obsidian (backfill 2026-07-17)
+**File:** `knowledge/shared/harness-core/companion_store_pluggable_cross_audit_2026-06-11.md`
+Sister-asset cross-audit treating FH's companion store, gbrain, and Obsidian as interchangeable backends for one role — durable private knowledge persistence — and the rationale for making the companion store pluggable.
+
+### 2026-06-14 | pattern | live-surface, observe-act-verify, appium-less, hybrid-webview (backfill 2026-07-17)
+**File:** `knowledge/shared/harness-core/live_surface_automation_pattern.md`
+Live-surface automation pattern — the capability pattern FH routes to when a mapping project needs an agent to drive a live UI surface: the cross-platform observe-act-verify contract, the Appium-less principle, and the hybrid-WebView vision-synthesis rule. FH routes drivers (no-reinvention).
+
+### 2026-07-17 | pattern | ensemble-union, detection-task, voting-vs-union (backfill)
+**File:** `knowledge/patterns/ensemble_union_detection_task_pattern.md`
+Ensemble union pattern for detection tasks — detection ensembles combine by UNION (recall gain), generation ensembles by VOTING; field-measured on a fixed open-weight 3-model panel.
+
 ### 2026-06-06 | pattern | parallax, multi-persona-review, synthesizer, standpoint-coverage
 **File:** `knowledge/shared/patterns/multi-persona-review.md`
 Generalized architecture for multi-persona parallel artifact review ("parallax") — parallel isolated personas + shared output protocol + neutral synthesizer. Domain-agnostic, IP-stripped; embodied as sim-conductor Step 1.5.

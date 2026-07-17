@@ -60,6 +60,15 @@ cp <harness-root>/templates/CLAUDE.md <project>/CLAUDE.md
 | Save session | "save the current session" |
 | Evaluate structure | "how do you evaluate this structure from an AI perspective" |
 | Check duplicates | "check for duplicate or meaningless data" |
+| Diagnose a mapped project's harness | "진단해줘" / "improve this harness" (inside the project) → ranked fix list, you approve per item |
+| Recall past work | "what did we do last week?" → CATALOG-first search |
+
+### Full autonomy — the whole contract in one line
+
+> **"끝까지 해줘" / "run it to the end" removes the per-item *prompts*, never the *gates*.**
+> A token budget is agreed up front (goal-quench), install/acceleration plans never overwrite your
+> existing harness/config files (merges are proposed instead), and irreversible actions
+> (publish · delete · history-rewrite) still stop for you.
 
 ---
 
@@ -90,7 +99,11 @@ cd ~/projects/forge-harness
 git add -A && git commit -m "message"
 ```
 
-### 4-Axis Gate (one-time setup per clone)
+### 4-Axis Gate (hub contributors only — one-time setup)
+
+> **Only needed if you will modify FH's own assets** (skills, rules, templates, CLAUDE.md — i.e. hub
+> contributions). If you just use FH with your projects, **skip this section**: the gate never fires
+> on your own project's commits.
 
 ```bash
 # Activate the pre-commit hook — run once after cloning
@@ -144,7 +157,7 @@ ls <project>/.claude/agents/
 echo '.claude/agents/' >> <project>/.git/info/exclude
 ```
 
-### Mode D — Copy only agent files (minimal entry without plugin install)
+### Agent-copy path — copy only agent files (minimal entry without plugin install)
 
 ```bash
 # Copy only the agents you need to your project

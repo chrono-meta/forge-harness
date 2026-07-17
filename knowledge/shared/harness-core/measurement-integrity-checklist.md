@@ -17,6 +17,7 @@ becomes a gate other skills invoke, revisit the weight.
 | 2 | **Non-deterministic borderline verdicts** — contested/borderline cases flip across runs (observed: haiku 4/4 flip; flagship models flip too — flipping is **not** a tier signal). A single draw is noise, not a measurement. | **reps ≥ 3 on any borderline/contested verdict.** A single run on a contested case is inadmissible. Report the flip pattern (STABLE vs FLIP), not just the modal verdict. |
 | 3 | **Generic self-identity probe** — a probe any model passes ("are you working? → OK") proves nothing about *which* model answered. | **Use a discriminating probe** — one that two different models answer *differently*. A generic-pass probe is invalid. The probe is a **pattern, not a fixed string**: a probe that discriminates Opus 4.8 from Sonnet 4.6 today may both-pass a future model generation, so **re-validate the probe each model generation** (same staleness class `memory-hygiene` exists to catch). |
 | 4 | **Serving-path / quantization variance** — the *same* display-name model served over two different backends (different quantization/infra) is a **different instrument** and yields materially different measurements. Observed: one GLM-5.2 model family gave effect-size delta **+0.21** when served via an internal NVFP4-quantized deployment vs **+0.08** via an OpenRouter relay — same model name, ~2.6× different effect (n=864, reps≥3). A correctly-pinned display name (item #1) is **necessary but not sufficient**. | **Pin *and record* the serving path** — backend host + quantization, not just the display name. Two runs are comparable only if the serving path matches; a name match across different infra is an implicit apples-to-oranges. When you cannot hold it fixed, **report the serving path as a measured variable**, not a constant. |
+| 5 | **Injected-context contamination (blind-sim class)** — a subagent dispatched to evaluate a *modified* instruction file answers from the **auto-injected project context** (claudeMd/memory baked into its system prompt at spawn) instead of reading the target. Observed twice in one session (2026-07-17): a "blind sim" quoted section numbering that existed only in the pre-edit file, and a second sim cited trigger-table rows that had been **deleted** from the file it claimed to have read — tool-use count 0–1 in both. The measurement *looks* grounded (fluent, plausibly cited) but the instrument never touched the target. A prompt-line telling it to ignore injected context is **not sufficient** — both runs had one. | **Force mechanical grounding a stale answer cannot fake**: ① stage the target at a **neutral path** (tmp copy) the injection cannot cover; ② require **verbatim quotes** (or grep line-number output) from that path for every claim; ③ design the probe around a **content discriminator** — something present only in the new version, or *absent* from it (a deleted row cited = instant invalidation); ④ treat **tool-use count as a validity signal** — a sim that "read two files" with 0–1 tool calls is invalid regardless of answer quality. Re-run, don't argue with a contaminated result. |
 
 ## Why these are entangled (and why they matter beyond their own scope)
 
@@ -36,10 +37,16 @@ served over a different quantization/backend). The verified identity a measureme
 sound once the serving path of each family is itself pinned, else "different family" silently smuggles
 "different infra" ([[reference_measurement_serving_path_variance]]).
 
+Item #5 (injected-context contamination) is item #3's sibling on the *input* side: #3 proves *who*
+answered, #5 proves *what they actually read*. Both reduce to the same mechanical-anchor rule — never
+accept a measurement's self-report (of identity or of grounding) when a discriminating mechanical
+check is available. Its sharpest tool is the **deleted-content discriminator**: a probe target that no
+longer contains X makes any answer citing X self-invalidating — certainty no prompt instruction buys.
+
 ## Done When
 
-- The checklist enumerates all four failure modes, each with its countermeasure.
-  *Check class: mandatory-pass (binary — four items present, each with a countermeasure).*
+- The checklist enumerates all five failure modes, each with its countermeasure.
+  *Check class: mandatory-pass (binary — five items present, each with a countermeasure).*
 - The probe item specifies a **discriminating** test and rejects generic probes.
   *Check class: judged, pair: a probe that two different models both pass must FAIL this check; a
   discriminating one must distinguish them.*
