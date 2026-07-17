@@ -142,12 +142,12 @@ Refinement challenge ≠ fundamental negation. When a **compatibility enhancemen
 
 Skip this step if no compatibility enhancement found (no token-filler).
 
-### Step 6. Update Trigger Count + Skill v0.2 Review
+### Step 6. Update Trigger Count + Skill Update Review
 
 Update trigger count in `memory feedback_bidirectional_self_validation.md`:
 
 - 5+ accumulated = Skill promotion review (already fulfilled by creating this skill ✅)
-- 8+ accumulated = Skill v0.2 update review (rule refinement + round table compression + update this skill)
+- 8+ accumulated = skill update review (rule refinement + round table compression + update this skill)
 - When user names a refinement challenge pattern (bidirectional evolution dimension documentation)
 - When this harness AI identifies its own baseline grep omission pattern (add new initial recommendation consistency guard)
 
@@ -203,7 +203,7 @@ Speak up **before** entering implementation if any of these apply:
 |---|---|
 | Step 4.5 change `diff` review | **Required** |
 | Step 4 major decision cascading (CATALOG · external asset impact) | **Required** |
-| Step 6 Skill v0.2 update | **Required** |
+| Step 6 skill update review | **Required** |
 
 ## Constraints
 

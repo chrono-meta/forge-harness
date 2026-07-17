@@ -332,156 +332,103 @@ advisory) is governed separately by `capability_escalation_consent.md`.
 
 ## Field-Harness Load-Bearing Change Gate (cross-family, pre-merge)
 
-The 4-axis gate above fires on **FH asset** changes. But the correlated blind spot it guards —
-*"when a verdict surface cannot mechanically ground its judgment, it defaults toward PASS instead
-of safe-fail"* — is **model-family-level, not FH-specific**. It lives in any load-bearing code the
-AI writes, including **mapped field projects** (qasp · the-bible · pmh), so those changes get the
-**same cross-family adversarial gate** as FH's own assets. Root principle: **prose-specified verdict
-logic grants discretion; discretion's degrade direction is unconstrained (→ optimistic PASS);
-same-family reviewers share the author's optimistic reading and miss it.**
+The 4-axis gate above fires on **FH asset** changes; this gate applies the **same cross-family
+adversarial rigor to load-bearing field code** (qasp · the-bible · pmh). The blind spot it guards is
+model-family-level, not FH-specific: **prose-specified verdict logic grants discretion; discretion's
+degrade direction is unconstrained (→ optimistic PASS); same-family reviewers share the author's
+optimistic reading and miss it.**
 
 **Trigger (per changed file — grep-assisted, salience-dependent, no field hook)**: an AI-authored
-change to a **load-bearing field surface** — a function returning a **verdict/gate enum or exit code** (PASS/FAIL/BLOCK/allow/deny),
-an **irreversible-op** path (publish/delete/history-rewrite), or a **safety invariant** (the-bible
-L1 floor, qasp verdict-binding, a pre-push/pre-commit hook). File+symbol based (grep the diff for a
-verdict-enum return / gate exit / safety-marked function) — a **strong-advisory grep trigger, not a
-hook**, so under-trigger is a real residual, not an airtight claim.
+change to a **verdict/gate enum or exit code** (PASS/FAIL/BLOCK/allow/deny), an **irreversible-op**
+path (publish/delete/history-rewrite), or a **safety invariant** (floor, verdict-binding, a
+pre-push/pre-commit hook). Grep the diff for verdict-enum returns / gate exits / safety-marked
+functions — strong-advisory trigger, so under-trigger is a named residual, not an airtight claim.
 
-**Gate (before merge, not after)**:
-1. **Degrade-direction lint** (mechanical pre-screen — `scripts/degrade_direction_scan.sh`): flags
-   fall-through / `except` / `.get(default)` / unknown-branch landing on a **permissive** value.
-   **Advisory review surface, NOT a hard gate** — grep-heuristic, FP-tolerant; a hit = *"prove this
-   isn't default-toward-PASS"*, never a solo block (exit 2 = advisory). Points attention; the
-   cross-family review decides. (Portable field copy: `templates/degrade_direction_scan.sh`.)
-2. **Cross-family adversarial review** (`auto-decorrelation` → ≥1 different-family auditor, e.g.
-   `codex` gpt-5.5/high for repo-grounded verdict code) — the same standing verifier the 4-axis
-   gate uses for load-bearing FH changes, now on field load-bearing changes. Governor keeps the
-   terminal verdict + **source-grounds** every finding (mechanical anchor over agreement).
-3. **Confirm→fix→re-verify loop** until CONVERGED (no reachable false-PASS / false-CONFIRMED /
-   masked-FAIL / crash-where-safe-fail). **Each fix ships a mechanical regression test reproducing
-   the closed hole** — the anchor leg is a *required* convergence sub-condition, not incidental: two
-   decorrelated models agreeing is still judgment (mechanical anchor over agreement). Documented
-   recall-limits of a deliberately-precise no-judge oracle (separator-negation, positional multiset
-   masking) are **not** blockers.
+**Gate (before merge, not after)**: ① **degrade-direction lint**
+(`scripts/degrade_direction_scan.sh` — advisory pre-screen, FP-tolerant, never a solo block) →
+② **cross-family adversarial review** (`auto-decorrelation` → ≥1 different-family auditor; governor
+keeps the terminal verdict + **source-grounds** every finding — mechanical anchor over agreement) →
+③ **confirm→fix→re-verify until CONVERGED**, **each fix shipping a mechanical regression test**
+reproducing the closed hole (the anchor leg is a *required* convergence sub-condition). *(Role
+deconfliction: this gate reviews **field code being authored**; the Irreversibility gates below gate
+**the act** of publish/delete/rewrite — disjoint, no double-gate.)*
 
-*(Role deconfliction: this gate reviews **field code being authored**; the Irreversibility gates
-below gate **the act** of publish/delete/rewrite — disjoint by role and by location, no double-gate.)*
-
-**Degrade direction — cross-family unavailable is NOT a silent same-family pass** (the gate's own
-standard): if no different-family auditor is reachable, the gate marks the change **NOT-CONVERGED**
-and either blocks the autonomous merge / asks the operator, or proceeds only under an **explicit,
-logged same-family-only acknowledgment**. This **overrides** the delegated skill's default
-silent-degrade for this surface, consistent with §Irreversibility Surface-Class Degrade Invariant
-(applicable-but-tooling-down ≠ free skip).
-
-**Residency**: sanitize company code (redact vendor/domain literals) before any external-family
-dispatch; domain data never leaves. **Autonomy**: autonomous once the operator has consented (UAP),
-same as the FH cross-family complement. **In autonomous loops** (innovator loop-engineering ·
-`/goal` · cluster orchestration): this gate is **part of the delegated pipeline**, not an
-afterthought — a load-bearing field change produced autonomously runs the lint → cross-family →
-converge loop *before* it is Done. Autonomy floor (§Floor governance): the skip/run judgment is
-trusted only at opus-tier+; below-floor RUNS the review by default (run-first, ask-last — asks only
-when no runnable path exists), never silently skips (sonnet_floor_doctrine.md §Autonomy at Sonnet).
+**Degrade direction (fail-closed)**: no different-family auditor reachable → **NOT-CONVERGED** —
+block the autonomous merge / ask the operator / proceed only under an **explicit, logged
+same-family-only acknowledgment**; never a silent same-family pass (§Irreversibility Surface-Class
+Degrade Invariant). **Residency**: sanitize company code before any external-family dispatch; domain data never leaves.
+**Autonomy**: autonomous once UAP-consented; **in autonomous loops the gate is part of the delegated
+pipeline**, not an afterthought, and a below-floor orchestrator RUNS the review by default
+(run-first, ask-last — `sonnet_floor_doctrine.md`).
 
 > **Detail**: See `knowledge/shared/harness-core/field_verdict_crossfamily_gate.md` — the discretion
-> principle, the four-faces failure signature, why same-family review misses it, the gate mechanics,
-> the n=7 qasp field evidence incl. the **9 default-toward-PASS holes across 3 harnesses** (measured
-> 2026-07-03), the named under-trigger residuals, and autonomous-loop baking — read when applying or
-> auditing this gate.
+> principle, the four-faces failure signature, why same-family review misses it, the full gate
+> mechanics, the n=7 qasp field evidence incl. the **9 default-toward-PASS holes across 3 harnesses**
+> (2026-07-03), the named under-trigger residuals, and autonomous-loop baking — read when applying
+> or auditing this gate.
 
 ## Field-Harness Diagnostic — "진단해줘 / 개선해줘" on a mapped project (compose → rank → HITL)
 
 The gate above fires on a **specific field code change**. This is its **on-demand pull sibling**: when
 the operator, working in a mapped project, asks to *diagnose* or *improve* the harness itself ("진단해줘",
-"개선해줘", "check this project"), don't hand-pick one skill — **compose the checks FH already has into a
-single ranked diagnostic list and get per-item approval.** The value is that the operator asks once and
-the harness surfaces *everything* worth fixing, ranked, instead of the operator having to know which of a
-dozen skills to invoke. Every fix is HITL — the diagnostic **proposes**, never auto-edits.
+"개선해줘", "check this project"), don't hand-pick one skill — **compose the checks FH already has**
+(no-reinvention: the diagnostic only *routes and ranks* existing checks) across **six lenses** —
+confidentiality/leak (`/public-surface-audit` incl. Step 3c ignore-verification) · split integrity (`/phantom-quench` Step 2.7) ·
+token/salience (`/context-doctor` · `/salience-splitter`) · structure (`/harness-doctor` L1–L4) ·
+verdict/gate degrade (`scripts/degrade_direction_scan.sh`) · loop-readiness (5-question lens —
+`loop_engineering.md`) — into **one ranked `M`/`S`/`R` list** (same tiering as harness-doctor; each
+item: *lens · file:line · one-line fix*). **Then HITL per item — nothing is auto-fixed**: the diagnostic's job is the
+intelligent list, the human's job is the *go*; an approved fix routes to the owning skill's normal
+path (and, if load-bearing field code, through the Load-Bearing Change Gate above).
 
-**Composition (no-reinvention — every row is an existing check; the diagnostic only *routes and ranks*):**
+**Guards**: (a) **project-level** "진단/개선" ask only (single-file asks go straight to the skill);
+(b) **once per ask**; (c) **company residency** — leak lenses run locally, sanitize before
+cross-family dispatch, company-sensitive findings are *surfaced* for operator decision, never
+auto-fixed; (d) **autonomy floor** — compose/rank trusted at opus-tier+; below-floor, run the
+individual checks and present raw rather than silently skipping a lens. Scale to the ask: a quick
+"뭐 고칠 거 있어?" = cheap mechanical lenses (leak · split · token); "제대로 진단해줘" = all six +
+harness-doctor depth.
 
-| Lens | Existing check | Catches (real examples from 2026-07-08) |
-|---|---|---|
-| **Confidentiality / leak** | `/public-surface-audit` (incl. Step 3c ignore-verification) | a hardcoded internal API host literal in a SKILL body; a `local_*_context.md` that is **tracked** when it should be gitignored (the gitignore-mistake class) |
-| **Split integrity** | `/phantom-quench` **Step 2.7** (bidirectional) | orphan detail sections + phantom pointers in a SKILL.md ↔ SKILL_detail.md pair |
-| **Token / salience** | salience-split candidates (`/context-doctor` · `/salience-splitter` targets) | oversized always-loaded SKILL.md / CLAUDE.md — trim candidates |
-| **Structure** | `/harness-doctor` (L1–L4) | orphaned/redundant/decorative units, missing Done-When, ≥70% overlap |
-| **Verdict/gate degrade** | `scripts/degrade_direction_scan.sh` | a field verdict/gate helper that degrades toward permissive (advisory pre-screen) |
-| **Loop-readiness** (황민호 loop-eng 5-question lens, 2026-07-10 — detail home: `loop_engineering.md`, incl. the FH loop inventory + design-time discipline) | *Loop-runtime axis — net-new vs Structure* (harness-doctor scans static form; this scans whether the path closes a loop). **Mechanical grep**: `/goal-quench`·`/loop` wiring present · check-class token declared. **Judged**: is the persisted state (card/handoff/memory) actually reloaded · is the declared check-class anchored, not judged-only · does the path halt. Done-When *presence* → see Structure row (no double-grep). **Adversarial pair** (for the judged sub-checks — decorrelated, behavior-vs-checklist): a target-tier blind sim that *runs* the path and observes whether it halts + persists, rather than re-checklisting it (the harness litmus shares this lens's axis, so it is a co-lens, not the adversary). | an agent path that *runs but doesn't loop*: no completion criterion (Done-When absent), judged-only validation with no anchor, no halt/budget guard (runaway/cost), or no state carried to the next run — the 5 questions (initiate · complete · validate · halt · persist) with 0 answers |
-
-**Output**: one ranked list, `M` (must-fix) / `S` (should-fix) / `R` (recommended) — same tiering as
-harness-doctor — each item stating *lens · file:line · one-line fix*. **Then HITL**: the operator approves
-per item (or a batch); an approved fix routes to the owning skill's normal path (and, if it is itself a
-load-bearing field change, through the Load-Bearing Change Gate above). **Nothing is auto-fixed** — the
-diagnostic's job is the *intelligent list*, the human's job is the *go*.
-
-**Guards**: (a) fires on a **project-level** "진단/개선" ask, not a single-file edit request (those go
-straight to the relevant skill); (b) **once per ask** — not a per-turn nag; (c) **company residency** —
-run leak/confidentiality lenses locally, sanitize before any cross-family dispatch, and *surface*
-company-sensitive findings (tracked company hosts, git-history rewrites) for operator decision rather
-than auto-fixing them (dogfood 2026-07-08: the `local_pmh_context.md` tracked-company-hosts finding was
-surfaced, not auto-untracked — history rewrite is the operator's call); (d) **autonomy floor** — the
-compose/rank judgment is trusted at opus-tier+; below-floor, run the individual checks and present raw
-rather than silently skipping a lens. Scale to the ask: a quick "뭐 고칠 거 있어?" runs the cheap
-mechanical lenses (leak · split · token); "제대로 진단해줘" runs all five + harness-doctor depth.
+> **Detail**: See `knowledge/shared/harness-core/field_harness_diagnostic.md` — the full lens table
+> (incl. loop-readiness mechanics + its adversarial pairing), the 2026-07-08 dogfood examples, and
+> guard rationale — read when actually running the diagnostic.
 
 ## Onboarding / Acceleration Autopilot — "새 프로젝트 · 하네스 작성 · 가속화" (discover → compose → rank → install-HITL)
 
 The **install-direction twin of the Field-Harness Diagnostic**: same `compose → rank → HITL` engine, but
 it decides *what to install/wire* instead of *what to fix*. When the operator enters an onboarding /
 acceleration door (returning-menu ①②③: "새 프로젝트", "하네스 작성/작성해줘", "이 프로젝트 가속화",
-"harness-ify", "accelerate this project"), don't hand-run one skill — **auto-discover the local state,
-let the innovator center a recommend cascade, produce a ranked install plan, and gate every install.**
+"harness-ify", "accelerate this project"), don't hand-run one skill:
 
-**Flow:**
+1. **Phase 0 — State Audit + branch**: auto-discover existing `.claude/`, `CLAUDE.md`, mapped
+   `tracks/`, sibling repos, `LOCAL_SKILL_REGISTRY` → branch *new-build* / *extend-existing*
+   (found→extend, never fork) / *maintain* (→ Field-Harness Diagnostic instead). New-build that is
+   uncertain · exploratory · failure-expensive → **flag simulate-first**: a one-line HITL
+   recommendation to run the chamber (`scripts/chamber_run.sh`), then Full-Harness Mode §6 for the
+   actual onboarding — **never presented as a push-button autonomous emit** (EMIT has never fired;
+   the chamber to date *screens*, it has not *birthed*).
+2. **Innovator-centered recommend**: `persona-innovator` (Mode I acceleration / Mode F FH-dev)
+   composing `plugin-recommender` + `cross-ecosystem-synergy-detection` + inferred technical level.
+3. **Ranked install plan**: one `M`/`S`/`R` list — *what · why · source tier · exact install
+   command*; an official/built-in that covers the need outranks a net-new scaffold.
+4. **Install — HITL, non-overwriting**: per-item approval; installed FH assets run the **4-axis
+   gate**, field scaffolds run `asset-placement-gate` + `steel-quench`. **"끝까지 해줘 / 자율로
+   완주" → full-autonomy** under the `/goal-quench` budget+quality gate — autonomy removes the
+   per-item *prompt*, never the *gate*.
 
-1. **Phase 0 — State Audit + branch (auto-discovery)**: read the target's existing `.claude/agents|skills`,
-   `CLAUDE.md`, mapped `tracks/`, **locally-connected sibling repos** (the env-delta SessionStart hook already
-   emits "N unmapped sibling repos"), and the `LOCAL_SKILL_REGISTRY` + stack/language. Then **branch**:
-   *new-build* (no prior harness) · *extend-existing* (harness present → found→extend, never fork) ·
-   *maintain* (mature harness → route to the Field-Harness Diagnostic instead).
-   **new-build sub-branch — simulate-first (incubator doctrine)**: judge the project's character before
-   building. Clear · small · low failure-cost → build immediately (current flow). Uncertain · exploratory ·
-   failure-expensive → **flag simulate-first as an option**: doctrine says such a project *should* be
-   chamber-simulated before emit. The chamber **run orchestration is now wired** (`scripts/chamber_run.sh`
-   — an intent-driven, resumable 7-step runner: budget-entry cap, ≥3-blind-persona gate, Emission Gate,
-   G4 ledger auto-append; run #3 exercised it 2026-07-14). But a **live one-command autonomous
-   simulate→EMIT of a field harness is NOT yet a capability**: step-4 persona dispatch is human/Claude-driven
-   (bash cannot spawn the isolated Agents — the honest muscle boundary), the EMIT terminus is HITL, and
-   **EMIT has never fired — the ledger's real runs are 2/2 KILL** (the chamber to date *screens*, it has not
-   *birthed*). So today this branch = a one-line HITL recommendation to run the chamber (`chamber_run.sh`),
-   then fall back to Full-Harness Mode §6 for the actual onboarding; the runner gates and records a
-   human-driven run — it must **not** be presented as a push-button autonomous emit. The same branch applies
-   to a **new capability of an existing harness** — the incubate-in-chamber-then-transplant flow is likewise
-   run-orchestrated but not autonomously emitting today. Rationale + economics:
-   `knowledge/shared/harness-core/harness_incubator_doctrine.md §3`. This audit-and-branch pre-step
-   is imported from the revfactory/harness Phase-0 State Audit (sister-audit 2026-07-07) — it tightens FH's
-   found→extend reflex and is the "이미 로컬에 연결돼 있으면 자동 탐색" mechanism.
-2. **Innovator-centered recommend**: `persona-innovator` centers the cascade (Mode I on acceleration / Mode F
-   on FH-dev), composing `plugin-recommender` (Tier 0 platform → Tier 1 official → Tier 2/3) +
-   `cross-ecosystem-synergy-detection` (locally-connected skills worth wiring) + inferred technical level
-   (conversation-cue read, also imported from revfactory) to shape *what* and *how much*.
-3. **Ranked install plan**: one list, `M`/`S`/`R`, each item = *what · why · source (Tier 0 built-in / Tier 1
-   official / local sibling / FH scaffold) · exact install command*. No-reinvention: an official/built-in that
-   covers the need ranks above a net-new scaffold.
-4. **Install — HITL, non-overwriting**: per-item approval; **never clobber an existing `.claude/`** (propose
-   merge/skip if present — this is FH's edge over revfactory's post-plan auto-write and harness-100's raw
-   `cp`). Any generated/installed FH asset runs the **4-axis gate**; a field scaffold runs
-   `asset-placement-gate` + `steel-quench`. **"끝까지 해줘 / 자율로 완주" → full-autonomy**: run the whole
-   plan under the `/goal-quench` budget+quality gate (token cost accepted by the operator), still
-   non-overwriting and still gated per asset — autonomy removes the per-item *prompt*, never the *gate*.
+**Guards (inviolable)**: (a) **non-overwriting** — propose merge, never clobber an existing
+`.claude/`; (b) **no-reinvention** — Tier 0/1 first, scaffold only what adds governance; (c)
+**company residency** — a company sibling repo is surfaced, never auto-mapped/leaked; `residency` is
+a machine field on the skill registry (`fh_detail_protocols.md §1-c`), so recommendations naming a
+`company`/`operator-private` entry land only in gitignored `tracks/_meta/` or the private companion
+store; (d) **autonomy floor** — discover/rank trusted at opus-tier+; below-floor, present the raw
+recommend and ask; (e) **once per door-entry**. This is the door ③ engine made autonomous — the
+operator asks once and the harness discovers, ranks, and (on request) installs everything worth wiring.
 
-**Guards**: (a) **non-overwriting is inviolable** — the one thing both revfactory surfaces get wrong; FH
-proposes merge, never clobbers; (b) **no-reinvention** — Tier 0/1 first, scaffold only what adds governance;
-(c) **company residency** — discovery of a company sibling repo surfaces it, does not auto-map/leak it;
-promoted to a machine field (`residency` on the skill registry, `fh_detail_protocols.md §1-c`) so any
-derived recommendation naming a `company`/`operator-private` entry lands only in gitignored `tracks/_meta/`
-or the private companion store, never a tracked public file (chamber run #7, 2026-07-14 — the guard was
-prose-only and the field didn't exist);
-(d) **autonomy floor** — the discover/rank judgment is trusted at opus-tier+; below-floor, present the raw
-recommend and ask; (e) **once per door-entry**, not a per-turn nag. This is the door ③ (accelerate) engine
-and the new-project/harness-write path made autonomous — the operator asks once and the harness discovers,
-ranks, and (on request) installs everything worth wiring.
+> **Detail**: See `knowledge/shared/harness-core/onboarding_acceleration_autopilot.md` — the full
+> Phase-0 branch logic (incl. the chamber/simulate-first honesty boundary + `chamber_run.sh` runner
+> scope), revfactory provenance, and guard evidence (chamber run #7) — read when executing this
+> autopilot.
 
 ## Irreversibility Gates — Surface-Class Degrade Invariant (shared spine of the two gates below)
 
