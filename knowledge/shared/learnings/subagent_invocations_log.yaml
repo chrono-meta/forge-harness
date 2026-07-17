@@ -252,3 +252,9 @@
   target: "FH hub — today's doctor findings as seeds (E7 debt, ETCLOVG O-gap, E1 accretion, chamber 8/8 KILL)"
   outcome: accepted
   note: "4 internal candidates + 4 external signals, honest grounding tags (1 SPECULATIVE self-flagged: MCP 7/28 spec via T3 relay, asset changes barred pending primary fetch). Routed: S1 Prediction-Settlement-Sweep (E7 x AHE T1 crossing, extend-only) + S2 Sediment-Shed-Cycle (naming, cost-0) -> fh_signal_2026-07-17_innovator.md; Live-Run-Ledger -> CHAMBER-CANDIDATE (infra-dependent, evidence-threshold unmet); Screen-vs-Birth frame -> carried to next chamber run, no new file; 2 sister-link pointers (Weng 2026-07-04, Dive-into-CC arXiv 2604.14228). Generator-side only — adoption gated on challenger/steel-quench per H3."
+- date: 2026-07-17
+  skill: "multi-harness audit wave — 18 agents: 3 structure (pmh/qasp doctor, cluster) + 9 persona (beginner/main-player/expert x fh/pmh/qasp) + 2 fixers + 4 gate verifiers"
+  context: "operator: 'fh pmh qasp dev 모두 닥터와 하네스클러스터기능으로 감사돌려주고 온보딩 미들 고수 등 여러페르소나로 사용성과 의도기반으로 풀오케스트레이션 잘 돌리는지... 프런티어급으로 개선해줘'"
+  target: "3-harness cluster structure + usability (intent-based orchestration, friendliness)"
+  outcome: accepted
+  note: "All 18 completed. Cross-cutting chorus: routing tables narrower than real daily utterances in ALL three harnesses (FH product-verify / pmh close-chain ambiguity / qasp act1.5+3). Cluster = two opposite halves (qasp discoverable-ungated, pmh gated-undiscoverable). Fixes applied same-session: FH c25aeb9 (pushed) + pmh b866c94 + qasp 2b3499a (local branches). Fixer honesty highlights: qasp fixer verified-then-skipped a false typo claim (케크=jargon); pmh fixer passed pmh's own pre-commit gate properly instead of bypassing. Canonical report: fh-be/tracks/fh/multi_harness_usability_audit_2026-07-17.md. Deferred M3/S8/R4 backlog ranked there."
