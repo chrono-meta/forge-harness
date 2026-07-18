@@ -149,6 +149,7 @@ When user selects desired plugin from recommendation list, help with installatio
 ## Constraints
 
 - **Recommendations, not guarantees**: Does not guarantee plugin performance, stability, or security.
+- **Inbound supply-chain risk (Tier 3/4)**: a Tier 3/4 candidate (§Tier Classification Table) has no marketplace vetting — public skill registries have shipped malicious skills at scale (pointers: [HN 47370624](https://news.ycombinator.com/item?id=47370624) — 824 malicious skills reported on ClawHub; [HN 48678603](https://news.ycombinator.com/item?id=48678603) — Snyk ToxicSkills study. Secondary sources — verify before quoting figures). Flag this explicitly to the user before recommending a Tier 3/4 candidate.
 - **User consent required**: Does not auto-install without explicit consent.
 - **Search scope limitations**: Only searches within configured search space.
 
