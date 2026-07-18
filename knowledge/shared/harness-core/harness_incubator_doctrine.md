@@ -47,6 +47,17 @@ which is why its unit of work is the harness, not the skill.
 
 ## 3. The nursery — FH as field-harness incubator and simulator
 
+**Origin layer (operator-forged, 2026-07-18)** — beneath the nursery frame sits the founding
+observation: the defects and improvement points that many reviewers find *by hand over a long
+time* can be found by an LLM running **many simulations**, compressing that labor by 99%+.
+Incubation-acceleration is the natural extension of that single move, not a separate idea. The
+resulting differentiator: **a solo developer can ship a product with frontier-grade robustness,
+ready for immediate real use** — because the simulations exhaust the functional-defect space
+before any human reviewer sees it, the human loop is freed to add *taste* (personal and
+organizational judgment) rather than hunt bugs. First end-to-end instance: chamber run #9
+(2026-07-18) — surveys, an N=50 concurrency chamber, three find-fix-regress defect cycles, and
+a gated public release, in one session.
+
 FH's dual role:
 
 - **Primary — build and emit**: forge a field harness and release it as an independent, specialized
