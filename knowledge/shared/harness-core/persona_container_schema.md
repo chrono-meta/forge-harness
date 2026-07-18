@@ -16,7 +16,7 @@ scope: meta-harness
 > directive.
 >
 > **Consumer status**: sim-conductor extension **SHIPPED 2026-06-20** (same session as this schema) —
-> Persona Discovery ② now fills these 6 slots instead of an ad-hoc directive; §Scale gained the Crowd
+> Persona Discovery ② now fills these slots (7 as of 2026-07-18 — stance added) instead of an ad-hoc directive; §Scale gained the Crowd
 > tier (16-cap lifted behind the marginal-coverage stop) + cost-tier routing; Step 5 adds the graduate
 > step with the admission test below. The A4 clocked write-off trigger is therefore **resolved** — this
 > doc has a live consumer.
@@ -25,7 +25,7 @@ scope: meta-harness
 > reviewed → which gates fire); this profiles the **persona** (who reviews). TPA's profile *drives*
 > which personas to synthesize — they pair, they do not overlap (zero shared fields).
 
-## The container — 6 slots
+## The container — 7 slots
 
 A synthesized persona is a filled instance of these slots. (Empirically used 2026-06-20 to synthesize
 blind `newcomer` / `red-team` / `vulnerable-user` personas that found a real grounding bug a
@@ -38,7 +38,21 @@ design-aware inline pass missed.)
 | **external grounding** | the real artifact files the persona MUST read + (optional) external-search queries that ground the persona in real data | a persona ungrounded in the artifact hallucinates; cheap bounded grounding keeps it economical |
 | **output protocol** | **reuses sim-conductor Step 1.5 parallax shape** (single source — do not re-spec here; it already defines Strengths / Concerns / Open-questions / Absence-check) | one shape across all personas → cross-persona agreement is meaningful (`[[multi-persona-review]]`) |
 | **cost tier** | which model runs this persona (floor-local · heavy-local · frontier) | the economy lever — see §Multi-LLM tier distribution |
+| **stance (온도)** | delivery temperature the persona speaks with: friendly · neutral · hostile (optional — default neutral) | conscious pressure control: the same cast serves onboarding-warmth and red-team pressure without forking personas; field-harvested from a qasp resident-persona pattern (2026-07-18) |
 | **lifecycle** | synthesized · validated · graduated (see §Lifecycle) | most personas stay ephemeral; only proven ones graduate |
+
+**Stance invariant** (the orthogonality guard of this slot — same shape as CLAUDE.md §Voice/Tone):
+stance is a **delivery layer only** and never moves the evidence bar — a hostile persona reports the
+same M-grade findings a friendly one must, and a friendly persona never withholds one to stay warm.
+If two stances of the same persona disagree on *what is a finding* (not how it is said), the stance
+layer has leaked into judgment and that run is invalid. Dispatchers (sim-conductor and any
+persona-dispatch skill) fill the slot when synthesizing — an omitted stance is **recorded as explicit
+neutral** (so "optional" never means "unfilled": the slot always carries a value the run log can cite);
+graduated personas record which stances they were validated at. **Unmechanized residual** (honest
+scope): leak *detection* has no mechanical path yet — no dispatcher runs the same persona at two
+stances to compare finding-sets, so this invariant is salience-enforced; mechanizing it (a paired-stance
+probe) is deliberately deferred behind the n≥2 rule. (Origin: qasp stance parameter, first meta-level
+formalization here — n=1 field use.)
 
 **Isolation invariant**: a synthesized persona dispatches as an **isolated** agent (no main-session
 context inherited). Isolation is the FH mechanism that keeps a blind reaction honest — a `newcomer`
@@ -138,7 +152,7 @@ point (cost-efficiency > build-and-demolish).
 
 `sim-conductor` is the runner that **fills** these slots instead of injecting an ad-hoc role directive.
 The shipped extension (through the FH 4-axis gate, HITL): sim-conductor's Persona Discovery ② reads this
-schema and fills the 6 slots; §Scale lifts its 3–16 cap behind the marginal-coverage stop (Crowd tier)
+schema and fills the slots (7 as of 2026-07-18); §Scale lifts its 3–16 cap behind the marginal-coverage stop (Crowd tier)
 and assigns `cost tier` per persona for multi-LLM distribution; Step 5 adds the graduate step. Routing
 decided by `[[asset-placement-gate]]` (2026-06-20): **not a new forked skill** (≈60–70% overlap with
 sim-conductor's runner role) — this schema is the net-new asset, sim-conductor is extended to consume it.

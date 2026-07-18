@@ -9,7 +9,7 @@ model-note: session-inherit — Sonnet base is first-class (sonnet_floor_doctrin
 # sim-conductor — Meta-Simulation Automation Orchestrator
 
 > Profiles target → derives personas → dispatches parallel agents → M/S/R triage → commit.
-> Personas are sourced installed-first → **filled from the persona-container schema** (6 slots, not an
+> Personas are sourced installed-first → **filled from the persona-container schema** (7 slots as of 2026-07-18 — stance added, not an
 > ad-hoc directive) → external install. Scale: 3 to 16, extensible to a crowd behind the
 > marginal-coverage stop (§Scale).
 
@@ -99,8 +99,8 @@ Recommendation:
 
 #### Persona Discovery (after profile → before dispatch)
 
-> **Schema**: `knowledge/shared/harness-core/persona_container_schema.md` — the 6-slot persona-definition
-> container. ② below **fills** these slots (lens / internal-logic / external-grounding / output-protocol
+> **Schema**: `knowledge/shared/harness-core/persona_container_schema.md` — the 7-slot persona-definition
+> container. ② below **fills** these slots (lens / internal-logic / external-grounding / output-protocol / stance
 > / cost-tier / lifecycle) instead of injecting a shapeless directive. The container is what makes a
 > synthesized persona reproducible and cost-routable; the old "fallback palette" was undefined.
 
@@ -109,7 +109,7 @@ After profiling, sim-conductor determines the needed perspective types, then map
 ```
 For each needed perspective:
   ① Scan installed plugins + .claude/agents/ → exact match? → use it
-  ② Fill the 6-slot persona container — lens · internal-logic · external-grounding · output-protocol
+  ② Fill the 7-slot persona container — lens · internal-logic · external-grounding · output-protocol · stance
        (= Step 1.5 parallax shape) · cost-tier · lifecycle → a defined, reproducible persona; the filled
        container IS the dispatch prompt (replaces the old ad-hoc "fallback palette" directive). Assign
        the cost-tier slot per §Scale cost-tier routing. [Schema: persona_container_schema.md]
@@ -123,8 +123,8 @@ Persona Discovery output:
 
 ```
 Persona Map:
-  beginner       → [installed agent: beginner] OR [filled 6-slot container]
-  challenger     → [installed agent: challenger] OR [filled 6-slot container]
+  beginner       → [installed agent: beginner] OR [filled 7-slot container]
+  challenger     → [installed agent: challenger] OR [filled 7-slot container]
   [profile-specific role] → ⚠️ GAP — plugin-recommender recommends: [X] (install? y/n)
 ```
 
@@ -213,7 +213,7 @@ sim-conductor does **not** run a fixed persona set. It derives needed perspectiv
 
 ```
 ① Installed first — scan installed plugins + .claude/agents/ for a matching persona/agent
-② Container fill — fill the 6-slot persona container for the standpoint; the filled container IS the
+② Container fill — fill the 7-slot persona container for the standpoint; the filled container IS the
      dispatch prompt into a general-purpose Agent (Path B — replaces the old ad-hoc role directive)
 ③ External fetch — chain to /plugin-recommender when ①② insufficient for high-stakes tasks
 ```
@@ -231,7 +231,7 @@ FH ships a coherent **user-mastery spectrum** as real, reusable agents (not prom
 
 > **Lineage**: `beginner` / `main-player` / `expert` are the FH-native frontier successors to the field deep-insight `user` group (newcomer / power-user) — re-derived to FH grade with embedded methodology + Done-When, not name-copied. `challenger` is the advanced form of the field `devil-advocate`. The former standalone skeptic standpoint is folded into `challenger` U1.
 
-**Ad-hoc roles** (② tier — container fill): when the profile demands a standpoint with no shipped agent (e.g. "security auditor", "non-native reader"), fill the 6-slot persona container for that standpoint — the filled container is the dispatch prompt. Prefer ① shipped agents; use ② only for genuinely task-specific one-offs.
+**Ad-hoc roles** (② tier — container fill): when the profile demands a standpoint with no shipped agent (e.g. "security auditor", "non-native reader"), fill the 7-slot persona container for that standpoint — the filled container is the dispatch prompt. Prefer ① shipped agents; use ② only for genuinely task-specific one-offs.
 
 #### Scale
 
@@ -329,7 +329,7 @@ Persona composition adapts to `artifact_type` from Step 0.3 profile:
 | Prompt / config | `beginner` | challenger | Interpretation errors, implicit assumptions |
 | Auth / security-sensitive | challenger + Security-auditor† | `main-player` (Heavy) | Attack surface, privilege escalation |
 
-† Security-auditor = ② tier — the 6-slot persona container filled for a security-auditor standpoint.
+† Security-auditor = ② tier — the 7-slot persona container filled for a security-auditor standpoint.
 
 All personas run in parallel. Findings = M/S/R → M-tier items fixed immediately.
 
