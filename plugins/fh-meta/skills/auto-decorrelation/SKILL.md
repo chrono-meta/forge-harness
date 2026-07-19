@@ -52,9 +52,21 @@ single-session even when sidecars are available.
 
 Build the available panel at run time; absent tools **and unreachable endpoints** drop off silently:
 ```bash
-command -v codex >/dev/null && echo "codex"        # GPT family CLI
-command -v agy   >/dev/null && echo "agy"           # serves Gemini AND GPT-OSS — probe the model
+# Agent-CLI sidecars. The candidate pool is NOT maintained here — `clawd-on-desk`'s README already
+# tracks the multi-agent CLI landscape (18+ CLIs incl. their hook/settings paths); treat that as the
+# upstream catalog and probe the subset that is headless-callable. Adding a CLI here is cheap; the
+# expensive mistake is NOT probing one that is installed (the panel silently degrades to same-family).
+command -v codex >/dev/null && echo "codex"          # GPT family CLI
+command -v agy   >/dev/null && echo "agy"            # serves Gemini AND GPT-OSS — probe the model
 command -v gemini>/dev/null && echo "gemini"
+command -v gh >/dev/null && gh copilot --help >/dev/null 2>&1 && echo "copilot"
+                                                     # ↑ gh EXTENSION, not a binary — `command -v copilot` misses it.
+                                                     #   Enterprise seats expose Claude/GPT/Gemini behind one CLI, so
+                                                     #   family MUST come from the model probe (Step 3), never the name.
+command -v opencode >/dev/null && echo "opencode"    # serves GLM/others — the runtime used when a cheaper
+                                                     #   main model drives and Claude Code follows up
+command -v qwen >/dev/null && echo "qwen"            # Qwen Code — non-Claude/GPT/Gemini family
+command -v hermes >/dev/null && echo "hermes"        # Hermes Agent
 # Local ollama serving-paths = canary tier (electricity-only). mac localhost is public → probed
 # UNCONDITIONALLY. Any extra path (e.g. a Tailscale GPU box) is an operator-private token → read from a
 # gitignored binding, NEVER hardcoded in this public file. Both mac-serving (H2) and 4090-serving (평시)
