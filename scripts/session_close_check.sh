@@ -69,14 +69,27 @@ if [ -n "$LAST_TAG" ] && [ -f "$FH/package.json" ]; then
   if printf '%s\n' "$CHANGED_SINCE_TAG" | grep -qE "$SHIP_RE"; then
     echo "⚠️  ④-b npm-shipped assets changed since $LAST_TAG — propose lockstep republish (never auto)"
   fi
-  # ④-b-drift: auto-FIRE a drift-CANDIDATE reminder (not a parity verdict). If a shipped CLAUDE.md/knowledge
-  # path changed but the Codex entry points (AGENTS.md / docs/codex-compat.md) did NOT co-change, flag it.
-  # HONEST SCOPE: this tests file co-occurrence, not topical parity — it can false-positive (changed path
-  # doesn't mirror an entry-point section) or false-negative (AGENTS.md touched for an unrelated reason).
-  # The reminder is mechanized; the drift DETERMINATION stays judged (runner syncs or records drift:none).
-  if printf '%s\n' "$CHANGED_SINCE_TAG" | grep -qE '^(CLAUDE\.md|knowledge/shared/(harness-core|dialogue|rules)/)' \
-     && ! printf '%s\n' "$CHANGED_SINCE_TAG" | grep -qE '^(AGENTS\.md|docs/codex-compat)'; then
-    echo "⚠️  ④-b drift candidate: shipped CLAUDE.md/knowledge changed but AGENTS.md/docs/codex-compat did not — JUDGE Codex entry-point parity (sync, or record drift:none if genuinely unaffected)"
+  # ④-b-drift: auto-FIRE a drift-CANDIDATE reminder (not a parity verdict) — **in BOTH directions**.
+  # The two entry points are read by DIFFERENT runtimes (CLAUDE.md → Claude Code · AGENTS.md/codex-compat
+  # → Codex/OpenCode and other non-CC runtimes). A rule that lands in only one is INVISIBLE to the other,
+  # so either file changing alone is a candidate — not just the CC→Codex direction.
+  # HONEST SCOPE: this tests file co-occurrence, not topical parity — false-positive (a genuinely
+  # runtime-specific change needs no mirror) and false-negative (file touched for an unrelated reason)
+  # are both possible. The reminder is mechanized; the drift DETERMINATION stays judged (sync, or record
+  # drift:none).
+  # Origin (2026-07-19): the REVERSE direction was unwired and a real miss slipped through — a field
+  # harness's boundary-crossing behavior rules landed in AGENTS.md only, leaving Claude Code sessions
+  # unaware of a rule whose violation destroys a downstream harness's identity. Half a check caught none
+  # of it, because the miss happened to travel the unwired way.
+  _ENTRY_CC='^(CLAUDE\.md|knowledge/shared/(harness-core|dialogue|rules)/)'
+  _ENTRY_CX='^(AGENTS\.md|docs/codex-compat)'
+  if printf '%s\n' "$CHANGED_SINCE_TAG" | grep -qE "$_ENTRY_CC" \
+     && ! printf '%s\n' "$CHANGED_SINCE_TAG" | grep -qE "$_ENTRY_CX"; then
+    echo "⚠️  ④-b drift candidate (CC→Codex): shipped CLAUDE.md/knowledge changed but AGENTS.md/docs/codex-compat did not — JUDGE entry-point parity (sync, or record drift:none if genuinely unaffected)"
+  fi
+  if printf '%s\n' "$CHANGED_SINCE_TAG" | grep -qE "$_ENTRY_CX" \
+     && ! printf '%s\n' "$CHANGED_SINCE_TAG" | grep -qE "$_ENTRY_CC"; then
+    echo "⚠️  ④-b drift candidate (Codex→CC): AGENTS.md/docs/codex-compat changed but CLAUDE.md/knowledge did not — JUDGE entry-point parity (a rule living only in AGENTS.md is invisible to Claude Code sessions)"
   fi
 fi
 

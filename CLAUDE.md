@@ -747,12 +747,18 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc.)
   → ③ Sync local/gitignored session state to your durable companion store, if you keep one
   → ④ Memory hygiene — update stale entries + record new session findings
   → ④-b npm freshness — if any npm-shipped asset changed (`package.json` `files[]`: skills · agents ·
-       knowledge/ · docs/ · README · AGENTS.md · CLAUDE.md · CHEATSHEET · CATALOG.md): **first a Codex-entrypoint
-       drift check** — the script (`session_close_check.sh`) auto-*fires a candidate reminder* by cheap grep
-       (file co-occurrence, not topical parity), then **you judge**: does the changed CLAUDE.md/knowledge topic
-       actually mirror a section in `AGENTS.md` / `docs/codex-compat.md` (both files[]-shipped Codex entry
-       points)? sync it, else record `drift:none`. The grep flags; it does not determine — the parity call is
-       judged. Version lockstep invalidates the plugin.json *cache* but is **orthogonal** to
+       knowledge/ · docs/ · README · AGENTS.md · CLAUDE.md · CHEATSHEET · CATALOG.md): **first an entry-point
+       drift check — BIDIRECTIONAL** — the script (`session_close_check.sh`) auto-*fires a candidate reminder*
+       by cheap grep (file co-occurrence, not topical parity), then **you judge** whether the changed topic
+       actually mirrors a section on the other side; sync it, else record `drift:none`. The grep flags; it does
+       not determine — the parity call is judged. **Both directions fire, because the two entry points are read
+       by different runtimes and a rule living in only one is invisible to the other**:
+       ▸ *CC→Codex* — `CLAUDE.md`/`knowledge/` changed, `AGENTS.md`/`docs/codex-compat.md` did not
+       ▸ *Codex→CC* — `AGENTS.md`/`docs/codex-compat.md` changed, `CLAUDE.md`/`knowledge/` did not
+       (the reverse direction was **unwired until 2026-07-19**, and a real miss travelled exactly that way:
+       a field harness's behavior rules landed in `AGENTS.md` only, leaving Claude Code sessions unaware of a
+       rule whose violation destroys a downstream harness's identity — half a check caught none of it).
+       Version lockstep invalidates the plugin.json *cache* but is **orthogonal** to
        entry-point *content* — a version-only bump can ship a stale Codex entry point (gate-locality,
        Codex side). Then **propose republish**: version bump **in lockstep**
        across `package.json` + every `.claude-plugin/plugin.json` + `marketplace.json` (single-source =
