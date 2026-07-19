@@ -186,6 +186,39 @@ Honest boundaries: (a) core invariants (floors, gates, identity) are never melte
 overcome-and-adopt is curation with license/provenance respect, never wholesale copying; (c) the
 disruptive path *looks inferior early* — running it is a deliberate bet, named as such.
 
+### 4-b. Boundary crossing — what actually flows between harnesses
+
+Compose and disrupt say *what FH does to* other harnesses. They do not say **what moves across the
+boundary, or what must not**. That gap is where the value of a multi-harness cluster is won or lost, so
+name it: a harness that only deepens its own well stays blind to what the neighbouring well knows —
+one harness sees runtime behaviour and not source structure, another sees source structure and never
+runtime. **The meta-harness's job is not to dig a deeper well; it is to make outputs flow across the
+boundary between wells.**
+
+Three rules, in falling order of how easily they are broken:
+
+1. **Crossing must not overwrite the receiving harness's identity.** If harness B is deliberately
+   black-box (it verifies only what a user could observe), pushing A's white-box artifacts into B does
+   not enrich B — it *destroys the property that made B worth having*. Route such insight to the
+   knowledge store instead, and let B keep its blindness on purpose. **Identity beats convenience**;
+   this is the rule that gets violated first, because injecting looks like helping.
+2. **What crosses is a transformed artifact, not a raw dump.** A finding is useful to the neighbour only
+   in the form that neighbour already consumes. The meta-harness owns the conversion — that conversion
+   *is* the pipe, and building it is the work.
+3. **Two-layer governance: the meta layer supplies, the field layer adjudicates.** FH (or any meta
+   harness) feeds the engine and the inputs; the field harness declares the verdict on its own surface.
+   A meta layer that issues field verdicts directly has collapsed the layers.
+
+Honest boundary: crossing is only worth building where the wells are **genuinely different in kind**
+(different observation modality, different failure classes). Between two harnesses that see the same
+things, a pipe adds coordination cost and no information — that is composition, not crossing. And a pipe
+being *connected* is not the same as it being *effective*: state infrastructure and measured effect
+separately, never quote the former as the latter.
+
+Origin: forged in a field environment (2026-07-19, operator) where a black-box regression harness and a
+white-box static-review harness had to feed each other without either losing its character; generalized
+here with the site-specific well names removed. The field-level instance keeps its own concrete form.
+
 ## 5. Sidecar corollary — ride the evolution, don't patch the weak spots
 
 Mechanically patching each frontier model's current weaknesses produces scaffolding that dies as models
