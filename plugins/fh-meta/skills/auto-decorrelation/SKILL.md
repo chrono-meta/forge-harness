@@ -52,21 +52,45 @@ single-session even when sidecars are available.
 
 Build the available panel at run time; absent tools **and unreachable endpoints** drop off silently:
 ```bash
-# Agent-CLI sidecars. The candidate pool is NOT maintained here — `clawd-on-desk`'s README already
-# tracks the multi-agent CLI landscape (18+ CLIs incl. their hook/settings paths); treat that as the
-# upstream catalog and probe the subset that is headless-callable. Adding a CLI here is cheap; the
-# expensive mistake is NOT probing one that is installed (the panel silently degrades to same-family).
+# Sidecar-callable CLIs only. **Scope discipline**: the probe list is NOT "every agent CLI that exists".
+# FH's main is Claude Code (vendor-native — `[[feedback_vendor_native_harness]]`), and the recommended
+# cross-family sidecars are **codex and gemini/agy**. Other agent CLIs on the machine (opencode, qwen,
+# hermes, cursor-agent …) are **runtimes a user works INSIDE**, not verifiers FH calls out to — being
+# installed is not a reason to probe them. Adding one costs a maintenance surface and dilutes the panel;
+# add only when a concrete task needs that family. (2026-07-19: four were added off a general CLI
+# catalog and removed the same session — installed ≠ belongs in the panel.)
 command -v codex >/dev/null && echo "codex"          # GPT family CLI
 command -v agy   >/dev/null && echo "agy"            # serves Gemini AND GPT-OSS — probe the model
 command -v gemini>/dev/null && echo "gemini"
 command -v gh >/dev/null && gh copilot --help >/dev/null 2>&1 && echo "copilot"
-                                                     # ↑ gh EXTENSION, not a binary — `command -v copilot` misses it.
-                                                     #   Enterprise seats expose Claude/GPT/Gemini behind one CLI, so
-                                                     #   family MUST come from the model probe (Step 3), never the name.
-command -v opencode >/dev/null && echo "opencode"    # serves GLM/others — the runtime used when a cheaper
-                                                     #   main model drives and Claude Code follows up
-command -v qwen >/dev/null && echo "qwen"            # Qwen Code — non-Claude/GPT/Gemini family
-command -v hermes >/dev/null && echo "hermes"        # Hermes Agent
+                                                     # ↑ gh EXTENSION, not a binary — `command -v copilot` misses it, and
+                                                     #   `gh copilot --help` shows only the LAUNCHER (its sole flag is
+                                                     #   --remove); the real flags live behind `--`.
+                                                     # Call form (verified 2026-07-19 by live call — credits were consumed):
+                                                     #   gh copilot -- -p '<prompt>' --model <model> --allow-all-tools
+                                                     # **Same class as codex/agy**: `--model` selects among several families
+                                                     #   behind ONE CLI ('auto' lets Copilot pick), so family MUST come from
+                                                     #   the pinned/probed model (Step 3), NEVER from the CLI name.
+                                                     # ★ SEAT TIER CHANGES ITS VALUE ENTIRELY — probe, never assume:
+                                                     #   · free seat        → narrow model choice; treat as ONE extra family
+                                                     #   · enterprise seat  → serves GPT, Gemini AND Claude behind the single
+                                                     #     CLI: a THREE-FAMILY panel with no other CLI installed
+                                                     #     ([[reference_corp_env_decorrelation_panel]]).
+                                                     #     ⚠️ BUT each family runs on Copilot's harness, not its vendor-native
+                                                     #     one — Claude-via-copilot ≠ Claude Code, GPT-via-copilot ≠ codex,
+                                                     #     Gemini-via-copilot ≠ agy. Per `[[feedback_vendor_native_harness]]`
+                                                     #     a non-native harness costs depth. So copilot buys **breadth cheaply,
+                                                     #     not depth**: use it to widen the panel, and route the decisive
+                                                     #     check to the vendor-native CLI when one is reachable. Same shape as
+                                                     #     the local canary tier (breadth ≠ terminal depth, measured 2026-07-19).
+                                                     #   Because the panel it yields depends on the seat, Step 3's model probe
+                                                     #   is not optional here: enumerate what this seat actually serves before
+                                                     #   claiming family diversity.
+                                                     # Cost shape: paid-seat credits. That makes it a strong *sidecar* but a
+                                                     #   poor main driver — seat quota is spent faster than it is worth when
+                                                     #   it drives the whole harness. Recruit it for decisive checks, not bulk.
+                                                     # Residual: the launcher may fetch the CLI body on first call, so on a
+                                                     #   cold machine the first recruit pays a download.
 # Local ollama serving-paths = canary tier (electricity-only). mac localhost is public → probed
 # UNCONDITIONALLY. Any extra path (e.g. a Tailscale GPU box) is an operator-private token → read from a
 # gitignored binding, NEVER hardcoded in this public file. Both mac-serving (H2) and 4090-serving (평시)
