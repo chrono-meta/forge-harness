@@ -200,3 +200,52 @@ EXECUTION_TIER: standard   # light / standard / full / max
 ```
 
 Temporary session change: say "use light mode for this one" or "switch to max".
+
+---
+
+## §Onboarding-Provenance
+
+> Relocated from always-loaded `CLAUDE.md` on 2026-07-20 (residency-ledger rank 3). The **rules** these
+> stories justify stay resident in CLAUDE.md; only the archaeology moved. Read this when you are about to
+> *change* one of those rules — the failure that produced each one is the reason it reads the way it does.
+
+### Why the greeting branch test is session files, never git history
+
+A fresh-clone Sonnet simulation rendered the **returning-user menu** to a brand-new install, because it
+inferred "returning" from commit messages and CATALOG residue. A fresh clone carries the full history and
+**zero session files** — history is therefore evidence of the *project's* past, not *this user's*. Logged as
+`fh_signal_2026-06-11` FP8. Hence the resident rule: the branch test is **mechanical local state — session
+files under `tracks/`** — and underscore-prefixed dirs (`tracks/_*`) never count as mapped projects.
+
+### Why the 🐿️ invariant is "same line", not a space count
+
+An earlier phrasing pinned the number of spaces after 🐿️. That is unverifiable: a markdown renderer
+**collapses multiple mid-line spaces to one**, so any assertion about the count is untestable in the
+rendered output the user actually sees. The verifiable invariant is that the emoji and the welcome line are
+on the **same line** (🐿️ alone on its own line was the defect being corrected).
+
+### Why the welcome line must be a plain translation, not a coinage
+
+Rendering the pinned welcome phrase in the user's language once produced an invented Korean coinage
+(`안 조종실…`), caught by the operator. The line is a **plain, natural translation of the pinned phrase** —
+onboarding smoothness is the lid, not the substance, but a wrong lid still reads as a broken product.
+
+### Why a task-first entry still runs the companion-store load
+
+Measured miss **2026-07-05**: the first message was a task, the session skipped the onboarding menu
+*and* the Mode D companion-store pull along with it, ran on stale memory, and produced wrong
+recommendations. The menu is a *menu*; the companion load is a *data load*. They were separated, and the
+data load is now hook-backed via `scripts/fh_session_load.sh` (see `modes_and_value.md
+§Session-start freshness`).
+
+### Why the initiative table was diet-ed (2026-07-17)
+
+A Step 0.5 trigger probe scored **13/18**. Rows whose skill-frontmatter `description` already caught the
+utterance at high confidence were removed, because platform-native skill matching owns those: plugin-recommender ·
+harness-doctor · synergy · frontier-digest · sim-conductor · install-wizard · asset-placement-gate ·
+marketplace-gate · public-surface-audit · verify-bidirectional · mcp-circuit-breaker · token-budget-gate ·
+salience-splitter (the last earned removal by a description strengthening made in the same change, not by
+its original description). What the table deliberately KEEPS: proactive safety gates (publish · destructive ·
+MCP-mount) · non-skill protocol routes (gates, doctrine sections, the deep-research ladder) · disambiguators
+and weak-description rows. **Operative rule (resident):** before adding a row back, probe whether the
+skill's description alone already catches it.
