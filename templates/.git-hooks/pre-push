@@ -52,6 +52,7 @@ DEL_BRANCHES=""   # space-separated "<tip-sha>|refs/heads/X" pairs — SHA first
 DEL_OTHER=""      # refs/tags/* refs/notes/* etc. being deleted
 FORCED_REFS=""
 UNCLASSIFIED=""   # force-check impossible (remote tip not fetched)
+DIRECT_MAIN=""    # non-delete update pushed straight at the integration branch (PR-only policy)
 
 while read -r local_ref local_sha remote_ref remote_sha; do
   [ -z "${remote_ref:-}" ] && continue
@@ -78,8 +79,47 @@ while read -r local_ref local_sha remote_ref remote_sha; do
         fi ;;
     esac
   fi
+  # PR-only policy: a non-delete update aimed straight at the integration branch.
+  # Detected INSIDE this loop because this is the only place git's ref list is readable.
+  if [ "$local_sha" != "$ZERO" ]; then
+    case "$remote_ref" in
+      refs/heads/main|refs/heads/master) DIRECT_MAIN="$DIRECT_MAIN $remote_ref" ;;
+    esac
+  fi
   # remote_sha == ZERO → creating a new branch (not destructive) → ignore
 done
+
+# ── PR-only policy for the integration branch (operator decision 2026-07-20) ──────
+# WHY THIS EXISTS LOCALLY: GitHub branch protection on main requires a pull request, but the
+# repo has `enforce_admins: false` — so an admin push satisfies the API and only prints
+# "Bypassed rule violations", which is a NOTICE, not a block. A rule that announces its own
+# bypass is not a floor ([[feedback_non_defeasible_floor]]). This hook is the honest-model floor
+# that actually stops the push; the HARD floor remains server-side (`enforce_admins: true`),
+# which is the operator's setting to flip, not this hook's job to emulate.
+# Scope: blocks the PUSH, not the merge — `gh pr merge` operates server-side and is unaffected.
+if [ -n "$DIRECT_MAIN" ] && [ "${MAIN_PUSH_OK:-0}" != "1" ]; then
+  echo ""
+  echo "══════════════════════════════════════════════"
+  echo " ⛔ FH PR-Only Policy (pre-push)"
+  echo "══════════════════════════════════════════════"
+  echo "  Direct push to the integration branch:$DIRECT_MAIN"
+  echo ""
+  echo "  main is PR-only (operator decision 2026-07-20). Branch protection requires a PR but"
+  echo "  exempts admins (enforce_admins: false), so the server prints a bypass notice instead of"
+  echo "  blocking. This hook blocks it for real."
+  echo ""
+  echo "  Normal path:"
+  echo "      git switch -c <branch> && git push -u origin <branch>"
+  echo "      gh pr create --fill"
+  echo "      # after review:  gh pr merge --squash --delete-branch --admin"
+  echo ""
+  echo "  Deliberate exception (explicit, logged — mirrors DESTRUCTIVE_OP_OK / PUBLIC_SURFACE_OK):"
+  echo "      MAIN_PUSH_OK=1 git push …"
+  exit 1
+fi
+if [ -n "$DIRECT_MAIN" ]; then
+  echo "  ⚠️  FH PR-Only Policy: direct push to$DIRECT_MAIN allowed by MAIN_PUSH_OK=1 (conscious, gated intent)"
+fi
 
 # ── Session-close check (CLAUDE.md §Session Wrap-up ①–⑥) ─────────────────────────
 # WIRED 2026-07-20. Before this, scripts/session_close_check.sh was referenced ONLY by prose

@@ -176,10 +176,29 @@ The forge-harness hub has a dual identity: **(a) a seed for others** + **(b) you
 - **Implementation:** Skills such as `harvest-loop` follow this principle — they generate skill drafts, prepare commits automatically, and propose PR creation. However, the final decision to submit a PR must always require the user's explicit approval (`y`). This ensures Human-in-the-loop while maximizing AI contribution.
 
 **PR Creation Principle:**
-- AI may commit and push automatically (when changes are approved)
+- AI may commit and push automatically (when changes are approved) — **to a feature branch, never to the integration branch**
 - **PR creation requires explicit user request** ("create PR", "PR 올려줘", "pull request")
 - **Reason:** Prevents PR fragmentation — logical units should be grouped into meaningful PRs, not atomized per commit
-- Default workflow: commit → push → wait for explicit PR request
+- Default workflow: branch → commit → push branch → wait for explicit PR request
+
+**Integration branch is PR-only** (operator decision 2026-07-20). Never `git push origin main`
+directly. Normal path: `git switch -c <branch>` → push the branch → `gh pr create` → after review
+`gh pr merge --squash --delete-branch --admin` (self-approval is impossible when you authored the PR,
+so `--admin` after a completed review is the normal route, not a shortcut).
+
+**Mechanically enforced** by `templates/.git-hooks/pre-push`, which blocks a direct push to
+`main`/`master` unless the explicit `MAIN_PUSH_OK=1` acknowledgment is set (same channel shape as
+`DESTRUCTIVE_OP_OK` / `PUBLIC_SURFACE_OK`). Known-pair calibrated: direct-to-main blocks,
+feature-branch push passes untouched, override honored — over-blocking would just train the override
+into muscle memory and disarm it.
+
+> **Why a local hook when the server already requires a PR**: the server-side rule has
+> `enforce_admins: false`, so an admin push *satisfies* it and merely prints
+> `Bypassed rule violations` — a notice, not a block (observed 2026-07-20 on this repo). A rule that
+> announces its own bypass is not a floor. This hook is the honest-model floor; the **hard** floor is
+> still server-side (`enforce_admins: true`), which is an operator setting, not something a hook can
+> emulate. ⚠️ Flipping it while `required_approving_review_count: 1` locks a solo operator out of
+> merging their own PRs — pair it with `required_approving_review_count: 0` if enabled.
 
 ## Permission-Denial Guidance (When Auto-Mode Blocks an Action)
 

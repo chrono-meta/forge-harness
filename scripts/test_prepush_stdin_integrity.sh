@@ -77,5 +77,43 @@ else
   _no "T5 could not run end-to-end (no exit code captured) — treat as unverified, not as pass"
 fi
 
+# ── PR-only policy guard (2026-07-20 operator decision) ──────────────────────────
+# KNOWN-PAIR calibration per CLAUDE.md §Instrument Calibration: a known-POSITIVE that must block
+# and a known-NEGATIVE that must NOT. A guard that fires on everything is as broken as one that
+# never fires — over-blocking trains MAIN_PUSH_OK=1 into muscle memory, which disarms it.
+_pp_run() { # _pp_run <refline> [env...]  -> echoes exit code
+  local refline="$1"; shift
+  local d; d=$(mktemp -d 2>/dev/null || echo "/tmp/fh_pp_$$"); mkdir -p "$d/scripts"
+  ( cd "$d" && git init -q . 2>/dev/null
+    printf '#!/usr/bin/env bash\nexit 0\n' > scripts/session_close_check.sh
+    chmod +x scripts/session_close_check.sh
+    cp "$HOOK" ./h
+    printf '%s\n' "$refline" | env "$@" bash ./h origin https://example.invalid/x.git >/dev/null 2>&1
+    echo "$?" > rc )
+  cat "$d/rc" 2>/dev/null; rm -rf "$d"
+}
+_SHA_A=1111111111111111111111111111111111111111
+_ZERO=0000000000000000000000000000000000000000
+# remote_sha = ZERO (new ref) ISOLATES the PR-only guard from the destructive classifier.
+# First draft used two synthetic non-zero SHAs; the hook could not resolve remote_sha, marked the
+# ref UNCLASSIFIED and fail-closed — so T7/T8 "failed" on the classifier, not on the guard under
+# test. The instrument was measuring itself. (Calibration caught it: the known-NEGATIVE is what
+# exposed it — CLAUDE.md §Instrument Calibration.)
+
+# T6 known-POSITIVE: a non-delete push aimed at main MUST block
+rc=$(_pp_run "refs/heads/main $_SHA_A refs/heads/main $_ZERO")
+[ "$rc" = "1" ] && _ok "T6 direct push to main BLOCKED (known-positive)" \
+                || _no "T6 direct push to main was NOT blocked (rc=$rc) — PR-only policy is fail-open"
+
+# T7 known-NEGATIVE: a feature branch must pass untouched (no over-blocking)
+rc=$(_pp_run "refs/heads/feat/x $_SHA_A refs/heads/feat/x $_ZERO")
+[ "$rc" = "0" ] && _ok "T7 feature-branch push allowed (known-negative, no over-block)" \
+                || _no "T7 feature-branch push was blocked (rc=$rc) — guard over-fires; that trains the override"
+
+# T8 the override is honored and stays explicit
+rc=$(_pp_run "refs/heads/main $_SHA_A refs/heads/main $_ZERO" MAIN_PUSH_OK=1)
+[ "$rc" = "0" ] && _ok "T8 MAIN_PUSH_OK=1 override honored" \
+                || _no "T8 override did not work (rc=$rc) — an unusable escape hatch gets --no-verify instead"
+
 echo "── prepush stdin integrity: $([ "$FAILED" -eq 0 ] && echo PASS || echo FAIL) ──"
 exit "$FAILED"
