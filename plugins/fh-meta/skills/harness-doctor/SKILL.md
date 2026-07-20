@@ -125,6 +125,20 @@ budget but every unit earns its scope, the remaining lever is **capability-level
 governance unit — **not** a salience split, which by construction only moves narrative and returns ~nothing
 when the content is behavioral.
 
+**Any scan-derived count must be calibrated before it is reported.** Before a number from a scan
+(broken refs, INACTIVE skills, footprint chars, orphan counts, coverage) enters the report, run it
+against **one known-positive and one known-negative** and record both outcomes; then **hand-verify the
+single case the scan is most confident about**. If either step is skipped the number ships labeled
+`UNCALIBRATED` and may not ground a tier. `not found` is reported as `UNMEASURED`, never as `0` — a
+scan that dies mid-run reports a low number, and low numbers read as PASS.
+Origin (2026-07-20, three instrument defects in one session): a footprint scan omitted 61% of the
+resident surface it claimed to measure · a size ratio was used as a proxy for content coverage · an
+ASCII-token scanner run over a Korean corpus produced ~96% false positives and a "70%" figure that was
+published to three records before one hand-check reduced it to 3 items. **Suspect the instrument before
+the target whenever a value is impossible** (all-pass, all-fail, or a self-scan that fails to detect the
+running tool itself). Full procedure: `knowledge/shared/harness-core/measurement-integrity-checklist.md
+§Instrument-Calibration`.
+
 **Every M/S-tier must cite the row it fired — verbatim, from this file.** Write the finding as
 `M-n · <verbatim row text or its threshold> · <measured value>`. If you cannot quote the row, **you do not
 have a finding** — downgrade to an observation. Origin (2026-07-20, instrument defect n+4, the *fourth* in

@@ -101,6 +101,41 @@ onto their single hardest sub-mechanism, and a failure from a **non-harness** ru
 metric — each read a live-but-incomplete thing as zero, each caught by the operator, not self-caught.
 Detail: `[[feedback_reinvention_reflex_normalization_counterweight]]`.)
 
+## Instrument Calibration — before you trust a number, prove the instrument works *here*
+
+An instrument (a scan, a grep, a checker, a diagnostic row, a metric) is a claim about the world only
+after it is shown to work **on this target**. The recurring defect is not "measured the wrong thing" —
+it is **never asking whether this instrument is valid for this corpus at all**.
+
+**Two mandatory steps — both cheap, neither skippable:**
+1. **Calibrate on a known pair** — run the instrument against **one known-positive and one
+   known-negative** before trusting any of its output. A scan that cannot separate a case you already
+   know the answer to is not measuring; it is generating.
+2. **Hand-verify one sample before publishing a number** — open the single case the instrument is most
+   confident about and confirm it by eye. Publishing first and correcting later is not symmetric: a
+   number, once written into a report, a card, and a signal, must then be corrected in **all three**.
+   **"Publish" = the first time the number is stated in ANY form — including saying it to the operator
+   in conversation** — not only writing it to a file. Saying "roughly 34 broken refs, I'll verify when
+   I write it up" is *not* compliance: the unverified figure is already anchored in the reader's head
+   and in the transcript, which is the propagation this rule exists to stop. (Closed 2026-07-20 by a
+   known-pair sim that found this loophole; the session that wrote the rule had itself leaked its bad
+   "70%" into conversation before any file.)
+
+**Degrade direction**: calibration impossible → the output ships **labeled `UNCALIBRATED`**, never as a
+bare number, and never as the basis of a tier/verdict. A missing measurement is not a zero
+(`not found` ≠ `0` — a file that does not exist is not an empty file).
+
+**Why resident**: the trigger is *intent* ("I am about to trust / publish this output"), not a file, and
+**no hook can catch it** — there is no mechanical backstop by nature, so salience is the only layer.
+(Measured 2026-07-20, one session, 3×: an always-loaded footprint scan that omitted 61% of the surface ·
+an index/file **size ratio** used as a proxy for content coverage · an **ASCII-token scanner run over a
+Korean corpus** → ~96% false positives, whose "77 items / 70%" was published into three records before a
+single hand-check collapsed it to **3**. Each was caught by looking at one real case.)
+
+> **Detail**: See `knowledge/shared/harness-core/measurement-integrity-checklist.md §Instrument-Calibration`
+> — the known-pair procedure, the language/encoding mismatch class, and the publish-order rule — read
+> before running a scan whose count will be reported.
+
 ## New Project Onboarding
 
 > Detailed procedure: `knowledge/shared/rules/auto_project_mapping.md` (5-step mapping + §6 Full-Harness Mode)

@@ -84,3 +84,65 @@ practitioners conflate "running model X" with running a *pruned/quantized deriva
 low-bit quantization + expert pruning measurably degrade long-context quality while the model *name* is
 unchanged). This is a general measurement pitfall, not FH-specific: a leaderboard or replication that
 pins only the display name silently compares different instruments across serving paths.
+
+---
+
+## §Instrument-Calibration
+
+> Scope note: the sections above govern **cross-model measurement** (pin the display name, reps ≥ 3,
+> discriminating identity probe). This section is broader and upstream of them: it governs **any
+> instrument whose output becomes a count, a tier, or a claim** — a scan, a grep, a checker script, a
+> diagnostic row, a coverage ratio. Added 2026-07-20 after three instrument defects in one session.
+
+### The rule
+
+**Before an instrument's output is trusted or published, it must be shown to work on *this* target.**
+
+1. **Known-pair calibration.** Run it against **one case you already know is positive** and **one you
+   know is negative**. If it cannot separate those, it is not measuring — it is generating. This costs
+   one run and catches the entire class below.
+2. **Hand-verify one sample before publishing.** Open the single case the instrument is *most* confident
+   about and confirm by eye. Do this **before** the number enters a report.
+
+**Publish-order asymmetry (why step 2 is not optional):** verification is cheap *before* publication and
+expensive *after*. A number written into a report, a session card, and a signal file must then be
+corrected in **all three**, and every downstream reader who already consumed it is not recalled.
+Measured 2026-07-20: a scanner's "77 items / 70% of the index" went into exactly those three records; a
+single hand-check reduced the true figure to **3**.
+
+### The failure class this catches: *the instrument's assumptions don't hold for this target*
+
+Not "measured the wrong property" — the subtler one: **never asked whether this instrument is valid
+here.** Three shapes, all observed 2026-07-20 in a single session:
+
+| # | Shape | Concrete instance | What the known-pair would have shown |
+|---|---|---|---|
+| n+7 | **Instrument sees only part of its own declared surface** | An "always-loaded footprint" scan summed files rooted at `$TARGET`, silently omitting the auto-loaded memory index living outside it — **61% of the real resident surface** | A known-positive (a file you *know* is resident) fails to appear in the sum |
+| n+8 | **A cheap proxy substituted for the real property** | Index-line/topic-file **size ratio** used as a proxy for *content coverage*; minimum ratio 3.7× read as "safe" — while an entry whose file was 3.7× larger still lacked every fact the index carried | One known case checked by content, not size, inverts the verdict immediately |
+| n+9 | **Language / encoding assumption mismatch** | An **ASCII-token scanner run over a Korean corpus**: the index wrote `catch`, `MERGED`, `expert-system`; the files wrote `잡았다`, `머지`, `케이스크래프트` → every token scored as missing. **~96% false positives** | One known-negative (an entry you know is fully covered) scores as "missing" → mismatch exposed |
+
+Secondary false-positive sources in the same run, worth checking explicitly: **whitespace/hyphen
+variants** (`3주새` vs `3주 새`), and treating a line's **navigational annotation** (`(detail …, archive)`)
+as a factual claim.
+
+### Degrade direction
+
+- Calibration impossible or inconclusive → ship the output **labeled `UNCALIBRATED`**. It may inform;
+  it may **not** ground a tier, a verdict, or a published figure.
+- **`not found` ≠ `0`.** A file that does not exist is not an empty file; a scan that died mid-run
+  reports a low number, and low numbers read as PASS. Guard the empty case explicitly and say
+  `UNMEASURED`, never `0`.
+- An instrument that produces an **impossible value** (all-pass, all-fail, or a self-scan in which the
+  running tool does not detect itself) is suspect **before** its target is. Suspect the instrument first.
+
+### Done When
+
+- Known-positive and known-negative both run, and the instrument separated them
+  (check class: **mandatory-pass** — record both cases and their outcomes)
+- At least one sample hand-verified before any count is written into a report
+  (check class: **mandatory-pass**)
+- If either is absent, the output carries the literal token `UNCALIBRATED`
+  (check class: **mandatory-pass** — grep the report for the label)
+- Adversarial pairing for the judged part ("is this instrument valid for this corpus?"): the
+  known-negative **is** the adversarial case — it is chosen to be one the instrument should *not* flag,
+  so a flag there is a refutation, not a finding.
