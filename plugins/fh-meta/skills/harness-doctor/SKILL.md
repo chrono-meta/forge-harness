@@ -110,6 +110,7 @@ size instrument* is read. The footprint rows below apply to **both** scopes and 
 | SKILL.md > 300 lines AND no `SKILL_detail.md` | S-tier — propose `/salience-splitter` (governance-semantic split, not compression) |
 | Rules files unreferenced in CLAUDE.md | R-tier |
 | Always-loaded footprint > 40k chars (see scan below for what counts) | S-tier — **lever depends on where the chars live**: rules/detail still auto-loading → relocate to a non-loaded dir (e.g. `knowledge/shared/rules/`), pointers stay in CLAUDE.md · narrative inside CLAUDE.md → `/salience-splitter` · **behavioral content only, nothing left to relocate** → capability-level (merge/retire a governance unit) |
+| **Memory-index footprint** — the session's auto-loaded memory index (`~/.claude/projects/<slug>/memory/MEMORY.md`), reported as **its own line, never summed into the row above** | S-tier > 10k chars — **different residency, different lever**: this one is `/memory-hygiene` (archive closed items to `MEMORY_archive.md`, tighten hooks to one line), NOT `/salience-splitter`. Summing it into the CLAUDE.md row would mis-route the lever, which is exactly what the row above ties to "where the chars live". **Blind spot this closes (2026-07-20, measured)**: a fresh top-level `/context` showed **Memory files = 41.7k of 68.8k resident tokens (61%)**, of which `MEMORY.md` alone was **14.1k — 55% the size of CLAUDE.md (25.5k)** — and the footprint scan below counted **none of it**. The instrument was optimising the smaller half of the surface it claimed to measure |
 | Always-loaded footprint > 80k chars | M-tier — same lever selection, mandatory, **and never self-discharged** (see below) |
 | **Pointer-illusion**: a CLAUDE.md "detail/detailed procedure" pointer whose target is itself an always-loaded `.claude/rules/*.md` | S-tier — the split saves zero context (rules/ auto-loads regardless); move the target out of auto-load, keep the pointer |
 | weekly_audit 14~30 days elapsed | S-tier |
@@ -162,6 +163,16 @@ Always-loaded + pointer-illusion checks are mechanical (found 2026-07-12 — FH 
 # measures whichever harness you happen to be standing in (usually the hub, while diagnosing a
 # field target) — a wrong-target measurement that reports the hub's number as the target's.
 TARGET="${1:?pass the target root explicitly — cwd is not the target}"
+# MEMORY-INDEX (reported SEPARATELY — see the memory-index row above; do NOT add it to T).
+# It is auto-loaded every session but lives outside $TARGET, so the $TARGET-rooted sum below is
+# structurally blind to it. Measured 2026-07-20: it was 55% the size of CLAUDE.md and invisible here.
+MEMSLUG=$(printf '%s' "$TARGET" | sed 's|^/||; s|/|-|g')
+MEMIDX="$HOME/.claude/projects/-$MEMSLUG/memory/MEMORY.md"
+if [ -f "$MEMIDX" ]; then
+  echo "memory-index: $(wc -c < "$MEMIDX") chars — $MEMIDX  (lever: /memory-hygiene, NOT salience-splitter)"
+else
+  echo "memory-index: not found at $MEMIDX — report as UNMEASURED, not as 0 (a missing file is not an empty one)"
+fi
 T=0
 for f in "$TARGET/CLAUDE.md" "$TARGET/CLAUDE.local.md"; do
   [ -f "$f" ] && T=$((T + $(wc -c < "$f")))
