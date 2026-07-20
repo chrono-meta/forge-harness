@@ -216,119 +216,15 @@ that skill class, and not a retroactive sweep of all routers.
 
 ## FH Improvement 4-Axis Auto-Gate (Self-Verification Orchestrator)
 
-**Whenever the AI modifies FH assets** (SKILL.md · `.claude/rules/*.md` · `knowledge/shared/rules/*.md` (relocated protocol rules — always full-gate, NOT under the knowledge carve-out) · `templates/` · `CLAUDE.md` · substantive `knowledge/` docs · substantive `docs/*.md` · `AGENTS.md` — see Substantive carve-out below),
-the 4-axis verification chain runs **automatically before the first commit** of that session.
-No user request is needed — this is a mandatory autonomous step, not a proposal.
+**FH 자산을 수정하면**(SKILL.md · `.claude/rules/*.md` · `knowledge/shared/rules/*.md` · `templates/` · `CLAUDE.md` · substantive `knowledge/`·`docs/*.md` · `AGENTS.md`) **4축 검증 체인이 그 세션 첫 커밋 전에 자동 실행된다.** 사용자 요청 불요 — 제안이 아니라 의무 단계다.
 
-**Commit gate**: `git commit` on FH asset changes is hard-blocked by `templates/.git-hooks/pre-commit` until all required axes PASS. Hook installation (one-time): `git config core.hooksPath templates/.git-hooks && chmod +x templates/.git-hooks/pre-commit templates/.git-hooks/pre-push` (the same `core.hooksPath` also activates the **pre-push** Destructive-Op gate — see that section below).
+**기계 floor**: `git commit` 은 `templates/.git-hooks/pre-commit` 이 **하드 차단**한다. 축이 전부 PASS 할 때까지 커밋 자체가 안 된다. 아래 상세가 로드되지 않아도 **훅이 막는다** — 이 산문은 훅 위의 살리언스 층이지 유일 floor 가 아니다.
 
-```
-FH asset modified → Axis 1 (templates/regression_guard.sh --pr {BRANCH})
-  → Axis 2 (/steel-quench) → Axis 3 (/phantom-quench)
-  → marker: tracks/_meta/.axes_23_passed_{branch}_{date}.marker
-     (required fields: axis2-engine / axis2-model / floor-status / axis2-evidence;
-      hook validates mechanically: below-floor blocks without below-floor-ack, and axis2-evidence
-      must be non-vacuous — a recorded verdict/count, not "it ran". Marker scope is form +
-      non-vacuity + auditability, NOT provenance — a fabricated marker is the weekly-audit + operator
-      residual by design, do NOT fake-close it.
-      → **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Marker-Irreducibility`
-        — why the below-floor-ack is structurally irreducible for an autonomous runner + the
-        operator-present GPG hard-close option — read when auditing or attempting to harden the marker.)
-  → Axis 4 (/edit-manifest RECORD, today's entry in edit_manifest.yaml)
-  → All 4 PASS → git commit allowed   |   Any FAIL → fix inline, re-run
-```
+> **상세 정본**: `.claude/rules/fh_4axis_gate.md` — 4축 정의·마커 필수 필드·경량 예외·substantive carve-out·target-tier sim 게이트·Mode D 모델 공지·cross-family 보완. **`paths:` 로 FH 자산 경로에 스코핑돼 있어 그 파일들을 *읽을 때* 자동 로드된다** (공식 트리거는 read — `code.claude.com/docs/en/memory.md` §Path-specific rules).
+> (2026-07-20 분리. **파일 char 실측**: 이 절이 76,706자 중 10,331자를 차지했고, 요약으로 대체해 **순감 9,124자 = 11.9%** — 이건 파일 크기지 `/context` 상주 실측이 아니다(계기≠대상, [[feedback_resident_memory_measured_fresh_toplevel]]: 상주는 톱레벨 새 세션 `/context` 로만 잰다 — 미측정). 트리거가 *파일*이고 *기계 백스톱*이 있어 1순위 후보였다. 같은 이유로 **비가역 게이트 3종은 이동 불가** — 의도 트리거라 경로 스코핑하면 fail-open 이 된다.)
+> **의무**: 이 요약에는 **축 이름·마커 필수 필드·경량 예외 기준이 없다.** 4축을 실제로 실행하거나 마커를 쓰기 전에 위 파일을 **반드시 직접 읽어라** — 안 읽고 마커를 쓰면 필드를 지어내게 된다(2026-07-20 Sonnet sim 이 스스로 지목한 실패 모드).
+> **잔여(살리언스 층에 한함, 훅은 무관)**: ⓐ 트리거가 read 라서 **신규 SKILL.md 를 Write 로 새로 만드는** 경로는 규칙이 안 실린다 ⓑ `CLAUDE.md` 는 glob 에서 의도적 제외라 CLAUDE.md-only 세션은 이 요약 + 훅만 본다. **두 경로에선 위 "반드시 읽어라"가 유일한 살리언스 층이다** — 단, 둘 다 pre-commit 훅이 여전히 커밋을 하드 차단한다.
 
-**Why automatic**: Each axis catches a different defect class; asking separately means slip-through. **Why hook**: CLAUDE.md rules are advisory — the hook physically blocks commit until marker + manifest exist. **Scope**: active from the moment any FH file is modified in the session.
-
-**Lightweight exception** (Axis 1 + 4 only, skip Axes 2–3): Sessions where **zero SKILL.md / rules / templates files changed** (e.g., CATALOG.md entry, tracks/ update). The hook detects this automatically — no Axes 2+3 marker required for light-only commits. Judgment is file-based, not subjective.
-
-**Substantive carve-out — `knowledge/` · `docs/*.md` · `AGENTS.md`** (Axes 2–3 DO run, despite these not being SKILL/rules/templates): a change to any of these is **not** light if its diff adds a fenced code block (```` ``` ````) or a citation/version claim (`arXiv:` / `DOI` / `http` / a versioned dependency like `x.y.z`). Executable patterns and factual claims need phantom-detection + adversarial review *wherever they live* — `knowledge/` Implementation-Patterns sections carry runnable commands, `docs/` holds published guides, and `AGENTS.md` is the Codex-user entry point, so a phantom skill name or wrong version there is an external-facing error the gate must catch. Prose-only edits (typos, rewording, link fixes) stay light. Detection is mechanical: `git diff` adds a ```` ``` ```` fence or a citation token → run Axes 2–3.
-
-**Unavailable axis**: If steel-quench or phantom-quench are not installed, note `Axis N: skipped (skill unavailable)` and proceed. Axis 1 PASS alone is sufficient to unblock a PR when Axes 2–3 are unavailable. Axis 4 (edit-manifest): if the skill is not installed, substitute a manual one-line prediction appended to `tracks/_meta/edit_manifest.yaml` — the record is what matters, not the skill.
-
-**Target-tier sim gate (Mode D supplement — all change classes: fix, improvement, new asset)**: the
-discriminator is not the change class but the **enforcement column**: does the asset's effect depend on
-a session *following prose instructions* (salience-dependent — rules, onboarding scaffolds, SKILL.md
-trigger behavior), or is it mechanically enforced (hooks, scripts — tier-independent, normal 4-axis
-path, exempt)? For salience-dependent changes, verify with a **blind simulation in an isolated Agent**
-(no main-session reasoning inherited — isolation is the FH mechanism that keeps the sim honest) with
-`model:` pinned to the tier the change must survive on — **default sim tier = Sonnet** (the base
-floor every FH behavior must survive on, `sonnet_floor_doctrine.md`). Application strength scales
-with context:
-- **Mode D (FH self-dev) — near-mandatory**: any salience-dependent FH asset change runs the sim
-  before Done, at Sonnet by default. Mandatory without exception when the change fixes a behavioral
-  miss *observed* on a specific tier — sim at that same tier, even below Sonnet (the verification
-  tier must match the failure tier; fixing on a stronger model and verifying by review alone leaves
-  "does it fire on the weaker tier?" unanswered).
-- **Field harness assets (templates/ propagated via Full-Harness Mode) — conditional**: sim at the
-  default field tier (Sonnet) when the behavior is load-bearing (gates, onboarding, destructive/publish
-  paths); skip with a one-line note for low-stakes prose.
-- **Light mapping (tracks/ registration, CATALOG entries) — exempt**, alongside mechanical changes
-  (hook logic, scripts, file moves — tier-independent by construction).
-
-**Autonomy floor**: the skip/run *judgment* on conditional cases is itself depth-sensitive — trust it
-only at opus-tier or above. A below-floor orchestrator does not silently skip — and does not stall:
-its default is to RUN the sim (the conservative branch needs no trust); it asks the operator only when
-no runnable path exists (run-first, ask-last — sonnet_floor_doctrine.md §Autonomy at Sonnet).
-
-Record sim results in the Axes 2–3 marker + sub-agent invocation log.
-
-> **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Sim-Dispatch-Fallback` — the
-> headless `claude -p --model` fallback when in-session model-pin is unavailable, the saturation-disguise
-> retry (compact-then-retry once), and the credit-pool caveat — read when a model-pinned dispatch fails.
-
-**Measurement-integrity pre-flight**: when the sim/dispatch is a *cross-model measurement* (pinned to a
-tier, comparing model behaviors, or feeding a published claim), **the instrument must be verified before
-the measurement is trusted**.
-
-> **Detail**: See `knowledge/shared/harness-core/measurement-integrity-checklist.md` — pin the display
-> name not a slug (silent fallback to a weaker model is a measured failure) · reps ≥ 3 on any
-> borderline/contested verdict (single draw = noise) · use a discriminating identity probe (a generic
-> "OK" proves nothing about which model answered) — read **before** running any cross-model measurement.
-
-**Floor-tier canary (optional pre-screen — token-free, *below* the Sonnet sim)**: a local model ≤ Sonnet
-can blind-pre-screen a salience-dependent edit before the Sonnet dispatch is spent. **Canary, NOT gate**:
-a PASS adds cheap floor confidence and you still run the Sonnet sim; a FAIL never blocks alone. The
-terminal verdict stays with the **Sonnet-or-higher governor bound to a mechanical anchor** — **no
-judge-only path**, no weak-local-judge regression of the judge-robustness principle.
-
-> **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Floor-Tier-Canary` — the local
-> model/panel options, the blind-probe procedure, dogfood evidence, and the FAIL-triage (real salience gap
-> vs floor-model quirk) — read when running a floor canary.
-
-**Axis ownership** (each skill is already complete — orchestrator only coordinates):
-
-| Axis | Skill | What it catches |
-|---|---|---|
-| Backward | `templates/regression_guard.sh` | Critical section loss, broken refs, syntax errors, line reduction |
-| Adversarial | `steel-quench` | Trigger phrase collisions, design attack surface, over-engineered steps |
-| Forward | `phantom-quench` | Phantom references, paths that don't exist, stale external links |
-| Record | `edit-manifest` RECORD | Logs predicted impact — closes the predict-verify loop for future harvest-loop |
-
-**Cross-family complement (Axis 2, autonomous when consented)**: `steel-quench` dispatches in-session at the
-session tier — **same family** as the governor, so it shares the governor's blind spots. For a **load-bearing**
-change (gates · irreversible-surface code · doctrine), `auto-decorrelation` is the standing cross-family
-verifier: it recruits ≥1 **different-family** auditor when the sidecar panel is discoverable, and degrades
-honestly to single-session when none is. **Autonomous once the operator has consented** (one-time, in the
-UAP — `[[user_adaptation_profile]]`); the governor keeps the terminal verdict and **source-grounds** every
-sidecar finding before acting on it (`[[feedback_judge_robustness_mechanical_anchor]]`).
-
-> **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Cross-Family-Complement` — the
-> UAP sidecar mapping (which family for which task class) and the 2026-06-27 dogfood evidence — read when
-> recruiting or configuring a cross-family auditor.
-
-### Mode D Model Notice (fires once, at the same trigger as this gate)
-
-When FH self-dev begins (an FH asset is about to change), check the **session model** and surface **one
-line**, then proceed — never block, **never switch the model** (human override inviolable): opus-tier+ →
-no notice · below-opus → **dispatch-first recommend** (keep Sonnet + route depth turns to sidecar/opus
-dispatch; `/model opus` pin = secondary — `sonnet_floor_doctrine.md`) · unknown → static fallback recommend. Once per session;
-field-project (non-FH-asset) sessions never see it. Whether a session actually *escalates* (not just this
-advisory) is governed separately by `capability_escalation_consent.md`.
-
-> **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Mode-D-Model-Notice` — the
-> exact 3-branch wording (한글), the full guards, and the capability-escalation-consent cross-ref — read
-> when surfacing the notice.
 
 ## Field-Harness Load-Bearing Change Gate (cross-family, pre-merge)
 
