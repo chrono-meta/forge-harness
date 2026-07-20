@@ -90,12 +90,15 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 done
 
 # ── PR-only policy for the integration branch (operator decision 2026-07-20) ──────
-# WHY THIS EXISTS LOCALLY: GitHub branch protection on main requires a pull request, but the
-# repo has `enforce_admins: false` — so an admin push satisfies the API and only prints
-# "Bypassed rule violations", which is a NOTICE, not a block. A rule that announces its own
-# bypass is not a floor ([[feedback_non_defeasible_floor]]). This hook is the honest-model floor
-# that actually stops the push; the HARD floor remains server-side (`enforce_admins: true`),
-# which is the operator's setting to flip, not this hook's job to emulate.
+# WHY THIS EXISTS LOCALLY: it is the SHIFT-LEFT half of a two-layer floor.
+# History: on 2026-07-20 the server required a PR but had `enforce_admins: false`, so an admin
+# push satisfied the API and only printed "Bypassed rule violations" — a NOTICE, not a block.
+# A rule that announces its own bypass is not a floor ([[feedback_non_defeasible_floor]]).
+# The operator then flipped `enforce_admins: true` (+ `required_approving_review_count: 0` so a
+# solo operator can still merge their own PR), so the server IS now the hard floor.
+# This hook still earns its place: it fails at push time with the actual remedy in the message,
+# instead of a bare server rejection, and it keeps working if the server setting is ever relaxed.
+# It is deliberately NOT the hard floor — a client-side hook is bypassable by `--no-verify`.
 # Scope: blocks the PUSH, not the merge — `gh pr merge` operates server-side and is unaffected.
 if [ -n "$DIRECT_MAIN" ] && [ "${MAIN_PUSH_OK:-0}" != "1" ]; then
   echo ""
@@ -104,9 +107,8 @@ if [ -n "$DIRECT_MAIN" ] && [ "${MAIN_PUSH_OK:-0}" != "1" ]; then
   echo "══════════════════════════════════════════════"
   echo "  Direct push to the integration branch:$DIRECT_MAIN"
   echo ""
-  echo "  main is PR-only (operator decision 2026-07-20). Branch protection requires a PR but"
-  echo "  exempts admins (enforce_admins: false), so the server prints a bypass notice instead of"
-  echo "  blocking. This hook blocks it for real."
+  echo "  main is PR-only (operator decision 2026-07-20). The server enforces this too"
+  echo "  (enforce_admins: true, review_count: 0) — this hook just fails earlier, with the fix."
   echo ""
   echo "  Normal path:"
   echo "      git switch -c <branch> && git push -u origin <branch>"

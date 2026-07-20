@@ -192,13 +192,20 @@ so `--admin` after a completed review is the normal route, not a shortcut).
 feature-branch push passes untouched, override honored — over-blocking would just train the override
 into muscle memory and disarm it.
 
-> **Why a local hook when the server already requires a PR**: the server-side rule has
-> `enforce_admins: false`, so an admin push *satisfies* it and merely prints
-> `Bypassed rule violations` — a notice, not a block (observed 2026-07-20 on this repo). A rule that
-> announces its own bypass is not a floor. This hook is the honest-model floor; the **hard** floor is
-> still server-side (`enforce_admins: true`), which is an operator setting, not something a hook can
-> emulate. ⚠️ Flipping it while `required_approving_review_count: 1` locks a solo operator out of
-> merging their own PRs — pair it with `required_approving_review_count: 0` if enabled.
+> **Two layers, and which one is the floor**: the **hard floor is server-side** — this repo now runs
+> `enforce_admins: true` with `required_approving_review_count: 0` (set 2026-07-20; the count must be
+> `0`, because enabling `enforce_admins` while it is `1` locks a solo operator out of merging their
+> own PRs — self-approval is impossible). The hook is the **shift-left layer**: it fails at push time
+> and prints the actual remedy, and it keeps holding if the server setting is ever relaxed. It is
+> deliberately not the floor — a client-side hook is bypassable with `--no-verify`.
+> *Origin*: before that change the server had `enforce_admins: false`, so an admin push *satisfied*
+> the rule and merely printed `Bypassed rule violations` — a notice, not a block. A rule that
+> announces its own bypass is not a floor.
+> ⚠️ **Unresolved residual**: `allow_force_pushes` on `main` is still `true`. Two documented API
+> attempts to set it `false` were accepted without error and did **not** persist (verified by
+> independent GET, not by the write response). Force/non-ff pushes are blocked locally by this same
+> hook, so the honest-model case is covered — but the **server-side** history-rewrite surface on
+> `main` remains open. Re-check before relying on it.
 
 ## Permission-Denial Guidance (When Auto-Mode Blocks an Action)
 
