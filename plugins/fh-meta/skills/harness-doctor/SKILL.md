@@ -105,6 +105,7 @@ size instrument* is read. The footprint rows below apply to **both** scopes and 
 | **Field/project** CLAUDE.md 200+ lines | M-tier — separation or reduction needed |
 | **Field/project** 15+ `##` sections in CLAUDE.md | S-tier warning |
 | **Meta-harness (FH hub)** CLAUDE.md — raw line / section count | **Not a verdict.** Judge by the always-loaded footprint rows below (char-based = actual token cost) + the doctrine's red flags (orphaned · redundant · decorative). Report the count as context only |
+| **Meta-harness — residency ledger** (the positive instrument that replaces the disabled line-count rows) | For each `##` section record **trigger class** (intent / file / ambient) + **backstop** (a hook or script path that must be **grep-verified to exist AND to be wired**, or the literal `none-by-nature`). Tier ONLY these: **M** = a section claiming a mechanical floor whose script is referenced by no hook (a prose-invoked "floor" is not a floor) · **S** = `file`-triggered *with* a verified backstop but still resident (splittable — name the destination glob) · **S** = duplicated verbatim in another section · **R** = orphaned/decorative. A section that is intent- or ambient-triggered with `none-by-nature` is **PASS, not a finding** — moving it would be fail-open. Never tier a section on its size |
 | **Meta-harness** growth since last run: decompose into *new sections* vs *existing-section growth* (mechanical — diff `##` section names + line counts vs the prior run's commit; **first run / no prior commit → report both as n/a, no tier**) | **Tier is decided by the two counts alone**: **S-tier iff existing-section growth > new-section growth** (the file is thickening faster than it is gaining capability); otherwise advisory, no tier. Report both numbers **and** the new sections' names — the names are *reporting output for the human*, never an input to the tier. Do not judge "was this growth capability-bearing?" per line |
 | SKILL.md > 300 lines AND no `SKILL_detail.md` | S-tier — propose `/salience-splitter` (governance-semantic split, not compression) |
 | Rules files unreferenced in CLAUDE.md | R-tier |
@@ -122,6 +123,17 @@ footprint M-tier is *not* evidence that some section failed to earn its scope. W
 budget but every unit earns its scope, the remaining lever is **capability-level** — merge or retire a
 governance unit — **not** a salience split, which by construction only moves narrative and returns ~nothing
 when the content is behavioral.
+
+**Every M/S-tier must cite the row it fired — verbatim, from this file.** Write the finding as
+`M-n · <verbatim row text or its threshold> · <measured value>`. If you cannot quote the row, **you do not
+have a finding** — downgrade to an observation. Origin (2026-07-20, instrument defect n+4, the *fourth* in
+a single run): a run fired `M-1 · CLAUDE.md 816 lines — exceeds the FH threshold of 500`. The string `500`
+does not occur anywhere in this file (grep: 0 hits), and the meta-harness row it claimed to read says raw
+line count is **"Not a verdict."** So the run invented a threshold *and* fired a row this skill explicitly
+disables for meta-harnesses — the exact recurrence of the 2026-07-15 inversion documented below, which had
+already been patched *in the skill*. The patch held; the **run** ignored it. A verdict grounded in a
+citation that cannot be quoted is the same defect class as a phantom reference, and it propagates: a
+downstream sidecar judgment inherited the fabricated 500 and reasoned from it until a grep caught it.
 
 **No M-tier in this skill is ever self-discharged — not just the footprint one.** "The cost is priced /
 accepted", "it's all necessary", "over budget but fine" are **not** verdicts this skill may reach on its

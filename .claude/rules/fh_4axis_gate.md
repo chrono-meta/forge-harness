@@ -19,7 +19,9 @@ paths:
   FH 4-Axis Auto-Gate — 경로 스코핑된 규칙 (2026-07-20 이전)
 
   왜 여기 있나: CLAUDE.md **파일** 76,706자 중 이 섹션이 10,331자(13.5%)로 단일 최대였다.
-  요약으로 대체한 뒤 순감 9,124자(11.9%) — 전부 **파일 char 실측**이지 `/context` 상주
+  요약으로 대체했다. 파일 전체는 같은 세션의 다른 정리(중복 3건·New-Skill 게이트 편입)까지 합쳐
+  76,706 → 67,611 (순감 9,095자, 11.9%) — **합산치이지 이 절 하나의 성과가 아니다**.
+  전부 **파일 char 실측**이지 `/context` 상주
   실측이 아니다(상주는 톱레벨 새 세션 `/context` 로만 잰다 — 이번엔 미측정).
   이 게이트는 **FH 자산 파일을 건드릴 때만** 필요하므로 `paths:` 로 조건부 로드한다.
   (`paths:` 없는 rules 파일은 세션 시작 시 항상 로드된다 — 반드시 유지할 것.)
@@ -156,3 +158,38 @@ advisory) is governed separately by `capability_escalation_consent.md`.
 > **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Mode-D-Model-Notice` — the
 > exact 3-branch wording (한글), the full guards, and the capability-escalation-consent cross-ref — read
 > when surfacing the notice.
+
+---
+
+<!-- Relocated from always-loaded CLAUDE.md 2026-07-20 (Fable residency judgment, rank 2).
+     ①파일 트리거(신규/편집 SKILL.md) ②기계 백스톱 검증됨 — pre-commit:105 가 어떤 SKILL.md
+     경로에도 4축 전체를 발동하고, :552-558 에 신규스킬 count-consistency 슬라이스가 따로 있다.
+     glob 은 신설이 아니라 이 파일 frontmatter 의 기존 plugins/**/SKILL.md 를 재사용한다.
+     잔여: paths: 는 read 트리거라 '스킬을 맨바닥에서 Write 로 만드는' 경로엔 안 실린다 —
+     오늘 아침 4축 분리가 수용한 것과 동일한 잔여이고 floor 도 동일(pre-commit). -->
+
+## New Skill Creation Pre-Commit Gate
+
+All 6 items below must pass before committing a new SKILL.md. If any fails, fix and re-commit.
+
+| Item | Criterion |
+|---|---|
+| **Role duplication check** | Pass `/asset-placement-gate` — no overlap with existing role clusters, **platform built-ins (Tier 0), or `claude-plugins-official` (Tier 1 official)**. Reinventing an official capability requires explicit justification in the SKILL.md (no-reinvention rule — FH builds only what adds governance) |
+| **Description diet** | Plain text / 0 self-marketing expressions / 0 emphasis words (⭐, "critical", "groundbreaking") |
+| **Done When defined** | At least 1 explicit completion condition |
+| **Check-class declared** | Each Done When condition states its check class — mandatory-pass / measured / judged (`harness_6axis_framework.md` §Axis 5). Any judged condition names its adversarial pairing — no judge-only path |
+| **Natural language triggers** | At least 3 examples that work without internal vocabulary. This is a **form** check (judged — do the examples avoid internal jargon). For a load-bearing gate/router skill it can be upgraded **judged → measured** with steel-quench's `Step 0.5 — Trigger-Accuracy Probe` (a dispatched should-fire / near-miss-should-not-fire fire-count), turning "do these triggers collide?" from a guess into a number. Optional for ordinary skills; recommended when the skill is a routing/gate surface |
+| **Independently executable** | Confirmed to work without other FH skills (or dependencies are explicitly documented) |
+
+Skills without a Done When definition automatically qualify as harness-doctor L2 M-tier.
+Check-class declaration applies to **new** skills; existing skills backfill opportunistically
+(when next edited), not retroactively. **Obligation (always-loaded):** a **routing/gate skill** (primary
+output = a dispatch decision or pass/block verdict) owes a **one-time `Step 0.5` baseline trigger-probe**
+at the next `harness-doctor` run **and a re-probe whenever its trigger phrases change** — not optional for
+that skill class, and not a retroactive sweep of all routers.
+
+> **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §New-Skill-Backfill` — the
+> probe mechanics (fire-count procedure), the baseline-floor rationale, and the mechanical "routing/gate
+> skill" test — read when editing a router/gate skill.
+
+---

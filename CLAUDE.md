@@ -111,6 +111,8 @@ Detail: `[[feedback_reinvention_reflex_normalization_counterweight]]`.)
 
 **Light vs full**: steps 1–3 register lightly. For project-local harness assets (session rules + context filter + env card), run **Full-Harness Mode** (`auto_project_mapping.md §6`) — approval-gated, never overwrites. FH self-gate is **not** installed into projects.
 
+**Trigger routing**: "connect a project" · "link to hub" · "map this project" · "scan parent directory and connect" → the mapping protocol above. "harness-ify this project" · "full harness setup" · "프로젝트 하네스화" (or accepting the post-mapping promotion prompt) → §6 Full-Harness Mode.
+
 ## Harness Drift Prevention Principles
 
 The forge-harness hub has a dual identity: **(a) a seed for others** + **(b) your own active work harness**. This is why clearly separating "team assets" from "personal assets" is essential to prevent drift.
@@ -190,27 +192,11 @@ Compose session-card candidates **into door ③ (field) and the 🔧 door (FH-de
 
 ## New Skill Creation Pre-Commit Gate
 
-All 6 items below must pass before committing a new SKILL.md. If any fails, fix and re-commit.
+Every new `SKILL.md` must clear a **6-item bar** (role-duplication via `/asset-placement-gate` · description diet · **Done When** · check-class · natural-language triggers · independently executable) before commit. A **routing/gate skill** additionally owes a one-time `Step 0.5` trigger-probe, re-probed whenever its trigger phrases change.
 
-| Item | Criterion |
-|---|---|
-| **Role duplication check** | Pass `/asset-placement-gate` — no overlap with existing role clusters, **platform built-ins (Tier 0), or `claude-plugins-official` (Tier 1 official)**. Reinventing an official capability requires explicit justification in the SKILL.md (no-reinvention rule — FH builds only what adds governance) |
-| **Description diet** | Plain text / 0 self-marketing expressions / 0 emphasis words (⭐, "critical", "groundbreaking") |
-| **Done When defined** | At least 1 explicit completion condition |
-| **Check-class declared** | Each Done When condition states its check class — mandatory-pass / measured / judged (`harness_6axis_framework.md` §Axis 5). Any judged condition names its adversarial pairing — no judge-only path |
-| **Natural language triggers** | At least 3 examples that work without internal vocabulary. This is a **form** check (judged — do the examples avoid internal jargon). For a load-bearing gate/router skill it can be upgraded **judged → measured** with steel-quench's `Step 0.5 — Trigger-Accuracy Probe` (a dispatched should-fire / near-miss-should-not-fire fire-count), turning "do these triggers collide?" from a guess into a number. Optional for ordinary skills; recommended when the skill is a routing/gate surface |
-| **Independently executable** | Confirmed to work without other FH skills (or dependencies are explicitly documented) |
+**Consequence (kept resident on purpose)**: a skill shipped **without a `Done When` definition automatically qualifies as harness-doctor L2 M-tier** — the bar has teeth, and those teeth stay in the always-loaded layer even though the bar's detail does not. Each `Done When` condition must also declare its check class (mandatory-pass / measured / judged); a **judged** condition names its adversarial pairing — no judge-only path.
 
-Skills without a Done When definition automatically qualify as harness-doctor L2 M-tier.
-Check-class declaration applies to **new** skills; existing skills backfill opportunistically
-(when next edited), not retroactively. **Obligation (always-loaded):** a **routing/gate skill** (primary
-output = a dispatch decision or pass/block verdict) owes a **one-time `Step 0.5` baseline trigger-probe**
-at the next `harness-doctor` run **and a re-probe whenever its trigger phrases change** — not optional for
-that skill class, and not a retroactive sweep of all routers.
-
-> **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §New-Skill-Backfill` — the
-> probe mechanics (fire-count procedure), the baseline-floor rationale, and the mechanical "routing/gate
-> skill" test — read when editing a router/gate skill.
+> **정본**: `.claude/rules/fh_4axis_gate.md §New Skill Creation Pre-Commit Gate` — the full 6-item table, the judged→measured upgrade path, and the routing/gate test. It is `paths:`-scoped to `plugins/**/SKILL.md`, so it **auto-loads when you read a SKILL.md**. **Creating a skill from scratch reads no SKILL.md — go read it explicitly.** Mechanical floor either way: `templates/.git-hooks/pre-commit` runs the full 4-axis gate on any `SKILL.md` path plus a new-skill count-consistency slice.
 
 ---
 
@@ -221,7 +207,7 @@ that skill class, and not a retroactive sweep of all routers.
 **기계 floor**: `git commit` 은 `templates/.git-hooks/pre-commit` 이 **하드 차단**한다. 축이 전부 PASS 할 때까지 커밋 자체가 안 된다. 아래 상세가 로드되지 않아도 **훅이 막는다** — 이 산문은 훅 위의 살리언스 층이지 유일 floor 가 아니다.
 
 > **상세 정본**: `.claude/rules/fh_4axis_gate.md` — 4축 정의·마커 필수 필드·경량 예외·substantive carve-out·target-tier sim 게이트·Mode D 모델 공지·cross-family 보완. **`paths:` 로 FH 자산 경로에 스코핑돼 있어 그 파일들을 *읽을 때* 자동 로드된다** (공식 트리거는 read — `code.claude.com/docs/en/memory.md` §Path-specific rules).
-> (2026-07-20 분리. **파일 char 실측**: 이 절이 76,706자 중 10,331자를 차지했고, 요약으로 대체해 **순감 9,124자 = 11.9%** — 이건 파일 크기지 `/context` 상주 실측이 아니다(계기≠대상, [[feedback_resident_memory_measured_fresh_toplevel]]: 상주는 톱레벨 새 세션 `/context` 로만 잰다 — 미측정). 트리거가 *파일*이고 *기계 백스톱*이 있어 1순위 후보였다. 같은 이유로 **비가역 게이트 3종은 이동 불가** — 의도 트리거라 경로 스코핑하면 fail-open 이 된다.)
+> (2026-07-20 분리. **파일 char 실측**: 이 절 자체가 76,706자 중 **10,331자(13.5%)**로 단일 최대였다. 그 분리 + 같은 세션의 중복 3건 제거 + New-Skill 게이트 편입까지 **합산**해 파일은 **76,706 → 67,611 (순감 9,095자, 11.9%)** — 합산치이지 이 절 하나의 성과가 아니다 — 이건 파일 크기지 `/context` 상주 실측이 아니다(계기≠대상, [[feedback_resident_memory_measured_fresh_toplevel]]: 상주는 톱레벨 새 세션 `/context` 로만 잰다 — 미측정). 트리거가 *파일*이고 *기계 백스톱*이 있어 1순위 후보였다. 같은 이유로 **비가역 게이트 3종은 이동 불가** — 의도 트리거라 경로 스코핑하면 fail-open 이 된다.)
 > **의무**: 이 요약에는 **축 이름·마커 필수 필드·경량 예외 기준이 없다.** 4축을 실제로 실행하거나 마커를 쓰기 전에 위 파일을 **반드시 직접 읽어라** — 안 읽고 마커를 쓰면 필드를 지어내게 된다(2026-07-20 Sonnet sim 이 스스로 지목한 실패 모드).
 > **잔여(살리언스 층에 한함, 훅은 무관)**: ⓐ 트리거가 read 라서 **신규 SKILL.md 를 Write 로 새로 만드는** 경로는 규칙이 안 실린다 ⓑ `CLAUDE.md` 는 glob 에서 의도적 제외라 CLAUDE.md-only 세션은 이 요약 + 훅만 본다. **두 경로에선 위 "반드시 읽어라"가 유일한 살리언스 층이다** — 단, 둘 다 pre-commit 훅이 여전히 커밋을 하드 차단한다.
 
@@ -434,7 +420,7 @@ force-push, scrub of tracked history, bulk deletion of session records / tracks 
 2. **Recover (judged — depth-sensitive)**: every CHECK/REVIEW item gets a content-direction look;
    live un-integrated state (cards · handoffs · signals · session records) is integrated to main
    **before** anything is deleted. This step exists because the loss class is silent — run it at the
-   strongest available tier (floor semantics, §Tier-floor); a below-floor pass is provisional.
+   strongest available tier (floor semantics: `multi_model_sidecar_strategy.md §Tier-floor resolution`); a below-floor pass is provisional.
 3. **Destroy** only what passed — REVIEW blocks a scripted delete chain (script exits 1).
 
 **Mechanical floor (pre-push hook — git-side surfaces)**: at *push* time, **remote branch/ref deletion**
@@ -489,7 +475,7 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "publish", "make public", "make this repo public", "go public", "gh repo create --public", "flip to public", "first public push", "publish the package", "npm publish", "twine upload", **opening/updating a PR or pushing content to the public hub** (esp. company-origin) (publish intent — **proactive**, fire *before* the action; adding content to an already-public repo IS publishing that content) | **Pre-Publish Surface Gate** (see above → `/public-surface-audit` + `/marketplace-gate` Check 5 must PASS first). The commit-time half is now **hook-enforced** (mechanical confidentiality scan — see Pre-Publish Gate §Hook coverage (b)), so this proactive trigger is the salience layer over a mechanical floor. |
 | "delete the branch", "브랜치 삭제", "브랜치 정리", "clean up branches", "force-push", "rewrite history", "지워도 돼?" (destructive intent — **proactive**, fire *before* the action) | **Destructive-Op Gate** (see above → enumerate → recover → destroy; `templates/predelete_check.sh`) |
 | **"새 기능 검증해줘", "test this feature", "이 TC 확인해줘" — verifying the user's PRODUCT/feature (not FH itself)** | **Route to the mapped field harness first** (Cross-Project Skill Bus / registry) — the field harness owns product verification. The harness-verification rows in this table (`verify-bidirectional` · `prompt-regression` · `sim-conductor` · `pipeline-conductor`) verify the *harness*, and must not shadow a product-verification ask (a field project's *harness assets* — its skills/rules — still use those FH verification rows) |
-| "지난주에 뭐 했지", "what did we do last week", "예전에 이거 한 적 있나" (recall intent) | §Searching Past Work (CATALOG-first) — read CATALOG.md, then open only candidate files |
+| "지난주에 뭐 했지", "what did we do last week", "예전에 이거 한 적 있나" (recall intent) | **CATALOG-first recall** — read `CATALOG.md`, identify candidates by tag/date, then open only those files. Never scan session files one by one |
 | "add this MCP server", "mount this MCP", "mcp.json에 추가", "connect this tool server" (external-MCP mount intent — **proactive**, fire *before* first tool call; mount intent only — a failing/erroring mounted server is `/mcp-circuit-breaker`'s row above) | `templates/.claude/rules/mcp_tool_gating.md` (name-keyed ask/allow table — never trust server annotations or names; fill §3 at mount time) |
 | "did my rule change break anything", "regression check", "test harness changes" | `/prompt-regression` |
 | "review for the team", "CTO review", "decision-maker", "share with leadership", "approval deck" | `/apex-review` |
@@ -500,8 +486,8 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "memory feels bloated", "clean up memory", "memory too large", "memory hygiene" | `/memory-hygiene` |
 | "ready to PR", "about to push", "merge this", "PR 올려줘", FH asset changed in session | 4-axis auto-gate (see above — runs automatically, no proposal needed) |
 | **field verdict/gate/safety/irreversible code changed** in a mapped project (function returning a verdict enum / gate exit code / safety-invariant · publish/delete/history path) — **proactive, before merge** | **Field-Harness Load-Bearing Change Gate** (see above → degrade-lint → cross-family review → converge; same rigor as FH assets, applied to field code) |
-| **"진단해줘", "개선해줘", "diagnose this", "improve this harness", "check this project", "audit this project"** — said while working **in a mapped project** (not a single-file ask) | **Field-Harness Diagnostic** (see §Field-Harness Diagnostic below → compose existing checks into one ranked M/S/R list → HITL approval per item, nothing auto-fixed) |
-| **"새 프로젝트", "하네스 작성해줘", "이 프로젝트 가속화", "harness-ify this", "accelerate this project"** — an onboarding/acceleration door (returning-menu ①②③) | **Onboarding / Acceleration Autopilot** (see §Onboarding / Acceleration Autopilot below → Phase 0 auto-discover + branch → innovator-centered recommend → ranked install plan → HITL per item, non-overwriting; "끝까지 자율로" → full-autonomy under /goal-quench gate) |
+| **"진단해줘", "개선해줘", "diagnose this", "improve this harness", "check this project", "audit this project"** — said while working **in a mapped project** (not a single-file ask) | **Field-Harness Diagnostic** (see §Field-Harness Diagnostic above → compose existing checks into one ranked M/S/R list → HITL approval per item, nothing auto-fixed) |
+| **"새 프로젝트", "하네스 작성해줘", "이 프로젝트 가속화", "harness-ify this", "accelerate this project"** — an onboarding/acceleration door (returning-menu ①②③) | **Onboarding / Acceleration Autopilot** (see §Onboarding / Acceleration Autopilot above → Phase 0 auto-discover + branch → innovator-centered recommend → ranked install plan → HITL per item, non-overwriting; "끝까지 자율로" → full-autonomy under /goal-quench gate) |
 
 **Guard**: Do not propose a skill that is already running. One signal = one-line proposal (no pressure). Before proposing, consult the UAP (§Operational Adaptation Loop): a skill the user has rejected 3+ times is **suppressed**, not re-proposed.
 For per-skill utterance patterns, see the relevant `SKILL.md §Trigger Phrases` section.
@@ -603,27 +589,7 @@ Tiers: S=light(~5K) · M=standard(~15K, FH default) · L=full(~30K) · XL=max(~6
 
 ## Operational Status
 
-**Current: Beta → External Validation Achieved** — v1.0 formal release conditions: additional external install evidence + at least 1 external PR.
-
 > Usage modes (A/B/C) + what-you-get (Layer 1/2) + **ephemeral-session handoff rule** (leave a surfaced handoff in a durable location before an ephemeral/cloud session ends): `knowledge/shared/rules/modes_and_value.md`
-
-## Auto Project Mapping Protocol
-
-> Detailed procedure: `knowledge/shared/rules/auto_project_mapping.md` (5-step mapping + §6 Full-Harness Mode)
-
-When the user requests **"connect a project"** · **"link to hub"** · **"map this project"** · **"scan parent directory and connect"**, follow the `auto_project_mapping.md` protocol. When they request **"harness-ify this project"** · **"full harness setup"** · **"프로젝트 하네스화"** (or accept the post-mapping promotion prompt), run **§6 Full-Harness Mode** — installs project-local harness assets (session rules · context filter · env card) from `templates/`, approval-gated and non-overwriting. (The FH self-gate is FH-internal and is not installed into projects.)
-
-## Searching Past Work
-
-When searching for past work, **read CATALOG.md first**. Use tags and summaries to identify candidate files, then open only those files for detail.
-
-```
-1. Read CATALOG.md → identify candidate files by tag/date
-2. Open candidate files directly → review details
-```
-
-Do not scan session files one by one sequentially.
-
 
 ## Session Wrap-up — Card Update Protocol
 
@@ -677,8 +643,7 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc.)
 > when executing that close step.
 
 **Card-last guard**: ①–④-c (incl. ①-b open-PR sweep, ④-c handoff lifecycle) must ALL complete before
-⑤ runs. **Mechanical floor**: `bash scripts/session_close_check.sh` before ⑥ —
-exit 1 (card-last violated / required close artifact missing) blocks the push step until fixed. Any new information produced during ①–④ (new commits from a merged self-PR, model changes,
+⑤ runs. **Mechanical floor**: `scripts/session_close_check.sh` is **wired into `templates/.git-hooks/pre-push`** (2026-07-20) — it runs on *every* push, so it is no longer prose-invoked. Enforcement is surface-matched: an ordinary push **surfaces** ❌ violations (advisory — a branch push is reversible), and the **close push blocks** on them: run step ⑥ as **`FH_SESSION_CLOSE=1 git push`** → exit 1 (card-last violated / required close artifact missing) stops the push until fixed. *Why not block always*: ⑤ card-last is a close-time invariant, while ④ mandates writing `fh_completed_*` **during** the session — an unconditional block would pit the two rules against each other and train `--no-verify`, disarming the Destructive-Op gate in the same hook. Any new information produced during ①–④ (new commits from a merged self-PR, model changes,
 new findings, a carry item flipped to DONE) feeds INTO ⑤ — card is never written mid-sequence and
 then left open for more work to accumulate after it.
 

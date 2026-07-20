@@ -63,6 +63,19 @@ else
   fail=1
 fi
 
+# pre-push stdin integrity — anchors the 2026-07-20 fail-open hole (a stdin-inheriting subprocess
+# above the ref loop drains git's ref list → Destructive-Op gate silently allows a delete/force push).
+# Wired here, not left standalone: an unwired checker is the exact defect this session found in
+# session_close_check.sh — building the test and not running it repeats it one layer up.
+if [ -f scripts/test_prepush_stdin_integrity.sh ]; then
+  if ! bash scripts/test_prepush_stdin_integrity.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  pre-push stdin integrity: scripts/test_prepush_stdin_integrity.sh missing"
+  fail=1
+fi
+
 # Referenced-path existence is a source-tree check. The npm package intentionally
 # ships a narrower runtime surface, so package-mode selfcheck skips this section.
 if [ -d ".claude/rules" ]; then
