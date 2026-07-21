@@ -115,7 +115,7 @@ size instrument* is read. The footprint rows below apply to **both** scopes and 
 | **Pointer-illusion**: a CLAUDE.md "detail/detailed procedure" pointer whose target is itself an always-loaded `.claude/rules/*.md` | S-tier — the split saves zero context (rules/ auto-loads regardless); move the target out of auto-load, keep the pointer |
 | weekly_audit 14~30 days elapsed | S-tier |
 | weekly_audit 30+ days elapsed | M-tier |
-| `tracks/_meta/*.md` context files present but missing both a role/type tag and a version/date stamp | R-tier — taxonomy gap, not urgent |
+| `tracks/_meta/*.md` **reference assets** (excluding dated chronological records — `fh_completed_*` · `fh_signal_*` · `frontier_digest_*` · `session_*` · `weekly_audit_*` · `*_log_*`, whose date lives in the filename by design) missing **both** a role/type tag and a version/date stamp | R-tier — taxonomy gap, not urgent. ⚠️ **Measured FP rate before you act on this**: run against FH itself 2026-07-21 it flagged **99/161 (61%)** un-narrowed and **19/26 (73%)** after narrowing — a row that flags most of a directory is noise, not signal. ⚠️ **No consumer**: grep found **no skill that reads `role`/`type` from these files**. Until one exists this is taxonomy for taxonomy's sake — treat as an inventory observation, never escalate |
 
 **Per-unit ≠ aggregate — do not slide between them.** "Every section earns its scope" (the per-unit
 doctrine test) and "the always-loaded total is affordable" (the budget test) are **different questions, and
@@ -251,6 +251,8 @@ total=0; untagged=0
 while IFS= read -r f; do
   [ -n "$f" ] || continue
   total=$((total + 1))
+  # 연대기 기록물은 파일명에 날짜가 있는 것이 설계다 — taxonomy 대상이 아니다(FP 원인의 78/99)
+  case "$(basename "$f")" in fh_completed_*|fh_signal_*|frontier_digest_*|session_*|weekly_audit_*|*_log_*) continue ;; esac
   grep -qE '^(role|type):|^# ?Role:' "$f" && tag=yes || tag=no
   head -10 "$f" | grep -qE '[0-9]{4}-[0-9]{2}-[0-9]{2}|^version:' && stamp=yes || stamp=no
   if [ "$tag" = no ] || [ "$stamp" = no ]; then
