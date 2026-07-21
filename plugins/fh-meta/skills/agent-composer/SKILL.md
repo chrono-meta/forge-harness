@@ -63,6 +63,50 @@ For each subtask in the composition plan:
 | Code generation | `writes: true` + code tools | `writes: false` or no code tools |
 | Audit-only | `writes: false` (safe) | `writes: true` (risky for audit) |
 
+### Author-Exposure Table — a review pass, not a second executor
+
+The table above picks **who does the subtask**. This one adds a different question at a different
+stage: **what failure is the author structurally exposed to, now that the work is claimed done?**
+It never replaces capability fit and never selects the agent that performs the work — it adds a
+**review pass** before the work is released. A doc-writing subtask scores no "adversarial review"
+fit, yet its author is blind to cold-entry failure, and capability fit never surfaces that.
+
+**Materiality gate — run this pass only when the work product is material.** At least one of:
+public or otherwise irreversible surface · affects users other than the author · carries external
+claims, numbers, or citations · introduces new behavior · touches security, data, deletion, or
+permissions. Internal notes, wording fixes, and one-line edits do **not** trigger it — an
+unbounded trigger just trains the pass into being skipped.
+
+| Failure the author cannot self-detect | Review mechanism | Type |
+|---|---|---|
+| Cold entry — first contact breaks (missing install step, undefined term, no success signal) | `beginner` | agent |
+| Everyday-use friction invisible to the designer | `main-player` | agent |
+| Currency vs the outside field (needs external citation, not assertion) | `expert` | agent |
+| Self-verification only fails in the optimistic direction | `challenger` + `auto-decorrelation` | agent + pipeline |
+| Rebuilding something that already exists | `fact-checker` · `asset-placement-gate` | agent · skill |
+| Numbers/citations living in the artifact without grounding | `phantom-quench` | skill |
+| **Exposure unclear** (material, but no row above fits) | `challenger` | agent — default, not a skip |
+
+The `Type` column matters for the capability-fit checks above: `writes`/tooling scoring applies to
+**agent** rows only; skill and pipeline rows are invoked, not scored.
+
+**Behavioral rule — no silent skip, and "no row applies" is not an exit.** Name the row before the
+agent. If you believe none applies, you must (a) state which rows you considered, (b) give a
+one-line reason each is excluded, and (c) fall through to the **Exposure-unclear** row — the
+default is `challenger`, never nothing. (Origin: 2026-07-21 — four dispatches in one session were
+chosen by orchestrator judgment alone. They were right; that is luck, not a mechanism. In the same
+session one `beginner` dispatch blocked a public-repo merge on 4 findings the author had not seen.)
+
+**Behavioral rule — the lens does not hold the verdict.** A review pass returns `evidence`,
+`risk`, and a `recommended decision` only. It may **not** emit a terminal `block`/`approve`; the
+orchestrator declares the outcome, on its own stated grounds, and approval on an irreversible
+surface stays with the human regardless of what the lens returned.
+
+**Row-growth criterion (anti-case-crafting).** A new row is admissible only if the failure type has
+been **observed more than once**, is **not coverable by an existing row**, and names a *verifiable
+exposure axis* rather than a job title or a favorite tool. If rows keep accreting, that is the
+signal to fold the table into a smaller set of principled axes — not to keep appending.
+
 **Behavioral rule**: A `writes: false` agent (e.g. fact-checker, hub-persona-auditor) must NOT be assigned a task requiring edits. Capability fit scoring catches this statically before dispatch.
 
 **Behavioral rule**: Degraded composition — when any required-weight role is filled with general-purpose fallback, output `⚠️ degraded: [role]` in the composition plan. Do not silently use general-purpose for a specialized role.
