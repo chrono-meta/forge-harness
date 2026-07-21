@@ -27,6 +27,23 @@
 set -uo pipefail
 
 FH="${HUB_DIR:-${CLAUDE_PROJECT_DIR:-$HOME/projects/forge-harness}}"
+
+# ── frontier-digest: 부재를 0으로 읽지 않는다 ────────────────────────────────────
+# 왜: digest 는 launchd 로 매일 09:00 에 돌지만 **31회 중 6회(19%) 산출물 없이 끝났다**
+# (2026-07-21 실측: exit 1 / 재시도 후에도 없음 / Attempt 에서 hang — 세 형태).
+# 그런데 세션 시작은 "있으면 읽는다"만 했다 → **실패가 '오늘은 뉴스 없음'으로 읽혔다.**
+# 부재와 실패는 0이 아니다. 로그가 있는데 산출물이 없으면 그건 부재가 아니라 FAILED 다.
+_FD_TODAY="$FH/tracks/_meta/frontier_digest_$(date +%Y_%m_%d).md"
+_FD_LOG="$FH/tracks/_meta/logs/frontier_digest_$(date +%Y_%m_%d).log"
+if [ -f "$_FD_TODAY" ]; then
+  :
+elif [ -f "$_FD_LOG" ]; then
+  echo "⚠️  [frontier-digest] 오늘 잡은 돌았는데 **산출물이 없다** — 부재가 아니라 실패다."
+  echo "    마지막 로그: $(tail -1 "$_FD_LOG" 2>/dev/null | cut -c1-90)"
+  echo "    → 수동 재실행하거나 실패 원인을 보라. '오늘은 뉴스 없음'으로 읽지 말 것."
+else
+  echo "⚠️  [frontier-digest] 오늘 로그도 산출물도 없다 — 잡이 아예 안 돌았을 수 있다(launchd 확인)."
+fi
 BE="${BE_DIR:-}"   # companion-store path — supplied by the gitignored hook registration; no public default.
 
 # Non-Mode-D / no companion store → silent no-op (this is the majority path for public users).
