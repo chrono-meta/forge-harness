@@ -56,3 +56,6 @@ tracks/**
 # pages; keep out of the public surface. Demo PNGs are local-only by default.
 .playwright-mcp/
 *-playwright-demo.png
+
+# frontier-digest 잡의 스크래치 (잡이 정리하지 않아 루트에 남는다 — 2026-07-21 실측)
+.fd_*
