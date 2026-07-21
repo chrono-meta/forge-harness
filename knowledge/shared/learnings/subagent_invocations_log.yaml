@@ -258,3 +258,21 @@
   target: "3-harness cluster structure + usability (intent-based orchestration, friendliness)"
   outcome: accepted
   note: "All 18 completed. Cross-cutting chorus: routing tables narrower than real daily utterances in ALL three harnesses (FH product-verify / pmh close-chain ambiguity / qasp act1.5+3). Cluster = two opposite halves (qasp discoverable-ungated, pmh gated-undiscoverable). Fixes applied same-session: FH c25aeb9 (pushed) + pmh b866c94 + qasp 2b3499a (local branches). Fixer honesty highlights: qasp fixer verified-then-skipped a false typo claim (케크=jargon); pmh fixer passed pmh's own pre-commit gate properly instead of bypassing. Canonical report: fh-be/tracks/fh/multi_harness_usability_audit_2026-07-17.md. Deferred M3/S8/R4 backlog ranked there."
+
+- date: 2026-07-21
+  agent: fh-meta:beginner
+  model: opus
+  purpose: "Cold-read peer review of forge-wiki README + examples/org-instance before a public-repo merge (PR #3, round 1)"
+  prompt_summary: "Zero-context org evaluator arriving at forge-wiki to consider adoption. Attempt the documented path rather than skim; report where comprehension or execution breaks, file:line. Explicit anti-sycophancy: the report decides the merge."
+  outcome: accepted
+  finding: "HARD 4 / SOFT 10, 'first success reached: NO — stopped at Quick start line 2'. (1) install step absent entirely — `cd your-knowledge-repo && python3 bin/fw.py init` cannot run, fw.py is not there; (2) Quick-start vs org-instance-copy path indistinguishable, and cp silently overwrites where fw init refuses; (3) the example files I authored violate the project's own SPEC.md:24-26 ('unnormalized wikilink fails CI') — a model given to be imitated that must not be imitated; (4) `notes/` in quick start vs the new section table = two vocabularies 20 lines apart. Also caught that `fw init` creates only signals/ while the prose says start with memory/."
+  note: "Merge was blocked on this. All 4 source-verified before acting per [[feedback_challenger_verify_before_act]] — all 4 held. Side-finding from the verification: SPEC declares a CI that does not exist (.github absent), i.e. a declared gate with no machine — logged out of scope for that PR. The lens earned its cost on defect (3): the author cannot see that his own example contradicts a spec he wrote."
+
+- date: 2026-07-21
+  agent: fh-meta:beginner
+  model: opus
+  purpose: "Re-verify the same artifact after fixes (PR #3, round 2) — convergence check, not a fresh review"
+  prompt_summary: "Resumed the same agent with context intact via SendMessage. Instructed to re-walk from line 27 rather than trust the claimed fixes, to check for newly introduced problems (quick start got longer), and to state explicitly whether remaining items are blocking — over-blocking named as a defect too."
+  outcome: accepted
+  finding: "HARD 1 / SOFT 7, 'first success: YES'. Verdict 'GO — after one cp-path fix'. All 4 round-1 HARDs confirmed closed by re-execution, translation propagation verified line-by-line across ko/ja/zh. New HARD found that the fix itself introduced: the cp source stayed relative, so following the doc in order leaves cwd inside the knowledge repo and the copy fails. Refused to over-block — explicitly ruled the Status n=1 framing and undefined 'harness' non-blocking, and marked the clone URL UNCALIBRATED rather than guessing PASS."
+  note: "Two rounds to converge: HARD 4 → 1 → 0. The round-2 HARD was self-inflicted by the round-1 fix, which is the argument for re-verify over single-pass ([[fh-commons:convergence-loop]]). The UNCALIBRATED flag was correct discipline and I closed it by actually running `git clone` — an agent declining to assert what it cannot measure is the behavior [[feedback_judge_robustness_mechanical_anchor]] asks for. Report shape (typed verdict + file:line anchor + counted severities) is why one read was enough to act; recorded as the compression contract candidate in fh_signal_2026-07-21_session.md."
