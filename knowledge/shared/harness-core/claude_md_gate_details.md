@@ -266,6 +266,20 @@ record `drift:none`) — the script flags, it does not *catch*. Origin: 2026-07-
 lockstep-bumped v1.4.56/57 but only an operator question ("코덱스 호환성도 자동?") confirmed AGENTS.md was
 clean — the chain never auto-checked it (`fh_signal_2026-07-13_self-dev` S3).
 
+**Why the check is BIDIRECTIONAL (added 2026-07-19 — relocated here from always-loaded CLAUDE.md
+2026-07-20).** The drift check originally fired in one direction only: *CLAUDE.md/knowledge changed but
+AGENTS.md did not*. That is half a check, and a real miss travelled **exactly the unwired way**: a field
+harness's boundary-crossing behavior rules landed in `AGENTS.md` **only**, leaving Claude Code sessions
+unaware of a rule whose violation destroys a downstream harness's identity. The asymmetry was invisible
+precisely because the wired direction kept passing.
+
+The root reason both directions are required: **the two entry points are read by different runtimes.**
+`CLAUDE.md`/`knowledge/` → Claude Code; `AGENTS.md`/`docs/codex-compat` → Codex, OpenCode, and other
+non-CC runtimes. A rule living in only one of them is **invisible to the other**, and which direction the
+next miss travels is not predictable — so a one-directional check is not "most of the coverage", it is a
+coin flip. `session_close_check.sh` now fires a candidate in both directions (`_ENTRY_CC` / `_ENTRY_CX`);
+the honest-scope caveat above (mechanically *emitted*, judged-*determined*) applies unchanged to both.
+
 ---
 
 ## §Session-Close-Handoff-Lifecycle

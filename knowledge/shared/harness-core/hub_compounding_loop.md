@@ -57,9 +57,16 @@ Session learnings automatically absorbed back into FH ecosystem.
 
 ## Weekly Audit Cycle (Phase 1.5)
 
-1. `./tracks/_audit/_scanner.sh "7 days ago"` — aggregates: commits, tags, stale files, sub-agent invocation log, self-asset references
-2. Copy `_template_weekly.md` → `weekly_audit_YYYY-MM-DD.md`
-3. Propose 3-tier improvements (🟥mandatory / 🟧strong / 🟩recommended)
+1. Gather window data by hand — `git log --since="{window}" --oneline` (+ count), `git tag --sort=-creatordate`, tail of `knowledge/shared/learnings/subagent_invocations_log.yaml`, stale-file spot checks.
+   (**No `_scanner.sh` exists** — a prior reference here was a phantom; the automation path is Phase 2 harvest-loop, a standalone scanner script is deliberately not built.)
+2. `bash scripts/below_floor_scan.sh` — below-floor marker re-run queue (exit 1 = pending floor-tier re-validations, treat as S-tier)
+3. Write `tracks/_audit/weekly_audit_YYYY-MM-DD.md` mirroring the previous audit file's format — frontmatter + activity table + 🟥🟧🟩 + pattern table. (**No `_template_weekly.md` exists**; the previous audit file is the template.)
+4. Propose 3-tier improvements (🟥mandatory / 🟧strong / 🟩recommended)
+
+> **Why this correction is here (2026-07-20)**: the same phantom pair (`_scanner.sh` · `_template_weekly.md`)
+> was fixed in `knowledge/shared/rules/operations.md` on 2026-06-11, but **this file — its sibling
+> describing the same Phase 1.5 — was not updated**, so the phantom survived in the document a reader
+> is more likely to open for the loop itself. Half-applied fixes leave the weaker copy authoritative.
 
 **Phase 2 (skill-ized)**: `/harvest-loop` automates the above (manual ~10 min → auto ~3 min target).
 

@@ -37,7 +37,7 @@ core invariants never melt). Full doctrine: `knowledge/shared/harness-core/harne
 | **① Control Tower** | Coordinates all connected projects and **drives harness-ification across them** — decides *which* projects to harness and *when*, propagates harness assets to each, and feeds their synced learnings into the hub's compounding loop. The *how* (rules · gates · 6-axis) is executed via the Core Axis. Command HQ, not a passive registry. | `knowledge/shared/rules/auto_project_mapping.md` (mapping + **Full-Harness Mode**) · `harvest-loop` (compounding loop) · `templates/` (project-harness bundle) · `CATALOG.md` |
 | **② Frontier → Org Propagation** | Proactively applies global AI/harness frontier thinking and **translates it for your organization**. | `knowledge/shared/harness-core/harness_frontier_diagnosis_*.md` · `knowledge/{your-org}/` |
 | **③ AI Collaboration Guide** | Accumulates and distributes best practices for token efficiency and dialogue methodology — "how to ask, delegate, and record". | `CHEATSHEET.md` · `knowledge/shared/dialogue/ai_dialogue_playbook.md` · `MEMORY.md` intent-based + associative recall (`knowledge/shared/dialogue/memory_intent_recall.md`) |
-| **Core Axis** | **Harness Engineering (How)** — the methodology and practice axis that realizes the three layers above. The 6-axis framework is the operating unit. **A harness is a means, not an end** — Field harness: "simpler over time" (complexity = warning signal). Meta-harness: *optimize*, not necessarily simplify — complexity earns its scope; red flags are orphaned, redundant, and decorative units, not complexity itself. | `harness_6axis_framework.md` · `hub_compounding_loop.md` · `claude_code_runtime_flow.md` · `.claude/agents/` (sub-agents) |
+| **Core Axis** | **Harness Engineering (How)** — the methodology and practice axis that realizes the three layers above. The 6-axis framework is the operating unit. **A harness is a means, not an end** — Field harness: "simpler over time" (complexity = warning signal). Meta-harness: *optimize*, not necessarily simplify — complexity earns its scope; red flags are orphaned, redundant, and decorative units, not complexity itself. | `harness_6axis_framework.md` · `hub_compounding_loop.md` · `claude_code_runtime_flow.md` · `plugins/*/agents/` (sub-agents) |
 
 ## Core Reference Documents (Consult First)
 
@@ -101,6 +101,41 @@ onto their single hardest sub-mechanism, and a failure from a **non-harness** ru
 metric — each read a live-but-incomplete thing as zero, each caught by the operator, not self-caught.
 Detail: `[[feedback_reinvention_reflex_normalization_counterweight]]`.)
 
+## Instrument Calibration — before you trust a number, prove the instrument works *here*
+
+An instrument (a scan, a grep, a checker, a diagnostic row, a metric) is a claim about the world only
+after it is shown to work **on this target**. The recurring defect is not "measured the wrong thing" —
+it is **never asking whether this instrument is valid for this corpus at all**.
+
+**Two mandatory steps — both cheap, neither skippable:**
+1. **Calibrate on a known pair** — run the instrument against **one known-positive and one
+   known-negative** before trusting any of its output. A scan that cannot separate a case you already
+   know the answer to is not measuring; it is generating.
+2. **Hand-verify one sample before publishing a number** — open the single case the instrument is most
+   confident about and confirm it by eye. Publishing first and correcting later is not symmetric: a
+   number, once written into a report, a card, and a signal, must then be corrected in **all three**.
+   **"Publish" = the first time the number is stated in ANY form — including saying it to the operator
+   in conversation** — not only writing it to a file. Saying "roughly 34 broken refs, I'll verify when
+   I write it up" is *not* compliance: the unverified figure is already anchored in the reader's head
+   and in the transcript, which is the propagation this rule exists to stop. (Closed 2026-07-20 by a
+   known-pair sim that found this loophole; the session that wrote the rule had itself leaked its bad
+   "70%" into conversation before any file.)
+
+**Degrade direction**: calibration impossible → the output ships **labeled `UNCALIBRATED`**, never as a
+bare number, and never as the basis of a tier/verdict. A missing measurement is not a zero
+(`not found` ≠ `0` — a file that does not exist is not an empty file).
+
+**Why resident**: the trigger is *intent* ("I am about to trust / publish this output"), not a file, and
+**no hook can catch it** — there is no mechanical backstop by nature, so salience is the only layer.
+(Measured 2026-07-20, one session, 3×: an always-loaded footprint scan that omitted 61% of the surface ·
+an index/file **size ratio** used as a proxy for content coverage · an **ASCII-token scanner run over a
+Korean corpus** → ~96% false positives, whose "77 items / 70%" was published into three records before a
+single hand-check collapsed it to **3**. Each was caught by looking at one real case.)
+
+> **Detail**: See `knowledge/shared/harness-core/measurement-integrity-checklist.md §Instrument-Calibration`
+> — the known-pair procedure, the language/encoding mismatch class, and the publish-order rule — read
+> before running a scan whose count will be reported.
+
 ## New Project Onboarding
 
 > Detailed procedure: `knowledge/shared/rules/auto_project_mapping.md` (5-step mapping + §6 Full-Harness Mode)
@@ -110,6 +145,8 @@ Detail: `[[feedback_reinvention_reflex_normalization_counterweight]]`.)
 3. Reference `ai_dialogue_playbook.md` + `claude_code_runtime_flow.md` at top of project CLAUDE.md (Layer ③)
 
 **Light vs full**: steps 1–3 register lightly. For project-local harness assets (session rules + context filter + env card), run **Full-Harness Mode** (`auto_project_mapping.md §6`) — approval-gated, never overwrites. FH self-gate is **not** installed into projects.
+
+**Trigger routing**: "connect a project" · "link to hub" · "map this project" · "scan parent directory and connect" → the mapping protocol above. "harness-ify this project" · "full harness setup" · "프로젝트 하네스화" (or accepting the post-mapping promotion prompt) → §6 Full-Harness Mode.
 
 ## Harness Drift Prevention Principles
 
@@ -139,10 +176,36 @@ The forge-harness hub has a dual identity: **(a) a seed for others** + **(b) you
 - **Implementation:** Skills such as `harvest-loop` follow this principle — they generate skill drafts, prepare commits automatically, and propose PR creation. However, the final decision to submit a PR must always require the user's explicit approval (`y`). This ensures Human-in-the-loop while maximizing AI contribution.
 
 **PR Creation Principle:**
-- AI may commit and push automatically (when changes are approved)
+- AI may commit and push automatically (when changes are approved) — **to a feature branch, never to the integration branch**
 - **PR creation requires explicit user request** ("create PR", "PR 올려줘", "pull request")
 - **Reason:** Prevents PR fragmentation — logical units should be grouped into meaningful PRs, not atomized per commit
-- Default workflow: commit → push → wait for explicit PR request
+- Default workflow: branch → commit → push branch → wait for explicit PR request
+
+**Integration branch is PR-only** (operator decision 2026-07-20). Never `git push origin main`
+directly. Normal path: `git switch -c <branch>` → push the branch → `gh pr create` → after review
+`gh pr merge --squash --delete-branch --admin` (self-approval is impossible when you authored the PR,
+so `--admin` after a completed review is the normal route, not a shortcut).
+
+**Mechanically enforced** by `templates/.git-hooks/pre-push`, which blocks a direct push to
+`main`/`master` unless the explicit `MAIN_PUSH_OK=1` acknowledgment is set (same channel shape as
+`DESTRUCTIVE_OP_OK` / `PUBLIC_SURFACE_OK`). Known-pair calibrated: direct-to-main blocks,
+feature-branch push passes untouched, override honored — over-blocking would just train the override
+into muscle memory and disarm it.
+
+> **Two layers, and which one is the floor**: the **hard floor is server-side** — this repo now runs
+> `enforce_admins: true` with `required_approving_review_count: 0` (set 2026-07-20; the count must be
+> `0`, because enabling `enforce_admins` while it is `1` locks a solo operator out of merging their
+> own PRs — self-approval is impossible). The hook is the **shift-left layer**: it fails at push time
+> and prints the actual remedy, and it keeps holding if the server setting is ever relaxed. It is
+> deliberately not the floor — a client-side hook is bypassable with `--no-verify`.
+> *Origin*: before that change the server had `enforce_admins: false`, so an admin push *satisfied*
+> the rule and merely printed `Bypassed rule violations` — a notice, not a block. A rule that
+> announces its own bypass is not a floor.
+> ⚠️ **Unresolved residual**: `allow_force_pushes` on `main` is still `true`. Two documented API
+> attempts to set it `false` were accepted without error and did **not** persist (verified by
+> independent GET, not by the write response). Force/non-ff pushes are blocked locally by this same
+> hook, so the honest-model case is covered — but the **server-side** history-rewrite surface on
+> `main` remains open. Re-check before relying on it.
 
 ## Permission-Denial Guidance (When Auto-Mode Blocks an Action)
 
@@ -165,7 +228,7 @@ Simplification guard: trivial denials with one obvious fix → state block + sin
 
 **4-step summary**: ① Auto-read CLAUDE.md + CATALOG + session card + registry scan + UAP (`tracks/_meta/user_adaptation_profile.md`, if present — apply user-tuned defaults: preferred tier, suppressed proposals, muted nags; see §Operational Adaptation Loop) **+ Mode D companion-store load — if a companion store is configured (your `CLAUDE.local.md` binding), pull it and read its index (its TOC) before its other files, then check freshness against the card (`modes_and_value.md §Session-start freshness`); this load is part of the auto-read, not a step the operator should have to request** → ② One-line proposal (new user / exploratory / returning branches) → ③ 5-skill cascade (plugin-recommender → synergy → .claudeignore → model → verify) → ④ Approval + setup
 
-**Greeting branch + door skeleton (summary-level — applies even if the detail file read is skipped)**: the branch test is **mechanical local state — session files under `tracks/`** — never git log / CATALOG residue (a fresh clone carries full history but zero session files: it is a NEW install — origin: a fresh-clone sonnet sim rendered the returning menu off commit messages, `fh_signal_2026-06-11` FP8). Every variant opens with **🐿️ then an identity-revealing welcome line on the SAME line** (🐿️ is no longer alone on its own line), followed by the menu — one salience unit, not a separate rule. (Put a space after 🐿️; the exact count is **not significant** — a markdown renderer collapses multiple mid-line spaces to one — so the verifiable invariant is *same-line*, NOT a space count.) Welcome line by branch: new / exploratory = "Welcome to FH." · returning = "Welcome back to FH." · operator (FH-dev state) = "The FH operator — good to see you." (rendered in the user's language **as a plain, natural translation of the pinned phrase — not an invented coinage** (cf. the operator-caught `안 조종실…` mistranslation); the lid/onboarding-smoothness matters even though it is not the substance).
+**Greeting branch + door skeleton (summary-level — applies even if the detail file read is skipped)**: the branch test is **mechanical local state — session files under `tracks/`** — never git log / CATALOG residue (a fresh clone carries full history but zero session files: it is a NEW install). Every variant opens with **🐿️ then an identity-revealing welcome line on the SAME line**, followed by the menu — one salience unit, not a separate rule. The verifiable invariant is *same-line*, **not** a space count. Welcome line by branch: new / exploratory = "Welcome to FH." · returning = "Welcome back to FH." · operator (FH-dev state) = "The FH operator — good to see you." — rendered in the user's language as a **plain, natural translation of the pinned phrase, never an invented coinage**. (Why each of these reads as it does — the fresh-clone FP, the space-count retraction, the mistranslation: `fh_detail_protocols.md §Onboarding-Provenance`.)
 
 - **New user** (no session files AND no mapped project tracks under `tracks/` — fresh clone/install; **any underscore-prefixed dir** (`tracks/_*` — `_meta`/`_audit`/`_contrib`/`_chamber`…) doesn't count, general rule not a closed list — `_chamber` holds incubation chamber runs, never mapped projects): 2-door starter, never the returning menu —
 
@@ -185,150 +248,30 @@ Compose session-card candidates **into door ③ (field) and the 🔧 door (FH-de
 
 **Identity marker**: every greeting response (Step ②) opens with 🐿️ then an identity-revealing welcome line **on the same line** (a space after 🐿️; exact count not significant — the renderer collapses it — the invariant is *same-line*, not 🐿️ alone) — new / exploratory = "Welcome to FH." · returning = "Welcome back to FH." · operator (FH-dev state) = "The FH operator — good to see you." It is embedded in all skeletons above (do not strip it when composing doors); the exploratory branch template (`fh_detail_protocols.md` Step 2) uses the "Welcome to FH." line.
 
-**Guards**: explicit task-entry utterance → skip onboarding **menu** (the door skeleton / greeting) — but this **never skips the Mode D companion-store freshness load** (pull + INDEX read + card-vs-commit reconcile); that is a data-load, not the menu, and it fires even when the first message is a task (measured miss 2026-07-05: task-first entry skipped the companion-store pull → stale memory → wrong recommendations; now hook-backed via `scripts/fh_session_load.sh`, see `modes_and_value.md §Session-start freshness`) · once per session · code/debug requests → start working directly · project routing is a suggestion, mention at most once
+**Guards**: explicit task-entry utterance → skip onboarding **menu** (the door skeleton / greeting) — but this **never skips the Mode D companion-store freshness load** (pull + INDEX read + card-vs-commit reconcile); that is a data-load, not the menu, and it fires even when the first message is a task — hook-backed via `scripts/fh_session_load.sh` (measured miss + mechanics: `fh_detail_protocols.md §Onboarding-Provenance` · `modes_and_value.md §Session-start freshness`) · once per session · code/debug requests → start working directly · project routing is a suggestion, mention at most once
 **Metadata-is-not-intent guard**: the trigger is the user's **typed message only**. Session metadata — branch name (auto-derived from the first message, e.g. `claude/korean-greeting-*`), repo name, file paths — is **never** a task spec and never suppresses or redirects the greeting trigger. A bare greeting fires onboarding even when the branch name looks like a feature request; if the only "task" signal lives in metadata and not in what the user typed, treat the message as a greeting and run the greeting branch + door skeleton above.
 
 ## New Skill Creation Pre-Commit Gate
 
-All 6 items below must pass before committing a new SKILL.md. If any fails, fix and re-commit.
+Every new `SKILL.md` must clear a **6-item bar** (role-duplication via `/asset-placement-gate` · description diet · **Done When** · check-class · natural-language triggers · independently executable) before commit. A **routing/gate skill** additionally owes a one-time `Step 0.5` trigger-probe, re-probed whenever its trigger phrases change.
 
-| Item | Criterion |
-|---|---|
-| **Role duplication check** | Pass `/asset-placement-gate` — no overlap with existing role clusters, **platform built-ins (Tier 0), or `claude-plugins-official` (Tier 1 official)**. Reinventing an official capability requires explicit justification in the SKILL.md (no-reinvention rule — FH builds only what adds governance) |
-| **Description diet** | Plain text / 0 self-marketing expressions / 0 emphasis words (⭐, "critical", "groundbreaking") |
-| **Done When defined** | At least 1 explicit completion condition |
-| **Check-class declared** | Each Done When condition states its check class — mandatory-pass / measured / judged (`harness_6axis_framework.md` §Axis 5). Any judged condition names its adversarial pairing — no judge-only path |
-| **Natural language triggers** | At least 3 examples that work without internal vocabulary. This is a **form** check (judged — do the examples avoid internal jargon). For a load-bearing gate/router skill it can be upgraded **judged → measured** with steel-quench's `Step 0.5 — Trigger-Accuracy Probe` (a dispatched should-fire / near-miss-should-not-fire fire-count), turning "do these triggers collide?" from a guess into a number. Optional for ordinary skills; recommended when the skill is a routing/gate surface |
-| **Independently executable** | Confirmed to work without other FH skills (or dependencies are explicitly documented) |
+**Consequence (kept resident on purpose)**: a skill shipped **without a `Done When` definition automatically qualifies as harness-doctor L2 M-tier** — the bar has teeth, and those teeth stay in the always-loaded layer even though the bar's detail does not. Each `Done When` condition must also declare its check class (mandatory-pass / measured / judged); a **judged** condition names its adversarial pairing — no judge-only path.
 
-Skills without a Done When definition automatically qualify as harness-doctor L2 M-tier.
-Check-class declaration applies to **new** skills; existing skills backfill opportunistically
-(when next edited), not retroactively. **Obligation (always-loaded):** a **routing/gate skill** (primary
-output = a dispatch decision or pass/block verdict) owes a **one-time `Step 0.5` baseline trigger-probe**
-at the next `harness-doctor` run **and a re-probe whenever its trigger phrases change** — not optional for
-that skill class, and not a retroactive sweep of all routers.
-
-> **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §New-Skill-Backfill` — the
-> probe mechanics (fire-count procedure), the baseline-floor rationale, and the mechanical "routing/gate
-> skill" test — read when editing a router/gate skill.
+> **정본**: `.claude/rules/fh_4axis_gate.md §New Skill Creation Pre-Commit Gate` — the full 6-item table, the judged→measured upgrade path, and the routing/gate test. It is `paths:`-scoped to `plugins/**/SKILL.md`, so it **auto-loads when you read a SKILL.md**. **Creating a skill from scratch reads no SKILL.md — go read it explicitly.** Mechanical floor either way: `templates/.git-hooks/pre-commit` runs the full 4-axis gate on any `SKILL.md` path plus a new-skill count-consistency slice.
 
 ---
 
 ## FH Improvement 4-Axis Auto-Gate (Self-Verification Orchestrator)
 
-**Whenever the AI modifies FH assets** (SKILL.md · `.claude/rules/*.md` · `knowledge/shared/rules/*.md` (relocated protocol rules — always full-gate, NOT under the knowledge carve-out) · `templates/` · `CLAUDE.md` · substantive `knowledge/` docs · substantive `docs/*.md` · `AGENTS.md` — see Substantive carve-out below),
-the 4-axis verification chain runs **automatically before the first commit** of that session.
-No user request is needed — this is a mandatory autonomous step, not a proposal.
+**FH 자산을 수정하면**(SKILL.md · `.claude/rules/*.md` · `knowledge/shared/rules/*.md` · `templates/` · `CLAUDE.md` · substantive `knowledge/`·`docs/*.md` · `AGENTS.md`) **4축 검증 체인이 그 세션 첫 커밋 전에 자동 실행된다.** 사용자 요청 불요 — 제안이 아니라 의무 단계다.
 
-**Commit gate**: `git commit` on FH asset changes is hard-blocked by `templates/.git-hooks/pre-commit` until all required axes PASS. Hook installation (one-time): `git config core.hooksPath templates/.git-hooks && chmod +x templates/.git-hooks/pre-commit templates/.git-hooks/pre-push` (the same `core.hooksPath` also activates the **pre-push** Destructive-Op gate — see that section below).
+**기계 floor**: `git commit` 은 `templates/.git-hooks/pre-commit` 이 **하드 차단**한다. 축이 전부 PASS 할 때까지 커밋 자체가 안 된다. 아래 상세가 로드되지 않아도 **훅이 막는다** — 이 산문은 훅 위의 살리언스 층이지 유일 floor 가 아니다.
 
-```
-FH asset modified → Axis 1 (templates/regression_guard.sh --pr {BRANCH})
-  → Axis 2 (/steel-quench) → Axis 3 (/phantom-quench)
-  → marker: tracks/_meta/.axes_23_passed_{branch}_{date}.marker
-     (required fields: axis2-engine / axis2-model / floor-status / axis2-evidence;
-      hook validates mechanically: below-floor blocks without below-floor-ack, and axis2-evidence
-      must be non-vacuous — a recorded verdict/count, not "it ran". Marker scope is form +
-      non-vacuity + auditability, NOT provenance — a fabricated marker is the weekly-audit + operator
-      residual by design, do NOT fake-close it.
-      → **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Marker-Irreducibility`
-        — why the below-floor-ack is structurally irreducible for an autonomous runner + the
-        operator-present GPG hard-close option — read when auditing or attempting to harden the marker.)
-  → Axis 4 (/edit-manifest RECORD, today's entry in edit_manifest.yaml)
-  → All 4 PASS → git commit allowed   |   Any FAIL → fix inline, re-run
-```
+> **상세 정본**: `.claude/rules/fh_4axis_gate.md` — 4축 정의·마커 필수 필드·경량 예외·substantive carve-out·target-tier sim 게이트·Mode D 모델 공지·cross-family 보완. **`paths:` 로 FH 자산 경로에 스코핑돼 있어 그 파일들을 *읽을 때* 자동 로드된다** (공식 트리거는 read — `code.claude.com/docs/en/memory.md` §Path-specific rules).
+> (2026-07-20 분리. **파일 char 실측**: 이 절 자체가 76,706자 중 **10,331자(13.5%)**로 단일 최대였다. 그 분리 + 같은 세션의 중복 3건 제거 + New-Skill 게이트 편입까지 **합산**해 파일은 **76,706 → 67,611 (순감 9,095자, 11.9%)** — 합산치이지 이 절 하나의 성과가 아니다 — 이건 파일 크기지 `/context` 상주 실측이 아니다(계기≠대상, [[feedback_resident_memory_measured_fresh_toplevel]]: 상주는 톱레벨 새 세션 `/context` 로만 잰다 — 미측정). 트리거가 *파일*이고 *기계 백스톱*이 있어 1순위 후보였다. 같은 이유로 **비가역 게이트 3종은 이동 불가** — 의도 트리거라 경로 스코핑하면 fail-open 이 된다.)
+> **의무**: 이 요약에는 **축 이름·마커 필수 필드·경량 예외 기준이 없다.** 4축을 실제로 실행하거나 마커를 쓰기 전에 위 파일을 **반드시 직접 읽어라** — 안 읽고 마커를 쓰면 필드를 지어내게 된다(2026-07-20 Sonnet sim 이 스스로 지목한 실패 모드).
+> **잔여(살리언스 층에 한함, 훅은 무관)**: ⓐ 트리거가 read 라서 **신규 SKILL.md 를 Write 로 새로 만드는** 경로는 규칙이 안 실린다 ⓑ `CLAUDE.md` 는 glob 에서 의도적 제외라 CLAUDE.md-only 세션은 이 요약 + 훅만 본다. **두 경로에선 위 "반드시 읽어라"가 유일한 살리언스 층이다** — 단, 둘 다 pre-commit 훅이 여전히 커밋을 하드 차단한다.
 
-**Why automatic**: Each axis catches a different defect class; asking separately means slip-through. **Why hook**: CLAUDE.md rules are advisory — the hook physically blocks commit until marker + manifest exist. **Scope**: active from the moment any FH file is modified in the session.
-
-**Lightweight exception** (Axis 1 + 4 only, skip Axes 2–3): Sessions where **zero SKILL.md / rules / templates files changed** (e.g., CATALOG.md entry, tracks/ update). The hook detects this automatically — no Axes 2+3 marker required for light-only commits. Judgment is file-based, not subjective.
-
-**Substantive carve-out — `knowledge/` · `docs/*.md` · `AGENTS.md`** (Axes 2–3 DO run, despite these not being SKILL/rules/templates): a change to any of these is **not** light if its diff adds a fenced code block (```` ``` ````) or a citation/version claim (`arXiv:` / `DOI` / `http` / a versioned dependency like `x.y.z`). Executable patterns and factual claims need phantom-detection + adversarial review *wherever they live* — `knowledge/` Implementation-Patterns sections carry runnable commands, `docs/` holds published guides, and `AGENTS.md` is the Codex-user entry point, so a phantom skill name or wrong version there is an external-facing error the gate must catch. Prose-only edits (typos, rewording, link fixes) stay light. Detection is mechanical: `git diff` adds a ```` ``` ```` fence or a citation token → run Axes 2–3.
-
-**Unavailable axis**: If steel-quench or phantom-quench are not installed, note `Axis N: skipped (skill unavailable)` and proceed. Axis 1 PASS alone is sufficient to unblock a PR when Axes 2–3 are unavailable. Axis 4 (edit-manifest): if the skill is not installed, substitute a manual one-line prediction appended to `tracks/_meta/edit_manifest.yaml` — the record is what matters, not the skill.
-
-**Target-tier sim gate (Mode D supplement — all change classes: fix, improvement, new asset)**: the
-discriminator is not the change class but the **enforcement column**: does the asset's effect depend on
-a session *following prose instructions* (salience-dependent — rules, onboarding scaffolds, SKILL.md
-trigger behavior), or is it mechanically enforced (hooks, scripts — tier-independent, normal 4-axis
-path, exempt)? For salience-dependent changes, verify with a **blind simulation in an isolated Agent**
-(no main-session reasoning inherited — isolation is the FH mechanism that keeps the sim honest) with
-`model:` pinned to the tier the change must survive on — **default sim tier = Sonnet** (the base
-floor every FH behavior must survive on, `sonnet_floor_doctrine.md`). Application strength scales
-with context:
-- **Mode D (FH self-dev) — near-mandatory**: any salience-dependent FH asset change runs the sim
-  before Done, at Sonnet by default. Mandatory without exception when the change fixes a behavioral
-  miss *observed* on a specific tier — sim at that same tier, even below Sonnet (the verification
-  tier must match the failure tier; fixing on a stronger model and verifying by review alone leaves
-  "does it fire on the weaker tier?" unanswered).
-- **Field harness assets (templates/ propagated via Full-Harness Mode) — conditional**: sim at the
-  default field tier (Sonnet) when the behavior is load-bearing (gates, onboarding, destructive/publish
-  paths); skip with a one-line note for low-stakes prose.
-- **Light mapping (tracks/ registration, CATALOG entries) — exempt**, alongside mechanical changes
-  (hook logic, scripts, file moves — tier-independent by construction).
-
-**Autonomy floor**: the skip/run *judgment* on conditional cases is itself depth-sensitive — trust it
-only at opus-tier or above. A below-floor orchestrator does not silently skip — and does not stall:
-its default is to RUN the sim (the conservative branch needs no trust); it asks the operator only when
-no runnable path exists (run-first, ask-last — sonnet_floor_doctrine.md §Autonomy at Sonnet).
-
-Record sim results in the Axes 2–3 marker + sub-agent invocation log.
-
-> **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Sim-Dispatch-Fallback` — the
-> headless `claude -p --model` fallback when in-session model-pin is unavailable, the saturation-disguise
-> retry (compact-then-retry once), and the credit-pool caveat — read when a model-pinned dispatch fails.
-
-**Measurement-integrity pre-flight**: when the sim/dispatch is a *cross-model measurement* (pinned to a
-tier, comparing model behaviors, or feeding a published claim), **the instrument must be verified before
-the measurement is trusted**.
-
-> **Detail**: See `knowledge/shared/harness-core/measurement-integrity-checklist.md` — pin the display
-> name not a slug (silent fallback to a weaker model is a measured failure) · reps ≥ 3 on any
-> borderline/contested verdict (single draw = noise) · use a discriminating identity probe (a generic
-> "OK" proves nothing about which model answered) — read **before** running any cross-model measurement.
-
-**Floor-tier canary (optional pre-screen — token-free, *below* the Sonnet sim)**: a local model ≤ Sonnet
-can blind-pre-screen a salience-dependent edit before the Sonnet dispatch is spent. **Canary, NOT gate**:
-a PASS adds cheap floor confidence and you still run the Sonnet sim; a FAIL never blocks alone. The
-terminal verdict stays with the **Sonnet-or-higher governor bound to a mechanical anchor** — **no
-judge-only path**, no weak-local-judge regression of the judge-robustness principle.
-
-> **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Floor-Tier-Canary` — the local
-> model/panel options, the blind-probe procedure, dogfood evidence, and the FAIL-triage (real salience gap
-> vs floor-model quirk) — read when running a floor canary.
-
-**Axis ownership** (each skill is already complete — orchestrator only coordinates):
-
-| Axis | Skill | What it catches |
-|---|---|---|
-| Backward | `templates/regression_guard.sh` | Critical section loss, broken refs, syntax errors, line reduction |
-| Adversarial | `steel-quench` | Trigger phrase collisions, design attack surface, over-engineered steps |
-| Forward | `phantom-quench` | Phantom references, paths that don't exist, stale external links |
-| Record | `edit-manifest` RECORD | Logs predicted impact — closes the predict-verify loop for future harvest-loop |
-
-**Cross-family complement (Axis 2, autonomous when consented)**: `steel-quench` dispatches in-session at the
-session tier — **same family** as the governor, so it shares the governor's blind spots. For a **load-bearing**
-change (gates · irreversible-surface code · doctrine), `auto-decorrelation` is the standing cross-family
-verifier: it recruits ≥1 **different-family** auditor when the sidecar panel is discoverable, and degrades
-honestly to single-session when none is. **Autonomous once the operator has consented** (one-time, in the
-UAP — `[[user_adaptation_profile]]`); the governor keeps the terminal verdict and **source-grounds** every
-sidecar finding before acting on it (`[[feedback_judge_robustness_mechanical_anchor]]`).
-
-> **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Cross-Family-Complement` — the
-> UAP sidecar mapping (which family for which task class) and the 2026-06-27 dogfood evidence — read when
-> recruiting or configuring a cross-family auditor.
-
-### Mode D Model Notice (fires once, at the same trigger as this gate)
-
-When FH self-dev begins (an FH asset is about to change), check the **session model** and surface **one
-line**, then proceed — never block, **never switch the model** (human override inviolable): opus-tier+ →
-no notice · below-opus → **dispatch-first recommend** (keep Sonnet + route depth turns to sidecar/opus
-dispatch; `/model opus` pin = secondary — `sonnet_floor_doctrine.md`) · unknown → static fallback recommend. Once per session;
-field-project (non-FH-asset) sessions never see it. Whether a session actually *escalates* (not just this
-advisory) is governed separately by `capability_escalation_consent.md`.
-
-> **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Mode-D-Model-Notice` — the
-> exact 3-branch wording (한글), the full guards, and the capability-escalation-consent cross-ref — read
-> when surfacing the notice.
 
 ## Field-Harness Load-Bearing Change Gate (cross-family, pre-merge)
 
@@ -369,66 +312,53 @@ pipeline**, not an afterthought, and a below-floor orchestrator RUNS the review 
 
 ## Field-Harness Diagnostic — "진단해줘 / 개선해줘" on a mapped project (compose → rank → HITL)
 
-The gate above fires on a **specific field code change**. This is its **on-demand pull sibling**: when
-the operator, working in a mapped project, asks to *diagnose* or *improve* the harness itself ("진단해줘",
-"개선해줘", "check this project"), don't hand-pick one skill — **compose the checks FH already has**
-(no-reinvention: the diagnostic only *routes and ranks* existing checks) across **six lenses** —
-confidentiality/leak (`/public-surface-audit` incl. Step 3c ignore-verification) · split integrity (`/phantom-quench` Step 2.7) ·
-token/salience (`/context-doctor` · `/salience-splitter`) · structure (`/harness-doctor` L1–L4) ·
-verdict/gate degrade (`scripts/degrade_direction_scan.sh`) · loop-readiness (5-question lens —
-`loop_engineering.md`) — into **one ranked `M`/`S`/`R` list** (same tiering as harness-doctor; each
-item: *lens · file:line · one-line fix*). **Then HITL per item — nothing is auto-fixed**: the diagnostic's job is the
-intelligent list, the human's job is the *go*; an approved fix routes to the owning skill's normal
-path (and, if load-bearing field code, through the Load-Bearing Change Gate above).
+The **on-demand pull sibling** of the gate above: a *project-level* "diagnose / improve this harness" ask
+composes the checks FH **already has** across **six lenses** — leak (`/public-surface-audit`, incl. **Step 3c ignore-verification** — a file believed gitignored but actually tracked is the leak this sub-step exists to catch) · split
+integrity (`/phantom-quench` **Step 2.7**) · token/salience (`/context-doctor` · `/salience-splitter`) · structure
+(`/harness-doctor`) · verdict degrade (`scripts/degrade_direction_scan.sh`) · loop-readiness
+(`loop_engineering.md`) — into **one ranked `M`/`S`/`R` list**. No-reinvention: it only routes and ranks.
 
-**Guards**: (a) **project-level** "진단/개선" ask only (single-file asks go straight to the skill);
-(b) **once per ask**; (c) **company residency** — leak lenses run locally, sanitize before
-cross-family dispatch, company-sensitive findings are *surfaced* for operator decision, never
-auto-fixed; (d) **autonomy floor** — compose/rank trusted at opus-tier+; below-floor, run the
-individual checks and present raw rather than silently skipping a lens. Scale to the ask: a quick
-"뭐 고칠 거 있어?" = cheap mechanical lenses (leak · split · token); "제대로 진단해줘" = all six +
-harness-doctor depth.
+**Resident guards (do not defer these to the detail file)**: **nothing is auto-fixed** — the list is the
+skill's job, the *go* is the human's; and **company residency (absolute)** — **raw company source, secrets,
+hostnames, internal repo/asset names, stack traces, and unredacted findings never leave the local machine**:
+not to an external **or same-family** cloud model, not through a browser/API tool, not into a log, comment,
+or paste. Leak lenses run **locally**; anything dispatched outward is a **sanitized summary only**.
+Company-sensitive findings are *surfaced* for operator decision, never auto-fixed. Any exception needs
+**explicit operator approval + a gitignored audit note**. (A leak does not un-happen — absolute, not
+deferrable, and "is this sanitized enough?" is not a call the session makes alone.) **Autonomy floor**:
+compose/rank is trusted at opus-tier+; below-floor, run the individual checks and present raw —
+**never silently skip a lens**.
 
-> **Detail**: See `knowledge/shared/harness-core/field_harness_diagnostic.md` — the full lens table
-> (incl. loop-readiness mechanics + its adversarial pairing), the 2026-07-08 dogfood examples, and
-> guard rationale — read when actually running the diagnostic.
+> **Detail**: See `knowledge/shared/harness-core/field_harness_diagnostic.md` — the full lens table (incl.
+> loop-readiness mechanics + adversarial pairing), the remaining guards (project-level-only · once-per-ask ·
+> autonomy floor · how to scale to the size of the ask), and the 2026-07-08 dogfood examples.
+> **Read it before running the diagnostic** — this summary names the lenses, not how to run them.
 
 ## Onboarding / Acceleration Autopilot — "새 프로젝트 · 하네스 작성 · 가속화" (discover → compose → rank → install-HITL)
 
-The **install-direction twin of the Field-Harness Diagnostic**: same `compose → rank → HITL` engine, but
-it decides *what to install/wire* instead of *what to fix*. When the operator enters an onboarding /
-acceleration door (returning-menu ①②③: "새 프로젝트", "하네스 작성/작성해줘", "이 프로젝트 가속화",
-"harness-ify", "accelerate this project"), don't hand-run one skill:
+The **install-direction twin** of the Diagnostic above — same `compose → rank → HITL` engine, deciding
+what to *install/wire* rather than what to *fix*. Four phases: **Phase 0** state audit + branch
+(*new-build* / *extend-existing* — found→extend, never fork / *maintain* → use the Diagnostic instead) →
+**innovator-centered recommend** → **ranked `M`/`S`/`R` install plan** (an official/built-in that covers
+the need outranks a net-new scaffold) → **install**.
 
-1. **Phase 0 — State Audit + branch**: auto-discover existing `.claude/`, `CLAUDE.md`, mapped
-   `tracks/`, sibling repos, `LOCAL_SKILL_REGISTRY` → branch *new-build* / *extend-existing*
-   (found→extend, never fork) / *maintain* (→ Field-Harness Diagnostic instead). New-build that is
-   uncertain · exploratory · failure-expensive → **flag simulate-first**: a one-line HITL
-   recommendation to run the chamber (`scripts/chamber_run.sh`), then Full-Harness Mode §6 for the
-   actual onboarding — **never presented as a push-button autonomous emit** (EMIT has never fired;
-   the chamber to date *screens*, it has not *birthed*).
-2. **Innovator-centered recommend**: `persona-innovator` (Mode I acceleration / Mode F FH-dev)
-   composing `plugin-recommender` + `cross-ecosystem-synergy-detection` + inferred technical level.
-3. **Ranked install plan**: one `M`/`S`/`R` list — *what · why · source tier · exact install
-   command*; an official/built-in that covers the need outranks a net-new scaffold.
-4. **Install — HITL, non-overwriting**: per-item approval; installed FH assets run the **4-axis
-   gate**, field scaffolds run `asset-placement-gate` + `steel-quench`. **"끝까지 해줘 / 자율로
-   완주" → full-autonomy** under the `/goal-quench` budget+quality gate — autonomy removes the
-   per-item *prompt*, never the *gate*.
+**Resident guards (inviolable — never deferred)**: **non-overwriting** — propose a merge, never clobber an
+existing `.claude/` · **company residency** — a company sibling repo is **surfaced, never auto-mapped or leaked**; `residency` is a
+machine field on the skill registry, so any recommendation naming a `company`/`operator-private` entry lands
+**only** in gitignored `tracks/_meta/` or the private companion store — never in a tracked file, and the
+absolute no-raw-company-data rule in the Diagnostic above applies here unchanged · **per-item gate routing** —
+installed **FH assets** run the **4-axis gate**; **field scaffolds** run **`asset-placement-gate` +
+`steel-quench`** (the FH pre-commit hook is repo-local and does **not** reach a scaffold installed into another
+repo, so this routing is not redundant with it) · **autonomy floor** — discover/rank trusted at opus-tier+;
+below-floor, present the raw recommend and ask · **HITL per item**, and `"끝까지 해줘 / 자율로 완주"` → full-autonomy under the `/goal-quench`
+gate: autonomy removes the per-item *prompt*, **never the gate**. Honesty boundary that must not soften in
+summary: the chamber to date **screens**; it has not *birthed* — simulate-first is a one-line HITL
+recommendation, never a push-button autonomous emit.
 
-**Guards (inviolable)**: (a) **non-overwriting** — propose merge, never clobber an existing
-`.claude/`; (b) **no-reinvention** — Tier 0/1 first, scaffold only what adds governance; (c)
-**company residency** — a company sibling repo is surfaced, never auto-mapped/leaked; `residency` is
-a machine field on the skill registry (`fh_detail_protocols.md §1-c`), so recommendations naming a
-`company`/`operator-private` entry land only in gitignored `tracks/_meta/` or the private companion
-store; (d) **autonomy floor** — discover/rank trusted at opus-tier+; below-floor, present the raw
-recommend and ask; (e) **once per door-entry**. This is the door ③ engine made autonomous — the
-operator asks once and the harness discovers, ranks, and (on request) installs everything worth wiring.
-
-> **Detail**: See `knowledge/shared/harness-core/onboarding_acceleration_autopilot.md` — the full
-> Phase-0 branch logic (incl. the chamber/simulate-first honesty boundary + `chamber_run.sh` runner
-> scope), revfactory provenance, and guard evidence (chamber run #7) — read when executing this
-> autopilot.
+> **Detail**: See `knowledge/shared/harness-core/onboarding_acceleration_autopilot.md` — full Phase-0 branch
+> logic + `chamber_run.sh` scope, the per-phase skill composition, the remaining guards (no-reinvention
+> tiering · autonomy floor · once-per-door-entry), revfactory provenance, and chamber-run-#7 guard evidence.
+> **Read it before running the autopilot.**
 
 ## Irreversibility Gates — Surface-Class Degrade Invariant (shared spine of the two gates below)
 
@@ -538,7 +468,7 @@ force-push, scrub of tracked history, bulk deletion of session records / tracks 
 2. **Recover (judged — depth-sensitive)**: every CHECK/REVIEW item gets a content-direction look;
    live un-integrated state (cards · handoffs · signals · session records) is integrated to main
    **before** anything is deleted. This step exists because the loss class is silent — run it at the
-   strongest available tier (floor semantics, §Tier-floor); a below-floor pass is provisional.
+   strongest available tier (floor semantics: `multi_model_sidecar_strategy.md §Tier-floor resolution`); a below-floor pass is provisional.
 3. **Destroy** only what passed — REVIEW blocks a scripted delete chain (script exits 1).
 
 **Mechanical floor (pre-push hook — git-side surfaces)**: at *push* time, **remote branch/ref deletion**
@@ -565,15 +495,7 @@ into "just delete it."
 At any point during a session, when the following signals are detected, propose the relevant skill in one line.
 Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?"`
 
-> **Row diet (2026-07-17, Step 0.5 probe 13/18)**: rows whose skill frontmatter `description` already
-> catches the utterance at high confidence were removed — platform-native skill matching owns those
-> (plugin-recommender · harness-doctor · synergy · frontier-digest · sim-conductor · install-wizard ·
-> asset-placement-gate · marketplace-gate · public-surface-audit · verify-bidirectional ·
-> mcp-circuit-breaker · token-budget-gate · salience-splitter — the last one earned removal by a
-> description strengthening in the same change, not by its original description). This table keeps only: **proactive
-> safety gates** (publish · destructive · MCP-mount) · **non-skill protocol routes** (gates, doctrine
-> sections, deep-research ladder) · **disambiguators and weak-description rows**. Before adding a row
-> back, probe whether the description alone catches it.
+> **Row diet (2026-07-17)**: rows already caught at high confidence by a skill's own frontmatter `description` were removed — platform-native skill matching owns those. The table keeps proactive safety gates · non-skill protocol routes · disambiguators and weak-description rows. **Before adding a row back, probe whether the description alone already catches it.** (Probe score, the full removed list, and the keep-criteria rationale: `fh_detail_protocols.md §Onboarding-Provenance`.)
 
 | Conversation Signal Keywords | Proposed Skill |
 |---|---|
@@ -593,7 +515,7 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "publish", "make public", "make this repo public", "go public", "gh repo create --public", "flip to public", "first public push", "publish the package", "npm publish", "twine upload", **opening/updating a PR or pushing content to the public hub** (esp. company-origin) (publish intent — **proactive**, fire *before* the action; adding content to an already-public repo IS publishing that content) | **Pre-Publish Surface Gate** (see above → `/public-surface-audit` + `/marketplace-gate` Check 5 must PASS first). The commit-time half is now **hook-enforced** (mechanical confidentiality scan — see Pre-Publish Gate §Hook coverage (b)), so this proactive trigger is the salience layer over a mechanical floor. |
 | "delete the branch", "브랜치 삭제", "브랜치 정리", "clean up branches", "force-push", "rewrite history", "지워도 돼?" (destructive intent — **proactive**, fire *before* the action) | **Destructive-Op Gate** (see above → enumerate → recover → destroy; `templates/predelete_check.sh`) |
 | **"새 기능 검증해줘", "test this feature", "이 TC 확인해줘" — verifying the user's PRODUCT/feature (not FH itself)** | **Route to the mapped field harness first** (Cross-Project Skill Bus / registry) — the field harness owns product verification. The harness-verification rows in this table (`verify-bidirectional` · `prompt-regression` · `sim-conductor` · `pipeline-conductor`) verify the *harness*, and must not shadow a product-verification ask (a field project's *harness assets* — its skills/rules — still use those FH verification rows) |
-| "지난주에 뭐 했지", "what did we do last week", "예전에 이거 한 적 있나" (recall intent) | §Searching Past Work (CATALOG-first) — read CATALOG.md, then open only candidate files |
+| "지난주에 뭐 했지", "what did we do last week", "예전에 이거 한 적 있나" (recall intent) | **CATALOG-first recall** — read `CATALOG.md`, identify candidates by tag/date, then open only those files. Never scan session files one by one |
 | "add this MCP server", "mount this MCP", "mcp.json에 추가", "connect this tool server" (external-MCP mount intent — **proactive**, fire *before* first tool call; mount intent only — a failing/erroring mounted server is `/mcp-circuit-breaker`'s row above) | `templates/.claude/rules/mcp_tool_gating.md` (name-keyed ask/allow table — never trust server annotations or names; fill §3 at mount time) |
 | "did my rule change break anything", "regression check", "test harness changes" | `/prompt-regression` |
 | "review for the team", "CTO review", "decision-maker", "share with leadership", "approval deck" | `/apex-review` |
@@ -604,8 +526,8 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "memory feels bloated", "clean up memory", "memory too large", "memory hygiene" | `/memory-hygiene` |
 | "ready to PR", "about to push", "merge this", "PR 올려줘", FH asset changed in session | 4-axis auto-gate (see above — runs automatically, no proposal needed) |
 | **field verdict/gate/safety/irreversible code changed** in a mapped project (function returning a verdict enum / gate exit code / safety-invariant · publish/delete/history path) — **proactive, before merge** | **Field-Harness Load-Bearing Change Gate** (see above → degrade-lint → cross-family review → converge; same rigor as FH assets, applied to field code) |
-| **"진단해줘", "개선해줘", "diagnose this", "improve this harness", "check this project", "audit this project"** — said while working **in a mapped project** (not a single-file ask) | **Field-Harness Diagnostic** (see §Field-Harness Diagnostic below → compose existing checks into one ranked M/S/R list → HITL approval per item, nothing auto-fixed) |
-| **"새 프로젝트", "하네스 작성해줘", "이 프로젝트 가속화", "harness-ify this", "accelerate this project"** — an onboarding/acceleration door (returning-menu ①②③) | **Onboarding / Acceleration Autopilot** (see §Onboarding / Acceleration Autopilot below → Phase 0 auto-discover + branch → innovator-centered recommend → ranked install plan → HITL per item, non-overwriting; "끝까지 자율로" → full-autonomy under /goal-quench gate) |
+| **"진단해줘", "개선해줘", "diagnose this", "improve this harness", "check this project", "audit this project"** — said while working **in a mapped project** (not a single-file ask) | **Field-Harness Diagnostic** (see §Field-Harness Diagnostic above → compose existing checks into one ranked M/S/R list → HITL approval per item, nothing auto-fixed) |
+| **"새 프로젝트", "하네스 작성해줘", "이 프로젝트 가속화", "harness-ify this", "accelerate this project"** — an onboarding/acceleration door (returning-menu ①②③) | **Onboarding / Acceleration Autopilot** (see §Onboarding / Acceleration Autopilot above → Phase 0 auto-discover + branch → innovator-centered recommend → ranked install plan → HITL per item, non-overwriting; "끝까지 자율로" → full-autonomy under /goal-quench gate) |
 
 **Guard**: Do not propose a skill that is already running. One signal = one-line proposal (no pressure). Before proposing, consult the UAP (§Operational Adaptation Loop): a skill the user has rejected 3+ times is **suppressed**, not re-proposed.
 For per-skill utterance patterns, see the relevant `SKILL.md §Trigger Phrases` section.
@@ -707,27 +629,7 @@ Tiers: S=light(~5K) · M=standard(~15K, FH default) · L=full(~30K) · XL=max(~6
 
 ## Operational Status
 
-**Current: Beta → External Validation Achieved** — v1.0 formal release conditions: additional external install evidence + at least 1 external PR.
-
 > Usage modes (A/B/C) + what-you-get (Layer 1/2) + **ephemeral-session handoff rule** (leave a surfaced handoff in a durable location before an ephemeral/cloud session ends): `knowledge/shared/rules/modes_and_value.md`
-
-## Auto Project Mapping Protocol
-
-> Detailed procedure: `knowledge/shared/rules/auto_project_mapping.md` (5-step mapping + §6 Full-Harness Mode)
-
-When the user requests **"connect a project"** · **"link to hub"** · **"map this project"** · **"scan parent directory and connect"**, follow the `auto_project_mapping.md` protocol. When they request **"harness-ify this project"** · **"full harness setup"** · **"프로젝트 하네스화"** (or accept the post-mapping promotion prompt), run **§6 Full-Harness Mode** — installs project-local harness assets (session rules · context filter · env card) from `templates/`, approval-gated and non-overwriting. (The FH self-gate is FH-internal and is not installed into projects.)
-
-## Searching Past Work
-
-When searching for past work, **read CATALOG.md first**. Use tags and summaries to identify candidate files, then open only those files for detail.
-
-```
-1. Read CATALOG.md → identify candidate files by tag/date
-2. Open candidate files directly → review details
-```
-
-Do not scan session files one by one sequentially.
-
 
 ## Session Wrap-up — Card Update Protocol
 
@@ -747,15 +649,18 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc.)
   → ③ Sync local/gitignored session state to your durable companion store, if you keep one
   → ④ Memory hygiene — update stale entries + record new session findings
   → ④-b npm freshness — if any npm-shipped asset changed (`package.json` `files[]`: skills · agents ·
-       knowledge/ · docs/ · README · AGENTS.md · CLAUDE.md · CHEATSHEET · CATALOG.md): **first a Codex-entrypoint
-       drift check** — the script (`session_close_check.sh`) auto-*fires a candidate reminder* by cheap grep
-       (file co-occurrence, not topical parity), then **you judge**: does the changed CLAUDE.md/knowledge topic
-       actually mirror a section in `AGENTS.md` / `docs/codex-compat.md` (both files[]-shipped Codex entry
-       points)? sync it, else record `drift:none`. The grep flags; it does not determine — the parity call is
-       judged. Version lockstep invalidates the plugin.json *cache* but is **orthogonal** to
+       knowledge/ · docs/ · README · AGENTS.md · CLAUDE.md · CHEATSHEET · CATALOG.md): **first an entry-point
+       drift check — BIDIRECTIONAL** — the script (`session_close_check.sh`) auto-*fires a candidate reminder*
+       by cheap grep (file co-occurrence, not topical parity), then **you judge** whether the changed topic
+       actually mirrors a section on the other side; sync it, else record `drift:none`. The grep flags; it does
+       not determine — the parity call is judged. **Both directions fire, because the two entry points are read
+       by different runtimes and a rule living in only one is invisible to the other**:
+       ▸ *CC→Codex* — `CLAUDE.md`/`knowledge/` changed, `AGENTS.md`/`docs/codex-compat.md` did not
+       ▸ *Codex→CC* — `AGENTS.md`/`docs/codex-compat.md` changed, `CLAUDE.md`/`knowledge/` did not
+       Version lockstep invalidates the plugin.json *cache* but is **orthogonal** to
        entry-point *content* — a version-only bump can ship a stale Codex entry point (gate-locality,
        Codex side). Then **propose republish**: version bump **in lockstep**
-       across `package.json` + every `.claude-plugin/plugin.json` + `marketplace.json` (single-source =
+       across `package.json` + every `.claude-plugin/plugin.json` + `.claude-plugin/marketplace.json` (single-source =
        `package.json`) → Pre-Publish gate → `npm publish` → `git tag vX.Y.Z` at publish. **Propose, don't
        auto-publish.** (Why lockstep — Codex caches on plugin.json version — + drift-check + tag-drift caveat → §detail below.)
   → ④-c Handoff lifecycle (cross-machine continuity) — when a durable **result artifact lands** this
@@ -775,8 +680,7 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc.)
 > when executing that close step.
 
 **Card-last guard**: ①–④-c (incl. ①-b open-PR sweep, ④-c handoff lifecycle) must ALL complete before
-⑤ runs. **Mechanical floor**: `bash scripts/session_close_check.sh` before ⑥ —
-exit 1 (card-last violated / required close artifact missing) blocks the push step until fixed. Any new information produced during ①–④ (new commits from a merged self-PR, model changes,
+⑤ runs. **Mechanical floor**: `scripts/session_close_check.sh` is **wired into `templates/.git-hooks/pre-push`** (2026-07-20) — it runs on *every* push, so it is no longer prose-invoked. Enforcement is surface-matched: an ordinary push **surfaces** ❌ violations (advisory — a branch push is reversible), and the **close push blocks** on them: run step ⑥ as **`FH_SESSION_CLOSE=1 git push`** → exit 1 (card-last violated / required close artifact missing) stops the push until fixed. *Why not block always*: ⑤ card-last is a close-time invariant, while ④ mandates writing `fh_completed_*` **during** the session — an unconditional block would pit the two rules against each other and train `--no-verify`, disarming the Destructive-Op gate in the same hook. Any new information produced during ①–④ (new commits from a merged self-PR, model changes,
 new findings, a carry item flipped to DONE) feeds INTO ⑤ — card is never written mid-sequence and
 then left open for more work to accumulate after it.
 

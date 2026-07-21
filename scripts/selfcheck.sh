@@ -63,6 +63,26 @@ else
   fail=1
 fi
 
+# pre-push stdin integrity — anchors the 2026-07-20 fail-open hole (a stdin-inheriting subprocess
+# above the ref loop drains git's ref list → Destructive-Op gate silently allows a delete/force push).
+# Wired here, not left standalone: an unwired checker is the exact defect this session found in
+# session_close_check.sh — building the test and not running it repeats it one layer up.
+# Package-mode guard: neither the test nor its subject (templates/.git-hooks/pre-push) is in
+# package.json files[] — both are source-tree-only infra. Without this guard the SHIPPED selfcheck
+# fails for every consumer running `npm test` on the installed package. Caught pre-publish 2026-07-20
+# by reproducing package mode; mirrors the ref-path SKIP below.
+if [ ! -f templates/.git-hooks/pre-push ]; then
+  echo "SKIP  pre-push stdin integrity (package mode: templates/.git-hooks absent)"
+elif [ -f scripts/test_prepush_stdin_integrity.sh ]; then
+  if ! bash scripts/test_prepush_stdin_integrity.sh; then
+    fail=1
+  fi
+else
+  # source tree HAS the hook but NOT the test => the anchor was deleted. That is a real failure.
+  echo "FAIL  pre-push stdin integrity: hook present but scripts/test_prepush_stdin_integrity.sh missing"
+  fail=1
+fi
+
 # Referenced-path existence is a source-tree check. The npm package intentionally
 # ships a narrower runtime surface, so package-mode selfcheck skips this section.
 if [ -d ".claude/rules" ]; then

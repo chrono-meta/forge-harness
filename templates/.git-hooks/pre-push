@@ -52,6 +52,7 @@ DEL_BRANCHES=""   # space-separated "<tip-sha>|refs/heads/X" pairs — SHA first
 DEL_OTHER=""      # refs/tags/* refs/notes/* etc. being deleted
 FORCED_REFS=""
 UNCLASSIFIED=""   # force-check impossible (remote tip not fetched)
+DIRECT_MAIN=""    # non-delete update pushed straight at the integration branch (PR-only policy)
 
 while read -r local_ref local_sha remote_ref remote_sha; do
   [ -z "${remote_ref:-}" ] && continue
@@ -78,9 +79,103 @@ while read -r local_ref local_sha remote_ref remote_sha; do
         fi ;;
     esac
   fi
+  # PR-only policy: a non-delete update aimed straight at the integration branch.
+  # Detected INSIDE this loop because this is the only place git's ref list is readable.
+  if [ "$local_sha" != "$ZERO" ]; then
+    case "$remote_ref" in
+      refs/heads/main|refs/heads/master) DIRECT_MAIN="$DIRECT_MAIN $remote_ref" ;;
+    esac
+  fi
   # remote_sha == ZERO → creating a new branch (not destructive) → ignore
 done
 
+# ── PR-only policy for the integration branch (operator decision 2026-07-20) ──────
+# WHY THIS EXISTS LOCALLY: it is the SHIFT-LEFT half of a two-layer floor.
+# History: on 2026-07-20 the server required a PR but had `enforce_admins: false`, so an admin
+# push satisfied the API and only printed "Bypassed rule violations" — a NOTICE, not a block.
+# A rule that announces its own bypass is not a floor ([[feedback_non_defeasible_floor]]).
+# The operator then flipped `enforce_admins: true` (+ `required_approving_review_count: 0` so a
+# solo operator can still merge their own PR), so the server IS now the hard floor.
+# This hook still earns its place: it fails at push time with the actual remedy in the message,
+# instead of a bare server rejection, and it keeps working if the server setting is ever relaxed.
+# It is deliberately NOT the hard floor — a client-side hook is bypassable by `--no-verify`.
+# Scope: blocks the PUSH, not the merge — `gh pr merge` operates server-side and is unaffected.
+if [ -n "$DIRECT_MAIN" ] && [ "${MAIN_PUSH_OK:-0}" != "1" ]; then
+  echo ""
+  echo "══════════════════════════════════════════════"
+  echo " ⛔ FH PR-Only Policy (pre-push)"
+  echo "══════════════════════════════════════════════"
+  echo "  Direct push to the integration branch:$DIRECT_MAIN"
+  echo ""
+  echo "  main is PR-only (operator decision 2026-07-20). The server enforces this too"
+  echo "  (enforce_admins: true, review_count: 0) — this hook just fails earlier, with the fix."
+  echo ""
+  echo "  Normal path:"
+  echo "      git switch -c <branch> && git push -u origin <branch>"
+  echo "      gh pr create --fill"
+  echo "      # after review:  gh pr merge --squash --delete-branch --admin"
+  echo ""
+  echo "  Deliberate exception (explicit, logged — mirrors DESTRUCTIVE_OP_OK / PUBLIC_SURFACE_OK):"
+  echo "      MAIN_PUSH_OK=1 git push …"
+  exit 1
+fi
+if [ -n "$DIRECT_MAIN" ]; then
+  echo "  ⚠️  FH PR-Only Policy: direct push to$DIRECT_MAIN allowed by MAIN_PUSH_OK=1 (conscious, gated intent)"
+fi
+
+# ── Session-close check (CLAUDE.md §Session Wrap-up ①–⑥) ─────────────────────────
+# WIRED 2026-07-20. Before this, scripts/session_close_check.sh was referenced ONLY by prose
+# (CLAUDE.md + 2 knowledge docs + itself — grep-verified 0 hook references), while CLAUDE.md
+# advertised it as a "mechanical floor" that "blocks the push step". Nothing ran it. A floor that
+# only runs when the session remembers to run it is not a floor ([[feedback_non_defeasible_floor]],
+# §gate-locality). Found by a Fable judgment pass on CLAUDE.md residency, source-closed by grep.
+#
+# WHY ADVISORY BY DEFAULT (and not a hard block on every push): the script's blocking invariants are
+# CLOSE-TIME invariants. ⑤ card-last requires the session card to be the NEWEST close artifact — but
+# CLAUDE.md separately mandates appending to fh_completed_<date>.md **immediately** during the session.
+# So mid-session, an obedient runner necessarily makes the card momentarily stale. Blocking every push
+# on ⑤ would put two documented rules in direct conflict and train the operator to --no-verify, which
+# would disarm the Destructive-Op gate below it. Degrade direction is defensible here because an
+# ordinary branch push is REVERSIBLE (§Irreversibility Surface-Class Degrade Invariant: reversible
+# surface → advisory; only publish/delete/rewrite fail closed).
+#
+# ENFORCING FORM (use at actual session close, step ⑥):  FH_SESSION_CLOSE=1 git push …
+if [ -x "$REPO_ROOT/scripts/session_close_check.sh" ] || [ -f "$REPO_ROOT/scripts/session_close_check.sh" ]; then
+  # ⚠️ `< /dev/null` is DEFENSE IN DEPTH — keep it, but it is not what makes this safe.
+  # git feeds the push ref list on the hook's STDIN, and a subprocess started here INHERITS stdin.
+  # If such a helper reads stdin it drains the ref list; a classification loop running AFTERWARDS
+  # would then see ZERO refs, leave every DEL_/FORCED_ var empty, and fall into the
+  # "nothing destructive → ordinary ff push → exit 0" path — silently DISARMING the Destructive-Op
+  # gate on exactly the push it exists to stop. Empirically reproduced 2026-07-20.
+  # THE STRUCTURAL FIX IS THE POSITION, NOT THIS REDIRECT: the classification loop above has already
+  # consumed stdin into variables before we get here, so draining fd 0 now costs nothing.
+  # If anyone ever moves this block back above that loop, the redirect alone is a thin guard —
+  # scripts/test_prepush_stdin_integrity.sh asserts the ordering for exactly that reason.
+  _SC_OUT=$(bash "$REPO_ROOT/scripts/session_close_check.sh" "$REPO_ROOT" 2>&1 < /dev/null); _SC_RC=$?
+  if [ "${FH_SESSION_CLOSE:-0}" = "1" ]; then
+    printf '%s\n' "$_SC_OUT"
+    if [ "$_SC_RC" -ne 0 ]; then
+      echo ""
+      echo "  ⛔ FH Session-Close Check: close invariant violated (FH_SESSION_CLOSE=1 → enforcing)."
+      echo "     Fix the ❌ line(s) above — card-last means ⑤ runs AFTER ①–④-c, never before."
+      exit 1
+    fi
+    echo "  ✅ FH Session-Close Check: close state consistent."
+  elif [ "$_SC_RC" -ne 0 ]; then
+    # Not a close push: surface the violations, never block.
+    printf '%s\n' "$_SC_OUT" | grep '❌' || true
+    echo "  ⚠️  FH Session-Close Check: close invariant(s) violated (advisory — this is not a close push)."
+    echo "     At session close, enforce with:  FH_SESSION_CLOSE=1 git push …"
+  fi
+fi
+
+# NOTE ON POSITION (moved here 2026-07-20 after a cross-family audit returned NOT-CONVERGED):
+# this block ORIGINALLY sat above the ref-reading loop. That was a priority inversion — an
+# ADVISORY check placed above a BLOCKING safety gate — and it opened an fd-0 hazard: the helper
+# subprocess inherits stdin, git delivers the push ref list on stdin, so a helper that read stdin
+# would drain the ref list and the loop below would classify ZERO destructive refs and allow the
+# push. Running AFTER classification removes the hazard structurally (the refs are already read
+# into variables); the `< /dev/null` guard is kept as defense in depth, not as the fix.
 # Nothing destructive and nothing unclassifiable → ordinary ff push / new branch → allow.
 if [ -z "$DEL_BRANCHES$DEL_OTHER$FORCED_REFS$UNCLASSIFIED" ]; then
   exit 0

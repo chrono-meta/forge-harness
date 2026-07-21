@@ -105,10 +105,12 @@ size instrument* is read. The footprint rows below apply to **both** scopes and 
 | **Field/project** CLAUDE.md 200+ lines | M-tier — separation or reduction needed |
 | **Field/project** 15+ `##` sections in CLAUDE.md | S-tier warning |
 | **Meta-harness (FH hub)** CLAUDE.md — raw line / section count | **Not a verdict.** Judge by the always-loaded footprint rows below (char-based = actual token cost) + the doctrine's red flags (orphaned · redundant · decorative). Report the count as context only |
+| **Meta-harness — residency ledger** (the positive instrument that replaces the disabled line-count rows) | For each `##` section record **trigger class** (intent / file / ambient) + **backstop** (a hook or script path that must be **grep-verified to exist AND to be wired**, or the literal `none-by-nature`). Tier ONLY these: **M** = a section claiming a mechanical floor whose script is referenced by no hook (a prose-invoked "floor" is not a floor) · **S** = `file`-triggered *with* a verified backstop but still resident (splittable — name the destination glob) · **S** = duplicated verbatim in another section · **R** = orphaned/decorative. A section that is intent- or ambient-triggered with `none-by-nature` is **PASS, not a finding** — moving it would be fail-open. Never tier a section on its size |
 | **Meta-harness** growth since last run: decompose into *new sections* vs *existing-section growth* (mechanical — diff `##` section names + line counts vs the prior run's commit; **first run / no prior commit → report both as n/a, no tier**) | **Tier is decided by the two counts alone**: **S-tier iff existing-section growth > new-section growth** (the file is thickening faster than it is gaining capability); otherwise advisory, no tier. Report both numbers **and** the new sections' names — the names are *reporting output for the human*, never an input to the tier. Do not judge "was this growth capability-bearing?" per line |
 | SKILL.md > 300 lines AND no `SKILL_detail.md` | S-tier — propose `/salience-splitter` (governance-semantic split, not compression) |
 | Rules files unreferenced in CLAUDE.md | R-tier |
 | Always-loaded footprint > 40k chars (see scan below for what counts) | S-tier — **lever depends on where the chars live**: rules/detail still auto-loading → relocate to a non-loaded dir (e.g. `knowledge/shared/rules/`), pointers stay in CLAUDE.md · narrative inside CLAUDE.md → `/salience-splitter` · **behavioral content only, nothing left to relocate** → capability-level (merge/retire a governance unit) |
+| **Memory-index footprint** — the session's auto-loaded memory index (`~/.claude/projects/<slug>/memory/MEMORY.md`), reported as **its own line, never summed into the row above** | S-tier > 10k chars — **different residency, different lever**: this one is `/memory-hygiene` (archive closed items to `MEMORY_archive.md`, tighten hooks to one line), NOT `/salience-splitter`. Summing it into the CLAUDE.md row would mis-route the lever, which is exactly what the row above ties to "where the chars live". **Blind spot this closes (2026-07-20, measured)**: a fresh top-level `/context` showed **Memory files = 41.7k of 68.8k resident tokens (61%)**, of which `MEMORY.md` alone was **14.1k — 55% the size of CLAUDE.md (25.5k)** — and the footprint scan below counted **none of it**. The instrument was optimising the smaller half of the surface it claimed to measure |
 | Always-loaded footprint > 80k chars | M-tier — same lever selection, mandatory, **and never self-discharged** (see below) |
 | **Pointer-illusion**: a CLAUDE.md "detail/detailed procedure" pointer whose target is itself an always-loaded `.claude/rules/*.md` | S-tier — the split saves zero context (rules/ auto-loads regardless); move the target out of auto-load, keep the pointer |
 | weekly_audit 14~30 days elapsed | S-tier |
@@ -123,6 +125,31 @@ footprint M-tier is *not* evidence that some section failed to earn its scope. W
 budget but every unit earns its scope, the remaining lever is **capability-level** — merge or retire a
 governance unit — **not** a salience split, which by construction only moves narrative and returns ~nothing
 when the content is behavioral.
+
+**Any scan-derived count must be calibrated before it is reported.** Before a number from a scan
+(broken refs, INACTIVE skills, footprint chars, orphan counts, coverage) enters the report, run it
+against **one known-positive and one known-negative** and record both outcomes; then **hand-verify the
+single case the scan is most confident about**. If either step is skipped the number ships labeled
+`UNCALIBRATED` and may not ground a tier. `not found` is reported as `UNMEASURED`, never as `0` — a
+scan that dies mid-run reports a low number, and low numbers read as PASS.
+Origin (2026-07-20, three instrument defects in one session): a footprint scan omitted 61% of the
+resident surface it claimed to measure · a size ratio was used as a proxy for content coverage · an
+ASCII-token scanner run over a Korean corpus produced ~96% false positives and a "70%" figure that was
+published to three records before one hand-check reduced it to 3 items. **Suspect the instrument before
+the target whenever a value is impossible** (all-pass, all-fail, or a self-scan that fails to detect the
+running tool itself). Full procedure: `knowledge/shared/harness-core/measurement-integrity-checklist.md
+§Instrument-Calibration`.
+
+**Every M/S-tier must cite the row it fired — verbatim, from this file.** Write the finding as
+`M-n · <verbatim row text or its threshold> · <measured value>`. If you cannot quote the row, **you do not
+have a finding** — downgrade to an observation. Origin (2026-07-20, instrument defect n+4, the *fourth* in
+a single run): a run fired `M-1 · CLAUDE.md 816 lines — exceeds the FH threshold of 500`. The string `500`
+does not occur anywhere in this file (grep: 0 hits), and the meta-harness row it claimed to read says raw
+line count is **"Not a verdict."** So the run invented a threshold *and* fired a row this skill explicitly
+disables for meta-harnesses — the exact recurrence of the 2026-07-15 inversion documented below, which had
+already been patched *in the skill*. The patch held; the **run** ignored it. A verdict grounded in a
+citation that cannot be quoted is the same defect class as a phantom reference, and it propagates: a
+downstream sidecar judgment inherited the fabricated 500 and reasoned from it until a grep caught it.
 
 **No M-tier in this skill is ever self-discharged — not just the footprint one.** "The cost is priced /
 accepted", "it's all necessary", "over budget but fine" are **not** verdicts this skill may reach on its
@@ -151,6 +178,16 @@ Always-loaded + pointer-illusion checks are mechanical (found 2026-07-12 — FH 
 # measures whichever harness you happen to be standing in (usually the hub, while diagnosing a
 # field target) — a wrong-target measurement that reports the hub's number as the target's.
 TARGET="${1:?pass the target root explicitly — cwd is not the target}"
+# MEMORY-INDEX (reported SEPARATELY — see the memory-index row above; do NOT add it to T).
+# It is auto-loaded every session but lives outside $TARGET, so the $TARGET-rooted sum below is
+# structurally blind to it. Measured 2026-07-20: it was 55% the size of CLAUDE.md and invisible here.
+MEMSLUG=$(printf '%s' "$TARGET" | sed 's|^/||; s|/|-|g')
+MEMIDX="$HOME/.claude/projects/-$MEMSLUG/memory/MEMORY.md"
+if [ -f "$MEMIDX" ]; then
+  echo "memory-index: $(wc -c < "$MEMIDX") chars — $MEMIDX  (lever: /memory-hygiene, NOT salience-splitter)"
+else
+  echo "memory-index: not found at $MEMIDX — report as UNMEASURED, not as 0 (a missing file is not an empty one)"
+fi
 T=0
 for f in "$TARGET/CLAUDE.md" "$TARGET/CLAUDE.local.md"; do
   [ -f "$f" ] && T=$((T + $(wc -c < "$f")))

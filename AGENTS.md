@@ -104,6 +104,28 @@ For complex multi-step tasks, run `/agent-composer` first to plan which agents t
 
 The methodology layer (`tracks/`, `knowledge/`, `SKILL.md` docs) is Codex-compatible beta. Any AI model can follow skill workflows by reading SKILL.md files directly; the automation layer (hooks, plugin-channel agents under `plugins/*/agents/`, `/model`) is Claude Code-native and requires manual adaptation. FH's own agents are auto-loaded via the plugin channel when the plugin is enabled — `.claude/agents/` is the field-project override slot, not where FH ships its agents. Non-Claude runtimes use this `AGENTS.md`, `plugins/*/agents/*.md`, and `scripts/fh-run.sh` to apply the same methodology via adapter.
 
+### Non-Claude runtimes: two things CLAUDE.md holds that you will not auto-load
+
+`.claude/rules/*.md` with `paths:` frontmatter is a **Claude Code platform feature** — those files are
+auto-loaded into a Claude Code session when it reads a matching file, and **your runtime has no equivalent**.
+So two things that govern behavior are not going to reach you on their own. Read them explicitly:
+
+1. **FH asset changes run a mandatory 4-axis verification chain before the session's first commit.**
+   Detail (axis definitions · marker required fields · lightweight exception · substantive carve-out):
+   `.claude/rules/fh_4axis_gate.md` — **open it directly**; nothing will load it for you. The commit is
+   hard-blocked by `templates/.git-hooks/pre-commit` regardless of runtime, so skipping the read does not
+   skip the gate — it just means you meet the block without knowing what it wants.
+2. **Company residency is absolute** (CLAUDE.md §Field-Harness Diagnostic): raw company source, secrets,
+   hostnames, internal repo/asset names, stack traces, and unredacted findings **never leave the local
+   machine** — not to an external *or same-family* cloud model, not through a browser/API tool, not into a
+   log, comment, or paste. Outbound gets a **sanitized summary only**; exceptions need explicit operator
+   approval plus a gitignored audit note. This binds every runtime, not just Claude Code — a leak does not
+   un-happen, and the guard is worth nothing if it only lives where one runtime reads.
+
+The irreversible-surface gates (Pre-Publish · Destructive-Op) likewise live in CLAUDE.md and fire on
+**intent**, not on a file — read them before any publish, delete, or history-rewrite. `pre-push` enforces
+the git-side destructive surface mechanically for every runtime.
+
 ### Entry point for Codex users
 
 AGENTS.md is your starting point. Navigate from here to skill workflows:

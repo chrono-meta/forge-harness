@@ -50,13 +50,68 @@ single-session even when sidecars are available.
 
 ## Step 2 — Sidecar discovery (mechanical, the anti-power-waste core)
 
-Build the available panel at run time; absent tools drop off silently:
+Build the available panel at run time; absent tools **and unreachable endpoints** drop off silently:
 ```bash
-command -v codex >/dev/null && echo "codex"        # GPT family CLI
-command -v agy   >/dev/null && echo "agy"           # serves Gemini AND GPT-OSS — probe the model
+# Sidecar-callable CLIs only. **Scope discipline**: the probe list is NOT "every agent CLI that exists".
+# FH's main is Claude Code (vendor-native — `[[feedback_vendor_native_harness]]`), and the recommended
+# cross-family sidecars are **codex and gemini/agy**. Other agent CLIs on the machine (opencode, qwen,
+# hermes, cursor-agent …) are **runtimes a user works INSIDE**, not verifiers FH calls out to — being
+# installed is not a reason to probe them. Adding one costs a maintenance surface and dilutes the panel;
+# add only when a concrete task needs that family. (2026-07-19: four were added off a general CLI
+# catalog and removed the same session — installed ≠ belongs in the panel.)
+command -v codex >/dev/null && echo "codex"          # GPT family CLI
+command -v agy   >/dev/null && echo "agy"            # serves Gemini AND GPT-OSS — probe the model
 command -v gemini>/dev/null && echo "gemini"
-curl -s -m6 http://<4090-tailscale>:11434/api/tags >/dev/null 2>&1 && echo "ollama-4090"  # local
+command -v gh >/dev/null && gh copilot --help >/dev/null 2>&1 && echo "copilot"
+                                                     # ↑ gh EXTENSION, not a binary — `command -v copilot` misses it, and
+                                                     #   `gh copilot --help` shows only the LAUNCHER (its sole flag is
+                                                     #   --remove); the real flags live behind `--`.
+                                                     # Call form (verified 2026-07-19 by live call — credits were consumed):
+                                                     #   gh copilot -- -p '<prompt>' --model <model> --allow-all-tools
+                                                     # **Same class as codex/agy**: `--model` selects among several families
+                                                     #   behind ONE CLI ('auto' lets Copilot pick), so family MUST come from
+                                                     #   the pinned/probed model (Step 3), NEVER from the CLI name.
+                                                     # ★ SEAT TIER CHANGES ITS VALUE ENTIRELY — probe, never assume:
+                                                     #   · free seat        → narrow model choice; treat as ONE extra family
+                                                     #   · enterprise seat  → serves GPT, Gemini AND Claude behind the single
+                                                     #     CLI: a THREE-FAMILY panel with no other CLI installed
+                                                     #     ([[reference_corp_env_decorrelation_panel]]).
+                                                     #     ⚠️ BUT each family runs on Copilot's harness, not its vendor-native
+                                                     #     one — Claude-via-copilot ≠ Claude Code, GPT-via-copilot ≠ codex,
+                                                     #     Gemini-via-copilot ≠ agy. Per `[[feedback_vendor_native_harness]]`
+                                                     #     a non-native harness costs depth. So copilot buys **breadth cheaply,
+                                                     #     not depth**: use it to widen the panel, and route the decisive
+                                                     #     check to the vendor-native CLI when one is reachable. Same shape as
+                                                     #     the local canary tier (breadth ≠ terminal depth, measured 2026-07-19).
+                                                     #   Because the panel it yields depends on the seat, Step 3's model probe
+                                                     #   is not optional here: enumerate what this seat actually serves before
+                                                     #   claiming family diversity.
+                                                     # Cost shape: paid-seat credits. That makes it a strong *sidecar* but a
+                                                     #   poor main driver — seat quota is spent faster than it is worth when
+                                                     #   it drives the whole harness. Recruit it for decisive checks, not bulk.
+                                                     # Residual: the launcher may fetch the CLI body on first call, so on a
+                                                     #   cold machine the first recruit pays a download.
+# Local ollama serving-paths = canary tier (electricity-only). mac localhost is public → probed
+# UNCONDITIONALLY. Any extra path (e.g. a Tailscale GPU box) is an operator-private token → read from a
+# gitignored binding, NEVER hardcoded in this public file. Both mac-serving (H2) and 4090-serving (평시)
+# are covered: whichever box is not serving simply fails the probe and drops off.
+# probe() validates the /api/tags SCHEMA, not just a reachable port: -f rejects HTTP 4xx/5xx and the
+# `"models"` grep rejects a non-ollama server or an empty/overloaded instance — else a dead box reports
+# live (false-positive discovery). Endpoints are only ever curl-probed here, never eval'd.
+probe() { curl -fsS -m"${2:-6}" "http://$1/api/tags" 2>/dev/null | grep -q '"models"'; }
+probe localhost:11434 && echo "ollama-local(mac)"
+EP="$FH_SIDECAR_EXTRA"
+[ -z "$EP" ] && [ -f tracks/_meta/sidecar_endpoints.env ] && \
+  EP="$(grep '^OLLAMA_EXTRA=' tracks/_meta/sidecar_endpoints.env | cut -d= -f2- | tr -d '"')"
+for e in $EP; do
+  case "$e" in *[!0-9a-zA-Z.:-]*|'') continue;; esac   # host:port form only — reject glob/junk (no word-split hole)
+  probe "$e" 10 && echo "ollama-extra($e)"             # -m10: a sleeping GPU box may wake slower than 6s
+done
 ```
+Endpoint resolution is a **mechanical env/file read** (not a prose instruction the runner must remember),
+so this discovery is tier-independent — no target-tier sim owed. The extra-endpoint binding lives only in
+the gitignored `tracks/_meta/sidecar_endpoints.env` (auto-synced to the companion store); the public skill
+carries the probe logic, never the address.
 
 ## Step 3 — Family map by runtime model probe (NOT CLI name)
 

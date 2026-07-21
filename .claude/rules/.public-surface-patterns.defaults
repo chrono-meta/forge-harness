@@ -6,3 +6,5 @@
 # /Users/ class below is safe — the literal '[' after /Users/ cannot match the class [a-z0-9_-].
 # Format: severity<TAB>regex
 MED	/Users/[a-z0-9_-]+/
+# Tailscale CGNAT (2nd octet 64-127) — operator node / private network topology (a Tailscale-served sidecar box)
+MED	100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.[0-9]{1,3}\.[0-9]{1,3}
