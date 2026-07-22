@@ -106,6 +106,14 @@ If `steel-quench`/`phantom-quench` are unavailable in the routine session, note
 `Axis N: skipped (skill unavailable)` — Axis 1 PASS alone unblocks a *draft* PR (Axes 2–3 are the
 operator's residual at merge review).
 
+> ⚠️ **"Axis 1 PASS" 는 종료코드로 판정하지 마라.** `regression_guard.sh` 의 `exit 0` 은
+> **PASS 와 SKIP 을 둘 다** 뜻한다 — SKIP 은 "게이트 pathspec 에 걸린 파일이 없었다"이지
+> "검사했고 괜찮다"가 아니다. 무인 루틴이 종료코드만 보면 **미검사가 draft PR 을 unblock 한다.**
+> 구분: stdout 에 `REGRESSION_GUARD_RESULT=skip` 이 있으면 SKIP 이다 — 그 경우 Axis 1 은
+> *통과가 아니라 미실행*이므로 Axes 2–3 과 같은 운영자 잔여로 올려라.
+> (2026-07-22 실측: `pre-commit` 이 정확히 이 혼동을 일으켜 AGENTS.md 변경이 `✅ PASS` 를
+> 받고 지나갔다. `pre-commit` 은 배선 완료 · 이 루틴을 포함한 나머지 소비자는 **미배선 잔여**.)
+
 **Skip-visibility at the handoff (load-bearing for honest HITL escalation).** When Axis 2
 (challenger / steel-quench) is skipped, the adversarial check did not run autonomously — it becomes
 the *merger's* responsibility. An intelligent hand-off must make that visible at the hand-off point,
