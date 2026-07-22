@@ -120,6 +120,11 @@ All 5 Steps completed
 ```
 
 **→ Mandatory when PR contains SKILL.md / rules / templates changes: `bash templates/regression_guard.sh`** — run Axis 1 (backward check) before merge recommendation is issued. If regression_guard exits with M-tier block, merge recommendation must change to ❌ regardless of other checks.
+**Read the verdict from the typed channel, not the exit code** — `exit 0` means pass **or** skip
+(not-checked). Run with `REGRESSION_GUARD_RESULT_FILE=/tmp/rg.$$` and read `result=` from that file:
+`skip` means Axis 1 **did not examine** this PR (no matching file) — record it as "Axis 1 N/A", never
+as a green check. A merge recommendation that cites an unexamined Axis 1 as PASS is the 2026-07-22
+fail-open class.
 
 ## References
 

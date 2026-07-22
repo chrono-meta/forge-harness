@@ -466,9 +466,13 @@ Verifies that prescription application didn't strip operational content. Run aft
 | F6 Line reduction ≥30% | S |
 | F7 Bash block syntax (bash -n parse) | M if net increase in bad blocks |
 
-Verdict: ✅ PASS (0M 0S) · ⚠️ REVIEW (0M 1+S) · ❌ BLOCK (1+M).
+Verdict: ✅ PASS (0M 0S) · ⚠️ REVIEW (0M 1+S) · ❌ BLOCK (1+M) · ⏭️ SKIP (검사 대상 0 — **PASS 가 아니다**).
 
 Implementation: `bash templates/regression_guard.sh` (compare vs main) or `bash templates/regression_guard.sh BASE HEAD`.
+**Verdict 는 종료코드가 아니라 typed 채널로 읽어라** — `exit 0` 은 pass 와 skip 둘 다다(2026-07-23):
+`REGRESSION_GUARD_RESULT_FILE=/tmp/rg.$$ bash templates/regression_guard.sh …` 후 파일의
+`result=pass|review|block|skip` 를 판정에 쓴다. `skip` = 미검사 — PASS 로 보고하지 말고 "Axis 1
+해당 없음(대상 파일 0)" 으로 보고한다.
 
 > **Detail**: See `SKILL_detail.md §Step-1-3` — bash scripts for Steps 1~6 (L1~L4 diagnostics) — read when running the diagnostic commands.
 

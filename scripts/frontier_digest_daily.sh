@@ -6,8 +6,10 @@
 # Tool permissions: pre-approved in .claude/settings.json (no interactive prompts needed)
 
 # Auto-detect repo root from this script's location (scripts/ → repo root) and the claude CLI.
-FH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CLAUDE_BIN="$(command -v claude || echo "${HOME}/.local/bin/claude")"
+FH_DIR="${FD_FH_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+# FD_* env 오버라이드: 재현 하네스(test_frontier_digest_retry.sh)가 스텁/짧은 타임아웃을
+# 주입하기 위한 것. 미설정 시 기본값 그대로 — 프로덕션 경로 무변.
+CLAUDE_BIN="${FD_CLAUDE_BIN:-$(command -v claude || echo "${HOME}/.local/bin/claude")}"
 TODAY=$(date +%Y_%m_%d)
 HUMAN_DATE=$(date +%Y-%m-%d)   # pinned once with TODAY — a wake-fired run crossing midnight must not drift (filename date ≠ prompt date)
 LOG_DIR="${FH_DIR}/tracks/_meta/logs"
@@ -61,8 +63,29 @@ cd "$FH_DIR"
 # hang variant also reaches the retry path — a foreground call would block the loop forever.
 # [automated-run: launchd] in the prompt = run-provenance token (proposed by the 07-16 digest) so a
 # digest can mechanically distinguish an automated run from a manual /frontier-digest invocation.
-MAX_ATTEMPTS=3
-ATTEMPT_TIMEOUT_SECS=1800
+MAX_ATTEMPTS="${FD_MAX_ATTEMPTS:-3}"
+ATTEMPT_TIMEOUT_SECS="${FD_ATTEMPT_TIMEOUT_SECS:-1800}"
+RETRY_SLEEP_SECS="${FD_RETRY_SLEEP_SECS:-600}"
+POLL_SECS="${FD_POLL_SECS:-30}"
+
+# ── 판별 계측 (2026-07-23, 주간감사 🟧2) ─────────────────────────────────────
+# 07-19 실측: attempt 1 이 56분 53초 돌았는데 30분 watchdog 미발화 + Attempt 2/3 미진행,
+# 로그 4줄로 끝. 경쟁 가설 ⓐ 시스템 슬립(폴링 sleep 이 통째로 정지 → 프로세스도 같이 자다
+# 깨어나 죽은 채 발견, 신호 없음) ⓑ launchd 잡 회수(backoff sleep 중 TERM). 로그만으로
+# 판별 불가였다 — **신호 trap + 단계 로깅**이 그 판별 계기다:
+#   · TERM/INT/HUP 수신 → 로그에 남김 → 다음 실발화가 ⓑ면 이 줄이 찍힌다
+#   · 각 sleep 진입/복귀를 로그 → ⓐ면 진입-복귀 사이 벽시계 갭이 sleep 길이를 초과한다
+# (재현 하네스는 로직 검증까지 — 환경 원인은 이 계측이 라이브에서 잡는다)
+# trap 은 **로그 후 재발사** — trap-without-exit 는 신호를 삼켜 러너가 TERM 을 무시하고
+# 최대 ~110분 더 돈다(challenger B-1 실측: TERM 2발 무시, Attempt 3 완주). 재발사 전에
+# lock 을 직접 정리한다(재발사된 TERM 은 기본 핸들러라 EXIT trap 을 안 태울 수 있음).
+trap 'echo "[$(date "+%Y-%m-%d %H:%M:%S")] SIGNAL: runner received TERM — launchd reclaim? (hypothesis-b evidence)" >> "$LOG_FILE"; rmdir "$LOCK_DIR" 2>/dev/null; trap - TERM; kill -TERM $$' TERM
+trap 'echo "[$(date "+%Y-%m-%d %H:%M:%S")] SIGNAL: runner received INT/HUP" >> "$LOG_FILE"; rmdir "$LOCK_DIR" 2>/dev/null; trap - INT HUP; kill -INT $$' INT HUP
+
+# 인터럽터블 sleep — foreground sleep 은 끝나야 trap 이 돌아 신호 수신이 sleep 잔여시간만큼
+# 늦는다(challenger B-1: launchd 의 TERM→~20s→KILL 창에서 backoff 600s 기준 기록 확률 ~3%).
+# `sleep & wait` 는 wait 가 builtin 이라 신호를 즉시 받는다 → trap 즉발.
+_isleep() { sleep "$1" & wait $!; }
 for ATTEMPT in $(seq 1 $MAX_ATTEMPTS); do
     # Re-check before spending an attempt (a manual run may have landed the digest during the sleep)
     if digest_ready; then
@@ -76,9 +99,12 @@ for ATTEMPT in $(seq 1 $MAX_ATTEMPTS); do
     CLAUDE_PID=$!
     DEADLINE=$((SECONDS + ATTEMPT_TIMEOUT_SECS))
     while kill -0 "$CLAUDE_PID" 2>/dev/null && [ "$SECONDS" -lt "$DEADLINE" ]; do
-        sleep 30
+        _isleep "$POLL_SECS"
     done
     if kill -0 "$CLAUDE_PID" 2>/dev/null; then
+        # 자식까지 — 부모만 죽이면 claude 의 자식(MCP 서버 등)이 고아로 남는다
+        # (challenger B-2 실측: 하네스 1회에 고아 sleep 3개). bash 3.2 호환 2단 kill.
+        pkill -P "$CLAUDE_PID" 2>/dev/null
         kill "$CLAUDE_PID" 2>/dev/null
         wait "$CLAUDE_PID" 2>/dev/null
         EXIT_CODE=124
@@ -92,7 +118,11 @@ for ATTEMPT in $(seq 1 $MAX_ATTEMPTS); do
         exit 0
     fi
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] No digest file after attempt ${ATTEMPT} (claude exit ${EXIT_CODE})" >> "$LOG_FILE"
-    [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ] && sleep 600
+    if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Backoff: sleeping ${RETRY_SLEEP_SECS}s before attempt $((ATTEMPT+1)) (wake-gap > sleep length ⇒ hypothesis-a system-sleep evidence)" >> "$LOG_FILE"
+        _isleep "$RETRY_SLEEP_SECS"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Backoff: woke for attempt $((ATTEMPT+1))" >> "$LOG_FILE"
+    fi
 done
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] All ${MAX_ATTEMPTS} attempts failed — no digest for ${TODAY}" >> "$LOG_FILE"
