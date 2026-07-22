@@ -104,11 +104,11 @@ For complex multi-step tasks, run `/agent-composer` first to plan which agents t
 
 The methodology layer (`tracks/`, `knowledge/`, `SKILL.md` docs) is Codex-compatible beta. Any AI model can follow skill workflows by reading SKILL.md files directly; the automation layer (hooks, plugin-channel agents under `plugins/*/agents/`, `/model`) is Claude Code-native and requires manual adaptation. FH's own agents are auto-loaded via the plugin channel when the plugin is enabled — `.claude/agents/` is the field-project override slot, not where FH ships its agents. Non-Claude runtimes use this `AGENTS.md`, `plugins/*/agents/*.md`, and `scripts/fh-run.sh` to apply the same methodology via adapter.
 
-### Non-Claude runtimes: three things CLAUDE.md holds that you will not auto-load
+### Non-Claude runtimes: four things CLAUDE.md holds that you will not auto-load
 
 `.claude/rules/*.md` with `paths:` frontmatter is a **Claude Code platform feature** — those files are
 auto-loaded into a Claude Code session when it reads a matching file, and **your runtime has no equivalent**.
-So three things that govern behavior are not going to reach you on their own. Read them explicitly:
+So four things that govern behavior are not going to reach you on their own. Read them explicitly:
 
 1. **FH asset changes run a mandatory 4-axis verification chain before the session's first commit.**
    Detail (axis definitions · marker required fields · lightweight exception · substantive carve-out):
@@ -131,6 +131,34 @@ So three things that govern behavior are not going to reach you on their own. Re
    an exit. **This row exists because the triggering utterance names no agent** — nothing will fire it
    for you. Your runtime *can* run these lenses: substitute `Agent(subagent_type=...)` per §M2 above
    (`fh-run`, or `codex exec` reading the agent spec). The lens returns evidence, never the verdict.
+
+4. **General work is in scope here, and the mechanism for serving it is to marshal installed
+   capability.** CLAUDE.md §Intent Marshaling makes this the runtime default. It settles a *category*
+   question only — whether non-harness work belongs in this environment at all. Every ordinary check
+   about a specific request (is it safe, sensible, well-formed, worth doing) is yours and is unaffected.
+
+   The category answer is yes, for a concrete reason: the skill registry, the mapped field harnesses,
+   and the memory store exist **only** in this environment. So when the operator states a work intent in
+   plain language (write this doc, build this wiki page, organize this material — **any work-shaped ask,
+   not only harness building**), the scan below is what tells you whether capability for it is actually
+   present. An empty scan, reported with the scan cited, is a correct answer — see the third bullet.
+
+   Three constraints carry over unchanged to your runtime:
+   - **Enumerate rather than recall.** List the available skills, `LOCAL_SKILL_REGISTRY`, and the mapped
+     project assets. Recall under-reports what is installed, which is why the scan is a listing step.
+   - **Marshaling never upgrades a trust tier.** Run-first autonomy covers **FH-native capability whose
+     steps are per-action reversible**. A non-FH sibling capability stays at its registry `ask-tier`
+     (propose only), and an outward-mutating action (send · post · deploy · delete) keeps its own gate.
+   - **A capability gap is declared by citing the scan result**, not as a bare "nothing fits" — then
+     route at request scale (internal scan → external search → in-session synthesis). *Persist* routes
+     to the New-Skill gate; *install* routes to plugin-recommender's HITL. No new gates.
+
+   **This item exists because the triggering utterance is ordinary work language that names no skill and
+   no agent** — like item 3, no automatic trigger covers it; read it explicitly.
+
+> **Detail**: See `knowledge/shared/harness-core/intent_marshaling_general_work.md` — the 5-step loop,
+> the gate-routing table, the Sonnet-floor boundaries, and the origin defect — **open it directly**
+> before applying the ladder or when a gap appears.
 
 The irreversible-surface gates (Pre-Publish · Destructive-Op) likewise live in CLAUDE.md and fire on
 **intent**, not on a file — read them before any publish, delete, or history-rewrite. `pre-push` enforces
