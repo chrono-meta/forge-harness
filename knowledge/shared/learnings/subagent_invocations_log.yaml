@@ -276,3 +276,30 @@
   outcome: accepted
   finding: "HARD 1 / SOFT 7, 'first success: YES'. Verdict 'GO — after one cp-path fix'. All 4 round-1 HARDs confirmed closed by re-execution, translation propagation verified line-by-line across ko/ja/zh. New HARD found that the fix itself introduced: the cp source stayed relative, so following the doc in order leaves cwd inside the knowledge repo and the copy fails. Refused to over-block — explicitly ruled the Status n=1 framing and undefined 'harness' non-blocking, and marked the clone URL UNCALIBRATED rather than guessing PASS."
   note: "Two rounds to converge: HARD 4 → 1 → 0. The round-2 HARD was self-inflicted by the round-1 fix, which is the argument for re-verify over single-pass ([[fh-commons:convergence-loop]]). The UNCALIBRATED flag was correct discipline and I closed it by actually running `git clone` — an agent declining to assert what it cannot measure is the behavior [[feedback_judge_robustness_mechanical_anchor]] asks for. Report shape (typed verdict + file:line anchor + counted severities) is why one read was enough to act; recorded as the compression contract candidate in fh_signal_2026-07-21_session.md."
+
+- date: 2026-07-22
+  agent: claude (isolated blind sim ×2)
+  model: sonnet
+  purpose: "Target-tier known-pair sim for the new Intent-Marshaling doctrine (CLAUDE.md §Intent Marshaling + intent_marshaling_general_work.md) — salience-dependent change, Mode D near-mandatory"
+  prompt_summary: "Blind fresh-session sims: positive = '팀 공유용 qasp 소개 위키 초안 만들어줘' (must marshal), negative = 'CATALOG.md 오타 하나 고쳐줘' (must NOT add ceremony). No expected-answer leakage."
+  outcome: accepted
+  finding: "Pair separated → instrument valid. Positive: marshaled (mechanical grounding scan found existing teamlead deck = found→extend, tone-rule self-applied, run-first, zero deflection). Negative: direct check-and-answer, no marshaling ceremony. Residual: first-response scope means skill-composition naming + Step-5 exposure gate unobserved."
+  note: "Known-pair discipline per CLAUDE.md §Instrument Calibration. Recorded before publishing the PASS claim anywhere else."
+
+- date: 2026-07-22
+  agent: codex-sidecar (headless x2 rounds)
+  model: gpt-5.5 (xhigh)
+  purpose: "Cross-family adversarial review of load-bearing Intent-Marshaling doctrine (auto-decorrelation standing path)"
+  prompt_summary: "R1: 4 attack angles (degrade direction / gate routing / overclaim / row collision). R2: stdin-inlined convergence check on the 4 fixes."
+  outcome: accepted
+  finding: "R1: 4/4 findings source-verified TRUE (2 HIGH, 2 MED) — trust-tier auto-run hole, per-action reversibility fail-open, subjective gap predicate, trigger collision. R2: CONVERGED, no new findings."
+  note: "Same-family review would likely have shared the optimistic 'installed = runnable' reading — the two HIGHs are exactly the correlated-blind-spot class. Transcript preserved for marker."
+
+- date: 2026-07-22
+  agent: fh-meta:hub-persona-auditor
+  model: session-inherit
+  purpose: "Pre-publication persona audit of a leader-briefing draft (private companion store, restricted-env publication pending)"
+  prompt_summary: "3 personas (바쁜 비기술 파트장 · 회의적 기술 실장 · QA 리드) + 수치 소스 대조 + 측정경계/와이어프레임/행동가능성 검증"
+  outcome: accepted
+  finding: "수치 불일치 0/8. SHIP_AFTER_M: M3(비용 부재·바통터치 1인→다인 과대·용어 무정의) S7 R4 — 문서가 자기 원칙(낙관 차단)을 2곳에서 스스로 위반한 것 적발(1.5막 라벨·제작방식 시제). 전건 반영."
+  note: "감사가 잡은 낙관 2건을 문서 §제작방식에 명시 — 게이트 작동의 셀프 실증으로 전환."
