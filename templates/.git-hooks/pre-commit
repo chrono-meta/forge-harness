@@ -179,8 +179,13 @@ else
   GUARD_EXIT=0
   # Pre-commit must evaluate the STAGED index, not --pr merge-base: on a direct-to-main
   # workflow merge-base(main,main)=HEAD makes staged changes invisible (fh_signal 2026-06-04).
-  bash "$GUARD" --staged 2>&1 || GUARD_EXIT=$?
-  if [ "$GUARD_EXIT" -eq 0 ]; then
+  GUARD_OUT="$(bash "$GUARD" --staged 2>&1)" || GUARD_EXIT=$?
+  printf '%s\n' "$GUARD_OUT"
+  if [ "$GUARD_EXIT" -eq 0 ] && printf '%s' "$GUARD_OUT" | grep -q '^REGRESSION_GUARD_RESULT=skip$'; then
+    # ★ 미검사를 통과로 렌더하지 않는다. 가역 표면이라 커밋은 막지 않지만,
+    #   "PASS" 라고 쓰면 게이트가 자산을 봤다는 잘못된 신호가 된다(2026-07-22 수리).
+    echo "  ⏭️  SKIP — 게이트 pathspec 에 걸린 파일이 없다 (검사 안 함 ≠ 통과)"
+  elif [ "$GUARD_EXIT" -eq 0 ]; then
     echo "  ✅ PASS"
   elif [ "$GUARD_EXIT" -eq 1 ]; then
     echo "  ⚠️  S-tier warnings present — review before merge (commit allowed)"

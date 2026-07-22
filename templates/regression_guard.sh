@@ -9,7 +9,14 @@
 #   bash templates/regression_guard.sh --staged                # pre-commit: staged index vs HEAD
 #   bash templates/regression_guard.sh --verbose --staged      # include suppression reasons
 #
-# Exit codes: 0=PASS / 1=S-tier warnings / 2=M-tier block / 3=usage error
+# Exit codes: 0=PASS **또는 SKIP** / 1=S-tier warnings / 2=M-tier block / 3=usage error
+#
+# ⚠️ exit 0 은 두 의미를 갖는다 — 검사해서 통과(PASS)와 **검사 대상이 없었음(SKIP)**.
+#    구분하려면 stdout 의 `REGRESSION_GUARD_RESULT=skip` 을 보라. 종료코드만 보는 호출자는
+#    미검사를 통과로 읽는다(2026-07-22: pre-commit 이 정확히 그랬고, AGENTS.md 변경이
+#    그 경로로 '✅ PASS' 를 받고 지나갔다).
+#    배선 현황: pre-commit ✅ / harness-doctor · harvest-loop · hub-cc-pr-reviewer ·
+#    self_evolution_routine = **미배선(종료코드만 판정)** — 알려진 잔여.
 #
 # PR mode rationale: using 'main' as BASE_REF for a PR branch includes changes from OTHER
 # merged PRs as false positives. --pr computes the fork-point (merge-base) automatically,
@@ -78,17 +85,40 @@ else
   HEAD_REF="${2:-}"   # empty = working tree
 fi
 
+# 게이트 커버 자산 = 4축 정본(.claude/rules/fh_4axis_gate.md §48)이 선언한 목록과 맞춘다.
+# 2026-07-22 수리: AGENTS.md · knowledge/** · docs/*.md 가 여기 없어서, 정본이 "커버한다"고
+# 선언한 자산을 Axis 1 이 **아예 보지 못했다**. 그리고 그 미검사가 호출부(pre-commit)에서
+# `✅ PASS` 로 렌더됐다 = 검사 안 함이 통과로 보고되는 fail-open.
+# 새 경로를 추가할 때는 반드시 fh_4axis_gate.md §48 과 대조할 것 — 두 목록이 갈리면
+# 갈린 쪽이 조용히 무검사 구간이 된다.
+GUARD_PATHSPEC=(
+  'plugins/*/skills/*/SKILL.md'
+  '.claude/rules/*.md'
+  'knowledge/shared/rules/*.md'
+  'knowledge/*.md'
+  'knowledge/*/*.md'
+  'knowledge/*/*/*.md'
+  'CLAUDE.md'
+  'AGENTS.md'
+  'docs/*.md'
+  'templates/*.md'
+)
+
 # Discover changed files
 if [ "$STAGED_MODE" -eq 1 ]; then
-  CHANGED=$(git diff --cached --name-only -- 'plugins/*/skills/*/SKILL.md' '.claude/rules/*.md' 'knowledge/shared/rules/*.md' 'CLAUDE.md' 'templates/*.md' 2>/dev/null)
+  CHANGED=$(git diff --cached --name-only -- "${GUARD_PATHSPEC[@]}" 2>/dev/null)
 elif [ -z "$HEAD_REF" ]; then
-  CHANGED=$(git diff --name-only "$BASE_REF" -- 'plugins/*/skills/*/SKILL.md' '.claude/rules/*.md' 'knowledge/shared/rules/*.md' 'CLAUDE.md' 'templates/*.md' 2>/dev/null)
+  CHANGED=$(git diff --name-only "$BASE_REF" -- "${GUARD_PATHSPEC[@]}" 2>/dev/null)
 else
-  CHANGED=$(git diff --name-only "$BASE_REF" "$HEAD_REF" -- 'plugins/*/skills/*/SKILL.md' '.claude/rules/*.md' 'knowledge/shared/rules/*.md' 'CLAUDE.md' 'templates/*.md' 2>/dev/null)
+  CHANGED=$(git diff --name-only "$BASE_REF" "$HEAD_REF" -- "${GUARD_PATHSPEC[@]}" 2>/dev/null)
 fi
 
 if [ -z "$CHANGED" ]; then
-  echo "REGRESSION_GUARD: no SKILL.md / rules / CLAUDE.md changes — skip"
+  # ★ SKIP 은 PASS 가 아니다. 이 스크립트는 exit 0 을 유지하지만(가역 표면 · 호출부 호환),
+  #   **문구로 통과와 구분**한다 — 과거 호출부가 이 줄을 받고 `✅ PASS` 를 찍어
+  #   "검사 안 함"이 "통과"로 보고됐다(2026-07-22 수리).
+  echo "REGRESSION_GUARD: SKIP (not-checked, NOT a pass) — no file matched the gate pathspec"
+  echo "REGRESSION_GUARD_RESULT=skip"
   exit 0
 fi
 
@@ -429,6 +459,27 @@ echo
 echo "===================="
 echo "VERDICT"
 echo "===================="
+# ── carve-out 경로 강등 (2026-07-22, challenger HIGH-1) ──────────────────────
+# knowledge/ · docs/ · AGENTS.md 는 **커버되어야 하지만 산문이 본체**다. 이 경로에
+# 내용-손실 검사(토큰 카운트·섹션 그룹)를 그대로 걸면 동의어 교체 한 번에 M-tier 가
+# 뜬다(실측: 산문 한 단어 교체 → 토큰 2→1, 50% 드롭 → 하드 블록).
+# 과차단은 이론 비용이 아니다 — `--no-verify` 를 근육에 새기고, 그러면 **같은 훅의
+# Destructive-Op 게이트까지 함께 무장해제**된다. 그래서 이 경로는 차단이 아니라 경고다.
+# 호출부(pre-commit)의 CARVEOUT 분류기와 **같은 방향**이되, 여기서 substantive 판정을
+# 재구현하지는 않는다 — 판정 로직을 두 벌 두면 관대함이 갈리고, 그게 이번 주에
+# qasp 에서 고친 바로 그 결함 클래스다(divergent-leniency).
+if [ "$M_TIER" -gt 0 ] && [ -n "$CHANGED" ]; then
+  NON_CARVEOUT=$(printf '%s\n' "$CHANGED" \
+    | grep -vE '(^knowledge/.*\.md$|^docs/.*\.md$|(^|/)AGENTS\.md$)' \
+    | grep -vE '^\s*$' || true)
+  if [ -z "$NON_CARVEOUT" ]; then
+    echo "  ⚠️  carve-out 경로만 변경 — M-tier ${M_TIER}건을 S-tier 로 강등한다"
+    echo "      (산문 자산에 내용-손실 검사를 하드 블록으로 걸면 과차단 → --no-verify 학습)"
+    S_TIER=$((S_TIER + M_TIER))
+    M_TIER=0
+  fi
+fi
+
 echo "M-tier blockers: $M_TIER"
 echo "S-tier warnings: $S_TIER"
 
