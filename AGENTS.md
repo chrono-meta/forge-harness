@@ -117,7 +117,9 @@ So four things that govern behavior are not going to reach you on their own. Rea
    skip the gate — it just means you meet the block without knowing what it wants.
    ⚠️ If you run `templates/regression_guard.sh` (Axis 1) yourself, **`exit 0` means PASS *or* SKIP** —
    SKIP being "no staged file matched the gate's pathspec", which is *not checked*, not *checked and
-   clean*. Read stdout for `REGRESSION_GUARD_RESULT=skip` to tell them apart. Judging by exit code
+   clean*. Prefer the typed file channel — set `REGRESSION_GUARD_RESULT_FILE=<path>` and read
+   `result=pass|review|block|skip|error` from that file (stdout's `REGRESSION_GUARD_RESULT=` line is
+   the no-env fallback). Judging by exit code
    alone lets an unexamined change report as a pass (measured 2026-07-22: that is exactly what the
    commit hook did until it was fixed).
 2. **Company residency is absolute** (CLAUDE.md §Field-Harness Diagnostic): raw company source, secrets,

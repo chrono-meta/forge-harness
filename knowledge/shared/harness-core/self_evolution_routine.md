@@ -109,7 +109,9 @@ operator's residual at merge review).
 > ⚠️ **"Axis 1 PASS" 는 종료코드로 판정하지 마라.** `regression_guard.sh` 의 `exit 0` 은
 > **PASS 와 SKIP 을 둘 다** 뜻한다 — SKIP 은 "게이트 pathspec 에 걸린 파일이 없었다"이지
 > "검사했고 괜찮다"가 아니다. 무인 루틴이 종료코드만 보면 **미검사가 draft PR 을 unblock 한다.**
-> 구분: stdout 에 `REGRESSION_GUARD_RESULT=skip` 이 있으면 SKIP 이다 — 그 경우 Axis 1 은
+> 구분: `REGRESSION_GUARD_RESULT_FILE=<path>` 를 설정하고 그 파일의 `result=` 를 읽어라 —
+> typed 채널이 정본이고 stdout `REGRESSION_GUARD_RESULT=` 줄은 env 를 못 쓸 때 폴백이다.
+> `result=skip` 이면 SKIP — 그 경우 Axis 1 은
 > *통과가 아니라 미실행*이므로 Axes 2–3 과 같은 운영자 잔여로 올려라.
 > (2026-07-22 실측: `pre-commit` 이 정확히 이 혼동을 일으켜 AGENTS.md 변경이 `✅ PASS` 를
 > 받고 지나갔다. `pre-commit` 은 배선 완료 · 이 루틴을 포함한 나머지 소비자는 **미배선 잔여**.)

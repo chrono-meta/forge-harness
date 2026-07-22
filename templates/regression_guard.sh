@@ -104,6 +104,19 @@ GUARD_PATHSPEC=(
   'templates/*.md'
 )
 
+# 계기 무결: base ref 가 안 풀리면 diff 실패가 2>/dev/null 로 삼켜져 CHANGED 공백 →
+# `result=skip` 으로 세탁된다(challenger C-2 실측: no-such-ref → 확신형 skip + exit 0).
+# shallow clone / detached CI 에서 실제로 나는 경로 — 계기 에러는 skip 이 아니라 error 다.
+if [ "$STAGED_MODE" -ne 1 ]; then
+  if ! git rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1; then
+    echo "REGRESSION_GUARD: base ref '$BASE_REF' does not resolve — instrument error, NOT a skip" >&2
+    if [ -n "${REGRESSION_GUARD_RESULT_FILE:-}" ]; then
+      printf 'result=error\nm_tier=0\ns_tier=0\nfiles_checked=0\n' > "$REGRESSION_GUARD_RESULT_FILE"
+    fi
+    exit 3
+  fi
+fi
+
 # Discover changed files
 if [ "$STAGED_MODE" -eq 1 ]; then
   CHANGED=$(git diff --cached --name-only -- "${GUARD_PATHSPEC[@]}" 2>/dev/null)
@@ -119,6 +132,13 @@ if [ -z "$CHANGED" ]; then
   #   "검사 안 함"이 "통과"로 보고됐다(2026-07-22 수리).
   echo "REGRESSION_GUARD: SKIP (not-checked, NOT a pass) — no file matched the gate pathspec"
   echo "REGRESSION_GUARD_RESULT=skip"
+  if [ -n "${REGRESSION_GUARD_RESULT_FILE:-}" ]; then
+    printf 'result=skip
+m_tier=0
+s_tier=0
+files_checked=0
+' > "$REGRESSION_GUARD_RESULT_FILE"
+  fi
   exit 0
 fi
 
@@ -483,13 +503,33 @@ fi
 echo "M-tier blockers: $M_TIER"
 echo "S-tier warnings: $S_TIER"
 
+# ── typed verdict 채널 (2026-07-23, #165 잔여 폐쇄) ──────────────────────────
+# 종료코드는 다의적이고(0=pass|skip) stdout grep 은 prose-grep 채널이라 취약하다
+# ([[feedback_typed_verdict_channel]]). REGRESSION_GUARD_RESULT_FILE 이 설정돼 있으면
+# 기계 판독용 typed verdict 를 그 파일에 쓴다 — 소비자는 stdout 을 파싱할 필요가 없다.
+# stdout 의 REGRESSION_GUARD_RESULT= 줄은 파일 채널 없는 소비자용 폴백(전 결과에 방출).
+_emit_result() {  # $1=verdict
+  echo "REGRESSION_GUARD_RESULT=$1"
+  if [ -n "${REGRESSION_GUARD_RESULT_FILE:-}" ]; then
+    printf 'result=%s
+m_tier=%s
+s_tier=%s
+files_checked=%s
+'       "$1" "$M_TIER" "$S_TIER" "$(printf '%s
+' "$CHANGED" | grep -c . || true)"       > "$REGRESSION_GUARD_RESULT_FILE"
+  fi
+}
+
 if [ "$M_TIER" -gt 0 ]; then
   echo "❌ BLOCK — fix M-tier issues before merge"
+  _emit_result block
   exit 2
 elif [ "$S_TIER" -gt 0 ]; then
   echo "⚠️  REVIEW — S-tier warnings present (merge allowed but verify intent)"
+  _emit_result review
   exit 1
 else
   echo "✅ PASS — safe to merge"
+  _emit_result pass
   exit 0
 fi

@@ -179,9 +179,20 @@ else
   GUARD_EXIT=0
   # Pre-commit must evaluate the STAGED index, not --pr merge-base: on a direct-to-main
   # workflow merge-base(main,main)=HEAD makes staged changes invisible (fh_signal 2026-06-04).
-  GUARD_OUT="$(bash "$GUARD" --staged 2>&1)" || GUARD_EXIT=$?
+  # typed 파일 채널로 verdict 수신 — stdout grep(prose-grep) 대체 (2026-07-23, #165 잔여 폐쇄).
+  GUARD_RESULT_FILE=$(mktemp "${TMPDIR:-/tmp}/fh_guard_result.XXXXXX")
+  GUARD_OUT="$(REGRESSION_GUARD_RESULT_FILE="$GUARD_RESULT_FILE" bash "$GUARD" --staged 2>&1)" || GUARD_EXIT=$?
   printf '%s\n' "$GUARD_OUT"
-  if [ "$GUARD_EXIT" -eq 0 ] && printf '%s' "$GUARD_OUT" | grep -q '^REGRESSION_GUARD_RESULT=skip$'; then
+  GUARD_VERDICT=$(sed -n 's/^result=//p' "$GUARD_RESULT_FILE" 2>/dev/null | head -1)
+  rm -f "$GUARD_RESULT_FILE"
+  # 일관성 검사 (challenger C-1): exit 코드와 typed verdict 가 어긋나면 게이트 계기 오류다 —
+  # 특히 중도 crash(exit 1, 파일 미작성)가 "S-tier 경고, 커밋 허용"으로 렌더되던 구멍.
+  # fh-gate.sh 의 exit-10 harness-error 선례: 계기 오류는 통과도 경고도 아닌 fail-closed.
+  if { [ "$GUARD_EXIT" -eq 1 ] && [ "$GUARD_VERDICT" != "review" ]; } \
+     || { [ "$GUARD_EXIT" -eq 0 ] && [ "$GUARD_VERDICT" != "pass" ] && [ "$GUARD_VERDICT" != "skip" ]; }; then
+    echo "  ❌ HARNESS-ERROR — guard exit=$GUARD_EXIT but typed verdict='$GUARD_VERDICT' (crash or instrument fault; not a pass, not a warning)"
+    FAILED=1
+  elif [ "$GUARD_EXIT" -eq 0 ] && [ "$GUARD_VERDICT" = "skip" ]; then
     # ★ 미검사를 통과로 렌더하지 않는다. 가역 표면이라 커밋은 막지 않지만,
     #   "PASS" 라고 쓰면 게이트가 자산을 봤다는 잘못된 신호가 된다(2026-07-22 수리).
     echo "  ⏭️  SKIP — 게이트 pathspec 에 걸린 파일이 없다 (검사 안 함 ≠ 통과)"

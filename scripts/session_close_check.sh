@@ -109,5 +109,63 @@ else
   FAIL=1
 fi
 
+# ⑤-b card-drift probe — 카드의 "부재 주장"을 실물과 대조 (advisory, never FAIL).
+# WHY (N=3, 2026-07-22 주간감사 🟥1): 카드 🔴 "frontier-digest 미가동 — 로그도 산출물도 0"이
+# 오판정이었다(실측 launchd 14/14 발화·산출 12/14). 07-20 S-4 재발에 이어 3회째 →
+# operations.md §Recurrence escalation: 습관 규칙이 아니라 기계 프로브.
+# HONEST SCOPE: 카드 🔴/🟡 줄에서 부재-주장 키워드를 잡고, 그 줄의 이름/경로 토큰으로
+# 실물을 글롭 검색한다. 어휘가 안 겹치면 못 잡는다(무음 FN) — 앵커지 floor 가 아니다.
+# 방향은 advisory: 가역 표면에서 하드 블록은 --no-verify 를 학습시킨다(#165 HIGH-1 동일 원리).
+_ABSENCE_RE='미가동|산출물[^가-힣]*0|로그[^가-힣]*0|0건|부재|안 돌|미생성|not running|no output|zero output'
+# 부정/정정 문맥 가드 — 부재-주장을 **인용하며** 정정하는 줄만 건너뛴다. 판별자는 debunk
+# 어휘 단독이 아니라 **부재-키워드가 인용부호 안에 있는가** — challenger A-1 실측: 살아있는
+# 주장 + 무관한 '정정 필요' 가 같은 줄이면 debunk-단독 가드가 진짜 경고를 무음 삼켰다(FN).
+_DEBUNK_RE='오판정|정정|거짓|아니었|반증'
+_QUOTED_ABSENCE_RE='["“”'"'"'『][^"“”'"'"'』]*(미가동|부재|미생성)'
+if [ -f "$CARD" ]; then
+  DRIFT_HITS=0
+  while IFS= read -r line; do
+    # 부재-주장 줄에서 검증 가능한 토큰 2계층 추출:
+    #  (a) 명시 경로/글롭 (슬래시나 * 포함) — 그대로 글롭 확장
+    #  (b) 이름 토큰 (하이픈/언더스코어 포함 ≥6자, e.g. frontier-digest) — -/_ 정규화 후
+    #      tracks/_meta{,/logs} 파일명 부분일치 검색
+    # `*` 는 추출 클래스에서 제외 — 마크다운 강조(**tok**)가 토큰에 붙어 글롭 분기로
+    # 오폭한다(known-pair P 픽스처가 잡은 계기 불량, 2026-07-23). 경로 판정은 슬래시로만.
+    tokens=$(printf '%s\n' "$line" | grep -oE '[A-Za-z0-9_./-]+' \
+             | sed 's/^[.-]*//; s/[.-]*$//' \
+             | grep -E '(/|[A-Za-z0-9]+[-_][A-Za-z0-9]+)' | grep -E '.{6,}' \
+             | grep -vE '^[0-9._-]+$' | sort -u)   # 날짜/숫자 토큰 제외 (실카드 FP)
+    [ -z "$tokens" ] && continue
+    while IFS= read -r tok; do
+      found=0
+      case "$tok" in
+        */*)  # (a) 경로 — **파일만** 인정(-f). 디렉토리를 세면 카드의 위치-언급
+              # (tracks/_meta/ 등)이 "실물"로 잡힌다(challenger A-2 FP). 인프라 루트 제외.
+          case "$tok" in tracks/_meta|tracks/_meta/|tracks/_meta/logs|tracks/_meta/logs/) continue ;; esac
+          # shellcheck disable=SC2086
+          for f in $FH/$tok $FH/${tok}*; do [ -f "$f" ] && found=$((found+1)); done ;;
+        *)         # (b) 이름 토큰 — 양쪽 구분자 변형으로 검색
+          norm_u=$(printf '%s' "$tok" | tr '-' '_'); norm_h=$(printf '%s' "$tok" | tr '_' '-')
+          found=$(find "$FH/tracks/_meta" -maxdepth 2 -type f ! -name "$(basename "$CARD")" \( -name "*${norm_u}*" -o -name "*${norm_h}*" \) 2>/dev/null | wc -l | tr -d ' ') ;;
+      esac
+      if [ "${found:-0}" -gt 0 ]; then
+        echo "⚠️  ⑤-b card-drift: 카드가 부재를 주장하는데 실물이 있다 — 토큰 '$tok' 매치 ${found}건. 줄: $(printf '%s' "$line" | cut -c1-80)…"
+        echo "     → 주장을 손검증하라 (미가동≠산출누락 — 07-22 오판정 클래스). advisory, 차단 아님."
+        DRIFT_HITS=$((DRIFT_HITS+1)); break
+      fi
+    done <<CARD_TOK_EOF
+$tokens
+CARD_TOK_EOF
+  done <<CARD_LINE_EOF
+$(grep -E '(🔴|🟡)' "$CARD" 2>/dev/null | grep -E "$_ABSENCE_RE" | grep -v '^description:' \
+   | while IFS= read -r _l; do
+       if printf '%s\n' "$_l" | grep -qE "$_DEBUNK_RE" \
+          && printf '%s\n' "$_l" | grep -qE "$_QUOTED_ABSENCE_RE"; then continue; fi
+       printf '%s\n' "$_l"
+     done || true)
+CARD_LINE_EOF
+  [ "$DRIFT_HITS" -eq 0 ] && echo "✅ ⑤-b no card absence-claim contradicted by on-disk artifacts"
+fi
+
 echo "── close check: $([ "$FAIL" -eq 0 ] && echo CONSISTENT || echo VIOLATIONS) ──"
 exit "$FAIL"
