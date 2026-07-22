@@ -104,11 +104,11 @@ For complex multi-step tasks, run `/agent-composer` first to plan which agents t
 
 The methodology layer (`tracks/`, `knowledge/`, `SKILL.md` docs) is Codex-compatible beta. Any AI model can follow skill workflows by reading SKILL.md files directly; the automation layer (hooks, plugin-channel agents under `plugins/*/agents/`, `/model`) is Claude Code-native and requires manual adaptation. FH's own agents are auto-loaded via the plugin channel when the plugin is enabled — `.claude/agents/` is the field-project override slot, not where FH ships its agents. Non-Claude runtimes use this `AGENTS.md`, `plugins/*/agents/*.md`, and `scripts/fh-run.sh` to apply the same methodology via adapter.
 
-### Non-Claude runtimes: three things CLAUDE.md holds that you will not auto-load
+### Non-Claude runtimes: four things CLAUDE.md holds that you will not auto-load
 
 `.claude/rules/*.md` with `paths:` frontmatter is a **Claude Code platform feature** — those files are
 auto-loaded into a Claude Code session when it reads a matching file, and **your runtime has no equivalent**.
-So three things that govern behavior are not going to reach you on their own. Read them explicitly:
+So four things that govern behavior are not going to reach you on their own. Read them explicitly:
 
 1. **FH asset changes run a mandatory 4-axis verification chain before the session's first commit.**
    Detail (axis definitions · marker required fields · lightweight exception · substantive carve-out):
@@ -131,6 +131,29 @@ So three things that govern behavior are not going to reach you on their own. Re
    an exit. **This row exists because the triggering utterance names no agent** — nothing will fire it
    for you. Your runtime *can* run these lenses: substitute `Agent(subagent_type=...)` per §M2 above
    (`fh-run`, or `codex exec` reading the agent spec). The lens returns evidence, never the verdict.
+
+4. **A plain work request is served by marshaling installed capability — not deflected.** CLAUDE.md
+   §Intent Marshaling makes this the runtime default: when the operator states a work intent in plain
+   language (write this doc, build this wiki page, organize this material — **any work-shaped ask, not
+   only harness building**), you scan what is actually installed, propose a one-line composition, and
+   run it. *"This is a harness hub, not for that"* is a **forbidden deflection** — serving general work
+   is identity, because the skill registry, the mapped harnesses, and the memory store exist only here.
+   Three things carry over unchanged to your runtime:
+   - **The scan is mechanical, never recall** — enumerate the skill list, `LOCAL_SKILL_REGISTRY`, and
+     mapped project assets. Marshal-by-feel is the defect this replaces.
+   - **Marshaling never upgrades a trust tier.** Run-first autonomy covers **FH-native capability whose
+     steps are per-action reversible**. A non-FH sibling capability stays at its registry `ask-tier`
+     (propose only), and an outward-mutating action (send · post · deploy · delete) keeps its own gate.
+   - **A capability gap is declared by citing the scan result**, never as a bare "nothing fits" — then
+     route at request scale (internal scan → external search → in-session synthesis). *Persist* routes
+     to the New-Skill gate; *install* routes to plugin-recommender's HITL. No new gates.
+
+   **This row exists because the triggering utterance is ordinary work language that names no skill and
+   no agent** — exactly like row 3, nothing will fire it for you.
+
+> **Detail**: See `knowledge/shared/harness-core/intent_marshaling_general_work.md` — the 5-step loop,
+> the gate-routing table, the Sonnet-floor boundaries, and the origin defect — **open it directly**
+> before applying the ladder or when a gap appears.
 
 The irreversible-surface gates (Pre-Publish · Destructive-Op) likewise live in CLAUDE.md and fire on
 **intent**, not on a file — read them before any publish, delete, or history-rewrite. `pre-push` enforces
