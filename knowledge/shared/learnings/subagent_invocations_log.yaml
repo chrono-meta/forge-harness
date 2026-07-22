@@ -303,3 +303,12 @@
   outcome: accepted
   finding: "수치 불일치 0/8. SHIP_AFTER_M: M3(비용 부재·바통터치 1인→다인 과대·용어 무정의) S7 R4 — 문서가 자기 원칙(낙관 차단)을 2곳에서 스스로 위반한 것 적발(1.5막 라벨·제작방식 시제). 전건 반영."
   note: "감사가 잡은 낙관 2건을 문서 §제작방식에 명시 — 게이트 작동의 셀프 실증으로 전환."
+
+- date: 2026-07-22
+  agent: fh-meta:hub-persona-auditor
+  model: session-inherit
+  purpose: "Pre-publication persona audit of the TF-facing methodology briefing (private companion store, restricted-env publication pending)"
+  prompt_summary: "3 TF personas (확산 리드 · 타 도메인 리더 · 회의적 플랫폼 엔지니어) + 도메인-무관 주장별 근거 검증 + 사례 축소 적정성 + 요청 행동가능성"
+  outcome: accepted
+  finding: "SHIP_AFTER_M 3건(플레이스홀더 잔존 · 자매문서 대비 미배선 단서 누락 · '무관' 단정 vs n=1) + S4 R3. 핵심 캐치: 사례 축소가 '분량'이 아니라 '선택'이 거꾸로 — 도메인 무관 층의 유일한 정량 근거(방법-스택 8/8)를 빼고 QA-특화 수치만 남긴 것. 전건 반영, 단 감사자 인용 60%→100%는 소스 재검증으로 5/8→6/8→8/8 정확값으로 교정."
+  note: "감사자 finding도 소스 검증 후 수용 — 근사치 인용 1건을 정확값으로 바로잡음 (challenger-verify-before-act)."
