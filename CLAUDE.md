@@ -524,6 +524,7 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | "help me write a prompt", "build a prompt", "improve this prompt", "prompt template" | `/meta-prompt-builder` |
 | "/goal", "run this autonomously", "big multi-step task", "orchestrate this goal", or **any heavy autonomous/multi-agent run** (proactive — propose *before* running; it is expensive, so the proposal is mandatory, not the auto-run) | `/goal-quench` (budget gate + quality gate) |
 | "I don't know what to build", "how should I approach this", "organize this for me", "clarify this", "정리해줘" (ambiguous request before dispatch) | `/deep-clarify` |
+| **work-shaped request outside the harness domain** — "이 문서 만들어줘", "위키 페이지 써줘", "이 자료 표로 만들어줘", any general work ask no other row or skill catches (**fallback default** — a more specific row above/below always wins: 리서치→deep-research · ambiguous "정리해줘"→deep-clarify · heavy fleet→goal-quench) | **Intent-Marshaling loop** (§Intent Marshaling — mechanical capability scan → one-line compose proposal → run; gap → capability ladder) |
 | "memory feels bloated", "clean up memory", "memory too large", "memory hygiene" | `/memory-hygiene` |
 | "ready to PR", "about to push", "merge this", "PR 올려줘", FH asset changed in session | 4-axis auto-gate (see above — runs automatically, no proposal needed) |
 | **field verdict/gate/safety/irreversible code changed** in a mapped project (function returning a verdict enum / gate exit code / safety-invariant · publish/delete/history path) — **proactive, before merge** | **Field-Harness Load-Bearing Change Gate** (see above → degrade-lint → cross-family review → converge; same rigor as FH assets, applied to field code) |
@@ -597,6 +598,29 @@ Purpose: {task/session purpose}  |  Completed: {what's already done}
 This agent's task: {specific task + target files/paths}  |  Note: {constraints/history}
 ```
 Simple file-lookup agents may omit. Agent dispatch works from any mapped project cwd — for FH skills, specify `~/projects/forge-harness/` explicitly.
+
+---
+
+## Intent Marshaling — General-Work Serving (runtime default)
+
+FH/PMH is a **purpose organization**, not only a meta-harness: when the leader states a work intent in
+plain language — wiki/document production, research-and-write, organizing, **any work-shaped ask, not
+just harness building** — the session **marshals installed capability** (skills · agents · mapped
+harnesses · memory) into a one-line composition proposal and runs it. "This is a harness hub, not for
+that" is a forbidden deflection — serving general work is identity (the registry + mapped harnesses +
+memory exist only here; a plain chatbot cannot marshal them). Marshal-by-feel is the defect this
+replaces (same shape as pre-#158 lens selection): the capability scan is **mechanical** (skill list ·
+`LOCAL_SKILL_REGISTRY` · mapped assets), never recall — and it **carries trust tiers**: run-first
+autonomy covers **FH-native capability with per-action-reversible steps only**; a non-FH sibling hit
+stays at its registry `ask-tier` (propose-only) and an outward-mutating action (send · post · deploy ·
+delete) keeps its own gate — marshaling never upgrades either. Capability gap (declared only by citing
+the scan result, never a bare "nothing fits") → the goal-quench Step C ladder semantics at request
+scale (internal scan → external search → in-session synthesis; **persist** routes to the New-Skill
+gate, **install** to plugin-recommender's HITL — no new gates).
+
+> **Detail (read before applying the ladder or when a gap appears)**:
+> `knowledge/shared/harness-core/intent_marshaling_general_work.md` — the 5-step loop, gate-routing
+> table, Sonnet-floor boundaries, and the origin defect.
 
 ---
 
