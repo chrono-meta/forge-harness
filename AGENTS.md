@@ -115,6 +115,11 @@ So four things that govern behavior are not going to reach you on their own. Rea
    `.claude/rules/fh_4axis_gate.md` — **open it directly**; nothing will load it for you. The commit is
    hard-blocked by `templates/.git-hooks/pre-commit` regardless of runtime, so skipping the read does not
    skip the gate — it just means you meet the block without knowing what it wants.
+   ⚠️ If you run `templates/regression_guard.sh` (Axis 1) yourself, **`exit 0` means PASS *or* SKIP** —
+   SKIP being "no staged file matched the gate's pathspec", which is *not checked*, not *checked and
+   clean*. Read stdout for `REGRESSION_GUARD_RESULT=skip` to tell them apart. Judging by exit code
+   alone lets an unexamined change report as a pass (measured 2026-07-22: that is exactly what the
+   commit hook did until it was fixed).
 2. **Company residency is absolute** (CLAUDE.md §Field-Harness Diagnostic): raw company source, secrets,
    hostnames, internal repo/asset names, stack traces, and unredacted findings **never leave the local
    machine** — not to an external *or same-family* cloud model, not through a browser/API tool, not into a
