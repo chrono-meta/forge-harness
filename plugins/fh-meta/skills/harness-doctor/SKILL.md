@@ -115,7 +115,6 @@ size instrument* is read. The footprint rows below apply to **both** scopes and 
 | **Pointer-illusion**: a CLAUDE.md "detail/detailed procedure" pointer whose target is itself an always-loaded `.claude/rules/*.md` | S-tier — the split saves zero context (rules/ auto-loads regardless); move the target out of auto-load, keep the pointer |
 | weekly_audit 14~30 days elapsed | S-tier |
 | weekly_audit 30+ days elapsed | M-tier |
-| `tracks/_meta/*.md` **reference assets** (excluding dated chronological records — `fh_completed_*` · `fh_signal_*` · `frontier_digest_*` · `session_*` · `weekly_audit_*` · `*_log_*`, whose date lives in the filename by design) missing **both** a role/type tag and a version/date stamp | R-tier — taxonomy gap, not urgent. ⚠️ **Measured FP rate before you act on this**: run against FH itself 2026-07-21 it flagged **99/161 (61%)** un-narrowed and **19/26 (73%)** after narrowing — a row that flags most of a directory is noise, not signal. ⚠️ **No consumer**: grep found **no skill that reads `role`/`type` from these files**. Until one exists this is taxonomy for taxonomy's sake — treat as an inventory observation, never escalate |
 
 **Per-unit ≠ aggregate — do not slide between them.** "Every section earns its scope" (the per-unit
 doctrine test) and "the always-loaded total is affordable" (the budget test) are **different questions, and
@@ -230,51 +229,11 @@ FAIL, the safe direction); and the scope test reads directory *existence*, so th
 field→meta (acceptable: the operator names the target, and the footprint rows apply to **both** scopes
 regardless — but it does skip the field-only line rows).
 
-**Context-File Taxonomy check** (mechanical grep, R-tier only — a coverage lens, not a mandate): L1 (Step 2)
-checks `CLAUDE.md` / `.claudeignore` / `.claude/` existence, but nothing checks `tracks/_meta/*.md` context-file
-existence or taxonomy — this adds both. Note: `tpa_schema.md` classifies this file class (`session_card`) as
-**low** risk / "ephemeral state, low blast radius" — most `tracks/_meta/*.md` files are untagged by design, and
-that is expected, not a defect. This check surfaces untagged files for optional triage on the subset that
-function as durable references (e.g. `reference_next_session_starter.md`); it is not a mandate that every file
-in the directory carry a tag.
-
-Scan for two markers per file — a role/type tag (`role:` or `type:` in frontmatter, or a leading `# Role:`
-line) and a version/date stamp (a `YYYY-MM-DD` date or a `version:` frontmatter key, either in the first 10
-lines). A file missing either marker is untagged — report the file list and count; do not escalate past R
-without a human judging whether the specific file's staleness is actually a problem.
-
-```bash
-# find | while, not a glob — same reason as the always-loaded footprint scan above: an unmatched
-# glob aborts under zsh, and a silent zero-match run must still report, not disappear.
-TARGET="${1:?pass the target root explicitly — cwd is not the target}"
-total=0; untagged=0
-while IFS= read -r f; do
-  [ -n "$f" ] || continue
-  total=$((total + 1))
-  # 연대기 기록물은 파일명에 날짜가 있는 것이 설계다 — taxonomy 대상이 아니다(FP 원인의 78/99)
-  case "$(basename "$f")" in fh_completed_*|fh_signal_*|frontier_digest_*|session_*|weekly_audit_*|*_log_*) continue ;; esac
-  grep -qE '^(role|type):|^# ?Role:' "$f" && tag=yes || tag=no
-  head -10 "$f" | grep -qE '[0-9]{4}-[0-9]{2}-[0-9]{2}|^version:' && stamp=yes || stamp=no
-  if [ "$tag" = no ] || [ "$stamp" = no ]; then
-    untagged=$((untagged + 1))
-    echo "UNTAGGED: $f (role-tag=$tag version-stamp=$stamp)"
-  fi
-done < <(find "$TARGET/tracks/_meta" -maxdepth 1 -name '*.md' 2>/dev/null)
-echo "context-file-taxonomy: $untagged untagged of $total files"
-```
-
-**Named residuals of this scan**: `head -10` can miss a stamp in unusually long frontmatter; `^type:` is not
-fence-scoped, so a stray body line starting `type:` outside frontmatter false-positives `tag=yes` — both push
-toward under-reporting, not over-reporting.
-
-Origin (2026-07-20, frontier-auto): surfaced via [Frontier Digest 2026-07-14](https://github.com/chrono-meta/forge-harness/issues/102#issuecomment-4964058520),
-which described a durable-context-file pattern (role-tagged, versioned files shared across 50+ specialized
-agents) citing `aimultiple.com/llm-orchestration` as its source. A `/phantom-quench` pass on 2026-07-20 found
-that page's retrievable content does not actually discuss this pattern — the digest's citation is mis-attributed
-and no verified primary source has been located. The qualitative taxonomy idea (role/version tagging on context
-files) is adopted here on the digest's description alone and is `SPECULATIVE` per H1/H1-b until a verified
-primary source is found; the "40% fewer tool calls" figure the digest also reported is not cited anywhere in
-this check for the same reason.
+<!-- Context-File Taxonomy check removed 2026-07-22/23 (#153 → weekly-audit #6 decision): consumer
+     re-measure = 0 skills read role:/type: from these files; measured FP 99/161 (61%) un-narrowed,
+     19/26 (73%) after narrowing; origin citation was mis-attributed (SPECULATIVE, no primary source).
+     Decorative unit per doctrine — FP figures preserved in the removal commit message as the
+     regression anchor. Re-adding requires a named consumer first. -->
 
 ### Step 3-L. Language Lint (`--lint` mode only)
 

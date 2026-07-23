@@ -312,3 +312,21 @@
   outcome: accepted
   finding: "SHIP_AFTER_M 3건(플레이스홀더 잔존 · 자매문서 대비 미배선 단서 누락 · '무관' 단정 vs n=1) + S4 R3. 핵심 캐치: 사례 축소가 '분량'이 아니라 '선택'이 거꾸로 — 도메인 무관 층의 유일한 정량 근거(방법-스택 8/8)를 빼고 QA-특화 수치만 남긴 것. 전건 반영, 단 감사자 인용 60%→100%는 소스 재검증으로 5/8→6/8→8/8 정확값으로 교정."
   note: "감사자 finding도 소스 검증 후 수용 — 근사치 인용 1건을 정확값으로 바로잡음 (challenger-verify-before-act)."
+
+- date: 2026-07-23
+  agent: fh-commons:quench-challenger
+  model: session-inherit
+  purpose: "4-axis Axis 2 adversarial review of fh_session_load.sh digest schedule-aware guard (pre-commit full mode)"
+  prompt_summary: "diff 공격 — 산술/파싱(10# · set -u 즉사) · 시각 경계(자정·09:00 정각) · stat 폴백 · in-flight 임계 · 다운스트림 파괴"
+  outcome: accepted
+  finding: "VERDICT PASS(HIGH 0) · MED 2(존재판정이 러너 digest_ready 와 관대함 갈림 → partial 성공-오독 · 락 미확인 → 슬립-복귀 false 실패) · LOW 3. 실패 공격 8건은 bash 3.2 실기 실측으로 기각. MED 2건+LOW 1건 소스검증 후 수리, 8/8 재캘리브레이션."
+  note: "MED-1 은 pre-existing 을 챌린저가 잡음 — divergent-leniency 패턴의 실전 재발 사례. 처방 술어를 러너 원문(-size +1k · -mmin +240)과 문면 일치시켜 수리."
+
+- date: 2026-07-23
+  agent: fh-commons:quench-challenger
+  model: session-inherit
+  purpose: "4-axis Axis 2 adversarial review of harness-doctor #153 taxonomy check removal"
+  prompt_summary: "삭제 diff 공격 — dangling refs · 구조(테이블/Step 흐름) · 삭제 vs 강등 판단 · 제외리스트 loss · 톰스톤 정확성"
+  outcome: accepted
+  finding: "VERDICT PASS(HIGH 0 MED 0 LOW 3). 소비자 0 을 독립 재검증(log yaml role: 0줄 · tracks/_meta 접촉 스킬 4종 무독자) · 실패 공격 5축 전부 근거 명시 기각. LOW 3건=커밋 메시지 요건."
+  note: "삭제 검증에서도 challenger 가 자체 grep 으로 소스 접지 — 거버너 동의가 아닌 기계 앵커로 수용."
