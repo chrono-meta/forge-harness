@@ -33,27 +33,56 @@ FH="${HUB_DIR:-${CLAUDE_PROJECT_DIR:-$HOME/projects/forge-harness}}"
 # (2026-07-21 실측: exit 1 / 재시도 후에도 없음 / Attempt 에서 hang — 세 형태).
 # 그런데 세션 시작은 "있으면 읽는다"만 했다 → **실패가 '오늘은 뉴스 없음'으로 읽혔다.**
 # 부재와 실패는 0이 아니다. 로그가 있는데 산출물이 없으면 그건 부재가 아니라 FAILED 다.
-_FD_TODAY="$FH/tracks/_meta/frontier_digest_$(date +%Y_%m_%d).md"
+# Portable mtime (epoch). GNU-first: on GNU/coreutils `stat -f %m` exits 0 with filesystem-format
+# output (never reaching a BSD fallback), so probe `stat -c %Y` FIRST — on BSD/macOS it errors and
+# falls through to `-f %m`. Always echoes a numeric value (0 on total failure) so `-gt` never breaks.
+# (codex cross-family review 2026-07-05 [MED]: BSD-first order silently mis-parsed on GNU.)
+_mtime() { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null || echo 0; }
+
 _FD_LOG="$FH/tracks/_meta/logs/frontier_digest_$(date +%Y_%m_%d).log"
-if [ -f "$_FD_TODAY" ]; then
+_FD_LOCK="$FH/tracks/_meta/logs/.frontier_digest.lock"
+# 스케줄 전 부재 ≠ 실패: 잡은 launchd 로 09:00 에 돈다(com.forge-harness.frontier-digest.plist).
+# 2026-07-23 08:07 세션이 "잡이 안 돌았을 수 있다" 경고를 받았고 잡은 09:00 에 정상 완주 —
+# 경고가 나중에 읽히면 오보처럼 보인다. 그래서 ① 스케줄 전엔 경고하지 않고 ② 모든 분기에
+# 발화 시각을 스탬프하고 ③ 러너 생존 신호(로그 갱신 or 락)가 있는 동안은 실패 판정을 보류한다.
+_FD_SCHED=900                              # 09:00, HHMM 를 10진 정수로
+_FD_NOW="${FD_NOW_HHMM:-$(date +%H%M)}"    # FD_NOW_HHMM = known-pair 캘리브레이션 전용(숫자 4자리만)
+_FD_STAMP="$(date +%H:%M) 기준"
+# 존재 판정은 러너 digest_ready 와 동일 술어(glob + -size +1k). 정확명 [ -f ] 는 러너와 관대함이
+# 갈린다 — partial 파일(>0 <1k)이 성공으로 오독되고, suffix 착지가 영구 오경보가 된다
+# (divergent-leniency: 같은 상태를 두 술어가 다르게 읽으면 한쪽 결과가 무음으로 샌다).
+_fd_ready() { find "$FH/tracks/_meta" -maxdepth 1 -name "frontier_digest_$(date +%Y_%m_%d)*.md" -size +1k 2>/dev/null | grep -q .; }
+if _fd_ready; then
   :
+elif [ "$((10#$_FD_NOW))" -lt "$_FD_SCHED" ]; then
+  echo "ℹ️  [frontier-digest] 오늘 digest 는 09:00 예정 — 아직 전이다($_FD_STAMP). 부재는 정상."
 elif [ -f "$_FD_LOG" ]; then
-  echo "⚠️  [frontier-digest] 오늘 잡은 돌았는데 **산출물이 없다** — 부재가 아니라 실패다."
-  echo "    마지막 로그: $(tail -1 "$_FD_LOG" 2>/dev/null | cut -c1-90)"
-  echo "    → 수동 재실행하거나 실패 원인을 보라. '오늘은 뉴스 없음'으로 읽지 말 것."
+  _FD_LOG_AGE=$(( $(date +%s) - $(_mtime "$_FD_LOG") ))
+  # 러너 생존 신호 2종 — 어느 쪽이든 있으면 FAILED 대신 보류:
+  #   ① 로그 최근 갱신(임계 2100s > 러너 최장 침묵창 = watchdog 1800s)
+  #   ② 락 존재이면서 비-stale — stale 임계는 러너 자신의 락-브레이크 술어(-mmin +240)와 동일.
+  #      락은 슬립-복귀 직후(로그는 오래됐지만 러너가 살아 재개하는 케이스)를 커버한다.
+  _FD_ALIVE=""
+  if [ -d "$_FD_LOCK" ] && [ -z "$(find "$_FD_LOCK" -maxdepth 0 -mmin +240 2>/dev/null)" ]; then
+    _FD_ALIVE="락 존재"
+  fi
+  [ "$_FD_LOG_AGE" -lt 2100 ] && _FD_ALIVE="${_FD_ALIVE:+$_FD_ALIVE · }로그 ${_FD_LOG_AGE}s 전 갱신"
+  if [ -n "$_FD_ALIVE" ]; then
+    echo "ℹ️  [frontier-digest] 잡이 아직 돌고 있는 중일 수 있다($_FD_STAMP, $_FD_ALIVE) — 실패 판정 보류, 나중에 재확인."
+  else
+    echo "⚠️  [frontier-digest] 오늘 잡은 돌았는데 **산출물이 없다**($_FD_STAMP) — 부재가 아니라 실패다."
+    echo "    마지막 로그: $(tail -1 "$_FD_LOG" 2>/dev/null | cut -c1-90)"
+    echo "    → 수동 재실행하거나 실패 원인을 보라. '오늘은 뉴스 없음'으로 읽지 말 것."
+  fi
 else
-  echo "⚠️  [frontier-digest] 오늘 로그도 산출물도 없다 — 잡이 아예 안 돌았을 수 있다(launchd 확인)."
+  echo "⚠️  [frontier-digest] 스케줄(09:00) 지났는데 로그도 산출물도 없다($_FD_STAMP) — 잡이 아예 안 돌았을 수 있다(launchd 확인)."
 fi
 BE="${BE_DIR:-}"   # companion-store path — supplied by the gitignored hook registration; no public default.
 
 # Non-Mode-D / no companion store → silent no-op (this is the majority path for public users).
 [ -d "$BE/.git" ] || exit 0
 
-# Portable mtime (epoch). GNU-first: on GNU/coreutils `stat -f %m` exits 0 with filesystem-format
-# output (never reaching a BSD fallback), so probe `stat -c %Y` FIRST — on BSD/macOS it errors and
-# falls through to `-f %m`. Always echoes a numeric value (0 on total failure) so `-gt` never breaks.
-# (codex cross-family review 2026-07-05 [MED]: BSD-first order silently mis-parsed on GNU.)
-_mtime() { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null || echo 0; }
+# (_mtime is defined above the frontier-digest block — single definition, both sections use it.)
 
 # 1) Refresh the companion store — fail-fast, never block the first turn, never mutate into a
 #    merge/conflict. (codex cross-family review 2026-07-05 [HIGH]/[MED].)
