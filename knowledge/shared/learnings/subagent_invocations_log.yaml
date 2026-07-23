@@ -330,3 +330,12 @@
   outcome: accepted
   finding: "VERDICT PASS(HIGH 0 MED 0 LOW 3). 소비자 0 을 독립 재검증(log yaml role: 0줄 · tracks/_meta 접촉 스킬 4종 무독자) · 실패 공격 5축 전부 근거 명시 기각. LOW 3건=커밋 메시지 요건."
   note: "삭제 검증에서도 challenger 가 자체 grep 으로 소스 접지 — 거버너 동의가 아닌 기계 앵커로 수용."
+
+- date: 2026-07-23
+  agent: codex-sidecar (gpt-5.5, cross-family)
+  model: gpt-5.5
+  purpose: "qasp-dev PR #16 게이트 실행기(exit-code verdict 표면) cross-family 적대 검증 — Field-Harness Load-Bearing Change Gate 이행"
+  prompt_summary: "R1 degrade-방향 공격(무음 PASS 경로·argparse 충돌·컨텍스트 제외·test_ 면제 우회) → R2 수리 재검 → R3 수렴 확인"
+  outcome: accepted
+  finding: "R1 HIGH 2(비-.py 단일 지정 무음 exit0 · test_ 이름만 면제로 page.py core 메서드 통과) MED 2 LOW 2 → 수리. R2 NEW 1(pytestmark 구식 술어가 test_*.py 접두 미검사 = PASS 방향 누락) → 수리. R3 CONVERGED — codex 자체 재실행으로 42 passed·실표면 13건/exit1 재확인."
+  note: "codex 제안 술어(_RE_TEST_FILE)가 실FP 파일을 못 덮는 것을 known-pair 로 확인 후 넓혀 적용 — challenger-verify-before-act 양방향(제안도 검증)."
