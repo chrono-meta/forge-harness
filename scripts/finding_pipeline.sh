@@ -30,13 +30,15 @@ set -uo pipefail
 
 SUPPORTED_FAMILIES="codex gemini"          # must match finding_verifier.sh's own case statement
 
-TARGET=""; OUT=""; FLEET=""
-usage() { echo "usage: finding_pipeline.sh <target-file> --out <dir> [--fleet <table>]" >&2; exit 2; }
+TARGET=""; OUT=""; FLEET=""; SEEDED_IDS=""; SEEDED_FILE=""
+usage() { echo "usage: finding_pipeline.sh <target-file> --out <dir> [--fleet <table>] [--seeded <ids>] [--seeded-file <path>]" >&2; exit 2; }
 need() { [ $# -ge 2 ] || { echo "finding_pipeline: $1 needs a value" >&2; exit 2; }; }
 [ $# -ge 1 ] || usage
 TARGET="$1"; shift
 while [ $# -gt 0 ]; do
   case "$1" in
+    --seeded)      need "$@"; SEEDED_IDS="$2"; shift 2 ;;
+    --seeded-file) need "$@"; SEEDED_FILE="$2"; shift 2 ;;
     --out)   need "$@"; OUT="$2"; shift 2 ;;    # `shift 2` on a trailing flag consumes nothing and
     --fleet) need "$@"; FLEET="$2"; shift 2 ;;  # spins forever; codex reproduced the hang.
     *) usage ;;
@@ -64,6 +66,24 @@ for _p in "$OUT" "$OUT/fleet" "$OUT/confirmed.jsonl" "$OUT/dropped.jsonl" "$OUT/
 done
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# 씨앗 선언을 «작업 시작 전» 에 확정한다 — verify 쪽과 같은 규율(빈 파일·디코드 오류는 설정 오류다)
+ALL_SEEDS="$SEEDED_IDS"
+if [ -n "$SEEDED_FILE" ]; then
+  _FROM_FILE=$(/usr/bin/python3 -c '
+import sys
+try:
+    with open(sys.argv[1], encoding="utf-8") as fh:
+        ids = [l.strip() for l in fh if l.strip() and not l.startswith("#")]
+except (OSError, UnicodeDecodeError) as e:
+    print("finding_pipeline: --seeded-file unusable: %s" % e, file=sys.stderr); sys.exit(2)
+if not ids:
+    print("finding_pipeline: --seeded-file %r yielded no ids — a control file that declares "
+          "nothing is a disabled control, not an absent one" % sys.argv[1], file=sys.stderr)
+    sys.exit(2)
+print(",".join(ids))' "$SEEDED_FILE") || exit 2
+  ALL_SEEDS="${ALL_SEEDS:+$ALL_SEEDS,}$_FROM_FILE"
+fi
+
 FLEET_SH="$HERE/finding_fleet.sh"; VERIFY_PY="$HERE/finding_verify.py"; VERIFIER_SH="$HERE/finding_verifier.sh"
 for f in "$FLEET_SH" "$VERIFY_PY" "$VERIFIER_SH"; do
   [ -f "$f" ] || { echo "finding_pipeline: missing $f — skipped, NOT passed" >&2; exit 3; }
@@ -140,7 +160,11 @@ pick_auditor() { # $1=producer $2=verifier — prefer a third party; fall back t
 # run's verdict while a confirmed survivor sat in the other split. Rank them explicitly instead, and
 # derive 1-vs-0 from the survivor count at the end, never from a split.
 WORST_RANK=0; WORST_CODE=0
-rank_of() { case "$1" in 2) echo 4;; 3) echo 3;; 4) echo 2;; *) echo 0;; esac; }
+# 🟥 exit 5 (SEEDED DEGRADED/INCONCLUSIVE/ABSENT) had NO CASE here, so it fell to the default 0
+# and the driver exited 0 while a split had just reported that the filter deleted a known-true
+# finding. The entire seeded control was invisible at the level a reader actually reads.
+# (cross-family round 4, gemini family, S severity — three same-family rounds missed it.)
+rank_of() { case "$1" in 2) echo 5;; 5) echo 4;; 3) echo 3;; 4) echo 2;; *) echo 0;; esac; }
 note_rc() { local r; r=$(rank_of "$1"); if [ "$r" -gt "$WORST_RANK" ]; then WORST_RANK="$r"; WORST_CODE="$1"; fi; }
 
 : > "$OUT/confirmed.jsonl"; : > "$OUT/dropped.jsonl"; : > "$OUT/splits.txt"
@@ -175,9 +199,30 @@ for l in open(sys.argv[1],encoding="utf-8"):
   else
     echo "  ⚠️  split producer=$PROD — no supported auditor; any drop will come back UNAUDITED" >&2
   fi
+  # 🟥 Seeds are forwarded PER SPLIT, filtered to the ids that actually live in that split's input.
+  # Forwarding the whole declared set to every split would make each split report ABSENT for the
+  # seeds that belong to the other producer — a false alarm manufactured by the routing, not by the
+  # filter. The global "did any declared seed enter at all?" question is answered once, below.
+  SEEDARGS=()
+  if [ -n "$ALL_SEEDS" ]; then
+    _SPLIT_SEEDS=$(ALL_SEEDS="$ALL_SEEDS" /usr/bin/python3 -c '
+import sys, json, os
+want = {x for x in os.environ.get("ALL_SEEDS", "").split(",") if x}
+have = set()
+try:
+    for l in open(sys.argv[1], encoding="utf-8"):
+        l = l.strip()
+        if not l: continue
+        try: d = json.loads(l)
+        except Exception: continue
+        if isinstance(d, dict) and d.get("id") is not None: have.add(str(d["id"]))
+except OSError: pass
+print(",".join(sorted(want & have)))' "$SD/in.jsonl")
+    [ -n "$_SPLIT_SEEDS" ] && SEEDARGS=(--seeded "$_SPLIT_SEEDS")
+  fi
   /usr/bin/python3 "$VERIFY_PY" "$SD/in.jsonl" --out "$SD" \
     --verifier-argv "$(argv_json bash "$VERIFIER_SH" --family "$VER" --target "$TARGET")" --family "$VER" \
-    ${AUDARGS[@]+"${AUDARGS[@]}"} > "$SD/summary.txt" 2>"$SD/err.txt"
+    ${SEEDARGS[@]+"${SEEDARGS[@]}"} ${AUDARGS[@]+"${AUDARGS[@]}"} > "$SD/summary.txt" 2>"$SD/err.txt"
   RC=$?
   note_rc "$RC"
   cat "$SD/summary.txt"
@@ -196,6 +241,137 @@ TOTAL_UNVER=$(count_lines '"verdict": *"unverified"' "$OUT/confirmed.jsonl")
 # becomes true by wording alone.
 TOTAL_AUD=$(count_lines '"drop_verdict": *"\(correct-drop\|wrong-drop\|uncertain\)"' "$OUT/dropped.jsonl")
 TOTAL_WRONG=$(count_lines '"reinstated": *true' "$OUT/confirmed.jsonl")
+# 🟥 COVERAGE ALSO RIDES THE DRIVER LINE, not only the per-split one. `finding_verify.py` records it
+# per split, but the driver's summary is what a reader actually reads — a field recorded in a place
+# nobody reads is the half-externalisation shape this repo keeps re-finding (a slot with zero
+# consumers always reports "done", because presence is doing the judging).
+#
+# 🟥 THREE things this number got wrong on the first attempt, all found by cross-family round 2:
+#   ⓐ it subtracted `unverified` but NOT `needs-debate` — an all-debate run printed 100%. The
+#     verifier had already been fixed for exactly this and the driver had not: a half-fix that
+#     stopped at the propagation boundary, which is the failure mode this repo has a name for.
+#   ⓑ the DENOMINATOR was `confirmed + dropped`, i.e. what came OUT. A partition that is skipped
+#     (unsupported family) then vanishes from numerator and denominator alike and coverage reads
+#     100% while findings were never judged at all. The denominator must be what came IN.
+#   ⓒ the counters were line greps, so passthrough metadata containing `"verdict": "unverified"`
+#     anywhere in a row counted as an abstention. Verdicts are read from the TOP LEVEL of each row.
+# 🟥 판정 수는 «뺄셈» 이 아니라 «양의 계수» 로 구한다. 초판은 입력 총수에서 기권을 뺐는데,
+#    그러면 **출력에 아예 안 나타난 것이 판정된 것으로 계수된다** — 건너뛴 파티션도, 읽기 실패도,
+#    깨진 JSON 도 전부 «100%» 가 된다(cross-family R3 가 A급 둘로 지목, 재현됨).
+#    판정 = 「해결된 verdict 를 실제로 들고 있는 행」의 수다. 없으면 0 이고, 그것이 fail-closed 다.
+_count_json() {   # $1 = 파일, $2 = 필드, $3.. = 셀 값들. 실패는 «0» 이 아니라 비-영 종료로 낸다.
+  /usr/bin/python3 -c '
+import sys, json
+path, field, want = sys.argv[1], sys.argv[2], set(sys.argv[3:])
+n = 0
+try:
+    fh = open(path, encoding="utf-8")
+except FileNotFoundError:
+    print(0); sys.exit(0)                 # 파일 자체가 없는 것은 «행이 0» 이다
+except OSError as e:
+    print("count: %s" % e, file=sys.stderr); sys.exit(9)
+with fh:
+    try:
+        for l in fh:
+            l = l.strip()
+            if not l: continue
+            d = json.loads(l)             # 깨진 줄은 «건너뛰기» 가 아니라 계측 오류다
+            if not isinstance(d, dict): raise ValueError("row is not an object")
+            v = d.get(field)
+            if v is not None and not isinstance(v, str): raise ValueError("non-string %s" % field)
+            if v in want: n += 1
+    except (json.JSONDecodeError, ValueError, UnicodeDecodeError) as e:
+        print("count: %s" % e, file=sys.stderr); sys.exit(9)
+print(n)' "$@"
+}
+_count_lines_json() {   # 행 수 — 같은 실패 규율
+  /usr/bin/python3 -c '
+import sys
+n = 0
+try:
+    fh = open(sys.argv[1], encoding="utf-8")
+except FileNotFoundError:
+    print(0); sys.exit(0)
+except OSError as e:
+    print("count: %s" % e, file=sys.stderr); sys.exit(9)
+with fh:
+    try:
+        for l in fh:
+            if l.strip(): n += 1
+    except UnicodeDecodeError as e:
+        print("count: %s" % e, file=sys.stderr); sys.exit(9)
+print(n)' "$1"
+}
+COUNT_ERR=0
+TOTAL_IN=$(_count_lines_json "$FINDINGS") || COUNT_ERR=1
+TOTAL_UNVER=$(_count_json "$OUT/confirmed.jsonl" verdict unverified) || COUNT_ERR=1
+TOTAL_DEBATE=$(_count_json "$OUT/confirmed.jsonl" verdict needs-debate) || COUNT_ERR=1
+# 🟥 양의 계수: 실제로 «해결된» 판정을 들고 있는 행만 센다.
+# 복권된 행은 이제 verdict=confirmed 를 단다(verify 쪽 근원 수리). 그 전에 만들어진 산출물과의
+# 호환을 위해 «reinstated 이면서 false-positive» 도 판정으로 센다 — 그 행은 감사가 «되돌렸다» 는
+# 결정을 받은 것이지 미판정이 아니다.
+JUDGED_CONF=$(_count_json "$OUT/confirmed.jsonl" verdict confirmed) || COUNT_ERR=1
+JUDGED_REINST=$(/usr/bin/python3 -c '
+import sys, json
+n = 0
+try:
+    fh = open(sys.argv[1], encoding="utf-8")
+except FileNotFoundError:
+    print(0); sys.exit(0)
+except OSError as e:
+    print("count: %s" % e, file=sys.stderr); sys.exit(9)
+with fh:
+    try:
+        for l in fh:
+            l = l.strip()
+            if not l: continue
+            d = json.loads(l)
+            if isinstance(d, dict) and d.get("reinstated") is True and d.get("verdict") != "confirmed":
+                n += 1
+    except (json.JSONDecodeError, ValueError, UnicodeDecodeError) as e:
+        print("count: %s" % e, file=sys.stderr); sys.exit(9)
+print(n)' "$OUT/confirmed.jsonl") || COUNT_ERR=1
+JUDGED_DROP=$(_count_json "$OUT/dropped.jsonl" verdict false-positive) || COUNT_ERR=1
+TOTAL_IN=${TOTAL_IN:-0}; TOTAL_UNVER=${TOTAL_UNVER:-0}; TOTAL_DEBATE=${TOTAL_DEBATE:-0}
+JUDGED_CONF=${JUDGED_CONF:-0}; JUDGED_DROP=${JUDGED_DROP:-0}
+JUDGED_REINST=${JUDGED_REINST:-0}
+TOTAL_JUDGED=$(( JUDGED_CONF + JUDGED_DROP + JUDGED_REINST ))
+# 🟥 Split-level ABSENT cannot fire once seeds are filtered per split, so the "did the control run
+# at all?" question is asked ONCE, globally, against the whole fleet output.
+if [ -n "$ALL_SEEDS" ]; then
+  _SEEDS_SEEN=$(ALL_SEEDS="$ALL_SEEDS" /usr/bin/python3 -c '
+import sys, json, os
+want = {x for x in os.environ.get("ALL_SEEDS", "").split(",") if x}
+have = set()
+try:
+    for l in open(sys.argv[1], encoding="utf-8"):
+        l = l.strip()
+        if not l: continue
+        try: d = json.loads(l)
+        except Exception: continue
+        if isinstance(d, dict) and d.get("id") is not None: have.add(str(d["id"]))
+except OSError: pass
+print(len(want & have))' "$FINDINGS")
+  if [ "${_SEEDS_SEEN:-0}" -eq 0 ]; then
+    echo "  ⚠️  declared seeds are not present anywhere in the fleet output — the control never ran" >&2
+    note_rc 5
+  fi
+fi
+if [ "$COUNT_ERR" -ne 0 ]; then
+  echo "  ⚠️  coverage 계측이 실패했다 — 이 런의 coverage 는 판정이 아니라 «못 잼» 이다" >&2
+  note_rc 3
+fi
+# 🟥 회계 불일치는 clamp 로 덮지 않는다 — 판정이 입력보다 많으면 그건 «0으로 눌러서 정상처럼
+#    보이게 할 것» 이 아니라 계측 결함이다(R3 지적).
+if [ "$TOTAL_JUDGED" -gt "$TOTAL_IN" ]; then
+  echo "  ⚠️  coverage 회계 불일치: 판정 $TOTAL_JUDGED > 입력 $TOTAL_IN" >&2
+  note_rc 3
+fi
+if [ "$TOTAL_IN" -gt 0 ]; then
+  COV_PCT=$(( TOTAL_JUDGED * 100 / TOTAL_IN ))   # floored, never rounded
+else
+  COV_PCT=0
+fi
 
 if [ "$FAILED_MEMBERS" -gt 0 ]; then
   echo "  ⚠️  $FAILED_MEMBERS fleet member(s) exited non-zero — a member that crashed after emitting some findings leaves its family looking complete" >&2
@@ -205,9 +381,9 @@ fi
 RC_FINAL="$WORST_CODE"
 [ "$WORST_RANK" -eq 0 ] && [ "$TOTAL_CONF" -eq 0 ] && RC_FINAL=1
 
-printf 'PIPELINE target=%s families=%s confirmed=%s dropped=%s unverified=%s audited_drops=%s reinstated=%s failed_members=%s rc=%s\n' \
+printf 'PIPELINE target=%s families=%s confirmed=%s dropped=%s unverified=%s debate=%s coverage=%s/%s (%s%%) audited_drops=%s reinstated=%s failed_members=%s rc=%s\n' \
   "$(basename "$TARGET")" "$(tr '\n' ',' < "$OUT/families.txt" | sed 's/,$//')" "$TOTAL_CONF" "$TOTAL_DROP" \
-  "$TOTAL_UNVER" "$TOTAL_AUD" "$TOTAL_WRONG" "$FAILED_MEMBERS" "$RC_FINAL"
+  "$TOTAL_UNVER" "$TOTAL_DEBATE" "$TOTAL_JUDGED" "$TOTAL_IN" "$COV_PCT" "$TOTAL_AUD" "$TOTAL_WRONG" "$FAILED_MEMBERS" "$RC_FINAL"
 # `unverified` is reported on its own line rather than folded into `confirmed`, because folding it is
 # exactly the "not found rendered as zero" family this repo keeps re-finding.
 exit "$RC_FINAL"

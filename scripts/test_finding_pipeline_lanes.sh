@@ -454,6 +454,383 @@ R38=$(_pf_run '{"id":"z1","title":"t","producer_family":"gamma"}' diff)
   && ok "L38 producer_family != 검증자 계열 → 정상 통과 (과차단 아님)" \
   || no "L38 과차단 없음" "got=$R38 want=0|VERIFIED"
 
+# ── L39~L45 커버리지 기록 + 씨앗 통제 (2026-09-09, 거버넌스 루프 R1) ─────────────
+# 🟥 오류율은 «혼자 인용될 수 없는 수» 로 만든다. 판정된 것만 분모에 넣고 기권을 빼면 그 비율은
+#    말하지 않은 동작점에서의 값이고, 기권율이 다른 두 팔을 나란히 놓는 순간 비교가 성립하지
+#    않는다. 이건 선택적 예측 문헌이 이미 «흔한 결함» 으로 명명한 형태이고(arXiv:2407.01032),
+#    우리 5팔 표가 그 실례다. 그래서 coverage 는 DROPS 줄과 같이 «무조건» 나간다.
+# 🟥 그리고 씨앗 통제는 known-pair 규율을 «필터» 에 적용한 것이다 — 이 레포는 그 규율을
+#    스캐너에만 적용해 왔고 삭제 단계에는 한 번도 적용한 적이 없다. 필터도 계기다.
+cat > "$D/sv_keep.sh" <<'EOS'
+#!/bin/sh
+cat >/dev/null
+echo '{"id":"z1","verdict":"confirmed","why":"ok"}'
+echo '{"id":"z2","verdict":"confirmed","why":"ok"}'
+EOS
+cat > "$D/sv_drop.sh" <<'EOS'
+#!/bin/sh
+cat >/dev/null
+echo '{"id":"z1","verdict":"confirmed","why":"ok"}'
+echo '{"id":"z2","verdict":"false-positive","why":"nope"}'
+EOS
+chmod +x "$D/sv_keep.sh" "$D/sv_drop.sh"
+printf '%s\n%s\n' '{"id":"z1","title":"a","producer_family":"gamma"}' \
+                  '{"id":"z2","title":"b","producer_family":"gamma"}' > "$D/sf.jsonl"
+# 하나가 자기 계열이라 unverified 가 되는 입력 — coverage 가 1.0 아래로 내려가야 한다
+printf '%s\n%s\n' '{"id":"z1","title":"a","producer_family":"beta"}' \
+                  '{"id":"z2","title":"b","producer_family":"gamma"}' > "$D/sf_partial.jsonl"
+_sv() { # $1 out이름, $2 verifier, $3 입력, 나머지 = 추가 인자 → "rc|FINDINGS|SEEDED"
+  local n="$1" v="$2" f="$3"; shift 3
+  local o rc; o=$(python3 "$HERE/finding_verify.py" "$D/$f" --out "$D/sv_$n" \
+        --verifier "sh $D/$v" --family beta "$@" 2>&1); rc=$?
+  printf '%s|%s|%s' "$rc" "$(printf '%s' "$o" | /usr/bin/grep -o 'coverage=[0-9]*/[0-9]*')" \
+                    "$(printf '%s' "$o" | sed -n 's/^SEEDED .*status=\([A-Z_]*\).*/\1/p')"
+}
+R39=$(_sv full sv_keep.sh sf.jsonl)
+[ "$R39" = "0|coverage=2/2|NOT_PROVIDED" ] \
+  && ok "L39 전부 판정되면 coverage=2/2 · 씨앗 미제공은 NOT_PROVIDED (후방호환: rc 불변)" \
+  || no "L39 coverage 만점 + 후방호환" "got=$R39 want=0|coverage=2/2|NOT_PROVIDED"
+R40=$(_sv part sv_keep.sh sf_partial.jsonl)
+[ "$R40" = "3|coverage=1/2|NOT_PROVIDED" ] \
+  && ok "L40 🟥 미판정이 있으면 coverage 가 1.0 아래로 내려간다 (기권이 분모 밖으로 숨지 않는다)" \
+  || no "L40 coverage 가 기권을 드러낸다" "got=$R40 want=3|coverage=1/2|NOT_PROVIDED"
+R41=$(_sv seed_ok sv_keep.sh sf.jsonl --seeded z2)
+[ "$R41" = "0|coverage=2/2|CLEAN" ] \
+  && ok "L41 씨앗 생존 → CLEAN · rc 불변" || no "L41 씨앗 생존" "got=$R41 want=0|coverage=2/2|CLEAN"
+R42=$(_sv seed_bad sv_drop.sh sf.jsonl --seeded z2)
+[ "$R42" = "5|coverage=2/2|DEGRADED" ] \
+  && ok "L42 🟥 씨앗이 지워지면 DEGRADED·rc=5 — 삭제로 정밀도를 산 «직접 증거»" \
+  || no "L42 씨앗 삭제 검출" "got=$R42 want=5|coverage=2/2|DEGRADED"
+R43=$(_sv seed_none sv_keep.sh sf.jsonl --seeded zzz)
+[ "$R43" = "5|coverage=2/2|ABSENT" ] \
+  && ok "L43 🟥 씨앗이 입력에 없으면 ABSENT·rc=5 — 안 돈 컨트롤은 통과한 컨트롤이 아니다" \
+  || no "L43 죽은 컨트롤 검출" "got=$R43 want=5|coverage=2/2|ABSENT"
+# L44 되돌림 — coverage 필드를 지우면 L39·L40 이 빨개져야 한다(앵커가 장식이 아님)
+MUT2="$D/verify_mut2.py"
+MUTERR2=$(python3 - "$VERIFY" "$MUT2" 2>&1 <<'PYX'
+import sys
+src, dst = sys.argv[1], sys.argv[2]
+s = open(src, encoding="utf-8").read()
+key = 'coverage={}/{} ({}%) '
+assert key in s, "ANCHOR-MOVED: coverage field format string not found"
+open(dst, "w", encoding="utf-8").write(s.replace(key, ''))
+PYX
+); MUTRC2=$?
+if [ "$MUTRC2" -ne 0 ] || [ ! -s "$MUT2" ]; then
+  no "L44 되돌림 (뮤턴트 생성 실패)" "$(printf '%s' "$MUTERR2" | tail -1) — 앵커가 «움직인» 것이지 «장식» 이 아니다"
+else
+  MO=$(python3 "$MUT2" "$D/sf.jsonl" --out "$D/sv_mut" --verifier "sh $D/sv_keep.sh" --family beta 2>&1); MRC=$?
+  # 🟥 «coverage= 가 없다» 만 보면 **크래시한 뮤턴트도 통과**한다 — 없는 이유가 «지웠기 때문» 인지
+  #    «안 돌았기 때문» 인지 안 갈린다(cross-family 지적 2026-09-09, 항목 5). 그래서 뮤턴트가
+  #    «정상 종료 + FINDINGS 줄을 냈다» 를 먼저 요구하고, 그 다음에 coverage 부재를 본다.
+  if [ "$MRC" -ne 0 ] || ! printf '%s' "$MO" | /usr/bin/grep -q '^FINDINGS '; then
+    no "L44 되돌림" "뮤턴트가 정상 실행되지 않았다(rc=$MRC) — coverage 부재를 «지웠기 때문» 으로 읽을 수 없다"
+  elif printf '%s' "$MO" | /usr/bin/grep -q 'coverage='; then
+    no "L44 되돌림" "coverage 를 지웠는데도 출력에 남아 있다 — 앵커가 다른 곳을 잰다"
+  else
+    ok "L44 되돌림: 뮤턴트는 정상 실행되고 coverage 만 사라진다 (레인이 실물을 잰다)"
+  fi
+fi
+# L45 씨앗 id 는 검증자 프롬프트에 «들어가지 않는다» — 새면 통제가 아니라 힌트가 된다
+cat > "$D/sv_echo.sh" <<'EOS'
+#!/bin/sh
+cat > "$SEEN_FILE"
+echo '{"id":"z1","verdict":"confirmed","why":"ok"}'
+echo '{"id":"z2","verdict":"confirmed","why":"ok"}'
+EOS
+chmod +x "$D/sv_echo.sh"
+# 🟥 초판은 리터럴 `seeded` 를 grep 했다 — 다른 변수명으로 새면 그대로 통과하고, 반대로 finding
+#    본문에 그 낱말이 있으면 거짓 실패다(cross-family 지적 2026-09-09, 항목 5). 누출의 정의는
+#    «씨앗 선택이 검증자 입력을 바꾸는가» 이므로, **선택을 바꿔 두 입력을 바이트 비교**한다.
+SEEN_FILE="$D/seen_a.txt" python3 "$HERE/finding_verify.py" "$D/sf.jsonl" --out "$D/sv_leak_a" \
+  --verifier "sh $D/sv_echo.sh" --family beta --seeded z1 >/dev/null 2>&1
+SEEN_FILE="$D/seen_b.txt" python3 "$HERE/finding_verify.py" "$D/sf.jsonl" --out "$D/sv_leak_b" \
+  --verifier "sh $D/sv_echo.sh" --family beta --seeded z2 >/dev/null 2>&1
+SEEN_FILE="$D/seen_n.txt" python3 "$HERE/finding_verify.py" "$D/sf.jsonl" --out "$D/sv_leak_n" \
+  --verifier "sh $D/sv_echo.sh" --family beta >/dev/null 2>&1
+if [ ! -s "$D/seen_a.txt" ] || [ ! -s "$D/seen_b.txt" ] || [ ! -s "$D/seen_n.txt" ]; then
+  no "L45 씨앗 누출" "검증자 입력을 못 캡처했다 — 미측정(통과 아님)"
+elif cmp -s "$D/seen_a.txt" "$D/seen_b.txt" && cmp -s "$D/seen_a.txt" "$D/seen_n.txt"; then
+  ok "L45 씨앗 «선택» 을 바꿔도 검증자 입력이 바이트 동일 (통제이지 힌트가 아니다)"
+else
+  no "L45 씨앗 누출" "씨앗 선택에 따라 검증자 입력이 달라진다 — 멤버십이 샌다"
+fi
+
+# L46 — coverage 가 «드라이버» 요약 줄에도 실린다. verify 에만 있으면 읽는 사람에게는 없는 것이다.
+FH_CODEX_BIN="$D/fake_smart.sh" FH_AGY_BIN="$D/fake_smart.sh" \
+  bash "$PIPE" "$D/tgt.py" --out "$D/pipeCOV" --fleet "$D/fleetT.tbl" >"$D/pCOV" 2>&1
+SUMC=$(grep -m1 '^PIPELINE ' "$D/pCOV")
+if printf '%s' "$SUMC" | grep -qE 'coverage=[0-9]+/[0-9]+ \([0-9]+%\)'; then
+  ok "L46 PIPELINE 요약 줄이 coverage 를 나른다 (verify 에만 있으면 소비처 0 이다)"
+else
+  no "L46 드라이버 coverage" "PIPELINE 줄에 coverage 없음 → $SUMC"
+fi
+
+# ── L47~L50 cross-family 라운드가 잡은 넷 (2026-09-09) — 수리마다 앵커 하나 ────────
+cat > "$D/sv_drop_all.sh" <<'EOS'
+#!/bin/sh
+cat >/dev/null
+echo '{"id":"z1","verdict":"false-positive","why":"no"}'
+echo '{"id":"z2","verdict":"false-positive","why":"no"}'
+EOS
+cat > "$D/sa_reinstate.sh" <<'EOS'
+#!/bin/sh
+cat >/dev/null
+echo '{"id":"z1","verdict":"correct-drop","why":"fine"}'
+echo '{"id":"z2","verdict":"wrong-drop","why":"actually real"}'
+EOS
+cat > "$D/sv_debate.sh" <<'EOS'
+#!/bin/sh
+cat >/dev/null
+echo '{"id":"z1","verdict":"needs-debate","why":"hm"}'
+echo '{"id":"z2","verdict":"needs-debate","why":"hm"}'
+EOS
+chmod +x "$D/sv_drop_all.sh" "$D/sa_reinstate.sh" "$D/sv_debate.sh"
+
+# L47 🟥 A급 — 감사자가 씨앗을 복권시켜도 «필터는 지웠다». 복권은 산출을 고치지 통제를 통과시키지 않는다
+O47=$(python3 "$HERE/finding_verify.py" "$D/sf.jsonl" --out "$D/l47" --verifier "sh $D/sv_drop_all.sh" \
+      --family beta --audit-verifier "sh $D/sa_reinstate.sh" --audit-family delta --seeded z2 2>&1); R47=$?
+# 🟥 rc=5/DEGRADED 만 보면 «감사 자체가 안 돈» 경우도 통과한다 — 그러면 이 레인은 A1 회귀를
+#    못 잡는다(cross-family R2 지적). 그러므로 «복권이 실제로 일어났다» 를 먼저 세운다.
+_L47_REINSTATED=0
+printf '%s' "$O47" | /usr/bin/grep -q 'reinstated=1'   && /usr/bin/grep -q '"id": *"z2"' "$D/l47/confirmed.jsonl" 2>/dev/null   && /usr/bin/grep -q '"reinstated": *true' "$D/l47/confirmed.jsonl" 2>/dev/null   && ! /usr/bin/grep -q '"id": *"z2"' "$D/l47/dropped.jsonl" 2>/dev/null   && _L47_REINSTATED=1
+if [ "$_L47_REINSTATED" -ne 1 ]; then
+  no "L47 전제 미성립" "복권이 실제로 안 일어났다 — 이 레인은 A1 회귀를 못 잡는다. $(printf '%s' "$O47" | /usr/bin/grep '^DROPS')"
+elif [ "$R47" -eq 5 ] && printf '%s' "$O47" | /usr/bin/grep -q 'SEEDED .*status=DEGRADED'; then
+  ok "L47 🟥 감사자가 씨앗을 «실제로 복권시켰는데도» DEGRADED·rc=5 (통제는 산출이 아니라 필터를 잰다)"
+else
+  no "L47 감사 복권이 통제를 지우지 못한다" "rc=$R47 · $(printf '%s' "$O47" | /usr/bin/grep '^SEEDED')"
+fi
+# L48 needs-debate 는 «판정» 이 아니다 — 전부 debate 면 coverage 는 0 이어야 한다
+O48=$(python3 "$HERE/finding_verify.py" "$D/sf.jsonl" --out "$D/l48" --verifier "sh $D/sv_debate.sh" \
+      --family beta 2>&1); R48=$?
+# 🟥 coverage 문자열만 보면 «0% 인데 rc=0» 이 통과한다 — 실제로 그랬다(cross-family R4). 판정
+#    0건인 런은 «완주» 가 아니므로 종료코드까지 같이 단언한다.
+if [ "$R48" -eq 3 ] && printf '%s' "$O48" | /usr/bin/grep -q 'coverage=0/2 (0%)'; then
+  ok "L48 전부 needs-debate → coverage=0/2 **그리고 rc=3** (판정 0건은 완주가 아니다)"
+else
+  no "L48 debate 는 커버 아님" "rc=$R48 want=3 · $(printf '%s' "$O48" | /usr/bin/grep '^FINDINGS')"
+fi
+# L49 빈 씨앗 파일 = «비활성화된 통제» 지 «없는 통제» 가 아니다 → 설정 오류로 rc=2
+: > "$D/seed_empty.txt"
+python3 "$HERE/finding_verify.py" "$D/sf.jsonl" --out "$D/l49" --verifier "sh $D/sv_keep.sh" \
+  --family beta --seeded-file "$D/seed_empty.txt" >/dev/null 2>&1; R49=$?
+[ "$R49" -eq 2 ] && ok "L49 빈 --seeded-file → rc=2 (조용히 통제가 꺼지지 않는다)" \
+                 || no "L49 빈 통제 파일" "rc=$R49 want=2"
+# L50 불량 UTF-8 은 «완주» 코드로 새면 안 된다 (초판은 UnicodeDecodeError 가 exit 1 로 샜다)
+printf '\377\376\n' > "$D/seed_bad.bin"
+python3 "$HERE/finding_verify.py" "$D/sf.jsonl" --out "$D/l50" --verifier "sh $D/sv_keep.sh" \
+  --family beta --seeded-file "$D/seed_bad.bin" >/dev/null 2>&1; R50=$?
+[ "$R50" -eq 2 ] && ok "L50 불량 UTF-8 씨앗 파일 → rc=2 (rc=1 «완주» 로 새지 않는다)" \
+                 || no "L50 통제 파일 디코드 오류" "rc=$R50 want=2"
+
+# ── L49b~L53 cross-family R2 가 지적한 레인 약점 + 새 앵커 (2026-09-09) ───────────
+# 🟥 L49/L50 은 rc=2 만 봤다 — 옵션 이름을 지워도 argparse 가 2 를 내므로 «무관한 실패» 로도
+#    통과했고, 파싱을 다시 뒤로 옮겨도 통과했다. 셋을 더한다: 유효 파일 성공 컨트롤 · 의도한
+#    진단 문구 · **검증자가 아예 호출되지 않았음**(출력물 부재로 판정).
+cat > "$D/sv_touch.sh" <<'EOS'
+#!/bin/sh
+cat >/dev/null
+: > "$TOUCHED"
+echo '{"id":"z1","verdict":"confirmed","why":"ok"}'
+echo '{"id":"z2","verdict":"confirmed","why":"ok"}'
+EOS
+chmod +x "$D/sv_touch.sh"
+printf 'z2\n' > "$D/seed_good.txt"
+# (a) 유효 파일 컨트롤 — 성공해야 한다. 이게 없으면 «전부 막는 픽스» 와 구분 불가
+TOUCHED="$D/t_ok" python3 "$HERE/finding_verify.py" "$D/sf.jsonl" --out "$D/l49a" \
+  --verifier "sh $D/sv_touch.sh" --family beta --seeded-file "$D/seed_good.txt" >/dev/null 2>&1; R49A=$?
+# (b) 빈 파일 — rc=2 · 진단 문구 · 검증자 미호출 · 출력 미생성
+E49=$(TOUCHED="$D/t_empty" python3 "$HERE/finding_verify.py" "$D/sf.jsonl" --out "$D/l49b" \
+  --verifier "sh $D/sv_touch.sh" --family beta --seeded-file "$D/seed_empty.txt" 2>&1); R49B=$?
+if [ "$R49A" -ne 0 ]; then
+  no "L49b 유효 통제 파일 컨트롤" "정상 씨앗 파일인데 rc=$R49A — 픽스가 과차단이다"
+elif [ "$R49B" -ne 2 ]; then
+  no "L49b 빈 통제 파일" "rc=$R49B want=2"
+elif ! printf '%s' "$E49" | /usr/bin/grep -q 'yielded no ids'; then
+  no "L49b 진단 문구" "rc=2 는 맞지만 의도한 진단이 아니다 — 무관한 usage 실패와 구분 불가: $E49"
+elif [ -e "$D/t_empty" ] || [ -e "$D/l49b/confirmed.jsonl" ]; then
+  no "L49b 조기 거부" "검증자가 호출됐거나 출력이 생겼다 — 검증 «전» 에 안 막았다"
+else
+  ok "L49b 빈 통제 파일: rc=2 · 의도한 진단 · 검증자 미호출 · 출력 미생성 (유효 파일 컨트롤 통과)"
+fi
+# (c) 불량 UTF-8 — 같은 세 조건
+E50=$(TOUCHED="$D/t_bad" python3 "$HERE/finding_verify.py" "$D/sf.jsonl" --out "$D/l50b" \
+  --verifier "sh $D/sv_touch.sh" --family beta --seeded-file "$D/seed_bad.bin" 2>&1); R50B=$?
+if [ "$R50B" -eq 2 ] && printf '%s' "$E50" | /usr/bin/grep -q 'unusable' \
+   && [ ! -e "$D/t_bad" ] && [ ! -e "$D/l50b/confirmed.jsonl" ]; then
+  ok "L50b 불량 UTF-8: rc=2 · 의도한 진단 · 검증자 미호출 (rc=1 «완주» 로 새지 않는다)"
+else
+  no "L50b 통제 파일 디코드 오류" "rc=$R50B · touched=$([ -e "$D/t_bad" ] && echo yes || echo no) · $E50"
+fi
+# L51 🟥 반올림 회귀 — 201건 중 1건만 미판정이면 100% 가 아니라 99% 여야 한다
+: > "$D/big.jsonl"
+i=1; while [ "$i" -le 201 ]; do
+  if [ "$i" -eq 1 ]; then fam=beta; else fam=gamma; fi
+  printf '{"id":"b%s","title":"t","producer_family":"%s"}\n' "$i" "$fam" >> "$D/big.jsonl"
+  i=$((i+1))
+done
+cat > "$D/sv_all.sh" <<'EOS'
+#!/bin/sh
+python3 -c '
+import sys, json
+for l in sys.stdin:
+    l = l.strip()
+    if not l: continue
+    try: d = json.loads(l)
+    except Exception: continue
+    print(json.dumps({"id": d.get("id"), "verdict": "confirmed", "why": "ok"}))'
+EOS
+chmod +x "$D/sv_all.sh"
+O51=$(python3 "$HERE/finding_verify.py" "$D/big.jsonl" --out "$D/l51" --verifier "sh $D/sv_all.sh" --family beta 2>&1)
+if printf '%s' "$O51" | /usr/bin/grep -q 'coverage=200/201 (99%)'; then
+  ok "L51 🟥 200/201 은 99% 로 찍힌다 (반올림하면 미판정 1건이 100% 뒤에 숨는다)"
+else
+  no "L51 바닥 내림" "$(printf '%s' "$O51" | /usr/bin/grep '^FINDINGS')"
+fi
+# L52 드라이버도 debate 를 커버로 안 센다 (verify 만 고치고 드라이버를 안 고친 반쪽-픽스 회귀 앵커)
+cat > "$D/m_deb.sh" <<'EOS'
+#!/bin/sh
+echo '{"id":"d1","title":"debatable thing","file":"tgt.py","line":1,"severity":"B"}'
+EOS
+chmod +x "$D/m_deb.sh"
+# 🟥 초판 픽스처는 stdin 을 버리고 고정 id 하나를 뱉었다 — 실제 id 와 안 맞아 verify 가 «판정 없음
+#    → unverified» 로 처리했고, 레인은 「전제 미성립」으로 정직하게 실패했다(통과 아님). 실제로
+#    debate 를 만들려면 «받은 id 를 그대로» 되돌려줘야 한다. 형태는 fake_smart.sh 와 같이 간다.
+cat > "$D/fake_debate.sh" <<'EOS'
+#!/bin/sh
+IN=$(cat)
+[ -n "$IN" ] || IN="$*"
+case "$IN" in *"correct-drop"*) MODE=audit ;; *) MODE=verify ;; esac
+printf '%s\n' "$IN" | tr ',' '\n' | sed -n 's/.*"id": *"\([^"]*\)".*/\1/p' | sort -u | while read -r id; do
+  if [ "$MODE" = audit ]; then
+    echo "{\"id\":\"$id\",\"verdict\":\"correct-drop\",\"why\":\"checked\"}"
+  else
+    echo "{\"id\":\"$id\",\"verdict\":\"needs-debate\",\"why\":\"unclear from this file alone\"}"
+  fi
+done
+EOS
+chmod +x "$D/fake_debate.sh"
+printf 'codex|logic|%s\ngemini|security|%s\n' "sh $D/m_deb.sh" "sh $D/m_deb.sh" > "$D/fleetD.tbl"
+FH_CODEX_BIN="$D/fake_debate.sh" FH_AGY_BIN="$D/fake_debate.sh" \
+  bash "$PIPE" "$D/tgt.py" --out "$D/pipeDEB" --fleet "$D/fleetD.tbl" >"$D/pDEB" 2>&1
+SUMD=$(grep -m1 '^PIPELINE ' "$D/pDEB")
+# 🟥 `coverage=0/` 만 보면 «분모도 0» 이거나 «numerator 를 상수 0 으로 바꾼» 구현도 통과한다
+#    (cross-family R3 지적). 분모를 정확히 요구한다 — 이 픽스처는 계열 2개 × finding 1개 = 2건.
+if printf '%s' "$SUMD" | grep -qE 'debate=[1-9]' && printf '%s' "$SUMD" | grep -q 'coverage=0/2 (0%)'; then
+  ok "L52 드라이버도 needs-debate 를 커버로 안 센다 (verify 만 고친 반쪽-픽스 회귀 앵커)"
+elif printf '%s' "$SUMD" | grep -qE 'debate=0'; then
+  no "L52 전제 미성립" "이 픽스처가 debate 를 만들지 못했다 — 미측정(통과 아님): $SUMD"
+else
+  no "L52 드라이버 debate" "$SUMD"
+fi
+
+# ── L53~L55 cross-family R3: «출력에 안 나타난 것» 이 판정으로 세어지면 안 된다 ────────
+# 🟥 초판 드라이버는 판정 수를 «입력 − 기권» 으로 구했다. 그러면 건너뛴 파티션·읽기 실패·깨진
+#    JSON 처럼 **출력에 아예 안 나타난 것이 판정된 것으로** 계수되고 coverage 가 100% 로 찍힌다.
+#    지금은 «해결된 verdict 를 실제로 들고 있는 행» 을 양으로 센다. 그 셋을 각각 박는다.
+# L53 단일 계열이라 라우팅이 건너뛴다 → 판정 0. coverage 가 100% 면 안 된다
+printf 'codex|logic|%s\n' "sh $D/m_codex.sh" > "$D/fleetS53.tbl"
+FH_CODEX_BIN="$D/fake_smart.sh" bash "$PIPE" "$D/tgt.py" --out "$D/pipe53" --fleet "$D/fleetS53.tbl" >"$D/p53" 2>&1; R53=$?
+SUM53=$(grep -m1 '^PIPELINE ' "$D/p53")
+if [ -z "$SUM53" ]; then
+  no "L53 전제 미성립" "PIPELINE 요약 줄이 없다 — 미측정(통과 아님)"
+elif printf '%s' "$SUM53" | grep -qE 'coverage=[1-9][0-9]*/[0-9]+ \(100%\)'; then
+  no "L53 건너뛴 파티션" "판정이 0인데 coverage 가 100% — 안 나타난 것을 «판정됨» 으로 셌다: $SUM53"
+elif printf '%s' "$SUM53" | grep -q 'coverage=0/'; then
+  ok "L53 🟥 라우팅이 건너뛴 파티션은 «판정» 으로 안 세어진다 (coverage 0, rc=$R53)"
+else
+  no "L53 건너뛴 파티션" "$SUM53"
+fi
+# L54 양의 컨트롤 — 정상 런은 분모까지 정확히 맞아야 한다. 없으면 «항상 0» 구현이 L53 을 통과한다
+FH_CODEX_BIN="$D/fake_smart.sh" FH_AGY_BIN="$D/fake_smart.sh" \
+  bash "$PIPE" "$D/tgt.py" --out "$D/pipe54" --fleet "$D/fleetT.tbl" >"$D/p54" 2>&1
+SUM54=$(grep -m1 '^PIPELINE ' "$D/p54")
+if printf '%s' "$SUM54" | grep -q 'coverage=2/2 (100%)'; then
+  ok "L54 정상 런은 coverage=2/2 (100%) — «항상 0» 구현이 L53 을 통과하지 못하게 하는 양의 컨트롤"
+else
+  no "L54 양의 컨트롤" "정상 런인데 분모/분자가 안 맞는다: $SUM54"
+fi
+# L55 🟥 이 레인은 «장식» 이었다 — 인라인 파이썬 스니펫이 예외를 던지는지만 봤고, 출하되는
+#     `_count_json` 도 `finding_pipeline.sh` 도 한 줄도 안 불렀다. 드라이버의 계측 가드를 통째로
+#     지워도 통과했다(cross-family R4, gemini 지목). 이제 **출하 스크립트에서 함수를 뽑아** 돌린다.
+_L55_FN=$(sed -n '/^_count_json() {/,/^}/p' "$PIPE")
+if [ -z "$_L55_FN" ]; then
+  no "L55 계측 실패 규율" "_count_json 을 $PIPE 에서 못 뽑았다 — 미측정(통과 아님)"
+else
+  printf 'NOT JSON AT ALL\n' > "$D/broken.jsonl"
+  printf '{"id":"z1","verdict":"confirmed"}\n' > "$D/okrows.jsonl"
+  _L55_OUT=$(eval "$_L55_FN"; _count_json "$D/broken.jsonl" verdict confirmed >/dev/null 2>&1; echo "broken=$?";
+             _count_json "$D/okrows.jsonl" verdict confirmed >/dev/null 2>&1; echo "ok=$?";
+             _count_json "$D/does_not_exist.jsonl" verdict confirmed 2>/dev/null; echo "missing_rc=$?")
+  case "$_L55_OUT" in
+    *"broken=9"*) : ;;
+    *) no "L55 계측 실패 규율" "깨진 JSONL 인데 출하 함수가 비-영을 안 냈다 → $_L55_OUT"; _L55_BAD=1 ;;
+  esac
+  if [ "${_L55_BAD:-0}" -eq 0 ]; then
+    case "$_L55_OUT" in
+      *"ok=0"*) ok "L55 출하되는 _count_json: 깨진 산출물 → rc=9 · 정상 산출물 → rc=0 (양의 컨트롤 동반)" ;;
+      *) no "L55 계측 실패 규율" "정상 JSONL 인데 비-영 — 과차단이다 → $_L55_OUT" ;;
+    esac
+  fi
+fi
+
+# ── L56~L59 cross-family R4 (gemini 계열) 가 잡은 것들 ──────────────────────────
+# L56 🟥 «안 지워졌다» 는 «통과» 가 아니다 — 씨앗에 기권하면 INCONCLUSIVE·rc=5
+# 🟥 픽스처는 «씨앗에만» 기권해야 한다. 전부 기권시키면 «판정 0건 → rc=3» 이 먼저 걸려서
+#    rc=5 를 가리고, 그러면 이 레인은 자기가 주장하는 것을 안 재게 된다(첫 작성에서 실제로 그랬다).
+cat > "$D/sv_debate_seed.sh" <<'EOS'
+#!/bin/sh
+cat >/dev/null
+echo '{"id":"z1","verdict":"confirmed","why":"ok"}'
+echo '{"id":"z2","verdict":"needs-debate","why":"unclear"}'
+EOS
+chmod +x "$D/sv_debate_seed.sh"
+O56=$(python3 "$HERE/finding_verify.py" "$D/sf.jsonl" --out "$D/l56" --verifier "sh $D/sv_debate_seed.sh" \
+      --family beta --seeded z2 2>&1); R56=$?
+if [ "$R56" -eq 5 ] && printf '%s' "$O56" | /usr/bin/grep -q 'SEEDED .*status=INCONCLUSIVE'; then
+  ok "L56 🟥 검증자가 씨앗에 기권하면 INCONCLUSIVE·rc=5 (삭제 말고 «안 정하기» 로도 못 산다)"
+else
+  no "L56 기권으로 통제 우회" "rc=$R56 · $(printf '%s' "$O56" | /usr/bin/grep '^SEEDED')"
+fi
+# L57 정수 id 씨앗 — 문자열 비교 강제 전에는 present=0 → ABSENT rc=5 라는 거짓 경보였다
+printf '%s\n' '{"id":101,"title":"a","producer_family":"gamma"}' > "$D/intid.jsonl"
+cat > "$D/sv_101.sh" <<'EOS'
+#!/bin/sh
+cat >/dev/null
+echo '{"id":"101","verdict":"confirmed","why":"ok"}'
+EOS
+chmod +x "$D/sv_101.sh"
+O57=$(python3 "$HERE/finding_verify.py" "$D/intid.jsonl" --out "$D/l57" --verifier "sh $D/sv_101.sh" \
+      --family beta --seeded 101 2>&1); R57=$?
+if [ "$R57" -eq 0 ] && printf '%s' "$O57" | /usr/bin/grep -q 'SEEDED .*status=CLEAN'; then
+  ok "L57 정수 id 도 씨앗으로 잡힌다 (문자열 비교 — 거짓 ABSENT 경보 없음)"
+else
+  no "L57 정수 id 씨앗" "rc=$R57 · $(printf '%s' "$O57" | /usr/bin/grep '^SEEDED')"
+fi
+# L58 복권된 행은 판정으로 세어진다 — verify 쪽 verdict 가 confirmed 로 바뀌었나
+O58=$(python3 "$HERE/finding_verify.py" "$D/sf.jsonl" --out "$D/l58" --verifier "sh $D/sv_drop_all.sh" \
+      --family beta --audit-verifier "sh $D/sa_reinstate.sh" --audit-family delta 2>&1)
+if /usr/bin/grep -q '"reinstated": *true' "$D/l58/confirmed.jsonl" 2>/dev/null \
+   && /usr/bin/grep -q '"verdict": *"confirmed"' "$D/l58/confirmed.jsonl" 2>/dev/null \
+   && /usr/bin/grep -q '"pre_audit_verdict": *"false-positive"' "$D/l58/confirmed.jsonl" 2>/dev/null; then
+  ok "L58 복권된 행이 verdict=confirmed 를 달고 이전 값을 pre_audit_verdict 로 보존한다 (계수에서 증발 안 함)"
+else
+  no "L58 복권 행 verdict" "$(head -c 300 "$D/l58/confirmed.jsonl" 2>/dev/null)"
+fi
+# L59 🟥 S급 — 드라이버가 split 의 exit 5 를 삼키면 안 된다 (rank_of 에 5 가 없었다)
+_R59=$(bash -c 'rank_of() { case "$1" in 2) echo 5;; 5) echo 4;; 3) echo 3;; 4) echo 2;; *) echo 0;; esac; }; rank_of 5')
+_R59_REAL=$(sed -n '/^rank_of() {/,/^}/p' "$PIPE" | head -20)
+if [ -z "$_R59_REAL" ]; then
+  _R59_REAL=$(/usr/bin/grep -m1 '^rank_of() ' "$PIPE")
+fi
+_R59_OUT=$(eval "$_R59_REAL"; rank_of 5)
+if [ "${_R59_OUT:-0}" -gt 0 ]; then
+  ok "L59 🟥 출하되는 rank_of 가 exit 5 를 «실패» 로 순위매긴다 (드라이버가 씨앗 통제 실패를 안 삼킨다)"
+else
+  no "L59 exit 5 순위" "rank_of 5 → ${_R59_OUT:-없음} — 0 이면 드라이버가 rc=0 을 낸다"
+fi
+
 /bin/rm -rf "$D"
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ] && { echo "FAILED=0"; exit 0; } || { echo "FAILED=1"; exit 1; }

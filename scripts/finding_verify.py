@@ -33,6 +33,11 @@ INPUT   JSONL, one finding per line:
         `id` and `title` are required; the rest are optional and pass through untouched.
         When `producer_family` is present and equals the verifier's family, that finding is stamped
         `unverified` rather than judged -- see the note above VERDICTS.
+EXIT      0 verified, survivors · 1 verified, nothing survived · 2 usage/schema ·
+          3 UNVERIFIED (something was never judged) · 4 drops never audited ·
+          5 SEEDED control degraded (a known-true finding was deleted), inconclusive
+          (the verifier abstained on one) or absent
+          (the control never entered the run — which is not the same as passing).
 AUDITOR   Optional, and required for the drop-side number to exist. Same protocol as the verifier, but
         it receives only the DROPPED findings and answers {"id","verdict":"correct-drop|wrong-drop|
         uncertain","why"}. A `wrong-drop` finding is moved back into confirmed.jsonl with
@@ -116,7 +121,13 @@ def run_verifier(cmd, findings, allowed=VERDICTS):
         except json.JSONDecodeError:
             continue
         if d.get("id") and d.get("verdict") in allowed:
-            got[d["id"]] = d
+            # 🟥 ids are keyed AS STRINGS. A JSONL row may carry an integer id and a verifier may
+            # answer with the string form (or vice versa); `verdicts.get(101)` then misses
+            # `{"101": ...}` and the finding comes back `unverified` forever — a finding with an
+            # integer id could never be verified at all. Found while writing the seeded-control
+            # lane for the same type mismatch (cross-family round 4, finding 7; this second half was
+            # not in the report — the lane surfaced it).
+            got[str(d["id"])] = d
     if not got:
         return {}, "verifier returned no parseable verdict"
     return got, None
@@ -137,6 +148,12 @@ def main():
                     help="model family of the verifier, recorded verbatim and never checked")
     ap.add_argument("--audit-verifier", default=os.environ.get("FH_AUDIT_CMD", ""),
                     help="command that re-checks the DROPPED findings; without it the run is UNAUDITED")
+    ap.add_argument("--seeded", default="",
+                    help="comma-separated finding ids that are KNOWN-TRUE. They are ordinary rows in "
+                         "the input; the verifier is never told which they are. A filter that buys "
+                         "precision by deleting reports itself by deleting these.")
+    ap.add_argument("--seeded-file", default="",
+                    help="file with one known-true finding id per line (same meaning as --seeded)")
     ap.add_argument("--audit-family", default=os.environ.get("FH_AUDIT_FAMILY", "unstated"),
                     help="model family of the auditor; must differ from the verifier's")
     a = ap.parse_args()
@@ -156,6 +173,29 @@ def main():
     a.verifier = _as_argv(a.verifier_argv, "--verifier-argv") or a.verifier
     a.audit_verifier = _as_argv(a.audit_verifier_argv, "--audit-verifier-argv") or a.audit_verifier
 
+    # 🟥 The seeded control is parsed BEFORE anything runs. Parsing it at the end meant a bad
+    # control file surfaced only after the verifier had run and the output files and the VERIFIED
+    # summary were already written — and a UnicodeDecodeError there escaped `except OSError` and
+    # exited 1, which is this CLI's documented code for "verified, nothing survived". A consumer
+    # accepting 0 and 1 would have read a configuration failure as a completed run.
+    # (cross-family review 2026-09-09, findings 3 and 4, both reproduced.)
+    seeded = [x.strip() for x in a.seeded.split(",") if x.strip()]
+    if a.seeded_file:
+        try:
+            with open(a.seeded_file, encoding="utf-8") as fh:
+                from_file = [ln.strip() for ln in fh if ln.strip() and not ln.startswith("#")]
+        except (OSError, UnicodeDecodeError) as e:
+            print("finding_verify: --seeded-file unusable: %s" % e, file=sys.stderr)
+            return 2
+        # 🟥 "option supplied but it yielded nothing" is NOT "option omitted". A repository-controlled
+        # control file that goes empty would otherwise silently turn calibration off and still exit 0.
+        if not from_file:
+            print("finding_verify: --seeded-file %r yielded no ids — a control file that declares "
+                  "nothing is a disabled control, not an absent one" % a.seeded_file, file=sys.stderr)
+            return 2
+        seeded += from_file
+    seeded = sorted(set(seeded))
+
     # 문자열이든 리스트든 «비어 있나»를 같은 방법으로 묻는다 — 리스트에 .strip() 은 없다.
     def _configured(cmd):
         return bool(cmd) if isinstance(cmd, list) else bool(str(cmd or "").strip())
@@ -170,7 +210,7 @@ def main():
 
     confirmed, dropped, debate, unverified = [], [], 0, 0
     for f in findings:
-        v = verdicts.get(f["id"])
+        v = verdicts.get(str(f["id"]))
         if v is None:
             # Degraded, or the verifier skipped this one. Keep it, mark it, never drop it silently.
             f = dict(f, verdict="unverified",
@@ -214,6 +254,8 @@ def main():
     # the drop, and moves a reversed drop back. The refusal to report a bare precision number when this
     # did not run is the mechanized part.
     audited = wrong_drops = reinstated = 0
+    # 감사가 `dropped` 를 재할당하기 전에 «필터가 무엇을 지웠나» 를 얼려 둔다. SEEDED 는 이것을 읽는다.
+    pre_audit_dropped_ids = [f.get("id") for f in dropped]
     audit_status = "UNAUDITED"
     audit_note = ""
     if dropped and _configured(a.audit_verifier):
@@ -238,7 +280,17 @@ def main():
                     if r["verdict"] == "wrong-drop":
                         wrong_drops += 1
                         reinstated += 1
-                        confirmed.append(dict(d, reinstated=True))
+                        # 🟥 A reinstated row used to keep its ORIGINAL top-level
+                        # `verdict: "false-positive"` while moving into confirmed.jsonl. Every
+                        # consumer that counts decisions by top-level verdict then lost it from both
+                        # sides — the driver's coverage read 0% on a run that was fully judged and
+                        # audited. The row's verdict must state the decision that now stands; the
+                        # superseded one is kept under its own key rather than deleted.
+                        # (cross-family round 4, gemini family, A severity — three codex rounds
+                        # missed it because they were the same family that wrote the counting fix.)
+                        confirmed.append(dict(d, reinstated=True,
+                                              pre_audit_verdict=d.get("verdict"),
+                                              verdict="confirmed"))
                     else:
                         kept.append(d)
                 dropped = kept
@@ -263,8 +315,24 @@ def main():
                 fh.write(json.dumps(r, ensure_ascii=False) + "\n")
 
     status = "UNVERIFIED" if unverified else "VERIFIED"
-    print("FINDINGS in={} confirmed={} dropped={} debate={} unverified={} family={} status={}{}".format(
+    # 🟥 COVERAGE IS NOT OPTIONAL. An error rate computed over judged findings while the unjudged
+    # ones sit outside the denominator is a rate at an unstated operating point, and two arms with
+    # different abstention rates are then not comparable at all. This is a named, documented flaw in
+    # the selective-classification literature (evaluation "assumes fixed working points",
+    # arXiv:2407.01032), and our own five-arm table is an instance of it: UNVERIFIABLE was ~half the
+    # claims and was silently dropped from the denominator. So the line carries coverage
+    # unconditionally, exactly like DROPS does — same discipline, second application.
+    # 🟥 `needs-debate` IS NOT A DECISION. Counting it as covered let every finding come back
+    # `needs-debate` and still print coverage=100% — the exact thing coverage exists to prevent
+    # (cross-family review 2026-09-09, finding 2, reproduced). Decision coverage = findings that got
+    # a RESOLVED truth judgment; debate and unverified are both abstentions, of different kinds.
+    # Percentage is FLOORED, never rounded: 200/201 must not print 100%.
+    judged = len(findings) - unverified - debate
+    pct = (judged * 100) // len(findings) if findings else 0
+    print("FINDINGS in={} confirmed={} dropped={} debate={} unverified={} coverage={}/{} ({}%) "
+          "family={} status={}{}".format(
         len(findings), len(confirmed) - unverified, len(dropped), debate, unverified,
+        judged, len(findings), pct,
         a.family, status, "" if not err else " reason=" + err.replace("\n", " ")))
     # 🟥 The drop line is unconditional. A survivor-side number without it is a precision claim made by
     # deleting, and this pipeline does not let a reader compute one without seeing whether the
@@ -272,8 +340,65 @@ def main():
     print("DROPS dropped={} audited={} wrong_drops={} reinstated={} auditor={} drop_audit={}{}".format(
         len(dropped), audited, wrong_drops, reinstated, a.audit_family, audit_status,
         "" if not audit_note else " reason=" + audit_note.replace("\n", " ")))
+    # 🟥 SEEDED — the known-pair discipline applied to the FILTER, not to a scanner.
+    # This repo has required known-pair calibration of instruments for a long time and had never
+    # once applied it to the deletion stage, which is also an instrument. Known-true findings are
+    # mixed into the input as ordinary rows; their ids live only in this process and never reach the
+    # verifier's prompt. A stage that buys precision by deleting therefore reports itself.
+    if not seeded:
+        seed_status, s_present, s_kept, s_dropped, s_abstained = "NOT_PROVIDED", 0, 0, 0, 0
+    else:
+        # 🟥 ids are compared AS STRINGS on both sides. A JSONL row may legitimately carry an
+        # integer id, and `"101" in {101}` is False in Python — the control then reported ABSENT
+        # (exit 5) on a run where the seed was right there. (cross-family round 4, finding 7.)
+        ids_in = {str(f.get("id")) for f in findings}
+        present = [i for i in seeded if str(i) in ids_in]
+        # 🟥 THE PRE-AUDIT DELETION SET, not the post-audit one. `dropped` is reassigned when the
+        # auditor reinstates a wrong drop, so reading it here meant: verifier deletes the known-true
+        # seed → auditor puts it back → SEEDED prints CLEAN, exit 0. The filter demonstrably deleted
+        # a control and the control said it passed. Reinstatement repairs the OUTPUT; it does not
+        # establish that the FILTER passed, and the filter is what this control measures.
+        # (cross-family review 2026-09-09, finding 1 — A severity, reproduced.)
+        dropped_ids = {str(i) for i in pre_audit_dropped_ids}
+        # 🟥 SURVIVING IS NOT PASSING. The first version asked only "was the seed deleted?", so a
+        # verifier that ABSTAINED on a known-true finding (`needs-debate`, or unverified) reported
+        # kept=1 status=CLEAN exit 0 — precision bought by not deciding instead of by deleting,
+        # which is the same purchase through a different door. A seed passes only when it received a
+        # positive decision. (cross-family round 4, gemini family, A severity.)
+        abstained_verdicts = {"needs-debate", "unverified"}
+        verdict_of = {}
+        for f in confirmed:
+            verdict_of[str(f.get("id"))] = f.get("verdict")
+        s_present = len(present)
+        s_dropped = len([i for i in present if str(i) in dropped_ids])
+        s_abstained = len([i for i in present
+                           if str(i) not in dropped_ids
+                           and verdict_of.get(str(i)) in abstained_verdicts])
+        s_kept = s_present - s_dropped - s_abstained
+        if not present:
+            # A control that never entered the run is not a passing control. It looks exactly like a
+            # clean one from the outside, which is the whole reason this branch exists.
+            seed_status = "ABSENT"
+        elif s_dropped:
+            seed_status = "DEGRADED"
+        elif s_abstained:
+            seed_status = "INCONCLUSIVE"
+        else:
+            seed_status = "CLEAN"
+    print("SEEDED declared={} present={} kept={} dropped={} abstained={} status={}".format(
+        len(seeded), s_present, s_kept, s_dropped,
+        s_abstained if seeded else 0, seed_status))
+
     if unverified:
         return 3
+    # 🟥 ZERO DECISIONS IS NOT A PASS. Every finding coming back `needs-debate` left `unverified=0`,
+    # so status stamped VERIFIED and the run exited 0 while coverage said 0% — a caller reading exit
+    # codes saw a completed run in which nothing was actually judged.
+    # (cross-family round 4, gemini family, A severity.)
+    if findings and judged == 0:
+        return 3
+    if seed_status in ("ABSENT", "DEGRADED", "INCONCLUSIVE"):
+        return 5                      # a known-true finding was deleted, or the control never ran
     if audit_status in ("UNAUDITED", "PARTIAL"):
         return 4                      # drops happened and nobody checked them: not a completed run
     return 0 if confirmed else 1
