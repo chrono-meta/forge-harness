@@ -848,7 +848,12 @@ chmod +x "$D/m_seed.sh"
 #   봐야 «호출자 어휘로 선언한 씨앗» 을 지울 수 있다. 이게 이 레인이 재려는 경로 그 자체다.
 cat > "$D/fake_kill_seed.sh" <<'EOS'
 #!/bin/sh
-python3 -c '
+# 🟥 gemini 경로는 프롬프트를 stdin 이 아니라 `-p` 인자로 받고 stdin 을 /dev/null 로 닫는다.
+#   stdin 만 읽는 픽스처는 그 split 에서 아무 판정도 못 내고 «미판정» 을 만든다 — 레인이
+#   측정하려던 것과 다른 것을 재게 된다. 둘 다 받는다(fake_smart.sh 와 같은 형태).
+IN=$(cat)
+[ -n "$IN" ] || IN="$*"
+printf '%s' "$IN" | python3 -c '
 import sys, json
 rows = []
 for l in sys.stdin:
@@ -878,11 +883,77 @@ else
   no "L60 종단간 씨앗" "rc=$R60 want=5 · $(grep -m1 '^PIPELINE ' "$D/pSEED") · $(tail -2 "$D/pSEED")"
 fi
 # L61 배선 검사(행동 아님, 그렇게 라벨한다) — COUNT_ERR 이 실제로 소비되나
-if /usr/bin/grep -q 'COUNT_ERR' "$PIPE" && /usr/bin/grep -A2 'if \[ "\$COUNT_ERR" -ne 0 \]' "$PIPE" | /usr/bin/grep -q 'note_rc'; then
+if /usr/bin/grep -q 'COUNT_ERR' "$PIPE" && /usr/bin/grep -A6 'if \[ "\$COUNT_ERR" -ne 0 \]' "$PIPE" | /usr/bin/grep -q 'note_rc'; then
   ok "L61 배선: 계측 오류 플래그가 실제로 note_rc 로 소비된다 (🟡 배선 검사지 행동 검사가 아니다)"
 else
   no "L61 배선" "COUNT_ERR 이 설정만 되고 rc 에 반영되지 않는다 — 조용한 계측 실패다"
 fi
+# ── L62~L65 cross-family R6 (gemini) 가 잡은 것들 ────────────────────────────────
+# L62 드라이버 `confirmed=` 가 debate 를 포함하면 안 된다 — verify 만 고친 반쪽-픽스의 **세 번째** 재발
+FH_CODEX_BIN="$D/fake_debate.sh" FH_AGY_BIN="$D/fake_debate.sh" \
+  bash "$PIPE" "$D/tgt.py" --out "$D/pipe62" --fleet "$D/fleetD.tbl" >"$D/p62" 2>&1
+SUM62=$(grep -m1 '^PIPELINE ' "$D/p62")
+if printf '%s' "$SUM62" | grep -qE 'confirmed=0 ' && printf '%s' "$SUM62" | grep -qE 'debate=[1-9]'; then
+  ok "L62 전부 기권이면 드라이버도 confirmed=0 (한 줄 안에서 세 숫자가 서로 안 어긋난다)"
+else
+  no "L62 드라이버 confirmed" "$SUM62"
+fi
+# L63 🟥 씨앗이 두 행에 걸리면 AMBIGUOUS — «비관적으로 하나로 묶어» 거짓 DEGRADED 를 내면 안 된다
+printf '%s\n%s\n' '{"id":"r1","member_id":"1","title":"a","producer_family":"gamma"}' \
+                  '{"id":"r2","member_id":"1","title":"b","producer_family":"gamma"}' > "$D/amb.jsonl"
+cat > "$D/sv_amb.sh" <<'EOS'
+#!/bin/sh
+cat >/dev/null
+echo '{"id":"r1","verdict":"confirmed","why":"ok"}'
+echo '{"id":"r2","verdict":"false-positive","why":"nope"}'
+EOS
+chmod +x "$D/sv_amb.sh"
+O63=$(python3 "$HERE/finding_verify.py" "$D/amb.jsonl" --out "$D/l63" --verifier "sh $D/sv_amb.sh" \
+      --family beta --seeded 1 2>&1); R63=$?
+if [ "$R63" -eq 5 ] && printf '%s' "$O63" | /usr/bin/grep -q 'status=AMBIGUOUS' \
+   && printf '%s' "$O63" | /usr/bin/grep -q 'locally unique'; then
+  ok "L63 🟥 씨앗이 여러 행에 걸리면 AMBIGUOUS·rc=5 + 사유 (거짓 DEGRADED 로 접지 않는다)"
+else
+  no "L63 씨앗 모호성" "rc=$R63 · $(printf '%s' "$O63" | /usr/bin/grep -E 'status=|locally')"
+fi
+# L64 검증기가 «안 돌았다» 는 통제 모호성이 아니라 실행 실패 — rc=3 이어야 한다
+O64=$(python3 "$HERE/finding_verify.py" "$D/sf.jsonl" --out "$D/l64" \
+      --verifier "sh $D/does_not_exist_at_all.sh" --family beta --seeded z2 2>&1); R64=$?
+if [ "$R64" -eq 3 ]; then
+  ok "L64 검증기 실행 실패 → rc=3 (씨앗 INCONCLUSIVE 로 오보하지 않는다)"
+else
+  no "L64 실행 실패 vs 통제 모호성" "rc=$R64 want=3 · $(printf '%s' "$O64" | /usr/bin/grep -E '^(FINDINGS|SEEDED)')"
+fi
+# L65 양의 컨트롤 — 씨앗이 살아남으면 드라이버는 0 을 낸다. 없으면 «--seeded 면 무조건 5» 도 L60 을 통과한다
+cat > "$D/fake_keep_seed.sh" <<'EOS'
+#!/bin/sh
+# 🟥 gemini 경로는 프롬프트를 stdin 이 아니라 `-p` 인자로 받고 stdin 을 /dev/null 로 닫는다.
+#   stdin 만 읽는 픽스처는 그 split 에서 아무 판정도 못 내고 «미판정» 을 만든다 — 레인이
+#   측정하려던 것과 다른 것을 재게 된다. 둘 다 받는다(fake_smart.sh 와 같은 형태).
+IN=$(cat)
+[ -n "$IN" ] || IN="$*"
+printf '%s' "$IN" | python3 -c '
+import sys, json
+rows = []
+for l in sys.stdin:
+    l = l.strip()
+    if not l.startswith("{"): continue
+    try: rows.append(json.loads(l))
+    except Exception: pass
+audit = any("drop_verdict" in r or r.get("verdict") == "false-positive" for r in rows)
+for r in rows:
+    v = "correct-drop" if audit else "confirmed"
+    print(json.dumps({"id": r.get("id"), "verdict": v, "why": "ok"}))'
+EOS
+chmod +x "$D/fake_keep_seed.sh"
+FH_CODEX_BIN="$D/fake_keep_seed.sh" FH_AGY_BIN="$D/fake_keep_seed.sh" \
+  bash "$PIPE" "$D/tgt.py" --out "$D/pipeKEEP" --fleet "$D/fleetSEED.tbl" --seeded s1 >"$D/pKEEP" 2>&1; R65=$?
+if [ "$R65" -eq 0 ]; then
+  ok "L65 양의 컨트롤: 씨앗이 살아남으면 --seeded 여도 rc=0 («--seeded 면 무조건 5» 를 배제)"
+else
+  no "L65 씨앗 양의 컨트롤" "rc=$R65 want=0 · $(grep -m1 '^PIPELINE ' "$D/pKEEP") · $(tail -2 "$D/pKEEP")"
+fi
+
 /bin/rm -rf "$D"
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ] && { echo "FAILED=0"; exit 0; } || { echo "FAILED=1"; exit 1; }

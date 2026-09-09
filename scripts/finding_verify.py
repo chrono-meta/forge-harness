@@ -364,6 +364,14 @@ def main():
         present = [i for i in seeded if str(i) in ids_in]
         def _row_matches(f, sid):
             return str(f.get("id")) == str(sid) or str(f.get("member_id")) == str(sid)
+        # 🟥 A SEED MUST RESOLVE TO EXACTLY ONE ROW. `member_id` is the member's own id and is only
+        # locally unique — two fleet members can both emit `1`. Binding the seed to every matching
+        # row then makes an unrelated member's drop read as "the control was deleted", and a
+        # perfectly legitimate run fails closed with exit 5. A false alarm on a fail-closed surface
+        # is not a safe default: it trains the override. So an ambiguous declaration is reported AS
+        # ambiguous, by name, instead of being silently resolved the pessimistic way.
+        # (cross-family round 6, gemini family, A severity.)
+        ambiguous = [i for i in present if sum(1 for f in findings if _row_matches(f, i)) > 1]
         # 🟥 THE PRE-AUDIT DELETION SET, not the post-audit one. `dropped` is reassigned when the
         # auditor reinstates a wrong drop, so reading it here meant: verifier deletes the known-true
         # seed → auditor puts it back → SEEDED prints CLEAN, exit 0. The filter demonstrably deleted
@@ -388,7 +396,12 @@ def main():
                            and any(_row_matches(f, i) and f.get("verdict") in abstained_verdicts
                                    for f in confirmed)])
         s_kept = s_present - s_dropped - s_abstained
-        if not present:
+        if ambiguous:
+            seed_status = "AMBIGUOUS"
+            print("finding_verify: seed(s) %s match more than one finding — member ids are only "
+                  "locally unique; declare the routing id instead" % ",".join(ambiguous),
+                  file=sys.stderr)
+        elif not present:
             # A control that never entered the run is not a passing control. It looks exactly like a
             # clean one from the outside, which is the whole reason this branch exists.
             seed_status = "ABSENT"
@@ -408,7 +421,13 @@ def main():
     # known-true finding" was suppressed into a generic unverified exit. The calibration verdict is
     # the more specific and the more serious fact, and it is reported as such.
     # (cross-family round 5, gemini family, A severity.)
-    if seed_status in ("ABSENT", "DEGRADED", "INCONCLUSIVE"):
+    # 🟥 A VERIFIER THAT DID NOT RUN IS AN EXECUTION FAILURE, NOT A CONTROL AMBIGUITY. When the
+    # verifier command crashes, every finding degrades to `unverified`, the seed among them becomes
+    # `INCONCLUSIVE`, and the run used to exit 5 — reporting a calibration problem for what is
+    # actually "the tool did not execute". The execution fact wins. (cross-family round 6.)
+    if err and unverified:
+        return 3
+    if seed_status in ("ABSENT", "DEGRADED", "INCONCLUSIVE", "AMBIGUOUS"):
         return 5
     if unverified:
         return 3

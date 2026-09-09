@@ -222,13 +222,18 @@ except OSError: pass
 print(",".join(sorted(want & have)))' "$SD/in.jsonl")
     if [ -n "$_SPLIT_SEEDS" ]; then
       SEEDARGS=(--seeded "$_SPLIT_SEEDS")
-      SEEDS_ROUTED="${SEEDS_ROUTED:+$SEEDS_ROUTED,}$_SPLIT_SEEDS"
     fi
   fi
   /usr/bin/python3 "$VERIFY_PY" "$SD/in.jsonl" --out "$SD" \
     --verifier-argv "$(argv_json bash "$VERIFIER_SH" --family "$VER" --target "$TARGET")" --family "$VER" \
     ${SEEDARGS[@]+"${SEEDARGS[@]}"} ${AUDARGS[@]+"${AUDARGS[@]}"} > "$SD/summary.txt" 2>"$SD/err.txt"
   RC=$?
+  # 🟥 «라우팅했다» 를 «검증됐다» 로 세면 안 된다. 초판은 verify 를 부르기 «전» 에 기록해서,
+  #   verify 가 크래시해도 그 씨앗은 «돌았다» 로 남았다(cross-family round 6). 요약을 실제로
+  #   낸 실행에 대해서만 기록한다.
+  if [ -n "${_SPLIT_SEEDS:-}" ] && [ -s "$SD/summary.txt" ]; then
+    SEEDS_ROUTED="${SEEDS_ROUTED:+$SEEDS_ROUTED,}$_SPLIT_SEEDS"
+  fi
   note_rc "$RC"
   cat "$SD/summary.txt"
   printf 'split producer=%s verifier=%s auditor=%s rc=%s\n' "$PROD" "$VER" "${AUD:-NONE}" "$RC" >> "$OUT/splits.txt"
@@ -403,8 +408,13 @@ fi
 RC_FINAL="$WORST_CODE"
 [ "$WORST_RANK" -eq 0 ] && [ "$TOTAL_CONF" -eq 0 ] && RC_FINAL=1
 
+# 🟥 `confirmed=` prints the RESOLVED confirmations, not the raw line count of confirmed.jsonl.
+# That file also holds debate and unverified rows, so the driver printed `confirmed=2 debate=2
+# coverage=0/2` — three numbers in one line contradicting each other. The verifier had already been
+# fixed for exactly this; the driver had not. **Third recurrence of the same half-fix shape in this
+# change** (cross-family round 6). Survivor semantics for rc stay on TOTAL_CONF.
 printf 'PIPELINE target=%s families=%s confirmed=%s dropped=%s unverified=%s debate=%s coverage=%s/%s (%s%%) audited_drops=%s reinstated=%s failed_members=%s rc=%s\n' \
-  "$(basename "$TARGET")" "$(tr '\n' ',' < "$OUT/families.txt" | sed 's/,$//')" "$TOTAL_CONF" "$TOTAL_DROP" \
+  "$(basename "$TARGET")" "$(tr '\n' ',' < "$OUT/families.txt" | sed 's/,$//')" "$JUDGED_CONF" "$TOTAL_DROP" \
   "$TOTAL_UNVER" "$TOTAL_DEBATE" "$TOTAL_JUDGED" "$TOTAL_IN" "$COV_PCT" "$TOTAL_AUD" "$TOTAL_WRONG" "$FAILED_MEMBERS" "$RC_FINAL"
 # `unverified` is reported on its own line rather than folded into `confirmed`, because folding it is
 # exactly the "not found rendered as zero" family this repo keeps re-finding.
