@@ -314,7 +314,6 @@ def main():
             for r in rows:
                 fh.write(json.dumps(r, ensure_ascii=False) + "\n")
 
-    status = "UNVERIFIED" if unverified else "VERIFIED"
     # 🟥 COVERAGE IS NOT OPTIONAL. An error rate computed over judged findings while the unjudged
     # ones sit outside the denominator is a rate at an unstated operating point, and two arms with
     # different abstention rates are then not comparable at all. This is a named, documented flaw in
@@ -329,9 +328,16 @@ def main():
     # Percentage is FLOORED, never rounded: 200/201 must not print 100%.
     judged = len(findings) - unverified - debate
     pct = (judged * 100) // len(findings) if findings else 0
+    # 🟥 `VERIFIED` must not be stamped on a run in which nothing was decided. An all-debate run
+    # left `unverified == 0`, so the summary said VERIFIED while coverage said 0% — the exit code was
+    # already fixed to 3 but the human-readable half still lied.
+    # (cross-family round 5, gemini family, A severity — a half-fix that stopped at the exit code.)
+    status = "UNVERIFIED" if (unverified or (findings and judged == 0)) else "VERIFIED"
     print("FINDINGS in={} confirmed={} dropped={} debate={} unverified={} coverage={}/{} ({}%) "
           "family={} status={}{}".format(
-        len(findings), len(confirmed) - unverified, len(dropped), debate, unverified,
+        # `confirmed=` excludes BOTH abstention kinds. Debate rows live in the confirmed list for
+        # output purposes, but counting them as confirmations double-reports them beside `debate=`.
+        len(findings), len(confirmed) - unverified - debate, len(dropped), debate, unverified,
         judged, len(findings), pct,
         a.family, status, "" if not err else " reason=" + err.replace("\n", " ")))
     # 🟥 The drop line is unconditional. A survivor-side number without it is a precision claim made by
@@ -351,8 +357,13 @@ def main():
         # 🟥 ids are compared AS STRINGS on both sides. A JSONL row may legitimately carry an
         # integer id, and `"101" in {101}` is False in Python — the control then reported ABSENT
         # (exit 5) on a run where the seed was right there. (cross-family round 4, finding 7.)
+        # 씨앗은 «라우팅 id» 로도 «원래 멤버 id» 로도 선언할 수 있다. fleet 이 id 를 재번호하므로
+        # 호출자 어휘로 선언하려면 후자가 필요하다.
         ids_in = {str(f.get("id")) for f in findings}
+        ids_in |= {str(f["member_id"]) for f in findings if f.get("member_id") is not None}
         present = [i for i in seeded if str(i) in ids_in]
+        def _row_matches(f, sid):
+            return str(f.get("id")) == str(sid) or str(f.get("member_id")) == str(sid)
         # 🟥 THE PRE-AUDIT DELETION SET, not the post-audit one. `dropped` is reassigned when the
         # auditor reinstates a wrong drop, so reading it here meant: verifier deletes the known-true
         # seed → auditor puts it back → SEEDED prints CLEAN, exit 0. The filter demonstrably deleted
@@ -370,10 +381,12 @@ def main():
         for f in confirmed:
             verdict_of[str(f.get("id"))] = f.get("verdict")
         s_present = len(present)
-        s_dropped = len([i for i in present if str(i) in dropped_ids])
+        dropped_rows = [f for f in findings if str(f.get("id")) in dropped_ids]
+        s_dropped = len([i for i in present if any(_row_matches(f, i) for f in dropped_rows)])
         s_abstained = len([i for i in present
-                           if str(i) not in dropped_ids
-                           and verdict_of.get(str(i)) in abstained_verdicts])
+                           if not any(_row_matches(f, i) for f in dropped_rows)
+                           and any(_row_matches(f, i) and f.get("verdict") in abstained_verdicts
+                                   for f in confirmed)])
         s_kept = s_present - s_dropped - s_abstained
         if not present:
             # A control that never entered the run is not a passing control. It looks exactly like a
@@ -389,6 +402,14 @@ def main():
         len(seeded), s_present, s_kept, s_dropped,
         s_abstained if seeded else 0, seed_status))
 
+    # 🟥 THE SEED VERDICT IS CHECKED FIRST. It used to sit after the two exit-3 branches, so a
+    # single unrelated `unverified` finding anywhere in the batch masked a DEGRADED control: the
+    # split returned 3, and in the driver rank_of(3) < rank_of(5), so "the filter deleted a
+    # known-true finding" was suppressed into a generic unverified exit. The calibration verdict is
+    # the more specific and the more serious fact, and it is reported as such.
+    # (cross-family round 5, gemini family, A severity.)
+    if seed_status in ("ABSENT", "DEGRADED", "INCONCLUSIVE"):
+        return 5
     if unverified:
         return 3
     # 🟥 ZERO DECISIONS IS NOT A PASS. Every finding coming back `needs-debate` left `unverified=0`,
@@ -396,9 +417,7 @@ def main():
     # codes saw a completed run in which nothing was actually judged.
     # (cross-family round 4, gemini family, A severity.)
     if findings and judged == 0:
-        return 3
-    if seed_status in ("ABSENT", "DEGRADED", "INCONCLUSIVE"):
-        return 5                      # a known-true finding was deleted, or the control never ran
+        return 3                      # a known-true finding was deleted, or the control never ran
     if audit_status in ("UNAUDITED", "PARTIAL"):
         return 4                      # drops happened and nobody checked them: not a completed run
     return 0 if confirmed else 1

@@ -30,7 +30,7 @@ set -uo pipefail
 
 SUPPORTED_FAMILIES="codex gemini"          # must match finding_verifier.sh's own case statement
 
-TARGET=""; OUT=""; FLEET=""; SEEDED_IDS=""; SEEDED_FILE=""
+TARGET=""; OUT=""; FLEET=""; SEEDED_IDS=""; SEEDED_FILE=""; SEEDS_ROUTED=""
 usage() { echo "usage: finding_pipeline.sh <target-file> --out <dir> [--fleet <table>] [--seeded <ids>] [--seeded-file <path>]" >&2; exit 2; }
 need() { [ $# -ge 2 ] || { echo "finding_pipeline: $1 needs a value" >&2; exit 2; }; }
 [ $# -ge 1 ] || usage
@@ -207,7 +207,7 @@ for l in open(sys.argv[1],encoding="utf-8"):
   if [ -n "$ALL_SEEDS" ]; then
     _SPLIT_SEEDS=$(ALL_SEEDS="$ALL_SEEDS" /usr/bin/python3 -c '
 import sys, json, os
-want = {x for x in os.environ.get("ALL_SEEDS", "").split(",") if x}
+want = {x.strip() for x in os.environ.get("ALL_SEEDS", "").split(",") if x.strip()}
 have = set()
 try:
     for l in open(sys.argv[1], encoding="utf-8"):
@@ -215,10 +215,15 @@ try:
         if not l: continue
         try: d = json.loads(l)
         except Exception: continue
-        if isinstance(d, dict) and d.get("id") is not None: have.add(str(d["id"]))
+        if isinstance(d, dict):
+            if d.get("id") is not None: have.add(str(d["id"]))
+            if d.get("member_id") is not None: have.add(str(d["member_id"]))
 except OSError: pass
 print(",".join(sorted(want & have)))' "$SD/in.jsonl")
-    [ -n "$_SPLIT_SEEDS" ] && SEEDARGS=(--seeded "$_SPLIT_SEEDS")
+    if [ -n "$_SPLIT_SEEDS" ]; then
+      SEEDARGS=(--seeded "$_SPLIT_SEEDS")
+      SEEDS_ROUTED="${SEEDS_ROUTED:+$SEEDS_ROUTED,}$_SPLIT_SEEDS"
+    fi
   fi
   /usr/bin/python3 "$VERIFY_PY" "$SD/in.jsonl" --out "$SD" \
     --verifier-argv "$(argv_json bash "$VERIFIER_SH" --family "$VER" --target "$TARGET")" --family "$VER" \
@@ -341,7 +346,7 @@ TOTAL_JUDGED=$(( JUDGED_CONF + JUDGED_DROP + JUDGED_REINST ))
 if [ -n "$ALL_SEEDS" ]; then
   _SEEDS_SEEN=$(ALL_SEEDS="$ALL_SEEDS" /usr/bin/python3 -c '
 import sys, json, os
-want = {x for x in os.environ.get("ALL_SEEDS", "").split(",") if x}
+want = {x.strip() for x in os.environ.get("ALL_SEEDS", "").split(",") if x.strip()}
 have = set()
 try:
     for l in open(sys.argv[1], encoding="utf-8"):
@@ -349,11 +354,28 @@ try:
         if not l: continue
         try: d = json.loads(l)
         except Exception: continue
-        if isinstance(d, dict) and d.get("id") is not None: have.add(str(d["id"]))
+        if isinstance(d, dict):
+            if d.get("id") is not None: have.add(str(d["id"]))
+            if d.get("member_id") is not None: have.add(str(d["member_id"]))
 except OSError: pass
 print(len(want & have))' "$FINDINGS")
   if [ "${_SEEDS_SEEN:-0}" -eq 0 ]; then
     echo "  ⚠️  declared seeds are not present anywhere in the fleet output — the control never ran" >&2
+    note_rc 5
+  fi
+  # 🟥 «하나라도 들어왔나» 로는 부족하다. 선언한 씨앗 중 **어떤 split 에도 안 실린 것**이 있으면
+  #   그 씨앗은 검증기를 통과한 적이 없고, 그런데도 나머지가 CLEAN 이면 드라이버는 0 을 낸다.
+  #   두 경로로 그렇게 된다: ⓐ fleet 출력에 애초에 없다 ⓑ 있는데 producer_family 가 없거나
+  #   지원되지 않아 라우팅에서 빠진다. 둘 다 «통제가 그 씨앗에 대해 안 돌았다» 는 같은 사실이다.
+  #   (cross-family round 5, gemini 계열.)
+  _SEEDS_MISSED=$(ALL_SEEDS="$ALL_SEEDS" ROUTED="${SEEDS_ROUTED:-}" /usr/bin/python3 -c '
+import os
+want = {x.strip() for x in os.environ.get("ALL_SEEDS", "").split(",") if x.strip()}
+got  = {x.strip() for x in os.environ.get("ROUTED", "").split(",") if x.strip()}
+missed = sorted(want - got)
+print(",".join(missed))')
+  if [ -n "$_SEEDS_MISSED" ]; then
+    echo "  ⚠️  declared seeds never reached any verified split: $_SEEDS_MISSED — the control did not run for them" >&2
     note_rc 5
   fi
 fi

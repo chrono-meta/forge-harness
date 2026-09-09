@@ -89,6 +89,14 @@ with open(dst, "w", encoding="utf-8") as w:
         if not d.get("title"):
             continue
         n += 1
+        # 🟥 The member's own id is PRESERVED before renumbering. The fleet assigns a routing id
+        # (`family-role-n`) because member ids collide across members — but overwriting the original
+        # made the seeded control unusable end to end: a caller cannot declare `--seeded <id>` for an
+        # id that does not exist until after the run. Keeping the member id lets the control be
+        # declared in the caller's own vocabulary. (Found while writing the end-to-end lane; no
+        # review round named it — the lane did.)
+        if d.get("id") is not None:
+            d["member_id"] = str(d["id"])
         d["id"] = f"{fam}-{role}-{n}"
         d["producer_family"] = fam
         d["producer_role"] = role

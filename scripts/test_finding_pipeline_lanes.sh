@@ -818,19 +818,71 @@ if /usr/bin/grep -q '"reinstated": *true' "$D/l58/confirmed.jsonl" 2>/dev/null \
 else
   no "L58 복권 행 verdict" "$(head -c 300 "$D/l58/confirmed.jsonl" 2>/dev/null)"
 fi
-# L59 🟥 S급 — 드라이버가 split 의 exit 5 를 삼키면 안 된다 (rank_of 에 5 가 없었다)
-_R59=$(bash -c 'rank_of() { case "$1" in 2) echo 5;; 5) echo 4;; 3) echo 3;; 4) echo 2;; *) echo 0;; esac; }; rank_of 5')
-_R59_REAL=$(sed -n '/^rank_of() {/,/^}/p' "$PIPE" | head -20)
-if [ -z "$_R59_REAL" ]; then
-  _R59_REAL=$(/usr/bin/grep -m1 '^rank_of() ' "$PIPE")
-fi
-_R59_OUT=$(eval "$_R59_REAL"; rank_of 5)
-if [ "${_R59_OUT:-0}" -gt 0 ]; then
-  ok "L59 🟥 출하되는 rank_of 가 exit 5 를 «실패» 로 순위매긴다 (드라이버가 씨앗 통제 실패를 안 삼킨다)"
+# L59 🟥 S급 앵커 — 드라이버가 split 의 exit 5 를 삼키지 않는다.
+#   초판은 `sed -n '/^rank_of() {/,/^}/p'` 로 함수를 뽑았는데 **rank_of 는 한 줄짜리라 범위가
+#   안 끝났고**, sed 가 135줄을 뱉었고 `head -20` 이 파이썬 스크립트 중간을 잘랐고, `eval` 이
+#   드라이버 코드 스무 줄을 실제로 실행했다(파일명 too long 오류까지 냈다). 레인이 통과한 이유는
+#   첫 줄의 함수 정의가 크래시 «전» 에 평가됐기 때문이다 — 통과의 출처가 의도와 달랐다.
+#   (cross-family round 5, gemini 계열.) 이제 **한 줄 정의만** 뽑고, 뽑은 것이 완결됐는지 검사한다.
+_R59_DEF=$(/usr/bin/grep -m1 -E '^rank_of\(\) \{.*\}$' "$PIPE")
+if [ -z "$_R59_DEF" ]; then
+  no "L59 exit 5 순위" "rank_of 를 한 줄 형태로 못 뽑았다 — 정의가 여러 줄로 바뀌었으면 추출을 고쳐라(미측정)"
 else
-  no "L59 exit 5 순위" "rank_of 5 → ${_R59_OUT:-없음} — 0 이면 드라이버가 rc=0 을 낸다"
+  _R59_5=$( eval "$_R59_DEF"; rank_of 5 )
+  _R59_3=$( eval "$_R59_DEF"; rank_of 3 )
+  _R59_0=$( eval "$_R59_DEF"; rank_of 0 )
+  if [ "${_R59_5:-0}" -gt "${_R59_3:-0}" ] && [ "${_R59_0:-9}" -eq 0 ]; then
+    ok "L59 🟥 출하 rank_of: 5 > 3 이고 0 은 0 (드라이버가 씨앗 통제 실패를 삼키지 않는다)"
+  else
+    no "L59 exit 5 순위" "rank_of(5)=$_R59_5 rank_of(3)=$_R59_3 rank_of(0)=$_R59_0 — 5 가 3 보다 커야 하고 0 은 0 이어야 한다"
+  fi
 fi
-
+# L60 종단간 — 드라이버 `--seeded` 로 씨앗을 지우는 검증자를 태우면 파이프라인 rc 가 5 여야 한다
+cat > "$D/m_seed.sh" <<'EOS'
+#!/bin/sh
+echo '{"id":"s1","title":"seeded known-true","file":"tgt.py","line":1,"severity":"A"}'
+echo '{"id":"s2","title":"ordinary","file":"tgt.py","line":2,"severity":"B"}'
+EOS
+chmod +x "$D/m_seed.sh"
+# 🟥 검증자는 fleet 이 «재번호한» id 를 받는다 — 그래서 픽스처는 원래 멤버 id(`member_id`)를
+#   봐야 «호출자 어휘로 선언한 씨앗» 을 지울 수 있다. 이게 이 레인이 재려는 경로 그 자체다.
+cat > "$D/fake_kill_seed.sh" <<'EOS'
+#!/bin/sh
+python3 -c '
+import sys, json
+rows = []
+for l in sys.stdin:
+    l = l.strip()
+    if not l.startswith("{"): continue
+    try: rows.append(json.loads(l))
+    except Exception: pass
+audit = any("drop_verdict" in r or r.get("verdict") == "false-positive" for r in rows)
+for r in rows:
+    rid = r.get("id")
+    if audit:
+        print(json.dumps({"id": rid, "verdict": "correct-drop", "why": "checked"}))
+    elif str(r.get("member_id")) == "s1":
+        print(json.dumps({"id": rid, "verdict": "false-positive", "why": "deleting the control"}))
+    else:
+        print(json.dumps({"id": rid, "verdict": "confirmed", "why": "holds"}))'
+EOS
+chmod +x "$D/fake_kill_seed.sh"
+printf 'codex|logic|%s\ngemini|security|%s\n' "sh $D/m_seed.sh" "sh $D/m_seed.sh" > "$D/fleetSEED.tbl"
+# 🟥 fleet 이 id 를 재번호하므로 호출자 어휘(`s1`)로 선언할 수 있어야 한다 — member_id 보존이
+#   그것을 가능하게 한다. 이 레인이 그 종단간 경로를 통째로 잰다.
+FH_CODEX_BIN="$D/fake_kill_seed.sh" FH_AGY_BIN="$D/fake_kill_seed.sh" \
+  bash "$PIPE" "$D/tgt.py" --out "$D/pipeSEED" --fleet "$D/fleetSEED.tbl" --seeded s1 >"$D/pSEED" 2>&1; R60=$?
+if [ "$R60" -eq 5 ]; then
+  ok "L60 🟥 종단간: 드라이버 --seeded s1 (호출자 어휘) 로 씨앗을 지우면 파이프라인 rc=5"
+else
+  no "L60 종단간 씨앗" "rc=$R60 want=5 · $(grep -m1 '^PIPELINE ' "$D/pSEED") · $(tail -2 "$D/pSEED")"
+fi
+# L61 배선 검사(행동 아님, 그렇게 라벨한다) — COUNT_ERR 이 실제로 소비되나
+if /usr/bin/grep -q 'COUNT_ERR' "$PIPE" && /usr/bin/grep -A2 'if \[ "\$COUNT_ERR" -ne 0 \]' "$PIPE" | /usr/bin/grep -q 'note_rc'; then
+  ok "L61 배선: 계측 오류 플래그가 실제로 note_rc 로 소비된다 (🟡 배선 검사지 행동 검사가 아니다)"
+else
+  no "L61 배선" "COUNT_ERR 이 설정만 되고 rc 에 반영되지 않는다 — 조용한 계측 실패다"
+fi
 /bin/rm -rf "$D"
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ] && { echo "FAILED=0"; exit 0; } || { echo "FAILED=1"; exit 1; }
