@@ -1616,6 +1616,57 @@ else
   no "L100 id 이월" "ids='$_I100'"
 fi
 
+# ══ R5 (cross-family, codex 2026-09-11 08:12→08:18) — A3, each with a known pair ══
+# L101 🟥 R5 #1: member_id 별칭은 «신뢰된 1차 행» 에서만 — 사칭한 남의 id 는 별칭으로도 안 남는다
+_M101=$(/usr/bin/grep -o '"member_id": "[^"]*"' "$D/f100/findings.jsonl" 2>/dev/null | tr '\n' ' ')
+cat > $D/r2_keepid_alias.sh <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) echo '{"id":"codex-logic-1","title":"K1 kept","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+  *) echo '{"id":"seed-original","title":"K1","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+chmod +x $D/r2_keepid_alias.sh
+printf 'codex|logic|sh %s\n' "$D/r2_keepid_alias.sh" > "$D/f101.tbl"
+bash "$FL" "$D/x_t.py" --out "$D/f101" --fleet "$D/f101.tbl" --round2 >/dev/null 2>&1
+_A101=$(/usr/bin/grep -o '"member_id": "[^"]*"' "$D/f101/findings.jsonl" 2>/dev/null | tr '\n' ' ')
+if ! printf '%s' "$_M101" | /usr/bin/grep -q 'gemini-security-1' && printf '%s' "$_A101" | /usr/bin/grep -q '"member_id": "seed-original"'; then
+  ok "L101 🟥 R5#1 사칭 id 는 member_id 로도 안 남고 · KEEP 한 발견은 1차 별칭 seed-original 을 되찾는다"
+else
+  no "L101 별칭 신뢰" "f100 member_ids='$_M101' · f101='$_A101'"
+fi
+
+# L102 🟥 R5 #2: 깨진 생존자 + DROPPED 는 «전원 철회» 가 아니라 ZERO_NONJSON(폴백)
+cat > $D/r2_malformed_plus_drop.sh <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) echo '{"id":"codex-logic-1","title":"A retained",}'; echo 'DROPPED: B withdrawn' ;;
+  *) echo '{"title":"A","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}'
+     echo '{"title":"B","file":"x_t.py","line":2,"severity":"B","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+chmod +x $D/r2_malformed_plus_drop.sh
+printf 'codex|logic|sh %s\n' "$D/r2_malformed_plus_drop.sh" > "$D/f102.tbl"
+O102=$(bash "$FL" "$D/x_t.py" --out "$D/f102" --fleet "$D/f102.tbl" --round2 2>&1)
+N102=$(/usr/bin/grep -c . "$D/f102/findings.jsonl" 2>/dev/null); N102=${N102:-0}
+N81=$(/usr/bin/grep -c . "$D/f81/findings.jsonl" 2>/dev/null); N81=${N81:-0}
+if [ "$N102" -eq 2 ] && printf '%s' "$O102" | /usr/bin/grep -q 'status=ZERO_NONJSON' && [ ! -f "$D/f102/INTENTIONAL_EMPTY" ] && [ "$N81" -eq 0 ]; then
+  ok "L102 🟥 R5#2 깨진 생존자+DROPPED → ZERO_NONJSON 폴백(1차 2건 보존, 마커 없음) · 순수 철회 컨트롤(L81) 은 0건"
+else
+  no "L102 철회 우선순위" "final=$N102(2) marker=$([ -f "$D/f102/INTENTIONAL_EMPTY" ] && echo y || echo n) · $(printf '%s' "$O102" | /usr/bin/grep -o 'status=[A-Z_]*' | head -2 | tr '\n' ' ') · L81=$N81"
+fi
+
+# L103 🟥 R5 #3: 비-객체 JSON 행([] · null) 은 스키마 오류 rc=2 — «생존 0» 의 rc=1 이 아니다
+R103a=$(printf '[]\n' | python3 "$VERIFY" - --out "$D/o103a" --verifier "sh $D/v_ok.sh" --family beta 2>&1 >/dev/null); Ra=$?
+R103b=$(printf 'null\n' | python3 "$VERIFY" - --out "$D/o103b" --verifier "sh $D/v_ok.sh" --family beta 2>&1 >/dev/null); Rb=$?
+if [ "$Ra" -eq 2 ] && [ "$Rb" -eq 2 ] && printf '%s' "$R103a" | /usr/bin/grep -q 'not a JSON object' && ! printf '%s' "$R103a" | /usr/bin/grep -q 'AttributeError'; then
+  ok "L103 🟥 R5#3 [] · null 행 → rc=2 «not a JSON object» (AttributeError 없음)"
+else
+  no "L103 비-객체 행" "rc=$Ra/$Rb '$(printf '%s' "$R103a" | tail -1)'"
+fi
+
 /bin/rm -rf "$D"
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ] && { echo "FAILED=0"; exit 0; } || { echo "FAILED=1"; exit 1; }

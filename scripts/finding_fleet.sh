@@ -121,19 +121,21 @@ with open(sys.argv[2], "w", encoding="utf-8") as w:
   local rc=$?
   FAM="$fam" ROLE="$role" RC="$rc" /usr/bin/python3 - "$raw" "$out/part2_${fam}_${role}.jsonl" "$out/findings_r1.jsonl" <<'PYR2'
 import json, os, sys
-own_r1_ids = set()
+own_r1 = {}   # own round-1 id -> its trusted member_id alias (or None)
 try:
     for _l in open(sys.argv[3], encoding="utf-8"):
         try: _d = json.loads(_l)
         except Exception: continue
         if _d.get("producer_family") == os.environ["FAM"] and _d.get("producer_role") == os.environ["ROLE"] and _d.get("id") is not None:
-            own_r1_ids.add(str(_d["id"]))
+            own_r1[str(_d["id"])] = _d.get("member_id")
 except OSError:
     pass
+own_r1_ids = set(own_r1)
 fam, role, rc = os.environ["FAM"], os.environ["ROLE"], os.environ["RC"]
 src, dst = sys.argv[1], sys.argv[2]
 n = 0
 saw_bytes = False
+bad_json = False
 dropped = []
 with open(dst, "w", encoding="utf-8") as w:
     for line in open(src, encoding="utf-8", errors="replace"):
@@ -153,16 +155,20 @@ with open(dst, "w", encoding="utf-8") as w:
         try:
             d = json.loads(line)
         except json.JSONDecodeError:
+            bad_json = True   # R5 #2: a survivor that failed to parse is evidence, not silence
             continue
         if not d.get("title"):
             continue
         n += 1
-        if d.get("id") is not None:
-            d["member_id"] = str(d["id"])
         # R4 #5: a KEPT/CORRECTED finding keeps its round-1 id (identity survives the rewrite);
         #        anything else gets a fresh routing id. Only THIS member's own r1 ids are honoured.
+        # R5 #1: the alias (member_id) comes from the TRUSTED round-1 row, never from the response —
+        #        a rejected foreign routing id must not survive as a seed-matchable alias.
+        d.pop("member_id", None)
         if str(d.get("id")) in own_r1_ids:
             d["id"] = str(d["id"])
+            if own_r1[d["id"]] is not None:
+                d["member_id"] = own_r1[d["id"]]
         else:
             d["id"] = f"{fam}-{role}-r2-{n}"
         d["producer_family"] = fam
@@ -171,6 +177,7 @@ with open(dst, "w", encoding="utf-8") as w:
         w.write(json.dumps(d, ensure_ascii=False) + "\n")
 # 🟥 «전부 스스로 내렸다» 는 정당한 2차 결과이고 «차단» 이 아니다 — 별 값을 준다.
 status = ("FAILED" if rc != "0" else "OK" if n > 0
+          else "ZERO_NONJSON" if bad_json      # R5 #2: malformed survivor + DROPPED must not certify «all withdrawn»
           else "ZERO_SELFDROPPED" if dropped
           else "ZERO_NONJSON" if saw_bytes else "ZERO_EMPTY")
 print(f"MEMBER2 family={fam} role={role} rc={rc} findings={n} self_dropped={len(dropped)} status={status}")

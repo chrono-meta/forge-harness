@@ -82,6 +82,9 @@ def read_findings(path):
             d = json.loads(line)
         except json.JSONDecodeError as e:
             _schema_error(f"finding_verify: line {n} is not JSON: {e}")
+        if not isinstance(d, dict):
+            # R5 #3: `[]` / `null` parse fine and then crash on .get() with exit 1 (= "nothing survived")
+            _schema_error(f"finding_verify: line {n} is not a JSON object")
         for k in REQUIRED:
             if not d.get(k):
                 _schema_error(f"finding_verify: line {n} missing required field '{k}'")
