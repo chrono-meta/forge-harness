@@ -140,16 +140,16 @@ def _intent_index(intended):
             errs.append(f'attr_consistency.intended[{n}] : 🟥 why 가 비었다 — 사유 없는 면제는 오류다')
             continue
         for s in sl:
-            idx[(ax, int(s))].append((tuple(sorted(e.get('shapes') or [])), why))
+            idx[(ax, int(s))].append((tuple(sorted(e.get('shapes') or [])), why, n))
     return idx, errs
 
 
 def _why(idx, axis, slide, names):
     """면제는 «축 + 장 + 도형 집합»에 걸린다. `shapes` 를 안 적으면 그 장의 그 축 전체."""
     got = sorted(set(names))
-    for want, why in idx.get((axis, int(slide)), []):
+    for want, why, n in idx.get((axis, int(slide)), []):
         if not want or list(want) == got:
-            return why
+            return why, n
     return None
 
 
@@ -253,15 +253,22 @@ def collect(path, cfg):
     # 명시 크기가 없는 도형은 크기 축에서 UNMEASURED — 0 으로 접지 않고 센다
     stats['shapes'] = sum(len(sh) for sh in S)
     stats['sized'] = sum(1 for sh in S for a in sh if a['szs'])
+    hits = collections.Counter()
     for ax in want:
         for slide, names, line in AXIS_FN[ax](S, sw, cfg):
-            why = _why(idx, ax, slide, names)
-            if why is not None:
-                suppressed.append(line + f'   ← 선언: {why}')
+            hit = _why(idx, ax, slide, names)
+            if hit is not None:
+                suppressed.append(line + f'   ← 선언: {hit[0]}')
                 stats['suppressed'] += 1
+                hits[hit[1]] += 1
             else:
                 lines.append(line)
                 stats[ax] += 1
+    # 🟥 죽은 선언 보고 — 아무 후보도 안 거는 intended 항목(덱 세션 실측 09-11: 유령 후보에 붙은 why)
+    for n in sorted({n for v in idx.values() for _w, _y, n in v}):
+        if hits.get(n, 0) == 0:
+            errors.append(f'attr_consistency.intended[{n}] : 🟥 죽은 선언 — 이 덱에서 아무 후보도 면제하지 않는다. 지우거나 고쳐라')
+            stats['dead_intended'] += 1
     return lines, suppressed, errors, dict(stats)
 
 

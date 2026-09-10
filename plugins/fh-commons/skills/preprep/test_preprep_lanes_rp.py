@@ -416,6 +416,45 @@ def run_codex_audit_regressions(fx_dir):
     ok('A7-3 다중성 보존 — 원고 Title×2 vs 덱 Title×1 → 짝 없는 줄 1') if len(absent) == 1 and len(wording) == 0 \
         else ng('A7-3 absent=%r wording=%r' % (absent, wording))
 
+    # A8 알갱이 불일치(덱 세션 실측 47→279) — 원고는 도형 단위, 덱은 문단 단위. 2단계 대조가 «같은 도형의 문단 join» 을 짝으로 본다
+    mp2 = os.path.join(fx_dir, 'ma_man2.md')
+    with open(mp2, 'w', encoding='utf-8') as f:
+        f.write('### U1 · x\n🖥\n1.무엇이 문제였나 2.무엇을 만들었나 3.무엇을 가져가나\n🗣\n말\n')
+    d2 = os.path.join(fx_dir, 'ma_multi.pptx')
+    body3 = ('<p:sp><p:nvSpPr><p:cNvPr id="1" name="g"/></p:nvSpPr><p:txBody>'
+             '<a:p><a:r><a:rPr/><a:t>1.무엇이 문제였나</a:t></a:r></a:p>'
+             '<a:p><a:r><a:rPr/><a:t>2.무엇을 만들었나</a:t></a:r></a:p>'
+             '<a:p><a:r><a:rPr/><a:t>3.무엇을 가져가나</a:t></a:r></a:p></p:txBody></p:sp>')
+    _mini_deck(d2, [body3])
+    man2 = LS.manuscript_screens(mp2); grp = LS.deck_screens_grouped(d2); deck2 = [[t for sh_ in sl for t in sh_] for sl in grp]
+    a1, w1, st1 = LS.compare(man2, deck2)                       # 1단계만 — 오탐 형태 재현(1 원고-only + 3 화면-only)
+    a2, w2, st2 = LS.compare(man2, deck2, deck_groups=grp)      # 2단계
+    ok('A8 다문단 도형: 1단계만이면 짝없음 %d(오탐) · 2단계면 0 (join 1건)' % len(a1)) \
+        if len(a1) == 4 and len(a2) == 0 and st2.get('joined') == 1 else ng('A8 a1=%d a2=%d joined=%r' % (len(a1), len(a2), st2.get('joined')))
+    # A8 컨트롤 — 덱에서 문단 하나가 정말 빠지면 2단계로도 안 맞아야 한다(join 이 원고 줄과 달라진다)
+    d3 = os.path.join(fx_dir, 'ma_multi_missing.pptx')
+    _mini_deck(d3, [body3.replace('<a:p><a:r><a:rPr/><a:t>2.무엇을 만들었나</a:t></a:r></a:p>', '')])
+    grp3 = LS.deck_screens_grouped(d3); deck3 = [[t for sh_ in sl for t in sh_] for sl in grp3]
+    a3, w3, st3 = LS.compare(man2, deck3, threshold=0.90, deck_groups=grp3)
+    ok('A8 컨트롤 — 문단 소실 덱은 2단계로도 짝없음/문구차이로 남는다') if (len(a3) + len(w3)) >= 1 \
+        else ng('A8 컨트롤 — 문단이 빠졌는데 0 (a3=%r w3=%r)' % (a3, w3))
+    # A9 죽은 선언 — 아무것도 안 거는 intended 항목이 🟥 로 보고된다 (geometry · attr 둘 다)
+    dg = os.path.join(fx_dir, 'ma_dead_geo.pptx')
+    _mini_deck(dg, [_sp('bar', 914400, 914400, 100000, 100000, 'x'), _sp('bar', 914400 + 20000, 914400, 100000, 100000, 'x')])
+    S_g = LG.load_slides(dg)
+    _l, _st, sup, errs = LG.p1_lines(S_g, 200000, [
+        {'slides': [1, 2], 'shapes': ['bar'], 'attrs': ['x'], 'why': '산 선언'},
+        {'slides': [1, 2], 'shapes': ['ghost'], 'attrs': ['y'], 'why': '죽은 선언'}])
+    dead = [e for e in errs if '죽은 선언' in e]
+    ok('A9 geometry: 산 선언 1 면제 · 죽은 선언 1 보고 (%s)' % (dead[0][:40] if dead else '-')) \
+        if len(sup) == 1 and len(dead) == 1 and 'intended[2]' in dead[0] else ng('A9 geometry sup=%d errs=%r' % (len(sup), errs))
+    S_a, sw_a = LA.load(os.path.join(fx_dir, 'ma_algn.pptx'))
+    _l2, sup2, errs2, st2 = LA.collect(os.path.join(fx_dir, 'ma_algn.pptx'), {
+        'intended': [{'axis': 'algn', 'slides': [1], 'why': '산 선언'}, {'axis': 'dash', 'slides': [1], 'why': '죽은 선언'}]})
+    dead2 = [e for e in errs2 if '죽은 선언' in e]
+    ok('A9 attr: 산 선언 1 면제 · 죽은 선언 1 보고') if len(sup2) == 1 and len(dead2) == 1 and 'intended[2]' in dead2[0] \
+        else ng('A9 attr sup=%d errs=%r' % (len(sup2), errs2))
+
 
 def run_baseline_delta(fx_dir):
     print('\n[2] --baseline 델타 모드 — 편집 전/후 한 쌍')

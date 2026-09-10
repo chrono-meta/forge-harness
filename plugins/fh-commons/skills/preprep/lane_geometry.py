@@ -161,7 +161,7 @@ def _intent_index(intended):
             errs.append(f'geometry.intended[{n}] : 🟥 why 가 비었다 — 사유 없는 면제는 오류다, 면제 안 함')
             continue
         for name in sh:
-            idx[(int(sl[0]), name)].append((frozenset(at), why))
+            idx[(int(sl[0]), name)].append((frozenset(at), why, n))
     return idx, errs
 
 
@@ -175,6 +175,8 @@ def p1_lines(S, JIT, intended=None):
                같은 목록에 두되 같은 것처럼 읽히면 안 된다.
       suppressed = `geometry.intended` 로 면제된 줄 (조용히 버리지 않고 같이 낸다)"""
     idx, errors = _intent_index(intended)
+    declared = {n for v in idx.values() for _a, _w, n in v}
+    hits = collections.Counter()
     lines, suppressed = [], []
     stats = collections.Counter()
     for i in range(1, len(S)):
@@ -205,11 +207,17 @@ def p1_lines(S, JIT, intended=None):
             moved = ' · '.join(f'{LAB[k]} {d[k]:+d}' for k in range(4) if d[k])
             line = (f"   {i:>3}p→{i+1:<3}p {nm[:16]:16} {moved}  ({mx/EMU_PT:.2f}pt)  "
                     + ('[이름만 결박 — 글자 없는 도형]' if weak else f'«{cur[4][:26]}»'))
-            why = next((w for a, w in idx.get((i, nm), []) if a == moved_set), None)
-            if why is not None:
-                suppressed.append(line + f"   ← 선언된 연출: {why}")
+            hit = next(((w, n) for a, w, n in idx.get((i, nm), []) if a == moved_set), None)
+            if hit is not None:
+                suppressed.append(line + f"   ← 선언된 연출: {hit[0]}")
+                hits[hit[1]] += 1
             else:
                 lines.append(line)
+    # 🟥 아무것도 안 거는 선언은 «알고 남긴 것» 이 아니라 «알던 것이 틀린 것» 이다 — 출력이 같으면
+    #    구분이 안 된다(덱 세션 실측 09-11: 유령 후보에 why 를 붙여 선언해 둔 것이 수리 뒤 죽어 있었다).
+    for n in sorted(declared):
+        if hits.get(n, 0) == 0:
+            errors.append(f'geometry.intended[{n}] : 🟥 죽은 선언 — 이 덱에서 아무 변화도 면제하지 않는다(가리키는 변화가 없다). 지우거나 고쳐라')
     return lines, dict(stats), suppressed, errors
 
 

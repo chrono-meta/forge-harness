@@ -53,6 +53,14 @@ def manuscript_screens(path):
 
 
 def deck_screens(path):
+    """장별 [문단 텍스트 …] (평평하게). 도형 경계는 deck_screens_grouped() 가 보존한다."""
+    return [[t for shp in sl for t in shp] for sl in deck_screens_grouped(path)]
+
+
+def deck_screens_grouped(path):
+    """장별 [[도형의 문단 …] …] — 🟥 원고 🖥 는 «도형 단위» 로 쓰이고 덱은 «문단 단위» 로 읽힌다.
+    알갱이가 다른 채 짝지으면 다문단 도형마다 1+N 건 오탐이 난다(실측 47 → 279). 그래서 도형 경계를
+    같이 넘겨 compare 가 두 단계로 맞춘다."""
     z = zipfile.ZipFile(path)
     rels = {}
     for tag in re.findall(r'<Relationship\b[^>]*>', z.read('ppt/_rels/presentation.xml.rels').decode('utf-8')):
@@ -65,14 +73,18 @@ def deck_screens(path):
     out = []
     for sn in order:
         x = z.read('ppt/slides/slide%d.xml' % sn).decode('utf-8')
-        lines = []
-        # 문단 단위로 뽑는다 — 한 도형의 두 문단·그룹 안의 두 도형이 «alphabeta» 로 붙지 않게.
+        shapes = []
+        # 도형(sp/cxnSp/pic — grpSp 는 자식 sp 로 풀린다) 안에서 문단 단위로 뽑는다.
         #    엔티티(&amp;)는 풀어서 원고의 R&D 와 같은 글자가 되게(codex 09-11).
-        for pm in re.finditer(r'<a:p\b[^>]*>.*?</a:p>', x, re.S):
-            t = html.unescape(''.join(re.findall(r'<a:t>([^<]*)</a:t>', pm.group(0)))).strip()
-            if t:
-                lines.append(t)
-        out.append(lines)
+        for sm in re.finditer(r'<p:(sp|cxnSp|pic)>.*?</p:\1>', x, re.S):
+            paras = []
+            for pm in re.finditer(r'<a:p\b[^>]*>.*?</a:p>', sm.group(0), re.S):
+                t = html.unescape(''.join(re.findall(r'<a:t>([^<]*)</a:t>', pm.group(0)))).strip()
+                if t:
+                    paras.append(t)
+            if paras:
+                shapes.append(paras)
+        out.append(shapes)
     return out
 
 
@@ -80,9 +92,12 @@ def _norm(t):
     return re.sub(r'\s', '', t)
 
 
-def compare(man, deck, threshold=0.60, skip=()):
-    """(absent, wording, stats) — 🟥 둘을 합치지 않는다."""
+def compare(man, deck, threshold=0.60, skip=(), deck_groups=None):
+    """(absent, wording, stats) — 🟥 둘을 합치지 않는다.
+    deck_groups 가 있으면 2단계: ① 문단 단위로 맞추고 ② 남은 원고 줄을 «같은 도형의 남은 문단 join»
+    과 한 번 더 맞춘 뒤에야 짝 없음으로 낸다(원고는 도형 단위로 쓰인 면이다 — 덱 세션 실측 09-11)."""
     absent, wording = [], []
+    joined_hits = 0
     for i, (uid, mlines) in enumerate(man):
         if uid in skip:
             continue
@@ -98,6 +113,22 @@ def compare(man, deck, threshold=0.60, skip=()):
                 pool.remove(t)
             else:
                 only_m.append(t)
+        # ② 도형 단위 재대조 — 남은 원고 줄이 «어느 도형의 남은 문단 전부를 이어 붙인 것» 이면 짝이다
+        if deck_groups is not None and only_m:
+            for paras in deck_groups[i]:
+                ps = [_norm(p) for p in paras if _norm(p)]
+                if len(ps) < 2 or not all(p in pool for p in ps):
+                    continue
+                j = ''.join(ps)
+                hit = next((t for t in only_m if t == j), None)
+                if hit is None:
+                    cand = max(((difflib.SequenceMatcher(None, t, j).ratio(), t) for t in only_m), default=(0.0, None))
+                    hit = cand[1] if cand[0] >= threshold else None
+                if hit is not None:
+                    only_m.remove(hit)
+                    for p in ps:
+                        pool.remove(p)
+                    joined_hits += 1
         for t in only_m:
             best = max(((difflib.SequenceMatcher(None, t, c).ratio(), c) for c in pool),
                        default=(0.0, None))
@@ -109,7 +140,7 @@ def compare(man, deck, threshold=0.60, skip=()):
         for t in pool:
             absent.append((i + 1, uid, '화면에만', t))
     slides = {a[0] for a in absent} | {w[0] for w in wording}
-    return absent, wording, {'units': len(man), 'slides_touched': len(slides)}
+    return absent, wording, {'units': len(man), 'slides_touched': len(slides), 'joined': joined_hits}
 
 
 def _resolve(root, p):
@@ -137,7 +168,8 @@ def scan(cfg, root):
     spec = cfg.get('screen_parity') or {}
     try:
         man = manuscript_screens(mp)
-        deck = deck_screens(dp)
+        groups = deck_screens_grouped(dp)
+        deck = [[t for shp in sl for t in shp] for sl in groups]
     except Exception as e:
         return [], ['L14 screen-parity : 계기 오류(%s: %s) — UNMEASURED (0 아님)'
                     % (type(e).__name__, e)]
@@ -147,11 +179,11 @@ def scan(cfg, root):
                     '못 세운다. UNMEASURED (0 아님, 「어긋남 없음」 아님)' % (len(man), len(deck))]
     absent, wording, st = compare(man, deck,
                                   float(spec.get('wording_threshold', 0.60)),
-                                  set(spec.get('skip_units') or ()))
+                                  set(spec.get('skip_units') or ()), deck_groups=groups)
     notes = ['L14 screen-parity : 짝 없는 줄 %d · 문구만 다른 줄 %d '
-             '(단위 %d · 어긋난 장 %d) — 🟥 advisory. 원고 🖥 는 화면의 «모든» 도형을 적는 '
+             '(단위 %d · 어긋난 장 %d · 도형 join 으로 맞춘 원고 줄 %d) — 🟥 advisory. 원고 🖥 는 화면의 «모든» 도형을 적는 '
              '자리가 아니라 사람이 적는 요약이라 후보 0 이 목표가 아니다'
-             % (len(absent), len(wording), st['units'], st['slides_touched'])]
+             % (len(absent), len(wording), st['units'], st['slides_touched'], st.get('joined', 0))]
     for sn, uid, side, t in absent[:int(spec.get('max_show', 24))]:
         notes.append('   🗑 %3dp %-7s %s : «%s»' % (sn, uid, side, t[:50]))
     if len(absent) > int(spec.get('max_show', 24)):
