@@ -22,6 +22,9 @@ CODEX="${FH_CODEX_BIN:-$(command -v codex 2>/dev/null || echo "$HOME/.npm-global
 AGY="${FH_AGY_BIN:-$(command -v agy 2>/dev/null || echo "$HOME/.local/bin/agy")}"
 
 FAMILY=""; TARGET=""; MODE="verify"; KEEP=""
+# 호출자(파이프라인)가 env 로 보존 경로를 줄 수 있다 — 검증 패스의 CLI stderr(토큰 회계)가 여기서 산다.
+# --keep 플래그가 뒤에서 덮으므로 env 는 «폴백» 이지 강제가 아니다. (2026-09-10: 0바이트 ≠ 0 토큰)
+KEEP="${FH_VERIFIER_KEEP:-}"
 usage() { echo "usage: finding_verifier.sh --family codex|gemini --target <file> [--audit] [--keep <dir>]" >&2; exit 2; }
 # `shift 2` with only one word left FAILS and consumes nothing, so the loop spins forever. Under
 # `set -uo pipefail` (no errexit) nothing stops it. codex reproduced a hang on a trailing --family.
@@ -95,7 +98,7 @@ fi
 case "$FAMILY" in
   codex)  "$CODEX" exec --sandbox read-only --skip-git-repo-check -m gpt-6-astra \
             -c model_reasoning_effort="high" < "$WORK/prompt.txt" > "$WORK/raw.txt" 2>"$WORK/err.txt" ;;
-  gemini) "$AGY" --model gemini-3.8-flash-high --output-format text --print-timeout 5m \
+  gemini) "$AGY" --model gemini-3.8-flash-high --output-format text --print-timeout 20m \
             -p "$(cat "$WORK/prompt.txt")" < /dev/null > "$WORK/raw.txt" 2>"$WORK/err.txt" ;;
   *) echo "finding_verifier: unknown family '$FAMILY' (codex|gemini)" >&2; exit 2 ;;
 esac

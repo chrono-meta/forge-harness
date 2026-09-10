@@ -240,6 +240,10 @@ for l in open(sys.argv[1],encoding="utf-8"):
     printf 'split producer=%s verifier=%s rc=0 (no findings)\n' "$PROD" "$VER" >> "$OUT/splits.txt"; continue
   fi
 
+  # 🟥 검증 패스의 CLI stderr(토큰 회계 «tokens used» 포함)가 mktemp 에 쓰이고 cleanup 이 지웠다.
+  #    그래서 «검증 패스 토큰 = 0바이트» 로 보였는데 0 이 아니라 «버려진 것» 이다. --keep 은 이미
+  #    있는 채널이고 파이프라인이 안 넘겼을 뿐이다. split 디렉터리에 남긴다(2026-09-10).
+  export FH_VERIFIER_KEEP="$SD"
   AUDARGS=()
   if [ -n "$AUD" ]; then
     AUDARGS=(--audit-verifier-argv "$(argv_json bash "$VERIFIER_SH" --family "$AUD" --target "$TARGET" --audit)" --audit-family "$AUD")

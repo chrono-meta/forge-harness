@@ -1257,6 +1257,28 @@ else
   no "L78 심링크 가드 등재" "roster.err=$(/usr/bin/grep -c '"\$OUT/roster.err"' "$PIPE") peer=$(/usr/bin/grep -c 'peer_\${fam}.txt"' "$FL")"
 fi
 
+# L79 🟥 검증 패스의 CLI stderr(토큰 회계)가 버려지지 않는다 — mktemp cleanup 이 지우던 것
+cat > "$D/ver_acct.sh" <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+echo "tokens used" >&2; echo "12345" >&2
+printf '%s' "$IN" | /usr/bin/python3 -c '
+import sys,json
+for l in sys.stdin:
+    l=l.strip()
+    if l.startswith("{"):
+        d=json.loads(l); print(json.dumps({"id":d["id"],"verdict":"confirmed","why":"x"}))'
+EOS
+chmod +x "$D/ver_acct.sh"
+printf 'codex|logic|sh %s\ngemini|security|sh %s\n' "$D/one_find.sh" "$D/one_find.sh" > "$D/fleetK.tbl"
+FH_CODEX_BIN="$D/ver_acct.sh" FH_AGY_BIN="$D/ver_acct.sh" \
+  bash "$PIPE" "$D/pool_t.py" --out "$D/pk" --fleet "$D/fleetK.tbl" >/dev/null 2>&1
+if ls "$D/pk"/split_*/err.txt >/dev/null 2>&1 && /usr/bin/grep -q 'tokens used' "$D"/pk/split_*/err.txt 2>/dev/null; then
+  ok "L79 검증 패스 stderr 가 split_*/err.txt 에 남는다 (토큰 회계가 «버려진 0» 이 아니다)"
+else
+  no "L79 검증 stderr 보존" "$(ls "$D"/pk/split_* 2>/dev/null | head -3)"
+fi
+
 /bin/rm -rf "$D"
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ] && { echo "FAILED=0"; exit 0; } || { echo "FAILED=1"; exit 1; }

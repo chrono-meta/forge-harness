@@ -36,7 +36,7 @@ AGY="${FH_AGY_BIN:-$(command -v agy 2>/dev/null || echo "$HOME/.local/bin/agy")}
 default_fleet() {
   cat <<'EOF'
 codex|logic|CODEX_BIN exec --sandbox read-only --skip-git-repo-check -m gpt-6-astra -c model_reasoning_effort="high"
-gemini|security|AGY_BIN --model gemini-3.8-flash-high --output-format text --print-timeout 5m -p "$(cat PROMPT_FILE)"
+gemini|security|AGY_BIN --model gemini-3.8-flash-high --output-format text --print-timeout 20m -p "$(cat PROMPT_FILE)"
 EOF
 }
 
