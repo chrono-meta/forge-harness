@@ -36,7 +36,7 @@ AGY="${FH_AGY_BIN:-$(command -v agy 2>/dev/null || echo "$HOME/.local/bin/agy")}
 default_fleet() {
   cat <<'EOF'
 codex|logic|CODEX_BIN exec --sandbox read-only --skip-git-repo-check -m gpt-6-astra -c model_reasoning_effort="high"
-gemini|security|AGY_BIN --model gemini-3.8-flash-high --output-format text --print-timeout 20m -p "$(cat PROMPT_FILE)"
+gemini|security|AGY_BIN --mode plan --sandbox --model gemini-3.8-flash-high --output-format text --print-timeout 20m -p "$(cat PROMPT_FILE)"
 EOF
 }
 
@@ -79,37 +79,57 @@ run_member_r2() { # $1=family $2=role $3=command $4=target $5=outdir
   q_codex="$(printf '%q' "$CODEX")"; q_agy="$(printf '%q' "$AGY")"
   cmd="${cmd//CODEX_BIN/$q_codex}"; cmd="${cmd//AGY_BIN/$q_agy}"
   local raw="$out/raw2_${fam}_${role}.txt" pf="$out/prompt2_${fam}_${role}.txt"
-  for _p in "$raw" "$pf" "$out/err2_${fam}_${role}.txt" "$out/part2_${fam}_${role}.jsonl" "$out/peer_${fam}.txt"; do
+  for _p in "$raw" "$pf" "$out/err2_${fam}_${role}.txt" "$out/part2_${fam}_${role}.jsonl" "$out/peer_${fam}_${role}.txt"; do
     [ -L "$_p" ] && { echo "finding_fleet: refusing to write through a symlink: $_p" >&2; return 1; }
   done
   # 자기 것과 «남의 것» 을 갈라서 보여준다 — 어느 쪽이 자기 것인지 모르면 수정할 수가 없다
-  MINE_FAM="$fam" /usr/bin/python3 -c '
+  # 🟥 R4 #8: «mine» is the MEMBER (family+role), not the family — two roles of one family were each
+  #    told the other's findings were their own. R4 #5: own rows carry `id` so a kept/revised finding
+  #    keeps its identity through round 2 (a declared seed otherwise turns ABSENT while surviving).
+  MINE_FAM="$fam" MINE_ROLE="$role" /usr/bin/python3 -c '
 import sys, json, os
-mine, theirs = [], []
-fam = os.environ["MINE_FAM"]
+mine, kin, theirs = [], [], []
+fam, role = os.environ["MINE_FAM"], os.environ["MINE_ROLE"]
 for l in open(sys.argv[1], encoding="utf-8"):
     l = l.strip()
     if not l: continue
     try: d = json.loads(l)
     except Exception: continue
     row = {k: d.get(k) for k in ("title","file","line","severity","category","detail","defeater")}
-    (mine if d.get("producer_family") == fam else theirs).append(row)
+    if d.get("producer_family") == fam and d.get("producer_role") == role:
+        mine.append(dict(id=d.get("id"), **row))
+    elif d.get("producer_family") == fam:
+        kin.append(row)
+    else:
+        theirs.append(row)
 with open(sys.argv[2], "w", encoding="utf-8") as w:
-    w.write("\n===== YOUR OWN ROUND-1 FINDINGS =====\n")
+    w.write("\n===== YOUR OWN ROUND-1 FINDINGS (keep the id field verbatim on any you KEEP or CORRECT) =====\n")
     for r in mine: w.write(json.dumps(r, ensure_ascii=False) + "\n")
     if not mine: w.write("(you reported none)\n")
+    if kin:
+        w.write("\n===== OTHER MEMBERS OF YOUR OWN FAMILY (not yours — do not keep/drop these) =====\n")
+        for r in kin: w.write(json.dumps(r, ensure_ascii=False) + "\n")
     w.write("\n===== THE OTHER FAMILY ROUND-1 FINDINGS =====\n")
     for r in theirs: w.write(json.dumps(r, ensure_ascii=False) + "\n")
     if not theirs: w.write("(they reported none)\n")
-' "$out/findings_r1.jsonl" "$out/peer_${fam}.txt" || return 1
+' "$out/findings_r1.jsonl" "$out/peer_${fam}_${role}.txt" || return 1   # R3 #9: per-member — two roles of one family raced on a shared truncate/write
   { printf '%s%s\n\n===== FILE: %s =====\n' "$PROMPT_HEAD_R2" "$role" "$(basename "$tgt")"
-    cat "$tgt"; cat "$out/peer_${fam}.txt"; } > "$pf"
+    cat "$tgt"; cat "$out/peer_${fam}_${role}.txt"; } > "$pf"
   q_pf="$(printf '%q' "$pf")"
   cmd="${cmd//PROMPT_FILE/$q_pf}"
   eval "$cmd" < "$pf" > "$raw" 2>"$out/err2_${fam}_${role}.txt"
   local rc=$?
-  FAM="$fam" ROLE="$role" RC="$rc" /usr/bin/python3 - "$raw" "$out/part2_${fam}_${role}.jsonl" <<'PYR2'
+  FAM="$fam" ROLE="$role" RC="$rc" /usr/bin/python3 - "$raw" "$out/part2_${fam}_${role}.jsonl" "$out/findings_r1.jsonl" <<'PYR2'
 import json, os, sys
+own_r1_ids = set()
+try:
+    for _l in open(sys.argv[3], encoding="utf-8"):
+        try: _d = json.loads(_l)
+        except Exception: continue
+        if _d.get("producer_family") == os.environ["FAM"] and _d.get("producer_role") == os.environ["ROLE"] and _d.get("id") is not None:
+            own_r1_ids.add(str(_d["id"]))
+except OSError:
+    pass
 fam, role, rc = os.environ["FAM"], os.environ["ROLE"], os.environ["RC"]
 src, dst = sys.argv[1], sys.argv[2]
 n = 0
@@ -139,7 +159,12 @@ with open(dst, "w", encoding="utf-8") as w:
         n += 1
         if d.get("id") is not None:
             d["member_id"] = str(d["id"])
-        d["id"] = f"{fam}-{role}-r2-{n}"
+        # R4 #5: a KEPT/CORRECTED finding keeps its round-1 id (identity survives the rewrite);
+        #        anything else gets a fresh routing id. Only THIS member's own r1 ids are honoured.
+        if str(d.get("id")) in own_r1_ids:
+            d["id"] = str(d["id"])
+        else:
+            d["id"] = f"{fam}-{role}-r2-{n}"
         d["producer_family"] = fam
         d["producer_role"] = role
         d["round"] = 2
@@ -288,6 +313,7 @@ mkdir -p "$OUT"
 if [ -n "$FLEET" ]; then cp "$FLEET" "$OUT/fleet.txt"; else default_fleet > "$OUT/fleet.txt"; fi
 
 : > "$OUT/members.txt"
+/bin/rm -f "$OUT/INTENTIONAL_EMPTY"   # R3 #8: a stale marker from an earlier run must not certify this one
 while IFS='|' read -r fam role cmd; do
   [ -n "${fam:-}" ] || continue
   case "$fam" in \#*) continue ;; esac
@@ -308,7 +334,7 @@ if [ "$ROUND2" -eq 1 ]; then
   if [ "$R1_TOTAL" -eq 0 ]; then
     echo "FLEET round2 skipped — round 1 produced no findings (nothing to decorrelate against)"
   else
-    for _p in "$OUT/findings_r1.jsonl" "$OUT/findings_r2merged.jsonl"; do
+    for _p in "$OUT/findings_r1.jsonl" "$OUT/findings_r2merged.jsonl" "$OUT/INTENTIONAL_EMPTY"; do
       [ -L "$_p" ] && { echo "finding_fleet: refusing to write through a symlink: $_p" >&2; exit 2; }
     done
     cp "$OUT/findings.jsonl" "$OUT/findings_r1.jsonl"
@@ -333,7 +359,14 @@ if [ "$ROUND2" -eq 1 ]; then
       case "$_fam" in \#*) continue ;; esac
       # 🟥 R2 #3: family/role 을 정규식에 보간하면 `logic.review` 가 `logicXreview` 의 OK 를 집는다.
       #    awk 로 «필드 리터럴» 비교 — 값이 데이터로만 다뤄진다.
-      _st=$(/usr/bin/awk -v f="$_fam" -v r="$_role" '$1=="MEMBER2" && $2=="family="f && $3=="role="r {for(i=4;i<=NF;i++) if($i ~ /^status=/) v=substr($i,8)} END{print v}' "$OUT/members.txt")
+      # 🟥 R3 #4: awk had already split `role=logic review` into fields, so $3=="role="r never matched a
+      #    role with a space → «ABSENT» → its valid round-2 discarded. Compare the fixed PREFIX
+      #    `MEMBER2 family=F role=R rc=` as one literal span (index()==1); still no regex interpolation.
+      # 🟥 R4 #4: a PREFIX still aliased `role=logic` onto `role=logic rc=99 …` (executed). The fixed tail
+      #    ` rc=N findings=N self_dropped=N status=S$` is stripped first and the WHOLE head is compared;
+      #    ENVIRON instead of -v so a backslash in a role is not escape-interpreted.
+      _st=$(_FAM="$_fam" _ROLE="$_role" /usr/bin/awk 'BEGIN{p="MEMBER2 family=" ENVIRON["_FAM"] " role=" ENVIRON["_ROLE"]}
+        match($0, / rc=[^ ]+ findings=[^ ]+ self_dropped=[^ ]+ status=[^ ]+$/) && substr($0,1,RSTART-1)==p {v=$NF; sub(/^status=/,"",v)} END{print v}' "$OUT/members.txt")
       _p2="$OUT/part2_${_fam}_${_role}.jsonl"; _p1="$OUT/part_${_fam}_${_role}.jsonl"
       # 🟥 R2 #4: 차단(ZERO_NONJSON)·빈 응답(ZERO_EMPTY)·미실행(부재) 은 «2차가 없다» 이지 «2차가 비었다» 가 아니다
       #    → 자기 1차로 폴백. ZERO_SELFDROPPED 만이 «의도된 빈 2차» 다(#5).
@@ -352,10 +385,15 @@ if [ "$ROUND2" -eq 1 ]; then
     done < "$OUT/fleet.txt"
     if [ -s "$OUT/findings_r2merged.jsonl" ]; then
       /bin/mv "$OUT/findings_r2merged.jsonl" "$OUT/findings.jsonl"
-    elif [ "$R2_OK" -gt 0 ] && [ "$R2_FALLBACK" -eq 0 ]; then
+    elif [ "$R2_OK" -gt 0 ]; then
       # 🟥 R2 #5: 모든 멤버가 «성공적으로» 빈 2차(전량 자기 철회)를 냈다 — 그것은 결과이지 실패가 아니다.
       #    1차로 되돌리면 정당한 철회가 무효화된다. 빈 결과를 그대로 낸다.
+      # 🟥 R3 #5: `&& R2_FALLBACK==0` 은 틀렸다 — 폴백 멤버는 이미 «자기 1차» 를 merged 에 얹었으므로
+      #    merged 가 비었다는 것은 그 1차도 비었다는 뜻이다(codex 철회 + gemini 1차 0·2차 ZERO_EMPTY).
+      #    그 경우 1차 전체로 되돌리면 codex 의 정당한 철회가 되살아난다. 멤버별 병합이 «구성됐으면»
+      #    빈 것도 권위다. 1차로 돌아가는 것은 R2_OK==0 (아무 멤버도 2차를 못 냈을 때) 뿐이다.
       : > "$OUT/findings.jsonl"
+      : > "$OUT/INTENTIONAL_EMPTY"   # R3 #8: typed marker the driver reads — «reviewed, withdrawn» ≠ «unreviewed»
       echo "FLEET round2 all members withdrew (ZERO_SELFDROPPED) — result is intentionally empty"
     else
       # 🟥 합쳐서도 비면 1차를 «대체» 하지 않는다 — 그러면 탈상관이 아니라 삭제다.

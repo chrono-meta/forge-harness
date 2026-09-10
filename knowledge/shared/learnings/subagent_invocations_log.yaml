@@ -3583,3 +3583,11 @@
   evidence: tracks/_meta/dominance_B2/RESULT_2026-09-10_scoring-calibration.md §1~§10 · fh_axes23_2026-09-10_verifier-roster.md · cross-family 6/6 실적발 전건 수리(L73~L78)
   cost: codex 577k(F_typed 리뷰) + 한도 3회 소진 · 로컬 4090 무료 · 거버너 UNMEASURED
   note: 통합 1항목. 사이드카는 auditor 로만(트리 쓰기 0). 자력 적발 0/6(cross-family) · 계기 축 자력 2(L72 · quota 오탐)
+- date: 2026-09-10
+  agent: general-purpose ×5 (Claude, 로컬 격리 워크트리 · 사이드카 0 — residency)
+  task: qasp-dev PR 스택 7건(#278–#284) 거버너 검증 — 레인 실행 · 되돌림 프로브 · 표본 손검증 · known-pair (#279 · #280+#281 · #282 · #283 · #284) + 거버너 직접 #278·스택 전수
+  count: 5
+  outcome: accepted
+  evidence: tracks/_meta/field_gate_review_2026-09-10_qasp-stack7.md — #281 BLOCK(coverage.py:142 파생 fail-open 재현 + 정본 :41), 5건 A 소견 전부 file:line·재현 동반 · 스택 전수 4092/0
+  cost: subagent_tokens 163k+184k+215k+200k+195k ≈ 957k · 거버너 UNMEASURED
+  note: 통합 1항목. crossfamily=DEGRADED_SINGLE_FAMILY(corp-context 어휘 — residency). 자력(거버너) 적발 0 — 다섯 A 전부 에이전트 실행이 잡음; 저자 자기검토도 다섯 다 놓친 자리(«거버너 1종» 이 실제로 «기계 1종+의미 0종» 이라는 저자 정정은 채택)

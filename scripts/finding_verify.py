@@ -64,6 +64,13 @@ AUDIT_VERDICTS = ("correct-drop", "wrong-drop", "uncertain")
 # decide whether the claim is true, only that the party answering must not be the party asking.
 
 
+def _schema_error(msg):
+    # R4 #3: a string SystemExit exits 1 — the documented code for "verified, nothing survived".
+    #        Schema rejection is exit 2, and a consumer treating 0/1 as "completed" must not see 1 here.
+    print(msg, file=sys.stderr)
+    sys.exit(2)
+
+
 def read_findings(path):
     out, seen = [], set()
     src = sys.stdin if path == "-" else open(path, encoding="utf-8")
@@ -74,13 +81,20 @@ def read_findings(path):
         try:
             d = json.loads(line)
         except json.JSONDecodeError as e:
-            raise SystemExit(f"finding_verify: line {n} is not JSON: {e}")
+            _schema_error(f"finding_verify: line {n} is not JSON: {e}")
         for k in REQUIRED:
             if not d.get(k):
-                raise SystemExit(f"finding_verify: line {n} missing required field '{k}'")
-        if d["id"] in seen:
-            raise SystemExit(f"finding_verify: duplicate id {d['id']!r} on line {n}")
-        seen.add(d["id"])
+                _schema_error(f"finding_verify: line {n} missing required field '{k}'")
+        # 🟥 R4 #7: audit/verdict metadata is OURS to write — a producer row arriving with
+        #    `reinstated: true` was counted as recovered coverage by the driver (probe: 1/2 → 2/2).
+        for k in ("verdict", "verify_note", "reinstated", "drop_verdict", "audit_note", "audit_why"):
+            d.pop(k, None)
+        # 🟥 R3 #1: verdicts are keyed by str(id) (run_verifier), so 101 and "101" are ONE key
+        #    there — uniqueness here must use the same form, or both rows take whichever verdict
+        #    came last (reproduced: false-positive + confirmed → confirmed=2, exit 0).
+        if str(d["id"]) in seen:
+            _schema_error(f"finding_verify: duplicate id {d['id']!r} on line {n} (ids compare as strings)")
+        seen.add(str(d["id"]))
         out.append(d)
     return out
 
@@ -269,7 +283,7 @@ def main():
             else:
                 kept = []
                 for d in dropped:
-                    r = av.get(d["id"])
+                    r = av.get(str(d["id"]))   # R3 #7: same normalization as the verify lookup
                     if r is None:
                         kept.append(dict(d, drop_verdict="unaudited"))
                         continue
@@ -401,9 +415,11 @@ def main():
             print("finding_verify: seed(s) %s match more than one finding — member ids are only "
                   "locally unique; declare the routing id instead" % ",".join(ambiguous),
                   file=sys.stderr)
-        elif not present:
+        elif len(present) < len(seeded):
             # A control that never entered the run is not a passing control. It looks exactly like a
             # clean one from the outside, which is the whole reason this branch exists.
+            # 🟥 R3 #2: `not present` only caught TOTAL absence — z1 present + `missing` absent
+            #    printed CLEAN exit 0. Any declared seed missing is ABSENT.
             seed_status = "ABSENT"
         elif s_dropped:
             seed_status = "DEGRADED"

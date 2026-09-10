@@ -57,6 +57,11 @@ umask 077
 WORK="$(mktemp -d 2>/dev/null)" || { echo "finding_verifier: mktemp failed" >&2; exit 3; }
 # 🟥 R2 #7: 검증과 감사가 같은 keep 을 쓰면 감사가 검증 err.txt(토큰 회계)를 덮는다 — 드롭이 있는 런에서
 #    «바로 그 런» 의 회계가 또 버려진다. MODE 별 하위 디렉터리로 가른다. R2 #1: 심링크 잎은 복사 전에 거부.
+# 🟥 R3 #3: the root is checked BEFORE the mode dir is appended — appended first, a symlink root became
+#    an ancestor and passed both the dir check and the leaf check (path probe: INPUT_IS_SYMLINK → GUARD_ALLOWS).
+# R4 #2: `link/` makes -L false (the trailing slash resolves through the link) — strip separators first, keep "/" intact.
+while [ "${#KEEP}" -gt 1 ] && [ "${KEEP%/}" != "$KEEP" ]; do KEEP="${KEEP%/}"; done
+if [ -n "$KEEP" ] && [ -L "$KEEP" ]; then echo "finding_verifier: --keep root is a symlink: $KEEP — refusing" >&2; exit 2; fi
 if [ -n "$KEEP" ] && [ -z "${FH_VERIFIER_KEEP_FLAT:-}" ]; then KEEP="$KEEP/keep_$MODE"; fi
 cleanup() {
   if [ -n "$KEEP" ]; then
@@ -112,7 +117,7 @@ fi
 case "$FAMILY" in
   codex)  "$CODEX" exec --sandbox read-only --skip-git-repo-check -m gpt-6-astra \
             -c model_reasoning_effort="high" < "$WORK/prompt.txt" > "$WORK/raw.txt" 2>"$WORK/err.txt" ;;
-  gemini) "$AGY" --model gemini-3.8-flash-high --output-format text --print-timeout 20m \
+  gemini) "$AGY" --mode plan --sandbox --model gemini-3.8-flash-high --output-format text --print-timeout 20m \
             -p "$(cat "$WORK/prompt.txt")" < /dev/null > "$WORK/raw.txt" 2>"$WORK/err.txt" ;;
   *) echo "finding_verifier: unknown family '$FAMILY' (codex|gemini)" >&2; exit 2 ;;
 esac

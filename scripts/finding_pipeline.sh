@@ -112,6 +112,25 @@ R2ARGS=(); [ "$ROUND2" -eq 1 ] && R2ARGS=(--round2)
 bash "$FLEET_SH" "$TARGET" --out "$OUT/fleet" ${FA[@]+"${FA[@]}"} ${R2ARGS[@]+"${R2ARGS[@]}"} 2>&1 | tee "$OUT/fleet_run.log"
 FLEET_RC=${PIPESTATUS[0]}
 FINDINGS="$OUT/fleet/findings.jsonl"
+if [ "$FLEET_RC" -eq 0 ] && [ ! -s "$FINDINGS" ] && [ -f "$OUT/fleet/INTENTIONAL_EMPTY" ]; then
+  # 🟥 R3 #8: every member completed round 2 and withdrew everything — that is a REVIEWED empty result,
+  #    not a missing review. The typed marker (not the empty file) is what distinguishes the two.
+  # R4 #6: a reused --out kept the previous run's aggregates beside this early return — reset them here.
+  for _p in "$OUT/confirmed.jsonl" "$OUT/dropped.jsonl" "$OUT/splits.txt"; do
+    [ -L "$_p" ] && { echo "finding_pipeline: refusing to write through a symlink: $_p" >&2; exit 2; }
+    : > "$_p"
+  done
+  # R4 #1: a declared control that never entered the run is ABSENT on this path too — WITHDRAWN must not
+  #        pass a seed check it never ran. Same exit (5) and same SEEDED line the verifier would print.
+  if [ -n "$ALL_SEEDS" ]; then
+    _n=$(printf '%s' "$ALL_SEEDS" | /usr/bin/tr ',' '\n' | /usr/bin/grep -c .)
+    echo "PIPELINE target=$(basename "$TARGET") fleet_rc=0 findings=0 status=WITHDRAWN confirmed=0 dropped=0 coverage=0/0 rc=5"
+    echo "SEEDED declared=$_n present=0 kept=0 dropped=0 abstained=0 status=ABSENT"
+    exit 5
+  fi
+  echo "PIPELINE target=$(basename "$TARGET") fleet_rc=0 findings=0 status=WITHDRAWN confirmed=0 dropped=0 coverage=0/0 rc=0"
+  exit 0
+fi
 if [ "$FLEET_RC" -ne 0 ] || [ ! -s "$FINDINGS" ]; then
   echo "PIPELINE target=$(basename "$TARGET") fleet_rc=$FLEET_RC findings=0 status=UNREVIEWED"
   echo "  🟥 an empty finding list is UNREVIEWED, not clean (finding_fleet.sh says so and this agrees)" >&2
@@ -163,7 +182,9 @@ for l in open(sys.argv[1],encoding="utf-8",errors="replace"):
     #    그런 줄이 통째로 무시되고 명부가 «빈 채로 성공» 한다 — 두 필드를 따로 잡는다.
     # 🟥 R2 #6: `\brc=` 는 role 안의 rc= 를 먼저 잡는다(role=rc=1 rc=0 → 오탈락, 실행 확인).
     #    레코드 형식이 고정이므로 «뒤에서» 잡는다 — rc= 다음에 findings= 가 오는 것이 앵커다.
-    fm = re.search(r"\bfamily=(\S+)", l); rm = re.search(r"\brc=(\S+) findings=", l)
+    # 🟥 R3 #6: «findings= 가 뒤에 온다» 는 접미 경계가 아니었다 — role=`rc=0 findings=x` 가 먼저 잡혔다.
+    #    레코드 끝(`rc=N findings=N [self_dropped=N] status=S$`)에 앵커한다.
+    fm = re.search(r"\bfamily=(\S+)", l); rm = re.search(r" rc=(\S+) findings=\S+(?: self_dropped=\S+)? status=\S+\s*$", l)
     if not l.startswith("MEMBER") or not fm or not rm: continue
     fam, rc = fm.group(1), rm.group(1)
     if rc != "0": continue
