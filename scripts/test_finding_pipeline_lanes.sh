@@ -246,12 +246,18 @@ bash "$PIPE" "$D/tgt.py" --out "$D/pipe22" --fleet "$D/fleet0.tbl" >"$D/p22" 2>&
 MUTD="$D/mut"; mkdir -p "$MUTD"
 cp "$HERE/finding_fleet.sh" "$HERE/finding_verify.py" "$HERE/finding_verifier.sh" "$MUTD/"
 MUTP="$MUTD/finding_pipeline.sh"
-/usr/bin/python3 - "$PIPE" "$MUTP" <<'PY'
+MUT_ERR="$D/mut23.err"
+/usr/bin/python3 - "$PIPE" "$MUTP" 2>"$MUT_ERR" <<'PY'
 import sys
 src, dst = sys.argv[1], sys.argv[2]
 s = open(src, encoding="utf-8").read()
-key = '  while IFS= read -r f; do [ -n "$f" ] && [ "$f" != "$p" ] && supported "$f" && { echo "$f"; return; }; done < "$OUT/families.txt"'
-assert key in s, "pick_verifier body moved — the revert probe is pinned to a line that no longer exists"
+# 🟥 2026-09-10: 검증자 후보 풀이 families.txt → roster(함대 명부) 로 바뀌면서 이 핀이 빗나갔다.
+#   그때 레인은 «L20 이 실물을 안 잰다» 라는 **틀린 진단**을 냈다 — 핀이 빗나간 것과 대상이
+#   빨간 것은 다른 사건인데 출력이 같았다. 그래서 이제 핀 실패는 HARNESS-ERROR 로 «따로» 운다.
+key = '  while IFS= read -r f; do [ -n "$f" ] && [ "$f" != "$p" ] && supported "$f" && { echo "$f"; return; }; done < "$ROSTER"'
+if key not in s:
+    sys.stderr.write("HARNESS-ERROR: pick_verifier body moved — the revert probe is pinned to a line that no longer exists\n")
+    sys.exit(9)
 s = s.replace(key, '  echo "$p"')   # 자기 계열을 검증기로 고른다
 open(dst, "w", encoding="utf-8").write(s)
 PY
@@ -260,7 +266,9 @@ FH_CODEX_BIN="$D/fake_conf.sh" FH_AGY_BIN="$D/fake_conf.sh" \
 M23=$(grep '^PIPELINE ' "$D/p23" | grep -c 'unverified=2')
 [ "$M23" = 1 ] \
   && ok "L23 되돌림: 검증기를 자기 계열로 바꾸면 전부 unverified 로 떨어진다 (L20 은 장식이 아니다)" \
-  || no "L23 되돌림" "뮤턴트인데 unverified=2 가 안 나왔다 — L20 이 실물을 안 잰다 · $(grep '^PIPELINE ' "$D/p23")"
+  || no "L23 되돌림" "$(if /usr/bin/grep -q HARNESS-ERROR "$MUT_ERR" 2>/dev/null; then \
+        /usr/bin/grep -m1 HARNESS-ERROR "$MUT_ERR"; echo " (계기 실패 — 대상은 무판정이다)"; \
+      else echo "뮤턴트인데 unverified=2 가 안 나왔다 — L20 이 실물을 안 잰다"; fi) · $(grep '^PIPELINE ' "$D/p23")"
 
 # L24 — G6: fleet 프롬프트가 defeater 를 «요구» 하는가 (축③ 을 잴 수 있는 최소 조건)
 { grep -q '"defeater"' "$FLEET" && grep -q 'defeater. is required' "$FLEET"; } \
@@ -952,6 +960,301 @@ if [ "$R65" -eq 0 ]; then
   ok "L65 양의 컨트롤: 씨앗이 살아남으면 --seeded 여도 rc=0 («--seeded 면 무조건 5» 를 배제)"
 else
   no "L65 씨앗 양의 컨트롤" "rc=$R65 want=0 · $(grep -m1 '^PIPELINE ' "$D/pKEEP") · $(tail -2 "$D/pKEEP")"
+fi
+
+# ── L66~L68 생성시점 탈상관(--round2) — B-2 사전등록의 ARM ────────────────────────
+# 🟥 논지: 계열을 «걸러낼 때» 만나게 하면 수확을 지불한다(실측 8→6). «쓸 때» 만나게 하면 안 낸다.
+#   그래서 2차 패스는 수락/거부가 아니라 «자기 목록 다시 쓰기» 다. 세 가지를 박는다.
+cat > "$D/r2_a.sh" <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*)
+    echo '{"title":"A1 revised","file":"t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.8}'
+    echo '{"title":"A2 new","file":"t.py","line":2,"severity":"B","category":"d","detail":"x","defeater":"y","confidence":0.6}'
+    echo 'DROPPED: none' ;;
+  *) echo '{"title":"A1","file":"t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+cat > "$D/r2_b.sh" <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) echo '{"title":"B1 kept","file":"t.py","line":2,"severity":"B","category":"s","detail":"x","defeater":"y","confidence":0.7}' ;;
+  *) echo '{"title":"B1","file":"t.py","line":2,"severity":"B","category":"s","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+cat > "$D/r2_dead.sh" <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) : ;;   # 2차에서 아무것도 안 낸다
+  *) echo '{"title":"only round1","file":"t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+chmod +x "$D/r2_a.sh" "$D/r2_b.sh" "$D/r2_dead.sh"
+printf 'def f(x):\n    return x\n' > "$D/r2t.py"
+FLEET_SH2="$HERE/finding_fleet.sh"
+printf 'codex|logic|sh %s\ngemini|security|sh %s\n' "$D/r2_a.sh" "$D/r2_b.sh" > "$D/fleetR2.tbl"
+O66=$(bash "$FLEET_SH2" "$D/r2t.py" --out "$D/fr2" --fleet "$D/fleetR2.tbl" --round2 2>&1)
+if printf '%s' "$O66" | /usr/bin/grep -q 'FLEET round2 r1=2 r2=3 delta=1'; then
+  ok "L66 🟥 2차 패스가 수확을 «늘린다» (r1=2 → r2=3) — 선별이 아니라 생성이라는 증거"
+else
+  no "L66 생성시점 탈상관" "$(printf '%s' "$O66" | /usr/bin/grep '^FLEET round2')"
+fi
+# L67 peer 파일이 «자기» 와 «남» 을 실제로 가른다 — 안 가르면 무엇을 고칠지 모른다
+if /usr/bin/grep -q 'YOUR OWN ROUND-1' "$D/fr2/peer_codex.txt" 2>/dev/null \
+   && /usr/bin/grep -q 'THE OTHER FAMILY' "$D/fr2/peer_codex.txt" 2>/dev/null \
+   && /usr/bin/grep -A2 'YOUR OWN ROUND-1' "$D/fr2/peer_codex.txt" | /usr/bin/grep -q '"A1"' \
+   && /usr/bin/grep -A2 'THE OTHER FAMILY' "$D/fr2/peer_codex.txt" | /usr/bin/grep -q '"B1"'; then
+  ok "L67 peer 브리핑이 자기 것과 남의 것을 갈라서 보여준다"
+else
+  no "L67 peer 브리핑" "$(head -8 "$D/fr2/peer_codex.txt" 2>/dev/null)"
+fi
+# L68 🟥 2차가 아무것도 못 내면 1차를 «대체» 하면 안 된다 — 그러면 탈상관이 아니라 삭제다
+printf 'codex|logic|sh %s\n' "$D/r2_dead.sh" > "$D/fleetR2d.tbl"
+O68=$(bash "$FLEET_SH2" "$D/r2t.py" --out "$D/fr2d" --fleet "$D/fleetR2d.tbl" --round2 2>&1)
+N68=$(/usr/bin/wc -l < "$D/fr2d/findings.jsonl" 2>/dev/null | tr -d ' ')
+if [ "${N68:-0}" -ge 1 ] && printf '%s' "$O68" | /usr/bin/grep -q 'keeping round-1 findings'; then
+  ok "L68 🟥 2차가 빈손이면 1차를 유지한다 (실패한 2차가 1차를 삭제하지 않는다)"
+else
+  no "L68 2차 실패 시 1차 보존" "findings=$N68 · $(printf '%s' "$O68" | /usr/bin/grep -E 'round2')"
+fi
+
+# ── L69~L72 검증자 풀 = 함대 명부 (측정이 스스로 찾아낸 결함, 2026-09-10) ──────────────
+# 🟥 논지: families.txt 는 «발견을 낸 계열» 이라서 0건을 낸 계열은 검증자 후보에서 사라진다.
+#   그러면 멀쩡히 돌아간 검증자가 있는데도 발견 전체가 미검증으로 떨어진다(coverage 0/N).
+#   실측: F_typed 팔 case_g02.py r1~r3 — gemini 가 안전필터로 «차단»(rc=0!) 되어 0건 → codex 2건 전량 미검증.
+cat > "$D/one_find.sh" <<'EOS'
+#!/bin/sh
+cat >/dev/null
+echo '{"title":"solo A","file":"pool_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.8}'
+echo '{"title":"solo B","file":"pool_t.py","line":2,"severity":"B","category":"d","detail":"x","defeater":"y","confidence":0.6}'
+EOS
+cat > "$D/zero_prose.sh" <<'EOS'
+#!/bin/sh
+cat >/dev/null
+echo 'No issues found in this file.'
+EOS
+cat > "$D/zero_dead.sh" <<'EOS'
+#!/bin/sh
+cat >/dev/null
+echo 'ERROR: quota exhausted' >&2
+exit 1
+EOS
+# 검증자 스텁 — 받은 모든 행을 confirmed 로 판정. 감사 패스면 correct-drop.
+# 🟥 gemini 경로는 프롬프트를 stdin 이 아니라 `-p` 인자로 주고 stdin 을 닫는다(L65 의 교훈).
+cat > "$D/ver_ok.sh" <<'EOS'
+#!/bin/sh
+IN=$(cat)
+[ -n "$IN" ] || IN="$*"
+printf '%s' "$IN" | /usr/bin/python3 -c '
+import sys, json
+rows=[]
+for l in sys.stdin:
+    l=l.strip()
+    if not l.startswith("{"): continue
+    try: rows.append(json.loads(l))
+    except Exception: pass
+audit=any("drop_verdict" in r or r.get("verdict")=="false-positive" for r in rows)
+for r in rows:
+    v="correct-drop" if audit else "confirmed"
+    print(json.dumps({"id": r.get("id"), "verdict": v, "why": "stub"}))'
+EOS
+chmod +x "$D/one_find.sh" "$D/zero_prose.sh" "$D/zero_dead.sh" "$D/ver_ok.sh"
+printf 'def p(x):\n    return x\n' > "$D/pool_t.py"
+
+# L69 함대는 «응답은 있는데 계약 출력 0» 을 ZERO_NONJSON 으로 타입한다 (차단이 이 얼굴이다)
+printf 'codex|logic|sh %s\ngemini|security|sh %s\n' "$D/one_find.sh" "$D/zero_prose.sh" > "$D/fleetP.tbl"
+O69=$(bash "$HERE/finding_fleet.sh" "$D/pool_t.py" --out "$D/fp1" --fleet "$D/fleetP.tbl" 2>&1)
+if printf '%s\n' "$O69" | /usr/bin/grep -q 'family=gemini .*findings=0 status=ZERO_NONJSON' \
+   && printf '%s\n' "$O69" | /usr/bin/grep -q 'family=codex .*findings=2 status=OK'; then
+  ok "L69 🟥 rc=0 인 «응답 있음·계약 0» 이 ZERO_NONJSON 으로 기록된다 (known-negative: 발견 낸 쪽은 OK)"
+else
+  no "L69 ZERO_NONJSON 타입" "$(printf '%s\n' "$O69" | /usr/bin/grep '^MEMBER')"
+fi
+
+# L70 🟥 본 결함 — 0건을 낸 계열이 «검증자로 쓰인다». 수리 전에는 coverage 0/2 rc=3 이었다.
+O70=$(FH_CODEX_BIN="$D/ver_ok.sh" FH_AGY_BIN="$D/ver_ok.sh" \
+      bash "$PIPE" "$D/pool_t.py" --out "$D/pp1" --fleet "$D/fleetP.tbl" 2>&1); RC70=$?
+L70=$(printf '%s\n' "$O70" | /usr/bin/grep '^PIPELINE ')
+if [ "$RC70" -eq 0 ] && printf '%s' "$L70" | /usr/bin/grep -q 'coverage=2/2 (100%)' \
+   && printf '%s' "$L70" | /usr/bin/grep -q 'roster=[a-z,]*codex' \
+   && printf '%s' "$L70" | /usr/bin/grep -q 'roster=[a-z,]*gemini' \
+   && printf '%s' "$L70" | /usr/bin/grep -q '(fleet)' \
+   && printf '%s' "$L70" | /usr/bin/grep -q 'blocked_members=1'; then
+  ok "L70 🟥 0건 계열이 검증자 풀에 남는다 — coverage 2/2 rc=0 (수리 전: 0/2 rc=3)"
+else
+  no "L70 검증자 풀=함대 명부" "rc=$RC70 · $L70"
+fi
+
+# L71 반대 방향 — 상대 멤버가 «실제로 실패» 하면 풀에 들어가면 안 된다. 미검증이 정직한 답이다.
+printf 'codex|logic|sh %s\ngemini|security|sh %s\n' "$D/one_find.sh" "$D/zero_dead.sh" > "$D/fleetQ.tbl"
+O71=$(FH_CODEX_BIN="$D/ver_ok.sh" FH_AGY_BIN="$D/ver_ok.sh" \
+      bash "$PIPE" "$D/pool_t.py" --out "$D/pp2" --fleet "$D/fleetQ.tbl" 2>&1); RC71=$?
+L71=$(printf '%s\n' "$O71" | /usr/bin/grep '^PIPELINE ')
+if [ "$RC71" -eq 3 ] && printf '%s' "$L71" | /usr/bin/grep -q 'roster=codex(fleet)' \
+   && printf '%s' "$L71" | /usr/bin/grep -q 'coverage=0/2 (0%)'; then
+  ok "L71 🟥 죽은 멤버는 검증자가 못 된다 — rc=3·roster=codex (과교정 방지: 풀이 무조건 넓어지지 않는다)"
+else
+  no "L71 죽은 멤버 배제" "rc=$RC71 · $L71"
+fi
+
+# L72 되돌림 프로브 — 풀 소스를 families.txt 로 되돌리면 L70 이 «정확히» 빨개지나
+# 🟥 사본의 HERE 는 사본이 있는 디렉터리다 — 형제 스크립트를 같이 옮기지 않으면 «missing …
+#   skipped, NOT passed» 로 exit 3 이 나서 rc 만 맞는 거짓 초록이 된다(초판이 그랬고, 아래
+#   coverage 단언이 그것을 잡았다 — rc 하나만 봤으면 통과했다).
+/bin/cp "$HERE/finding_fleet.sh" "$HERE/finding_verify.py" "$HERE/finding_verifier.sh" "$D/" 2>/dev/null
+/usr/bin/sed 's|done < "$ROSTER"|done < "$OUT/families.txt"|g' "$PIPE" > "$D/pipe_rev.sh"
+NREV=$(/usr/bin/grep -c 'done < "\$OUT/families.txt"' "$D/pipe_rev.sh" 2>/dev/null); NREV=${NREV:-0}
+if [ "$NREV" -ge 2 ]; then
+  RCVOUT=$(FH_CODEX_BIN="$D/ver_ok.sh" FH_AGY_BIN="$D/ver_ok.sh" \
+        bash "$D/pipe_rev.sh" "$D/pool_t.py" --out "$D/pp3" --fleet "$D/fleetP.tbl" 2>&1); RCV_RC=$?
+  if [ "$RCV_RC" -eq 3 ] && printf '%s\n' "$RCVOUT" | /usr/bin/grep -q 'coverage=0/2 (0%)'; then
+    ok "L72 되돌림 — 풀을 families.txt 로 돌리면 결함이 정확히 재발한다 (L70 앵커가 장식이 아니다)"
+  else
+    no "L72 되돌림 프로브" "rc=$RCV_RC want=3 · $(printf '%s\n' "$RCVOUT" | /usr/bin/grep '^PIPELINE ') · $(printf '%s\n' "$RCVOUT" | /usr/bin/grep -m1 -i 'missing\|skipped')"
+  fi
+else
+  no "L72 되돌림 프로브" "치환 적용 $NREV 곳 (>=2 필요) — HARNESS-ERROR, 대상 무판정"
+fi
+
+# ── L73~L78 cross-family 라운드가 연 구멍들 (codex, 2026-09-10) ────────────────────
+# 🟥 여섯 건 전부 «내 수리가 만든» 결함이다 — 측정이 ①②를 물어왔고, 적대검증이 그 수리를 물었다.
+FL="$HERE/finding_fleet.sh"
+printf 'def q(x):\n    return x\n' > "$D/x_t.py"
+# 2차에서: codex 는 비고(glob 첫 파일) gemini 는 찬다
+cat > "$D/x_c_empty2.sh" <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) : ;;
+  *) echo '{"title":"C1 round1 only","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+cat > "$D/x_g_full2.sh" <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*)
+    echo '{"title":"G1 revised","file":"x_t.py","line":2,"severity":"B","category":"s","detail":"x","defeater":"y","confidence":0.8}'
+    echo '{"title":"G2 new","file":"x_t.py","line":3,"severity":"B","category":"s","detail":"x","defeater":"y","confidence":0.6}' ;;
+  *) echo '{"title":"G1","file":"x_t.py","line":2,"severity":"B","category":"s","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+# 2차에서 일부만 내고 죽는다 (rc=1)
+cat > "$D/x_c_die2.sh" <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*)
+    echo '{"title":"C1 partial","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}'
+    exit 1 ;;
+  *)
+    echo '{"title":"C1 round1","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}'
+    echo '{"title":"C2 round1 ONLY — must survive","file":"x_t.py","line":9,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+# 2차에서 «전부 스스로 내림» 만 낸다 (계약이 요구한 출력)
+cat > "$D/x_selfdrop2.sh" <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) echo 'DROPPED: S1 — checked the caller; my claim was wrong' ;;
+  *) echo '{"title":"S1","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+# 발견을 내고 «죽는다» (rc=1) — 1차에서
+cat > "$D/x_emit_die.sh" <<'EOS'
+#!/bin/sh
+cat >/dev/null
+echo '{"title":"E1 emitted then died","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}'
+exit 1
+EOS
+chmod +x "$D"/x_*.sh
+
+# L73 🟥 glob 첫 파일이 비었다고 «2차가 아무것도 못 냈다» 로 보고하면 안 된다
+printf 'codex|logic|sh %s\ngemini|security|sh %s\n' "$D/x_c_empty2.sh" "$D/x_g_full2.sh" > "$D/fx1.tbl"
+O73=$(bash "$FL" "$D/x_t.py" --out "$D/fx1" --fleet "$D/fx1.tbl" --round2 2>&1)
+if ! printf '%s\n' "$O73" | /usr/bin/grep -q 'produced nothing' \
+   && /usr/bin/grep -q 'G2 new' "$D/fx1/findings.jsonl" 2>/dev/null; then
+  ok "L73 🟥 glob 첫 파일이 비어도 «2차 빈손» 으로 오보하지 않는다 (멤버별 병합)"
+else
+  no "L73 glob-첫파일 편향" "$(printf '%s\n' "$O73" | /usr/bin/grep -E '^FLEET round2')"
+fi
+
+# L74 🟥 2차에서 죽은 멤버의 «1차 발견» 이 삭제되면 안 된다 — 조용한 수확 손실
+printf 'codex|logic|sh %s\ngemini|security|sh %s\n' "$D/x_c_die2.sh" "$D/x_g_full2.sh" > "$D/fx2.tbl"
+O74=$(bash "$FL" "$D/x_t.py" --out "$D/fx2" --fleet "$D/fx2.tbl" --round2 2>&1)
+if /usr/bin/grep -q 'C2 round1 ONLY' "$D/fx2/findings.jsonl" 2>/dev/null \
+   && printf '%s\n' "$O74" | /usr/bin/grep -q 'fallback=1' \
+   && /usr/bin/grep -q 'G2 new' "$D/fx2/findings.jsonl" 2>/dev/null; then
+  ok "L74 🟥 2차에서 죽은 멤버는 «자기 1차» 로 되돌아가고, 성공한 멤버는 2차로 간다 (멤버별)"
+else
+  no "L74 2차 실패 멤버별 폴백" "$(printf '%s\n' "$O74" | /usr/bin/grep -E 'fallback|FLEET round2') · $(wc -l < "$D/fx2/findings.jsonl" 2>/dev/null)"
+fi
+
+# L75 🟥 «빈 명부» 는 성공이 아니다 — 출하되는 명부 빌더를 «뽑아서» 직접 잰다.
+#   초판 픽스처는 이 경로에 못 닿았다(멤버가 전부 죽으면 함대가 더 앞에서 rc≠0 으로 끝난다).
+#   그래서 L55 와 같은 형태로 **출하 코드를 추출해** 양방향으로 돌린다 — 장식 레인 방지.
+/usr/bin/python3 - "$PIPE" "$D/roster_builder.py" <<'PY'
+import sys, re
+src, dst = sys.argv[1], sys.argv[2]
+s = open(src, encoding="utf-8").read()
+m = re.search(r"/usr/bin/python3 -c '\n(import re,sys\n.*?)' \"\$OUT/fleet/members\.txt\"", s, re.S)
+if not m:
+    sys.stderr.write("HARNESS-ERROR: roster builder snippet not found in the shipped driver\n"); sys.exit(9)
+open(dst, "w", encoding="utf-8").write(m.group(1))
+PY
+if [ -s "$D/roster_builder.py" ]; then
+  printf 'MEMBER family=codex role=logic rc=1 findings=0 status=FAILED\n' > "$D/mem_bad.txt"
+  printf 'MEMBER family=codex role=logic review rc=0 findings=1 status=OK\nMEMBER family=gemini role=security rc=0 findings=1 status=OK\n' > "$D/mem_space.txt"
+  R75A=$(/usr/bin/python3 "$D/roster_builder.py" "$D/mem_bad.txt" 2>/dev/null); A=$?
+  R75B=$(/usr/bin/python3 "$D/roster_builder.py" "$D/mem_space.txt" 2>/dev/null); B=$?
+  NB=$(printf '%s\n' "$R75B" | /usr/bin/grep -c .)
+  if [ "$A" -ne 0 ] && [ -z "$R75A" ] && [ "$B" -eq 0 ] && [ "$NB" = 2 ]; then
+    ok "L75 🟥 출하 명부 빌더: 0계열이면 비영 종료(개행 1바이트로 «성공» 안 함) · 공백 낀 role 도 2계열로 파싱 (양방향)"
+  else
+    no "L75 명부 빌더" "빈명부 rc=$A out='$R75A'(비영·빈 기대) · 공백role rc=$B n=$NB(0·2 기대)"
+  fi
+else
+  no "L75 명부 빌더" "HARNESS-ERROR: 출하 스니펫 추출 실패 — 대상 무판정"
+fi
+# L75b 배선 — 드라이버가 «바이트» 가 아니라 «계열 수» 로 판정하나
+if /usr/bin/grep -q '_ROSTER_N=$(/usr/bin/grep -c . "$ROSTER"' "$PIPE" \
+   && /usr/bin/grep -q '\[ "$_ROSTER_N" -eq 0 \]' "$PIPE" \
+   && ! /usr/bin/grep -q '! -s "$ROSTER"' "$PIPE"; then
+  ok "L75b 드라이버가 명부를 «계열 수» 로 판정한다 (-s 가 사라졌다 — 🟡 배선 검사)"
+else
+  no "L75b 명부 판정 배선" "$(/usr/bin/grep -n 'ROSTER_N\|-s \"\$ROSTER\"' "$PIPE" | head -3)"
+fi
+
+# L76 🟥 «전부 스스로 내림» 은 계약 준수지 «차단» 이 아니다
+printf 'codex|logic|sh %s\n' "$D/x_selfdrop2.sh" > "$D/fx4.tbl"
+O76=$(bash "$FL" "$D/x_t.py" --out "$D/fx4" --fleet "$D/fx4.tbl" --round2 2>&1)
+if printf '%s\n' "$O76" | /usr/bin/grep -q 'MEMBER2 .*status=ZERO_SELFDROPPED' \
+   && ! printf '%s\n' "$O76" | /usr/bin/grep -q 'MEMBER2 .*status=ZERO_NONJSON'; then
+  ok "L76 🟥 DROPPED 만 낸 2차 멤버는 ZERO_SELFDROPPED (규약을 지킨 멤버가 blocked 로 안 세어진다)"
+else
+  no "L76 자기드롭 분류" "$(printf '%s\n' "$O76" | /usr/bin/grep '^MEMBER2')"
+fi
+
+# L77 🟥 blocked_members 는 «마지막 필드» 에 결박된다 — role 값이 그 자리를 흉내내면 안 된다
+_L77=$(printf 'MEMBER family=gemini role=status=ZERO_NONJSON rc=0 findings=1 status=OK\n' \
+       | /usr/bin/grep -c '^MEMBER2\{0,1\} .*status=ZERO_NONJSON$')
+_L77b=$(printf 'MEMBER family=gemini role=security rc=0 findings=0 status=ZERO_NONJSON\n' \
+       | /usr/bin/grep -c '^MEMBER2\{0,1\} .*status=ZERO_NONJSON$')
+if [ "$_L77" = 0 ] && [ "$_L77b" = 1 ]; then
+  ok "L77 blocked_members 패턴이 role 흉내를 안 세고 진짜 status 는 센다 (known-pair 동반)"
+else
+  no "L77 blocked 패턴 결박" "role흉내=$_L77(0 기대) 진짜=$_L77b(1 기대)"
+fi
+
+# L78 새 쓰기 경로가 심링크 가드 목록에 있나 (배선 검사 — 그렇게 라벨한다)
+if /usr/bin/grep -q '"\$OUT/roster.err"' "$PIPE" && /usr/bin/grep -q '"\$out/peer_\${fam}.txt"' "$FL"; then
+  ok "L78 새 출력 경로(roster.err · peer_<fam>.txt)가 심링크 가드에 등재됨 (🟡 배선 검사)"
+else
+  no "L78 심링크 가드 등재" "roster.err=$(/usr/bin/grep -c '"\$OUT/roster.err"' "$PIPE") peer=$(/usr/bin/grep -c 'peer_\${fam}.txt"' "$FL")"
 fi
 
 /bin/rm -rf "$D"

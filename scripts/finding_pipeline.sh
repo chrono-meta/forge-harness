@@ -30,13 +30,14 @@ set -uo pipefail
 
 SUPPORTED_FAMILIES="codex gemini"          # must match finding_verifier.sh's own case statement
 
-TARGET=""; OUT=""; FLEET=""; SEEDED_IDS=""; SEEDED_FILE=""; SEEDS_ROUTED=""
-usage() { echo "usage: finding_pipeline.sh <target-file> --out <dir> [--fleet <table>] [--seeded <ids>] [--seeded-file <path>]" >&2; exit 2; }
+TARGET=""; OUT=""; FLEET=""; SEEDED_IDS=""; SEEDED_FILE=""; SEEDS_ROUTED=""; ROUND2=0
+usage() { echo "usage: finding_pipeline.sh <target-file> --out <dir> [--fleet <table>] [--round2] [--seeded <ids>] [--seeded-file <path>]" >&2; exit 2; }
 need() { [ $# -ge 2 ] || { echo "finding_pipeline: $1 needs a value" >&2; exit 2; }; }
 [ $# -ge 1 ] || usage
 TARGET="$1"; shift
 while [ $# -gt 0 ]; do
   case "$1" in
+    --round2)      ROUND2=1; shift ;;
     --seeded)      need "$@"; SEEDED_IDS="$2"; shift 2 ;;
     --seeded-file) need "$@"; SEEDED_FILE="$2"; shift 2 ;;
     --out)   need "$@"; OUT="$2"; shift 2 ;;    # `shift 2` on a trailing flag consumes nothing and
@@ -59,7 +60,7 @@ umask 077
 mkdir -p "$OUT" || { echo "finding_pipeline: cannot create --out" >&2; exit 2; }
 # 🟥 미리 깔린 심링크를 따라가면 «출력»이 남의 파일 truncate 가 된다. 리다이렉션도 open() 도
 #    심링크를 따라간다 — 그래서 쓰기 «전»에 거부한다(cross-family review 2026-09-09).
-for _p in "$OUT" "$OUT/fleet" "$OUT/confirmed.jsonl" "$OUT/dropped.jsonl" "$OUT/splits.txt" "$OUT/families.txt"; do
+for _p in "$OUT" "$OUT/fleet" "$OUT/confirmed.jsonl" "$OUT/dropped.jsonl" "$OUT/splits.txt" "$OUT/families.txt" "$OUT/roster.txt" "$OUT/roster.err" "$OUT/families.err"; do
   if [ -L "$_p" ]; then
     echo "finding_pipeline: refusing to write through a symlink: $_p" >&2; exit 2
   fi
@@ -106,7 +107,9 @@ argv_json() {  # each argument becomes one JSON string — no shell ever parses 
 # the second family and make a single-family run look cross-verified.
 /bin/rm -rf "$OUT/fleet"
 FA=(); [ -n "$FLEET" ] && FA=(--fleet "$FLEET")
-bash "$FLEET_SH" "$TARGET" --out "$OUT/fleet" ${FA[@]+"${FA[@]}"} 2>&1 | tee "$OUT/fleet_run.log"
+# 생성시점 탈상관은 fleet 층의 일이다 — 드라이버는 플래그만 통과시킨다.
+R2ARGS=(); [ "$ROUND2" -eq 1 ] && R2ARGS=(--round2)
+bash "$FLEET_SH" "$TARGET" --out "$OUT/fleet" ${FA[@]+"${FA[@]}"} ${R2ARGS[@]+"${R2ARGS[@]}"} 2>&1 | tee "$OUT/fleet_run.log"
 FLEET_RC=${PIPESTATUS[0]}
 FINDINGS="$OUT/fleet/findings.jsonl"
 if [ "$FLEET_RC" -ne 0 ] || [ ! -s "$FINDINGS" ]; then
@@ -117,6 +120,9 @@ fi
 # A fleet is "ok" when ONE member succeeded. A member that crashed after emitting a few findings still
 # leaves its family present, so the split routing below sees two families and the run looks complete.
 FAILED_MEMBERS=$(grep -c '^MEMBER .* rc=[^0]' "$OUT/fleet_run.log" 2>/dev/null); FAILED_MEMBERS=${FAILED_MEMBERS:-0}
+# 🟥 rc=0 인데 계약 출력이 0 인 멤버 — 안전필터 차단이 이 얼굴이다. failed_members 로는 안 보인다.
+#    «0건» 이 아니라 «검증 없는 0» 이므로 별 칸으로 표면화한다(기존 필드 의미는 안 건드린다).
+BLOCKED_MEMBERS=$(grep -c '^MEMBER2\{0,1\} .*status=ZERO_NONJSON$' "$OUT/fleet_run.log" 2>/dev/null); BLOCKED_MEMBERS=${BLOCKED_MEMBERS:-0}
 
 # ── 2. split by producer, verify each half with the other family ──────────────────────────────────
 # Families are read into a newline-delimited list and validated. An unquoted space-joined expansion
@@ -141,17 +147,58 @@ if [ "$FAMRC" -ne 0 ] || [ ! -s "$OUT/families.txt" ]; then
   echo "finding_pipeline: findings carry no usable producer_family — cannot route" >&2; exit 3
 fi
 
+# 🟥 검증자 후보 풀은 «발견을 낸 계열» 이 아니라 «실제로 돌아간 함대 명부» 다.
+#    families.txt 는 producer_family 에서 만들어지므로 0건을 낸 계열은 목록에서 사라진다. 그러면
+#    pick_verifier 가 «다른 계열이 없다» 로 읽고 그 발견들을 통째로 미검증 처리한다 — 검증자로
+#    쓸 수 있는 계열이 멀쩡히 돌고 있었는데도. 측정이 스스로 찾아낸 결함이다:
+#    F_typed 팔 case_g02.py r1~r3 이 정확히 이 형태로 coverage 0/2 (0%) 였다(2026-09-10).
+#    분할 루프는 바뀌지 않는다 — 여전히 발견자별이다. 바뀌는 것은 «누가 검증할 수 있나» 뿐이다.
+#    rc!=0 인 멤버는 제외한다: 안 돌아간 CLI 는 검증도 못 한다(한도 소진이 그 형태).
+ROSTER="$OUT/roster.txt"
+/usr/bin/python3 -c '
+import re,sys
+seen=[]
+for l in open(sys.argv[1],encoding="utf-8",errors="replace"):
+    # 🟥 role 값에 공백이 들어갈 수 있다(fleet 표가 허용한다). 접두 전체를 한 패턴으로 묶으면
+    #    그런 줄이 통째로 무시되고 명부가 «빈 채로 성공» 한다 — 두 필드를 따로 잡는다.
+    fm = re.search(r"\bfamily=(\S+)", l); rm = re.search(r"\brc=(\S+)", l)
+    if not l.startswith("MEMBER") or not fm or not rm: continue
+    fam, rc = fm.group(1), rm.group(1)
+    if rc != "0": continue
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+", fam):
+        sys.stderr.write("finding_pipeline: illegal family %r in fleet roster — refusing to route\n" % (fam,))
+        sys.exit(2)
+    if fam not in seen: seen.append(fam)
+if not seen:
+    # 🟥 빈 목록을 «성공» 으로 내보내면 안 된다. `print("\n".join([]))` 는 개행 1바이트를 쓰고
+    #    `[ -s ]` 는 그걸 «내용 있음» 으로 읽는다 — 그러면 DEGRADE 분기가 통째로 건너뛰어지고
+    #    아무도 검증자를 못 받는다(cross-family #4, codex 2026-09-10).
+    sys.stderr.write("finding_pipeline: fleet roster parsed 0 usable families\n"); sys.exit(4)
+print("\n".join(seen))' "$OUT/fleet/members.txt" > "$ROSTER" 2>"$OUT/roster.err"
+ROSTRC=$?
+_ROSTER_N=$(/usr/bin/grep -c . "$ROSTER" 2>/dev/null); _ROSTER_N=${_ROSTER_N:-0}
+if [ "$ROSTRC" -ne 0 ] || [ "$_ROSTER_N" -eq 0 ]; then
+  cat "$OUT/roster.err" >&2
+  # 🟥 degrade 는 «조용히 넘어감» 이 아니라 «좁은 풀로 되돌아감 + 그 사실을 말함» 이다.
+  #    없는 검증자를 만들어내지 않으므로 방향은 안전하다(과소검증 쪽으로 실패한다).
+  echo "  ⚠️  fleet roster unusable (rc=$ROSTRC) — verifier pool DEGRADED to producer families; a family that produced 0 findings cannot be picked" >&2
+  /bin/cp "$OUT/families.txt" "$ROSTER" 2>/dev/null || : > "$ROSTER"
+  ROSTER_SRC="families(DEGRADED)"
+else
+  ROSTER_SRC="fleet"
+fi
+
 supported() { case " $SUPPORTED_FAMILIES " in *" $1 "*) return 0;; *) return 1;; esac; }
 pick_verifier() { # $1=producer — a DIFFERENT family the wrapper can actually run
   local p="$1" f
-  while IFS= read -r f; do [ -n "$f" ] && [ "$f" != "$p" ] && supported "$f" && { echo "$f"; return; }; done < "$OUT/families.txt"
+  while IFS= read -r f; do [ -n "$f" ] && [ "$f" != "$p" ] && supported "$f" && { echo "$f"; return; }; done < "$ROSTER"
   echo ""
 }
 pick_auditor() { # $1=producer $2=verifier — prefer a third party; fall back to producer (appeal)
   local p="$1" v="$2" f
   while IFS= read -r f; do
     [ -n "$f" ] && [ "$f" != "$p" ] && [ "$f" != "$v" ] && supported "$f" && { echo "$f"; return; }
-  done < "$OUT/families.txt"
+  done < "$ROSTER"
   supported "$p" && { echo "$p"; return; }
   echo ""
 }
@@ -413,9 +460,11 @@ RC_FINAL="$WORST_CODE"
 # coverage=0/2` — three numbers in one line contradicting each other. The verifier had already been
 # fixed for exactly this; the driver had not. **Third recurrence of the same half-fix shape in this
 # change** (cross-family round 6). Survivor semantics for rc stay on TOTAL_CONF.
-printf 'PIPELINE target=%s families=%s confirmed=%s dropped=%s unverified=%s debate=%s coverage=%s/%s (%s%%) audited_drops=%s reinstated=%s failed_members=%s rc=%s\n' \
-  "$(basename "$TARGET")" "$(tr '\n' ',' < "$OUT/families.txt" | sed 's/,$//')" "$JUDGED_CONF" "$TOTAL_DROP" \
-  "$TOTAL_UNVER" "$TOTAL_DEBATE" "$TOTAL_JUDGED" "$TOTAL_IN" "$COV_PCT" "$TOTAL_AUD" "$TOTAL_WRONG" "$FAILED_MEMBERS" "$RC_FINAL"
+printf 'PIPELINE target=%s families=%s roster=%s(%s) confirmed=%s dropped=%s unverified=%s debate=%s coverage=%s/%s (%s%%) audited_drops=%s reinstated=%s failed_members=%s blocked_members=%s rc=%s\n' \
+  "$(basename "$TARGET")" "$(tr '\n' ',' < "$OUT/families.txt" | sed 's/,$//')" \
+  "$(tr '\n' ',' < "$ROSTER" | sed 's/,$//')" "$ROSTER_SRC" "$JUDGED_CONF" "$TOTAL_DROP" \
+  "$TOTAL_UNVER" "$TOTAL_DEBATE" "$TOTAL_JUDGED" "$TOTAL_IN" "$COV_PCT" "$TOTAL_AUD" "$TOTAL_WRONG" \
+  "$FAILED_MEMBERS" "$BLOCKED_MEMBERS" "$RC_FINAL"
 # `unverified` is reported on its own line rather than folded into `confirmed`, because folding it is
 # exactly the "not found rendered as zero" family this repo keeps re-finding.
 exit "$RC_FINAL"
