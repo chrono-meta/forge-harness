@@ -1015,7 +1015,8 @@ fi
 printf 'codex|logic|sh %s\n' "$D/r2_dead.sh" > "$D/fleetR2d.tbl"
 O68=$(bash "$FLEET_SH2" "$D/r2t.py" --out "$D/fr2d" --fleet "$D/fleetR2d.tbl" --round2 2>&1)
 N68=$(/usr/bin/wc -l < "$D/fr2d/findings.jsonl" 2>/dev/null | tr -d ' ')
-if [ "${N68:-0}" -ge 1 ] && printf '%s' "$O68" | /usr/bin/grep -q 'keeping round-1 findings'; then
+# R2 #4 이후: 단독 멤버가 2차 빈손이면 «멤버별 폴백»(ZERO_EMPTY → 자기 1차) 이 먼저 잡는다 — 둘 다 «1차 보존» 이다
+if [ "${N68:-0}" -ge 1 ] && printf '%s' "$O68" | /usr/bin/grep -qE 'keeping round-1 findings|keeping ITS round-1 findings'; then
   ok "L68 🟥 2차가 빈손이면 1차를 유지한다 (실패한 2차가 1차를 삭제하지 않는다)"
 else
   no "L68 2차 실패 시 1차 보존" "findings=$N68 · $(printf '%s' "$O68" | /usr/bin/grep -E 'round2')"
@@ -1212,10 +1213,12 @@ if [ -s "$D/roster_builder.py" ]; then
   R75A=$(/usr/bin/python3 "$D/roster_builder.py" "$D/mem_bad.txt" 2>/dev/null); A=$?
   R75B=$(/usr/bin/python3 "$D/roster_builder.py" "$D/mem_space.txt" 2>/dev/null); B=$?
   NB=$(printf '%s\n' "$R75B" | /usr/bin/grep -c .)
-  if [ "$A" -ne 0 ] && [ -z "$R75A" ] && [ "$B" -eq 0 ] && [ "$NB" = 2 ]; then
-    ok "L75 🟥 출하 명부 빌더: 0계열이면 비영 종료(개행 1바이트로 «성공» 안 함) · 공백 낀 role 도 2계열로 파싱 (양방향)"
+  # 🟥 R2: `sys.exit(4)`→`raise` 로 바꿔도 «비영» 이라 통과했다 — 의도한 실패와 크래시가 같은 얼굴. 코드 4 를 «정확히» 요구.
+  E75A=$(/usr/bin/python3 "$D/roster_builder.py" "$D/mem_bad.txt" 2>&1 >/dev/null)
+  if [ "$A" -eq 4 ] && [ -z "$R75A" ] && printf '%s' "$E75A" | /usr/bin/grep -q '0 usable families' && [ "$B" -eq 0 ] && [ "$NB" = 2 ]; then
+    ok "L75 🟥 출하 명부 빌더: 0계열이면 «exit 4 + 사유»(크래시와 구분) · 공백 낀 role 도 2계열로 파싱 (양방향)"
   else
-    no "L75 명부 빌더" "빈명부 rc=$A out='$R75A'(비영·빈 기대) · 공백role rc=$B n=$NB(0·2 기대)"
+    no "L75 명부 빌더" "빈명부 rc=$A(4 기대) out='$R75A' err='$E75A' · 공백role rc=$B n=$NB(0·2 기대)"
   fi
 else
   no "L75 명부 빌더" "HARNESS-ERROR: 출하 스니펫 추출 실패 — 대상 무판정"
@@ -1240,18 +1243,20 @@ else
 fi
 
 # L77 🟥 blocked_members 는 «마지막 필드» 에 결박된다 — role 값이 그 자리를 흉내내면 안 된다
-_L77=$(printf 'MEMBER family=gemini role=status=ZERO_NONJSON rc=0 findings=1 status=OK\n' \
-       | /usr/bin/grep -c '^MEMBER2\{0,1\} .*status=ZERO_NONJSON$')
-_L77b=$(printf 'MEMBER family=gemini role=security rc=0 findings=0 status=ZERO_NONJSON\n' \
-       | /usr/bin/grep -c '^MEMBER2\{0,1\} .*status=ZERO_NONJSON$')
+# 🟥 R2: 초판은 «자기 리터럴» 을 검사해서 프로덕션의 `$` 를 지워도 초록이었다. 출하 패턴을 뽑아 쓴다.
+_P77=$(/usr/bin/sed -n "s/^BLOCKED_MEMBERS=\$(grep -c '\(.*\)' \"\$OUT\/fleet_run.log\".*/\1/p" "$PIPE" | head -1)
+[ -n "$_P77" ] || _P77='__EXTRACT_FAILED__'
+_L77=$(printf 'MEMBER family=gemini role=status=ZERO_NONJSON rc=0 findings=1 status=OK\n' | /usr/bin/grep -c "$_P77")
+_L77b=$(printf 'MEMBER family=gemini role=security rc=0 findings=0 status=ZERO_NONJSON\n' | /usr/bin/grep -c "$_P77")
 if [ "$_L77" = 0 ] && [ "$_L77b" = 1 ]; then
-  ok "L77 blocked_members 패턴이 role 흉내를 안 세고 진짜 status 는 센다 (known-pair 동반)"
+  ok "L77 «출하» blocked_members 패턴이 role 흉내를 안 세고 진짜 status 는 센다 (프로덕션 추출, known-pair)"
 else
   no "L77 blocked 패턴 결박" "role흉내=$_L77(0 기대) 진짜=$_L77b(1 기대)"
 fi
 
 # L78 새 쓰기 경로가 심링크 가드 목록에 있나 (배선 검사 — 그렇게 라벨한다)
-if /usr/bin/grep -q '"\$OUT/roster.err"' "$PIPE" && /usr/bin/grep -q '"\$out/peer_\${fam}.txt"' "$FL"; then
+# 🟥 R2: 같은 문자열이 쓰기 줄에도 있어서 가드에서 빼도 초록이었다. «for _p in» 가드 줄 안에서만 찾는다.
+if /usr/bin/grep -E '^for _p in .*"\$OUT/roster.err"' "$PIPE" >/dev/null && /usr/bin/grep -E '^\s*for _p in .*"\$out/peer_\$\{fam\}.txt"' "$FL" >/dev/null; then
   ok "L78 새 출력 경로(roster.err · peer_<fam>.txt)가 심링크 가드에 등재됨 (🟡 배선 검사)"
 else
   no "L78 심링크 가드 등재" "roster.err=$(/usr/bin/grep -c '"\$OUT/roster.err"' "$PIPE") peer=$(/usr/bin/grep -c 'peer_\${fam}.txt"' "$FL")"
@@ -1273,10 +1278,111 @@ chmod +x "$D/ver_acct.sh"
 printf 'codex|logic|sh %s\ngemini|security|sh %s\n' "$D/one_find.sh" "$D/one_find.sh" > "$D/fleetK.tbl"
 FH_CODEX_BIN="$D/ver_acct.sh" FH_AGY_BIN="$D/ver_acct.sh" \
   bash "$PIPE" "$D/pool_t.py" --out "$D/pk" --fleet "$D/fleetK.tbl" >/dev/null 2>&1
-if ls "$D/pk"/split_*/err.txt >/dev/null 2>&1 && /usr/bin/grep -q 'tokens used' "$D"/pk/split_*/err.txt 2>/dev/null; then
-  ok "L79 검증 패스 stderr 가 split_*/err.txt 에 남는다 (토큰 회계가 «버려진 0» 이 아니다)"
+# 🟥 R2: 두 split 이 첫 디렉터리로 몰려도 «하나만 매치» 라 통과했다. split 마다 «자기» keep 을 요구한다.
+_N79=$(ls -d "$D"/pk/split_* 2>/dev/null | wc -l | tr -d ' ')
+_K79=$(for d in "$D"/pk/split_*; do /usr/bin/grep -lq 'tokens used' "$d"/err.txt "$d"/keep_verify/err.txt 2>/dev/null && echo 1; done | wc -l | tr -d ' ')
+if [ "$_N79" -ge 2 ] && [ "$_K79" = "$_N79" ]; then
+  ok "L79 검증 패스 stderr 가 «split 마다» 남는다 ($_K79/$_N79 — 첫 디렉터리로 몰리지 않는다)"
 else
-  no "L79 검증 stderr 보존" "$(ls "$D"/pk/split_* 2>/dev/null | head -3)"
+  no "L79 검증 stderr 보존" "split=$_N79 keep=$_K79 · $(ls "$D"/pk/split_* 2>/dev/null | head -3)"
+fi
+
+# ── L80~L84 cross-family R2 (codex, 2026-09-10 21:45) — 2차 병합·명부 파서의 남은 구멍 ─────────
+# 🟥 F_gen 실측: case_h01.rs r1 에서 gemini 2차 차단(ZERO_NONJSON) → 1차 발견 4건이 최종에서 삭제됐다.
+# 2차가 차단·빈응답인 멤버 (R2 #4)
+cat > "$D/r2_blocked.sh" <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) echo "This request was blocked by filters." ;;
+  *) echo '{"title":"B1 round1 — must survive block","file":"x_t.py","line":1,"severity":"A","category":"s","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+# 전원 자기 철회 (R2 #5)
+cat > "$D/r2_drop_all.sh" <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) echo 'DROPPED: W1 — re-read; not a defect' ;;
+  *) echo '{"title":"W1","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+chmod +x "$D/r2_blocked.sh" "$D/r2_drop_all.sh"
+
+# L80 🟥 #4: 2차에서 차단된 멤버의 1차 발견은 «자기 1차» 로 폴백된다 (삭제되지 않는다)
+printf 'codex|logic|sh %s\ngemini|security|sh %s\n' "$D/x_g_full2.sh" "$D/r2_blocked.sh" > "$D/f80.tbl"
+O80=$(bash "$FL" "$D/x_t.py" --out "$D/f80" --fleet "$D/f80.tbl" --round2 2>&1)
+if /usr/bin/grep -q 'B1 round1' "$D/f80/findings.jsonl" 2>/dev/null && printf '%s\n' "$O80" | /usr/bin/grep -q 'gemini/security ZERO_NONJSON — keeping ITS round-1'; then
+  ok "L80 🟥 2차 차단(ZERO_NONJSON) 멤버는 자기 1차로 폴백 — 발견이 삭제되지 않는다 (F_gen h01 r1 재현 차단)"
+else
+  no "L80 2차 차단 폴백" "$(printf '%s\n' "$O80" | /usr/bin/grep -E 'round2') · B1=$(/usr/bin/grep -c 'B1 round1' "$D/f80/findings.jsonl" 2>/dev/null)"
+fi
+
+# L81 🟥 #5: 전원이 «정당하게» 철회하면 결과는 빈 것이고, 1차로 되돌리지 않는다
+printf 'codex|logic|sh %s\n' "$D/r2_drop_all.sh" > "$D/f81.tbl"
+O81=$(bash "$FL" "$D/x_t.py" --out "$D/f81" --fleet "$D/f81.tbl" --round2 2>&1)
+N81=$(/usr/bin/grep -c . "$D/f81/findings.jsonl" 2>/dev/null); N81=${N81:-0}
+if [ "$N81" -eq 0 ] && printf '%s\n' "$O81" | /usr/bin/grep -q 'all members withdrew'; then
+  ok "L81 🟥 전원 자기철회 → 최종 0건 (정당한 철회가 «1차 유지» 로 무효화되지 않는다)"
+else
+  no "L81 전원 철회" "final=$N81(0 기대) · $(printf '%s\n' "$O81" | /usr/bin/grep -E 'round2')"
+fi
+
+# L82 🟥 #3: 멤버 키 매칭이 리터럴 — role `logic.review` 가 `logicXreview` 의 상태를 집지 않는다
+T82=$(mktemp -d); mkdir -p "$T82"
+printf 'MEMBER2 family=codex role=logic.review rc=1 findings=1 status=FAILED\nMEMBER2 family=codex role=logicXreview rc=0 findings=1 status=OK\n' > "$T82/members.txt"
+_ST82=$(/usr/bin/awk -v f="codex" -v r="logic.review" '$1=="MEMBER2" && $2=="family="f && $3=="role="r {for(i=4;i<=NF;i++) if($i ~ /^status=/) v=substr($i,8)} END{print v}' "$T82/members.txt")
+_SED82=$(/usr/bin/sed -n "s/^MEMBER2 family=codex role=logic.review .*status=\([A-Z_]*\).*/\1/p" "$T82/members.txt" | tail -1)
+if [ "$_ST82" = "FAILED" ] && [ "$_SED82" = "OK" ] && /usr/bin/grep -q 'awk -v f="\$_fam" -v r="\$_role"' "$FL"; then
+  ok "L82 🟥 멤버 키 리터럴 매칭 (awk) — 보간 sed 는 OK 를 오집(known-negative 동반), 출하본은 awk"
+else
+  no "L82 멤버 키 매칭" "awk=$_ST82(FAILED 기대) sed=$_SED82(OK=오집 재현) 출하=$(/usr/bin/grep -c 'awk -v f=' "$FL")"
+fi
+/bin/rm -rf "$T82"
+
+# L83 🟥 #6: 명부 파서가 role 안의 rc= 를 안 본다
+printf 'MEMBER family=gemini role=rc=1 rc=0 findings=1 status=OK\nMEMBER family=codex role=rc=0 rc=1 findings=0 status=FAILED\n' > "$D/mem83.txt"
+R83=$(/usr/bin/python3 "$D/roster_builder.py" "$D/mem83.txt" 2>/dev/null | tr '\n' ',')
+if [ "$R83" = "gemini," ]; then
+  ok "L83 🟥 명부 파서가 role 의 rc= 에 안 속는다 (gemini 포함·codex 배제)"
+else
+  no "L83 명부 rc 파싱" "got='$R83' want='gemini,'"
+fi
+
+# L84 🟥 #7: 검증 keep 과 감사 keep 이 «다른» 디렉터리 — 드롭이 있는 런에서 감사가 검증 err 를 안 덮는다
+cat > "$D/ver_drop_acct.sh" <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+# 🟥 원문 grep 은 두 방향 다 틀렸다(검증 프롬프트에 false-positive 리터럴 有 · 감사 프롬프트에 drop_verdict 리터럴 無).
+#    «행» 을 파싱해 verdict==false-positive 를 가진 행이 있으면 감사다 — 드롭 행만 verdict 를 달고 온다(fake_kill_seed 와 동형).
+if printf '%s' "$IN" | /usr/bin/python3 -c '
+import sys,json
+rows=[json.loads(l) for l in sys.stdin if l.strip().startswith("{")]
+sys.exit(0 if any(r.get("verdict")=="false-positive" for r in rows) else 1)'; then echo "tokens used AUDIT" >&2; else echo "tokens used VERIFY" >&2; fi
+printf '%s' "$IN" | /usr/bin/python3 -c '
+import sys,json
+rows=[json.loads(l) for l in sys.stdin if l.strip().startswith("{")]
+audit=any("drop_verdict" in r or r.get("verdict")=="false-positive" for r in rows)
+for r in rows:
+    v="correct-drop" if audit else ("false-positive" if r.get("member_id")=="d1" else "confirmed")
+    print(json.dumps({"id":r.get("id"),"verdict":v,"why":"x"}))'
+EOS
+chmod +x "$D/ver_drop_acct.sh"
+cat > "$D/m_drop.sh" <<'EOS'
+#!/bin/sh
+cat >/dev/null
+echo '{"id":"d1","title":"will be dropped","file":"pool_t.py","line":1,"severity":"B","category":"d","detail":"x","defeater":"y"}'
+echo '{"id":"k1","title":"kept","file":"pool_t.py","line":2,"severity":"A","category":"d","detail":"x","defeater":"y"}'
+EOS
+chmod +x "$D/m_drop.sh"
+printf 'codex|logic|sh %s\ngemini|security|sh %s\n' "$D/m_drop.sh" "$D/m_drop.sh" > "$D/f84.tbl"
+FH_CODEX_BIN="$D/ver_drop_acct.sh" FH_AGY_BIN="$D/ver_drop_acct.sh" bash "$PIPE" "$D/pool_t.py" --out "$D/f84" --fleet "$D/f84.tbl" >/dev/null 2>&1
+V84=$(/usr/bin/grep -l 'tokens used VERIFY' "$D"/f84/split_*/keep_verify/err.txt 2>/dev/null | wc -l | tr -d ' ')
+A84=$(/usr/bin/grep -l 'tokens used AUDIT'  "$D"/f84/split_*/keep_audit/err.txt  2>/dev/null | wc -l | tr -d ' ')
+if [ "$V84" -ge 1 ] && [ "$A84" -ge 1 ]; then
+  ok "L84 🟥 검증 keep($V84) 과 감사 keep($A84) 이 갈라져 있다 — 드롭 런에서 검증 토큰 회계가 살아남는다"
+else
+  no "L84 keep 분리" "verify=$V84 audit=$A84 · $(ls -d "$D"/f84/split_*/keep_* 2>/dev/null | head -3)"
 fi
 
 /bin/rm -rf "$D"

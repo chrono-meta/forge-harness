@@ -161,7 +161,9 @@ seen=[]
 for l in open(sys.argv[1],encoding="utf-8",errors="replace"):
     # 🟥 role 값에 공백이 들어갈 수 있다(fleet 표가 허용한다). 접두 전체를 한 패턴으로 묶으면
     #    그런 줄이 통째로 무시되고 명부가 «빈 채로 성공» 한다 — 두 필드를 따로 잡는다.
-    fm = re.search(r"\bfamily=(\S+)", l); rm = re.search(r"\brc=(\S+)", l)
+    # 🟥 R2 #6: `\brc=` 는 role 안의 rc= 를 먼저 잡는다(role=rc=1 rc=0 → 오탈락, 실행 확인).
+    #    레코드 형식이 고정이므로 «뒤에서» 잡는다 — rc= 다음에 findings= 가 오는 것이 앵커다.
+    fm = re.search(r"\bfamily=(\S+)", l); rm = re.search(r"\brc=(\S+) findings=", l)
     if not l.startswith("MEMBER") or not fm or not rm: continue
     fam, rc = fm.group(1), rm.group(1)
     if rc != "0": continue
@@ -243,7 +245,16 @@ for l in open(sys.argv[1],encoding="utf-8"):
   # 🟥 검증 패스의 CLI stderr(토큰 회계 «tokens used» 포함)가 mktemp 에 쓰이고 cleanup 이 지웠다.
   #    그래서 «검증 패스 토큰 = 0바이트» 로 보였는데 0 이 아니라 «버려진 것» 이다. --keep 은 이미
   #    있는 채널이고 파이프라인이 안 넘겼을 뿐이다. split 디렉터리에 남긴다(2026-09-10).
-  export FH_VERIFIER_KEEP="$SD"
+  # 🟥 R2 #7: 검증과 감사가 같은 keep 을 쓰면 드롭이 있는 런에서 감사가 검증 err.txt 를 덮는다 —
+  #    토큰 회계가 «바로 그 런» 에서 또 버려진다. 갈라 둔다. #1: 잎 경로 심링크도 여기서 거부.
+  for _p in "$SD/keep_verify" "$SD/keep_audit"; do
+    [ -L "$_p" ] && { echo "finding_pipeline: refusing to write through a symlink: $_p" >&2; note_rc 2; continue 2; }
+    mkdir -p "$_p"
+    for _leaf in raw.txt err.txt prompt.txt findings.jsonl; do
+      [ -L "$_p/$_leaf" ] && { echo "finding_pipeline: refusing to write through a symlink: $_p/$_leaf" >&2; note_rc 2; continue 3; }
+    done
+  done
+  export FH_VERIFIER_KEEP="$SD"   # verifier 가 MODE 별로 keep_verify/ keep_audit/ 를 «스스로» 고른다 (R2 #7)
   AUDARGS=()
   if [ -n "$AUD" ]; then
     AUDARGS=(--audit-verifier-argv "$(argv_json bash "$VERIFIER_SH" --family "$AUD" --target "$TARGET" --audit)" --audit-family "$AUD")

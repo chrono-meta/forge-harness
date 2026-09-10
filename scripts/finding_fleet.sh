@@ -308,6 +308,9 @@ if [ "$ROUND2" -eq 1 ]; then
   if [ "$R1_TOTAL" -eq 0 ]; then
     echo "FLEET round2 skipped — round 1 produced no findings (nothing to decorrelate against)"
   else
+    for _p in "$OUT/findings_r1.jsonl" "$OUT/findings_r2merged.jsonl"; do
+      [ -L "$_p" ] && { echo "finding_fleet: refusing to write through a symlink: $_p" >&2; exit 2; }
+    done
     cp "$OUT/findings.jsonl" "$OUT/findings_r1.jsonl"
     while IFS='|' read -r fam role cmd; do
       [ -n "${fam:-}" ] || continue
@@ -328,12 +331,20 @@ if [ "$ROUND2" -eq 1 ]; then
     while IFS='|' read -r _fam _role _cmd; do
       [ -n "${_fam:-}" ] || continue
       case "$_fam" in \#*) continue ;; esac
-      _st=$(/usr/bin/sed -n "s/^MEMBER2 family=$_fam role=$_role .*status=\([A-Z_]*\).*/\1/p" "$OUT/members.txt" | tail -1)
+      # 🟥 R2 #3: family/role 을 정규식에 보간하면 `logic.review` 가 `logicXreview` 의 OK 를 집는다.
+      #    awk 로 «필드 리터럴» 비교 — 값이 데이터로만 다뤄진다.
+      _st=$(/usr/bin/awk -v f="$_fam" -v r="$_role" '$1=="MEMBER2" && $2=="family="f && $3=="role="r {for(i=4;i<=NF;i++) if($i ~ /^status=/) v=substr($i,8)} END{print v}' "$OUT/members.txt")
       _p2="$OUT/part2_${_fam}_${_role}.jsonl"; _p1="$OUT/part_${_fam}_${_role}.jsonl"
-      if [ "${_st:-FAILED}" = "FAILED" ]; then
+      # 🟥 R2 #4: 차단(ZERO_NONJSON)·빈 응답(ZERO_EMPTY)·미실행(부재) 은 «2차가 없다» 이지 «2차가 비었다» 가 아니다
+      #    → 자기 1차로 폴백. ZERO_SELFDROPPED 만이 «의도된 빈 2차» 다(#5).
+      case "${_st:-FAILED}" in
+        FAILED|ZERO_NONJSON|ZERO_EMPTY) _fallback=1 ;;
+        *) _fallback=0 ;;
+      esac
+      if [ "$_fallback" -eq 1 ]; then
         [ -f "$_p1" ] && cat "$_p1" >> "$OUT/findings_r2merged.jsonl"
         R2_FALLBACK=$((R2_FALLBACK + 1))
-        echo "FLEET round2 member=$_fam/$_role FAILED — keeping ITS round-1 findings (per-member fallback)"
+        echo "FLEET round2 member=$_fam/$_role ${_st:-ABSENT} — keeping ITS round-1 findings (per-member fallback)"
       else
         [ -f "$_p2" ] && cat "$_p2" >> "$OUT/findings_r2merged.jsonl"
         R2_OK=$((R2_OK + 1))
@@ -341,6 +352,11 @@ if [ "$ROUND2" -eq 1 ]; then
     done < "$OUT/fleet.txt"
     if [ -s "$OUT/findings_r2merged.jsonl" ]; then
       /bin/mv "$OUT/findings_r2merged.jsonl" "$OUT/findings.jsonl"
+    elif [ "$R2_OK" -gt 0 ] && [ "$R2_FALLBACK" -eq 0 ]; then
+      # 🟥 R2 #5: 모든 멤버가 «성공적으로» 빈 2차(전량 자기 철회)를 냈다 — 그것은 결과이지 실패가 아니다.
+      #    1차로 되돌리면 정당한 철회가 무효화된다. 빈 결과를 그대로 낸다.
+      : > "$OUT/findings.jsonl"
+      echo "FLEET round2 all members withdrew (ZERO_SELFDROPPED) — result is intentionally empty"
     else
       # 🟥 합쳐서도 비면 1차를 «대체» 하지 않는다 — 그러면 탈상관이 아니라 삭제다.
       echo "FLEET round2 produced nothing — keeping round-1 findings (a failed 2nd pass must not delete the 1st)"

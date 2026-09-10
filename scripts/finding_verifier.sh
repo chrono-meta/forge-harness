@@ -55,7 +55,21 @@ fi
 umask 077
 
 WORK="$(mktemp -d 2>/dev/null)" || { echo "finding_verifier: mktemp failed" >&2; exit 3; }
-cleanup() { [ -n "$KEEP" ] && cp "$WORK"/* "$KEEP"/ 2>/dev/null; rm -rf "$WORK"; }
+# 🟥 R2 #7: 검증과 감사가 같은 keep 을 쓰면 감사가 검증 err.txt(토큰 회계)를 덮는다 — 드롭이 있는 런에서
+#    «바로 그 런» 의 회계가 또 버려진다. MODE 별 하위 디렉터리로 가른다. R2 #1: 심링크 잎은 복사 전에 거부.
+if [ -n "$KEEP" ] && [ -z "${FH_VERIFIER_KEEP_FLAT:-}" ]; then KEEP="$KEEP/keep_$MODE"; fi
+cleanup() {
+  if [ -n "$KEEP" ]; then
+    [ -L "$KEEP" ] && { echo "finding_verifier: refusing to keep through a symlink: $KEEP" >&2; rm -rf "$WORK"; return; }
+    mkdir -p "$KEEP" 2>/dev/null
+    for _f in "$WORK"/*; do
+      _dst="$KEEP/$(basename "$_f")"
+      [ -L "$_dst" ] && { echo "finding_verifier: refusing to keep through a symlink: $_dst" >&2; continue; }
+      cp "$_f" "$_dst" 2>/dev/null
+    done
+  fi
+  rm -rf "$WORK"
+}
 trap cleanup EXIT
 
 cat > "$WORK/findings.jsonl"

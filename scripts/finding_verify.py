@@ -106,7 +106,7 @@ def run_verifier(cmd, findings, allowed=VERDICTS):
     shell = isinstance(cmd, str)
     try:
         p = subprocess.run(cmd, shell=shell, input=payload, capture_output=True,
-                           text=True, timeout=int(os.environ.get("FH_VERIFY_TIMEOUT", "600")))
+                           text=True, timeout=int(os.environ.get("FH_VERIFY_TIMEOUT", "1200")))
     except Exception as e:                                   # noqa: BLE001 - degrade on anything
         return {}, f"verifier did not run: {e}"
     if p.returncode != 0:
