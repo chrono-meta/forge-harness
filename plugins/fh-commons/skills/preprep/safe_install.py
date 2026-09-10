@@ -1,0 +1,187 @@
+#!/usr/bin/env python3
+"""산출물 무결성 게이트 — **편집 결과를 정본에 반영하기 전에** 확인한다.
+
+## 왜 있나 (2026-09-10 실사고)
+
+pptx 편집 스크립트가 `assert len(paras) == 3` 에서 죽었는데 **뒤따르는 `cp` 가 그대로 돌아**
+120장짜리 정본을 **102장으로 잘린 파일**이 덮었다. git 에서 복구했다.
+
+🟥 근본 원인은 assert 가 아니다 — **«만들기»와 «설치»가 한 호출에 묶여 있었다.** 앞이 실패해도
+   뒤가 도는 형태이고, 셸에서 `;` 로 이은 줄은 전부 이 형태다. 그래서 처방은 «assert 를 더 잘
+   쓰자»가 아니라 **설치를 별도 단계로 떼고, 그 단계가 스스로 대상을 검사하게 하는 것**이다.
+   ([[feedback_recover_and_destroy_never_in_one_call]] 와 같은 축 — 회수와 파괴를 안 묶는다.)
+
+## 무엇을 보나
+
+    ① 후보가 실재하고 비어 있지 않은가
+    ② 열리는 zip 인가 · `testzip()` 이 통과하는가 (잘린 파일이 여기서 걸린다)
+    ③ pptx 필수 부품이 있는가 (`[Content_Types].xml` · `ppt/presentation.xml` · 그 .rels)
+    ④ 장 수가 **기존본보다 줄지 않았는가** — 🟥 이것이 그 사고를 잡는 줄이다
+    ⑤ `ppt/slides/*.xml` 파일 수 · `sldIdLst` 항목 수 · **rels 로 실제 닿는 서로 다른 슬라이드 수**
+       가 **셋 다 같은가** (목록만 잘린 형태 · 같은 장을 두 번 가리키는 형태 · 끊긴 rels 를 잡는다)
+    ⑥ **검사한 바이트가 곧 설치되는 바이트**다 — 후보를 한 번 읽어 그 바이트로 검사·해시·쓰기를
+       전부 하고, 옆의 임시 파일에 쓴 뒤 해시를 다시 확인하고 나서야 정본 자리에 넣는다
+       (복사 중 잘려도 정본은 무사하고, 검사 뒤 후보가 바뀌어도 바뀐 바이트는 안 들어간다)
+
+🟥 **줄어드는 것이 항상 오류는 아니다** — 일부러 장을 뺄 수 있다. 그때는 `--allow-shrink` 를
+   **명시**한다. 기본값을 「거부」로 두는 이유는 이 표면이 «되돌리기 어려운 쪽»이기 때문이다
+   (CLAUDE.md §Irreversibility Gates — 비가역 표면은 fail-closed).
+🟥 **기존본을 못 읽으면 반영하지 않는다** — 축소 여부를 판정할 수 없는데 덮어쓰는 것은
+   «미측정을 통과로 접는 것»이다. 기존본이 아예 없을 때만 첫 설치로 진행한다.
+⚠️ 이 게이트는 **구조**만 본다. 내용이 옳은지는 안 본다 — 120장이 그대로 120장이면서 전부
+   빈 장이 된 경우는 통과한다. 좁아진 것이지 닫힌 게 아니다. 그 자리는 레인과 렌더가 본다.
+
+## 쓰는 법
+
+    python3 safe_install.py <후보> <정본>              # 검사하고 통과하면 반영
+    python3 safe_install.py <후보> <정본> --dry-run    # 검사만
+    python3 safe_install.py <후보> <정본> --expect 120 # 장 수를 못 박는다
+    python3 safe_install.py <후보> <정본> --allow-shrink --why "38p 삭제"
+
+종료코드  0 반영함 · 1 거부(반영 안 함) · 2 판정불가(계기 오류·인자 오류 — PASS 아님)
+"""
+import sys, os, re, io, zipfile, hashlib, argparse, posixpath
+
+REQUIRED = ('[Content_Types].xml', 'ppt/presentation.xml', 'ppt/_rels/presentation.xml.rels')
+SLIDE_RE = re.compile(r'^ppt/slides/slide\d+\.xml$')
+
+
+def probe_bytes(data):
+    """(slide_files, sldIdLst_count, reached_distinct) 또는 예외.
+    🟥 셋을 따로 세는 것이 요점이다 — 파일·목록·관계 그래프는 서로 다른 실패를 낸다."""
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        bad = z.testzip()
+        if bad is not None:
+            raise ValueError(f'zip 안의 «{bad}» 가 깨져 있다')
+        names = set(z.namelist())
+        missing = [r for r in REQUIRED if r not in names]
+        if missing:
+            raise ValueError(f'pptx 필수 부품 없음: {missing}')
+        files = sorted(n for n in names if SLIDE_RE.match(n))
+        pres = z.read('ppt/presentation.xml').decode('utf-8', 'replace')
+        lst = re.search(r'<p:sldIdLst\b[^>]*>(.*?)</p:sldIdLst>', pres, re.S)
+        rids = re.findall(r'<p:sldId\b[^>]*\br:id="([^"]+)"', lst.group(1)) if lst else []
+        rels = z.read('ppt/_rels/presentation.xml.rels').decode('utf-8', 'replace')
+        # 속성 순서에 안 기댄다 — Id 와 Target 을 각각 뽑는다
+        rel_map = {}
+        for tag in re.findall(r'<Relationship\b[^>]*>', rels):
+            mid = re.search(r'\bId="([^"]+)"', tag); mt = re.search(r'\bTarget="([^"]+)"', tag)
+            if mid and mt:
+                rel_map[mid.group(1)] = posixpath.normpath(posixpath.join('ppt', mt.group(1)))
+        reached = []
+        for rid in rids:
+            tgt = rel_map.get(rid)
+            if tgt is None:
+                raise ValueError(f'sldId r:id={rid} 가 rels 에 없다 (끊긴 관계)')
+            if tgt not in names:
+                raise ValueError(f'sldId r:id={rid} → {tgt} 가 zip 에 없다')
+            reached.append(tgt)
+        dup = len(reached) - len(set(reached))
+        if dup:
+            raise ValueError(f'sldIdLst 가 같은 슬라이드를 {dup}회 중복해 가리킨다')
+    return files, len(rids), len(set(reached))
+
+
+def sha_bytes(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def parse(argv):
+    ap = argparse.ArgumentParser(prog='safe_install.py', add_help=False)
+    ap.add_argument('cand'); ap.add_argument('dest')
+    ap.add_argument('--dry-run', action='store_true')
+    ap.add_argument('--expect', type=int, default=None)
+    ap.add_argument('--allow-shrink', action='store_true')
+    ap.add_argument('--why', default='')
+    try:
+        ns = ap.parse_args(argv[1:])
+    except SystemExit:
+        print(__doc__.split('## 쓰는 법')[1]); return None
+    # 🟥 `--why --allow-shrink` 처럼 다음 플래그를 값으로 먹은 경우 — 사유가 아니다
+    if ns.why.startswith('--'):
+        print(f'🟥 --why 의 값이 플래그처럼 보인다({ns.why!r}) — 사유가 아니다 — 판정불가'); return None
+    return ns
+
+
+def main(argv):
+    ns = parse(argv)
+    if ns is None:
+        return 2
+    cand, dest = ns.cand, ns.dest
+
+    if not os.path.exists(cand) or os.path.getsize(cand) == 0:
+        print(f'🟥 후보가 없거나 비었다: {cand} — 반영 안 함')
+        return 1
+    # ⑥ 한 번 읽는다 — 이 바이트가 검사되고, 이 바이트가 설치된다
+    with open(cand, 'rb') as f:
+        data = f.read()
+    try:
+        c_files, c_listed, c_reached = probe_bytes(data)
+    except Exception as e:
+        print(f'🟥 후보를 못 읽는다 ({type(e).__name__}: {e}) — 반영 안 함')
+        return 1
+
+    print(f'후보 : {cand}')
+    print(f'       슬라이드 파일 {len(c_files)}개 · sldIdLst 항목 {c_listed}개 · rels 도달 {c_reached}개')
+    # ⑤ 셋이 같아야 한다 — 목록이 0 이어도 «검사 생략» 이 아니라 «어긋남» 이다
+    if not (len(c_files) == c_listed == c_reached):
+        print(f'🟥 파일 수({len(c_files)}) · 목록 수({c_listed}) · 도달 수({c_reached}) 가 어긋난다 — 반영 안 함')
+        return 1
+    if len(c_files) == 0:
+        print('🟥 슬라이드가 0장인 덱 — 반영 안 함')
+        return 1
+
+    # ── 기존본과의 비교 ────────────────────────────────────────────────────────
+    if os.path.exists(dest):
+        try:
+            with open(dest, 'rb') as f:
+                d_files, _l, _r = probe_bytes(f.read())
+        except Exception as e:
+            # 🟥 축소 판정을 못 하는데 덮어쓰면 «미측정 → 통과» 다. 거부.
+            print(f'🟥 기존본을 못 읽는다 ({type(e).__name__}: {e}) — 축소 여부 판정 불가 — 반영 안 함')
+            return 1
+        print(f'정본 : {dest}\n       슬라이드 {len(d_files)}개')
+        if len(c_files) < len(d_files):
+            if not ns.allow_shrink:
+                print(f'🟥 장이 {len(d_files)} → {len(c_files)} 로 **줄었다**. '
+                      f'의도한 것이면 --allow-shrink --why "<사유>" 로 명시하라 — 반영 안 함')
+                return 1
+            if not ns.why.strip():
+                print('🟥 --allow-shrink 에는 --why 가 필요하다 — 사유 없는 축소는 거부 — 반영 안 함')
+                return 1
+            print(f'⚠️ 축소를 명시 승인으로 반영한다 ({len(d_files)} → {len(c_files)}): {ns.why}')
+    else:
+        print(f'⚠️ 정본이 아직 없다({dest}) — 장 수 대조 UNMEASURED (첫 설치로 진행, 비교 대상 없음)')
+
+    if ns.expect is not None and len(c_files) != ns.expect:
+        print(f'🟥 --expect {ns.expect} 인데 후보는 {len(c_files)}장 — 반영 안 함')
+        return 1
+
+    if ns.dry_run:
+        print('✅ 검사 통과 — --dry-run 이라 반영은 안 했다')
+        return 0
+
+    # ⑥ 검사한 바이트를 «옆에» 쓰고 확인한 뒤에 정본 자리에 넣는다 — 정본은 마지막 순간까지 무사하다
+    src_hash = sha_bytes(data)
+    tmp = dest + '.safe_install.tmp'
+    try:
+        with open(tmp, 'wb') as f:
+            f.write(data)
+        with open(tmp, 'rb') as f:
+            if sha_bytes(f.read()) != src_hash:
+                print('🟥 임시 파일 해시가 다르다 — 쓰기 실패. 정본은 건드리지 않았다')
+                return 1
+        os.replace(tmp, dest)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+    with open(dest, 'rb') as f:
+        if sha_bytes(f.read()) != src_hash:
+            print('🟥 반영 후 해시가 다르다 — 정본이 깨졌을 수 있다. 즉시 확인하라')
+            return 1
+    print(f'✅ 반영함 — {len(c_files)}장 · sha256 {src_hash[:16]}…')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

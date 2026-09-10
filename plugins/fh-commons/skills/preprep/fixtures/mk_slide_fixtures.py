@@ -12,8 +12,11 @@
 """
 import os
 from pptx import Presentation
-from pptx.util import Emu
+from pptx.util import Emu, Pt
 from pptx.dml.color import RGBColor
+from pptx.enum.text import PP_ALIGN
+from pptx.enum.shapes import MSO_CONNECTOR
+from pptx.enum.dml import MSO_LINE_DASH_STYLE as MSO_LINE
 
 SLIDE_W, SLIDE_H = Emu(24384000), Emu(13716000)
 ACCENT = RGBColor(0xFA, 0xE1, 0x00)
@@ -155,6 +158,146 @@ def geometry_baseline_pair(base_path, edited_path):
     prs2.save(edited_path)
 
 
+# ── P1 결박 (이름 AND 글자) known-pair ───────────────────────────────────────
+def p1_binding(path):
+    """네 도형 전부 **같은 크기의 소폭 이동**(+30,000 EMU, JIT 안)을 한다 — 즉 기하만 보면
+    넷 다 후보다. 갈리는 것은 **결박 가능성**뿐이다:
+
+      bound_bar   양쪽 글자 같음        → bound.     후보로 뜬다
+      silent_bar  양쪽 글자 없음        → name_only. 🟥 **후보로 뜬다** — 막대·선이 여기 산다.
+                                           P1 의 원적 사건이 바로 이 부류라 잘라내면 안 된다
+      remix_bar   양쪽 글자 다름        → mismatch.  다른 내용이 같은 이름을 입었다 → 제외
+      halftext    한쪽만 글자 있음      → mismatch.  같은 이유로 제외
+
+    🟥 이 픽스처의 핵심은 «이동량이 넷 다 같다»는 것이다 — 결박 규칙 말고는 변수가 없으므로
+       임계·이동량이 아니라 **결박 규칙만** 재는 계기가 된다."""
+    prs = _new_deck()
+    for k in (0, 1):
+        s = _blank(prs)
+        d = 30000 * k
+        _box(s, 'bound_bar',  1000000 + d, 1000000, 900000, 400000, '같은 막대')
+        _box(s, 'remix_bar',  1000000 + d, 2000000, 900000, 400000, '앞 도해' if k == 0 else '뒤 도해')
+        _box(s, 'silent_bar', 1000000 + d, 3000000, 900000, 400000, None)
+        _box(s, 'halftext',   1000000 + d, 4000000, 900000, 400000, None if k == 0 else '뒤늦은 글자')
+    prs.save(path)
+
+
+def p1_intended(path):
+    """선언 면제(`geometry.intended`) known-pair. 두 도형이 **같은 소폭 이동**을 한다.
+
+      staged_bar   x 와 cx 가 함께 바뀐다  → `attrs: [x, cx]` 선언과 정확히 일치 → 면제 대상
+      stray_bar    y 만 바뀐다             → 선언과 속성이 다르다 → **면제되면 안 된다**
+
+    🟥 둘째가 이 픽스처의 요점이다 — 면제를 «도형 이름»에 걸면 stray 도 삼켜진다."""
+    prs = _new_deck()
+    s1 = _blank(prs)
+    _box(s1, 'staged_bar', 1000000, 1000000, 900000, 400000, '격리')
+    _box(s1, 'stray_bar',  1000000, 3000000, 900000, 400000, '옆칸')
+    s2 = _blank(prs)
+    _box(s2, 'staged_bar', 970000, 1000000, 1030000, 400000, '격리')   # x -30,000 · cx +130,000
+    _box(s2, 'stray_bar',  1000000, 3030000, 900000, 400000, '옆칸')   # y +30,000 뿐
+    prs.save(path)
+
+
+# ── P4 attr-consistency known-pair ───────────────────────────────────────────
+def _sized(slide, name, x, y, w, h, text, pt, algn=None):
+    """명시 `sz` 를 가진 상자. 🟥 P4 의 크기 축은 명시 sz 만 읽으므로 픽스처도 명시해야 한다
+    — 상속 크기로 만들면 known-positive 가 UNMEASURED 로 새서 계기가 죽는다."""
+    tb = slide.shapes.add_textbox(Emu(x), Emu(y), Emu(w), Emu(h))
+    tb.name = name
+    p = tb.text_frame.paragraphs[0]
+    if algn is not None:
+        p.alignment = algn
+    r = p.add_run()
+    r.text = text
+    r.font.size = Pt(pt)
+    return tb
+
+
+def _dashed(slide, name, x, y, w, pt_w, dash):
+    ln = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, Emu(x), Emu(y), Emu(x + w), Emu(y))
+    ln.name = name
+    ln.line.width = Pt(pt_w)
+    ln.line.dash_style = dash
+    return ln
+
+
+def p4(path, positive):
+    """축 넷을 한 벌로. positive 는 넷 다 갈리고, negative 는 **같은 구조로 전부 일치**한다.
+
+    🟥 negative 를 «도형을 뺀 것»으로 만들지 않는다 — 그러면 「안 떴다」가 「볼 게 없었다」와
+       구분이 안 되고(이 저장소가 이름 붙인 「레인이 초록인 이유는 셋」의 ②), 죽은 컨트롤이 된다.
+       두 팔의 도형 수·이름·자리는 같고 **갈리는 값 하나씩만** 다르다."""
+    prs = _new_deck()
+    s = _blank(prs)
+    # dash — 같은 종류 점선 두 개, 굵기만 갈린다
+    _dashed(s, 'rule_a', 1000000, 1000000, 6000000, 1.0, MSO_LINE.DASH)
+    _dashed(s, 'rule_b', 1000000, 1600000, 6000000, 3.0 if positive else 1.0, MSO_LINE.DASH)
+    # algn — 같은 폭·같은 y 한 줄, 정렬만 갈린다
+    _sized(s, 'row_l', 2000000, 4000000, 5000000, 800000, '왼쪽 칸', 24, PP_ALIGN.LEFT)
+    _sized(s, 'row_r', 9000000, 4000000, 5000000, 800000, '오른 칸', 24,
+           PP_ALIGN.CENTER if positive else PP_ALIGN.LEFT)
+    # mirror — 화면 중심 기준 거울(폭 5,000,000 · 중심 ±5,192,000), 크기만 갈린다
+    _sized(s, 'mir_l', 4000000, 8000000, 5000000, 800000, '만든 쪽', 32, PP_ALIGN.CENTER)
+    _sized(s, 'mir_r', 15384000, 8000000, 5000000, 800000, '받는 쪽',
+           28 if positive else 32, PP_ALIGN.CENTER)
+    # echo — 둘째 장에 같은 문장, 크기만 갈린다
+    _sized(s, 'echo_1', 2000000, 11000000, 9000000, 800000, '되돌릴 수 없는 곳', 32, PP_ALIGN.LEFT)
+    s2 = _blank(prs)
+    _sized(s2, 'echo_2', 2000000, 11000000, 9000000, 800000, '되돌릴 수 없는 곳',
+           26 if positive else 32, PP_ALIGN.LEFT)
+    prs.save(path)
+
+
+# ── P1 뒤집힘 known-pair ─────────────────────────────────────────────────────
+def p1_flip(path):
+    """두 장 · 상자 기하는 **한 EMU도 안 바뀐다**. 바뀌는 것은 flipH 하나뿐이다.
+
+    🟥 이 픽스처의 요점: 자리·크기만 보는 계기는 여기서 «어긋남 0» 을 낸다.
+       실사고가 정확히 그 모양이었다(화살표가 반대를 가리키는데 델타가 0건).
+       `steady` 는 양쪽 다 무플립이라 뜨면 안 된다(과차단 컨트롤)."""
+    from pptx.enum.shapes import MSO_CONNECTOR as _C
+    prs = _new_deck()
+    for k in (0, 1):
+        s = _blank(prs)
+        a = s.shapes.add_connector(_C.STRAIGHT, Emu(2000000), Emu(2000000),
+                                   Emu(2800000), Emu(2800000))
+        a.name = 'turned'
+        if k == 1:                      # 자리는 그대로, 방향만 뒤집는다
+            a._element.spPr.xfrm.set('flipH', '1')
+        b = s.shapes.add_connector(_C.STRAIGHT, Emu(6000000), Emu(2000000),
+                                   Emu(6800000), Emu(2800000))
+        b.name = 'steady'
+    prs.save(path)
+
+
+# ── L14 screen-parity known-pair ─────────────────────────────────────────────
+def screen_parity(deck_path, man_ok, man_bad):
+    """덱 2장 + 원고 두 벌. 🟥 덱은 **한 벌만** 만든다 — 원고만 바꿔서 「원고 쪽이 갈렸다」를
+    한 변수로 재기 위해서다(덱까지 같이 바꾸면 무엇이 신호인지 못 가른다).
+
+      man_ok   덱과 완전히 같다                      → 짝 없음 0 · 문구 다름 0
+      man_bad  ① 「사라진 줄」 을 원고만 들고 있다     → 짝 없음 (원고에만)
+               ② 「받아들인다」 를 덱만 들고 있다      → 짝 없음 (화면에만)
+               ③ 「증거 없이 반박을 믿는 셈이다」 ↔ 덱 「…믿는 셈」 → 문구 다름
+    """
+    prs = _new_deck()
+    s1 = _blank(prs)
+    _box(s1, 'h1', 1000000, 500000, 14000000, 800000, '첫 장 제목')
+    _box(s1, 'b1', 1000000, 2000000, 14000000, 800000, '증거 없이 반박을 믿는 셈')
+    s2 = _blank(prs)
+    _box(s2, 'h2', 1000000, 500000, 14000000, 800000, '둘째 장 제목')
+    _box(s2, 'b2', 1000000, 2000000, 14000000, 800000, '받아들인다')
+    prs.save(deck_path)
+
+    open(man_ok, 'w', encoding='utf-8').write(
+        '### S1 · 첫 장 제목\n🖥\n첫 장 제목\n증거 없이 반박을 믿는 셈\n🗣\n말.\n\n'
+        '### S2 · 둘째 장 제목\n🖥\n둘째 장 제목\n받아들인다\n🗣\n말.\n')
+    open(man_bad, 'w', encoding='utf-8').write(
+        '### S1 · 첫 장 제목\n🖥\n첫 장 제목\n증거 없이 반박을 믿는 셈이다\n사라진 줄\n🗣\n말.\n\n'
+        '### S2 · 둘째 장 제목\n🖥\n둘째 장 제목\n🗣\n말.\n')
+
+
 def build_all(outdir):
     os.makedirs(outdir, exist_ok=True)
     r1(os.path.join(outdir, 'r1_pos.pptx'), True)
@@ -166,7 +309,15 @@ def build_all(outdir):
     r5(os.path.join(outdir, 'r5_pos.pptx'), True)
     r5(os.path.join(outdir, 'r5_neg.pptx'), False)
     p1(os.path.join(outdir, 'p1.pptx'))
+    p1_binding(os.path.join(outdir, 'p1_binding.pptx'))
+    p1_intended(os.path.join(outdir, 'p1_intended.pptx'))
+    p1_flip(os.path.join(outdir, 'p1_flip.pptx'))
+    screen_parity(os.path.join(outdir, 'sp_deck.pptx'),
+                  os.path.join(outdir, 'sp_ok.md'),
+                  os.path.join(outdir, 'sp_bad.md'))
     p3(os.path.join(outdir, 'p3.pptx'))
+    p4(os.path.join(outdir, 'p4_pos.pptx'), True)
+    p4(os.path.join(outdir, 'p4_neg.pptx'), False)
     geometry_baseline_pair(os.path.join(outdir, 'geo_base.pptx'),
                             os.path.join(outdir, 'geo_edited.pptx'))
     return outdir

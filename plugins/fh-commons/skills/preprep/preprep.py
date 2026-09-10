@@ -774,7 +774,9 @@ def main():
     #    [[feedback_rule_misdescribes_its_own_machine]] · [[feedback_instrument_vs_target_and_budget]]
     _lanes = sorted(n[5:] for n in globals() if n.startswith('lane_') and callable(globals()[n]))
     _mods = sorted(m for m in ('lane_promise', 'lane_adjacent_dup', 'lane_progression',
-                                'lane_slide_relations', 'lane_geometry', 'lane_diagram', 'lane_slide_refs')
+                                'lane_slide_relations', 'lane_geometry', 'lane_attr_consistency',
+                                'lane_screen_parity',
+                                'lane_diagram', 'lane_slide_refs')
                    if os.path.exists(os.path.join(HERE, m + '.py')))
     # 🟥 2026-09-04 신설 — `--lane R1,R2,...` 로 **새 모듈 레인(R1-R5·P1/P3)만** 골라 끈다/켠다.
     #    L1~L11 은 아직 이 필터를 안 탄다(usage 줄의 --lane 은 그쪽엔 미배선인 채 남아 있다 —
@@ -883,6 +885,21 @@ def main():
             notes += _nP   # advisory 고정 — findings 에 안 태운다(L8·L11 관례)
         except Exception as _e:
             notes.append('P1/P3 geometry : 계기 미실행 — NOT_WIRED (%s: %s) (0 아님)'
+                         % (type(_e).__name__, _e))
+    try:
+        import lane_screen_parity
+        _f14, _n14 = lane_screen_parity.scan(cfg, root)
+        notes += _n14   # advisory 고정 — L8·L11 관례
+    except Exception as _e:
+        notes.append('L14 screen-parity : 계기 미실행 — NOT_WIRED (%s: %s) (0 아님)'
+                     % (type(_e).__name__, _e))
+    if _lane_on('P4', 'P'):
+        try:
+            import lane_attr_consistency
+            _f4, _n4 = lane_attr_consistency.scan(cfg, root)
+            notes += _n4   # advisory 고정 — 같은 관례
+        except Exception as _e:
+            notes.append('P4 attr-consistency : 계기 미실행 — NOT_WIRED (%s: %s) (0 아님)'
                          % (type(_e).__name__, _e))
 
     for n in notes: print(f"   · {n}")
