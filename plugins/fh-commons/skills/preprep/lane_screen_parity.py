@@ -53,7 +53,9 @@ def manuscript_screens(path):
 
 
 def deck_screens(path):
-    """장별 [문단 텍스트 …] (평평하게). 도형 경계는 deck_screens_grouped() 가 보존한다."""
+    """장별 [문단 텍스트 …] (평평하게). 🟥 deprecated — 이 결과를 compare() 에 «deck_groups 없이» 넘기면
+    조용히 1단계로 돌아 다문단 도형마다 오탐이 난다(덱 세션 실측 09-11: 279 vs 48). 새 호출자는
+    deck_screens_grouped() 를 쓰고 compare(..., deck_groups=groups) 로 불러라."""
     return [[t for shp in sl for t in shp] for sl in deck_screens_grouped(path)]
 
 
@@ -98,6 +100,11 @@ def compare(man, deck, threshold=0.60, skip=(), deck_groups=None):
     과 한 번 더 맞춘 뒤에야 짝 없음으로 낸다(원고는 도형 단위로 쓰인 면이다 — 덱 세션 실측 09-11)."""
     absent, wording = [], []
     joined_hits = 0
+    if deck_groups is None:
+        # 🟥 같은 얼굴로 다른 동작을 내지 않는다 — 1단계로 도는 것은 stats 에도, stderr 에도 남긴다
+        import sys
+        print('lane_screen_parity.compare: deck_groups 없음 — 1단계(문단 평면)만 돈다. '
+              '다문단 도형은 오탐이 난다. deck_screens_grouped() 를 넘겨라', file=sys.stderr)
     for i, (uid, mlines) in enumerate(man):
         if uid in skip:
             continue
@@ -140,7 +147,8 @@ def compare(man, deck, threshold=0.60, skip=(), deck_groups=None):
         for t in pool:
             absent.append((i + 1, uid, '화면에만', t))
     slides = {a[0] for a in absent} | {w[0] for w in wording}
-    return absent, wording, {'units': len(man), 'slides_touched': len(slides), 'joined': joined_hits}
+    return absent, wording, {'units': len(man), 'slides_touched': len(slides), 'joined': joined_hits,
+                             'stage': 2 if deck_groups is not None else 1}
 
 
 def _resolve(root, p):

@@ -429,8 +429,9 @@ def run_codex_audit_regressions(fx_dir):
     man2 = LS.manuscript_screens(mp2); grp = LS.deck_screens_grouped(d2); deck2 = [[t for sh_ in sl for t in sh_] for sl in grp]
     a1, w1, st1 = LS.compare(man2, deck2)                       # 1단계만 — 오탐 형태 재현(1 원고-only + 3 화면-only)
     a2, w2, st2 = LS.compare(man2, deck2, deck_groups=grp)      # 2단계
-    ok('A8 다문단 도형: 1단계만이면 짝없음 %d(오탐) · 2단계면 0 (join 1건)' % len(a1)) \
-        if len(a1) == 4 and len(a2) == 0 and st2.get('joined') == 1 else ng('A8 a1=%d a2=%d joined=%r' % (len(a1), len(a2), st2.get('joined')))
+    ok('A8 다문단 도형: 1단계만이면 짝없음 %d(오탐, stage=1 표기) · 2단계면 0 (join 1건, stage=2)' % len(a1)) \
+        if len(a1) == 4 and len(a2) == 0 and st2.get('joined') == 1 and st1.get('stage') == 1 and st2.get('stage') == 2 \
+        else ng('A8 a1=%d a2=%d joined=%r stage=%r/%r' % (len(a1), len(a2), st2.get('joined'), st1.get('stage'), st2.get('stage')))
     # A8 컨트롤 — 덱에서 문단 하나가 정말 빠지면 2단계로도 안 맞아야 한다(join 이 원고 줄과 달라진다)
     d3 = os.path.join(fx_dir, 'ma_multi_missing.pptx')
     _mini_deck(d3, [body3.replace('<a:p><a:r><a:rPr/><a:t>2.무엇을 만들었나</a:t></a:r></a:p>', '')])
