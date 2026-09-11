@@ -2948,7 +2948,7 @@
     다음번 처방: 병렬 디스패치는 **완료 알림을 받은 그 턴에** 한 줄이라도 적는다.
 - date: 2026-09-01
   agent: fh-meta:beginner / fh-meta:challenger / general-purpose(디자이너 렌즈)
-  count: 3
+  count: 4
   context: >-
     if(kakao) 덱 v1.1 비공개 사례 구간(68~75p) 재구축 직후 3렌즈 병렬 감사. 운영자가
     «발표준비하네스 능력을 100% 활용해서 … 테크니컬라이터도 부르고 디자이너도 불러서» 로
@@ -2997,7 +2997,7 @@
     신호: tracks/_meta/fh_signal_2026-09-02_dispatch-tally-attribution.md
 - date: 2026-09-02
   agent: general-purpose (2) + codex exec sidecar (1) — 프로 세션(Fable 5.1 거버너)
-  count: 3
+  count: 4
   context: >-
     운영자 «자체개발 거버너모드 · 병렬로». ⓐ ⑤ 증폭자 측정 사전등록 초안(블라인드) ⓑ 카드 미결 2건
     (eligcheck _tsv_pipe fail-open · target_pin mtime 분기) 조사+패치 제안(패치는 텍스트로 회신,
@@ -3033,7 +3033,7 @@
     같은 디렉터리에 있어 오염 → 폐기·재실행. 전 회신을 거버너가 실행으로 재현했고 codex 기각 5건은 소스 근거.
 - date: 2026-09-03
   agent: UNATTRIBUTED — 이 세션(forge-harness-d5, 프로)이 띄운 것이 아니다
-  count: 2
+  count: 4
   context: >-
     ④-e 가 «오늘 디스패치 2 · 원장 0» 으로 ❌. 자정 이후 이 세션의 Agent 호출은 0 (도구 호출은 Bash·gh·npm 뿐).
     tally 실물 `tracks/_meta/.subagent_dispatch_tally` 에 2026-09-03 두 줄. 같은 시각 이 머신에서 sim 추출기
@@ -3049,7 +3049,7 @@
   agent: fh-meta:expert
   invoker: forge-harness-27 (Fable 5.1 거버너, 야간 위임)
   task: 웹 QA 에이전트 프런티어(2025-2026) ↔ qasp 1/2/3막 대응표 + 2주 내 비저자 첫 완주 델타 5
-  count: 2
+  count: 4
   context: >-
     운영자 «qasp 세계에 물어보고 개발 위탁, 다다음주 AX lobby QA 투입». 1차(기본 모델)는 API 529 로 조기 종료,
     2차 sonnet 재시도 성공(검색 12·fetch 1·155,866 tokens). 읽기 전용, 회사 내부 정보 검색어 배제.
@@ -3575,3 +3575,11 @@
   outcome: accepted
   evidence: "① 델타 진술 + 제목 3 + thesis 2, 각각 defeater 동반 ② 외부 선행 11건(URL 열어 확인) + 미확인 4건 라벨 분리 ③ FH 결손 6건(G-1~G-6, 전부 기계화 가능). 🟥 G-4(finding_verify.py 의 자기검증 가드가 옵셔널 필드에 걸린 fail-open)는 내가 소스 확인 + 알려진 쌍 재현 후 **이 릴리스에서 닫았다**(PR #694). 사이드카 원 주장은 배선 경로도 뚫린다는 함의였는데 파이프라인이 라우팅을 거부하므로 좁혀서 채택 — 사이드카 발견은 «증거 후보» 이지 판정이 아니라는 규율대로"
   residual: "🟥 자기보고 잔여를 스스로 6항 적어 왔다(EU AI Act 미열람 · preprint 자기보고 수치 · 우리 표의 커버리지 불일치). 그 정직성 자체가 채택 근거의 일부. 외부 인용은 **아직 재검증 안 함** — 논문에 싣기 전에 URL 을 내가 직접 연다"
+- date: 2026-09-11
+  agent: general-purpose ×4 (Claude, 로컬) + sidecar-codex(gpt-6-astra high) ×7 호출(R3·R4×3·R5·R6×2·preprep R1 — 그중 REFUSED 1 · 한도 3)
+  task: ① 3.2.0 발행 게이트 security-review(v3.1.4..main 18커밋, 출하 443파일) ② qasp-dev PR #286 루프 분모 게이트 검증(격리 워크트리·뮤턴트·합성 데이터) ③ PR #287 픽스처 상대시각(TZ×시각×지평 스윕 → 일중 뒤집힘 S 발견, BLOCK → 재검 승인) ④ PR #288 스탬프 이동(종료경로 전수·관통 프로브·합의 레인 단독 뮤턴트) · codex = finding 파이프라인 cross-family R3~R5(17+3건) + preprep 4 레인 감사 R1(S5·A9·B4)
+  count: 4
+  outcome: accepted
+  evidence: security-review «No HIGH/MEDIUM»(후보 8 전부 «이미 닫힘» 기각) · #286 APPROVE + B1(규율 셋 잔여 2줄) · codex 라운드는 fh_axes23 마커 두 개(verifier-roster · preprep) 에 건별 기록
+  cost: subagent_tokens 187k+181k · codex ≈ 116k(REFUSED)+130k(한도)+60k(한도)+116k+88k+… · 거버너 UNMEASURED
+  note: 통합 1항목. 🟥 codex 사이버 필터가 «attack/spoof/bypass» 어휘 프롬프트를 116k 소모 후 거부 — REFUSED 는 0건이 아니다. 어휘 치환 후 같은 diff 로 8건 실적발. 🟥 «순차» 를 어겨 codex 잡 둘을 동시에 돌렸다가 한도(07:41)로 둘 다 죽음 — 이후 preflight 사슬로 순차화. 🟥 대기 사슬이 자기 명령줄을 grep 으로 잡아 영원 대기(«codex exec … model_reasoning» 문자열이 zsh -c 인자에 있다) — 파일 존재/토큰으로 판별해야 한다
