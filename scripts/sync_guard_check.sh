@@ -60,6 +60,7 @@ else
       # directory excludes (2026-09-03): re-home targets, same -path form as logs/.
       manifests/) grep -qF -- "! -path '*/manifests/*'" "$SYNC" || missing="$missing $e" ;;
       _index/)    grep -qF -- "! -path '*/_index/*'"    "$SYNC" || missing="$missing $e" ;;
+      .git/)      grep -qF -- "! -path '*/.git/*'"      "$SYNC" || missing="$missing $e" ;;   # 2026-09-11 중첩 레포 내부
       *)     grep -qF -- "! -name '$e'" "$SYNC"       || missing="$missing $e" ;;
     esac
   done

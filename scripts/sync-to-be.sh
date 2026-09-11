@@ -399,7 +399,10 @@ DIRTY=0   # cp-fallback mode can't count cheaply → mark work done, let git-dif
 # so a hub that somehow holds tracks/_meta/manifests/<peer>.yaml pushed it path-for-path onto the
 # peer's LIVE re-homed file and tripped the destination-newer abort on the other node. Symmetric
 # now: a directory that exists only as a re-home target is never mirrored as ordinary content.
-SYNC_EXCLUDES=('.gitkeep' '*.marker' 'logs/' '.fh_node_state' '.close_stamps_*' 'manifests/' '_index/')
+# `.git/` (2026-09-11): 벤치 복구 클론(tracks/_meta/dominance_bench_B/recovered_*/…/.git) 의 내부가 미러로 흘러가
+# `.git/index` 가 복사 mtime 으로 «미러가 더 새것» 가드를 매 실행 걸었다(다른 노드 아님 — 원본 22:47, 사본 23:01).
+# 중첩 레포 내부는 크로스머신 소비자가 없다 — 통째로 뺀다. 되돌아오는 pull 도 같은 predicate 를 갖는다.
+SYNC_EXCLUDES=('.gitkeep' '*.marker' 'logs/' '.fh_node_state' '.close_stamps_*' 'manifests/' '_index/' '.git/')
 
 NEWER_HITS=""
 
@@ -447,7 +450,7 @@ check_dest_newer() {   # $1 = src dir, $2 = dst dir
     # array-expanded safely here, so they are duplicated — the one place this file tolerates it.
     # Changing SYNC_EXCLUDES without changing this line reopens the false-abort/false-pass gap;
     # scripts/sync_guard_check.sh asserts the two stay equivalent.
-  done < <(find "$src" -type f ! -name '.gitkeep' ! -name '*.marker' ! -name '.fh_node_state' ! -name '.close_stamps_*' ! -path '*/logs/*' ! -path '*/manifests/*' ! -path '*/_index/*' 2>/dev/null)
+  done < <(find "$src" -type f ! -name '.gitkeep' ! -name '*.marker' ! -name '.fh_node_state' ! -name '.close_stamps_*' ! -path '*/logs/*' ! -path '*/manifests/*' ! -path '*/_index/*' ! -path '*/.git/*' 2>/dev/null)
 }
 
 # ── Shared abort message for BOTH destination-newer sites ─────────────────────
@@ -674,7 +677,7 @@ sync_dir() {
   else
     # rsync absent (default Windows git-bash): tar-pipe mirror with the same excludes,
     # no --delete (append-only). Source is canonical, so overwriting be's copy is correct.
-    if ( cd "$src" && tar cf - --exclude='.gitkeep' --exclude='*.marker' --exclude='.fh_node_state' --exclude='.close_stamps_*' --exclude='logs' --exclude='manifests' --exclude='_index' . ) \
+    if ( cd "$src" && tar cf - --exclude='.gitkeep' --exclude='*.marker' --exclude='.fh_node_state' --exclude='.close_stamps_*' --exclude='logs' --exclude='manifests' --exclude='_index' --exclude='.git' . ) \
          | ( cd "$dst" && tar xf - ); then
       DIRTY=1; log "mirrored (cp mode) → $dst"; stamp_banner "$dst" "$src"
     else

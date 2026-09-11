@@ -390,7 +390,7 @@ pull_dir() {   # $1 = companion (source) dir, $2 = hub (destination) dir, $3 = l
   listing="$(mktemp)" || { warn "mktemp failed — cannot enumerate $label"; ERRORS=$((ERRORS+1)); return 0; }
   if ! find "$src" -type f ! -name '.gitkeep' ! -name '*.marker' \
          ! -path '*/logs/*' ! -path '*/manifests/*' ! -path '*/_index/*' \
-         ! -path '*/substrate/*' \
+         ! -path '*/substrate/*' ! -path '*/.git/*' \
          ! -name '.fh_node_state' ! -name 'MEMORY.md' ! -name 'edit_manifest.yaml' \
          ! -name '.substrate_versions' \
          ! -name '.sync_from_be_held.marker' ! -name '.sync_overwrite_override_log' \

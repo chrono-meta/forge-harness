@@ -107,7 +107,21 @@ URL returns 200 directly, so the leg no longer depends on redirect-following at 
 because the fetch path is not always `curl -L` (a WebFetch-based run does not follow redirects the same
 way). Second collection endpoint to churn, after GeekNews `/rss/news` (2026-06-20).
 
-Extract `"title":"..."` + `"slug":"issue-\d+"` pattern → URL: `https://www.deeplearning.ai/the-batch/{slug}/`. Max 5 items.
+🟥 **Pattern churned again (2026-09-11).** The page no longer embeds `"title":"..."`/`"slug":"issue-N"` JSON —
+HTTP 200, ~186 KB, **0 matches**, and the `/the-batch/issue-N` anchors carry no text. Third endpoint churn
+(GeekNews `/rss/news` 2026-06-20 · trailing-slash 308 2026-07-26 · this). Current shape, verified live:
+
+```bash
+curl -s --max-time 15 -L "https://www.deeplearning.ai/the-batch" \
+  | /usr/bin/grep -oE '<a [^>]*aria-label="[^"]+"[^>]*href="/the-batch/issue-[0-9]+"' \
+  | sed -E 's/.*aria-label="([^"]+)".*href="(\/the-batch\/issue-[0-9]+)".*/\1\t\2/' | head -5
+```
+
+`aria-label` = title · `href` = `/the-batch/issue-NNN` → URL `https://www.deeplearning.ai{href}`. Max 5 items.
+🟥 **0 matches on a 200 is INSTRUMENT MISMATCH, never «Batch 0 items»** — report it as
+`Batch: UNMEASURED (pattern mismatch — HTTP 200, N bytes, 0 anchors)` and leave the leg out of the
+counts ([[feedback_not_found_is_not_zero_family]]). Calibrate: known-positive = the live page yields ≥1
+row today; known-negative = an empty body yields the UNMEASURED line, not `0`.
 
 ### GeekNews — news.hada.io (RSS)
 
