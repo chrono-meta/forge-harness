@@ -46,7 +46,15 @@ scan_one() { # $1=file → prints hits, returns 0 hit / 1 none / 3 unscannable
   if /usr/bin/file -b --mime-encoding "$f" 2>/dev/null | /usr/bin/grep -q '^binary$'; then
     echo "UNSCANNABLE  $f (binary)"; return 3; fi
   # one pass: drop comment-led lines, then classify (VERDICT wins over EXPOSURE over IRREV per line)
-  body=$(/usr/bin/grep -nEv "$COMMENT_RE" "$f" 2>/dev/null || true)
+  # 🟥 pmh-dev #76 (2026-09-11): 여러 줄 docstring 의 «안쪽» 줄은 줄머리가 따옴표가 아니라 COMMENT_RE 를 통과했다 —
+  #    실물: 파이썬 테스트의 docstring 안 «fail-safe … 봉인» 문장이 GATE-SHAPED 로 지목됨. 줄 단위 grep 앞에
+  #    """ / ''' 짝 상태를 awk 로 추적해 열린 동안의 줄을 전부 버린다(여는 줄·닫는 줄 포함). 한 줄 docstring 은
+  #    짝수라 상태가 안 바뀌고 종전 COMMENT_RE 가 그대로 거른다. 잔여(이름으로): JS 템플릿 리터럴(`) · 일반 문자열 안의 """.
+  body=$(/usr/bin/awk -v q="'''" -v t='"""' '
+    { line=$0; n=gsub(t, "&", line); n+=gsub(q, "&", line)
+      if (indoc) { if (n % 2 == 1) indoc=0; next }
+      if (n % 2 == 1) { indoc=1; next }
+      print NR ":" $0 }' "$f" 2>/dev/null | /usr/bin/grep -Ev "^[0-9]+:${COMMENT_RE#^}" || true)
   v=$(printf '%s\n' "$body" | /usr/bin/grep -Ei "$VERDICT_RE" || true)
   v2=$(printf '%s\n' "$body" | /usr/bin/grep -E "$ENUM_RE" || true)
   e=$(printf '%s\n' "$body" | /usr/bin/grep -E "$EXPOSURE_RE" || true)
@@ -64,7 +72,7 @@ scan_one() { # $1=file → prints hits, returns 0 hit / 1 none / 3 unscannable
 }
 
 selftest() { # known pair — positive must hit, negative must not, comment-only must not
-  local d rc_pos rc_pos2 rc_neg rc_cmt rc_bin rc_irr rc_bnd rc_star fails=0
+  local d rc_pos rc_pos2 rc_neg rc_cmt rc_bin rc_irr rc_bnd rc_star rc_doc rc_doc2 fails=0
   d="$(mktemp -d 2>/dev/null)" || d=""
   [ -n "$d" ] && [ -w "$d" ] || { echo "SELFTEST: ENV-BLOCKED (mktemp -d failed) — result unmeasured, not a pass"; return 3; }
   printf 'export class S {\n  start() {\n    this.app.listen(this.config.port, () => {});\n  }\n}\n' > "$d/pos_exposure.ts"
@@ -75,6 +83,8 @@ selftest() { # known pair — positive must hit, negative must not, comment-only
   printf 'set -e\ngit push origin main \\\n  --force\n' > "$d/pos_irrev.sh"
   printf 'authored_by = "x"\nallowance = 3\nauthor = "y"\n' > "$d/neg_boundary.py"
   printf 'int f(int *allow) {\n  *allow = 1;\n  return 0;\n}\n' > "$d/pos_star.c"
+  printf 'def t():\n    """docstring\n    PASS allow true — fail-safe 계통은 봉인\n    """\n    return 1\n' > "$d/neg_docstring.py"     # pmh-dev #76
+  printf 'def t():\n    """docstring\n    PASS allow true\n    """\n    return Verdict.ALLOW\n' > "$d/pos_after_docstring.py"
   scan_one "$d/pos_exposure.ts" >/dev/null; rc_pos=$?
   scan_one "$d/pos_verdict.py"  >/dev/null; rc_pos2=$?
   scan_one "$d/neg_util.py"     >/dev/null; rc_neg=$?
@@ -83,6 +93,8 @@ selftest() { # known pair — positive must hit, negative must not, comment-only
   scan_one "$d/pos_irrev.sh"    >/dev/null; rc_irr=$?
   scan_one "$d/neg_boundary.py" >/dev/null; rc_bnd=$?
   scan_one "$d/pos_star.c"      >/dev/null; rc_star=$?
+  scan_one "$d/neg_docstring.py" >/dev/null; rc_doc=$?
+  scan_one "$d/pos_after_docstring.py" >/dev/null; rc_doc2=$?
   [ "$rc_pos" -eq 0 ]  && echo "  ✅ known-positive exposure (listen()) → GATE-SHAPED"      || { echo "  ❌ known-positive exposure rc=$rc_pos"; fails=1; }
   [ "$rc_pos2" -eq 0 ] && echo "  ✅ known-positive verdict (ALLOW/DENY) → GATE-SHAPED"    || { echo "  ❌ known-positive verdict rc=$rc_pos2"; fails=1; }
   [ "$rc_neg" -eq 1 ]  && echo "  ✅ known-negative util (docstring 'Pass') → NOT"          || { echo "  ❌ known-negative util rc=$rc_neg"; fails=1; }
@@ -91,6 +103,8 @@ selftest() { # known pair — positive must hit, negative must not, comment-only
   [ "$rc_irr" -eq 0 ]  && echo "  ✅ known-positive irreversible (continued --force line) → GATE-SHAPED" || { echo "  ❌ known-positive irrev rc=$rc_irr"; fails=1; }
   [ "$rc_bnd" -eq 1 ]  && echo "  ✅ boundary: author/authored/allowance → NOT"                || { echo "  ❌ boundary rc=$rc_bnd"; fails=1; }
   [ "$rc_star" -eq 0 ] && echo "  ✅ code line starting with *allow (not a comment) → GATE-SHAPED" || { echo "  ❌ star-code rc=$rc_star"; fails=1; }
+  [ "$rc_doc" -eq 1 ]  && echo "  ✅ multi-line docstring interior ('PASS allow') → NOT (pmh-dev #76)" || { echo "  ❌ docstring interior rc=$rc_doc"; fails=1; }
+  [ "$rc_doc2" -eq 0 ] && echo "  ✅ control: real verdict line AFTER the docstring → GATE-SHAPED"   || { echo "  ❌ after-docstring rc=$rc_doc2"; fails=1; }
   /bin/rm -rf "$d"
   [ "$fails" -eq 0 ] && { echo "SELFTEST: PASS"; return 0; } || { echo "SELFTEST: FAIL"; return 3; }
 }
