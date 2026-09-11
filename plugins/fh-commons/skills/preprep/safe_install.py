@@ -41,6 +41,10 @@ pptx 편집 스크립트가 `assert len(paras) == 3` 에서 죽었는데 **뒤�
 종료코드  0 반영함 · 1 거부(반영 안 함) · 2 판정불가(계기 오류·인자 오류 — PASS 아님)
 """
 import sys, os, re, io, zipfile, hashlib, argparse, posixpath, tempfile
+try:
+    from pptx import Presentation as _Presentation   # 🟥 R3: 손으로 짠 XML 계수는 S 를 세 라운드째 냈다(접두 q:·깨진 XML·External rel).
+except Exception:                                    #    실제 파서를 오라클로 세우고, 내 계수는 그것과 «맞아야 하는» 두 번째 제공자로 둔다.
+    _Presentation = None
 
 REQUIRED = ('[Content_Types].xml', 'ppt/presentation.xml', 'ppt/_rels/presentation.xml.rels')
 SLIDE_RE = re.compile(r'^ppt/slides/slide\d+\.xml$')
@@ -73,6 +77,9 @@ def probe_bytes(data):
         for tag in re.findall(r'<Relationship\b[^>]*>', rels):
             mid = re.search(r'\bId="([^"]+)"', tag); mt = re.search(r'\bTarget="([^"]+)"', tag)
             if mid and mt:
+                if re.search(r'\bTargetMode="External"', tag):
+                    rel_map[mid.group(1)] = '<external:%s>' % mt.group(1)   # R3 S3: 외부 관계는 슬라이드가 아니다
+                    continue
                 rel_map[mid.group(1)] = posixpath.normpath(posixpath.join('ppt', mt.group(1)))
         reached = []
         for rid in rids:
@@ -87,6 +94,17 @@ def probe_bytes(data):
         dup = len(reached) - len(set(reached))
         if dup:
             raise ValueError(f'sldIdLst 가 같은 슬라이드를 {dup}회 중복해 가리킨다')
+    n_struct = (len(files), len(rids), len(set(reached)))
+    # 오라클: python-pptx 가 «읽어서» 세는 장 수 — 깨진 슬라이드 XML·외부 관계·다른 접두는 여기서 예외로 올라온다
+    if _Presentation is None:
+        raise ValueError('python-pptx 가 없다 — 오라클 없이는 판정불가')
+    prs = _Presentation(io.BytesIO(data))
+    n_pptx = 0
+    for sl in prs.slides:
+        _ = len(sl.shapes)          # 슬라이드 부품을 실제로 파싱하게 강제한다(R3 S2)
+        n_pptx += 1
+    if not (n_struct[0] == n_struct[1] == n_struct[2] == n_pptx):
+        raise ValueError(f'구조 계수 파일/목록/도달 {n_struct} 와 python-pptx 장 수 {n_pptx} 가 어긋난다 — 두 제공자가 불일치')
     return files, len(rids), len(set(reached))
 
 
@@ -140,13 +158,17 @@ def main(argv):
         return 1
 
     # ── 기존본과의 비교 ────────────────────────────────────────────────────────
+    # R3 S5: 끊긴 심링크는 exists() 가 False 라 «첫 설치» 로 흘렀다 — 링크 여부는 존재와 무관하게 먼저 본다
+    if os.path.islink(dest):
+        print(f'🟥 정본 경로가 심링크다({dest}) — 반영 안 함')
+        return 1
+    d_hash = None
     if os.path.exists(dest):
-        if os.path.islink(dest):
-            print(f'🟥 정본 경로가 심링크다({dest}) — 반영 안 함')
-            return 1
         try:
             with open(dest, 'rb') as f:
-                d_files, d_listed, d_reached = probe_bytes(f.read())
+                d_bytes = f.read()
+            d_hash = sha_bytes(d_bytes)
+            d_files, d_listed, d_reached = probe_bytes(d_bytes)
         except Exception as e:
             # 🟥 축소 판정을 못 하는데 덮어쓰면 «미측정 → 통과» 다. 거부.
             print(f'🟥 기존본을 못 읽는다 ({type(e).__name__}: {e}) — 축소 여부 판정 불가 — 반영 안 함')
@@ -187,6 +209,13 @@ def main(argv):
             if sha_bytes(f.read()) != src_hash:
                 print('🟥 임시 파일 해시가 다르다 — 쓰기 실패. 정본은 건드리지 않았다')
                 return 1
+        # R3 S4: 검사한 정본이 «지금도 그 정본» 인가 — 그 사이 다른 손이 덮었으면 축소 판정이 낡았다. 중단.
+        if os.path.islink(dest):
+            print('🟥 정본 경로가 그 사이 심링크가 됐다 — 반영 안 함'); return 1
+        now_hash = sha_bytes(open(dest, 'rb').read()) if os.path.exists(dest) else None
+        if now_hash != d_hash:
+            print('🟥 정본이 검사 뒤에 바뀌었다(다른 쓰기) — 판정이 낡았다 — 반영 안 함. 다시 돌려라')
+            return 1
         os.replace(tmp, dest)
     finally:
         if os.path.exists(tmp):

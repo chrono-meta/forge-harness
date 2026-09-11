@@ -79,7 +79,7 @@ def deck_screens_grouped(path):
         # 도형(sp/cxnSp/pic — grpSp 는 자식 sp 로 풀린다) 안에서 문단 단위로 뽑는다.
         #    엔티티(&amp;)는 풀어서 원고의 R&D 와 같은 글자가 되게(codex 09-11).
         # R2 A10: 표(graphicFrame → a:tc) 의 글자도 화면이다 — 빼면 «화면에만» 있는 줄이 조용히 사라진다
-        for sm in re.finditer(r'<p:(sp|cxnSp|pic|graphicFrame)>.*?</p:\1>', x, re.S):
+        for sm in re.finditer(r'<p:(sp|cxnSp|pic|graphicFrame)\b[^>]*>.*?</p:\1>', x, re.S):   # R3 A6
             paras = []
             for pm in re.finditer(r'<a:p\b[^>]*>.*?</a:p>', sm.group(0), re.S):
                 t = html.unescape(''.join(re.findall(r'<a:t>([^<]*)</a:t>', pm.group(0)))).strip()
@@ -114,10 +114,22 @@ def compare(man, deck, threshold=0.60, skip=(), deck_groups=None):
         # 🟥 다중성을 보존한다 — 원고에 «Title» 이 둘이고 덱에 하나면 하나가 짝이 없다(집합은 그걸 지운다)
         # R2 B12: 다중성은 Counter 로 — 같은 문단이 둘이면 둘 다 세고, 둘 다 빼야 한다(list.remove 는 크래시)
         pool = collections.Counter(t for t in D if t)
+        M = [t for t in M if t]
+        # ⓪ R3 B13: «도형 전체 join 이 원고 줄과 정확히 같은» 짝을 먼저 소비한다 — 문단 단위가 먼저 먹으면
+        #    (원고 AB·ABX ↔ 도형 [AB,X]·[A,B]) 옳은 배정이 막힌다.
+        if deck_groups is not None:
+            for paras in deck_groups[i]:
+                ps = [_norm(p) for p in paras if _norm(p)]
+                if len(ps) < 2 or not all(pool[p] > 0 for p in ps):
+                    continue
+                j = ''.join(ps)
+                if j in M:
+                    M.remove(j)
+                    for p in ps:
+                        pool[p] -= 1
+                    joined_hits += 1
         only_m = []
         for t in M:
-            if not t:
-                continue
             if pool[t] > 0:
                 pool[t] -= 1
             else:

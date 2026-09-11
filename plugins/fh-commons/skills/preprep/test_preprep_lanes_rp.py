@@ -384,6 +384,57 @@ def run_safe_install(fx_dir):
         else ng(f'S2 link rc={r.returncode} · planted rc={rc2} same={after == open(src, "rb").read()}\n{r.stdout}{out2}')
     os.remove(planted); os.remove(link_dest)
 
+    # ── R3 (codex 09-11 13:1x) 설치 표면 S5 — python-pptx 오라클 + 두 제공자 합의 ──
+    # S1 접두 q: + 부품 이름 관례 밖 기존본 — 구조 계수 0/0/0 인데 pptx 는 2장 → 불일치 → 거부(0장으로 접히지 않는다)
+    q_dest = os.path.join(fx_dir, 'si_qprefix_dest.pptx')
+    def _q(d):
+        return d.replace(b'<p:', b'<q:').replace(b'</p:', b'</q:').replace(b'xmlns:p=', b'xmlns:q=')
+    qm = dict(ren); qm['ppt/presentation.xml'] = (None, _q)
+    rezip(src, q_dest, qm)
+    shutil.copyfile(q_dest, dest)
+    rc, out = run(small)
+    ok('S1 접두 q:·부품 이름 관례 밖 기존본 → 두 제공자 불일치로 거부(축소 미통과)') if rc == 1 and '불일치' in out or (rc == 1 and '못 읽는다' in out) \
+        else ng(f'q: 기존본 위에 축소가 통과했다 (rc={rc})\n{out}')
+    shutil.copyfile(src, dest)
+    # S2 깨진 슬라이드 XML (zip CRC 는 정상) → pptx 파싱 실패 → 거부
+    broken = os.path.join(fx_dir, 'si_broken_slide.pptx')
+    rezip(src, broken, {names[0]: (None, lambda d: b'<broken')})
+    rc, out = run(broken)
+    ok('S2 깨진 슬라이드 XML(zip 정상) 은 거부된다(pptx 오라클)') if rc == 1 and '못 읽는다' in out else ng(f'깨진 슬라이드가 통과했다 (rc={rc})\n{out}')
+    # S3 TargetMode=External 관계 → 거부
+    ext = os.path.join(fx_dir, 'si_external_rel.pptx')
+    def _ext(d):
+        x = d.decode('utf-8'); m = re.search(r'<Relationship\b[^>]*Target="slides/slide\d+\.xml"[^>]*/>', x).group(0)
+        return x.replace(m, m[:-2] + ' TargetMode="External"/>', 1).encode('utf-8')
+    rezip(src, ext, {'ppt/_rels/presentation.xml.rels': (None, _ext)})
+    rc, out = run(ext)
+    ok('S3 External 관계는 슬라이드가 아니다 — 거부') if rc == 1 else ng(f'External 관계가 통과했다 (rc={rc})\n{out}')
+    # S5 끊긴 심링크 정본 → 거부(첫 설치로 흐르지 않는다)
+    dang = os.path.join(fx_dir, 'si_dangling.pptx')
+    if os.path.lexists(dang): os.remove(dang)
+    os.symlink(os.path.join(fx_dir, 'no_such_target.pptx'), dang)
+    r = subprocess.run([sys.executable, here, src, dang], capture_output=True, text=True)
+    ok('S5 끊긴 심링크 정본은 거부(rc=1) · 링크 그대로') if r.returncode == 1 and os.path.islink(dang) and not os.path.exists(dang) \
+        else ng(f'끊긴 심링크에 설치됐다 (rc={r.returncode} islink={os.path.islink(dang)} exists={os.path.exists(dang)})')
+    os.remove(dang)
+    # S4 검사 뒤 정본이 바뀌면 중단 — 정본 교체를 «후보 파일 자체를 정본으로 두는» 순간에 잡기 어렵다 → 계기 함수로 잰다:
+    #    d_hash 를 검사 후 바꾸는 대신, 정본에 «검사 전» 1장·«설치 직전» 다른 바이트를 쓰는 레이스를 monkeypatch 로 재현
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('safe_install_mod', here); SI = importlib.util.module_from_spec(spec); spec.loader.exec_module(SI)
+    race_dest = os.path.join(fx_dir, 'si_race_dest.pptx'); shutil.copyfile(small, race_dest)
+    _orig_mkstemp = SI.tempfile.mkstemp
+    def _racy_mkstemp(*a, **k):
+        shutil.copyfile(src, race_dest)          # 다른 손이 4장짜리로 덮는다 — 이제 1장 후보는 «축소» 다
+        return _orig_mkstemp(*a, **k)
+    SI.tempfile.mkstemp = _racy_mkstemp
+    import io as _io, contextlib
+    buf = _io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc4 = SI.main(['safe_install.py', small, race_dest])
+    SI.tempfile.mkstemp = _orig_mkstemp
+    ok('S4 검사 뒤 정본이 바뀌면 중단(rc=1) · 4장 정본 보존') if rc4 == 1 and slides(race_dest) == slides(src) and '바뀌었다' in buf.getvalue() \
+        else ng(f'S4 rc={rc4} dest={slides(race_dest)}장\n{buf.getvalue()}')
+
 
 def _mini_deck(path, slides_xml, sld_attr_order='id-first', rel_attr_order='id-first'):
     """최소 pptx. slides_xml = [슬라이드 본문 XML …] (발표 순서). 속성 순서를 골라 «순서에 기댄 정규식»을 잡는다."""
@@ -585,6 +636,74 @@ def run_codex_audit_regressions(fx_dir):
     hits9 = list(LA.ax_mirror(S9, sw9, {}))
     ok('A9 mirror: (28,32) vs (32,28) 가 갈림으로 잡힌다') if len(hits9) == 1 and S9[0][0]['szs'] == (28.0, 32.0) \
         else ng('A9 hits=%d szs=%r/%r' % (len(hits9), S9[0][0]['szs'], S9[0][1]['szs']))
+
+    # ── R3 (codex 09-11 13:1x) 레인 A6–A12 · B13–B14 ──
+    # A6 여는 태그에 속성이 있어도 도형이다 (셋 다)
+    d = os.path.join(fx_dir, 'r3_attr_tag.pptx')
+    _mini_deck(d, [_sp('h', 0, 0, 100, 100, 'Hidden by parser').replace('<p:sp>', '<p:sp useBgFill="1">')])
+    n_g = len(LG.load_slides(d)[0]); n_a = len(LA.load(d)[0][0]); n_s = len(LS.deck_screens(d)[0])
+    ok('A6 <p:sp useBgFill="1"> — geometry %d · attr %d · parity %d (전부 1)' % (n_g, n_a, n_s)) if (n_g, n_a, n_s) == (1, 1, 1) \
+        else ng('A6 속성 있는 여는 태그에서 도형 소실 g=%d a=%d s=%d' % (n_g, n_a, n_s))
+    # A7 geometry: 런이 갈려도 같은 글자면 결박되고 flip 이 보고된다
+    d = os.path.join(fx_dir, 'r3_geo_runs.pptx')
+    split_run = ('<p:sp><p:nvSpPr><p:cNvPr id="1" name="arrow"/></p:nvSpPr><p:spPr><a:xfrm flipH="1"><a:off x="0" y="0"/><a:ext cx="100" cy="100"/></a:xfrm></p:spPr>'
+                 '<p:txBody><a:p><a:r><a:rPr/><a:t>AB</a:t></a:r><a:r><a:rPr/><a:t>CD</a:t></a:r></a:p></p:txBody></p:sp>')
+    _mini_deck(d, [_sp('arrow', 0, 0, 100, 100, 'ABCD'), split_run])
+    l7, st7, _s, _e = LG.p1_lines(LG.load_slides(d), 200000)
+    ok('A7 geometry: AB+CD 런이 ABCD 로 결박되고 뒤집힘 1건 보고') if any('뒤집힘' in l for l in l7) and st7.get('mismatch', 0) == 0 \
+        else ng('A7 lines=%r stats=%r' % (l7, st7))
+    # A8 delta 신원 — 앞 16자가 같은 두 이름을 합치지 않는다
+    db = os.path.join(fx_dir, 'r3_delta_b.pptx'); dc = os.path.join(fx_dir, 'r3_delta_c.pptx')
+    A = 'abcdefghijklmnopA'; B = 'abcdefghijklmnopB'
+    # B 는 멀리(x=5,000,000) 둔다 — 겹치면 P3 인접 후보가 델타에 섞인다(계기가 아니라 픽스처의 문제)
+    _mini_deck(db, [_sp(A, 0, 0, 100, 100, 'x') + _sp(B, 5000000, 0, 100, 100, 'x'), _sp(A, 10, 0, 100, 100, 'x') + _sp(B, 5000000, 0, 100, 100, 'x')])
+    _mini_deck(dc, [_sp(A, 0, 0, 100, 100, 'x') + _sp(B, 5000000, 0, 100, 100, 'x'), _sp(A, 0, 0, 100, 100, 'x') + _sp(B, 5000010, 0, 100, 100, 'x')])
+    new8, gone8, *_ = LG.delta(db, dc, 200000, 63500)
+    ok('A8 delta: 새 1 · 사라짐 1 (이름 전체가 신원)') if len(new8) == 1 and len(gone8) == 1 else ng('A8 new=%d gone=%d' % (len(new8), len(gone8)))
+    # A9 문자열 shapes 선언은 오류 (geometry · attr)
+    _i9, e9 = LG._intent_index([{'slides': [1, 2], 'shapes': 'ab', 'attrs': ['x'], 'why': 'w'}])
+    _i9b, e9b = LA._intent_index([{'axis': 'dash', 'slides': [1], 'shapes': 'ab', 'why': 'w'}])
+    ok('A9 shapes:"ab" → geometry·attr 둘 다 선언 오류(면제 0)') if len(e9) == 1 and not _i9 and len(e9b) == 1 and not _i9b \
+        else ng('A9 geo errs=%r idx=%r · attr errs=%r idx=%r' % (e9, dict(_i9), e9b, dict(_i9b)))
+    # A10 구간: AB@28+CD@32 vs A@28+BCD@32 는 다르다 · ABCD@28 vs AB@28+CD@28 은 같다
+    def _runs(name, x, *runs):
+        return ('<p:sp><p:nvSpPr><p:cNvPr id="1" name="%s"/></p:nvSpPr><p:spPr><a:xfrm><a:off x="%d" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm></p:spPr>'
+                '<p:txBody><a:p>%s</a:p></p:txBody></p:sp>' % (name, x, ''.join('<a:r><a:rPr sz="%d"/><a:t>%s</a:t></a:r>' % (sz, t) for t, sz in runs)))
+    d = os.path.join(fx_dir, 'r3_spans.pptx')
+    # 장 1: t=AB@28+CD@32 · u=ABCD@28 · 장 2: t=A@28+BCD@32 · u=AB@28+CD@28 → echo 는 t 만(1건), u 는 같은 구간이라 0
+    _mini_deck(d, [_runs('t', 0, ('ABCDEFGH', 2800), ('IJKLMNOP', 3200)) + _runs('u', 5000000, ('QRSTUVWXQRSTUVWX', 2800)),
+                   _runs('t', 0, ('ABCDEFG', 2800), ('HIJKLMNOP', 3200)) + _runs('u', 5000000, ('QRSTUVWX', 2800), ('QRSTUVWX', 2800))])
+    S10, sw10 = LA.load(d)
+    sp_t1, sp_u1, sp_t2, sp_u2 = S10[0][0]['spans'], S10[0][1]['spans'], S10[1][0]['spans'], S10[1][1]['spans']
+    e10 = list(LA.ax_echo(S10, sw10, {}))
+    ok('A10 구간: t %s≠%s → echo 1 · u 같은 구간 → 0 (echo 총 %d)' % (sp_t1, sp_t2, len(e10))) \
+        if sp_t1 != sp_t2 and sp_u1 == sp_u2 == ((16, 28.0),) and len(e10) == 1 and 'ABCDEFGH' in e10[0][2] and 'u' not in [n for _s, ns, _l in e10 for n in ns] \
+        else ng('A10 t=%r/%r u=%r/%r echo=%r' % (sp_t1, sp_t2, sp_u1, sp_u2, [l for _s, _n, l in e10]))
+    # A11 정렬 슬롯: [ctr, 기본] vs [기본, ctr] 는 다르다
+    def _paras(name, x, *al):
+        return ('<p:sp><p:nvSpPr><p:cNvPr id="1" name="%s"/></p:nvSpPr><p:spPr><a:xfrm><a:off x="%d" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm></p:spPr><p:txBody>%s</p:txBody></p:sp>'
+                % (name, x, ''.join('<a:p>%s<a:r><a:rPr/><a:t>p</a:t></a:r></a:p>' % ('<a:pPr algn="%s"/>' % a_ if a_ else '') for a_ in al)))
+    d = os.path.join(fx_dir, 'r3_algn_slots.pptx'); _mini_deck(d, [_paras('a', 0, 'ctr', None) + _paras('b', 5000000, None, 'ctr')])
+    S11, sw11 = LA.load(d)
+    ok('A11 정렬 슬롯 %s vs %s → 갈림 1' % (S11[0][0]['algn'], S11[0][1]['algn'])) if S11[0][0]['algn'] != S11[0][1]['algn'] and len(list(LA.ax_algn(S11, sw11, {}))) == 1 \
+        else ng('A11 algn=%r/%r' % (S11[0][0]['algn'], S11[0][1]['algn']))
+    # A12 엔티티 동치: &amp; 와 &#38; 는 같은 문장
+    d = os.path.join(fx_dir, 'r3_entity.pptx')
+    _mini_deck(d, [_sp('e', 0, 0, 100, 100, 'Research &amp; Development', 2800), _sp('e', 0, 0, 100, 100, 'Research &#38; Development', 3200)])
+    S12, sw12 = LA.load(d)
+    ok('A12 &amp;/&#38; 같은 키 → echo 크기 갈림 1') if len(list(LA.ax_echo(S12, sw12, {}))) == 1 else ng('A12 texts=%r' % [S12[0][0]['text'], S12[1][0]['text']])
+    # B13 도형 전체 정확 join 을 먼저 소비 — 원고 AB·ABX ↔ 도형 [AB,X]·[A,B] → 0
+    d = os.path.join(fx_dir, 'r3_greedy.pptx'); _mini_deck(d, [_shape('AB', 'X') + _shape('A', 'B')])
+    a13, w13, st13 = _cmp(_man(['AB', 'ABX']), d)
+    ok('B13 정확 도형 join 우선 → 어긋남 0') if not a13 and not w13 else ng('B13 a=%r w=%r' % (a13, w13))
+    # B14 부분 선언이 완전 선언을 가리지 않는다(순서 무관)
+    d = os.path.join(fx_dir, 'r3_echo_order.pptx')
+    _mini_deck(d, [_sp('label', 0, 0, 100, 100, 'same sentence here', 2800), _sp('label', 0, 0, 100, 100, 'same sentence here', 3200)])
+    decl = [{'axis': 'echo', 'slides': [1], 'shapes': ['label'], 'why': '부분'}, {'axis': 'echo', 'slides': [1, 2], 'shapes': ['label'], 'why': '완전'}]
+    l14a, s14a, e14a, _ = LA.collect(d, {'axes': ['echo'], 'intended': decl})
+    l14b, s14b, e14b, _ = LA.collect(d, {'axes': ['echo'], 'intended': list(reversed(decl))})
+    ok('B14 [부분,완전]·[완전,부분] 둘 다 면제 1 · 후보 0') if len(s14a) == 1 and len(s14b) == 1 and not l14a and not l14b \
+        else ng('B14 a: sup=%d lines=%d · b: sup=%d lines=%d · errs=%r' % (len(s14a), len(l14a), len(s14b), len(l14b), e14a))
 
 
 def run_baseline_delta(fx_dir):

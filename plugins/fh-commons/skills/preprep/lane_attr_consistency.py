@@ -45,7 +45,7 @@
 - **n=1 코퍼스(120장 한국어 덱)에서 벼려졌다.** 다른 덱에 옮기면 거울 허용 오차와
   `min_echo_chars` 를 자기 분포에서 다시 재라.
 """
-import zipfile, re, os, collections
+import zipfile, re, os, collections, html
 
 EMU_IN = 914400.0
 EMU_PT = 12700.0
@@ -78,7 +78,7 @@ def _shapes(z, sn):
     이 레인은 «같은 이름을 짝지어 대조»하는 게 아니라 «한 장 안의 분포»를 보기 때문이다."""
     x = z.read('ppt/slides/slide%d.xml' % sn).decode('utf-8')
     out = []
-    for m in re.finditer(r'<p:(sp|cxnSp|pic)>.*?</p:\1>', x, re.S):
+    for m in re.finditer(r'<p:(sp|cxnSp|pic)\b[^>]*>.*?</p:\1>', x, re.S):   # R3 A6
         b = m.group(0)
         nm = re.search(r'name="([^"]*)"', b)
         o = re.search(r'<a:off x="(-?\d+)" y="(-?\d+)"/><a:ext cx="(-?\d+)" cy="(-?\d+)"', b)
@@ -96,18 +96,36 @@ def _shapes(z, sn):
         b_vis = re.sub(r'<a:endParaRPr\b[^>]*/>|<a:endParaRPr\b.*?</a:endParaRPr>', '', b, flags=re.S)
         # R2 A9: 순서·중복을 보존한다 — 좌 28/32 ↔ 우 32/28 을 «같은 집합» 으로 접지 않는다
         szs = tuple(int(v) / 100 for v in re.findall(r'<a:rPr\b[^>]*\bsz="(\d+)"', b_vis))
+        # R3 A10: 크기는 «글자 구간» 에 붙는다 — 런 단위 튜플은 AB@28+CD@28 을 ABCD@28 과 다르게(오탐),
+        #    AB@28+CD@32 를 A@28+BCD@32 와 같게(미탐) 읽었다. 인접 같은 크기 런을 합친 (글자수, 크기) 구간으로.
+        spans = []
+        for rm in re.finditer(r'<a:r\b[^>]*>(.*?)</a:r>', b_vis, re.S):
+            rb = rm.group(1)
+            szm = re.search(r'<a:rPr\b[^>]*\bsz="(\d+)"', rb)
+            sz = int(szm.group(1)) / 100 if szm else None
+            ln_ = len(html.unescape(''.join(re.findall(r'<a:t>([^<]*)</a:t>', rb))))
+            if ln_ == 0:
+                continue
+            if spans and spans[-1][1] == sz:
+                spans[-1] = (spans[-1][0] + ln_, sz)
+            else:
+                spans.append((ln_, sz))
+        spans = tuple(spans)
         out.append(dict(
             slide=sn, name=nm.group(1),
             x=int(o.group(1)) / EMU_IN, y=int(o.group(2)) / EMU_IN,
             w=int(o.group(3)) / EMU_IN, h=int(o.group(4)) / EMU_IN,
             szs=szs,                                  # () 이면 명시 크기 없음 → UNMEASURED
             # 문단 정렬은 <a:pPr algn> 뿐이다 — <a:ln algn="ctr"> 는 선의 정렬이라 다른 것(codex 09-11)
-            algn=tuple(re.findall(r'<a:pPr\b[^>]*\balgn="([^"]+)"', b)) or ('(기본)',),   # R2 A9: 문단 순서 보존
+            # R3 A11: 문단마다 자리를 남긴다 — 정렬이 없는 문단은 '(기본)' 슬롯(있는 것만 모으면 위치가 지워진다)
+            algn=tuple((re.search(r'<a:pPr\b[^>]*\balgn="([^"]+)"', pm) or [None, '(기본)'])[1]
+                       for pm in re.findall(r'<a:p\b[^>]*>.*?</a:p>', b, re.S)) or ('(기본)',),
+            spans=spans,
             lnw=lnw, dash=dash.group(1) if dash else None,
             # R2 A8: 런 경계는 글자가 아니다 — 문단 안 런은 '' 로, 문단 사이만 ' ' 로 잇는다
             text=re.sub(r'\s+', ' ', ' '.join(
-                ''.join(re.findall(r'<a:t>([^<]*)</a:t>', pm)) for pm in re.findall(r'<a:p\b[^>]*>.*?</a:p>', b, re.S)
-            )).strip()))
+                html.unescape(''.join(re.findall(r'<a:t>([^<]*)</a:t>', pm))) for pm in re.findall(r'<a:p\b[^>]*>.*?</a:p>', b, re.S)
+            )).strip()))   # R3 A12: &amp; 와 &#38; 는 같은 글자
     return out
 
 
@@ -140,6 +158,9 @@ def _intent_index(intended):
         if not sl:
             errs.append(f'attr_consistency.intended[{n}] : slides 가 비었다 — 면제 안 함')
             continue
+        if not isinstance(sl, list) or (e.get('shapes') is not None and not isinstance(e.get('shapes'), list)):
+            errs.append(f'attr_consistency.intended[{n}] : slides·shapes 는 목록이어야 한다 (문자열 "ab" 는 a·b 로 읽힌다) — 면제 안 함')   # R3 A9
+            continue
         if not why:
             errs.append(f'attr_consistency.intended[{n}] : 🟥 why 가 비었다 — 사유 없는 면제는 오류다')
             continue
@@ -148,13 +169,16 @@ def _intent_index(intended):
     return idx, errs
 
 
+def _why_all(idx, axis, slide, names):
+    """이 장·축·도형 집합에 걸리는 «모든» 선언 [(why, n) …]. R3 B14: 첫 선언만 고르면 순서 의존이 된다."""
+    got = sorted(set(names))
+    return [(why, n) for want, why, n in idx.get((axis, int(slide)), []) if not want or list(want) == got]
+
+
 def _why(idx, axis, slide, names):
     """면제는 «축 + 장 + 도형 집합»에 걸린다. `shapes` 를 안 적으면 그 장의 그 축 전체."""
-    got = sorted(set(names))
-    for want, why, n in idx.get((axis, int(slide)), []):
-        if not want or list(want) == got:
-            return why, n
-    return None
+    r = _why_all(idx, axis, slide, names)
+    return r[0] if r else None
 
 
 # ── 축 넷 ────────────────────────────────────────────────────────────────────
@@ -203,7 +227,7 @@ def ax_mirror(S, sw, cfg):
                     continue
                 if abs(ca - cb) < 1.0:                      # 너무 붙어 있으면 쌍이 아니다
                     continue
-                if a['szs'] != b['szs']:
+                if a['spans'] != b['spans']:   # R3 A10
                     yield sn, [a['name'], b['name']], (
                         f"{sn:>3}p [mirror] 좌우 대칭인데 크기가 갈린다 — "
                         f"{a['name'][:12]} {'/'.join(map(str, a['szs']))}pt «{a['text'][:14]}» ↔ "
@@ -226,13 +250,13 @@ def ax_echo(S, sw, cfg):
         slides = sorted({a['slide'] for a in v})
         if len(slides) < 2:
             continue
-        szset = {a['szs'] for a in v}
+        szset = {a['spans'] for a in v}   # R3 A10: 구간 단위
         xset = {round(a['x'], 1) for a in v}
         if len(szset) < 2 and len(xset) < 2:
             continue
         what = []
         if len(szset) > 1:
-            what.append('크기 ' + ' ↔ '.join('/'.join(map(str, s)) + 'pt' for s in sorted(szset)))
+            what.append('크기 ' + ' ↔ '.join('+'.join(f'{n_}자@{sz}pt' for n_, sz in s) for s in sorted(szset, key=str)))
         if len(xset) > 1:
             what.append('x ' + ' ↔ '.join(f'{x}"' for x in sorted(xset)))
         yield tuple(slides), [a['name'] for a in v], (   # R2 A7: 면제는 그룹의 «모든» 장이 선언돼야 걸린다
@@ -261,9 +285,13 @@ def collect(path, cfg):
     for ax in want:
         for slide, names, line in AXIS_FN[ax](S, sw, cfg):
             slides_all = list(slide) if isinstance(slide, tuple) else [slide]
-            hits_all = [_why(idx, ax, sl_, names) for sl_ in slides_all]
-            # 그룹이 여러 장에 걸치면(echo) 전부 같은 선언(n)에 걸려야 면제 — 하나라도 미선언이면 후보로 남긴다
-            hit = hits_all[0] if all(h is not None and h[1] == hits_all[0][1] for h in hits_all) and hits_all[0] is not None else None
+            # 그룹이 여러 장에 걸치면(echo) 전부 «같은 선언 n» 에 걸려야 면제 — R3 B14: 장마다 첫 선언을 고르지 말고
+            # 장 전체에 공통인 n 을 찾는다(부분 선언이 완전 선언을 가리지 않게)
+            per = [dict((n_, w_) for w_, n_ in _why_all(idx, ax, sl_, names)) for sl_ in slides_all]
+            common = set(per[0]) if per else set()
+            for d_ in per[1:]:
+                common &= set(d_)
+            hit = (per[0][min(common)], min(common)) if common else None
             if hit is not None:
                 suppressed.append(line + f'   ← 선언: {hit[0]}')
                 stats['suppressed'] += 1

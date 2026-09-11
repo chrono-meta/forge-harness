@@ -98,13 +98,15 @@ def shapes(z, sn):
     """
     x = z.read('ppt/slides/slide%d.xml' % sn).decode('utf-8')
     out = {}
-    for m in re.finditer(r'<p:(sp|cxnSp)>.*?</p:\1>', x, re.S):
+    for m in re.finditer(r'<p:(sp|cxnSp)\b[^>]*>.*?</p:\1>', x, re.S):   # R3 A6: 여는 태그에 속성이 있어도 도형이다
         b = m.group(0)
         nm = re.search(r'name="([^"]*)"', b)
         o = re.search(r'<a:off x="(-?\d+)" y="(-?\d+)"/><a:ext cx="(-?\d+)" cy="(-?\d+)"', b)
         if not (nm and o):
             continue
-        t = re.sub(r'\s+', ' ', ' '.join(re.findall(r'<a:t>([^<]*)</a:t>', b))).strip()
+        # R3 A7: 런 경계는 글자가 아니다(attr 레인과 같은 규칙) — 문단 안 '' · 문단 사이 ' '
+        t = re.sub(r'\s+', ' ', ' '.join(''.join(re.findall(r'<a:t>([^<]*)</a:t>', pm))
+                                          for pm in re.findall(r'<a:p\b[^>]*>.*?</a:p>', b, re.S))).strip()
         flip = ''.join(k for k in ('H', 'V') if re.search(r'\bflip%s="(1|true)"' % k, b))   # "true" 도 참이다(python-pptx 실물)
         out.setdefault(nm.group(1), []).append(
             (int(o.group(1)), int(o.group(2)), int(o.group(3)), int(o.group(4)), t, flip))
@@ -144,6 +146,9 @@ def _intent_index(intended):
             errs.append(f'geometry.intended[{n}] : 매핑이 아니다 — 면제 안 함')
             continue
         sl, sh = e.get('slides') or [], e.get('shapes') or []
+        if not isinstance(sh, list) or not isinstance(sl, list):
+            errs.append(f'geometry.intended[{n}] : shapes·slides 는 목록이어야 한다 (문자열 "ab" 는 a·b 두 도형으로 읽힌다) — 면제 안 함')   # R3 A9
+            continue
         at, why = e.get('attrs') or [], (e.get('why') or '').strip()
         if len(sl) != 2 or not sh or not at:
             errs.append(f'geometry.intended[{n}] : slides(2개)·shapes·attrs 가 모두 있어야 한다 — 면제 안 함')
@@ -194,7 +199,7 @@ def p1_lines(S, JIT, intended=None):
             # 🟥 뒤집힘은 «근사»가 아니다 — 임계와 무관하게 낸다. 상자가 한 EMU도 안 움직여도
             #    화면에서는 화살표가 반대를 가리킨다.
             if cur[5] != prv[5]:
-                lines.append(f"   {i:>3}p→{i+1:<3}p {nm[:16]:16} 🟥 뒤집힘 "
+                lines.append(f"   {i:>3}p→{i+1:<3}p {nm} 🟥 뒤집힘 "
                              f"«{prv[5] or '없음'}» → «{cur[5] or '없음'}»  "
                              f"— 자리는 그대로여도 방향이 바뀐다  "
                              + ('[이름만 결박]' if weak else f'«{cur[4][:20]}»'))
@@ -205,7 +210,7 @@ def p1_lines(S, JIT, intended=None):
                 continue
             moved_set = frozenset(LAB[k] for k in range(4) if d[k])
             moved = ' · '.join(f'{LAB[k]} {d[k]:+d}' for k in range(4) if d[k])
-            line = (f"   {i:>3}p→{i+1:<3}p {nm[:16]:16} {moved}  ({mx/EMU_PT:.2f}pt)  "
+            line = (f"   {i:>3}p→{i+1:<3}p {nm} {moved}  ({mx/EMU_PT:.2f}pt)  "   # R3 A8: 줄이 곧 신원 — 이름을 자르면 델타가 두 도형을 합친다
                     + ('[이름만 결박 — 글자 없는 도형]' if weak else f'«{cur[4][:26]}»'))
             hit = next(((w, n) for a, w, n in idx.get((i, nm), []) if a == moved_set), None)
             if hit is not None:
@@ -238,7 +243,7 @@ def p3_lines(S, ALN):
                 gap = vb[0] - (va[0] + va[2])  # A 오른쪽 → B 왼쪽
                 if 0 < abs(gap) <= ALN:
                     kind = '겹침' if gap < 0 else '틈'
-                    lines.append(f"   {i+1:>3}p {na[:14]:14} 오른끝 → {nb[:14]:14} 왼끝  "
+                    lines.append(f"   {i+1:>3}p {na} 오른끝 → {nb} 왼끝  "
                                  f"{kind} {abs(gap):>6} EMU ({abs(gap)/EMU_PT:.2f}pt)")
     return lines
 
