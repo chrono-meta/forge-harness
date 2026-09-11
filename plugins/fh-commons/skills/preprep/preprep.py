@@ -10,6 +10,8 @@
   L3 inventory  — 선언된 표면이 실물로 있나 (부재 = UNMEASURED, **0 이 아니다**)
   L4 getput     — 왕복 no-op 컨트롤. **v0.1 미배선 → NOT_WIRED 로 말한다**(거짓 초록 금지)
   L12 diagram   — 타입 JSON 도해가 «지금 JSON» 에서 validate 를 거쳐 구워졌나 (lane_diagram.py · 2026-09-05)
+  L15 font      — 서체가 그 덱의 **배포 템플릿**이 정한 집합을 벗어났나 (lane_font.py · 2026-09-11).
+                  🟥 마스터/레이아웃 상속분을 저자 이탈과 가르는 것이 이 레인의 본체다
 
 exit 0 = 전 레인 통과 · 1 = 발견 있음 · 2 = 계기 오류/미측정으로 판정 불가 (PASS 아님)
 
@@ -776,7 +778,7 @@ def main():
     _mods = sorted(m for m in ('lane_promise', 'lane_adjacent_dup', 'lane_progression',
                                 'lane_slide_relations', 'lane_geometry', 'lane_attr_consistency',
                                 'lane_screen_parity',
-                                'lane_diagram', 'lane_slide_refs')
+                                'lane_diagram', 'lane_slide_refs', 'lane_font')
                    if os.path.exists(os.path.join(HERE, m + '.py')))
     # 🟥 2026-09-04 신설 — `--lane R1,R2,...` 로 **새 모듈 레인(R1-R5·P1/P3)만** 골라 끈다/켠다.
     #    L1~L11 은 아직 이 필터를 안 탄다(usage 줄의 --lane 은 그쪽엔 미배선인 채 남아 있다 —
@@ -869,6 +871,18 @@ def main():
     except Exception as _e:
         notes.append('L13 slide-refs : 계기 미실행 — NOT_WIRED (%s: %s) (0 아님)'
                      % (type(_e).__name__, _e))
+    # L15 font — 서체가 «그 덱의 템플릿이 정한 것»을 벗어났나(2026-09-11 신설).
+    #   🟥 번호는 L15 다 — L14 는 컴패니언 배포본에서 screen-parity 가 이미 쓰고 있었다.
+    #   FH 트리만 훑어서 빈 줄 알았고, 드리프트 앵커(D2)가 그 충돌을 잡았다.
+    #   차단: slides/ 안에서 명시된 서체 중 허용 집합 밖인 것. 🟥 마스터·레이아웃·테마는
+    #   배포 템플릿 상속분이라 해시가 같으면 판정하지 않는다 — 안 가르면 오탐 85건이 나온다
+    #   (실측 2026-09-11). `fonts.template` 미선언이면 그 분리가 불가능하고, 그 사실을 노트에 적는다.
+    try:
+        import lane_font
+        _f15, _n15 = lane_font.scan(cfg, root)
+        findings += _f15; notes += _n15
+    except Exception as _e:
+        notes.append('L15 font : 계기 미실행 — NOT_WIRED (%s: %s) (0 아님)' % (type(_e).__name__, _e))
     # L12 diagram — 타입 JSON 도해가 «지금 JSON» 에서 validate 를 거쳐 구워졌나(2026-09-05 신설).
     #   차단: 선언된 diagram_source 표면에 한해 지문·validate·해상도·viewBox 폭·여백을 본다.
     #   영수증 없는 PNG(손그림)는 UNMEASURED 노트로만 — 0 이 아니다.
