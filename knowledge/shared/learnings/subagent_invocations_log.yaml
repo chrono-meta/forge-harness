@@ -3583,3 +3583,19 @@
   evidence: security-review «No HIGH/MEDIUM»(후보 8 전부 «이미 닫힘» 기각) · #286 APPROVE + B1(규율 셋 잔여 2줄) · codex 라운드는 fh_axes23 마커 두 개(verifier-roster · preprep) 에 건별 기록
   cost: subagent_tokens 187k+181k · codex ≈ 116k(REFUSED)+130k(한도)+60k(한도)+116k+88k+… · 거버너 UNMEASURED
   note: 통합 1항목. 🟥 codex 사이버 필터가 «attack/spoof/bypass» 어휘 프롬프트를 116k 소모 후 거부 — REFUSED 는 0건이 아니다. 어휘 치환 후 같은 diff 로 8건 실적발. 🟥 «순차» 를 어겨 codex 잡 둘을 동시에 돌렸다가 한도(07:41)로 둘 다 죽음 — 이후 preflight 사슬로 순차화. 🟥 대기 사슬이 자기 명령줄을 grep 으로 잡아 영원 대기(«codex exec … model_reasoning» 문자열이 zsh -c 인자에 있다) — 파일 존재/토큰으로 판별해야 한다
+- date: 2026-09-12
+  agent: general-purpose(opus) ×1 — preprep R8 «Opus 팔» (탈상관 A/B 의 같은 계열 팔, 격리 워크트리 wt_r8 @4f738ad, 실행 허용)
+  task: codex R8 과 같은 프롬프트로 5파일 적대 감사. 12 프로브 스크립트 실행(p1~p12), R7 수리 3건 재검(S2·A4·A5 건전) + 1S·4A·7B
+  count: 1
+  outcome: accepted
+  evidence: 거버너가 12 스크립트 중 8개를 재실행해 S1(rc=1 인데 정본 교체+이전 바이트 폐기)·A2(shape_type NotImplementedError 교착)·A3(intended 원소형 TypeError 로 P4 전체 UNMEASURED)·A4(공백 경계·br 오탐, «1자@Nonept» 거짓 증거)·B6(빈 Choice 진리값)·B7·B11 전부 재현. 전건 수리 대상
+  cost: subagent_tokens 251,268 · 15분 · codex 팔은 QUOTA_HIT(UNMEASURED, 03:55 재발송)
+  residual: A/B 판정은 codex 팔이 와야 성립 — 지금 말할 수 있는 것은 «같은 계열 + 실행» 이 0 이 아니라는 것뿐. 자력 적발 0/12
+- date: 2026-09-12
+  agent: general-purpose(opus) ×1 — O_nosent 산문 24런 → typed 주장 추출(부록4 봉인 규칙)
+  task: 답변 본문에서 «위치+결함» 단언을 1건씩, quote 축자 ≥15자 필수, 반증조건·파이프라인 메타 제외, 빈 런은 empty 기록
+  count: 1
+  outcome: accepted
+  evidence: 94 주장 + 빈 7런 · quote 축자 검증 0 실패(에이전트 자체 기계 검증) · 컨트롤(축② 판정 수 대조) |차|>2 = 3런(g03 r1 빈 답 · g04 r3 · h05 r1) → 손대조 대상으로 기록
+  cost: subagent_tokens 183,138 · 5분
+  residual: 추출은 판단이다(F_gen 은 파이프라인 typed) — O 유리 방향 비대칭을 부록 4 잔여로 명시. 추출자 결정 2건(위치별 분할 · 자기부정 항목 제외) 그대로 채택
