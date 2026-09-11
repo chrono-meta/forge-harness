@@ -380,7 +380,10 @@ def main():
         ids_in |= {str(f["member_id"]) for f in findings if f.get("member_id") is not None}
         present = [i for i in seeded if str(i) in ids_in]
         def _row_matches(f, sid):
-            return str(f.get("id")) == str(sid) or str(f.get("member_id")) == str(sid)
+            # R8 #3: a missing alias must not become the string "None" — a legitimate seed named "None"
+            #        matched every alias-less row and reported AMBIGUOUS.
+            mid = f.get("member_id")
+            return str(f.get("id")) == str(sid) or (mid is not None and str(mid) == str(sid))
         # 🟥 A SEED MUST RESOLVE TO EXACTLY ONE ROW. `member_id` is the member's own id and is only
         # locally unique — two fleet members can both emit `1`. Binding the seed to every matching
         # row then makes an unrelated member's drop read as "the control was deleted", and a

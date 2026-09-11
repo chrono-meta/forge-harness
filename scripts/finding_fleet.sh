@@ -131,6 +131,16 @@ try:
 except OSError:
     pass
 own_r1_ids = set(own_r1)
+own_r1_titles = {}   # R8 #1: id -> title, so a DROPPED line citing the title (not the id) still accounts for it
+try:
+    for _l in open(sys.argv[3], encoding="utf-8"):
+        try: _d = json.loads(_l)
+        except Exception: continue
+        if _d.get("producer_family") == os.environ["FAM"] and _d.get("producer_role") == os.environ["ROLE"] and _d.get("id") is not None:
+            own_r1_titles[str(_d["id"])] = str(_d.get("title") or "")
+except OSError:
+    pass
+withdrawn_ids = set()
 all_ids = set()      # R6 #2: every round-1 id of every member — the namespace new r2 ids must avoid
 try:
     for _l in open(sys.argv[3], encoding="utf-8"):
@@ -142,6 +152,7 @@ except OSError:
     pass
 minted = set()
 kept_ids = set()
+resp_titles = []
 fam, role, rc = os.environ["FAM"], os.environ["ROLE"], os.environ["RC"]
 src, dst = sys.argv[1], sys.argv[2]
 n = 0
@@ -152,6 +163,10 @@ with open(dst, "w", encoding="utf-8") as w:
     for line in open(src, encoding="utf-8", errors="replace"):
         line = line.strip().lstrip("\ufeff")
         if line.startswith("DROPPED:"):
+            _body = line[len("DROPPED:"):]
+            for _id, _t in own_r1_titles.items():
+                if _id in _body or (_t and _t in _body):
+                    withdrawn_ids.add(_id)
             # 🟥 saw_bytes 를 여기서 «올리지 않는다». DROPPED 는 2차 계약이 요구한 출력이므로
             #    「계약 밖 응답」의 증거가 될 수 없다 (cross-family #5, codex 2026-09-10).
             # 🟥 "DROPPED: none" 은 삭제가 아니다. 세면 «숨은 수확 손실» 계측이 그 자리에서 거짓이 된다.
@@ -164,7 +179,7 @@ with open(dst, "w", encoding="utf-8") as w:
         if not line.startswith("{"):
             # R7 #1: a line that PARSES as JSON but is not an object (`[…]`, `null`, `true`, `42`) is a malformed
             #        survivor — skipping it as chatter let an array of findings vanish and a `null` certify «all withdrawn».
-            if line[:1] in "[ntf0123456789-":
+            if line[:1] in "[ntf0123456789-\"":   # R8 #2: a double-encoded finding (JSON string) is a malformed survivor too
                 try:
                     _v = json.loads(line)
                     if not isinstance(_v, dict):
@@ -181,6 +196,7 @@ with open(dst, "w", encoding="utf-8") as w:
             bad_json = True   # R6 #1: a schema-invalid finding object is a malformed survivor, not silence
             continue
         n += 1
+        resp_titles.append(str(d.get("title") or ""))
         # R4 #5: a KEPT/CORRECTED finding keeps its round-1 id (identity survives the rewrite);
         #        anything else gets a fresh routing id. Only THIS member's own r1 ids are honoured.
         # R5 #1: the alias (member_id) comes from the TRUSTED round-1 row, never from the response —
@@ -208,6 +224,19 @@ with open(dst, "w", encoding="utf-8") as w:
         d["producer_role"] = role
         d["round"] = 2
         w.write(json.dumps(d, ensure_ascii=False) + "\n")
+# 🟥 R8 #1: 응답이 «성공» 이려면 자기 1차 발견 전부가 설명돼야 한다 — KEEP(id) 되거나 DROPPED 가 id/제목을 부르거나.
+#    «A 만 KEEP» 이 B 를 조용히 지웠고, «DROPPED: B» 한 줄이 A 없이 «전원 철회» 를 냈다. 설명 안 된 1차가 남으면
+#    불완전 응답 → 폴백(ZERO_NONJSON 과 같은 처분). 새 발견(ADD)은 설명 대상이 아니다.
+def _accounted(i):
+    if i in kept_ids or i in withdrawn_ids:
+        return True
+    t = own_r1_titles.get(i, "")
+    # 느슨한 설명: 응답 발견의 제목이 1차 제목을 잇거나(«G1» → «G1 revised») 그 반대 — id 를 안 실은 CORRECT 형태
+    return bool(t) and any((rt.startswith(t) or t.startswith(rt)) and len(rt) >= 2 for rt in resp_titles)
+unaccounted = sorted(i for i in own_r1_ids if not _accounted(i))
+if rc == "0" and not bad_json and unaccounted and (n > 0 or dropped):
+    bad_json = True
+    print(f"FLEET round2 note member={fam}/{role} unaccounted_r1={','.join(unaccounted)} — incomplete response, falling back")
 # 🟥 «전부 스스로 내렸다» 는 정당한 2차 결과이고 «차단» 이 아니다 — 별 값을 준다.
 # R6 #1: a response with ANY malformed survivor is not a trustworthy replacement of the member's round-1 list —
 #         `n > 0` used to win over bad_json, so «valid A + broken B» silently deleted B. bad_json outranks OK.

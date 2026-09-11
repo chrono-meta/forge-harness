@@ -1799,6 +1799,85 @@ else
   no "L110 중복 KEEP" "dup=$_DUP110 rows=$(/usr/bin/grep -c . "$D/f110/findings.jsonl") $(printf '%s' "$O110" | /usr/bin/grep -o 'status=[A-Z_]*' | head -1)"
 fi
 
+# ══ R8 (cross-family, codex 2026-09-11 23:01) — A3 ══
+# L111 🟥 R8 #1: 1차 전부가 설명돼야 성공 — «A 만 KEEP» 과 «DROPPED: B 만» 은 불완전 응답(폴백), «KEEP A + DROPPED B» 는 OK
+cat > $D/r2_keep_a_only.sh <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) echo '{"id":"codex-logic-1","title":"A kept","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+  *) echo '{"title":"A","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}'
+     echo '{"title":"B","file":"x_t.py","line":2,"severity":"B","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+cat > $D/r2_drop_b_only.sh <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) echo 'DROPPED: codex-logic-2 — B withdrawn' ;;
+  *) echo '{"title":"A","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}'
+     echo '{"title":"B","file":"x_t.py","line":2,"severity":"B","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+cat > $D/r2_keep_a_drop_b.sh <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) echo '{"id":"codex-logic-1","title":"A kept","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}'; echo 'DROPPED: codex-logic-2 — B withdrawn' ;;
+  *) echo '{"title":"A","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}'
+     echo '{"title":"B","file":"x_t.py","line":2,"severity":"B","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+chmod +x $D/r2_keep_a_only.sh $D/r2_drop_b_only.sh $D/r2_keep_a_drop_b.sh
+run111(){ printf 'codex|logic|sh %s\n' "$D/$1" > "$D/f111_$2.tbl"; O=$(bash "$FL" "$D/x_t.py" --out "$D/f111_$2" --fleet "$D/f111_$2.tbl" --round2 2>&1); N=$(/usr/bin/grep -c . "$D/f111_$2/findings.jsonl" 2>/dev/null); echo "${N:-0} $(printf '%s' "$O" | /usr/bin/grep -E '^MEMBER2 ' | /usr/bin/grep -o 'status=[A-Z_]*' | head -1)"; }
+R111a=$(run111 r2_keep_a_only.sh a); R111b=$(run111 r2_drop_b_only.sh b); R111c=$(run111 r2_keep_a_drop_b.sh c)
+if [ "$R111a" = "2 status=ZERO_NONJSON" ] && [ "$R111b" = "2 status=ZERO_NONJSON" ] && [ "$R111c" = "1 status=OK" ]; then
+  ok "L111 🟥 R8#1 «A 만 KEEP»·«DROPPED B 만» → 폴백(1차 2건 보존) · «KEEP A + DROPPED B» → OK(1건)"
+else
+  no "L111 1차 전부 설명" "a=[$R111a](2 ZERO_NONJSON) b=[$R111b](2 ZERO_NONJSON) c=[$R111c](1 OK)"
+fi
+# L112 🟥 R8 #2: 이중 인코딩된 발견(JSON 문자열) + DROPPED → 폴백(전원 철회 아님)
+cat > $D/r2_strline.sh <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) echo '"{\"id\":\"codex-logic-1\",\"title\":\"A kept\"}"'; echo 'DROPPED: codex-logic-2 — B withdrawn' ;;
+  *) echo '{"title":"A","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}'
+     echo '{"title":"B","file":"x_t.py","line":2,"severity":"B","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+chmod +x $D/r2_strline.sh; printf 'codex|logic|sh %s\n' "$D/r2_strline.sh" > "$D/f112.tbl"; O112=$(bash "$FL" "$D/x_t.py" --out "$D/f112" --fleet "$D/f112.tbl" --round2 2>&1); N112=$(/usr/bin/grep -c . "$D/f112/findings.jsonl" 2>/dev/null)
+# 둘째 팔 — #2 고유 몫: 1차 A 하나 · 응답 = «새 발견을 JSON 문자열로» + DROPPED A(설명 완료). #1 은 만족되므로
+#    #2 가 없으면 ZERO_SELFDROPPED(«의도된 빈 결과») 로 새 발견이 사라진다 → 문자열 줄은 깨진 생존자, 폴백
+cat > $D/r2_strline_new.sh <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) echo '"{\"title\":\"NEW X\",\"file\":\"x_t.py\",\"line\":9}"'; echo 'DROPPED: codex-logic-1 — A withdrawn' ;;
+  *) echo '{"title":"A","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+chmod +x $D/r2_strline_new.sh; printf 'codex|logic|sh %s\n' "$D/r2_strline_new.sh" > "$D/f112b.tbl"; O112b=$(bash "$FL" "$D/x_t.py" --out "$D/f112b" --fleet "$D/f112b.tbl" --round2 2>&1)
+_S112b=$(printf '%s' "$O112b" | /usr/bin/grep -E '^MEMBER2 ' | /usr/bin/grep -o 'status=[A-Z_]*' | head -1)
+if [ "${N112:-0}" -eq 2 ] && printf '%s' "$O112" | /usr/bin/grep -q 'status=ZERO_NONJSON' && [ ! -f "$D/f112/INTENTIONAL_EMPTY" ] && [ "$_S112b" = "status=ZERO_NONJSON" ] && [ ! -f "$D/f112b/INTENTIONAL_EMPTY" ]; then
+  ok "L112 🟥 R8#2 JSON 문자열 줄 + DROPPED → ZERO_NONJSON 폴백(2건 보존) · 문자열 «새 발견»+완전 철회 → 폴백(SELFDROPPED 아님)"
+else
+  no "L112 JSON 문자열 줄" "n=$N112 $(printf '%s' "$O112" | /usr/bin/grep -o 'status=[A-Z_]*' | head -1) · b=$_S112b(ZERO_NONJSON)"
+fi
+# L113 🟥 R8 #3: 별칭 없는 행은 씨앗 "None" 과 안 맞는다 — 유일한 "None" 별칭은 CLEAN, 별칭 없는 행이 있어도 AMBIGUOUS 아님
+cat > "$D/v113.sh" <<'EOS'
+#!/bin/sh
+cat >/dev/null; echo '{"id":"n1","verdict":"confirmed","why":"x"}'; echo '{"id":"o1","verdict":"confirmed","why":"x"}'
+EOS
+chmod +x "$D/v113.sh"
+printf '{"id":"n1","member_id":"None",%s}\n{"id":"o1",%s}\n' "$_FX" "$_FX" > "$D/f113.jsonl"
+O113=$(python3 "$VERIFY" "$D/f113.jsonl" --out "$D/o113" --verifier "sh $D/v113.sh" --family beta --seeded None 2>&1); R113=$?
+if [ "$R113" -eq 0 ] && printf '%s' "$O113" | /usr/bin/grep -q 'SEEDED declared=1 present=1 .*status=CLEAN'; then
+  ok "L113 🟥 R8#3 씨앗 \"None\" 이 별칭 없는 행과 안 섞인다 → CLEAN rc=0"
+else
+  no "L113 None 별칭" "rc=$R113 '$(printf '%s' "$O113" | /usr/bin/grep SEEDED)'"
+fi
+
 /bin/rm -rf "$D"
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ] && { echo "FAILED=0"; exit 0; } || { echo "FAILED=1"; exit 1; }
