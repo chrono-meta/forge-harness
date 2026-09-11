@@ -141,6 +141,7 @@ try:
 except OSError:
     pass
 minted = set()
+kept_ids = set()
 fam, role, rc = os.environ["FAM"], os.environ["ROLE"], os.environ["RC"]
 src, dst = sys.argv[1], sys.argv[2]
 n = 0
@@ -161,6 +162,15 @@ with open(dst, "w", encoding="utf-8") as w:
         if line:
             saw_bytes = True
         if not line.startswith("{"):
+            # R7 #1: a line that PARSES as JSON but is not an object (`[…]`, `null`, `true`, `42`) is a malformed
+            #        survivor — skipping it as chatter let an array of findings vanish and a `null` certify «all withdrawn».
+            if line[:1] in "[ntf0123456789-":
+                try:
+                    _v = json.loads(line)
+                    if not isinstance(_v, dict):
+                        bad_json = True
+                except json.JSONDecodeError:
+                    pass
             continue
         try:
             d = json.loads(line)
@@ -178,6 +188,10 @@ with open(dst, "w", encoding="utf-8") as w:
         d.pop("member_id", None)
         if str(d.get("id")) in own_r1_ids:
             d["id"] = str(d["id"])
+            if d["id"] in kept_ids:
+                bad_json = True   # R7 #2: the same round-1 id KEPT twice — two rows, one identity → invalid response
+                continue
+            kept_ids.add(d["id"])
             if own_r1[d["id"]] is not None:
                 d["member_id"] = own_r1[d["id"]]
         else:

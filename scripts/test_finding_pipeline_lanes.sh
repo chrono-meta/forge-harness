@@ -1752,6 +1752,53 @@ else
   no "L108 trailing dot" "rc=$R108/$R108b '$(printf '%s' "$E108" | head -1)'"
 fi
 
+# ══ R7 (cross-family, codex 2026-09-11 17:57) — A1·B1 ══
+# L109 🟥 R7 #1: 비-객체 JSON 줄(`[…]` · `null`)은 잡담이 아니라 깨진 생존자 — 배열 응답은 폴백, null+DROPPED 는 «전원 철회» 아님
+cat > $D/r2_array.sh <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) echo '{"id":"codex-logic-1","title":"A kept","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}'; echo '[{"id":"codex-logic-2","title":"B kept"}]' ;;
+  *) echo '{"title":"A","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}'
+     echo '{"title":"B","file":"x_t.py","line":2,"severity":"B","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+cat > $D/r2_null_drop.sh <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) echo 'null'; echo 'DROPPED: B withdrawn' ;;
+  *) echo '{"title":"A","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}'
+     echo '{"title":"B","file":"x_t.py","line":2,"severity":"B","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+chmod +x $D/r2_array.sh $D/r2_null_drop.sh
+printf 'codex|logic|sh %s\n' "$D/r2_array.sh" > "$D/f109.tbl"; O109=$(bash "$FL" "$D/x_t.py" --out "$D/f109" --fleet "$D/f109.tbl" --round2 2>&1)
+printf 'codex|logic|sh %s\n' "$D/r2_null_drop.sh" > "$D/f109b.tbl"; O109b=$(bash "$FL" "$D/x_t.py" --out "$D/f109b" --fleet "$D/f109b.tbl" --round2 2>&1)
+N109=$(/usr/bin/grep -c . "$D/f109/findings.jsonl" 2>/dev/null); N109b=$(/usr/bin/grep -c . "$D/f109b/findings.jsonl" 2>/dev/null)
+if [ "${N109:-0}" -eq 2 ] && printf '%s' "$O109" | /usr/bin/grep -q 'status=ZERO_NONJSON' && [ "${N109b:-0}" -eq 2 ] && printf '%s' "$O109b" | /usr/bin/grep -q 'status=ZERO_NONJSON' && [ ! -f "$D/f109b/INTENTIONAL_EMPTY" ]; then
+  ok "L109 🟥 R7#1 배열 생존자 → ZERO_NONJSON 폴백(2건 보존) · null+DROPPED → 폴백(전원 철회 아님)"
+else
+  no "L109 비객체 줄" "a=$N109(2) $(printf '%s' "$O109" | /usr/bin/grep -o 'status=[A-Z_]*' | head -1) · b=$N109b(2) $(printf '%s' "$O109b" | /usr/bin/grep -o 'status=[A-Z_]*' | head -1)"
+fi
+# L110 🟥 R7 #2: 같은 1차 id 를 두 번 KEEP 한 응답은 무효(폴백) — 한 id 두 행이 verify 를 rc=2 로 죽이지 않는다
+cat > $D/r2_dup_keep.sh <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) echo '{"id":"codex-logic-1","title":"K kept","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}'; echo '{"id":"codex-logic-1","title":"K kept again","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+  *) echo '{"title":"K","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+chmod +x $D/r2_dup_keep.sh
+printf 'codex|logic|sh %s\n' "$D/r2_dup_keep.sh" > "$D/f110.tbl"; O110=$(bash "$FL" "$D/x_t.py" --out "$D/f110" --fleet "$D/f110.tbl" --round2 2>&1)
+_DUP110=$(/usr/bin/grep -o '"id": "[^"]*"' "$D/f110/findings.jsonl" 2>/dev/null | sort | uniq -d | /usr/bin/grep -c .)
+if [ "$_DUP110" -eq 0 ] && [ "$(/usr/bin/grep -c . "$D/f110/findings.jsonl")" -eq 1 ] && printf '%s' "$O110" | /usr/bin/grep -q 'status=ZERO_NONJSON'; then
+  ok "L110 🟥 R7#2 중복 KEEP → ZERO_NONJSON 폴백(1차 1건 유지, 중복 id 0)"
+else
+  no "L110 중복 KEEP" "dup=$_DUP110 rows=$(/usr/bin/grep -c . "$D/f110/findings.jsonl") $(printf '%s' "$O110" | /usr/bin/grep -o 'status=[A-Z_]*' | head -1)"
+fi
+
 /bin/rm -rf "$D"
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ] && { echo "FAILED=0"; exit 0; } || { echo "FAILED=1"; exit 1; }
