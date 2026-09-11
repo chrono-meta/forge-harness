@@ -1046,8 +1046,10 @@ def run_r7_regressions(fx_dir):
                    _runs('L', 914400, [('A  B', 2800)]) + _runs('R', 7620000, [('A B', 2800)])])
     S, sw = LA.load(d)
     m = list(LA.ax_mirror(S, sw, {}))
-    ok('A6 32pt 공백 런 → 거울 후보(1장) %s · 공백 길이만 다름 → 0(2장) · spans %s' % (len(m), S[0][0]['spans'])) \
-        if len(m) == 1 and S[0][0]["spans"] == ((3, 28.0), (1, 32.0), (3, 28.0)) and S[1][0]['spans'] == S[1][1]['spans'] \
+    # 🟥 R8 A4 로 뒤집음: 공백은 크기를 갖지 않는다(앞 글자 상속) — 32pt 공백 «런» 은 이 레인이 못 본다(잔여, 이름으로).
+    #    R7 의 기대값((3,28),(1,32),(3,28) · 후보 1) 은 실물 런 분할에서 오탐을 냈다(Opus R8 A4 실행 프로브).
+    ok('A6(R8 역전) 32pt 공백 런 → 상속 (7,28) · 후보 0 · 공백 길이만 다름 → 0 · spans %s' % (S[0][0]['spans'],)) \
+        if len(m) == 0 and S[0][0]["spans"] == ((7, 28.0),) and S[1][0]['spans'] == S[1][1]['spans'] \
         else ng('A6 m=%r spans=%r/%r' % (m, S[0][0]['spans'], S[1][0]['spans']))
 
     # ── A7 xfrm 없는 자리표시자와 같은 이름 → 살아남은 도형이 dup ──
@@ -1067,6 +1069,170 @@ def run_r7_regressions(fx_dir):
     except Exception as e:
         n8, err = None, e
     ok('B8 xmlns:p = "…" 공백 선언 → 파싱 1 도형') if n8 == 1 else ng('B8 n=%r err=%r' % (n8, err))
+
+
+def run_r8_regressions(fx_dir):
+    """R8 (Opus 팔, 2026-09-12, commit 4f738ad) — 1S·4A·7B 각각 known-pair."""
+    print('\n[2-e] R8 Opus 감사 회귀 — S1 사후검증 실패 rc=3+복원 · A2 분류 실패≠결함 · A3 intended 원소형 · A4 공백/br 상속 · A5 flip 면제 · B6 빈 Choice · B7 절대 Target · B8 ppt/ 밖 r:id · B9 attrs 문자열 · B10 주석 뒤 루트 · B11 배율 미정의 · B12 제목 줄 id')
+    import subprocess, shutil, zipfile, re, io, os as _os
+    import lane_geometry as LG
+    import lane_attr_consistency as LA
+    import lane_screen_parity as LS
+    import oox
+    import safe_install as SI
+    here = os.path.join(HERE, 'safe_install.py')
+    src = os.path.join(fx_dir, 'p1.pptx')
+
+    def rewrite(src_p, dst_p, part, fn, add=None):
+        zi = zipfile.ZipFile(src_p); zo = zipfile.ZipFile(dst_p, 'w', zipfile.ZIP_DEFLATED)
+        for n in zi.namelist():
+            d = zi.read(n)
+            if n == part:
+                d = fn(d)
+            zo.writestr(n, d)
+        for n, d in (add or {}).items():
+            zo.writestr(n, d)
+        zo.close()
+
+    def run(cand, dest, *extra):
+        r = subprocess.run([sys.executable, here, cand, dest, *extra], capture_output=True, text=True)
+        return r.returncode, r.stdout + r.stderr
+
+    # ── S1: os.replace 직후 다른 손이 정본을 건드리면 → rc=3 + 이전 정본 복원 ──
+    dest = os.path.join(fx_dir, 'r8_s1_dest.pptx'); shutil.copyfile(src, dest)
+    prev = open(dest, 'rb').read()
+    small = os.path.join(fx_dir, 'si_small.pptx')      # [2-b] 가 만든 3장 축소본
+    real_replace = _os.replace
+    hit = {'n': 0}
+    def evil_replace(a, b):
+        real_replace(a, b)
+        if b == dest and hit['n'] == 0:          # 첫 교체(설치) 직후 한 번만 — 복원 교체는 건드리지 않는다
+            hit['n'] += 1
+            with open(b, 'ab') as g:
+                g.write(b'corrupt')
+    _os.replace = evil_replace
+    try:
+        import contextlib
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = SI.main(['safe_install', small, dest, '--allow-shrink', '--why', 'test'])
+    finally:
+        _os.replace = real_replace
+    after = open(dest, 'rb').read()
+    ok('S1 사후검증 실패 → rc=%s(3) · 이전 정본 복원 %s' % (rc, after == prev)) if rc == 3 and after == prev \
+        else ng('S1 rc=%r restored=%r\n%s' % (rc, after == prev, buf.getvalue()[-300:]))
+    shutil.copyfile(src, dest)
+    rc, out = run(small, dest, '--allow-shrink', '--why', 'ctrl')
+    ok('S1 컨트롤 — 정상 축소 반영 rc=0') if rc == 0 else ng('S1 ctrl rc=%s\n%s' % (rc, out[-200:]))
+
+    # ── A2: prstGeom 없는 합법 p:sp (python-pptx shape_type NotImplementedError) 는 결함이 아니다 ──
+    noprst = os.path.join(fx_dir, 'r8_noprst.pptx')
+    def _strip_prst(d):
+        x = d.decode('utf-8')
+        x2 = re.sub(r'<a:prstGeom\b.*?</a:prstGeom>', '', x, count=1, flags=re.S)
+        x2 = x2.replace(' txBox="1"', '', 1)     # 자리표시자도 글상자도 아닌 «맨» p:sp — python-pptx 가 분류 못 하는 조합
+        assert x2 != x, 'fixture: prstGeom 없음'
+        return x2.encode('utf-8')
+    rewrite(src, noprst, 'ppt/slides/slide1.xml', _strip_prst)
+    try:
+        from pptx import Presentation as _P
+        sh0 = [s_ for s_ in _P(noprst).slides[0].shapes][0]
+        try:
+            sh0.shape_type; nie = False
+        except NotImplementedError:
+            nie = True
+    except Exception as e:
+        nie = None
+    dest2 = os.path.join(fx_dir, 'r8_a2_dest.pptx'); shutil.copyfile(noprst, dest2)
+    rc_c, out_c = run(noprst, dest2, '--dry-run')          # 후보가 그 도형을 품음
+    rc_d, out_d = run(src, dest2, '--dry-run')             # 정본이 그 도형을 품음 — 교착이던 자리
+    ok('A2 prstGeom 없는 도형(python-pptx NotImplementedError=%s) — 후보 rc=%s · 정본 rc=%s (둘 다 0)' % (nie, rc_c, rc_d)) \
+        if nie and rc_c == 0 and rc_d == 0 else ng('A2 nie=%r cand=%s dest=%s\n%s' % (nie, rc_c, rc_d, (out_c + out_d)[-300:]))
+
+    # ── A3: intended shapes 원소가 섞이면 «그 항목만» 오류, 레인은 산다 ──
+    idx3, errs3 = LA._intent_index([{'axis': 'dash', 'slides': [1], 'shapes': ['A', 1], 'why': 'r'},
+                                    {'axis': 'dash', 'slides': [1], 'shapes': ['B'], 'why': 'r'}])
+    ok('A3 shapes=["A",1] → 오류 1 · 정상 항목은 색인됨 %s' % (dict(idx3),)) \
+        if len(errs3) == 1 and ('dash', 1) in idx3 and len(idx3[('dash', 1)]) == 1 else ng('A3 errs=%r idx=%r' % (errs3, dict(idx3)))
+
+    # ── A4: 런 경계 공백 · <a:br/> 는 크기 차이가 아니다 ──
+    def _runs(name, x, runs):
+        body = ''.join(('<a:br/>' if t == '\n' else '<a:r><a:rPr sz="%d"/><a:t>%s</a:t></a:r>' % (sz, t)) for t, sz in runs)
+        return ('<p:sp><p:nvSpPr><p:cNvPr id="1" name="%s"/></p:nvSpPr><p:spPr><a:xfrm><a:off x="%d" y="914400"/>'
+                '<a:ext cx="3657600" cy="914400"/></a:xfrm></p:spPr><p:txBody><a:p>%s</a:p></p:txBody></p:sp>' % (name, x, body))
+    d = os.path.join(fx_dir, 'r8_ws.pptx')
+    _mini_deck(d, [_runs('T', 914400, [('abc ', 2800), ('def gh', 3200)]), _runs('T', 914400, [('abc', 2800), (' def gh', 3200)]),
+                   _runs('T', 914400, [('abc', 2800), ('\n', None), ('def', 2800)]), _runs('T', 914400, [('abc def', 2800)]),
+                   _runs('T', 914400, [('abc ', 2800), ('def gh', 3600)])])         # 컨트롤: 같은 글자, 진짜 크기 갈림(32→36)
+    S, sw = LA.load(d)
+    e_all = list(LA.ax_echo(S, sw, {}))
+    sp = [S[i][0]['spans'] for i in range(5)]
+    ok('A4 경계 공백 %s=%s · br %s=%s · 컨트롤(진짜 갈림) echo 후보 %d' % (sp[0], sp[1], sp[2], sp[3], len(e_all))) \
+        if sp[0] == sp[1] == ((4, 28.0), (6, 32.0)) and sp[2] == sp[3] == ((7, 28.0),) and sp[4] == ((4, 28.0), (6, 36.0)) and len(e_all) >= 1 and not any('None' in str(l) for l in e_all) \
+        else ng('A4 spans=%r echo=%r' % (sp, e_all))
+
+    # ── A5: 뒤집힘을 attrs:[flip] 로 면제 · 선언 없으면 후보 · 다른 속성만 선언하면 안 맞음 ──
+    Sf = [{'s1': (0, 0, 100, 100, 't', '', None)}, {'s1': (0, 0, 100, 100, 't', 'H', None)}]
+    l_none, _st, sup_none, err_none = LG.p1_lines(Sf, 200000)
+    l_dec, _st, sup_dec, err_dec = LG.p1_lines(Sf, 200000, [{'slides': [1, 2], 'shapes': ['s1'], 'attrs': ['flip'], 'why': '반전 연출'}])
+    l_wrong, _st, sup_w, err_w = LG.p1_lines(Sf, 200000, [{'slides': [1, 2], 'shapes': ['s1'], 'attrs': ['x'], 'why': '엉뚱'}])
+    ok('A5 flip 면제 — 선언 없음 후보 %d · [flip] 선언 후보 %d/면제 %d/오류 %d · [x] 선언 후보 %d/죽은 선언 %d' % (len(l_none), len(l_dec), len(sup_dec), len(err_dec), len(l_wrong), len(err_w))) \
+        if len(l_none) == 1 and len(l_dec) == 0 and len(sup_dec) == 1 and not err_dec and len(l_wrong) == 1 and len(err_w) == 1 \
+        else ng('A5 none=%r dec=%r/%r/%r wrong=%r/%r' % (l_none, l_dec, sup_dec, err_dec, l_wrong, err_w))
+
+    # ── B6: 빈 <mc:Choice/> 는 Fallback 이 아니다 ──
+    alt_empty = ('<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">'
+                 '<mc:Choice Requires="x"/><mc:Fallback>%s</mc:Fallback></mc:AlternateContent>')
+    d = os.path.join(fx_dir, 'r8_alt_empty.pptx'); _mini_deck(d, [alt_empty % _sp('FB', 0, 0, 100, 100, 'b')])
+    n6 = [s_['name'] for s_ in oox.walk_slide(zipfile.ZipFile(d), 1)]
+    ok('B6 빈 Choice → 도형 %s (Fallback 안 걸음)' % (n6,)) if n6 == [] else ng('B6 %r' % (n6,))
+
+    # ── B7: 절대 Target(/ppt/slides/slide1.xml) — slide_order · safe_install 둘 다 ──
+    absr = os.path.join(fx_dir, 'r8_abs.pptx')
+    rewrite(src, absr, 'ppt/_rels/presentation.xml.rels', lambda b: b.replace(b'Target="slides/', b'Target="/ppt/slides/'))
+    assert b'/ppt/slides/' in zipfile.ZipFile(absr).read('ppt/_rels/presentation.xml.rels')
+    try:
+        n7 = len(oox.slide_order(zipfile.ZipFile(absr))); e7 = None
+    except Exception as e:
+        n7, e7 = None, e
+    dest7 = os.path.join(fx_dir, 'r8_b7_dest.pptx'); shutil.copyfile(src, dest7)
+    rc7, out7 = run(absr, dest7, '--dry-run')
+    ok('B7 절대 Target — slide_order %s장 · safe_install rc=%s' % (n7, rc7)) if n7 == 4 and rc7 == 0 else ng('B7 n=%r err=%r rc=%s\n%s' % (n7, e7, rc7, out7[-200:]))
+
+    # ── B8: ppt/ 밖 부품의 끊긴 r:id 도 거부 ──
+    cust = ('<?xml version="1.0"?><Properties xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            '<x r:id="rIdNOPE"/></Properties>').encode()
+    outside = os.path.join(fx_dir, 'r8_outside.pptx'); rewrite(src, outside, None, None, add={'docProps/custom.xml': cust})
+    dest8 = os.path.join(fx_dir, 'r8_b8_dest.pptx'); shutil.copyfile(src, dest8)
+    rc8, out8 = run(outside, dest8, '--dry-run')
+    ok('B8 docProps/custom.xml 의 끊긴 r:id → 거부 rc=%s' % rc8) if rc8 == 1 and '끊긴 참조' in out8 else ng('B8 rc=%s\n%s' % (rc8, out8[-200:]))
+
+    # ── B9: attrs 문자열 → 오류 ──
+    idx9, err9 = LG._intent_index([{'slides': [1, 2], 'shapes': ['s1'], 'attrs': 'xy', 'why': '연출'}])
+    ok('B9 attrs="xy" 문자열 → 오류 1 · 색인 0') if len(err9) == 1 and not idx9 else ng('B9 idx=%r err=%r' % (dict(idx9), err9))
+
+    # ── B10: 루트 앞 주석 안의 태그 ──
+    try:
+        r10 = oox.parse_xml('<!-- <p:ghost/> --><p:sld xmlns:q="Q"><p:x/></p:sld>'); ok10 = oox.local(r10.tag) == 'sld'
+    except Exception as e:
+        ok10 = e
+    ok('B10 주석 뒤 루트 파싱') if ok10 is True else ng('B10 %r' % (ok10,))
+
+    # ── B11: ext 없는 flip 그룹 → geo_unmeasured · geometry 통계 unmeasured ──
+    xf_noext = '<a:xfrm flipH="1"><a:off x="0" y="0"/><a:chOff x="0" y="0"/><a:chExt cx="1000" cy="1000"/></a:xfrm>'
+    grp = '<p:grpSp><p:nvGrpSpPr><p:cNvPr id="9" name="g"/></p:nvGrpSpPr><p:grpSpPr>%s</p:grpSpPr>%s</p:grpSp>' % (xf_noext, _sp('c', 100, 0, 50, 50, 'x'))
+    d = os.path.join(fx_dir, 'r8_noext.pptx'); _mini_deck(d, [grp, grp])
+    w11 = oox.walk_slide(zipfile.ZipFile(d), 1)
+    _l, st11, _s, _e = LG.p1_lines(LG.load_slides(d), 200000)
+    ok('B11 ext 없는 그룹 → geo_unmeasured=%s · geometry stats unmeasured=%s (bound 0)' % (w11[0].get('geo_unmeasured'), st11.get('unmeasured'))) \
+        if w11 and w11[0].get('geo_unmeasured') is True and st11.get('unmeasured') == 1 and not st11.get('bound') else ng('B11 w=%r st=%r' % (w11, st11))
+
+    # ── B12: '·' 없는 제목 — id 는 제목 줄 한 줄 ──
+    man = os.path.join(fx_dir, 'r8_man.md')
+    open(man, 'w', encoding='utf-8').write('### u1 · 첫 단위\n🖥\n한 줄\n🗣 말\n### u2 제목에 점 없음\n🖥\n두 줄\n🗣 말\n')
+    units = LS.manuscript_screens(man)
+    ok('B12 단위 id %s (한 줄, 블록 전체 아님)' % ([u for u, _ in units],)) if len(units) == 2 and '\n' not in units[1][0] and units[1][0].startswith('u2') \
+        else ng('B12 %r' % (units,))
 
 
 def run_baseline_delta(fx_dir):
@@ -1148,6 +1314,7 @@ def main():
     run_safe_install(fx_dir)
     run_codex_audit_regressions(fx_dir)
     run_r7_regressions(fx_dir)
+    run_r8_regressions(fx_dir)
     run_baseline_delta(fx_dir)
     run_real_corpus()
 

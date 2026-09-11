@@ -35,15 +35,13 @@
 """
 import html, re, os, zipfile, difflib, collections
 
-UNIT_RE = re.compile(r'^###\s+(\S+)\s*·', re.M)
-
-
 def manuscript_screens(path):
     """(순서대로의 [(단위id, [화면줄…])], 총 단위 수)"""
     s = open(path, encoding='utf-8').read()
     out = []
     for blk in re.split(r'^###\s+', s, flags=re.M)[1:]:
-        uid = re.split(r'\s*·', blk, 1)[0].strip()
+        head = blk.split('\n', 1)[0]                      # R8 B12: 단위 id 는 «제목 줄» 안에서만 — '·' 가 없으면 블록 전체가 id 가 됐다
+        uid = re.split(r'\s*·', head, 1)[0].strip() or '(제목 없음)'
         # 🖥 는 U+1F5A5 뒤에 변이 선택자(U+FE0F)나 공백이 붙어 올 수 있다 — 그 변이를 못 읽으면
         #    «단위 0» 이 되고 «어긋남 0» 으로 접힌다(codex 09-11)
         m = re.search(r'🖥\ufe0f?[ \t]*\n(.*?)(?=\n🗣|\Z)', blk, re.S)

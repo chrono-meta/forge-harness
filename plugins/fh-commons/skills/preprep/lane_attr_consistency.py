@@ -80,8 +80,10 @@ def _shapes(z, sn):
         paras = s['paras']
         szs = tuple(sz for p in paras for _t, sz in p['runs'] if sz is not None)
         # R3 A10: 크기는 «글자 구간» 에 붙는다 — 인접 같은 크기 런을 합친 (글자수, 크기). R6 B7: 글자수는 공백 정규화 후.
-        # R7 A6: 공백 정규화는 «문단 전체» 에서 한 번 — 런마다 strip 하면 구간 경계가 런 분할에 따라 움직인다.
-        #    글자마다 크기를 붙인 뒤(공백 뭉치는 한 칸, 양끝 제거) 인접 같은 크기를 합친다.
+        # R7 A6 → R8 A4: 공백 정규화는 «문단 전체» 에서 한 번. 🟥 그리고 공백은 자기 크기를 갖지 않는다 —
+        #    «앞 글자» 의 크기를 물려받는다(문단 첫 공백은 뒤 글자). R7 은 공백 런의 크기를 그대로 세어
+        #    "abc "@28+"def"@32 와 "abc"@28+" def"@32(같은 화면) 가 갈렸고, <a:br/> 은 «1자@Nonept» 라는 거짓 증거를 냈다.
+        #    잔여(이름으로): 공백 «만» 다른 크기인 런(codex R7 A6) 은 이 레인이 못 본다 — 그것은 글자 크기가 아니라 «틈 너비» 다.
         spans = []
         for p in paras:
             chars = [(ch, sz) for t, sz in p['runs'] for ch in t]
@@ -90,13 +92,19 @@ def _shapes(z, sn):
                 if ch.isspace():
                     if norm and norm[-1][0] == ' ':
                         continue
-                    norm.append((' ', sz))
+                    norm.append((' ', None))
                 else:
                     norm.append((ch, sz))
             while norm and norm[0][0] == ' ':
                 norm.pop(0)
             while norm and norm[-1][0] == ' ':
                 norm.pop()
+            prev_sz = None
+            for k_, (ch, sz) in enumerate(norm):
+                if ch == ' ':
+                    norm[k_] = (' ', prev_sz if prev_sz is not None else next((z for _c, z in norm[k_ + 1:] if _c != ' '), None))
+                else:
+                    prev_sz = sz
             for ch, sz in norm:
                 if spans and spans[-1][1] == sz:
                     spans[-1] = (spans[-1][0] + 1, sz)
@@ -143,6 +151,9 @@ def _intent_index(intended):
             continue
         if not isinstance(sl, list) or (e.get('shapes') is not None and not isinstance(e.get('shapes'), list)):
             errs.append(f'attr_consistency.intended[{n}] : slides·shapes 는 목록이어야 한다 (문자열 "ab" 는 a·b 로 읽힌다) — 면제 안 함')   # R3 A9
+            continue
+        if e.get('shapes') is not None and not all(isinstance(v, str) for v in e.get('shapes')):
+            errs.append(f'attr_consistency.intended[{n}] : shapes 원소는 문자열이어야 한다 (받은 값 {e.get("shapes")!r}) — 면제 안 함')   # R8 A3: 섞이면 sorted 가 TypeError 로 레인 전체를 UNMEASURED 로 접었다
             continue
         if not all(isinstance(v, int) and not isinstance(v, bool) for v in sl):
             errs.append(f'attr_consistency.intended[{n}] : slides 원소는 정수여야 한다 (받은 값 {sl!r} — 1.9·true 는 1 이 아니다) — 면제 안 함')   # R4 A7

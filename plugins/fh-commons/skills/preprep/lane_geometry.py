@@ -98,7 +98,9 @@ def shapes(z, sn):
     for s in _oox.walk_slide(z, sn):
         if s['kind'] not in ('sp', 'cxnSp') or s['name'] is None or s['x'] is None:
             continue
-        out.setdefault(s['name'], []).append((s['x'], s['y'], s['cx'], s['cy'], _oox.shape_text(s['paras']), s['flip']))
+        # R8 B11(+R7 rot): 회전·배율 미정의 그룹 아래 도형은 좌표를 «값» 으로 쓰지 않는다 — 7번째 칸에 이름을 남긴다
+        unm = 'rot' if s.get('rot_unmeasured') else ('geo' if s.get('geo_unmeasured') else None)
+        out.setdefault(s['name'], []).append((s['x'], s['y'], s['cx'], s['cy'], _oox.shape_text(s['paras']), s['flip'], unm))
     return {k: v[0] for k, v in out.items() if len(v) == 1}
 
 
@@ -112,6 +114,7 @@ def load_slides(path):
 
 
 LAB = ['x', 'y', 'cx', 'cy']
+DECLARABLE = LAB + ['flip']      # R8 A5: 뒤집힘도 선언으로 면제할 수 있어야 한다 — 채널 없는 후보는 영원한 후보다
 
 
 def _intent_index(intended):
@@ -126,7 +129,7 @@ def _intent_index(intended):
             errs.append(f'geometry.intended[{n}] : 매핑이 아니다 — 면제 안 함')
             continue
         sl, sh = e.get('slides') or [], e.get('shapes') or []
-        if not isinstance(sh, list) or not isinstance(sl, list):
+        if not isinstance(sh, list) or not isinstance(sl, list) or not isinstance(e.get('attrs') or [], list):   # R8 B9: attrs 도
             errs.append(f'geometry.intended[{n}] : shapes·slides 는 목록이어야 한다 (문자열 "ab" 는 a·b 두 도형으로 읽힌다) — 면제 안 함')   # R3 A9
             continue
         at, why = e.get('attrs') or [], (e.get('why') or '').strip()
@@ -138,9 +141,9 @@ def _intent_index(intended):
         if not all(isinstance(v, int) and not isinstance(v, bool) for v in sl) or sl[1] != sl[0] + 1:
             errs.append(f'geometry.intended[{n}] : slides 는 연속한 두 정수 [i, i+1] 이어야 한다 (받은 값 {sl!r}) — 면제 안 함')
             continue
-        bad = [a for a in at if a not in LAB]
+        bad = [a for a in at if a not in DECLARABLE]
         if bad:
-            errs.append(f'geometry.intended[{n}] : attrs 에 모르는 이름 {bad} (x·y·cx·cy 뿐) — 면제 안 함')
+            errs.append(f'geometry.intended[{n}] : attrs 에 모르는 이름 {bad} (x·y·cx·cy·flip 뿐) — 면제 안 함')
             continue
         if not why:
             errs.append(f'geometry.intended[{n}] : 🟥 why 가 비었다 — 사유 없는 면제는 오류다, 면제 안 함')
@@ -174,25 +177,35 @@ def p1_lines(S, JIT, intended=None):
             if cur[4] != prv[4]:
                 stats['mismatch'] += 1        # 다른 내용이 같은 이름을 입었다 → 결박 자체가 틀렸다
                 continue
+            if (len(cur) > 6 and cur[6]) or (len(prv) > 6 and prv[6]):
+                stats['unmeasured'] += 1      # R8 B11: 회전/배율 미정의 그룹 아래 — 좌표가 값이 아니다. 0 으로 접지 않는다
+                continue
             weak = not cur[4]                 # 양쪽 다 글자 없음 → 근거가 이름 하나뿐
             stats['name_only' if weak else 'bound'] += 1
             # 🟥 뒤집힘은 «근사»가 아니다 — 임계와 무관하게 낸다. 상자가 한 EMU도 안 움직여도
             #    화면에서는 화살표가 반대를 가리킨다.
-            if cur[5] != prv[5]:
-                lines.append(f"   {i:>3}p→{i+1:<3}p {nm} 🟥 뒤집힘 "
-                             f"«{prv[5] or '없음'}» → «{cur[5] or '없음'}»  "
-                             f"— 자리는 그대로여도 방향이 바뀐다  "
-                             + ('[이름만 결박]' if weak else f'«{cur[4][:20]}»'))
-                stats['flipped'] += 1
+            flip_changed = cur[5] != prv[5]
             d = [cur[k] - prv[k] for k in range(4)]
             mx = max(abs(v) for v in d)
-            if not (0 < mx <= JIT):
+            jitter = 0 < mx <= JIT
+            moved_set = frozenset(LAB[k] for k in range(4) if d[k]) if jitter else frozenset()
+            # R8 A5: 면제 조회 키 = «이 쌍에서 실제로 바뀐 것» — 뒤집힘 + 튐 속성. 선언은 그 집합과 정확히 같아야 한다
+            changed = moved_set | (frozenset(['flip']) if flip_changed else frozenset())
+            hit = next(((w, n) for a, w, n in idx.get((i, nm), []) if a == changed), None) if changed else None
+            if flip_changed:
+                fl = (f"   {i:>3}p→{i+1:<3}p {nm} 🟥 뒤집힘 "
+                      f"«{prv[5] or '없음'}» → «{cur[5] or '없음'}»  "
+                      f"— 자리는 그대로여도 방향이 바뀐다  "
+                      + ('[이름만 결박]' if weak else f'«{cur[4][:20]}»'))
+                stats['flipped'] += 1
+                (suppressed if hit is not None else lines).append(fl + (f"   ← 선언된 연출: {hit[0]}" if hit is not None else ''))
+            if not jitter:
+                if hit is not None:
+                    hits[hit[1]] += 1
                 continue
-            moved_set = frozenset(LAB[k] for k in range(4) if d[k])
             moved = ' · '.join(f'{LAB[k]} {d[k]:+d}' for k in range(4) if d[k])
             line = (f"   {i:>3}p→{i+1:<3}p {nm} {moved}  ({mx/EMU_PT:.2f}pt)  "   # R3 A8: 줄이 곧 신원 — 이름을 자르면 델타가 두 도형을 합친다
                     + ('[이름만 결박 — 글자 없는 도형]' if weak else f'«{cur[4][:26]}»'))
-            hit = next(((w, n) for a, w, n in idx.get((i, nm), []) if a == moved_set), None)
             if hit is not None:
                 suppressed.append(line + f"   ← 선언된 연출: {hit[0]}")
                 hits[hit[1]] += 1
@@ -210,7 +223,7 @@ def p3_lines(S, ALN):
     """adjacency 후보 — A 오른쪽 끝 ↔ B 왼쪽 끝, 세로로 겹치는 띠에 있을 때만."""
     lines = []
     for i, sh in enumerate(S):
-        items = [(nm, v) for nm, v in sh.items() if v[2] > 0 and v[3] > 0]
+        items = [(nm, v) for nm, v in sh.items() if v[2] > 0 and v[3] > 0 and not (len(v) > 6 and v[6])]   # R8 B11
         for a in range(len(items)):
             for b in range(len(items)):
                 if a == b:
@@ -242,6 +255,8 @@ def _fmt_stats(stats):
     s = f"이름+글자 {b}쌍 · 이름만(글자 없는 도형) {w}쌍 · 글자 불일치 {m}쌍 제외"
     if stats.get('flipped'):
         s += f" · 🟥 뒤집힘 {stats['flipped']}건"
+    if stats.get('unmeasured'):
+        s += f" · ⬜ 회전/배율 미정의 그룹 아래 {stats['unmeasured']}쌍 UNMEASURED"
     if not (b or w):
         s += ' — 🟥 결박 0 이면 「튐 없음」이 아니라 UNMEASURED 다'
     return s

@@ -20,7 +20,11 @@ def parse_xml(s):
     """XML 문자열 → 루트. 레인 픽스처처럼 접두가 «선언 없이» 쓰인 문서도 읽는다(루트에 임시 결박)."""
     if isinstance(s, bytes):
         s = s.decode('utf-8', 'replace')
-    m = re.search(r'<([A-Za-z_][\w.-]*:)?[A-Za-z_][\w.-]*\b[^>]*>', s)   # 첫 여는 태그
+    m = None
+    for m_ in re.finditer(r'<!--.*?-->|<\?.*?\?>|<!\[CDATA\[.*?\]\]>|<([A-Za-z_][\w.-]*:)?[A-Za-z_][\w.-]*\b[^>]*>', s, re.S):   # R8 B10: 주석·PI 안의 태그는 루트가 아니다
+        if not m_.group(0).startswith(('<!--', '<?', '<![CDATA[')):
+            m = m_
+            break
     if m:
         head = m.group(0)
         need = [p for p in ('p', 'a', 'r') if not re.search(r'xmlns:%s\s*=' % p, head) and re.search(r'\b%s:' % p, s)]   # R7 B8: `xmlns:p = "…"` 도 선언이다
@@ -67,6 +71,8 @@ def slide_order(z):
         if local(rel.tag) != 'Relationship':
             continue
         tgt = attr(rel, 'Target') or ''
+        if tgt.startswith('/'):                                        # R8 B7: OPC 절대 Target
+            tgt = tgt[len('/ppt/'):] if tgt.startswith('/ppt/') else tgt.lstrip('/')
         m = re.fullmatch(r'slides/slide(\d+)\.xml', tgt)
         if m and attr(rel, 'Id'):
             rels[attr(rel, 'Id')] = int(m.group(1))
@@ -101,12 +107,12 @@ class _T:
     부모 좌표 → 부모에게 같은 절차. 반사를 **각 단계에서** 하므로 바깥 그룹의 flip 이 안쪽 그룹의 내부 배치까지 거울로
     옮긴다(R7 A4 — 초판은 표식만 XOR 하고 자리를 안 옮겨 «이동» 이 사라졌다).
     회전(rot)은 합성하지 않는다 — 사슬 어딘가에 rot 가 있으면 `rot_unmeasured` 로 이름을 남긴다(잔여)."""
-    __slots__ = ('parent', 'ox', 'oy', 'sx', 'sy', 'chx', 'chy', 'gcx', 'gcy', 'own', 'flips', 'rot_unmeasured')
+    __slots__ = ('parent', 'ox', 'oy', 'sx', 'sy', 'chx', 'chy', 'gcx', 'gcy', 'own', 'flips', 'rot_unmeasured', 'geo_unmeasured')
 
     def __init__(self):
         self.parent = None
         self.ox = self.oy = 0; self.sx = self.sy = 1.0; self.chx = self.chy = 0; self.gcx = self.gcy = 0
-        self.own = set(); self.flips = set(); self.rot_unmeasured = False
+        self.own = set(); self.flips = set(); self.rot_unmeasured = False; self.geo_unmeasured = False
 
     def _apply_f(self, x, y, cx, cy):
         if self.parent is None:
@@ -141,6 +147,8 @@ class _T:
                 t.own.add(k)
         t.flips = set(self.flips) ^ t.own
         t.rot_unmeasured = self.rot_unmeasured or attr(xfrm, 'rot') not in (None, '0')
+        # R8 B11: ext 또는 chExt 가 0/부재인 그룹은 배율이 정의되지 않는다 — «안 움직였다» 로 접지 말고 이름으로 남긴다
+        t.geo_unmeasured = self.geo_unmeasured or not (gcx and gcy and ccx and ccy)
         return t
 
 
@@ -193,7 +201,8 @@ def _walk(container, T, out, in_group):
     for el in container:
         kind = local(el.tag)
         if kind == 'AlternateContent':                       # R7 A5: mc:AlternateContent — Choice(없으면 Fallback) 안으로
-            alt = child(el, 'Choice') or child(el, 'Fallback')
+            c = child(el, 'Choice')                          # R8 B6: 빈 <mc:Choice/> 는 «아무것도 안 그림» 이지 Fallback 이 아니다 — Element 진리값은 길이다
+            alt = c if c is not None else child(el, 'Fallback')
             if alt is not None:
                 _walk(alt, T, out, in_group)
             continue
@@ -238,7 +247,7 @@ def _walk(container, T, out, in_group):
         out.append(dict(name=name, kind=kind, x=geo[0] if geo else None, y=geo[1] if geo else None,
                         cx=geo[2] if geo else None, cy=geo[3] if geo else None,
                         flip=''.join(k for k in ('H', 'V') if k in flips), paras=paras,
-                        ln_w=ln_w, dash=dash, in_group=in_group, rot_unmeasured=T.rot_unmeasured))
+                        ln_w=ln_w, dash=dash, in_group=in_group, rot_unmeasured=T.rot_unmeasured, geo_unmeasured=T.geo_unmeasured))
 
 
 def para_texts(paras):

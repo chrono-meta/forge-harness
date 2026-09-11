@@ -39,6 +39,7 @@ pptx 편집 스크립트가 `assert len(paras) == 3` 에서 죽었는데 **뒤�
     python3 safe_install.py <후보> <정본> --allow-shrink --why "38p 삭제"
 
 종료코드  0 반영함 · 1 거부(반영 안 함) · 2 판정불가(계기 오류·인자 오류 — PASS 아님)
+          · 3 🟥 반영«했는데» 사후 검증 실패 — 정본이 바뀌었다. 이전 정본 바이트를 되돌려 놓았는지는 메시지에 적힌다(R8 S1)
 """
 import sys, os, re, io, zipfile, hashlib, argparse, posixpath, tempfile, fcntl
 import xml.etree.ElementTree as _ET
@@ -93,7 +94,8 @@ def probe_bytes(data):
                 if re.search(r'\bTargetMode="External"', tag):
                     rel_map[mid.group(1)] = '<external:%s>' % mt.group(1)   # R3 S3: 외부 관계는 슬라이드가 아니다
                     continue
-                rel_map[mid.group(1)] = posixpath.normpath(posixpath.join('ppt', mt.group(1)))
+                _t = mt.group(1)
+                rel_map[mid.group(1)] = posixpath.normpath(_t.lstrip('/')) if _t.startswith('/') else posixpath.normpath(posixpath.join('ppt', _t))   # R8 B7: 절대 Target
         reached = []
         for rid in rids:
             tgt = rel_map.get(rid)
@@ -115,9 +117,14 @@ def probe_bytes(data):
     n_pptx = 0
     def _walk(shapes):
         for shp in shapes:
-            _ = (shp.shape_id, shp.name, shp.shape_type)   # R4 S1: 도형 하나하나 — nvSpPr 없는 도형은 여기서 죽는다
-            st = shp.shape_type
-            if st is not None and int(st) == 6:            # GROUP — R5 S1: 자식도 같은 검사(그룹 안의 깨진 도형)
+            _ = (shp.shape_id, shp.name, shp.element)      # R4 S1: 도형 하나하나 — nvSpPr 없는 도형은 여기서 죽는다
+            # R8 A2: «분류» 는 검사가 아니다 — prstGeom 없는 합법 p:sp 에 python-pptx 가 NotImplementedError 를 낸다.
+            #    분류 실패는 결함이 아니므로 삼키고, 그룹 판별은 분류가 아니라 태그로 한다.
+            try:
+                _ = shp.shape_type
+            except NotImplementedError:
+                pass
+            if shp.element.tag.rsplit('}', 1)[-1] == 'grpSp':   # GROUP — R5 S1: 자식도 같은 검사(그룹 안의 깨진 도형)
                 _walk(shp.shapes)
     for sl in prs.slides:
         _walk(sl.shapes)
@@ -158,7 +165,7 @@ def _verify_rels_in_zip(names, z_bytes):
             rel_ids[src_part] = ids
         # R7 S2: 부품 XML 이 참조하는 r:… 속성(embed·link·id …)은 전부 그 부품 rels 에 있어야 한다
         for n in names:
-            if not (n.startswith('ppt/') and n.endswith('.xml')) or '/_rels/' in n:
+            if not n.endswith('.xml') or '/_rels/' in n or n == '[Content_Types].xml':   # R8 B8: ppt/ 밖 부품(docProps …)도 r:* 를 쓴다
                 continue
             try:
                 root = _ET.fromstring(z.read(n))
@@ -326,8 +333,21 @@ def _install_locked(ns, cand, dest):
             os.remove(tmp)
     with open(dest, 'rb') as f:
         if sha_bytes(f.read()) != src_hash:
-            print('🟥 반영 후 해시가 다르다 — 정본이 깨졌을 수 있다. 즉시 확인하라')
-            return 1
+            # R8 S1: 여기서 rc=1(«반영 안 함») 을 내면 호출자가 복구를 건너뛴다 — 정본은 이미 바뀌었다.
+            #    이전 정본 바이트가 손에 있으면 되돌려 놓고, 종료코드는 «반영했는데 실패» 로 따로 낸다.
+            if d_hash is not None:
+                try:
+                    fd2, tmp2 = tempfile.mkstemp(prefix=os.path.basename(dest) + '.safe_install.restore.', dir=os.path.dirname(os.path.abspath(dest)) or '.')
+                    with os.fdopen(fd2, 'wb') as g:
+                        g.write(d_bytes)
+                    os.replace(tmp2, dest)
+                    restored = sha_bytes(open(dest, 'rb').read()) == d_hash
+                except Exception as e:
+                    restored = False
+                print(f'🟥 반영 후 해시가 다르다 — 정본이 바뀌었다. 이전 정본({d_hash[:16]}…) 복원 {"성공" if restored else "실패 — 즉시 손으로 확인하라"}')
+            else:
+                print('🟥 반영 후 해시가 다르다 — 첫 설치라 되돌릴 이전 정본이 없다. 즉시 손으로 확인하라')
+            return 3
     print(f'✅ 반영함 — {len(c_files)}장 · sha256 {src_hash[:16]}…')
     return 0
 
