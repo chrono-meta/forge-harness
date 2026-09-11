@@ -33,7 +33,7 @@
 ⚠️ **매핑은 순서다** — 원고 i 번째 단위 ↔ 덱 i 번째 장. 개수가 다르면 통째로 **UNMEASURED**
 로 내고 아무것도 대조하지 않는다(어긋난 채 짝지으면 전량 오탐이 된다).
 """
-import html, re, os, zipfile, difflib
+import html, re, os, zipfile, difflib, collections
 
 UNIT_RE = re.compile(r'^###\s+(\S+)\s*·', re.M)
 
@@ -78,7 +78,8 @@ def deck_screens_grouped(path):
         shapes = []
         # 도형(sp/cxnSp/pic — grpSp 는 자식 sp 로 풀린다) 안에서 문단 단위로 뽑는다.
         #    엔티티(&amp;)는 풀어서 원고의 R&D 와 같은 글자가 되게(codex 09-11).
-        for sm in re.finditer(r'<p:(sp|cxnSp|pic)>.*?</p:\1>', x, re.S):
+        # R2 A10: 표(graphicFrame → a:tc) 의 글자도 화면이다 — 빼면 «화면에만» 있는 줄이 조용히 사라진다
+        for sm in re.finditer(r'<p:(sp|cxnSp|pic|graphicFrame)>.*?</p:\1>', x, re.S):
             paras = []
             for pm in re.finditer(r'<a:p\b[^>]*>.*?</a:p>', sm.group(0), re.S):
                 t = html.unescape(''.join(re.findall(r'<a:t>([^<]*)</a:t>', pm.group(0)))).strip()
@@ -111,40 +112,52 @@ def compare(man, deck, threshold=0.60, skip=(), deck_groups=None):
         M = [_norm(t) for t in mlines]
         D = [_norm(t) for t in deck[i]]
         # 🟥 다중성을 보존한다 — 원고에 «Title» 이 둘이고 덱에 하나면 하나가 짝이 없다(집합은 그걸 지운다)
-        pool = [t for t in D if t]
+        # R2 B12: 다중성은 Counter 로 — 같은 문단이 둘이면 둘 다 세고, 둘 다 빼야 한다(list.remove 는 크래시)
+        pool = collections.Counter(t for t in D if t)
         only_m = []
         for t in M:
             if not t:
                 continue
-            if t in pool:
-                pool.remove(t)
+            if pool[t] > 0:
+                pool[t] -= 1
             else:
                 only_m.append(t)
-        # ② 도형 단위 재대조 — 남은 원고 줄이 «어느 도형의 남은 문단 전부를 이어 붙인 것» 이면 짝이다
+        # ② 도형 단위 재대조 — 남은 원고 줄이 «어느 도형의 «아직 짝 없는» 문단을 이어 붙인 것» 이면 짝이다
+        #    (R2 B11: 1단계에서 일부가 맞았어도 나머지를 잇는다). 🟥 R2 A5: 정확 일치만 «조용히» 사라진다 —
+        #    유사 일치는 문구 차이로 남긴다(맞춘 것과 다른 것을 같은 얼굴로 내지 않는다).
         if deck_groups is not None and only_m:
             for paras in deck_groups[i]:
-                ps = [_norm(p) for p in paras if _norm(p)]
-                if len(ps) < 2 or not all(p in pool for p in ps):
+                avail = collections.Counter(pool)
+                ps = []
+                for p in (_norm(p) for p in paras):
+                    if p and avail[p] > 0:
+                        avail[p] -= 1
+                        ps.append(p)
+                if len(ps) < 2:
                     continue
                 j = ''.join(ps)
                 hit = next((t for t in only_m if t == j), None)
+                fuzzy = None
                 if hit is None:
                     cand = max(((difflib.SequenceMatcher(None, t, j).ratio(), t) for t in only_m), default=(0.0, None))
-                    hit = cand[1] if cand[0] >= threshold else None
+                    if cand[0] >= threshold:
+                        hit, fuzzy = cand[1], cand[0]
                 if hit is not None:
                     only_m.remove(hit)
                     for p in ps:
-                        pool.remove(p)
+                        pool[p] -= 1
                     joined_hits += 1
+                    if fuzzy is not None:
+                        wording.append((i + 1, uid, hit, j, fuzzy))
         for t in only_m:
-            best = max(((difflib.SequenceMatcher(None, t, c).ratio(), c) for c in pool),
+            best = max(((difflib.SequenceMatcher(None, t, c).ratio(), c) for c in pool.elements()),
                        default=(0.0, None))
             if best[0] >= threshold:
-                pool.remove(best[1])
+                pool[best[1]] -= 1
                 wording.append((i + 1, uid, t, best[1], best[0]))
             else:
                 absent.append((i + 1, uid, '원고에만', t))
-        for t in pool:
+        for t in pool.elements():
             absent.append((i + 1, uid, '화면에만', t))
     slides = {a[0] for a in absent} | {w[0] for w in wording}
     return absent, wording, {'units': len(man), 'slides_touched': len(slides), 'joined': joined_hits,

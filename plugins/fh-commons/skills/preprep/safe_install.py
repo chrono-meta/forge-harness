@@ -40,7 +40,7 @@ pptx 편집 스크립트가 `assert len(paras) == 3` 에서 죽었는데 **뒤�
 
 종료코드  0 반영함 · 1 거부(반영 안 함) · 2 판정불가(계기 오류·인자 오류 — PASS 아님)
 """
-import sys, os, re, io, zipfile, hashlib, argparse, posixpath
+import sys, os, re, io, zipfile, hashlib, argparse, posixpath, tempfile
 
 REQUIRED = ('[Content_Types].xml', 'ppt/presentation.xml', 'ppt/_rels/presentation.xml.rels')
 SLIDE_RE = re.compile(r'^ppt/slides/slide\d+\.xml$')
@@ -60,7 +60,13 @@ def probe_bytes(data):
         files = sorted(n for n in names if SLIDE_RE.match(n))
         pres = z.read('ppt/presentation.xml').decode('utf-8', 'replace')
         lst = re.search(r'<p:sldIdLst\b[^>]*>(.*?)</p:sldIdLst>', pres, re.S)
-        rids = re.findall(r'<p:sldId\b[^>]*\br:id="([^"]+)"', lst.group(1)) if lst else []
+        entries = re.findall(r'<p:sldId\b[^>]*>', lst.group(1)) if lst else []
+        rids = []
+        for ent in entries:
+            m = re.search(r'\br:id="([^"]+)"', ent)
+            if not m:
+                raise ValueError(f'sldId 항목에 r:id 가 없다: {ent[:60]}')   # R2 S4: r:id 없는 항목이 계수에서 사라졌다
+            rids.append(m.group(1))
         rels = z.read('ppt/_rels/presentation.xml.rels').decode('utf-8', 'replace')
         # 속성 순서에 안 기댄다 — Id 와 Target 을 각각 뽑는다
         rel_map = {}
@@ -75,6 +81,8 @@ def probe_bytes(data):
                 raise ValueError(f'sldId r:id={rid} 가 rels 에 없다 (끊긴 관계)')
             if tgt not in names:
                 raise ValueError(f'sldId r:id={rid} → {tgt} 가 zip 에 없다')
+            if not SLIDE_RE.match(tgt):
+                raise ValueError(f'sldId r:id={rid} → {tgt} 는 슬라이드 부품이 아니다')   # R2 S3: zip 에 «있다» ≠ 슬라이드다
             reached.append(tgt)
         dup = len(reached) - len(set(reached))
         if dup:
@@ -133,12 +141,19 @@ def main(argv):
 
     # ── 기존본과의 비교 ────────────────────────────────────────────────────────
     if os.path.exists(dest):
+        if os.path.islink(dest):
+            print(f'🟥 정본 경로가 심링크다({dest}) — 반영 안 함')
+            return 1
         try:
             with open(dest, 'rb') as f:
-                d_files, _l, _r = probe_bytes(f.read())
+                d_files, d_listed, d_reached = probe_bytes(f.read())
         except Exception as e:
             # 🟥 축소 판정을 못 하는데 덮어쓰면 «미측정 → 통과» 다. 거부.
             print(f'🟥 기존본을 못 읽는다 ({type(e).__name__}: {e}) — 축소 여부 판정 불가 — 반영 안 함')
+            return 1
+        if not (len(d_files) == d_listed == d_reached):
+            # R2 S1: 기존본이 «구조적으로 안 세어지면»(예: 슬라이드 부품 이름이 관례 밖) 0장으로 접혀 축소가 통과했다
+            print(f'🟥 기존본의 파일 수({len(d_files)}) · 목록 수({d_listed}) · 도달 수({d_reached}) 가 어긋난다 — 축소 여부 판정 불가 — 반영 안 함')
             return 1
         print(f'정본 : {dest}\n       슬라이드 {len(d_files)}개')
         if len(c_files) < len(d_files):
@@ -163,9 +178,10 @@ def main(argv):
 
     # ⑥ 검사한 바이트를 «옆에» 쓰고 확인한 뒤에 정본 자리에 넣는다 — 정본은 마지막 순간까지 무사하다
     src_hash = sha_bytes(data)
-    tmp = dest + '.safe_install.tmp'
+    # R2 S2: 예측 가능한 임시 경로는 미리 심어 둔 심링크가 정본을 가리킬 수 있다 — mkstemp(O_EXCL) 로 «내 것» 만 연다
+    fd, tmp = tempfile.mkstemp(prefix=os.path.basename(dest) + '.safe_install.', dir=os.path.dirname(os.path.abspath(dest)) or '.')
     try:
-        with open(tmp, 'wb') as f:
+        with os.fdopen(fd, 'wb') as f:
             f.write(data)
         with open(tmp, 'rb') as f:
             if sha_bytes(f.read()) != src_hash:

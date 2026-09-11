@@ -94,16 +94,20 @@ def _shapes(z, sn):
         # 🟥 눈에 보이는 런의 크기만 — endParaRPr(문단 끝 메타)는 화면에 없다. 그리고 2850 은 28 이 아니라
         #    28.5 다: 정수 나눗셈이 28 vs 28.5 를 같다고 봤다(codex 09-11).
         b_vis = re.sub(r'<a:endParaRPr\b[^>]*/>|<a:endParaRPr\b.*?</a:endParaRPr>', '', b, flags=re.S)
-        szs = tuple(sorted({int(v) / 100 for v in re.findall(r'<a:rPr\b[^>]*\bsz="(\d+)"', b_vis)}))
+        # R2 A9: 순서·중복을 보존한다 — 좌 28/32 ↔ 우 32/28 을 «같은 집합» 으로 접지 않는다
+        szs = tuple(int(v) / 100 for v in re.findall(r'<a:rPr\b[^>]*\bsz="(\d+)"', b_vis))
         out.append(dict(
             slide=sn, name=nm.group(1),
             x=int(o.group(1)) / EMU_IN, y=int(o.group(2)) / EMU_IN,
             w=int(o.group(3)) / EMU_IN, h=int(o.group(4)) / EMU_IN,
             szs=szs,                                  # () 이면 명시 크기 없음 → UNMEASURED
             # 문단 정렬은 <a:pPr algn> 뿐이다 — <a:ln algn="ctr"> 는 선의 정렬이라 다른 것(codex 09-11)
-            algn=tuple(sorted(set(re.findall(r'<a:pPr\b[^>]*\balgn="([^"]+)"', b)))) or ('(기본)',),
+            algn=tuple(re.findall(r'<a:pPr\b[^>]*\balgn="([^"]+)"', b)) or ('(기본)',),   # R2 A9: 문단 순서 보존
             lnw=lnw, dash=dash.group(1) if dash else None,
-            text=re.sub(r'\s+', ' ', ' '.join(re.findall(r'<a:t>([^<]*)</a:t>', b))).strip()))
+            # R2 A8: 런 경계는 글자가 아니다 — 문단 안 런은 '' 로, 문단 사이만 ' ' 로 잇는다
+            text=re.sub(r'\s+', ' ', ' '.join(
+                ''.join(re.findall(r'<a:t>([^<]*)</a:t>', pm)) for pm in re.findall(r'<a:p\b[^>]*>.*?</a:p>', b, re.S)
+            )).strip()))
     return out
 
 
@@ -231,7 +235,7 @@ def ax_echo(S, sw, cfg):
             what.append('크기 ' + ' ↔ '.join('/'.join(map(str, s)) + 'pt' for s in sorted(szset)))
         if len(xset) > 1:
             what.append('x ' + ' ↔ '.join(f'{x}"' for x in sorted(xset)))
-        yield slides[0], [a['name'] for a in v], (
+        yield tuple(slides), [a['name'] for a in v], (   # R2 A7: 면제는 그룹의 «모든» 장이 선언돼야 걸린다
             f"{'·'.join(str(s) for s in slides[:6])}p [echo]   «{t[:30]}» 가 "
             f"{len(slides)}장에서 갈린다 — {' · '.join(what)}")
 
@@ -256,7 +260,10 @@ def collect(path, cfg):
     hits = collections.Counter()
     for ax in want:
         for slide, names, line in AXIS_FN[ax](S, sw, cfg):
-            hit = _why(idx, ax, slide, names)
+            slides_all = list(slide) if isinstance(slide, tuple) else [slide]
+            hits_all = [_why(idx, ax, sl_, names) for sl_ in slides_all]
+            # 그룹이 여러 장에 걸치면(echo) 전부 같은 선언(n)에 걸려야 면제 — 하나라도 미선언이면 후보로 남긴다
+            hit = hits_all[0] if all(h is not None and h[1] == hits_all[0][1] for h in hits_all) and hits_all[0] is not None else None
             if hit is not None:
                 suppressed.append(line + f'   ← 선언: {hit[0]}')
                 stats['suppressed'] += 1

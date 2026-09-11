@@ -265,12 +265,13 @@ def _fmt_stats(stats):
 def delta(base_path, cur_path, JIT, ALN, intended=None):
     """편집 전/후 델타 — 절대 목록이 아니라 **차이**로 읽는 용법(정확했던 것). P3 는 SYS 를 안 쓰니
     양쪽에 같은 규칙을 그대로 적용하면 된다(계기 자기결함이 P2 전용이라 여기 안 옮는다)."""
-    bl, st_b, sup_b, err = collect_lines(base_path, JIT, ALN, intended)
-    cur, st_c, sup_c, _ = collect_lines(cur_path, JIT, ALN, intended)
+    bl, st_b, sup_b, _err_b = collect_lines(base_path, JIT, ALN, intended)
+    cur, st_c, sup_c, err_c = collect_lines(cur_path, JIT, ALN, intended)
     b = set(bl)
     new = [l for l in cur if l not in b]
     gone = [l for l in bl if l not in set(cur)]
-    return new, gone, st_b, st_c, sup_c, err
+    # R2 A6: 선언 오류(죽은 선언 포함)는 «현재본» 의 것과 같이 나가야 한다 — 기준본 것을 내던 것은 다른 덱의 답
+    return new, gone, st_b, st_c, sup_c, err_c
 
 
 def _resolve(root, p):
