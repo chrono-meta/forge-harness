@@ -67,6 +67,22 @@ def theme_with_fallback(font, fb='SimSun'):
             '</a:fontScheme></a:themeElements></a:theme>')
 
 
+def run_attrs_first(text, font):
+    """`<a:latin pitchFamily="34" charset="0" typeface="X"/>` — PowerPoint 가 실제로 쓰는 형태."""
+    return (f'<a:r><a:rPr lang="ko-KR">'
+            f'<a:latin pitchFamily="34" charset="0" typeface="{font}"/></a:rPr>'
+            f'<a:t>{text}</a:t></a:r>')
+
+
+# 🟥 Target 이 Id 보다 «앞에» 오는 rels. OOXML 이 허용하고, 가정하면 rels 가 통째로 빈 dict 가
+#    되어 장 순서가 파일명 순으로 조용히 대체된다(장 번호 어긋남 → 면제가 엉뚱한 장에 걸린다).
+PRES_RELS_REVERSED = (
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    '<Relationship Target="slides/slide1.xml" Id="rId1" '
+    'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide"/>'
+    '</Relationships>')
+
+
 def para_default_nested(font):
     """`defRPr` 에 **자식이 있는** 형태 — 비탐욕 정규식이 여기서 끊겼다."""
     return ('<a:pPr><a:defRPr sz="1800"><a:solidFill><a:srgbClr val="000000"/></a:solidFill>'
@@ -131,11 +147,11 @@ PRES_RID_FIRST = (
 
 
 def build(path, slide_runs, master_font='Helvetica Neue', theme_font='Brand Display Bold',
-          theme_xml=None, pres_xml=None, layout_xml=None):
+          theme_xml=None, pres_xml=None, layout_xml=None, rels_xml=None):
     with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as z:
         z.writestr('[Content_Types].xml', CT)
         z.writestr('ppt/presentation.xml', pres_xml or PRES)
-        z.writestr('ppt/_rels/presentation.xml.rels', PRES_RELS)
+        z.writestr('ppt/_rels/presentation.xml.rels', rels_xml or PRES_RELS)
         z.writestr('ppt/slides/slide1.xml', slide(slide_runs))
         z.writestr('ppt/slideMasters/slideMaster1.xml', master(master_font))
         z.writestr('ppt/theme/theme1.xml', theme_xml or theme(theme_font))
@@ -295,6 +311,44 @@ def main():
         fr6, _ = lane_font.scan(cfg_for(r6, tpl6, GOOD), d)
         (ok if not [x for x in fr6 if x[1] == 'font-inherited-drift']
          else bad)(f'R2-6 [A]: 갈라진 부품의 «원래» 서체는 이탈 아님 (실제 {len(fr6)}건)')
+
+        # ── R3: 3라운드가 문 넷 ────────────────────────────────────────────────
+        # R3-2 [S] 속성이 typeface 앞에 오면 서체를 통째로 놓쳤다
+        r3a = build(os.path.join(d, 'r3a.pptx'),
+                    [run('본문', 'Brand Display Bold'), run_attrs_first('코드', 'Comic Sans MS')])
+        f3a, _ = lane_font.scan(cfg_for(r3a, tpl, GOOD), d)
+        (ok if [x for x in f3a if 'Comic Sans' in x[3]]
+         else bad)('R3-2 [S]: 속성 순서와 무관하게 서체를 읽는다')
+
+        # R3-4 [S/A] rels 의 Id/Target 순서가 뒤집혀도 장 순서를 읽는다
+        r3b = build(os.path.join(d, 'r3b.pptx'), [run('코드', 'Comic Sans MS')],
+                    rels_xml=PRES_RELS_REVERSED)
+        f3b, n3b = lane_font.scan(cfg_for(r3b, tpl, GOOD), d)
+        (ok if [x for x in f3b if 'slides 1' in x[2]]
+         else bad)(f'R3-4 [S]: rels 속성 순서가 달라도 장 번호가 맞다 ({[x[2] for x in f3b]})')
+
+        # R3-3 [A] 테마 이탈도 선언 면제를 존중한다
+        r3c = build(os.path.join(d, 'r3c.pptx'), [run('본문', 'Brand Display Bold')],
+                    theme_font='Papyrus')
+        f3c, _ = lane_font.scan(
+            cfg_for(r3c, tpl, GOOD, intended=[{'fonts': ['Papyrus'], 'why': '테마 기본값 승인'}]), d)
+        (ok if not [x for x in f3c if x[1] == 'font-theme']
+         else bad)('R3-3 [A]: 테마 이탈도 fonts.intended 를 존중한다')
+
+        # R3-5 [A] 갈라진 부품의 endParaRPr 은 렌더 안 되므로 이탈이 아니다
+        LAY_T2 = ('<p:sldLayout xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" '
+                  'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+                  '<a:latin typeface="Helvetica Neue"/></p:sldLayout>')
+        LAY_D2 = LAY_T2.replace('</p:sldLayout>',
+                                '<a:p><a:endParaRPr><a:latin typeface="Papyrus"/></a:endParaRPr>'
+                                '</a:p></p:sldLayout>')
+        tpl3 = build(os.path.join(d, 'tpl3.pptx'), [run('본문', 'Brand Display Bold')],
+                     layout_xml=LAY_T2)
+        r3d = build(os.path.join(d, 'r3d.pptx'), [run('본문', 'Brand Display Bold')],
+                    layout_xml=LAY_D2)
+        f3d, _ = lane_font.scan(cfg_for(r3d, tpl3, GOOD), d)
+        (ok if not [x for x in f3d if x[1] == 'font-inherited-drift']
+         else bad)('R3-5 [A]: 갈라진 부품의 endParaRPr 은 이탈이 아니다')
 
         # R2-6b 대조 — 갈라진 부품에 «새로» 들인 서체는 여전히 잡힌다 (과교정 방지)
         LAY_NEW = LAY_T.replace('</p:sldLayout>', '<a:latin typeface="Papyrus"/></p:sldLayout>')

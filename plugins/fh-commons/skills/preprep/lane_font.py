@@ -52,6 +52,33 @@ THEME_REF = re.compile(r'^\+(mn|mj)-(lt|ea|cs)$')
 AREA_SLIDES = 'slides'
 AREA_INHERIT = ('slideLayouts', 'slideMasters', 'theme')
 
+
+# 🟥 **속성 순서를 가정하지 않는다 — 이 레인이 세 번 같은 자리에서 샜다.**
+#    `<a:latin typeface="X"/>` 만 가정한 패턴은 `<a:latin pitchFamily="34" charset="0"
+#    typeface="X"/>` 를 **통째로 놓친다**(실측 재현, cross-family R3-2 지목). OOXML 은 속성
+#    순서를 강제하지 않고 PowerPoint 는 실제로 pitchFamily/charset 을 앞에 붙인다.
+#    같은 부류가 `presentation.xml.rels`(Id↔Target 순서)에서도 났다 — 그래서 한 군데씩 깁지
+#    않고 **태그를 먼저 잡고 속성은 그 안에서 따로 읽는** 형태로 통일한다.
+_FONT_TAG = re.compile(r'<a:(latin|ea|cs)\b([^>]*?)/?>')
+_ATTR = re.compile(r'(\w+)="([^"]*)"')
+
+
+def font_refs(xml):
+    """[(슬롯, 서체이름)] — 속성 순서와 무관하게 읽는다. typeface 가 없는 태그는 건너뛴다."""
+    out = []
+    for m in _FONT_TAG.finditer(xml):
+        a = dict(_ATTR.findall(m.group(2)))
+        tf = a.get('typeface')
+        if tf:
+            out.append((m.group(1), tf))
+    return out
+
+
+def font_names(xml):
+    """서체 이름만 (슬롯 무시)."""
+    return [t for _, t in font_refs(xml)]
+
+
 _PART = re.compile(r'ppt/(slides|slideLayouts|slideMasters|theme)/[^/]+\.xml$')
 
 
@@ -67,7 +94,7 @@ def _parts(z):
 
 def _typefaces(z, name):
     """한 부품이 쓰는 서체 이름들 (등장 순서 유지, 중복 포함)."""
-    return re.findall(r'typeface="([^"]*)"', z.read(name).decode('utf-8', 'replace'))
+    return font_names(z.read(name).decode('utf-8', 'replace'))
 
 
 def theme_fonts(z):
@@ -84,9 +111,8 @@ def theme_fonts(z):
                     #    해당 문자가 없으면 렌더되지 않는다 — 넣으면 SimSun·Mangal 이 위반으로
                     #    뜬다(agy 3.8 지적 R2-4. 이 코퍼스엔 폴백이 0개라 재현은 안 됐고,
                     #    Office 기본 테마에는 흔하다 — 미재현을 부재로 읽지 않는다).
-                    got |= {t for _, t in re.findall(
-                        r'<a:(latin|ea|cs) typeface="([^"]*)"', m.group(0))
-                        if t and not THEME_REF.match(t)}
+                    got |= {t for t in font_names(m.group(0))
+                            if t and not THEME_REF.match(t)}
     return got
 
 
@@ -112,9 +138,8 @@ def _occurrences(xml, where):
             #    (agy 지적 A3). «해결이 불가능한 지적»은 지적이 아니라 소음이다.
             if not txt:
                 continue
-            for slot, tf in re.findall(r'<a:(latin|ea|cs) typeface="([^"]*)"', b):
-                if tf:
-                    out.append((tf, slot, txt, 'run' if tag == 'r' else 'field'))
+            for slot, tf in font_refs(b):
+                out.append((tf, slot, txt, 'run' if tag == 'r' else 'field'))
     # ② 단락/목록 기본 서식 — 글자는 상속되므로 렌더된다
     # 🟥 비탐욕 `.*?(?:/>|</a:defRPr>)` 는 **첫 자식 self-closing 태그에서 끊긴다.**
     #    `<a:defRPr sz="1800"><a:solidFill><a:srgbClr val="0"/></a:solidFill>
@@ -122,13 +147,11 @@ def _occurrences(xml, where):
     #    `…<a:srgbClr val="0"/>` 까지만 잡혀 **서체를 조용히 버린다** — 실측 재현,
     #    fail-open 이다(cross-family agy 3.8 지적 R2-1). 자기닫힘과 여는-태그를 갈라 처리한다.
     for m in re.finditer(r'<a:defRPr\b[^>]*/>', xml):
-        for slot, tf in re.findall(r'<a:(latin|ea|cs) typeface="([^"]*)"', m.group(0)):
-            if tf:
-                out.append((tf, slot, '', 'para-default'))
+        for slot, tf in font_refs(m.group(0)):
+            out.append((tf, slot, '', 'para-default'))
     for m in re.finditer(r'<a:defRPr\b[^>]*(?<!/)>(.*?)</a:defRPr>', xml, re.S):
-        for slot, tf in re.findall(r'<a:(latin|ea|cs) typeface="([^"]*)"', m.group(1)):
-            if tf:
-                out.append((tf, slot, '', 'para-default'))
+        for slot, tf in font_refs(m.group(1)):
+            out.append((tf, slot, '', 'para-default'))
     return out
 
 
@@ -136,14 +159,24 @@ def slide_runs(z):
     """[(장 인덱스 1-base, 서체, 슬롯, 텍스트, 출처)] — slides/ 안에서 «명시된» 서체만."""
     try:
         pres = z.read('ppt/presentation.xml').decode('utf-8', 'replace')
-        rels = dict(re.findall(r'Id="([^"]+)"[^>]*Target="slides/slide(\d+)\.xml"',
-                               z.read('ppt/_rels/presentation.xml.rels').decode('utf-8', 'replace')))
+        # 🟥 Id 와 Target 의 순서를 가정하지 않는다 — 가정하면 rels 가 통째로 빈 dict 가 되고
+        #    장 순서가 파일명 순으로 조용히 대체돼 「N번째 장」이 어긋난다(R3-4).
+        rels = {}
+        for rm in re.finditer(r'<Relationship\b[^>]*/?>',
+                              z.read('ppt/_rels/presentation.xml.rels').decode('utf-8', 'replace')):
+            a = dict(_ATTR.findall(rm.group(0)))
+            tgt = re.search(r'slides/slide(\d+)\.xml$', a.get('Target', ''))
+            if a.get('Id') and tgt:
+                rels[a['Id']] = tgt.group(1)
         lst = re.search(r'<p:sldIdLst>.*?</p:sldIdLst>', pres, re.S).group(0)
         # 🟥 속성 순서를 가정하지 않는다. 초판은 `id="\d+" r:id=` 라 **`r:id` 가 앞에 오면
         #    findall 이 빈 리스트를 내고 예외도 안 난다** → order=[] → rows=[] → 0건 PASS.
         #    파서가 조용히 아무것도 못 읽는 형태라 fail-open 이었다(agy 3.8 지적 R2-2).
-        order = [int(rels[r]) for r in re.findall(r'<p:sldId\b[^>]*\br:id="([^"]+)"', lst)
-                 if r in rels]
+        order = []
+        for sm in re.finditer(r'<p:sldId\b[^>]*/?>', lst):
+            rid = dict(_ATTR.findall(sm.group(0))).get('r:id')
+            if rid and rid in rels:
+                order.append(int(rels[rid]))
         if not order:
             raise ValueError('sldIdLst 에서 장 순서를 못 읽었다')
     except Exception:
@@ -178,13 +211,16 @@ def drifted_occurrences(z, drifted, zt=None):
         before = set()
         if zt is not None:
             try:
-                before = {t for _, t in re.findall(
-                    r'<a:(latin|ea|cs) typeface="([^"]*)"',
-                    zt.read(name).decode('utf-8', 'replace'))}
+                before = set(font_names(re.sub(
+                    r'<a:endParaRPr\b[^>]*(?:/>|>.*?</a:endParaRPr>)', '',
+                    zt.read(name).decode('utf-8', 'replace'), flags=re.S)))
             except Exception:
                 before = set()      # 템플릿에 없던 부품(신설) — 전부가 새 것이다
-        for slot, tf in re.findall(r'<a:(latin|ea|cs) typeface="([^"]*)"', x):
-            if tf and not THEME_REF.match(tf) and tf not in before:
+        # 🟥 렌더되지 않는 자리는 여기서도 안 센다 — `_occurrences` 만 엄격하고 여기는
+        #    파일 전체를 훑으면, 빈 문단의 `endParaRPr` 하나로 갈라짐 오탐이 난다(R3-5).
+        scanned = re.sub(r'<a:endParaRPr\b[^>]*(?:/>|>.*?</a:endParaRPr>)', '', x, flags=re.S)
+        for slot, tf in font_refs(scanned):
+            if not THEME_REF.match(tf) and tf not in before:
                 rows.append((area, name, tf, slot))
     return rows
 
@@ -352,7 +388,11 @@ def scan(cfg, root):
                             f'(0 아님. 추출이 죽어도 0 이 나온다)']
 
     # 테마가 허용 밖이면 장마다 지적하지 않고 테마 한 곳만 — 참조는 전부 거기서 온다
-    bad_theme = sorted(t for t in th if not _allowed(t, allow))
+    # 🟥 테마 이탈도 `fonts.intended` 를 존중한다 — 런과 갈라짐은 면제를 보는데 테마만
+    #    안 보면, 같은 선언이 자리에 따라 먹기도 하고 안 먹기도 한다(R3-3).
+    #    슬라이드 번호가 없는 자리이므로 «슬라이드 무관» 선언(slides 미지정)만 적용된다.
+    bad_theme = sorted(t for t in th
+                       if not _allowed(t, allow) and not _exempt(None, t, rules))
     if bad_theme and 'theme' not in inherited_ok:
         findings.append(('built_deck', 'font-theme', 'ppt/theme',
                          ' · '.join(bad_theme),
