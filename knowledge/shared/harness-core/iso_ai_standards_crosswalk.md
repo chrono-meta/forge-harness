@@ -72,7 +72,7 @@ TS 8200), 위험 식별(42119-2 §6) — 이 정확히 **하네스 층**에 산�
 | 42001 A.10 3자 | 3자·고객 관계 | capability composition contract(strictest-wins) · 클러스터 노드 등록 | `capability_composition_contract.md` | 🟡 |
 | 5338 수명주기 | 정의·통제·실행·개선 프로세스 | 인큐베이터(챔버 run) → EMIT → 필드 → harvest-loop 복리 | `harness_incubator_doctrine.md` · `hub_compounding_loop.md` | ✅ |
 | 23894 위험관리 | 식별·분석·평가·처리 | 등급표(🔴🟡🔵🟢) · Surface-Class Degrade Invariant(비가역 = fail-closed) · «미측정≠0」 | `ship_readiness_gate.md` · `CLAUDE.md §Irreversibility Gates` | ✅ 부분 |
-| 20246 리뷰 | 작업산출물 리뷰 프로세스 | cross-family 리뷰 · `/apex-review` · `hub-cc-pr-reviewer` · 콜드리드(`beginner`) | `plugins/fh-meta/agents/*` | ✅ |
+| 20246 리뷰 | 작업산출물 리뷰 프로세스 | cross-family 리뷰 · `/apex-review` · `harness-pr-reviewer` · 콜드리드(`beginner`) | `plugins/fh-meta/agents/*` | ✅ |
 
 ## 3. qasp crosswalk — QA 하네스에게 29119 는 «선택된 활동」 단위로 걸린다
 

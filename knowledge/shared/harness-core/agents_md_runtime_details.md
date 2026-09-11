@@ -178,7 +178,7 @@ is not the headless substitute.
 |---|---|---|
 | **M1 — Full** | No Claude-native dependency | `token-budget-gate`, `asset-placement-gate`, `phantom-quench`, `deep-clarify`, `convergence-loop` |
 | **M2 — Partial** | Core works; native agent/slash-command steps need adaptation | `deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop` |
-| **M3 — Claude-only** | Requires a Claude hook or session-scoped dispatch | `goal-quench`, `hub-cc-pr-reviewer`, `install-wizard` |
+| **M3 — Claude-only** | Requires a Claude hook or session-scoped dispatch | `goal-quench`, `harness-pr-reviewer`, `install-wizard` |
 
 **Which phase needs adapting** — the operative half of the M2/M3 rows. Without this a tier label
 tells a non-Claude runtime that a skill is "partial" but not *where* to intervene, which is the only
@@ -191,7 +191,7 @@ move, these per-skill cues did not, and they existed in no other file.)
 | `harvest-loop` | the git-scan phase | PR auto-proposal |
 | `deliberation` | proposal/synthesis structure | Mediator and Jury agent steps |
 | `goal-quench` (M3) | — | Phase 3 depends on a Claude Stop hook |
-| `hub-cc-pr-reviewer` (M3) | — | needs Claude session context |
+| `harness-pr-reviewer` (M3) | — | needs Claude session context |
 | `install-wizard` (M3) | — | writes `settings.json` |
 
 For M2, replace `Agent(subagent_type=...)` and slash-command steps with `fh-run` or direct

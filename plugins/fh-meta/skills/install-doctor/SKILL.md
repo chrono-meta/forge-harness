@@ -169,7 +169,7 @@ grep -i -n "pr\|pull request\|audit\|review\|weekly" CLAUDE.md 2>/dev/null | hea
 ```
 
 Judgment:
-- Existing PR convention present → possible priority conflict with `hub-cc-pr-reviewer` ⚠️
+- Existing PR convention present → possible priority conflict with `harness-pr-reviewer` ⚠️
 - Existing weekly audit present → possible format conflict with `harvest-loop` ⚠️
 
 ### 2-2. Skill Trigger Conflicts

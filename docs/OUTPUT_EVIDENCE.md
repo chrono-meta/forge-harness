@@ -131,7 +131,7 @@ rather than only synthetic ones.
 
 ```bash
 # active skills. NOTE: the old recipe here grepped each SKILL.md for "redirect stub"/"deprecated"
-# and returned 38, because phantom-quench and hub-cc-pr-reviewer — both live — merely MENTION those
+# and returned 38, because phantom-quench and harness-pr-reviewer — both live — merely MENTION those
 # words in their prose. A body-text grep cannot tell "I am a stub" from "I detect stubs". There are
 # currently zero stubs, so count the files and re-introduce an exclusion only when one exists, in
 # frontmatter where it can be matched on a field rather than on a phrase.

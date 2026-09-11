@@ -1,5 +1,5 @@
 ---
-name: hub-cc-pr-reviewer
+name: harness-pr-reviewer
 description: Checks a submitted PR against the environment's baseline assets (CLAUDE.md, memory, naming, asset classification) and attaches a review comment with a merge recommendation. 5 steps — diff read, 8-area consistency check, self-catch, comment, merge recommendation.
 user-invocable: true
 allowed-tools: ["Bash", "Read", "Grep", "Glob"]
@@ -15,13 +15,21 @@ complexity_routing:
 
 > **Note:** The original developer is the forge-harness original developer (development source + meta-monitoring home). In external user install environments, the install environment user themselves is the baseline integrity gate operator (following path B generalization baseline / `SKILL_detail.md §External User Environment Adaptation Path` §).
 
-# hub-cc-pr-reviewer — Hub Gate Operation Rule Automation
+# harness-pr-reviewer — Hub Gate Operation Rule Automation
 
 When a PR is submitted, checks consistency against the user environment's baseline assets (CLAUDE.md · memory · naming · asset classification) and attaches a review comment. 5-step: diff read → 8-matrix check → self-catch → comment attachment → merge recommendation.
 
 ## Activation Triggers
 
-1. **PR #N input**: *"Review PR #N"* / *"Check PR #N"* / *"hub review"* / *"baseline consistency check"*
+> **Renamed from `hub-cc-pr-reviewer` (2026-09-12, operator decision).** The old name said where it
+> was born (the hub's own cc reviewing its own PRs). What it actually is — measured on qasp/pmh PRs in
+> 2026-09 — is the **standalone doorway through which a field harness verifies its own submitted PR
+> with FH's review capability**. Old-name utterances ("hub-cc-pr-reviewer", "hub review", "hub cc
+> review") still route here; downstream forks that carry the old directory name (PMH) keep working
+> until they sync. No redirect stub directory is shipped (same policy as `phantom-quench`).
+
+
+1. **PR #N input**: *"Review PR #N"* / *"Check PR #N"* / *"hub review"* (old-name alias) / *"harness PR review"* / *"baseline consistency check"*
 2. **Action leader cc → hub sync point**: Large decision area PR catch (following Option C Hybrid policy — memory creation / CLAUDE.md change / CATALOG round / skill v0.x evolution / policy change / asset synergy branch judgment)
 3. **Hub cc session entry**: Layer A auto-read recent external commit catch (auto-discover new PRs)
 

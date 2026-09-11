@@ -742,8 +742,8 @@ FH 전체 지도(2026-09-05) — 5층: ① 무엇인가(문 → 3단 공정 → 
 - cross-family codex R1 21건(S2 = «막는다» 무조건 단정) → 수리 → R2 CONVERGED
 
 **File:** plugins/fh-meta/.claude-plugin/plugin.json + .claude-plugin/marketplace.json
-Hub meta operations tool bundle — 6 skills operation. harvest-loop path B generalization + verify-bidirectional path B generalization + frontier-digest path B generalization + cross-ecosystem-synergy-detection + plugin-recommender + **hub-cc-pr-reviewer** command tower gate operations rule automation (new). 2 agents (hub-persona-auditor + fact-checker). Beta operation — harness core principle *"beta + public release = practical capability obligation"* followed.
-- Decision: hub-cc-pr-reviewer skill newly created — command tower gate operations rule automation + PR lifecycle 4-run accumulated + explicit decision trigger
+Hub meta operations tool bundle — 6 skills operation. harvest-loop path B generalization + verify-bidirectional path B generalization + frontier-digest path B generalization + cross-ecosystem-synergy-detection + plugin-recommender + **harness-pr-reviewer** command tower gate operations rule automation (new). 2 agents (hub-persona-auditor + fact-checker). Beta operation — harness core principle *"beta + public release = practical capability obligation"* followed.
+- Decision: harness-pr-reviewer skill newly created — command tower gate operations rule automation + PR lifecycle 4-run accumulated + explicit decision trigger
 - Decision: plugin level v0.4.3 → v0.5.0 promoted — 6 skills operation baseline + path B generalization baseline followed
 - Decision: 3 skills path B generalization — harvest-loop + verify-bidirectional + frontier-digest / external user environment adaptation path enhanced
 - Note: audit-learnings deprecated from plugin (2026-05-xx) → transferred to hub-internal deprecated/; replaced by harvest-loop
@@ -763,8 +763,8 @@ Self-evolution pipeline — field-harvest → contention-layer → devil/innovat
 Bidirectional self-verification pattern automation — when user's precision counter-argument manifests after AI recommendation/agreement persistence, baseline update channel 6-step processing.
 - Decision: v0.5 official release — accumulated runs + mode C correction catch fully persisted
 
-### 2026-05-08 | fh-meta | hub-cc-pr-reviewer, command-tower-gate-automation, baseline-coherence-check, layer-5-self-catch
-**File:** plugins/fh-meta/skills/hub-cc-pr-reviewer/SKILL.md
+### 2026-05-08 | fh-meta | harness-pr-reviewer, command-tower-gate-automation, baseline-coherence-check, layer-5-self-catch
+**File:** plugins/fh-meta/skills/harness-pr-reviewer/SKILL.md
 Command Tower Gate operations rule automation — on PR input, auto-generates baseline coherence check 8-matrix + Layer 5 self-catch matrix + review comment attachment + admin override merge recommendation.
 - Decision: v0.1 newly created — PR lifecycle 4-run accumulated + explicit decision trigger met
 

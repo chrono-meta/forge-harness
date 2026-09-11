@@ -20,11 +20,11 @@ version: v1.0
 | 1 | plugin-recommender | skill | ✅ | "I want to handle Jira tickets", "recommend a plugin", "how do I visualize DB?" | new/returning | Most natural coverage |
 | 2 | install-wizard | skill | ✅ | "initial setup", "help me configure", "wizard" | new | separate slash-command `/install-wizard` |
 | 3 | context-doctor | skill | ✅ | "wasting tokens", "session is slow", "clean up context", "claudeignore" / auto-triggers if .claudeignore missing | new | Suppress sentinel prevents duplicates |
-| 4 | pr-review-watcher | skill | ✅ | "I submitted a PR", "when will review come", "notify me when review arrives" | returning | Monitoring role — distinct from hub-cc-pr-reviewer |
+| 4 | pr-review-watcher | skill | ✅ | "I submitted a PR", "when will review come", "notify me when review arrives" | returning | Monitoring role — distinct from harness-pr-reviewer |
 | 5 | audit-learnings | skill | ✅ | "summarize what I did this week", "let's do a retrospective", "this looks like a skill candidate", "let's organize repeating patterns" | returning | Auto-proposed when 7+ days elapsed / no bg parallel |
 | 6 | verify-bidirectional | skill | ✅ | "isn't that right?", "something seems off", "any counterarguments?", "double-check" | returning | v0.8 added proactive concern utterances |
 | 7 | sim-conductor | skill | ✅ | "look at this from an external user's perspective" (Area A), "check the harness" (B), "any new ideas?" (C), "code review" (D), "is the output good?" (E) | returning/advanced | Diverse natural language per Area |
-| 8 | hub-cc-pr-reviewer | skill | ✅ | "review PR #N", "check PR #N", "command tower review", "baseline consistency check" | returning | Review role — distinct from pr-review-watcher |
+| 8 | harness-pr-reviewer | skill | ✅ | "review PR #N", "check PR #N", "command tower review", "baseline consistency check" | returning | Review role — distinct from pr-review-watcher |
 | 9 | install-doctor | skill | ✅ | "is it okay to add this plugin?", "any overlaps?", "something's off after install", "check install conflicts" | returning | install-wizard Three-Doctor Loop link |
 | 10 | deliberation | skill | ⚠️ | "battle them out", "make them argue", "clash and synthesize" / agent-composer Wave next-D | returning/advanced | New v0.1 — "battle"/"argue" vocabulary needed; "look at this decision from multiple angles" may be more natural |
 | 11 | harness-doctor | skill | ⚠️ | "harness diagnosis", "check harness structure", "structure audit" | returning | Requires "harness" vocabulary; cannot trigger without it |
@@ -65,7 +65,7 @@ version: v1.0
 | plugin-recommender | S | Most likely needed first by new users — natural to link at end of install-wizard flow |
 | verify-bidirectional | R | Discoverable via natural utterance by returning users; no need to introduce right after install |
 | pr-review-watcher | R | Discoverable via natural utterance at PR creation stage |
-| hub-cc-pr-reviewer | R | Discoverable via natural utterance at PR creation stage |
+| harness-pr-reviewer | R | Discoverable via natural utterance at PR creation stage |
 | deliberation | S | New skill (v0.1) — even a one-line intro in install-wizard would secure a discovery path |
 | agent-composer | S | Core entry point for advanced users but introduced nowhere |
 | meta-prompt-builder | R | Post-agent-composer stage — natural utterance possible after prerequisite skill is found |
@@ -109,7 +109,7 @@ Triggered via natural utterance:
   └─ audit-learnings        ("summarize what I did this week")
   └─ verify-bidirectional   ("is that right?", "any counterarguments?")
   └─ pr-review-watcher      ("I submitted a PR", "when will review come?")
-  └─ hub-cc-pr-reviewer     ("review PR #N")
+  └─ harness-pr-reviewer     ("review PR #N")
   └─ install-doctor         ("any overlaps?")
   └─ sim-conductor          ("look from an external user's perspective")
 
@@ -196,7 +196,7 @@ Discovered via agents:
 
 | Verdict | Count | Assets |
 |:---:|:---:|---|
-| ✅ Natural utterance possible | 9 | plugin-recommender, install-wizard, context-doctor, pr-review-watcher, audit-learnings, verify-bidirectional, sim-conductor, hub-cc-pr-reviewer, install-doctor |
+| ✅ Natural utterance possible | 9 | plugin-recommender, install-wizard, context-doctor, pr-review-watcher, audit-learnings, verify-bidirectional, sim-conductor, harness-pr-reviewer, install-doctor |
 | ⚠️ Internal vocabulary dependent | 9 | deliberation, harness-doctor, marketplace-gate, agent-composer, field-harvest, asset-placement-gate, frontier-status-summary, cross-ecosystem-synergy-detection, meta-prompt-builder |
 | ❌ No trigger path | 3 | hub-persona-auditor, fact-checker, persona-innovator |
 

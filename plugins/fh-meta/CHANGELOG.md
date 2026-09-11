@@ -1,5 +1,9 @@
 # forge-harness (fh-meta) Changelog
 
+### [Unreleased] — harness-pr-reviewer: 이름과 Axis 2·3 강제 배선
+- **RENAME** `hub-cc-pr-reviewer` → `harness-pr-reviewer` (운영자 결정 2026-09-12): 실제 쓰임이 «현장 하네스가 자기 PR 을 FH 리뷰 능력으로 검증하는 standalone 창구» 라서. 옛 이름 발화·참조는 그대로 라우팅(별칭), 리다이렉트 스텁 없음(phantom-quench 선례).
+- Step 3.5 «Axis 2·3 의무 디스패치 레인» — 트리거 3항(8-matrix ❌ · load-bearing 경로 grep · 머지 권고 요청)을 PR 에서 계산, Axis 2 = auto-decorrelation 재사용 + `crossfamily:` 닫힌 enum, Axis 3 = phantom-quench(N/A 는 `--name-only` 로), 판정형 질문 reps≥3. Self-Catch 는 «판정이 아니라 cue». 플로어 sim: 현행 0/3 → 수정 3/3 (pmh-dev #77).
+
 ### [3.2.0] — 2026-09-09 — 판정 파이프라인이 실제로 돌고, 축에 이름이 붙었다
 
 **BREAKING (gate):** `scripts/**/*.py` 가 이제 HEAVY 다 — 마커 없는 파이썬 단독 커밋이 막힌다.

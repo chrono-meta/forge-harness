@@ -7,10 +7,10 @@ model: sonnet
 version: 0.1
 status: deprecated
 deprecated_date: 2026-05-18
-deprecated_reason: Can be directly replaced by gh pr view --json reviews. No real-world usage evidence. hub-cc-pr-reviewer is sufficient.
+deprecated_reason: Can be directly replaced by gh pr view --json reviews. No real-world usage evidence. harness-pr-reviewer is sufficient.
 ---
 
-> **DEPRECATED (2026-05-18)**: Directly replaceable by `gh pr view --json reviews` call with no real-world usage evidence. For PR review-related functionality, use `hub-cc-pr-reviewer` skill instead.
+> **DEPRECATED (2026-05-18)**: Directly replaceable by `gh pr view --json reviews` call with no real-world usage evidence. For PR review-related functionality, use `harness-pr-reviewer` skill instead.
 
 # pr-review-watcher — PR Review Arrival Monitor + Instant Summary
 
@@ -128,8 +128,8 @@ Proposal format: `"Shall I set up PR monitoring? You can get notified immediatel
 | Utterance | Route |
 |---|---|
 | "did the review come?", "waiting for PR review", "when will the review arrive?" | **This skill** — arrival monitoring |
-| "review PR #N", "check PR #N", "baseline consistency check" | `hub-cc-pr-reviewer` — consistency check |
-| "check the review" (neutral) | Context judgment — **waiting/monitoring context** → this skill, **check/review context** → `hub-cc-pr-reviewer` |
+| "review PR #N", "check PR #N", "baseline consistency check" | `harness-pr-reviewer` — consistency check |
+| "check the review" (neutral) | Context judgment — **waiting/monitoring context** → this skill, **check/review context** → `harness-pr-reviewer` |
 
 ## Simplification Guard
 

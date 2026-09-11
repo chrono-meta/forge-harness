@@ -542,7 +542,7 @@ Verdicts: PASS · CONDITIONAL_PASS (S/R only, or Area B cadence skip) · FAIL (M
 
 ## Operations Notes
 
-**AI-AI Loop Bias Defense**: sim-conductor → hub-cc-pr-reviewer → sim-conductor loop shares LLM cognitive blind spots. Internal convergence is "provisional convergence" — elevated only by external review or human gate. Area A/B convergence without human gate = incomplete.
+**AI-AI Loop Bias Defense**: sim-conductor → harness-pr-reviewer → sim-conductor loop shares LLM cognitive blind spots. Internal convergence is "provisional convergence" — elevated only by external review or human gate. Area A/B convergence without human gate = incomplete.
 
 ---
 

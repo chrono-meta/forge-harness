@@ -113,7 +113,7 @@ When `codex exec` runs **inside this repo**, FH's Claude-native git/Stop/PostToo
 M2 skills (`deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop`) have a core workflow that runs under Codex, but any step that dispatches `Agent(subagent_type=...)` or a slash command must be replaced by `fh-run` or a direct `codex exec` call reading the sub-agent's `SKILL.md`/agent `.md` — same workflow, different runtime (the "M2 adaptation pattern" in `AGENTS.md`). Example: `steel-quench` Waves 1–3 run; the `quench-challenger` agent step becomes `fh-run --agent fh-commons:quench-challenger`.
 
 ### 3. M3 skills do not run automatically under Codex
-M3 skills (`goal-quench` Phase-3 Stop hook, `hub-cc-pr-reviewer` CC session context, `install-wizard` settings.json write) require Claude-Code-native runtime and are **methodology reference only** under Codex unless a dedicated adapter exists. Use Codex's native goal/session features for goal control, and use `fh-gate` after completion for FH quality gating.
+M3 skills (`goal-quench` Phase-3 Stop hook, `harness-pr-reviewer` CC session context, `install-wizard` settings.json write) require Claude-Code-native runtime and are **methodology reference only** under Codex unless a dedicated adapter exists. Use Codex's native goal/session features for goal control, and use `fh-gate` after completion for FH quality gating.
 
 ### 4. No token accounting
 Codex token usage is billed in the Codex CLI quota and is **not** recorded in any FH session log or orchestrator measurement. Cross-family runs (Gemini/Codex) are invisible to FH's token-budget tooling by construction.

@@ -50,7 +50,7 @@
       "file": "plugins/fh-meta/agents/hub-persona-auditor.md",
       "role": "Pre-publication audit of external-facing assets — 3+ persona simulation, 4-axis review (resonance/confusion/resistance/supplement), 3-tier revision proposals",
       "allowed_tools": ["Read", "Grep", "Glob"],
-      "invoked_by": ["hub-cc-pr-reviewer", "sim-conductor", "direct"],
+      "invoked_by": ["harness-pr-reviewer", "sim-conductor", "direct"],
       "writes": false
     },
     {

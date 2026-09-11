@@ -20,7 +20,7 @@ refs:
 "The ratio at which the result of executing a skill can be independently reproduced and verified by an external observer"
 
 ### Measurement targets (5 core skills — fixed denominator)
-harness-doctor · verify-bidirectional · hub-cc-pr-reviewer · context-doctor · sim-conductor
+harness-doctor · verify-bidirectional · harness-pr-reviewer · context-doctor · sim-conductor
 
 ### Per-skill scoring criteria
 
