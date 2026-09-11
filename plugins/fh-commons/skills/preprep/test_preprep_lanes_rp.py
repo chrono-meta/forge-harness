@@ -1028,10 +1028,10 @@ def run_r7_regressions(fx_dir):
 
     # ── A5 mc:AlternateContent — Choice 안의 도형을 세고, Choice 없으면 Fallback ──
     alt = ('<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">'
-           '<mc:Choice Requires="x">%s</mc:Choice><mc:Fallback>%s</mc:Fallback></mc:AlternateContent>')
+           '<mc:Choice Requires="a">%s</mc:Choice><mc:Fallback>%s</mc:Fallback></mc:AlternateContent>')   # R9 A7a: Requires 는 «아는» 접두여야 Choice 가 선택된다
     d = os.path.join(fx_dir, 'r7_alt.pptx')
     _mini_deck(d, [alt % (_sp('choice', 0, 0, 100, 100, 'a'), _sp('fallback', 0, 0, 100, 100, 'b')),
-                   alt.replace('<mc:Choice Requires="x">%s</mc:Choice>', '') % (_sp('fallback', 0, 0, 100, 100, 'b'),)])
+                   alt.replace('<mc:Choice Requires="a">%s</mc:Choice>', '') % (_sp('fallback', 0, 0, 100, 100, 'b'),)])
     z = zipfile.ZipFile(d); order = oox.slide_order(z)
     n1 = [s_['name'] for s_ in oox.walk_slide(z, order[0])]; n2 = [s_['name'] for s_ in oox.walk_slide(z, order[1])]
     ok('A5 AlternateContent — Choice 도형 %s · Fallback 만이면 %s' % (n1, n2)) if n1 == ['choice'] and n2 == ['fallback'] else ng('A5 %r %r' % (n1, n2))
@@ -1182,7 +1182,7 @@ def run_r8_regressions(fx_dir):
 
     # ── B6: 빈 <mc:Choice/> 는 Fallback 이 아니다 ──
     alt_empty = ('<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">'
-                 '<mc:Choice Requires="x"/><mc:Fallback>%s</mc:Fallback></mc:AlternateContent>')
+                 '<mc:Choice Requires="a"/><mc:Fallback>%s</mc:Fallback></mc:AlternateContent>')   # R9: 아는 접두 + 빈 Choice = 아무것도 안 그림
     d = os.path.join(fx_dir, 'r8_alt_empty.pptx'); _mini_deck(d, [alt_empty % _sp('FB', 0, 0, 100, 100, 'b')])
     n6 = [s_['name'] for s_ in oox.walk_slide(zipfile.ZipFile(d), 1)]
     ok('B6 빈 Choice → 도형 %s (Fallback 안 걸음)' % (n6,)) if n6 == [] else ng('B6 %r' % (n6,))
@@ -1233,6 +1233,96 @@ def run_r8_regressions(fx_dir):
     units = LS.manuscript_screens(man)
     ok('B12 단위 id %s (한 줄, 블록 전체 아님)' % ([u for u, _ in units],)) if len(units) == 2 and '\n' not in units[1][0] and units[1][0].startswith('u2') \
         else ng('B12 %r' % (units,))
+
+
+def run_r9_regressions(fx_dir):
+    """R9 (codex R8 팔, 2026-09-12, commit 4f738ad) — 6S·3A 중 미수리분 각각 known-pair(S4·S6·A7b 는 R8 이 이미 닫음)."""
+    print('\n[2-f] R9 codex 감사 회귀 — S1 자리 밖 .rels · S2 External 이 embed 만족 · S3 빈 r:embed · S5 깨진 범용 XML 부품 · A7a Requires 미지원 Choice · A8 _paras 선택 분기 · A9 geometry 자리표시자 중복')
+    import subprocess, shutil, zipfile, re, io
+    import lane_geometry as LG
+    import oox
+    here = os.path.join(HERE, 'safe_install.py')
+    src = os.path.join(fx_dir, 'p1.pptx')
+
+    def rewrite(src_p, dst_p, fn_map, add=None, drop=()):
+        zi = zipfile.ZipFile(src_p); zo = zipfile.ZipFile(dst_p, 'w', zipfile.ZIP_DEFLATED)
+        for n in zi.namelist():
+            if n in drop:
+                continue
+            d = zi.read(n)
+            if n in fn_map:
+                d = fn_map[n](d)
+            zo.writestr(n, d)
+        for n, d in (add or {}).items():
+            zo.writestr(n, d)
+        zo.close()
+
+    def run(cand):
+        dest = os.path.join(fx_dir, 'r9_dest.pptx'); shutil.copyfile(src, dest)
+        r = subprocess.run([sys.executable, here, cand, dest, '--dry-run'], capture_output=True, text=True)
+        return r.returncode, r.stdout + r.stderr
+
+    # 그림 한 장 든 덱(R7 S3 픽스처 재사용) — embed 참조가 실재하는 실물
+    pic = os.path.join(fx_dir, 'r7_s3_ok.pptx')
+    if not os.path.exists(pic):
+        return sk('R9 그림 덱 픽스처(r7_s3_ok.pptx) 없음')
+    rels = 'ppt/slides/_rels/slide1.xml.rels'; slide = 'ppt/slides/slide1.xml'
+    rtxt = zipfile.ZipFile(pic).read(rels).decode()
+    rid = re.search(r'Id="(rId\d+)"[^>]*image', rtxt) or re.search(r'image[^>]*Id="(rId\d+)"', rtxt)
+    rid = rid.group(1) if rid else None
+    stxt = zipfile.ZipFile(pic).read(slide).decode(); assert rid and ('r:embed="%s"' % rid) in stxt, (rid, rtxt[:300])
+
+    # S1 자리 밖 .rels 가 참조를 만족시키면 안 된다
+    d = os.path.join(fx_dir, 'r9_s1.pptx')
+    rewrite(pic, d, {}, add={'ppt/slides/not_rels/slide1.xml.rels': zipfile.ZipFile(pic).read(rels)}, drop=(rels,))
+    rc1, o1 = run(d)
+    ok('S1 자리 밖 .rels(not_rels/) → 거부 rc=%s' % rc1) if rc1 == 1 and '_rels/ 디렉터리 밖' in o1 else ng('S1 rc=%s\n%s' % (rc1, o1[-300:]))
+    # S2 External 관계가 embed 를 만족시키면 안 된다 (컨트롤: r:link 는 External 이라도 통과)
+    d = os.path.join(fx_dir, 'r9_s2.pptx')
+    rewrite(pic, d, {rels: lambda b: re.sub(r'(<Relationship\b[^>]*Id="%s"[^>]*?)(/?>)' % rid, lambda m: m.group(1).replace('Target="', 'TargetMode="External" Target="https://example.invalid/') + m.group(2), b.decode()).encode()})
+    assert 'TargetMode="External"' in zipfile.ZipFile(d).read(rels).decode()
+    rc2, o2 = run(d)
+    d2 = os.path.join(fx_dir, 'r9_s2_ctrl.pptx')
+    rewrite(pic, d2, {rels: lambda b: b.replace(b'</Relationships>', b'<Relationship Id="rIdX" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/" TargetMode="External"/></Relationships>'),
+                      slide: lambda b: re.sub(r'<p:cNvPr ([^>]*?)/>', r'<p:cNvPr \1><a:hlinkClick r:id="rIdX"/></p:cNvPr>', b.decode(), count=1).encode()})
+    rc2c, o2c = run(d2)
+    ok('S2 External 관계 → embed 거부 rc=%s · 컨트롤(External hyperlink r:id) 통과 rc=%s' % (rc2, rc2c)) if rc2 == 1 and 'External 관계' in o2 and rc2c == 0 else ng('S2 rc=%s ctrl=%s\n%s\n%s' % (rc2, rc2c, o2[-200:], o2c[-200:]))
+    # S3 빈 r:embed=""
+    d = os.path.join(fx_dir, 'r9_s3.pptx')
+    rewrite(pic, d, {slide: lambda b: b.replace(('r:embed="%s"' % rid).encode(), b'r:embed=""', 1)})
+    rc3, o3 = run(d)
+    ok('S3 빈 r:embed="" → 거부 rc=%s' % rc3) if rc3 == 1 and '끊긴 참조' in o3 else ng('S3 rc=%s\n%s' % (rc3, o3[-300:]))
+    # S5 깨진 범용 XML 부품 (관계로 연결)
+    d = os.path.join(fx_dir, 'r9_s5.pptx')
+    rewrite(src, d, {'ppt/_rels/presentation.xml.rels': lambda b: b.replace(b'</Relationships>', b'<Relationship Id="rIdCUST" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/customXml" Target="custom/item1.xml"/></Relationships>'),
+                     '[Content_Types].xml': lambda b: b.replace(b'</Types>', b'<Override PartName="/ppt/custom/item1.xml" ContentType="application/xml"/></Types>')},
+            add={'ppt/custom/item1.xml': b'<broken'})
+    rc5, o5 = run(d)
+    ok('S5 깨진 범용 XML 부품 → 거부 rc=%s' % rc5) if rc5 == 1 and 'XML 이 깨졌다' in o5 else ng('S5 rc=%s\n%s' % (rc5, o5[-300:]))
+    # A7a Requires 가 모르는 네임스페이스 → Fallback · 아는 네임스페이스면 빈 Choice 라도 Choice
+    alt = ('<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:f="urn:unknown-ext">'
+           '<mc:Choice Requires="f"><f:shape/></mc:Choice><mc:Fallback>%s</mc:Fallback></mc:AlternateContent>')
+    alt2 = ('<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main">'
+            '<mc:Choice Requires="a14"/><mc:Fallback>%s</mc:Fallback></mc:AlternateContent>')
+    d = os.path.join(fx_dir, 'r9_req.pptx'); _mini_deck(d, [alt % _sp('FB', 0, 0, 100, 100, 'b'), alt2 % _sp('FB2', 0, 0, 100, 100, 'b')])
+    z = zipfile.ZipFile(d); order = oox.slide_order(z)
+    n7a = [s_['name'] for s_ in oox.walk_slide(z, order[0])]; n7b = [s_['name'] for s_ in oox.walk_slide(z, order[1])]
+    ok('A7a Requires 미지원 → Fallback %s · 지원+빈 Choice → %s' % (n7a, n7b)) if n7a == ['FB'] and n7b == [] else ng('A7a %r %r' % (n7a, n7b))
+    # A8 _paras 는 선택 분기만
+    body = ('<p:sp><p:nvSpPr><p:cNvPr id="1" name="T"/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="100" cy="100"/></a:xfrm></p:spPr><p:txBody>'
+            '<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:Choice Requires="a"><a:p><a:r><a:t>VISIBLE</a:t></a:r></a:p></mc:Choice>'
+            '<mc:Fallback><a:p><a:r><a:t>HIDDEN</a:t></a:r></a:p></mc:Fallback></mc:AlternateContent></p:txBody></p:sp>')
+    d = os.path.join(fx_dir, 'r9_paras.pptx'); _mini_deck(d, [body])
+    tx = oox.para_texts(oox.walk_slide(zipfile.ZipFile(d), 1)[0]['paras'])
+    ok('A8 _paras 선택 분기만 → %s' % (tx,)) if tx == ['VISIBLE'] else ng('A8 %r' % (tx,))
+    # A9 geometry: xfrm 없는 자리표시자와 같은 이름 → 결박에서 제외(모호)
+    ph = '<p:sp><p:nvSpPr><p:cNvPr id="2" name="A"/><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr><p:spPr/><p:txBody><a:p><a:r><a:t>t</a:t></a:r></a:p></p:txBody></p:sp>'
+    d = os.path.join(fx_dir, 'r9_geo_dup.pptx')
+    _mini_deck(d, [ph + _sp('A', 0, 0, 100, 100, 'x') + _sp('B', 0, 0, 100, 100, 'y'), ph + _sp('A', 35000, 0, 100, 100, 'x') + _sp('B', 0, 0, 100, 100, 'y')])
+    S9 = LG.load_slides(d)
+    l9, st9, sup9, err9 = LG.p1_lines(S9, 200000, [{'slides': [1, 2], 'shapes': ['A'], 'attrs': ['x'], 'why': '연출'}])
+    ok('A9 자리표시자와 겹치는 A → 결박 제외(bound %s · 면제 %d · 죽은 선언 %d) · B 는 결박' % (st9.get('bound'), len(sup9), len(err9))) \
+        if 'A' not in S9[0] and 'B' in S9[0] and len(sup9) == 0 and len(err9) == 1 else ng('A9 S=%r st=%r sup=%r err=%r' % ([sorted(x) for x in S9], st9, sup9, err9))
 
 
 def run_baseline_delta(fx_dir):
@@ -1315,6 +1405,7 @@ def main():
     run_codex_audit_regressions(fx_dir)
     run_r7_regressions(fx_dir)
     run_r8_regressions(fx_dir)
+    run_r9_regressions(fx_dir)
     run_baseline_delta(fx_dir)
     run_real_corpus()
 

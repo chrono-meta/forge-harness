@@ -95,8 +95,11 @@ def shapes(z, sn):
     """한 슬라이드의 도형을 {이름: (x,y,cx,cy,text,flip)} 로. 이름 중복은 대조 못 하니 뺀다.
     🟥 2026-09-11: 정규식 독자를 oox(트리 독자)로 교체 — 그룹 변환(이동·flip)을 합성한 절대 좌표, 속성 순서·접두·엔티티 무관."""
     out = {}
-    for s in _oox.walk_slide(z, sn):
-        if s['kind'] not in ('sp', 'cxnSp') or s['name'] is None or s['x'] is None:
+    walked = _oox.walk_slide(z, sn)
+    # R9 A9(codex): 이름 중복은 «장 위의 모든 도형» 에서 센다 — xfrm 없는 자리표시자와 겹치는 이름을 걸러낸 뒤 세면 결박이 그 이름을 «유일» 로 오인한다
+    dup = {n_ for n_, c_ in collections.Counter(s_['name'] for s_ in walked if s_['name'] is not None).items() if c_ > 1}
+    for s in walked:
+        if s['kind'] not in ('sp', 'cxnSp') or s['name'] is None or s['x'] is None or s['name'] in dup:
             continue
         # R8 B11(+R7 rot): 회전·배율 미정의 그룹 아래 도형은 좌표를 «값» 으로 쓰지 않는다 — 7번째 칸에 이름을 남긴다
         unm = 'rot' if s.get('rot_unmeasured') else ('geo' if s.get('geo_unmeasured') else None)

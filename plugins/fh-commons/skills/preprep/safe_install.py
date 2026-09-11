@@ -143,18 +143,25 @@ def _verify_rels_in_zip(names, z_bytes):
     # R7 S1: 정규식이 아니라 트리로 읽는다 — `<q:Relationship>`·홑따옴표 속성도 관계다
     with zipfile.ZipFile(io.BytesIO(z_bytes)) as z:
         rel_ids = {}                                             # 부품 → 그 부품 rels 의 Id 집합 (R7 S2)
+        ext_ids = {}                                             # 부품 → External 관계 Id (R9 S2)
         for n in names:
             if not n.endswith('.rels'):
                 continue
+            # R9 S1: .rels 는 반드시 `<부품 디렉터리>/_rels/<부품이름>.rels` 자리다 — 다른 디렉터리의 .rels 는 OPC 가 안 읽는데
+            #    여기서 «그 부품의 Id 집합» 으로 쓰이면 엉뚱한 파일이 참조를 만족시킨다. 자리 밖 .rels 는 거부.
+            if posixpath.basename(posixpath.dirname(n)) != '_rels':
+                raise ValueError(f'{n}: .rels 가 _rels/ 디렉터리 밖에 있다 — 관계 파일 자리가 아니다')
             base = posixpath.dirname(posixpath.dirname(n))          # ppt/slides/_rels/slide1.xml.rels → ppt/slides
             src_part = posixpath.join(base, posixpath.basename(n)[:-len('.rels')]) if posixpath.basename(n) != '.rels' else ''
-            ids = set()
+            ids = set(); exts = set()
             for rel in _ET.fromstring(z.read(n)).iter():
                 if _local(rel.tag) != 'Relationship':
                     continue
                 if _attr(rel, 'Id'):
                     ids.add(_attr(rel, 'Id'))
                 if _attr(rel, 'TargetMode') == 'External':
+                    if _attr(rel, 'Id'):
+                        exts.add(_attr(rel, 'Id'))
                     continue
                 tgt = _attr(rel, 'Target')
                 if not tgt:
@@ -162,23 +169,29 @@ def _verify_rels_in_zip(names, z_bytes):
                 path = posixpath.normpath(tgt.lstrip('/')) if tgt.startswith('/') else posixpath.normpath(posixpath.join(base, tgt))
                 if path not in names:
                     raise ValueError(f'{n}: 관계 대상 {path} 가 zip 에 없다 (끊긴 관계)')
-            rel_ids[src_part] = ids
+            rel_ids[src_part] = ids; ext_ids[src_part] = exts
         # R7 S2: 부품 XML 이 참조하는 r:… 속성(embed·link·id …)은 전부 그 부품 rels 에 있어야 한다
         for n in names:
             if not n.endswith('.xml') or '/_rels/' in n or n == '[Content_Types].xml':   # R8 B8: ppt/ 밖 부품(docProps …)도 r:* 를 쓴다
                 continue
             try:
                 root = _ET.fromstring(z.read(n))
-            except _ET.ParseError:
-                continue                                          # XML 자체는 오라클(python-pptx)이 판정한다
-            refs = set()
+            except _ET.ParseError as e:
+                # R9 S5: python-pptx 는 범용 XML 부품을 바이트로만 들고 파싱하지 않는다 — «오라클이 본다» 는 거짓이었다
+                raise ValueError(f'{n}: XML 이 깨졌다 ({e}) — 부품이 파싱되지 않는다')
+            refs = set(); embeds = set()
             for el in root.iter():
                 for k, v in el.attrib.items():
-                    if k.startswith('{' + _REL_NS + '}') and v:
-                        refs.add(v)
+                    if k.startswith('{' + _REL_NS + '}'):
+                        refs.add(v)                                # R9 S3: 빈 값도 «참조» 다 — '' 는 어떤 Id 와도 안 맞아 끊긴 참조로 뜬다
+                        if k.endswith('}embed'):
+                            embeds.add(v)
             missing = sorted(refs - rel_ids.get(n, set()))
             if missing:
                 raise ValueError(f'{n}: 관계 id {missing} 를 참조하는데 rels 에 없다 (끊긴 참조)')
+            bad_ext = sorted(embeds & ext_ids.get(n, set()))
+            if bad_ext:
+                raise ValueError(f'{n}: r:embed {bad_ext} 가 External 관계를 가리킨다 — 포함(embed) 은 내부 부품이어야 한다')   # R9 S2
 
 
 def _verify_package(prs):

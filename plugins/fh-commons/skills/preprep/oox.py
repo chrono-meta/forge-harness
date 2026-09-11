@@ -20,6 +20,7 @@ def parse_xml(s):
     """XML 문자열 → 루트. 레인 픽스처처럼 접두가 «선언 없이» 쓰인 문서도 읽는다(루트에 임시 결박)."""
     if isinstance(s, bytes):
         s = s.decode('utf-8', 'replace')
+    _NSMAP.clear(); _NSMAP.update({p_: u for p_, u in re.findall(r'xmlns:([\w.-]+)\s*=\s*["\']([^"\']*)["\']', s)})
     m = None
     for m_ in re.finditer(r'<!--.*?-->|<\?.*?\?>|<!\[CDATA\[.*?\]\]>|<([A-Za-z_][\w.-]*:)?[A-Za-z_][\w.-]*\b[^>]*>', s, re.S):   # R8 B10: 주석·PI 안의 태그는 루트가 아니다
         if not m_.group(0).startswith(('<!--', '<?', '<![CDATA[')):
@@ -164,10 +165,51 @@ def _text_of(el):
     return ''.join(el.itertext())
 
 
+# mc:AlternateContent — «우리가 읽는» 네임스페이스. Choice 의 Requires 접두가 전부 여기 결박돼 있으면 그 Choice 를 고르고,
+# 하나라도 모르는 네임스페이스면 Fallback 을 고른다(OOXML Part 3 §8.3.4.2.1 — 이해 못 하는 Choice 는 건너뛴다). R9 A7a.
+KNOWN_NS = {
+    'http://schemas.openxmlformats.org/presentationml/2006/main',
+    'http://schemas.openxmlformats.org/drawingml/2006/main',
+    'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
+    'http://schemas.openxmlformats.org/markup-compatibility/2006',
+    'http://schemas.microsoft.com/office/powerpoint/2010/main',
+    'http://schemas.microsoft.com/office/powerpoint/2012/main',
+    'http://schemas.microsoft.com/office/drawing/2010/main',
+    'http://schemas.microsoft.com/office/drawing/2014/main',
+}
+_NSMAP = {}          # 마지막으로 parse_xml 한 문서의 접두 → URI (Requires 판정용)
+
+
+def select_alternate(el):
+    """mc:AlternateContent 원소 → 걸을 자식(Choice 또는 Fallback) 또는 None.
+    빈 Choice 라도 «이해하는» Requires 면 그 Choice(=아무것도 안 그림)다 — Element 진리값(길이)으로 고르지 않는다(R8 B6)."""
+    for c in el:
+        if local(c.tag) != 'Choice':
+            continue
+        req = (attr(c, 'Requires') or '').split()
+        # 접두 p·a·r·mc 는 이 독자가 «이름으로» 읽는 것이라 URI 가 무엇이든 이해한다(레인 픽스처는 가짜 URI 를 쓴다)
+        if all(p_ in ('p', 'a', 'r', 'mc') or _NSMAP.get(p_) in KNOWN_NS for p_ in req):
+            return c
+        # 모르는 네임스페이스를 요구하는 Choice 는 건너뛴다 → 다음 Choice / Fallback
+    return child(el, 'Fallback')
+
+
+def _iter_selected(el):
+    """el 의 자손을 문서 순서로 — 단 AlternateContent 는 «선택된 분기» 만 들어간다(R9 A8: 양쪽 문단을 다 세던 구멍)."""
+    for c in el:
+        if local(c.tag) == 'AlternateContent':
+            alt = select_alternate(c)
+            if alt is not None:
+                yield from _iter_selected(alt)
+            continue
+        yield c
+        yield from _iter_selected(c)
+
+
 def _paras(el):
     """[{'algn': str|None, 'runs': [(text, sz_pt|None)]}] — 문단 단위, endParaRPr 제외, fld 포함."""
     out = []
-    for p in el.iter():
+    for p in _iter_selected(el):
         if local(p.tag) != 'p':
             continue
         ppr = child(p, 'pPr')
@@ -200,9 +242,8 @@ def walk_slide(z, sn):
 def _walk(container, T, out, in_group):
     for el in container:
         kind = local(el.tag)
-        if kind == 'AlternateContent':                       # R7 A5: mc:AlternateContent — Choice(없으면 Fallback) 안으로
-            c = child(el, 'Choice')                          # R8 B6: 빈 <mc:Choice/> 는 «아무것도 안 그림» 이지 Fallback 이 아니다 — Element 진리값은 길이다
-            alt = c if c is not None else child(el, 'Fallback')
+        if kind == 'AlternateContent':                       # R7 A5 · R8 B6 · R9 A7a: 선택 규칙은 select_alternate 한 곳
+            alt = select_alternate(el)
             if alt is not None:
                 _walk(alt, T, out, in_group)
             continue
