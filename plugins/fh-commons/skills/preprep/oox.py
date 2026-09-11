@@ -23,7 +23,7 @@ def parse_xml(s):
     m = re.search(r'<([A-Za-z_][\w.-]*:)?[A-Za-z_][\w.-]*\b[^>]*>', s)   # 첫 여는 태그
     if m:
         head = m.group(0)
-        need = [p for p in ('p', 'a', 'r') if ('xmlns:%s=' % p) not in head and re.search(r'\b%s:' % p, s)]
+        need = [p for p in ('p', 'a', 'r') if not re.search(r'xmlns:%s\s*=' % p, head) and re.search(r'\b%s:' % p, s)]   # R7 B8: `xmlns:p = "…"` 도 선언이다
         if need:
             inj = ''.join(' xmlns:%s="urn:fh-unbound-%s"' % (p, p) for p in need)
             s = s[:m.start()] + head[:-1].rstrip('/') + inj + ('/>' if head.endswith('/>') else '>') + s[m.end():]
@@ -97,36 +97,50 @@ def slide_size(z):
 # ── 변환 합성 ─────────────────────────────────────────────────────────────
 
 class _T:
-    """부모 변환: 자식 좌표 c → off + (c − chOff) × scale, 그리고 flip 의 XOR."""
-    __slots__ = ('ox', 'oy', 'sx', 'sy', 'chx', 'chy', 'flips')
+    """그룹 변환의 «사슬». 자식 좌표 → (chOff 빼고 × scale) → 이 그룹 자신의 flip 으로 상자 안에서 반사 → off 더해
+    부모 좌표 → 부모에게 같은 절차. 반사를 **각 단계에서** 하므로 바깥 그룹의 flip 이 안쪽 그룹의 내부 배치까지 거울로
+    옮긴다(R7 A4 — 초판은 표식만 XOR 하고 자리를 안 옮겨 «이동» 이 사라졌다).
+    회전(rot)은 합성하지 않는다 — 사슬 어딘가에 rot 가 있으면 `rot_unmeasured` 로 이름을 남긴다(잔여)."""
+    __slots__ = ('parent', 'ox', 'oy', 'sx', 'sy', 'chx', 'chy', 'gcx', 'gcy', 'own', 'flips', 'rot_unmeasured')
 
     def __init__(self):
-        self.ox = self.oy = 0; self.sx = self.sy = 1.0; self.chx = self.chy = 0; self.flips = set()
+        self.parent = None
+        self.ox = self.oy = 0; self.sx = self.sy = 1.0; self.chx = self.chy = 0; self.gcx = self.gcy = 0
+        self.own = set(); self.flips = set(); self.rot_unmeasured = False
+
+    def _apply_f(self, x, y, cx, cy):
+        if self.parent is None:
+            return (x, y, cx, cy)
+        lx, ly = (x - self.chx) * self.sx, (y - self.chy) * self.sy
+        w, h = cx * self.sx, cy * self.sy
+        if 'H' in self.own:
+            lx = self.gcx - lx - w
+        if 'V' in self.own:
+            ly = self.gcy - ly - h
+        return self.parent._apply_f(self.ox + lx, self.oy + ly, w, h)
 
     def apply(self, x, y, cx, cy):
-        return (int(round(self.ox + (x - self.chx) * self.sx)), int(round(self.oy + (y - self.chy) * self.sy)),
-                int(round(cx * self.sx)), int(round(cy * self.sy)))
+        return tuple(int(round(v)) for v in self._apply_f(x, y, cx, cy))
 
     def then(self, xfrm):
         """이 변환 «안» 의 그룹 xfrm 을 합성한 새 변환."""
         t = _T()
+        t.parent = self
         off, ext, choff, chext = (child(xfrm, n) for n in ('off', 'ext', 'chOff', 'chExt'))
         gx, gy = (int(attr(off, 'x') or 0), int(attr(off, 'y') or 0)) if off is not None else (0, 0)
         gcx, gcy = (int(attr(ext, 'cx') or 0), int(attr(ext, 'cy') or 0)) if ext is not None else (0, 0)
         cx0, cy0 = (int(attr(choff, 'x') or 0), int(attr(choff, 'y') or 0)) if choff is not None else (gx, gy)
         ccx, ccy = (int(attr(chext, 'cx') or 0), int(attr(chext, 'cy') or 0)) if chext is not None else (gcx, gcy)
-        sx = (gcx / ccx) if ccx else 1.0
-        sy = (gcy / ccy) if ccy else 1.0
-        # 그룹 자신의 off/ext 는 «부모 좌표계» 값이므로 먼저 부모 변환을 통과시킨다
-        ax, ay, acx, acy = self.apply(gx, gy, gcx, gcy)
-        t.ox, t.oy = ax, ay
-        t.sx, t.sy = self.sx * sx, self.sy * sy
+        t.ox, t.oy = gx, gy                        # 부모 좌표계 값 그대로 — 부모 변환은 사슬이 통과시킨다
+        t.sx = (gcx / ccx) if ccx else 1.0
+        t.sy = (gcy / ccy) if ccy else 1.0
         t.chx, t.chy = cx0, cy0
-        t.flips = set(self.flips)
+        t.gcx, t.gcy = gcx, gcy                    # 이 그룹 상자(부모 좌표계 크기) — 자식 반사의 기준
         for k in ('H', 'V'):
-            v = attr(xfrm, 'flip' + k)
-            if v in ('1', 'true'):
-                t.flips ^= {k}
+            if attr(xfrm, 'flip' + k) in ('1', 'true'):
+                t.own.add(k)
+        t.flips = set(self.flips) ^ t.own
+        t.rot_unmeasured = self.rot_unmeasured or attr(xfrm, 'rot') not in (None, '0')
         return t
 
 
@@ -178,6 +192,11 @@ def walk_slide(z, sn):
 def _walk(container, T, out, in_group):
     for el in container:
         kind = local(el.tag)
+        if kind == 'AlternateContent':                       # R7 A5: mc:AlternateContent — Choice(없으면 Fallback) 안으로
+            alt = child(el, 'Choice') or child(el, 'Fallback')
+            if alt is not None:
+                _walk(alt, T, out, in_group)
+            continue
         if kind == 'grpSp':
             gpr = child(el, 'grpSpPr')
             xf = child(gpr, 'xfrm') if gpr is not None else None
@@ -219,7 +238,7 @@ def _walk(container, T, out, in_group):
         out.append(dict(name=name, kind=kind, x=geo[0] if geo else None, y=geo[1] if geo else None,
                         cx=geo[2] if geo else None, cy=geo[3] if geo else None,
                         flip=''.join(k for k in ('H', 'V') if k in flips), paras=paras,
-                        ln_w=ln_w, dash=dash, in_group=in_group))
+                        ln_w=ln_w, dash=dash, in_group=in_group, rot_unmeasured=T.rot_unmeasured))
 
 
 def para_texts(paras):

@@ -930,6 +930,145 @@ def run_codex_audit_regressions(fx_dir):
         else ng('B7 spans=%r/%r' % (S7[0][0]['spans'], S7[0][1]['spans']))
 
 
+def run_r7_regressions(fx_dir):
+    """R7 (codex 2026-09-11, commit 1551a4b) — 3S·4A·1B 각각 known-pair. 되돌림 프로브는 세션 마커에 기록."""
+    print('\n[2-d] R7 codex 감사 회귀 — S1 rels 철자 · S2 r:embed 참조 · S3 잘린 JPEG · A4 flip 반사 · A5 AlternateContent · A6 공백 크기 · A7 자리표시자 중복 · B8 xmlns 공백')
+    import subprocess, shutil, zipfile, re, io
+    import lane_geometry as LG
+    import lane_attr_consistency as LA
+    import oox
+    here = os.path.join(HERE, 'safe_install.py')
+    src = os.path.join(fx_dir, 'p1.pptx')
+    dest = os.path.join(fx_dir, 'r7_dest.pptx')
+
+    def run(cand):
+        shutil.copyfile(src, dest)
+        r = subprocess.run([sys.executable, here, cand, dest, '--dry-run'], capture_output=True, text=True)
+        return r.returncode, r.stdout + r.stderr
+
+    def rewrite(src_p, dst_p, part, fn):
+        zi = zipfile.ZipFile(src_p); zo = zipfile.ZipFile(dst_p, 'w', zipfile.ZIP_DEFLATED)
+        for n in zi.namelist():
+            d = zi.read(n)
+            if n == part:
+                d = fn(d)
+            zo.writestr(n, d)
+        zo.close()
+
+    # ── S1 rels 를 `<q:Relationship xmlns:q=…>` + 홑따옴표로 다시 쓴 뒤 대상을 끊는다 ──
+    rels_part = 'ppt/slides/_rels/slide1.xml.rels'
+    def _requote(d, break_target):
+        x = d.decode('utf-8')
+        x = re.sub(r'<Relationship\b', '<q:Relationship xmlns:q="http://schemas.openxmlformats.org/package/2006/relationships"', x)
+        x = re.sub(r'\b(Id|Type|Target)="([^"]*)"', lambda m: "%s='%s'" % (m.group(1), m.group(2)), x)
+        if break_target:
+            x = x.replace("Target='../slideLayouts/", "Target='../slideLayouts/NOPE_", 1)
+        return x.encode('utf-8')
+    ok_p = os.path.join(fx_dir, 'r7_s1_ok.pptx'); rewrite(src, ok_p, rels_part, lambda d: _requote(d, False))
+    bad_p = os.path.join(fx_dir, 'r7_s1_bad.pptx'); rewrite(src, bad_p, rels_part, lambda d: _requote(d, True))
+    rc_ok, out_ok = run(ok_p); rc_bad, out_bad = run(bad_p)
+    ok('S1 q:Relationship+홑따옴표 — 멀쩡하면 통과(rc=0) · 대상 끊기면 거부(끊긴 관계)') \
+        if rc_ok == 0 and rc_bad == 1 and '끊긴 관계' in out_bad else ng('S1 ok=%s bad=%s\n%s\n%s' % (rc_ok, rc_bad, out_ok[-300:], out_bad[-300:]))
+
+    # ── S2 슬라이드 XML 이 r:id="rId999" 를 참조하는데 rels 에 없다 ──
+    slide_part = 'ppt/slides/slide1.xml'
+    def _hlink(rid):
+        def f(d):
+            x = d.decode('utf-8')
+            x = re.sub(r'<p:cNvPr ([^>]*?)/>', r'<p:cNvPr \1><a:hlinkClick r:id="%s"/></p:cNvPr>' % rid, x, count=1)
+            return x.encode('utf-8')
+        return f
+    existing = re.search(r'Id="(rId\d+)"', zipfile.ZipFile(src).read(rels_part).decode()).group(1)
+    ok_p = os.path.join(fx_dir, 'r7_s2_ok.pptx'); rewrite(src, ok_p, slide_part, _hlink(existing))
+    bad_p = os.path.join(fx_dir, 'r7_s2_bad.pptx'); rewrite(src, bad_p, slide_part, _hlink('rId999'))
+    rc_ok, out_ok = run(ok_p); rc_bad, out_bad = run(bad_p)
+    ok('S2 r:id 참조 — 실재 rId 통과 · rId999 거부(끊긴 참조)') \
+        if rc_ok == 0 and rc_bad == 1 and '끊긴 참조' in out_bad else ng('S2 ok=%s bad=%s\n%s\n%s' % (rc_ok, rc_bad, out_ok[-300:], out_bad[-300:]))
+
+    # ── S3 잘린 JPEG — verify() 는 통과시키고 load() 만 죽는 형태 ──
+    try:
+        from PIL import Image
+        from pptx import Presentation
+        from pptx.util import Inches
+    except ImportError as e:
+        sk('S3 PIL/python-pptx 부재: %s' % e)
+    else:
+        jpg = os.path.join(fx_dir, 'r7.jpg')
+        Image.new('RGB', (256, 256), (200, 30, 30)).save(jpg, 'JPEG', quality=95)
+        prs = Presentation(src); prs.slides[0].shapes.add_picture(jpg, Inches(1), Inches(1)); pic_p = os.path.join(fx_dir, 'r7_s3_ok.pptx'); prs.save(pic_p)
+        media = [n for n in zipfile.ZipFile(pic_p).namelist() if n.startswith('ppt/media/')]
+        assert len(media) == 1, media
+        bad_p = os.path.join(fx_dir, 'r7_s3_bad.pptx'); rewrite(pic_p, bad_p, media[0], lambda d: d[: len(d) // 2])
+        with Image.open(io.BytesIO(zipfile.ZipFile(bad_p).read(media[0]))) as im:
+            try:
+                im.verify(); v_ok = True
+            except Exception:
+                v_ok = False
+        rc_ok, out_ok = run(pic_p); rc_bad, out_bad = run(bad_p)
+        ok('S3 잘린 JPEG — verify() 는 통과(%s, 컨트롤: 이 레인이 재는 구멍이 실재) · 설치는 거부 · 온전한 그림은 통과' % v_ok) \
+            if v_ok and rc_ok == 0 and rc_bad == 1 else ng('S3 verify=%s ok=%s bad=%s\n%s' % (v_ok, rc_ok, rc_bad, out_bad[-400:]))
+
+    # ── A4 그룹 flipH 가 자식 «자리» 를 반사한다 — 단일 · 중첩 · rot 잔여 ──
+    def _grp(inner, flip='', off=(0, 0), ext=(1000, 1000), choff=(0, 0), chext=(1000, 1000), rot=None):
+        xf = '<a:xfrm%s%s><a:off x="%d" y="%d"/><a:ext cx="%d" cy="%d"/><a:chOff x="%d" y="%d"/><a:chExt cx="%d" cy="%d"/></a:xfrm>' % (
+            (' flipH="1"' if flip == 'H' else ''), (' rot="%d"' % rot if rot else ''), off[0], off[1], ext[0], ext[1], choff[0], choff[1], chext[0], chext[1])
+        return '<p:grpSp><p:nvGrpSpPr><p:cNvPr id="9" name="g"/></p:nvGrpSpPr><p:grpSpPr>%s</p:grpSpPr>%s</p:grpSp>' % (xf, inner)
+    ch = _sp('c', 0, 0, 100, 100, 'x')
+    d = os.path.join(fx_dir, 'r7_flip.pptx')
+    _mini_deck(d, [_grp(ch, flip='H'),                                                   # 단일: x 0 → 900
+                   _grp(_grp(ch, ext=(500, 500), chext=(500, 500)), flip='H'),           # 중첩(바깥 flip): 안쪽 상자 500~1000, 내부도 거울 → 900
+                   _grp(ch, rot=5400000),                                                # rot 잔여
+                   _grp(ch)])                                                            # 컨트롤: 0
+    z = zipfile.ZipFile(d); order = oox.slide_order(z)                     # _mini_deck 은 파일 번호를 거꾸로 매긴다 — 발표 순서로 읽는다
+    xs = [[s_['x'] for s_ in oox.walk_slide(z, fn)] for fn in order]
+    rot_flag = oox.walk_slide(z, order[2])[0].get('rot_unmeasured'); rot_ctrl = oox.walk_slide(z, order[3])[0].get('rot_unmeasured')
+    ok('A4 flipH 반사 — 단일 %s · 중첩 %s · 컨트롤 %s · rot 잔여 표시 %s/%s' % (xs[0], xs[1], xs[3], rot_flag, rot_ctrl)) \
+        if xs[0] == [900] and xs[1] == [900] and xs[3] == [0] and rot_flag and not rot_ctrl \
+        else ng('A4 xs=%r rot=%s/%s' % (xs, rot_flag, rot_ctrl))
+
+    # ── A5 mc:AlternateContent — Choice 안의 도형을 세고, Choice 없으면 Fallback ──
+    alt = ('<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">'
+           '<mc:Choice Requires="x">%s</mc:Choice><mc:Fallback>%s</mc:Fallback></mc:AlternateContent>')
+    d = os.path.join(fx_dir, 'r7_alt.pptx')
+    _mini_deck(d, [alt % (_sp('choice', 0, 0, 100, 100, 'a'), _sp('fallback', 0, 0, 100, 100, 'b')),
+                   alt.replace('<mc:Choice Requires="x">%s</mc:Choice>', '') % (_sp('fallback', 0, 0, 100, 100, 'b'),)])
+    z = zipfile.ZipFile(d); order = oox.slide_order(z)
+    n1 = [s_['name'] for s_ in oox.walk_slide(z, order[0])]; n2 = [s_['name'] for s_ in oox.walk_slide(z, order[1])]
+    ok('A5 AlternateContent — Choice 도형 %s · Fallback 만이면 %s' % (n1, n2)) if n1 == ['choice'] and n2 == ['fallback'] else ng('A5 %r %r' % (n1, n2))
+
+    # ── A6 공백 «런» 의 크기 변화가 숨지 않는다 — B7(공백 길이만 다름=0)은 유지 ──
+    def _runs(name, x, runs):
+        body = ''.join('<a:r><a:rPr sz="%d"/><a:t>%s</a:t></a:r>' % (sz, t) for t, sz in runs)
+        return ('<p:sp><p:nvSpPr><p:cNvPr id="1" name="%s"/></p:nvSpPr><p:spPr><a:xfrm><a:off x="%d" y="914400"/>'
+                '<a:ext cx="3657600" cy="914400"/></a:xfrm></p:spPr><p:txBody><a:p>%s</a:p></p:txBody></p:sp>' % (name, x, body))
+    d = os.path.join(fx_dir, 'r7_ws_size.pptx')
+    _mini_deck(d, [_runs('L', 914400, [('abc', 2800), (' ', 3200), ('def', 2800)]) + _runs('R', 7620000, [('abc def', 2800)]),
+                   _runs('L', 914400, [('A  B', 2800)]) + _runs('R', 7620000, [('A B', 2800)])])
+    S, sw = LA.load(d)
+    m = list(LA.ax_mirror(S, sw, {}))
+    ok('A6 32pt 공백 런 → 거울 후보(1장) %s · 공백 길이만 다름 → 0(2장) · spans %s' % (len(m), S[0][0]['spans'])) \
+        if len(m) == 1 and S[0][0]["spans"] == ((3, 28.0), (1, 32.0), (3, 28.0)) and S[1][0]['spans'] == S[1][1]['spans'] \
+        else ng('A6 m=%r spans=%r/%r' % (m, S[0][0]['spans'], S[1][0]['spans']))
+
+    # ── A7 xfrm 없는 자리표시자와 같은 이름 → 살아남은 도형이 dup ──
+    ph = '<p:sp><p:nvSpPr><p:cNvPr id="2" name="A"/><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr><p:spPr/><p:txBody><a:p><a:r><a:t>t</a:t></a:r></a:p></p:txBody></p:sp>'
+    d = os.path.join(fx_dir, 'r7_ph_dup.pptx')
+    _mini_deck(d, [ph + _sp('A', 914400, 914400, 100, 100, 'x'), _sp('A', 914400, 914400, 100, 100, 'x')])
+    S, _ = LA.load(d)
+    ok('A7 자리표시자(xfrm 없음)와 겹치는 이름 → dup=%s · 홀로면 %s' % (S[0][0]['dup'], S[1][0]['dup'])) \
+        if len(S[0]) == 1 and S[0][0]['dup'] and not S[1][0]['dup'] else ng('A7 %r' % (S,))
+
+    # ── B8 `xmlns:p = "…"` (= 양옆 공백) 도 선언이다 — 주입이 중복 속성을 만들면 안 된다 ──
+    d = os.path.join(fx_dir, 'r7_xmlns_ws.pptx'); _mini_deck(d, [_sp('a', 0, 0, 100, 100, 'x')])
+    d2 = os.path.join(fx_dir, 'r7_xmlns_ws2.pptx')
+    rewrite(d, d2, 'ppt/slides/slide1.xml', lambda b: b.replace(b'xmlns:p="p"', b'xmlns:p = "p"', 1))
+    try:
+        n8 = len(oox.walk_slide(zipfile.ZipFile(d2), 1)); err = None
+    except Exception as e:
+        n8, err = None, e
+    ok('B8 xmlns:p = "…" 공백 선언 → 파싱 1 도형') if n8 == 1 else ng('B8 n=%r err=%r' % (n8, err))
+
+
 def run_baseline_delta(fx_dir):
     print('\n[2] --baseline 델타 모드 — 편집 전/후 한 쌍')
     import lane_geometry as LG
@@ -1008,6 +1147,7 @@ def main():
     run_known_pairs(fx_dir)
     run_safe_install(fx_dir)
     run_codex_audit_regressions(fx_dir)
+    run_r7_regressions(fx_dir)
     run_baseline_delta(fx_dir)
     run_real_corpus()
 

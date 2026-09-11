@@ -71,22 +71,37 @@ def _shapes(z, sn):
     이 레인은 «같은 이름을 짝지어 대조»하는 게 아니라 «한 장 안의 분포»를 보기 때문이다. 대신 «한 장 안에서
     같은 이름이 둘» 이면 `dup=True` 로 표시해 면제 조회가 그것을 모호로 취급한다(R5 A6 · R6 A5)."""
     out = []
-    for s in _oox.walk_slide(z, sn):
+    walked = _oox.walk_slide(z, sn)
+    # R7 A7: 이름 중복은 «장 위의 모든 도형» 에서 센다 — xfrm 없는 자리표시자를 걸러낸 뒤 세면 그것과 겹치는 이름을 못 본다
+    cnt = collections.Counter(s_['name'] for s_ in walked if s_['name'] is not None)
+    for s in walked:
         if s['kind'] not in ('sp', 'cxnSp', 'pic') or s['name'] is None or s['x'] is None:
             continue
         paras = s['paras']
         szs = tuple(sz for p in paras for _t, sz in p['runs'] if sz is not None)
         # R3 A10: 크기는 «글자 구간» 에 붙는다 — 인접 같은 크기 런을 합친 (글자수, 크기). R6 B7: 글자수는 공백 정규화 후.
+        # R7 A6: 공백 정규화는 «문단 전체» 에서 한 번 — 런마다 strip 하면 구간 경계가 런 분할에 따라 움직인다.
+        #    글자마다 크기를 붙인 뒤(공백 뭉치는 한 칸, 양끝 제거) 인접 같은 크기를 합친다.
         spans = []
         for p in paras:
-            for t, sz in p['runs']:
-                n_ = len(re.sub(r'\s+', ' ', t).strip()) if t.strip() else 0
-                if n_ == 0:
-                    continue
-                if spans and spans[-1][1] == sz:
-                    spans[-1] = (spans[-1][0] + n_, sz)
+            chars = [(ch, sz) for t, sz in p['runs'] for ch in t]
+            norm = []
+            for ch, sz in chars:
+                if ch.isspace():
+                    if norm and norm[-1][0] == ' ':
+                        continue
+                    norm.append((' ', sz))
                 else:
-                    spans.append((n_, sz))
+                    norm.append((ch, sz))
+            while norm and norm[0][0] == ' ':
+                norm.pop(0)
+            while norm and norm[-1][0] == ' ':
+                norm.pop()
+            for ch, sz in norm:
+                if spans and spans[-1][1] == sz:
+                    spans[-1] = (spans[-1][0] + 1, sz)
+                else:
+                    spans.append((1, sz))
         out.append(dict(
             slide=sn, name=s['name'],
             x=s['x'] / EMU_IN, y=s['y'] / EMU_IN, w=s['cx'] / EMU_IN, h=s['cy'] / EMU_IN,
@@ -94,10 +109,7 @@ def _shapes(z, sn):
             algn=tuple((p['algn'] or '(기본)') for p in paras) or ('(기본)',),
             spans=tuple(spans),
             lnw=round(s['ln_w'] / EMU_PT, 2) if s['ln_w'] is not None else None, dash=s['dash'],
-            text=_oox.shape_text(paras), dup=False))
-    cnt = collections.Counter(a_['name'] for a_ in out)
-    for a_ in out:
-        a_['dup'] = cnt[a_['name']] > 1
+            text=_oox.shape_text(paras), dup=cnt[s['name']] > 1))
     return out
 
 

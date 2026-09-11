@@ -41,6 +41,19 @@ pptx 편집 스크립트가 `assert len(paras) == 3` 에서 죽었는데 **뒤�
 종료코드  0 반영함 · 1 거부(반영 안 함) · 2 판정불가(계기 오류·인자 오류 — PASS 아님)
 """
 import sys, os, re, io, zipfile, hashlib, argparse, posixpath, tempfile, fcntl
+import xml.etree.ElementTree as _ET
+_REL_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+
+
+def _local(tag):
+    return tag.rsplit('}', 1)[-1] if '}' in tag else tag.split(':', 1)[-1]
+
+
+def _attr(el, name):
+    for k, v in el.attrib.items():
+        if _local(k) == name:
+            return v
+    return None
 try:
     from pptx import Presentation as _Presentation   # 🟥 R3: 손으로 짠 XML 계수는 S 를 세 라운드째 냈다(접두 q:·깨진 XML·External rel).
 except Exception:                                    #    실제 파서를 오라클로 세우고, 내 계수는 그것과 «맞아야 하는» 두 번째 제공자로 둔다.
@@ -120,22 +133,45 @@ def probe_bytes(data):
 
 def _verify_rels_in_zip(names, z_bytes):
     """모든 *.rels 의 내부 Target 이 zip 안에 실재해야 한다(차트·미디어·자리표시자 그림 전부)."""
+    # R7 S1: 정규식이 아니라 트리로 읽는다 — `<q:Relationship>`·홑따옴표 속성도 관계다
     with zipfile.ZipFile(io.BytesIO(z_bytes)) as z:
+        rel_ids = {}                                             # 부품 → 그 부품 rels 의 Id 집합 (R7 S2)
         for n in names:
             if not n.endswith('.rels'):
                 continue
             base = posixpath.dirname(posixpath.dirname(n))          # ppt/slides/_rels/slide1.xml.rels → ppt/slides
-            rels = z.read(n).decode('utf-8', 'replace')
-            for tag in re.findall(r'<Relationship\b[^>]*>', rels):
-                if re.search(r'\bTargetMode="External"', tag):
+            src_part = posixpath.join(base, posixpath.basename(n)[:-len('.rels')]) if posixpath.basename(n) != '.rels' else ''
+            ids = set()
+            for rel in _ET.fromstring(z.read(n)).iter():
+                if _local(rel.tag) != 'Relationship':
                     continue
-                mt = re.search(r'\bTarget="([^"]+)"', tag)
-                if not mt:
+                if _attr(rel, 'Id'):
+                    ids.add(_attr(rel, 'Id'))
+                if _attr(rel, 'TargetMode') == 'External':
                     continue
-                tgt = mt.group(1)
+                tgt = _attr(rel, 'Target')
+                if not tgt:
+                    continue
                 path = posixpath.normpath(tgt.lstrip('/')) if tgt.startswith('/') else posixpath.normpath(posixpath.join(base, tgt))
                 if path not in names:
                     raise ValueError(f'{n}: 관계 대상 {path} 가 zip 에 없다 (끊긴 관계)')
+            rel_ids[src_part] = ids
+        # R7 S2: 부품 XML 이 참조하는 r:… 속성(embed·link·id …)은 전부 그 부품 rels 에 있어야 한다
+        for n in names:
+            if not (n.startswith('ppt/') and n.endswith('.xml')) or '/_rels/' in n:
+                continue
+            try:
+                root = _ET.fromstring(z.read(n))
+            except _ET.ParseError:
+                continue                                          # XML 자체는 오라클(python-pptx)이 판정한다
+            refs = set()
+            for el in root.iter():
+                for k, v in el.attrib.items():
+                    if k.startswith('{' + _REL_NS + '}') and v:
+                        refs.add(v)
+            missing = sorted(refs - rel_ids.get(n, set()))
+            if missing:
+                raise ValueError(f'{n}: 관계 id {missing} 를 참조하는데 rels 에 없다 (끊긴 참조)')
 
 
 def _verify_package(prs):
@@ -156,7 +192,9 @@ def _verify_package(prs):
             except Exception:
                 raise ValueError('PIL 이 없다 — 이미지 부품을 검증할 수 없어 판정불가')
             with Image.open(io.BytesIO(part.blob)) as im:
-                im.verify()                 # 깨진 바이트는 여기서 예외
+                im.verify()                 # 헤더·구조
+            with Image.open(io.BytesIO(part.blob)) as im:
+                im.load()                   # R7 S3: verify() 는 픽셀을 안 푼다 — 잘린 JPEG 는 load() 에서 죽는다
     if seen == 0:
         raise ValueError('패키지 부품 0 — 판정불가')
 
