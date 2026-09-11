@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""L14 — 서체 일관성: 이 덱이 «자기 템플릿이 정한 서체»를 벗어난 자리를 찾는다 (2026-09-11 신설).
+"""L15 — 서체 일관성: 이 덱이 «자기 템플릿이 정한 서체»를 벗어난 자리를 찾는다 (2026-09-11 신설).
 
 WHY: preprep 은 지금까지 **글자의 배치**(P1/P3 기하)와 **말의 정합**(L1·L5·L8·R1~R5)을 봤지,
 **무슨 서체로 찍혔는지**는 어느 레인도 안 봤다. 그런데 발표 템플릿을 주는 조직은 거의 항상
@@ -263,10 +263,10 @@ def scan(cfg, root):
     findings 는 **저자가 찍은 이탈**만 태운다. 상속분·선언된 면제는 노트로만 나간다."""
     deck_s = (cfg.get('surfaces_by_id') or {}).get('built_deck')
     if not deck_s:
-        return [], ['L14 font : built_deck 미선언 — NOT_CONFIGURED (0 아님)']
+        return [], ['L15 font : built_deck 미선언 — NOT_CONFIGURED (0 아님)']
     deck = os.path.normpath(os.path.join(root, os.path.expanduser(deck_s['path'])))
     if not os.path.exists(deck):
-        return [], [f'L14 font : built_deck 실물 없음({deck}) — UNMEASURED (0 아님)']
+        return [], [f'L15 font : built_deck 실물 없음({deck}) — UNMEASURED (0 아님)']
 
     spec = cfg.get('fonts') or {}
     tpl_p = spec.get('template')
@@ -281,7 +281,7 @@ def scan(cfg, root):
         parts = _parts(z)
         th = theme_fonts(z)
     except Exception as e:
-        return [], [f'L14 font : 계기 오류({type(e).__name__}: {e}) — UNMEASURED (0 아님)']
+        return [], [f'L15 font : 계기 오류({type(e).__name__}: {e}) — UNMEASURED (0 아님)']
 
     # ── ② 템플릿 대조 ──────────────────────────────────────────────────────────
     inherited_ok = set()          # 상속분으로 확인된 영역
@@ -289,7 +289,7 @@ def scan(cfg, root):
     if tpl_p:
         tpl = os.path.normpath(os.path.join(root, os.path.expanduser(tpl_p)))
         if not os.path.exists(tpl):
-            notes.append(f'L14 font : template 실물 없음({tpl}) — 상속 판정 UNMEASURED (0 아님). '
+            notes.append(f'L15 font : template 실물 없음({tpl}) — 상속 판정 UNMEASURED (0 아님). '
                          f'상속 영역의 서체는 «판정 안 함»이 아니라 «못 쟀음»이다')
         else:
             try:
@@ -306,24 +306,24 @@ def scan(cfg, root):
                     if len(same) == len(mine):
                         inherited_ok.add(area)
                     drifted += [(area, k) for k in diff + new]
-                    notes.append(f'L14 font : {area} 부품 {len(mine)} — 템플릿과 동일 {len(same)} · '
+                    notes.append(f'L15 font : {area} 부품 {len(mine)} — 템플릿과 동일 {len(same)} · '
                                  f'갈라짐 {len(diff)} · 템플릿에 없음 {len(new)}')
                 tpl_own = _template_own_fonts(zt)
                 if not allow:
                     allow = sorted(_allow_from_template(zt))
-                    notes.append('L14 font : allow 미선언 — 템플릿 자신의 분포에서 유도했다 '
+                    notes.append('L15 font : allow 미선언 — 템플릿 자신의 분포에서 유도했다 '
                                  f'({len(allow)}가족: ' + ' · '.join(allow[:6])
                                  + (' …' if len(allow) > 6 else '') + ')')
             except Exception as e:
-                notes.append(f'L14 font : template 읽기 오류({type(e).__name__}: {e}) — '
+                notes.append(f'L15 font : template 읽기 오류({type(e).__name__}: {e}) — '
                              f'상속 판정 UNMEASURED (0 아님)')
     else:
-        notes.append('L14 font : template 미선언 — 상속분을 저자 이탈과 **구분할 수 없다**. '
+        notes.append('L15 font : template 미선언 — 상속분을 저자 이탈과 **구분할 수 없다**. '
                      '이 상태의 판정은 마스터 상속 서체를 위반으로 셀 수 있다(실측 오탐 85건). '
                      'surfaces.yaml 에 `fonts.template` 로 배포 템플릿을 대라')
 
     if not allow:
-        return [], notes + ['L14 font : 허용 서체 집합이 비었다(allow 미선언 + template 미선언) — '
+        return [], notes + ['L15 font : 허용 서체 집합이 비었다(allow 미선언 + template 미선언) — '
                             'NOT_CONFIGURED (0 아님)']
 
     # ── ③ 판정 ────────────────────────────────────────────────────────────────
@@ -348,7 +348,7 @@ def scan(cfg, root):
             demoted[tf] += 1        # 억제가 아니라 «주석» 이다 — 아래 finding 문구에 실린다
 
     if not seen:
-        return [], notes + [f'L14 font : slides/ {nslides}장에서 서체 토큰 0건 — UNMEASURED '
+        return [], notes + [f'L15 font : slides/ {nslides}장에서 서체 토큰 0건 — UNMEASURED '
                             f'(0 아님. 추출이 죽어도 0 이 나온다)']
 
     # 테마가 허용 밖이면 장마다 지적하지 않고 테마 한 곳만 — 참조는 전부 거기서 온다
@@ -389,12 +389,12 @@ def scan(cfg, root):
                          + ' — 🟥 슬롯이 `ea`/`cs` 뿐이면 그 문자가 없을 때 렌더되지 않을 수 있다'
                            '(사람이 판정한다). 의도라면 `fonts.intended` 에 why 와 함께 선언해라'))
 
-    notes.append(f'L14 font : slides/ {nslides}장 · 명시 서체 {len(rows)}회 · 서체 {len(seen)}종 · '
+    notes.append(f'L15 font : slides/ {nslides}장 · 명시 서체 {len(rows)}회 · 서체 {len(seen)}종 · '
                  f'허용 {len(allow)}가족 · 이탈 {len(offenders)}종 · 선언 면제 {sum(exempted.values())}회 · '
                  f'그중 템플릿 자신도 쓰는 이름 {sum(demoted.values())}회'
                  + ('' if rows else ' — 🟥 0 이면 UNMEASURED, 「이탈 없음」이 아니다'))
     if inherited_ok:
-        notes.append('L14 font : 상속 확인(템플릿과 해시 동일) — ' + ' · '.join(sorted(inherited_ok))
+        notes.append('L15 font : 상속 확인(템플릿과 해시 동일) — ' + ' · '.join(sorted(inherited_ok))
                      + ' 의 서체는 저자 산물이 아니므로 판정하지 않는다')
     for (tf, why), c in exempted.most_common():
         notes.append(f'   면제됨 {tf} ({c}회) — {why}')

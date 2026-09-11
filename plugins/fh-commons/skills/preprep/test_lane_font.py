@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""L14 font self-test — known-pair + 뮤턴트.
+"""L15 font self-test — known-pair + 뮤턴트.
 
 exit 0 = 전부 통과 · 1 = 실패 있음 · 2 = 픽스처 생성 불가 (UNMEASURED, 통과 아님)
 
@@ -306,7 +306,7 @@ def main():
     finally:
         shutil.rmtree(d, ignore_errors=True)
 
-    print(f'\nL14 font self-test — PASS {PASS} · FAIL {FAIL}')
+    print(f'\nL15 font self-test — PASS {PASS} · FAIL {FAIL}')
     return 1 if FAIL else 0
 
 

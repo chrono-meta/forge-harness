@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test_preprep_font_lanes.sh — preprep L14(서체 일관성)의 계약을 고정한다.
+# test_preprep_font_lanes.sh — preprep L15(서체 일관성)의 계약을 고정한다.
 #
 # WHY: 발표 템플릿을 주는 조직은 거의 항상 서체를 규정하는데, 서체 이탈은 **렌더링에서만**
 # 드러나 사람이 눈으로 훑기 전에는 안 보인다. preprep 의 이웃 레인들은 배치(P1/P3)와 말의
