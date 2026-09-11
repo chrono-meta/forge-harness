@@ -1878,6 +1878,18 @@ else
   no "L113 None 별칭" "rc=$R113 '$(printf '%s' "$O113" | /usr/bin/grep SEEDED)'"
 fi
 
+
+# ── L114 --round2-blind (F_r2ctrl 컨트롤) — 상대 계열 목록이 2차 프롬프트에 «없어야» 하고, --round2 에는 «있어야» 한다 ──
+O114=$(bash "$FLEET_SH2" "$D/r2t.py" --out "$D/fr2blind" --fleet "$D/fleetR2.tbl" --round2-blind 2>&1)
+P114="$D/fr2blind/prompt2_codex_logic.txt"; P114c="$D/fr2/prompt2_codex_logic.txt"
+if [ -s "$P114" ] && ! /usr/bin/grep -q 'THE OTHER FAMILY ROUND-1 FINDINGS' "$P114" && ! /usr/bin/grep -q '"B1"' "$P114" \
+   && /usr/bin/grep -q 'YOUR OWN ROUND-1 FINDINGS' "$P114" && /usr/bin/grep -q '"A1"' "$P114" \
+   && /usr/bin/grep -q '"B1"' "$P114c" && printf '%s' "$O114" | /usr/bin/grep -q 'blind=1'; then
+  ok "L114 --round2-blind: 2차 프롬프트에 상대(B1) 없음·자기(A1) 있음 · --round2 컨트롤엔 B1 있음 · blind=1 표시"
+else
+  no "L114 round2-blind" "blind_has_B1=$(/usr/bin/grep -c '"B1"' "$P114" 2>/dev/null) ctrl_has_B1=$(/usr/bin/grep -c '"B1"' "$P114c" 2>/dev/null) $(printf '%s' "$O114" | /usr/bin/grep '^FLEET round2 members')"
+fi
+
 /bin/rm -rf "$D"
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ] && { echo "FAILED=0"; exit 0; } || { echo "FAILED=1"; exit 1; }

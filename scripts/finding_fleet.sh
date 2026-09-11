@@ -72,6 +72,22 @@ Do all of these that apply:
 
 Output ONLY JSON Lines in the same schema as before, one object per finding, then optionally the
 DROPPED: lines. Your assigned area is unchanged: '
+# F_r2ctrl(컨트롤) 머리 — 위와 같은 구조(KEEP/CORRECT/SHARPEN/ADD/DROPPED)에서 «다른 검토자» 언급만 뺐다.
+PROMPT_HEAD_R2_BLIND='You reviewed this file already. Your own round-1 list is below.
+
+🟥 THIS IS NOT AN ACCEPT/REJECT PASS. You are being asked to produce YOUR OWN final list on a second,
+independent look at the same file.
+
+Do all of these that apply:
+  - KEEP each of your findings that still holds.
+  - CORRECT any of yours that a second reading shows to be wrong, imprecise, or on the wrong line.
+  - SHARPEN a finding whose `defeater` you can now state more concretely.
+  - ADD findings you did not make the first time.
+  - If you now believe one of YOUR earlier findings was wrong, drop it AND say so in a final line
+    beginning `DROPPED:` naming the title and why. That line is prose and is expected.
+
+Output ONLY JSON Lines in the same schema as before, one object per finding, then optionally the
+DROPPED: lines. Your assigned area is unchanged: '
 
 run_member_r2() { # $1=family $2=role $3=command $4=target $5=outdir
   local fam="$1" role="$2" cmd="$3" tgt="$4" out="$5"
@@ -86,10 +102,11 @@ run_member_r2() { # $1=family $2=role $3=command $4=target $5=outdir
   # 🟥 R4 #8: «mine» is the MEMBER (family+role), not the family — two roles of one family were each
   #    told the other's findings were their own. R4 #5: own rows carry `id` so a kept/revised finding
   #    keeps its identity through round 2 (a declared seed otherwise turns ABSENT while surviving).
-  MINE_FAM="$fam" MINE_ROLE="$role" /usr/bin/python3 -c '
+  MINE_FAM="$fam" MINE_ROLE="$role" R2_BLIND="${ROUND2_BLIND:-0}" /usr/bin/python3 -c '
 import sys, json, os
 mine, kin, theirs = [], [], []
 fam, role = os.environ["MINE_FAM"], os.environ["MINE_ROLE"]
+blind = os.environ.get("R2_BLIND") == "1"
 for l in open(sys.argv[1], encoding="utf-8"):
     l = l.strip()
     if not l: continue
@@ -109,11 +126,16 @@ with open(sys.argv[2], "w", encoding="utf-8") as w:
     if kin:
         w.write("\n===== OTHER MEMBERS OF YOUR OWN FAMILY (not yours — do not keep/drop these) =====\n")
         for r in kin: w.write(json.dumps(r, ensure_ascii=False) + "\n")
-    w.write("\n===== THE OTHER FAMILY ROUND-1 FINDINGS =====\n")
-    for r in theirs: w.write(json.dumps(r, ensure_ascii=False) + "\n")
-    if not theirs: w.write("(they reported none)\n")
+    if blind:
+        # F_r2ctrl 컨트롤: 상대 목록을 «감춘다». 절 자체를 안 쓴다 — «(withheld)» 라고 쓰면 모델이 그 부재를 추론 재료로 쓴다
+        pass
+    else:
+        w.write("\n===== THE OTHER FAMILY ROUND-1 FINDINGS =====\n")
+        for r in theirs: w.write(json.dumps(r, ensure_ascii=False) + "\n")
+        if not theirs: w.write("(they reported none)\n")
 ' "$out/findings_r1.jsonl" "$out/peer_${fam}_${role}.txt" || return 1   # R3 #9: per-member — two roles of one family raced on a shared truncate/write
-  { printf '%s%s\n\n===== FILE: %s =====\n' "$PROMPT_HEAD_R2" "$role" "$(basename "$tgt")"
+  local head_r2="$PROMPT_HEAD_R2"; [ "${ROUND2_BLIND:-0}" = 1 ] && head_r2="$PROMPT_HEAD_R2_BLIND"
+  { printf '%s%s\n\n===== FILE: %s =====\n' "$head_r2" "$role" "$(basename "$tgt")"
     cat "$tgt"; cat "$out/peer_${fam}_${role}.txt"; } > "$pf"
   q_pf="$(printf '%q' "$pf")"
   cmd="${cmd//PROMPT_FILE/$q_pf}"
@@ -365,15 +387,16 @@ EOS
   [ "$fails" -eq 0 ] && { echo "SELFTEST: PASS"; return 0; } || { echo "SELFTEST: FAIL"; return 1; }
 }
 
-[ $# -ge 1 ] || { echo "usage: $0 <target-file> --out <dir> [--fleet <table>] [--round2] | --selftest" >&2; exit 2; }
+[ $# -ge 1 ] || { echo "usage: $0 <target-file> --out <dir> [--fleet <table>] [--round2|--round2-blind] | --selftest" >&2; exit 2; }
 [ "$1" = "--selftest" ] && { selftest; exit $?; }
 TARGET="$1"; shift
-OUT=""; FLEET=""; ROUND2=0
+OUT=""; FLEET=""; ROUND2=0; ROUND2_BLIND=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --out) OUT="${2:-}"; shift 2 ;;
     --fleet) FLEET="${2:-}"; shift 2 ;;
     --round2) ROUND2=1; shift ;;
+    --round2-blind) ROUND2=1; ROUND2_BLIND=1; shift ;;   # F_r2ctrl: 2차 패스는 돌리되 상대 계열 목록을 «감춘다» — «탈상관 효과» 와 «두 번 본 효과» 를 가른다
     *) echo "unknown flag: $1" >&2; exit 2 ;;
   esac
 done
@@ -475,7 +498,7 @@ if [ "$ROUND2" -eq 1 ]; then
       # 🟥 합쳐서도 비면 1차를 «대체» 하지 않는다 — 그러면 탈상관이 아니라 삭제다.
       echo "FLEET round2 produced nothing — keeping round-1 findings (a failed 2nd pass must not delete the 1st)"
     fi
-    echo "FLEET round2 members_ok=$R2_OK fallback=$R2_FALLBACK"
+    echo "FLEET round2 members_ok=$R2_OK fallback=$R2_FALLBACK blind=$ROUND2_BLIND"
     R2_TOTAL=$(/usr/bin/wc -l < "$OUT/findings.jsonl" | /usr/bin/tr -d ' ')
     echo "FLEET round2 r1=$R1_TOTAL r2=$R2_TOTAL delta=$((R2_TOTAL - R1_TOTAL))"
   fi

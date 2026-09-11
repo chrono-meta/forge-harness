@@ -30,14 +30,15 @@ set -uo pipefail
 
 SUPPORTED_FAMILIES="codex gemini"          # must match finding_verifier.sh's own case statement
 
-TARGET=""; OUT=""; FLEET=""; SEEDED_IDS=""; SEEDED_FILE=""; SEEDS_ROUTED=""; ROUND2=0
-usage() { echo "usage: finding_pipeline.sh <target-file> --out <dir> [--fleet <table>] [--round2] [--seeded <ids>] [--seeded-file <path>]" >&2; exit 2; }
+TARGET=""; OUT=""; FLEET=""; SEEDED_IDS=""; SEEDED_FILE=""; SEEDS_ROUTED=""; ROUND2=0; ROUND2_BLIND=0
+usage() { echo "usage: finding_pipeline.sh <target-file> --out <dir> [--fleet <table>] [--round2|--round2-blind] [--seeded <ids>] [--seeded-file <path>]" >&2; exit 2; }
 need() { [ $# -ge 2 ] || { echo "finding_pipeline: $1 needs a value" >&2; exit 2; }; }
 [ $# -ge 1 ] || usage
 TARGET="$1"; shift
 while [ $# -gt 0 ]; do
   case "$1" in
     --round2)      ROUND2=1; shift ;;
+    --round2-blind) ROUND2=1; ROUND2_BLIND=1; shift ;;
     --seeded)      need "$@"; SEEDED_IDS="$2"; shift 2 ;;
     --seeded-file) need "$@"; SEEDED_FILE="$2"; shift 2 ;;
     --out)   need "$@"; OUT="$2"; shift 2 ;;    # `shift 2` on a trailing flag consumes nothing and
@@ -108,7 +109,7 @@ argv_json() {  # each argument becomes one JSON string — no shell ever parses 
 /bin/rm -rf "$OUT/fleet"
 FA=(); [ -n "$FLEET" ] && FA=(--fleet "$FLEET")
 # 생성시점 탈상관은 fleet 층의 일이다 — 드라이버는 플래그만 통과시킨다.
-R2ARGS=(); [ "$ROUND2" -eq 1 ] && R2ARGS=(--round2)
+R2ARGS=(); [ "$ROUND2" -eq 1 ] && R2ARGS=(--round2); [ "$ROUND2_BLIND" -eq 1 ] && R2ARGS=(--round2-blind)
 bash "$FLEET_SH" "$TARGET" --out "$OUT/fleet" ${FA[@]+"${FA[@]}"} ${R2ARGS[@]+"${R2ARGS[@]}"} 2>&1 | tee "$OUT/fleet_run.log"
 FLEET_RC=${PIPESTATUS[0]}
 FINDINGS="$OUT/fleet/findings.jsonl"
