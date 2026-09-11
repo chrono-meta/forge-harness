@@ -83,9 +83,21 @@
 🟥 그리고 면제된 것은 **«면제됨»으로 출력한다** — 조용히 사라지면 다음 감사자가 그 연출을
 다시 «발견»한다(§방법론 ⓕ 「알고도 남긴 것」).
 """
-import zipfile, re, os, collections
+import zipfile, re, os, collections, html
 
 EMU_PT = 12700
+
+
+def _xfrm(b):
+    """(x, y, cx, cy) — <a:off>/<a:ext> 의 속성 순서에 기대지 않는다. 없으면 None."""
+    off = re.search(r'<a:off\b[^>]*>', b); ext = re.search(r'<a:ext\b[^>]*>', b)
+    if not (off and ext):
+        return None
+    try:
+        return tuple(int(re.search(r'\b%s="(-?\d+)"' % k, tag).group(1))
+                     for k, tag in (('x', off.group(0)), ('y', off.group(0)), ('cx', ext.group(0)), ('cy', ext.group(0))))
+    except AttributeError:
+        return None
 
 
 def shapes(z, sn):
@@ -101,15 +113,15 @@ def shapes(z, sn):
     for m in re.finditer(r'<p:(sp|cxnSp)\b[^>]*>.*?</p:\1>', x, re.S):   # R3 A6: 여는 태그에 속성이 있어도 도형이다
         b = m.group(0)
         nm = re.search(r'name="([^"]*)"', b)
-        o = re.search(r'<a:off x="(-?\d+)" y="(-?\d+)"/><a:ext cx="(-?\d+)" cy="(-?\d+)"', b)
+        # R4 A5: 속성 순서는 기하가 아니다 — off/ext 를 각각 찾고 x·y·cx·cy 를 따로 뽑는다
+        o = _xfrm(b)
         if not (nm and o):
             continue
         # R3 A7: 런 경계는 글자가 아니다(attr 레인과 같은 규칙) — 문단 안 '' · 문단 사이 ' '
-        t = re.sub(r'\s+', ' ', ' '.join(''.join(re.findall(r'<a:t>([^<]*)</a:t>', pm))
+        t = re.sub(r'\s+', ' ', ' '.join(html.unescape(''.join(re.findall(r'<a:t>([^<]*)</a:t>', pm)))   # R4 A6: &amp; == &#38;
                                           for pm in re.findall(r'<a:p\b[^>]*>.*?</a:p>', b, re.S))).strip()
         flip = ''.join(k for k in ('H', 'V') if re.search(r'\bflip%s="(1|true)"' % k, b))   # "true" 도 참이다(python-pptx 실물)
-        out.setdefault(nm.group(1), []).append(
-            (int(o.group(1)), int(o.group(2)), int(o.group(3)), int(o.group(4)), t, flip))
+        out.setdefault(nm.group(1), []).append((o[0], o[1], o[2], o[3], t, flip))
     return {k: v[0] for k, v in out.items() if len(v) == 1}
 
 

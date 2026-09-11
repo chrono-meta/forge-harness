@@ -67,6 +67,18 @@ def _slide_order(z):
     return [int(rels[r]) for r in re.findall(r'<p:sldId\b[^>]*\br:id="([^"]+)"', lst)]
 
 
+def _xfrm(b):
+    """(x, y, cx, cy) — <a:off>/<a:ext> 속성 순서에 기대지 않는다(R4 A5). 없으면 None."""
+    off = re.search(r'<a:off\b[^>]*>', b); ext = re.search(r'<a:ext\b[^>]*>', b)
+    if not (off and ext):
+        return None
+    try:
+        return tuple(int(re.search(r'\b%s="(-?\d+)"' % k, tag).group(1))
+                     for k, tag in (('x', off.group(0)), ('y', off.group(0)), ('cx', ext.group(0)), ('cy', ext.group(0))))
+    except AttributeError:
+        return None
+
+
 def _slide_size_in(z):
     m = re.search(r'<p:sldSz cx="(\d+)" cy="(\d+)"',
                   z.read('ppt/presentation.xml').decode('utf-8'))
@@ -81,7 +93,7 @@ def _shapes(z, sn):
     for m in re.finditer(r'<p:(sp|cxnSp|pic)\b[^>]*>.*?</p:\1>', x, re.S):   # R3 A6
         b = m.group(0)
         nm = re.search(r'name="([^"]*)"', b)
-        o = re.search(r'<a:off x="(-?\d+)" y="(-?\d+)"/><a:ext cx="(-?\d+)" cy="(-?\d+)"', b)
+        o = _xfrm(b)   # R4 A5: 속성 순서 무관
         if not (nm and o):
             continue
         ln = re.search(r'<a:ln([^>]*)>(.*?)</a:ln>', b, re.S)
@@ -99,7 +111,7 @@ def _shapes(z, sn):
         # R3 A10: 크기는 «글자 구간» 에 붙는다 — 런 단위 튜플은 AB@28+CD@28 을 ABCD@28 과 다르게(오탐),
         #    AB@28+CD@32 를 A@28+BCD@32 와 같게(미탐) 읽었다. 인접 같은 크기 런을 합친 (글자수, 크기) 구간으로.
         spans = []
-        for rm in re.finditer(r'<a:r\b[^>]*>(.*?)</a:r>', b_vis, re.S):
+        for rm in re.finditer(r'<a:(?:r|fld)\b[^>]*>(.*?)</a:(?:r|fld)>', b_vis, re.S):   # R4 A4: 필드 런도 글자다
             rb = rm.group(1)
             szm = re.search(r'<a:rPr\b[^>]*\bsz="(\d+)"', rb)
             sz = int(szm.group(1)) / 100 if szm else None
@@ -113,8 +125,8 @@ def _shapes(z, sn):
         spans = tuple(spans)
         out.append(dict(
             slide=sn, name=nm.group(1),
-            x=int(o.group(1)) / EMU_IN, y=int(o.group(2)) / EMU_IN,
-            w=int(o.group(3)) / EMU_IN, h=int(o.group(4)) / EMU_IN,
+            x=o[0] / EMU_IN, y=o[1] / EMU_IN,
+            w=o[2] / EMU_IN, h=o[3] / EMU_IN,
             szs=szs,                                  # () 이면 명시 크기 없음 → UNMEASURED
             # 문단 정렬은 <a:pPr algn> 뿐이다 — <a:ln algn="ctr"> 는 선의 정렬이라 다른 것(codex 09-11)
             # R3 A11: 문단마다 자리를 남긴다 — 정렬이 없는 문단은 '(기본)' 슬롯(있는 것만 모으면 위치가 지워진다)
@@ -160,6 +172,9 @@ def _intent_index(intended):
             continue
         if not isinstance(sl, list) or (e.get('shapes') is not None and not isinstance(e.get('shapes'), list)):
             errs.append(f'attr_consistency.intended[{n}] : slides·shapes 는 목록이어야 한다 (문자열 "ab" 는 a·b 로 읽힌다) — 면제 안 함')   # R3 A9
+            continue
+        if not all(isinstance(v, int) and not isinstance(v, bool) for v in sl):
+            errs.append(f'attr_consistency.intended[{n}] : slides 원소는 정수여야 한다 (받은 값 {sl!r} — 1.9·true 는 1 이 아니다) — 면제 안 함')   # R4 A7
             continue
         if not why:
             errs.append(f'attr_consistency.intended[{n}] : 🟥 why 가 비었다 — 사유 없는 면제는 오류다')
@@ -212,6 +227,10 @@ def ax_algn(S, sw, cfg):
                     f"{sn:>3}p [algn]   폭 {w}\" y {y}\" 한 줄인데 정렬이 갈린다 — {detail}"
 
 
+def _size_seq(spans):
+    return tuple(sz for _n, sz in spans)
+
+
 def ax_mirror(S, sw, cfg):
     """좌우 대칭 쌍(같은 y · 화면 중심 기준 거울)의 글자 크기가 갈리는가."""
     tol = float(cfg.get('mirror_tol_in', 0.4))
@@ -227,7 +246,8 @@ def ax_mirror(S, sw, cfg):
                     continue
                 if abs(ca - cb) < 1.0:                      # 너무 붙어 있으면 쌍이 아니다
                     continue
-                if a['spans'] != b['spans']:   # R3 A10
+                # R4 B8: 거울 쌍은 글자가 다른 게 정상이라 «글자 수» 는 비교 대상이 아니다 — 크기 «순열» 만(인접 동일 크기 합침)
+                if _size_seq(a['spans']) != _size_seq(b['spans']):
                     yield sn, [a['name'], b['name']], (
                         f"{sn:>3}p [mirror] 좌우 대칭인데 크기가 갈린다 — "
                         f"{a['name'][:12]} {'/'.join(map(str, a['szs']))}pt «{a['text'][:14]}» ↔ "

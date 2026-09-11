@@ -40,7 +40,7 @@ pptx 편집 스크립트가 `assert len(paras) == 3` 에서 죽었는데 **뒤�
 
 종료코드  0 반영함 · 1 거부(반영 안 함) · 2 판정불가(계기 오류·인자 오류 — PASS 아님)
 """
-import sys, os, re, io, zipfile, hashlib, argparse, posixpath, tempfile
+import sys, os, re, io, zipfile, hashlib, argparse, posixpath, tempfile, fcntl
 try:
     from pptx import Presentation as _Presentation   # 🟥 R3: 손으로 짠 XML 계수는 S 를 세 라운드째 냈다(접두 q:·깨진 XML·External rel).
 except Exception:                                    #    실제 파서를 오라클로 세우고, 내 계수는 그것과 «맞아야 하는» 두 번째 제공자로 둔다.
@@ -101,7 +101,8 @@ def probe_bytes(data):
     prs = _Presentation(io.BytesIO(data))
     n_pptx = 0
     for sl in prs.slides:
-        _ = len(sl.shapes)          # 슬라이드 부품을 실제로 파싱하게 강제한다(R3 S2)
+        for shp in sl.shapes:       # R4 S1: 도형 «수» 가 아니라 도형 «하나하나» 를 읽게 한다 — nvSpPr 없는 도형은 여기서 죽는다
+            _ = (shp.shape_id, shp.name, shp.shape_type)
         n_pptx += 1
     if not (n_struct[0] == n_struct[1] == n_struct[2] == n_pptx):
         raise ValueError(f'구조 계수 파일/목록/도달 {n_struct} 와 python-pptx 장 수 {n_pptx} 가 어긋난다 — 두 제공자가 불일치')
@@ -138,6 +139,19 @@ def main(argv):
     if not os.path.exists(cand) or os.path.getsize(cand) == 0:
         print(f'🟥 후보가 없거나 비었다: {cand} — 반영 안 함')
         return 1
+    # R4 S2: 검사와 교체 사이의 창은 «잠금» 으로만 닫힌다 — 같은 게이트를 쓰는 다른 설치는 여기서 직렬화된다.
+    #    🟥 잔여(이름으로): 이 잠금을 안 쓰는 임의의 쓰기 주체(cp·에디터)는 못 막는다. 그건 파일시스템의 성질이다.
+    lock_path = dest + '.safe_install.lock'
+    lock_fd = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+        return _install_locked(ns, cand, dest)
+    finally:
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        os.close(lock_fd)
+
+
+def _install_locked(ns, cand, dest):
     # ⑥ 한 번 읽는다 — 이 바이트가 검사되고, 이 바이트가 설치된다
     with open(cand, 'rb') as f:
         data = f.read()

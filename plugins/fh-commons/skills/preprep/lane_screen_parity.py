@@ -117,8 +117,9 @@ def compare(man, deck, threshold=0.60, skip=(), deck_groups=None):
         M = [t for t in M if t]
         # ⓪ R3 B13: «도형 전체 join 이 원고 줄과 정확히 같은» 짝을 먼저 소비한다 — 문단 단위가 먼저 먹으면
         #    (원고 AB·ABX ↔ 도형 [AB,X]·[A,B]) 옳은 배정이 막힌다.
+        consumed_shapes = set()   # R4 A3: ⓪ 에서 통째로 소비된 도형은 ② 가 다시 빌리지 못한다
         if deck_groups is not None:
-            for paras in deck_groups[i]:
+            for si, paras in enumerate(deck_groups[i]):
                 ps = [_norm(p) for p in paras if _norm(p)]
                 if len(ps) < 2 or not all(pool[p] > 0 for p in ps):
                     continue
@@ -128,6 +129,7 @@ def compare(man, deck, threshold=0.60, skip=(), deck_groups=None):
                     for p in ps:
                         pool[p] -= 1
                     joined_hits += 1
+                    consumed_shapes.add(si)
         only_m = []
         for t in M:
             if pool[t] > 0:
@@ -138,7 +140,9 @@ def compare(man, deck, threshold=0.60, skip=(), deck_groups=None):
         #    (R2 B11: 1단계에서 일부가 맞았어도 나머지를 잇는다). 🟥 R2 A5: 정확 일치만 «조용히» 사라진다 —
         #    유사 일치는 문구 차이로 남긴다(맞춘 것과 다른 것을 같은 얼굴로 내지 않는다).
         if deck_groups is not None and only_m:
-            for paras in deck_groups[i]:
+            for si, paras in enumerate(deck_groups[i]):
+                if si in consumed_shapes:
+                    continue
                 avail = collections.Counter(pool)
                 ps = []
                 for p in (_norm(p) for p in paras):
@@ -159,6 +163,7 @@ def compare(man, deck, threshold=0.60, skip=(), deck_groups=None):
                     for p in ps:
                         pool[p] -= 1
                     joined_hits += 1
+                    consumed_shapes.add(si)
                     if fuzzy is not None:
                         wording.append((i + 1, uid, hit, j, fuzzy))
         for t in only_m:

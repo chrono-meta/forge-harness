@@ -435,6 +435,30 @@ def run_safe_install(fx_dir):
     ok('S4 검사 뒤 정본이 바뀌면 중단(rc=1) · 4장 정본 보존') if rc4 == 1 and slides(race_dest) == slides(src) and '바뀌었다' in buf.getvalue() \
         else ng(f'S4 rc={rc4} dest={slides(race_dest)}장\n{buf.getvalue()}')
 
+    # ── R4 (codex 09-11 18:02) 설치 표면 ──
+    # S1 nvSpPr 없는 도형(파서가 도형 «수» 만 세면 통과) → 도형 하나하나를 읽어 거부
+    noname = os.path.join(fx_dir, 'si_noname_shape.pptx')
+    def _strip_nv(d):
+        return re.sub(rb'<p:nvSpPr>.*?</p:nvSpPr>', b'', d, count=1, flags=re.S)
+    rezip(src, noname, {names[0]: (None, _strip_nv)})
+    rc, out = run(noname)
+    ok('S1 nvSpPr 없는 도형은 오라클이 거부한다') if rc == 1 and '못 읽는다' in out else ng(f'깨진 도형이 통과했다 (rc={rc})\n{out}')
+    # S2 같은 게이트 둘이 동시에 돌면 직렬화된다 — 잠금 안에서 두 번째가 «바뀐 정본» 을 본다
+    import threading, fcntl
+    lock_dest = os.path.join(fx_dir, 'si_lock_dest.pptx'); shutil.copyfile(small, lock_dest)
+    lock_path = lock_dest + '.safe_install.lock'
+    lf = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o600); fcntl.flock(lf, fcntl.LOCK_EX)
+    res = {}
+    def _worker():
+        r = subprocess.run([sys.executable, here, small, lock_dest], capture_output=True, text=True); res['rc'] = r.returncode; res['out'] = r.stdout
+    th = threading.Thread(target=_worker); th.start(); th.join(1.5)
+    blocked_while_held = th.is_alive()
+    shutil.copyfile(src, lock_dest)          # 잠금을 쥔 «다른 설치» 가 4장으로 바꿨다
+    fcntl.flock(lf, fcntl.LOCK_UN); os.close(lf); th.join(30)
+    ok('S2 잠금 대기 중이던 설치가 «바뀐 정본(4장)» 을 보고 축소로 거부한다 (대기=%s)' % blocked_while_held) \
+        if blocked_while_held and res.get('rc') == 1 and slides(lock_dest) == slides(src) and '줄었다' in res.get('out', '') \
+        else ng(f'S2 blocked={blocked_while_held} rc={res.get("rc")} dest={slides(lock_dest)}장\n{res.get("out","")[:300]}')
+
 
 def _mini_deck(path, slides_xml, sld_attr_order='id-first', rel_attr_order='id-first'):
     """최소 pptx. slides_xml = [슬라이드 본문 XML …] (발표 순서). 속성 순서를 골라 «순서에 기댄 정규식»을 잡는다."""
@@ -704,6 +728,42 @@ def run_codex_audit_regressions(fx_dir):
     l14b, s14b, e14b, _ = LA.collect(d, {'axes': ['echo'], 'intended': list(reversed(decl))})
     ok('B14 [부분,완전]·[완전,부분] 둘 다 면제 1 · 후보 0') if len(s14a) == 1 and len(s14b) == 1 and not l14a and not l14b \
         else ng('B14 a: sup=%d lines=%d · b: sup=%d lines=%d · errs=%r' % (len(s14a), len(l14a), len(s14b), len(l14b), e14a))
+
+    # ── R4 (codex 09-11 18:02) 레인 A3–A7 · B8 ──
+    # A3 ⓪ 에서 통째로 소비된 도형은 ② 가 다시 못 빌린다 — 원고 AB·AB ↔ 도형 [A,B]·[A]·[B] → 둘째 AB 는 짝 없음
+    d = os.path.join(fx_dir, 'r4_owner.pptx'); _mini_deck(d, [_shape('A', 'B') + _shape('A') + _shape('B')])
+    a3, w3, st3 = _cmp(_man(['AB', 'AB']), d)
+    ok('A3 도형 소유권: 둘째 AB 는 짝 없음(absent %d · joined %d)' % (len(a3), st3['joined'])) if len(a3) == 1 and st3['joined'] == 1 \
+        else ng('A3 a=%r w=%r st=%r' % (a3, w3, st3))
+    # A4 <a:fld> 런의 크기도 구간에 들어간다
+    def _fld(name, x, sz):
+        return ('<p:sp><p:nvSpPr><p:cNvPr id="1" name="%s"/></p:nvSpPr><p:spPr><a:xfrm><a:off x="%d" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm></p:spPr>'
+                '<p:txBody><a:p><a:fld id="{x}" type="slidenum"><a:rPr sz="%d"/><a:t>7</a:t></a:fld></a:p></p:txBody></p:sp>' % (name, x, sz))
+    d = os.path.join(fx_dir, 'r4_fld.pptx'); _mini_deck(d, [_fld('L', 914400, 2800) + _fld('R', 7620000, 3200)])
+    S4, sw4 = LA.load(d)
+    ok('A4 fld 런 구간 %s vs %s → mirror 1' % (S4[0][0]['spans'], S4[0][1]['spans'])) if S4[0][0]['spans'] == ((1, 28.0),) and len(list(LA.ax_mirror(S4, sw4, {}))) == 1 \
+        else ng('A4 spans=%r/%r' % (S4[0][0]['spans'], S4[0][1]['spans']))
+    # A5 <a:off y= x=> 순서 — geometry·attr 둘 다 도형을 잃지 않는다
+    d = os.path.join(fx_dir, 'r4_offorder.pptx')
+    swapped = _sp('m', 35000, 0, 100, 100, 'x').replace('<a:off x="35000" y="0"/>', '<a:off y="0" x="35000"/>')
+    _mini_deck(d, [_sp('m', 0, 0, 100, 100, 'x'), swapped])
+    l5, st5, _s, _e = LG.p1_lines(LG.load_slides(d), 200000)
+    n_a5 = len(LA.load(d)[0][1])
+    ok('A5 off 속성 순서 뒤집혀도 geometry 후보 1 · attr 도형 1') if len(l5) == 1 and n_a5 == 1 else ng('A5 geo=%r attr=%d' % (l5, n_a5))
+    # A6 geometry 엔티티 동치 — R&amp;D 와 R&#38;D 는 같은 글자로 결박
+    d = os.path.join(fx_dir, 'r4_geo_entity.pptx'); _mini_deck(d, [_sp('e', 0, 0, 100, 100, 'R&amp;D'), _sp('e', 35000, 0, 100, 100, 'R&#38;D')])
+    l6, st6, _s, _e = LG.p1_lines(LG.load_slides(d), 200000)
+    ok('A6 geometry: 엔티티 표기가 달라도 결박(mismatch 0) · 후보 1') if len(l6) == 1 and st6.get('mismatch', 0) == 0 else ng('A6 lines=%r st=%r' % (l6, st6))
+    # A7 slides 원소 1.9 · true 는 오류
+    _i7, e7 = LA._intent_index([{'axis': 'dash', 'slides': [1.9], 'why': 'w'}, {'axis': 'dash', 'slides': [True], 'why': 'w'}])
+    ok('A7 slides [1.9]·[true] → 선언 오류 2 · 면제 0') if len(e7) == 2 and not _i7 else ng('A7 errs=%r idx=%r' % (e7, dict(_i7)))
+    # B8 mirror: 글자 수 다른 AB / ABCDE 같은 28pt → 후보 0 · (28,32)/(32,28) 는 여전히 1
+    d = os.path.join(fx_dir, 'r4_mirror_len.pptx')
+    _mini_deck(d, [_sp('L', 914400, 914400, 3657600, 914400, 'AB', 2800) + _sp('R', 7620000, 914400, 3657600, 914400, 'ABCDE', 2800)])
+    S8, sw8 = LA.load(d)
+    S9b, sw9b = LA.load(os.path.join(fx_dir, 'r2_order.pptx'))
+    ok('B8 mirror: 글자 수만 다른 쌍 0 · 크기 순열 다른 쌍 1') if len(list(LA.ax_mirror(S8, sw8, {}))) == 0 and len(list(LA.ax_mirror(S9b, sw9b, {}))) == 1 \
+        else ng('B8 len-only=%d order=%d' % (len(list(LA.ax_mirror(S8, sw8, {}))), len(list(LA.ax_mirror(S9b, sw9b, {})))))
 
 
 def run_baseline_delta(fx_dir):
