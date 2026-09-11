@@ -106,14 +106,59 @@ def probe_bytes(data):
             st = shp.shape_type
             if st is not None and int(st) == 6:            # GROUP — R5 S1: 자식도 같은 검사(그룹 안의 깨진 도형)
                 _walk(shp.shapes)
-            elif st is not None and int(st) == 13:         # PICTURE — R5 S2: 참조 부품이 실제로 있어야 한다
-                _ = shp.image.blob[:1]
     for sl in prs.slides:
         _walk(sl.shapes)
         n_pptx += 1
+    # 🟥 R6 S1/S2: 종류별 검사(그림 13번만)는 차트·자리표시자 그림(14번)·깨진 이미지 바이트를 놓쳤다.
+    #    «부품과 관계 전부» 를 걷는다 — 끊긴 관계는 여기서 KeyError, 이미지는 PIL 로 실제 디코드.
     if not (n_struct[0] == n_struct[1] == n_struct[2] == n_pptx):
         raise ValueError(f'구조 계수 파일/목록/도달 {n_struct} 와 python-pptx 장 수 {n_pptx} 가 어긋난다 — 두 제공자가 불일치')
+    _verify_rels_in_zip(names, z_bytes=data)   # R6 S1: python-pptx 는 끊긴 관계를 로드 시 조용히 버린다 — zip 수준에서 센다
+    _verify_package(prs)
     return files, len(rids), len(set(reached))
+
+
+def _verify_rels_in_zip(names, z_bytes):
+    """모든 *.rels 의 내부 Target 이 zip 안에 실재해야 한다(차트·미디어·자리표시자 그림 전부)."""
+    with zipfile.ZipFile(io.BytesIO(z_bytes)) as z:
+        for n in names:
+            if not n.endswith('.rels'):
+                continue
+            base = posixpath.dirname(posixpath.dirname(n))          # ppt/slides/_rels/slide1.xml.rels → ppt/slides
+            rels = z.read(n).decode('utf-8', 'replace')
+            for tag in re.findall(r'<Relationship\b[^>]*>', rels):
+                if re.search(r'\bTargetMode="External"', tag):
+                    continue
+                mt = re.search(r'\bTarget="([^"]+)"', tag)
+                if not mt:
+                    continue
+                tgt = mt.group(1)
+                path = posixpath.normpath(tgt.lstrip('/')) if tgt.startswith('/') else posixpath.normpath(posixpath.join(base, tgt))
+                if path not in names:
+                    raise ValueError(f'{n}: 관계 대상 {path} 가 zip 에 없다 (끊긴 관계)')
+
+
+def _verify_package(prs):
+    """패키지의 모든 부품을 읽고, 모든 내부 관계의 대상이 실재하며, 이미지 부품이 디코드되는지 확인한다."""
+    pkg = prs.part.package
+    seen = 0
+    for part in pkg.iter_parts():
+        _ = part.blob                       # 부품 바이트가 실제로 읽힌다
+        seen += 1
+        for rel in part.rels.values():
+            if rel.is_external:
+                continue
+            _ = rel.target_part             # 끊긴 관계 → KeyError
+        ct = str(getattr(part, 'content_type', '') or '')
+        if ct.startswith('image/') and ct not in ('image/svg+xml', 'image/x-emf', 'image/x-wmf', 'image/emf', 'image/wmf'):
+            try:
+                from PIL import Image
+            except Exception:
+                raise ValueError('PIL 이 없다 — 이미지 부품을 검증할 수 없어 판정불가')
+            with Image.open(io.BytesIO(part.blob)) as im:
+                im.verify()                 # 깨진 바이트는 여기서 예외
+    if seen == 0:
+        raise ValueError('패키지 부품 0 — 판정불가')
 
 
 def sha_bytes(data):

@@ -62,29 +62,14 @@ def deck_screens(path):
 def deck_screens_grouped(path):
     """장별 [[도형의 문단 …] …] — 🟥 원고 🖥 는 «도형 단위» 로 쓰이고 덱은 «문단 단위» 로 읽힌다.
     알갱이가 다른 채 짝지으면 다문단 도형마다 1+N 건 오탐이 난다(실측 47 → 279). 그래서 도형 경계를
-    같이 넘겨 compare 가 두 단계로 맞춘다."""
+    같이 넘겨 compare 가 두 단계로 맞춘다. 2026-09-11: 정규식 독자 → oox(트리). 표 셀 문단 포함."""
+    import oox as _oox
     z = zipfile.ZipFile(path)
-    rels = {}
-    for tag in re.findall(r'<Relationship\b[^>]*>', z.read('ppt/_rels/presentation.xml.rels').decode('utf-8')):
-        mid = re.search(r'\bId="([^"]+)"', tag); mt = re.search(r'\bTarget="slides/slide(\d+)\.xml"', tag)
-        if mid and mt:
-            rels[mid.group(1)] = mt.group(1)
-    lst = re.search(r'<p:sldIdLst\b[^>]*>(.*?)</p:sldIdLst>',
-                    z.read('ppt/presentation.xml').decode('utf-8'), re.S).group(1)
-    order = [int(rels[r]) for r in re.findall(r'<p:sldId\b[^>]*\br:id="([^"]+)"', lst)]
     out = []
-    for sn in order:
-        x = z.read('ppt/slides/slide%d.xml' % sn).decode('utf-8')
+    for sn in _oox.slide_order(z):
         shapes = []
-        # 도형(sp/cxnSp/pic — grpSp 는 자식 sp 로 풀린다) 안에서 문단 단위로 뽑는다.
-        #    엔티티(&amp;)는 풀어서 원고의 R&D 와 같은 글자가 되게(codex 09-11).
-        # R2 A10: 표(graphicFrame → a:tc) 의 글자도 화면이다 — 빼면 «화면에만» 있는 줄이 조용히 사라진다
-        for sm in re.finditer(r'<p:(sp|cxnSp|pic|graphicFrame)\b[^>]*>.*?</p:\1>', x, re.S):   # R3 A6
-            paras = []
-            for pm in re.finditer(r'<a:p\b[^>]*>.*?</a:p>', sm.group(0), re.S):
-                t = html.unescape(''.join(re.findall(r'<a:t\b[^>]*>([^<]*)</a:t>', pm.group(0)))).strip()
-                if t:
-                    paras.append(t)
+        for s in _oox.walk_slide(z, sn):
+            paras = _oox.para_texts(s['paras'])
             if paras:
                 shapes.append(paras)
         out.append(shapes)

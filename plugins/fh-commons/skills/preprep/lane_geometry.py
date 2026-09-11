@@ -88,67 +88,22 @@ import zipfile, re, os, collections, html
 EMU_PT = 12700
 
 
-def _xfrm(b):
-    """(x, y, cx, cy) — <a:off>/<a:ext> 의 속성 순서에 기대지 않는다. 없으면 None."""
-    off = re.search(r'<a:off\b[^>]*>', b); ext = re.search(r'<a:ext\b[^>]*>', b)
-    if not (off and ext):
-        return None
-    try:
-        return tuple(int(re.search(r'\b%s="(-?\d+)"' % k, tag).group(1))
-                     for k, tag in (('x', off.group(0)), ('y', off.group(0)), ('cx', ext.group(0)), ('cy', ext.group(0))))
-    except AttributeError:
-        return None
+import oox as _oox
 
 
 def shapes(z, sn):
     """한 슬라이드의 도형을 {이름: (x,y,cx,cy,text,flip)} 로. 이름 중복은 대조 못 하니 뺀다.
-
-    🟥 `flip` 은 2026-09-10 에 더했다. 그 전까지 이 레인은 x·y·cx·cy 만 읽었고, 그래서
-       **같은 상자에서 방향만 뒤집힌 도형을 «동일»로 판정했다.** 실사고: 화살표 셋의 자리를
-       거울로 맞추면서 flipH 가 엉뚱한 도형에 남아 바깥 화살표 둘이 상자 «바깥쪽»을 가리켰는데
-       (모이는 그림이 벌어지는 그림이 됐다) 델타가 「새 어긋남 0건」을 냈다. 사람이 눈으로 잡았다.
-    """
-    x = z.read('ppt/slides/slide%d.xml' % sn).decode('utf-8')
+    🟥 2026-09-11: 정규식 독자를 oox(트리 독자)로 교체 — 그룹 변환(이동·flip)을 합성한 절대 좌표, 속성 순서·접두·엔티티 무관."""
     out = {}
-    # R5 A3: 그룹의 xfrm 이 뒤집히면 자식도 뒤집힌다 — 자식 구간마다 «그룹 뒤집힘» 을 합성한다
-    grp_flips = []   # [(start, end, 'H'/'V'/'HV')]
-    for gm in re.finditer(r'<p:grpSp\b[^>]*>.*?</p:grpSp>', x, re.S):
-        gx = re.search(r'<p:grpSpPr\b[^>]*>.*?<a:xfrm\b([^>]*)>', gm.group(0), re.S)
-        if gx:
-            fl = ''.join(k for k in ('H', 'V') if re.search(r'\bflip%s="(1|true)"' % k, gx.group(1)))
-            if fl:
-                grp_flips.append((gm.start(), gm.end(), fl))
-    for m in re.finditer(r'<p:(sp|cxnSp)\b[^>]*>.*?</p:\1>', x, re.S):   # R3 A6: 여는 태그에 속성이 있어도 도형이다
-        b = m.group(0)
-        nm = re.search(r'name="([^"]*)"', b)
-        # R4 A5: 속성 순서는 기하가 아니다 — off/ext 를 각각 찾고 x·y·cx·cy 를 따로 뽑는다
-        o = _xfrm(b)
-        if not (nm and o):
+    for s in _oox.walk_slide(z, sn):
+        if s['kind'] not in ('sp', 'cxnSp') or s['name'] is None or s['x'] is None:
             continue
-        # R3 A7: 런 경계는 글자가 아니다(attr 레인과 같은 규칙) — 문단 안 '' · 문단 사이 ' '
-        t = re.sub(r'\s+', ' ', ' '.join(html.unescape(''.join(re.findall(r'<a:t\b[^>]*>([^<]*)</a:t>', pm)))   # R4 A6: &amp; == &#38;
-                                          for pm in re.findall(r'<a:p\b[^>]*>.*?</a:p>', b, re.S))).strip()
-        flip = ''.join(k for k in ('H', 'V') if re.search(r'\bflip%s="(1|true)"' % k, b))   # "true" 도 참이다(python-pptx 실물)
-        for gs, ge, fl in grp_flips:                       # 부모 그룹 뒤집힘 합성(같은 축 두 번이면 원상)
-            if gs <= m.start() < ge:
-                for k in fl:
-                    flip = flip.replace(k, '') if k in flip else flip + k
-        flip = ''.join(k for k in ('H', 'V') if k in flip)
-        out.setdefault(nm.group(1), []).append((o[0], o[1], o[2], o[3], t, flip))
+        out.setdefault(s['name'], []).append((s['x'], s['y'], s['cx'], s['cy'], _oox.shape_text(s['paras']), s['flip']))
     return {k: v[0] for k, v in out.items() if len(v) == 1}
 
 
 def _order(z):
-    # 🟥 속성 순서에 기대지 않는다 — `<p:sldId r:id="rId1" id="256"/>` 도 실물이다(codex 감사 09-11).
-    #    Id/Target 도 각각 뽑는다. 못 푸는 r:id 는 조용히 빠지지 않고 KeyError 로 올라간다.
-    rels = {}
-    for tag in re.findall(r'<Relationship\b[^>]*>', z.read('ppt/_rels/presentation.xml.rels').decode('utf-8')):
-        mid = re.search(r'\bId="([^"]+)"', tag); mt = re.search(r'\bTarget="slides/slide(\d+)\.xml"', tag)
-        if mid and mt:
-            rels[mid.group(1)] = mt.group(1)
-    lst = re.search(r'<p:sldIdLst\b[^>]*>(.*?)</p:sldIdLst>',
-                    z.read('ppt/presentation.xml').decode('utf-8'), re.S).group(1)
-    return [int(rels[r]) for r in re.findall(r'<p:sldId\b[^>]*\br:id="([^"]+)"', lst)]
+    return _oox.slide_order(z)
 
 
 def load_slides(path):

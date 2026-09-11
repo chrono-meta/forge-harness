@@ -54,91 +54,50 @@ AXES = ('dash', 'algn', 'mirror', 'echo')
 
 # ── 추출 ─────────────────────────────────────────────────────────────────────
 
+import oox as _oox
+
+
 def _slide_order(z):
-    # 🟥 속성 순서에 기대지 않는다 — `<p:sldId r:id="rId1" id="256"/>` 도 실물이다(codex 감사 09-11).
-    #    Id/Target 도 각각 뽑는다. 못 푸는 r:id 는 조용히 빠지지 않고 KeyError 로 올라간다.
-    rels = {}
-    for tag in re.findall(r'<Relationship\b[^>]*>', z.read('ppt/_rels/presentation.xml.rels').decode('utf-8')):
-        mid = re.search(r'\bId="([^"]+)"', tag); mt = re.search(r'\bTarget="slides/slide(\d+)\.xml"', tag)
-        if mid and mt:
-            rels[mid.group(1)] = mt.group(1)
-    lst = re.search(r'<p:sldIdLst\b[^>]*>(.*?)</p:sldIdLst>',
-                    z.read('ppt/presentation.xml').decode('utf-8'), re.S).group(1)
-    return [int(rels[r]) for r in re.findall(r'<p:sldId\b[^>]*\br:id="([^"]+)"', lst)]
-
-
-def _xfrm(b):
-    """(x, y, cx, cy) — <a:off>/<a:ext> 속성 순서에 기대지 않는다(R4 A5). 없으면 None."""
-    off = re.search(r'<a:off\b[^>]*>', b); ext = re.search(r'<a:ext\b[^>]*>', b)
-    if not (off and ext):
-        return None
-    try:
-        return tuple(int(re.search(r'\b%s="(-?\d+)"' % k, tag).group(1))
-                     for k, tag in (('x', off.group(0)), ('y', off.group(0)), ('cx', ext.group(0)), ('cy', ext.group(0))))
-    except AttributeError:
-        return None
+    return _oox.slide_order(z)
 
 
 def _slide_size_in(z):
-    tag = re.search(r'<p:sldSz\b[^>]*>', z.read('ppt/presentation.xml').decode('utf-8'))   # R5 A4: 속성 순서 무관
-    cx = re.search(r'\bcx="(\d+)"', tag.group(0)) if tag else None
-    cy = re.search(r'\bcy="(\d+)"', tag.group(0)) if tag else None
-    return (int(cx.group(1)) / EMU_IN, int(cy.group(1)) / EMU_IN) if (cx and cy) else (13.333, 7.5)
+    sz = _oox.slide_size(z)
+    return (sz[0] / EMU_IN, sz[1] / EMU_IN) if sz else (13.333, 7.5)
 
 
 def _shapes(z, sn):
-    """한 장의 도형 전부. 🟥 lane_geometry.shapes() 와 달리 **이름 중복도 버리지 않는다** —
-    이 레인은 «같은 이름을 짝지어 대조»하는 게 아니라 «한 장 안의 분포»를 보기 때문이다."""
-    x = z.read('ppt/slides/slide%d.xml' % sn).decode('utf-8')
+    """한 장의 도형 전부(그룹은 풀어서 절대 좌표). 🟥 lane_geometry.shapes() 와 달리 **이름 중복도 버리지 않는다** —
+    이 레인은 «같은 이름을 짝지어 대조»하는 게 아니라 «한 장 안의 분포»를 보기 때문이다. 대신 «한 장 안에서
+    같은 이름이 둘» 이면 `dup=True` 로 표시해 면제 조회가 그것을 모호로 취급한다(R5 A6 · R6 A5)."""
     out = []
-    for m in re.finditer(r'<p:(sp|cxnSp|pic)\b[^>]*>.*?</p:\1>', x, re.S):   # R3 A6
-        b = m.group(0)
-        nm = re.search(r'name="([^"]*)"', b)
-        o = _xfrm(b)   # R4 A5: 속성 순서 무관
-        if not (nm and o):
+    for s in _oox.walk_slide(z, sn):
+        if s['kind'] not in ('sp', 'cxnSp', 'pic') or s['name'] is None or s['x'] is None:
             continue
-        ln = re.search(r'<a:ln([^>]*)>(.*?)</a:ln>', b, re.S)
-        lnw = None
-        if ln:
-            w = re.search(r'\sw="(\d+)"', ln.group(1))
-            if w:
-                lnw = round(int(w.group(1)) / EMU_PT, 2)
-        dash = re.search(r'prstDash val="([^"]+)"', ln.group(2)) if ln else None
-        # 🟥 눈에 보이는 런의 크기만 — endParaRPr(문단 끝 메타)는 화면에 없다. 그리고 2850 은 28 이 아니라
-        #    28.5 다: 정수 나눗셈이 28 vs 28.5 를 같다고 봤다(codex 09-11).
-        b_vis = re.sub(r'<a:endParaRPr\b[^>]*/>|<a:endParaRPr\b.*?</a:endParaRPr>', '', b, flags=re.S)
-        # R2 A9: 순서·중복을 보존한다 — 좌 28/32 ↔ 우 32/28 을 «같은 집합» 으로 접지 않는다
-        szs = tuple(int(v) / 100 for v in re.findall(r'<a:rPr\b[^>]*\bsz="(\d+)"', b_vis))
-        # R3 A10: 크기는 «글자 구간» 에 붙는다 — 런 단위 튜플은 AB@28+CD@28 을 ABCD@28 과 다르게(오탐),
-        #    AB@28+CD@32 를 A@28+BCD@32 와 같게(미탐) 읽었다. 인접 같은 크기 런을 합친 (글자수, 크기) 구간으로.
+        paras = s['paras']
+        szs = tuple(sz for p in paras for _t, sz in p['runs'] if sz is not None)
+        # R3 A10: 크기는 «글자 구간» 에 붙는다 — 인접 같은 크기 런을 합친 (글자수, 크기). R6 B7: 글자수는 공백 정규화 후.
         spans = []
-        for rm in re.finditer(r'<a:(?:r|fld)\b[^>]*>(.*?)</a:(?:r|fld)>', b_vis, re.S):   # R4 A4: 필드 런도 글자다
-            rb = rm.group(1)
-            szm = re.search(r'<a:rPr\b[^>]*\bsz="(\d+)"', rb)
-            sz = int(szm.group(1)) / 100 if szm else None
-            ln_ = len(html.unescape(''.join(re.findall(r'<a:t\b[^>]*>([^<]*)</a:t>', rb))))
-            if ln_ == 0:
-                continue
-            if spans and spans[-1][1] == sz:
-                spans[-1] = (spans[-1][0] + ln_, sz)
-            else:
-                spans.append((ln_, sz))
-        spans = tuple(spans)
+        for p in paras:
+            for t, sz in p['runs']:
+                n_ = len(re.sub(r'\s+', ' ', t).strip()) if t.strip() else 0
+                if n_ == 0:
+                    continue
+                if spans and spans[-1][1] == sz:
+                    spans[-1] = (spans[-1][0] + n_, sz)
+                else:
+                    spans.append((n_, sz))
         out.append(dict(
-            slide=sn, name=nm.group(1),
-            x=o[0] / EMU_IN, y=o[1] / EMU_IN,
-            w=o[2] / EMU_IN, h=o[3] / EMU_IN,
-            szs=szs,                                  # () 이면 명시 크기 없음 → UNMEASURED
-            # 문단 정렬은 <a:pPr algn> 뿐이다 — <a:ln algn="ctr"> 는 선의 정렬이라 다른 것(codex 09-11)
-            # R3 A11: 문단마다 자리를 남긴다 — 정렬이 없는 문단은 '(기본)' 슬롯(있는 것만 모으면 위치가 지워진다)
-            algn=tuple((re.search(r'<a:pPr\b[^>]*\balgn="([^"]+)"', pm) or [None, '(기본)'])[1]
-                       for pm in re.findall(r'<a:p\b[^>]*>.*?</a:p>', b, re.S)) or ('(기본)',),
-            spans=spans,
-            lnw=lnw, dash=dash.group(1) if dash else None,
-            # R2 A8: 런 경계는 글자가 아니다 — 문단 안 런은 '' 로, 문단 사이만 ' ' 로 잇는다
-            text=re.sub(r'\s+', ' ', ' '.join(
-                html.unescape(''.join(re.findall(r'<a:t\b[^>]*>([^<]*)</a:t>', pm))) for pm in re.findall(r'<a:p\b[^>]*>.*?</a:p>', b, re.S)
-            )).strip()))   # R3 A12: &amp; 와 &#38; 는 같은 글자
+            slide=sn, name=s['name'],
+            x=s['x'] / EMU_IN, y=s['y'] / EMU_IN, w=s['cx'] / EMU_IN, h=s['cy'] / EMU_IN,
+            szs=szs,
+            algn=tuple((p['algn'] or '(기본)') for p in paras) or ('(기본)',),
+            spans=tuple(spans),
+            lnw=round(s['ln_w'] / EMU_PT, 2) if s['ln_w'] is not None else None, dash=s['dash'],
+            text=_oox.shape_text(paras), dup=False))
+    cnt = collections.Counter(a_['name'] for a_ in out)
+    for a_ in out:
+        a_['dup'] = cnt[a_['name']] > 1
     return out
 
 
@@ -148,7 +107,6 @@ def load(path):
     sw, _sh = _slide_size_in(z)
     S = [_shapes(z, sn) for sn in order]
     # 🟥 «몇 장» 은 발표 순서(위치)지 파일 번호가 아니다 — slide9.xml 이 1번째면 1p 다(codex 09-11).
-    #    echo 축과 면제 조회가 a['slide'] 를 쓰므로 여기서 위치로 바꾼다.
     for pos, sh in enumerate(S, 1):
         for sp in sh:
             sp['slide'] = pos
@@ -188,11 +146,11 @@ def _intent_index(intended):
 AMBIG = '\u2205'   # «같은 장 안에 같은 이름 둘» — 선언으로 못 가르는 표식(R5 A6). 어떤 선언과도 안 맞는다.
 
 
-def _mark_ambig(names_by_slide):
-    """[(slide, name) …] → 이름 목록. 한 장 안에서 이름이 겹치면 AMBIG 를 덧붙여 면제를 막는다."""
-    seen = collections.Counter(names_by_slide)
-    names = [n for _s, n in names_by_slide]
-    if any(c > 1 for c in seen.values()):
+def _mark_ambig(shapes_):
+    """도형 목록 → 이름 목록. 그중 하나라도 «자기 장 안에 같은 이름이 또 있으면»(dup) AMBIG 를 덧붙여 면제를 막는다.
+    R6 A5: 후보 쌍만 보면 «그 밖의» 같은 이름을 못 본다 — dup 은 장 전체에서 센 값이다."""
+    names = [s_['name'] for s_ in shapes_]
+    if any(s_.get('dup') for s_ in shapes_):
         names.append(AMBIG)
     return names
 
@@ -220,12 +178,12 @@ def ax_dash(S, sw, cfg):
         g = collections.defaultdict(dict)
         for a in sh:
             if a['dash'] and a['lnw'] is not None:
-                g[a['dash']].setdefault(a['lnw'], []).append(a['name'])
+                g[a['dash']].setdefault(a['lnw'], []).append(a)
         for d, byw in g.items():
             if len(byw) > 1:
-                detail = ' ↔ '.join(f"{w}pt({','.join(n[:10] for n in ns[:2])})"
+                detail = ' ↔ '.join(f"{w}pt({','.join(n['name'][:10] for n in ns[:2])})"
                                     for w, ns in sorted(byw.items()))
-                yield sn, _mark_ambig([(sn, n) for ns in byw.values() for n in ns]), \
+                yield sn, _mark_ambig([a_ for ns in byw.values() for a_ in ns]), \
                     f"{sn:>3}p [dash]   «{d}» 굵기가 갈린다 — {detail}"
 
 
@@ -239,7 +197,7 @@ def ax_algn(S, sw, cfg):
         for (w, y), v in rows.items():
             if len(v) > 1 and len({a['algn'] for a in v}) > 1:
                 detail = ' · '.join(f"{a['name'][:12]}={'/'.join(a['algn'])}" for a in v)
-                yield sn, _mark_ambig([(sn, a['name']) for a in v]), \
+                yield sn, _mark_ambig(v), \
                     f"{sn:>3}p [algn]   폭 {w}\" y {y}\" 한 줄인데 정렬이 갈린다 — {detail}"
 
 
@@ -266,7 +224,7 @@ def ax_mirror(S, sw, cfg):
                 # R5 A5: 단, 글자가 «같으면» 구간 전체를 비교한다(AB@28+CD@32 vs A@28+BCD@32 — B 가 커졌다)
                 differs = (a['spans'] != b['spans']) if a['text'] == b['text'] else (_size_seq(a['spans']) != _size_seq(b['spans']))
                 if differs:
-                    yield sn, _mark_ambig([(sn, a['name']), (sn, b['name'])]), (
+                    yield sn, _mark_ambig([a, b]), (
                         f"{sn:>3}p [mirror] 좌우 대칭인데 크기가 갈린다 — "
                         f"{a['name'][:12]} {'/'.join(map(str, a['szs']))}pt «{a['text'][:14]}» ↔ "
                         f"{b['name'][:12]} {'/'.join(map(str, b['szs']))}pt «{b['text'][:14]}»")
@@ -297,7 +255,7 @@ def ax_echo(S, sw, cfg):
             what.append('크기 ' + ' ↔ '.join('+'.join(f'{n_}자@{sz}pt' for n_, sz in s) for s in sorted(szset, key=str)))
         if len(xset) > 1:
             what.append('x ' + ' ↔ '.join(f'{x}"' for x in sorted(xset)))
-        yield tuple(slides), _mark_ambig([(a['slide'], a['name']) for a in v]), (   # R2 A7 · R5 A6(장 안 중복만 모호)
+        yield tuple(slides), _mark_ambig(v), (   # R2 A7 · R5 A6(장 안 중복만 모호)
             f"{'·'.join(str(s) for s in slides[:6])}p [echo]   «{t[:30]}» 가 "
             f"{len(slides)}장에서 갈린다 — {' · '.join(what)}")
 

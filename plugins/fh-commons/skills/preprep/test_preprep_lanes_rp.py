@@ -216,6 +216,18 @@ def _shrink_deck(src, dst, drop_last, consistent):
             ids = re.findall(r'<p:sldId\b[^>]*/>', m.group(1))
             x = x.replace(m.group(1), ''.join(ids[:keep_n]), 1)
             data = x.encode('utf-8')
+        # «의도한 삭제» 는 관계·Content_Types 도 같이 지운다 — 파워포인트가 그렇게 저장한다(2026-09-11: zip 수준 관계 검사가
+        #    끊긴 관계를 잡게 되자 이 픽스처가 «깨진 패키지» 로 읽혔다. 픽스처가 실물 형태가 아니었던 것)
+        if consistent and n == 'ppt/_rels/presentation.xml.rels':
+            x = data.decode('utf-8')
+            for dn in drop:
+                x = re.sub(r'<Relationship\b[^>]*Target="%s"[^>]*/>' % re.escape(dn.replace('ppt/', '')), '', x)
+            data = x.encode('utf-8')
+        if consistent and n == '[Content_Types].xml':
+            x = data.decode('utf-8')
+            for dn in drop:
+                x = re.sub(r'<Override\b[^>]*PartName="/%s"[^>]*/>' % re.escape(dn), '', x)
+            data = x.encode('utf-8')
         zo.writestr(n, data)
     zo.close()
     return keep_n
@@ -477,8 +489,8 @@ def run_safe_install(fx_dir):
     # S2 그림 부품이 zip 에서 빠진 덱 → 거부
     pp = os.path.join(fx_dir, 'si_pic_src.pptx'); prs = _Pres(); sl = prs.slides.add_slide(prs.slide_layouts[6])
     png = os.path.join(fx_dir, 'dot.png')
-    with open(png, 'wb') as f:
-        f.write(bytes.fromhex('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8cfc0f01f0005000102afd4cb0f0000000049454e44ae426082'))
+    from PIL import Image as _Img
+    _Img.new('RGB', (2, 2), (255, 0, 0)).save(png)          # 손으로 친 hex 는 PIL verify 를 못 넘겼다 — 실물 PNG 로
     sl.shapes.add_picture(png, _In(1), _In(1)); prs.save(pp)
     p_dest = os.path.join(fx_dir, 'si_pic_dest.pptx'); shutil.copyfile(pp, p_dest)
     pbad = os.path.join(fx_dir, 'si_pic_bad.pptx')
@@ -490,6 +502,31 @@ def run_safe_install(fx_dir):
     r_ok = subprocess.run([sys.executable, here, pp, p_dest, '--dry-run'], capture_output=True, text=True)
     ok('S2 그림 부품 결손 → 거부 · 정상 그림 덱 컨트롤 통과') if r.returncode == 1 and '못 읽는다' in r.stdout and r_ok.returncode == 0 \
         else ng(f'S2 bad rc={r.returncode} ctrl rc={r_ok.returncode}\n{r.stdout[:200]}{r_ok.stdout[:200]}')
+
+    # ── R6 (codex 09-11 23:07) 설치 표면 ──
+    # S2 이미지 바이트가 깨졌는데 zip CRC 는 정상 → PIL 디코드에서 거부
+    pbad2 = os.path.join(fx_dir, 'si_pic_badbytes.pptx')
+    zi = zipfile.ZipFile(pp); zo = zipfile.ZipFile(pbad2, 'w', zipfile.ZIP_DEFLATED)
+    for n in zi.namelist():
+        zo.writestr(n, b'not an image' if n.startswith('ppt/media/') else zi.read(n))
+    zo.close()
+    r = subprocess.run([sys.executable, here, pbad2, p_dest], capture_output=True, text=True)
+    ok('S2b 깨진 이미지 바이트(CRC 정상) → 거부') if r.returncode == 1 and '못 읽는다' in r.stdout else ng(f'S2b rc={r.returncode}\n{r.stdout[:200]}')
+    # S1 차트 부품 결손 → 관계 걷기에서 거부 (python-pptx 로 차트 덱을 만든다)
+    from pptx.chart.data import CategoryChartData as _CD
+    from pptx.enum.chart import XL_CHART_TYPE as _XL
+    cp = os.path.join(fx_dir, 'si_chart_src.pptx'); prs = _Pres(); sl = prs.slides.add_slide(prs.slide_layouts[6])
+    cd = _CD(); cd.categories = ['a', 'b']; cd.add_series('s', (1, 2)); sl.shapes.add_chart(_XL.COLUMN_CLUSTERED, _In(1), _In(1), _In(4), _In(3), cd); prs.save(cp)
+    c_dest = os.path.join(fx_dir, 'si_chart_dest.pptx'); shutil.copyfile(cp, c_dest)
+    cbad = os.path.join(fx_dir, 'si_chart_bad.pptx')
+    zi = zipfile.ZipFile(cp); zo = zipfile.ZipFile(cbad, 'w', zipfile.ZIP_DEFLATED)
+    for n in zi.namelist():
+        if not n.startswith('ppt/charts/'): zo.writestr(n, zi.read(n))
+    zo.close()
+    r = subprocess.run([sys.executable, here, cbad, c_dest], capture_output=True, text=True)
+    r_ok = subprocess.run([sys.executable, here, cp, c_dest, '--dry-run'], capture_output=True, text=True)
+    ok('S1b 차트 부품 결손 → 거부 · 정상 차트 덱 컨트롤 통과') if r.returncode == 1 and '못 읽는다' in r.stdout and r_ok.returncode == 0 \
+        else ng(f'S1b bad rc={r.returncode} ctrl rc={r_ok.returncode}\n{r.stdout[:200]}{r_ok.stdout[:200]}')
 
 
 def _mini_deck(path, slides_xml, sld_attr_order='id-first', rel_attr_order='id-first'):
@@ -841,6 +878,56 @@ def run_codex_audit_regressions(fx_dir):
     t_par = LS.deck_screens(d)[0]; t_attr = LA.load(d)[0][0][0]['text']; t_geo = LG.load_slides(d)[0]['u'][4]
     ok('A7 xmlns 붙은 <a:t>: parity %r · attr %r · geo %r' % (t_par, t_attr, t_geo)) if t_par == ['UNLISTED'] and t_attr == 'UNLISTED' and t_geo == 'UNLISTED' \
         else ng('A7 par=%r attr=%r geo=%r' % (t_par, t_attr, t_geo))
+
+    # ── R6 (codex 09-11 23:07) 레인 — 정규식 독자 → oox 트리 독자 교체의 회귀 ──
+    def _grp(inner, flip='', off=(0, 0), ext=(100, 100), choff=(0, 0), chext=(100, 100)):
+        xf = '<a:xfrm%s><a:off x="%d" y="%d"/><a:ext cx="%d" cy="%d"/><a:chOff x="%d" y="%d"/><a:chExt cx="%d" cy="%d"/></a:xfrm>' % (
+            (' flipH="1"' if flip == 'H' else ''), off[0], off[1], ext[0], ext[1], choff[0], choff[1], chext[0], chext[1])
+        return '<p:grpSp><p:nvGrpSpPr><p:cNvPr id="9" name="g"/></p:nvGrpSpPr><p:grpSpPr>%s</p:grpSpPr>%s</p:grpSp>' % (xf, inner)
+    # A3 중첩 그룹: 안쪽 그룹의 flipH 가 화살표에 합성 · 바깥 그룹 flip 은 «안쪽 그룹 뒤의 형제» 에도 합성
+    child = _sp('arrow', 0, 0, 100, 100, 'x'); sib = _sp('sib', 0, 0, 100, 100, 'y')
+    d = os.path.join(fx_dir, 'r6_nested.pptx')
+    _mini_deck(d, [_grp(_grp(child) + sib), _grp(_grp(child, flip='H') + sib)])
+    l3, st3, _s, _e = LG.p1_lines(LG.load_slides(d), 200000)
+    d2 = os.path.join(fx_dir, 'r6_nested_outer.pptx')
+    _mini_deck(d2, [_grp(_grp(child) + sib), _grp(_grp(child) + sib, flip='H')])
+    l3b, _st, _s, _e = LG.p1_lines(LG.load_slides(d2), 200000)
+    ok('A3 중첩: 안쪽 flip → arrow 뒤집힘 1 · 바깥 flip → arrow·sib 둘 다 뒤집힘') \
+        if sum('뒤집힘' in l and 'arrow' in l for l in l3) == 1 and sum('뒤집힘' in l for l in l3b) == 2 \
+        else ng('A3 inner=%r outer=%r' % (l3, l3b))
+    # A4 그룹 이동이 자식 절대 좌표에 합성 — geometry 후보 1 · attr x 가 달라져 echo 후보 1
+    d = os.path.join(fx_dir, 'r6_grpmove.pptx')
+    _mini_deck(d, [_grp(_sp('t', 0, 0, 100, 100, 'same sentence here', 2800), off=(0, 0)), _grp(_sp('t', 0, 0, 100, 100, 'same sentence here', 2800), off=(35000, 0))])
+    l4, st4, _s, _e = LG.p1_lines(LG.load_slides(d), 200000)
+    S4, sw4 = LA.load(d)
+    e4 = list(LA.ax_echo(S4, sw4, {}))
+    d = os.path.join(fx_dir, 'r6_grpmove_big.pptx')
+    _mini_deck(d, [_grp(_sp('t', 0, 0, 100, 100, 'same sentence here', 2800), off=(0, 0)), _grp(_sp('t', 0, 0, 100, 100, 'same sentence here', 2800), off=(914400, 0))])
+    S4b, sw4b = LA.load(d); e4b = list(LA.ax_echo(S4b, sw4b, {}))
+    ok('A4 그룹 이동 35000 EMU → geometry 후보 1 (%s) · 1인치 이동 → echo x 갈림 1' % (len(l4),)) \
+        if len(l4) == 1 and abs(S4[1][0]['x'] - 35000 / 914400) < 1e-6 and len(e4b) == 1 and len(e4) == 0 \
+        else ng('A4 geo=%r x2=%r echo35k=%d echo1in=%d' % (l4, S4[1][0]['x'], len(e4), len(e4b)))
+    # A5 같은 장 «다른 자리» 의 같은 이름이 거울 면제를 막는다
+    d = os.path.join(fx_dir, 'r6_dup_elsewhere.pptx')
+    _mini_deck(d, [_sp('A', 914400, 914400, 3657600, 914400, 'left', 2800) + _sp('B', 7620000, 914400, 3657600, 914400, 'right', 3200) + _sp('A', 0, 5000000, 100, 100, 'else')])
+    l5, s5, e5, _ = LA.collect(d, {'axes': ['mirror'], 'intended': [{'axis': 'mirror', 'slides': [1], 'shapes': ['A', 'B'], 'why': 'w'}]})
+    ok('A5 다른 자리의 같은 이름 A → 거울 면제 안 됨(후보 1)') if len(l5) == 1 and not s5 else ng('A5 lines=%d sup=%d' % (len(l5), len(s5)))
+    # A6 <q:sldId xmlns:q=…> 도 슬라이드다 — 세 레인 모두 3장
+    d = os.path.join(fx_dir, 'r6_qsld.pptx'); _mini_deck(d, [_sp('a', 0, 0, 100, 100, 'FIRST'), _sp('b', 0, 0, 100, 100, 'HIDDEN'), _sp('c', 0, 0, 100, 100, 'THIRD')])
+    zi = zipfile.ZipFile(d); data = {n: zi.read(n) for n in zi.namelist()}; zi.close()
+    import re
+    pres = data["ppt/presentation.xml"].decode(); ids = re.findall(r'<p:sldId [^>]*/>', pres)
+    pres = pres.replace(ids[1], ids[1].replace('<p:sldId ', '<q:sldId xmlns:q="http://schemas.openxmlformats.org/presentationml/2006/main" '), 1)
+    data['ppt/presentation.xml'] = pres.encode()
+    zo = zipfile.ZipFile(d, 'w'); [zo.writestr(n, v) for n, v in data.items()]; zo.close()
+    n6 = (len(LG.load_slides(d)), len(LA.load(d)[0]), len(LS.deck_screens(d)))
+    ok('A6 q:sldId — geometry·attr·parity 전부 3장 %s' % (n6,)) if n6 == (3, 3, 3) else ng('A6 %r' % (n6,))
+    # B7 공백 길이 차이는 크기 차이가 아니다 — "A  B" vs "A B" 28pt → mirror 0
+    d = os.path.join(fx_dir, 'r6_ws.pptx')
+    _mini_deck(d, [_sp('L', 914400, 914400, 3657600, 914400, 'A  B', 2800) + _sp('R', 7620000, 914400, 3657600, 914400, 'A B', 2800)])
+    S7, sw7 = LA.load(d)
+    ok('B7 공백 길이만 다른 거울 쌍 → 후보 0 (spans %s/%s)' % (S7[0][0]['spans'], S7[0][1]['spans'])) if len(list(LA.ax_mirror(S7, sw7, {}))) == 0 \
+        else ng('B7 spans=%r/%r' % (S7[0][0]['spans'], S7[0][1]['spans']))
 
 
 def run_baseline_delta(fx_dir):
