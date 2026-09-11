@@ -60,7 +60,14 @@ WORK="$(mktemp -d 2>/dev/null)" || { echo "finding_verifier: mktemp failed" >&2;
 # 🟥 R3 #3: the root is checked BEFORE the mode dir is appended — appended first, a symlink root became
 #    an ancestor and passed both the dir check and the leaf check (path probe: INPUT_IS_SYMLINK → GUARD_ALLOWS).
 # R4 #2: `link/` makes -L false (the trailing slash resolves through the link) — strip separators first, keep "/" intact.
-while [ "${#KEEP}" -gt 1 ] && [ "${KEEP%/}" != "$KEEP" ]; do KEEP="${KEEP%/}"; done
+# R6 #5: `link/.` and `link//.` also resolve through the link — strip trailing "/." and "/" until stable.
+while [ "${#KEEP}" -gt 1 ]; do
+  case "$KEEP" in
+    */.) KEEP="${KEEP%/.}" ;;
+    */)  KEEP="${KEEP%/}" ;;
+    *)   break ;;
+  esac
+done
 if [ -n "$KEEP" ] && [ -L "$KEEP" ]; then echo "finding_verifier: --keep root is a symlink: $KEEP — refusing" >&2; exit 2; fi
 if [ -n "$KEEP" ] && [ -z "${FH_VERIFIER_KEEP_FLAT:-}" ]; then KEEP="$KEEP/keep_$MODE"; fi
 cleanup() {

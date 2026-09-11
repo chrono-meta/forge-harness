@@ -288,6 +288,30 @@ for l in open(sys.argv[1],encoding="utf-8"):
   # filter. The global "did any declared seed enter at all?" question is answered once, below.
   SEEDARGS=()
   if [ -n "$ALL_SEEDS" ]; then
+    # 🟥 R6 #3: resolve each declared seed against the WHOLE fleet result BEFORE partitioning — two rows in
+    #    different splits sharing one member_id each looked unique inside their split (CLEAN twice) while the
+    #    unsplit verifier calls the same declaration AMBIGUOUS. Global multiplicity is decided once, here.
+    _AMBIG=$(ALL_SEEDS="$ALL_SEEDS" /usr/bin/python3 -c '
+import sys, json, os, collections
+want = {x.strip() for x in os.environ.get("ALL_SEEDS", "").split(",") if x.strip()}
+cnt = collections.Counter()
+try:
+    for l in open(sys.argv[1], encoding="utf-8"):
+        l = l.strip()
+        if not l: continue
+        try: d = json.loads(l)
+        except Exception: continue
+        if not isinstance(d, dict): continue
+        keys = {str(d[k]) for k in ("id", "member_id") if d.get(k) is not None}
+        for k in keys & want: cnt[k] += 1
+except OSError: pass
+print(",".join(sorted(k for k, c in cnt.items() if c > 1)))' "$FINDINGS")
+    if [ -n "$_AMBIG" ]; then
+      echo "PIPELINE target=$(basename "$TARGET") status=SEED_AMBIGUOUS seeds=$_AMBIG rc=5"
+      echo "SEEDED declared=$(printf '%s' "$ALL_SEEDS" | /usr/bin/tr ',' '\n' | /usr/bin/grep -c .) present=0 kept=0 dropped=0 abstained=0 status=AMBIGUOUS"
+      echo "  🟥 seed(s) $_AMBIG match more than one fleet row — member ids are only locally unique; declare the routing id instead" >&2
+      exit 5
+    fi
     _SPLIT_SEEDS=$(ALL_SEEDS="$ALL_SEEDS" /usr/bin/python3 -c '
 import sys, json, os
 want = {x.strip() for x in os.environ.get("ALL_SEEDS", "").split(",") if x.strip()}

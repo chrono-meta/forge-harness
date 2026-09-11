@@ -131,6 +131,16 @@ try:
 except OSError:
     pass
 own_r1_ids = set(own_r1)
+all_ids = set()      # R6 #2: every round-1 id of every member — the namespace new r2 ids must avoid
+try:
+    for _l in open(sys.argv[3], encoding="utf-8"):
+        try: _d = json.loads(_l)
+        except Exception: continue
+        if isinstance(_d, dict) and _d.get("id") is not None:
+            all_ids.add(str(_d["id"]))
+except OSError:
+    pass
+minted = set()
 fam, role, rc = os.environ["FAM"], os.environ["ROLE"], os.environ["RC"]
 src, dst = sys.argv[1], sys.argv[2]
 n = 0
@@ -157,7 +167,8 @@ with open(dst, "w", encoding="utf-8") as w:
         except json.JSONDecodeError:
             bad_json = True   # R5 #2: a survivor that failed to parse is evidence, not silence
             continue
-        if not d.get("title"):
+        if not isinstance(d, dict) or not d.get("title"):
+            bad_json = True   # R6 #1: a schema-invalid finding object is a malformed survivor, not silence
             continue
         n += 1
         # R4 #5: a KEPT/CORRECTED finding keeps its round-1 id (identity survives the rewrite);
@@ -170,14 +181,25 @@ with open(dst, "w", encoding="utf-8") as w:
             if own_r1[d["id"]] is not None:
                 d["member_id"] = own_r1[d["id"]]
         else:
-            d["id"] = f"{fam}-{role}-r2-{n}"
+            # R6 #2: allocate against the COMPLETE existing id set — role «logic-r2» owns r1 id
+            #        `codex-logic-r2-1`, which is exactly what role «logic» would mint here.
+            k = n
+            cand = f"{fam}-{role}-r2-{k}"
+            while cand in all_ids or cand in minted:
+                k += 1
+                cand = f"{fam}-{role}-r2-{k}"
+            d["id"] = cand
+            minted.add(cand)
         d["producer_family"] = fam
         d["producer_role"] = role
         d["round"] = 2
         w.write(json.dumps(d, ensure_ascii=False) + "\n")
 # 🟥 «전부 스스로 내렸다» 는 정당한 2차 결과이고 «차단» 이 아니다 — 별 값을 준다.
-status = ("FAILED" if rc != "0" else "OK" if n > 0
-          else "ZERO_NONJSON" if bad_json      # R5 #2: malformed survivor + DROPPED must not certify «all withdrawn»
+# R6 #1: a response with ANY malformed survivor is not a trustworthy replacement of the member's round-1 list —
+#         `n > 0` used to win over bad_json, so «valid A + broken B» silently deleted B. bad_json outranks OK.
+status = ("FAILED" if rc != "0"
+          else "ZERO_NONJSON" if bad_json      # R5 #2 / R6 #1: malformed survivor → fallback, never OK nor «all withdrawn»
+          else "OK" if n > 0
           else "ZERO_SELFDROPPED" if dropped
           else "ZERO_NONJSON" if saw_bytes else "ZERO_EMPTY")
 print(f"MEMBER2 family={fam} role={role} rc={rc} findings={n} self_dropped={len(dropped)} status={status}")
@@ -231,6 +253,10 @@ with open(dst, "w", encoding="utf-8") as w:
         # id that does not exist until after the run. Keeping the member id lets the control be
         # declared in the caller's own vocabulary. (Found while writing the end-to-end lane; no
         # review round named it — the lane did.)
+        # R6 #4: an incoming `member_id` is never trusted — the alias is derived ONLY from the response's own
+        #        `id`. Without this, a response carrying member_id="seed-never-emitted" (and no id) kept that
+        #        alias, and R5's «trusted round-1 alias» then carried it into round 2.
+        d.pop("member_id", None)
         if d.get("id") is not None:
             d["member_id"] = str(d["id"])
         d["id"] = f"{fam}-{role}-{n}"

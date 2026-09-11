@@ -852,6 +852,14 @@ echo '{"id":"s1","title":"seeded known-true","file":"tgt.py","line":1,"severity"
 echo '{"id":"s2","title":"ordinary","file":"tgt.py","line":2,"severity":"B"}'
 EOS
 chmod +x "$D/m_seed.sh"
+# 🟥 R6 #3: 두 계열이 같은 member id(s1)를 내면 «--seeded s1» 은 정당하게 AMBIGUOUS 다 — 양의 컨트롤은
+#    계열마다 다른 별칭을 내야 한다(gemini 는 g1/g2). 종전 픽스처는 그 모호성을 split 이 가려 주는 데 기대고 있었다.
+cat > "$D/m_seed_g.sh" <<'EOS'
+#!/bin/sh
+echo '{"id":"g1","title":"gemini seeded known-true","file":"tgt.py","line":3,"severity":"A"}'
+echo '{"id":"g2","title":"gemini ordinary","file":"tgt.py","line":4,"severity":"B"}'
+EOS
+chmod +x "$D/m_seed_g.sh"
 # 🟥 검증자는 fleet 이 «재번호한» id 를 받는다 — 그래서 픽스처는 원래 멤버 id(`member_id`)를
 #   봐야 «호출자 어휘로 선언한 씨앗» 을 지울 수 있다. 이게 이 레인이 재려는 경로 그 자체다.
 cat > "$D/fake_kill_seed.sh" <<'EOS'
@@ -880,7 +888,7 @@ for r in rows:
         print(json.dumps({"id": rid, "verdict": "confirmed", "why": "holds"}))'
 EOS
 chmod +x "$D/fake_kill_seed.sh"
-printf 'codex|logic|%s\ngemini|security|%s\n' "sh $D/m_seed.sh" "sh $D/m_seed.sh" > "$D/fleetSEED.tbl"
+printf 'codex|logic|%s\ngemini|security|%s\n' "sh $D/m_seed.sh" "sh $D/m_seed_g.sh" > "$D/fleetSEED.tbl"
 # 🟥 fleet 이 id 를 재번호하므로 호출자 어휘(`s1`)로 선언할 수 있어야 한다 — member_id 보존이
 #   그것을 가능하게 한다. 이 레인이 그 종단간 경로를 통째로 잰다.
 FH_CODEX_BIN="$D/fake_kill_seed.sh" FH_AGY_BIN="$D/fake_kill_seed.sh" \
@@ -1665,6 +1673,83 @@ if [ "$Ra" -eq 2 ] && [ "$Rb" -eq 2 ] && printf '%s' "$R103a" | /usr/bin/grep -q
   ok "L103 🟥 R5#3 [] · null 행 → rc=2 «not a JSON object» (AttributeError 없음)"
 else
   no "L103 비-객체 행" "rc=$Ra/$Rb '$(printf '%s' "$R103a" | tail -1)'"
+fi
+
+# ══ R6 (cross-family, codex 2026-09-11 12:59) — A5, each with a known pair ══
+# L104 🟥 R6 #1: «정상 A + 깨진 B» 응답은 OK 가 아니다 — 부분 응답이 멤버의 1차 목록을 대체하지 않는다
+cat > $D/r2_partial_bad.sh <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) echo '{"id":"codex-logic-1","title":"A retained","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}'; echo '{"id":"codex-logic-2","title":"B retained",}' ;;
+  *) echo '{"title":"A","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}'
+     echo '{"title":"B","file":"x_t.py","line":2,"severity":"B","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+cat > $D/r2_notitle_drop.sh <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) echo '{"id":"codex-logic-1","titel":"A"}'; echo 'DROPPED: B withdrawn' ;;
+  *) echo '{"title":"A","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}'
+     echo '{"title":"B","file":"x_t.py","line":2,"severity":"B","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+chmod +x $D/r2_partial_bad.sh $D/r2_notitle_drop.sh
+printf 'codex|logic|sh %s\n' "$D/r2_partial_bad.sh" > "$D/f104.tbl"; O104=$(bash "$FL" "$D/x_t.py" --out "$D/f104" --fleet "$D/f104.tbl" --round2 2>&1)
+printf 'codex|logic|sh %s\n' "$D/r2_notitle_drop.sh" > "$D/f104b.tbl"; O104b=$(bash "$FL" "$D/x_t.py" --out "$D/f104b" --fleet "$D/f104b.tbl" --round2 2>&1)
+N104=$(/usr/bin/grep -c . "$D/f104/findings.jsonl" 2>/dev/null); N104b=$(/usr/bin/grep -c . "$D/f104b/findings.jsonl" 2>/dev/null)
+if [ "${N104:-0}" -eq 2 ] && printf '%s' "$O104" | /usr/bin/grep -q 'status=ZERO_NONJSON' && [ "${N104b:-0}" -eq 2 ] && printf '%s' "$O104b" | /usr/bin/grep -q 'status=ZERO_NONJSON' && [ ! -f "$D/f104b/INTENTIONAL_EMPTY" ]; then
+  ok "L104 🟥 R6#1 «정상 A+깨진 B» → ZERO_NONJSON 폴백(1차 2건 보존) · «titel+DROPPED» 도 폴백(전원 철회 아님)"
+else
+  no "L104 부분 응답" "a=$N104(2) st=$(printf '%s' "$O104" | /usr/bin/grep -o 'status=[A-Z_]*' | head -1) · b=$N104b(2) st=$(printf '%s' "$O104b" | /usr/bin/grep -o 'status=[A-Z_]*' | head -1)"
+fi
+# L105 🟥 R6 #2: 새 2차 id 가 다른 role 의 1차 id 와 충돌하지 않는다 (role «logic-r2» 의 1차 = codex-logic-r2-1)
+# role «logic-r2» 는 2차에서 자기 1차 id(codex-logic-r2-1)를 KEEP 한다 — role «logic» 이 새로 찍는 첫 id 와 같은 문자열
+cat > $D/r2_keep_r2role.sh <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) echo '{"id":"codex-logic-r2-1","title":"K kept","file":"x_t.py","line":5,"severity":"B","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+  *) echo '{"title":"K","file":"x_t.py","line":5,"severity":"B","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+chmod +x $D/r2_keep_r2role.sh
+printf 'codex|logic|sh %s\ncodex|logic-r2|sh %s\n' "$D/x_g_full2.sh" "$D/r2_keep_r2role.sh" > "$D/f105.tbl"
+bash "$FL" "$D/x_t.py" --out "$D/f105" --fleet "$D/f105.tbl" --round2 >/dev/null 2>&1
+_IDS105=$(/usr/bin/grep -o '"id": "[^"]*"' "$D/f105/findings.jsonl" 2>/dev/null | sort); _DUP105=$(printf '%s\n' "$_IDS105" | uniq -d | /usr/bin/grep -c .)
+if [ "$_DUP105" -eq 0 ] && [ "$(printf '%s\n' "$_IDS105" | /usr/bin/grep -c .)" -eq 3 ] && printf '%s' "$_IDS105" | /usr/bin/grep -q '"id": "codex-logic-r2-1"'; then
+  ok "L105 🟥 R6#2 role logic + logic-r2 의 2차 병합에 중복 id 0 (전체 id 집합 대비 할당)"
+else
+  no "L105 id 충돌" "dup=$_DUP105 ids=$(printf '%s' "$_IDS105" | tr '\n' ' ')"
+fi
+# L106 🟥 R6 #3: 두 계열에 같은 member_id 가 있으면 파이프라인도 AMBIGUOUS rc=5 (split 이 모호성을 가리지 않는다)
+printf 'codex|logic|%s\ngemini|security|%s\n' "sh $D/m_seed.sh" "sh $D/m_seed.sh" > "$D/f106.tbl"
+FH_CODEX_BIN="$D/fake_kill_seed.sh" FH_AGY_BIN="$D/fake_kill_seed.sh" bash "$PIPE" "$D/tgt.py" --out "$D/p106" --fleet "$D/f106.tbl" --seeded s1 > "$D/p106.out" 2>&1; R106=$?
+if [ "$R106" -eq 5 ] && /usr/bin/grep -q 'status=SEED_AMBIGUOUS seeds=s1' "$D/p106.out"; then
+  ok "L106 🟥 R6#3 계열 둘이 같은 member_id s1 → SEED_AMBIGUOUS rc=5 (L65 의 계열별 별칭 컨트롤은 rc=0)"
+else
+  no "L106 전역 모호성" "rc=$R106 · $(/usr/bin/grep -m1 '^PIPELINE' "$D/p106.out")"
+fi
+# L107 🟥 R6 #4: 1차 응답의 member_id 는 신뢰되지 않는다 — id 없이 member_id 만 보내도 별칭이 안 남는다
+cat > $D/m_alias_only.sh <<'EOS'
+#!/bin/sh
+cat >/dev/null; echo '{"title":"ordinary","member_id":"seed-never-emitted","file":"x_t.py","line":1,"severity":"B","category":"d","detail":"x","defeater":"y","confidence":0.7}'
+EOS
+chmod +x $D/m_alias_only.sh
+printf 'codex|logic|sh %s\n' "$D/m_alias_only.sh" > "$D/f107.tbl"; bash "$FL" "$D/x_t.py" --out "$D/f107" --fleet "$D/f107.tbl" >/dev/null 2>&1
+if [ -s "$D/f107/findings.jsonl" ] && ! /usr/bin/grep -q 'seed-never-emitted' "$D/f107/findings.jsonl"; then
+  ok "L107 🟥 R6#4 응답의 member_id 는 버려진다(발견은 살아 있음)"
+else
+  no "L107 member_id 신뢰" "$(cat "$D/f107/findings.jsonl" 2>/dev/null | head -1 | cut -c1-120)"
+fi
+# L108 🟥 R6 #5: keep 루트 `link/.` · `link//.` 도 거부
+E108=$(bash "$VERIFIER" --family codex --target "$D/x_t.py" --keep "$D/keep_link/." 2>&1 </dev/null); R108=$?
+E108b=$(bash "$VERIFIER" --family codex --target "$D/x_t.py" --keep "$D/keep_link//." 2>&1 </dev/null); R108b=$?
+if [ "$R108" -eq 2 ] && [ "$R108b" -eq 2 ] && printf '%s' "$E108" | /usr/bin/grep -q 'keep root is a symlink'; then
+  ok "L108 🟥 R6#5 'link/.' · 'link//.' 둘 다 rc=2 거부"
+else
+  no "L108 trailing dot" "rc=$R108/$R108b '$(printf '%s' "$E108" | head -1)'"
 fi
 
 /bin/rm -rf "$D"
