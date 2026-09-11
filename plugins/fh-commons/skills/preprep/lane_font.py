@@ -59,8 +59,14 @@ AREA_INHERIT = ('slideLayouts', 'slideMasters', 'theme')
 #    순서를 강제하지 않고 PowerPoint 는 실제로 pitchFamily/charset 을 앞에 붙인다.
 #    같은 부류가 `presentation.xml.rels`(Id↔Target 순서)에서도 났다 — 그래서 한 군데씩 깁지
 #    않고 **태그를 먼저 잡고 속성은 그 안에서 따로 읽는** 형태로 통일한다.
-_FONT_TAG = re.compile(r'<a:(latin|ea|cs)\b([^>]*?)/?>')
-_ATTR = re.compile(r'(\w+)="([^"]*)"')
+# 🟥 `sym`(기호 글꼴 슬롯)도 본다 — 실측 덱에 157개 있었다. 빼면 금지 기호 서체를
+#    명시로 덮어써도 판정망을 그냥 빠져나간다(4라운드 지목).
+_FONT_TAG = re.compile(r'<a:(latin|ea|cs|sym)\b([^>]*?)/?>')
+# 🟥 속성 이름에 **네임스페이스 접두사**가 붙는다(`r:id`). `\w+` 는 콜론을 못 먹어서
+#    `r:id="rId2"` 를 `id="rId2"` 로 잘못 읽고 **엉뚱한 값을 `id` 키에 넣는다** — 3라운드에서
+#    속성 순서를 고치며 내가 심은 결함이고, 4라운드가 잡았다(실측: 실물 덱이 그 형태라
+#    장 순서가 계속 파일명 순 폴백으로 돌고 있었다).
+_ATTR = re.compile(r'([\w:.-]+)="([^"]*)"')
 
 
 def font_refs(xml):
@@ -133,7 +139,9 @@ def _occurrences(xml, where):
     for tag in ('r', 'fld'):
         for m in re.finditer(r'<a:%s[ >].*?</a:%s>' % (tag, tag), xml, re.S):
             b = m.group(0)
-            txt = re.sub(r'\s+', ' ', ''.join(re.findall(r'<a:t>([^<]*)</a:t>', b))).strip()
+            # 🟥 `<a:t xml:space="preserve">` — 앞뒤 공백이 있으면 PowerPoint 가 붙인다.
+            #    속성 없는 `<a:t>` 만 잡으면 그 런의 서체 검사가 통째로 건너뛰어진다(4라운드).
+            txt = re.sub(r'\s+', ' ', ''.join(re.findall(r'<a:t\b[^>]*>([^<]*)</a:t>', b))).strip()
             # 🟥 글자가 없는 런은 건너뛴다 — 지우고 남은 찌꺼기 속성이라 렌더되지 않는다
             #    (agy 지적 A3). «해결이 불가능한 지적»은 지적이 아니라 소음이다.
             if not txt:
@@ -235,7 +243,12 @@ def _allow_from_template(zt):
     got = set()
     for n in zt.namelist():
         if re.match(r'ppt/slides/slide\d+\.xml$', n):
-            got |= {t for t in _typefaces(zt, n) if t and not THEME_REF.match(t)}
+            # 🟥 템플릿의 «렌더 안 되는» 끝 서식은 허용 집합에 넣지 않는다 — 넣으면 템플릿의
+            #    보이지도 않는 잔재가 덱 전체의 합법 서체로 **승격**된다(4라운드 지목).
+            #    판정 쪽(`_occurrences`)만 엄격하고 유도 쪽이 헐거우면 그 비대칭이 곧 누수다.
+            x = re.sub(r'<a:endParaRPr\b[^>]*(?:/>|>.*?</a:endParaRPr>)', '',
+                       zt.read(n).decode('utf-8', 'replace'), flags=re.S)
+            got |= {t for t in font_names(x) if t and not THEME_REF.match(t)}
     return got | theme_fonts(zt)
 
 

@@ -160,6 +160,48 @@ def build(path, slide_runs, master_font='Helvetica Neue', theme_font='Brand Disp
     return path
 
 
+# 🟥 장 순서를 실제로 재려면 **2장 이상**이어야 한다. 1장짜리로는 파일명 순 폴백과
+#    정상 경로가 같은 답을 내서 «초록인 이유»를 구분할 수 없다 — R3-4 레인이 그래서
+#    엉뚱한 이유로 초록이었고, 4라운드가 그 뒤의 진짜 결함(r:id 파싱)을 잡았다.
+PRES_2 = ('<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" '
+          'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+          '<p:sldIdLst><p:sldId id="256" r:id="rId2"/><p:sldId id="257" r:id="rId1"/>'
+          '</p:sldIdLst></p:presentation>')
+# rId2→slide1, rId1→slide2 : 즉 «발표 1장 = slide1.xml, 2장 = slide2.xml» 이 아니라 그 반대가
+# 되도록 일부러 꼬아 둔다. 파일명 순 폴백이면 순서가 뒤집혀 면제가 엉뚱한 장에 걸린다.
+PRES_RELS_2 = ('<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+               '<Relationship Id="rId2" Target="slides/slide1.xml" '
+               'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide"/>'
+               '<Relationship Id="rId1" Target="slides/slide2.xml" '
+               'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide"/>'
+               '</Relationships>')
+
+
+def build2(path, runs1, runs2, tpl_theme='Brand Display Bold'):
+    """2장 덱. 발표순 1장=slide1, 2장=slide2 (rId 로 그렇게 묶는다)."""
+    with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as z:
+        z.writestr('[Content_Types].xml', CT)
+        z.writestr('ppt/presentation.xml', PRES_2)
+        z.writestr('ppt/_rels/presentation.xml.rels', PRES_RELS_2)
+        z.writestr('ppt/slides/slide1.xml', slide(runs1))
+        z.writestr('ppt/slides/slide2.xml', slide(runs2))
+        z.writestr('ppt/slideMasters/slideMaster1.xml', master('Helvetica Neue'))
+        z.writestr('ppt/theme/theme1.xml', theme(tpl_theme))
+    return path
+
+
+def sym_run(font):
+    """`<a:sym>` — 기호 글꼴 슬롯. 실물 덱에 157개 있었다."""
+    return (f'<a:r><a:rPr lang="ko-KR"><a:sym typeface="{font}"/></a:rPr>'
+            f'<a:t>기호</a:t></a:r>')
+
+
+def run_xmlspace(text, font):
+    """`<a:t xml:space="preserve">` — 앞뒤 공백이 있으면 PowerPoint 가 붙인다."""
+    return (f'<a:r><a:rPr lang="ko-KR"><a:latin typeface="{font}"/></a:rPr>'
+            f'<a:t xml:space="preserve"> {text} </a:t></a:r>')
+
+
 def cfg_for(deck, tpl=None, allow=None, intended=None):
     c = {'surfaces_by_id': {'built_deck': {'path': os.path.basename(deck)}}, 'fonts': {}}
     if tpl:
@@ -349,6 +391,48 @@ def main():
         f3d, _ = lane_font.scan(cfg_for(r3d, tpl3, GOOD), d)
         (ok if not [x for x in f3d if x[1] == 'font-inherited-drift']
          else bad)('R3-5 [A]: 갈라진 부품의 endParaRPr 은 이탈이 아니다')
+
+        # ── R4: 4라운드가 문 넷 (그중 하나는 R3 수리가 심은 결함이다) ──────────────
+        # R4-1 [S] `r:id` 네임스페이스 접두사 — 장 순서가 파일명 순으로 조용히 떨어졌다.
+        #      2장 덱으로 «순서»를 실제로 검증한다(1장짜리로는 폴백과 구분 불가 → R3-4 의 교훈)
+        r41 = build2(os.path.join(d, 'r41.pptx'),
+                     [run('본문', 'Brand Display Bold')],
+                     [run('코드', 'Comic Sans MS')])
+        f41, _ = lane_font.scan(cfg_for(r41, tpl, GOOD), d)
+        (ok if [x for x in f41 if 'slides 2' in x[2]]
+         else bad)(f'R4-1 [S]: r:id 를 읽어 발표순 2장으로 잡는다 (실제 {[x[2] for x in f41]})')
+        # 컨트롤 — 면제를 «2장»에 걸면 먹고, 1장에 걸면 안 먹어야 한다
+        f41b, _ = lane_font.scan(
+            cfg_for(r41, tpl, GOOD, intended=[{'slides': [2], 'fonts': ['Comic Sans MS'],
+                                               'why': '2장 면제'}]), d)
+        f41c, _ = lane_font.scan(
+            cfg_for(r41, tpl, GOOD, intended=[{'slides': [1], 'fonts': ['Comic Sans MS'],
+                                               'why': '1장 면제'}]), d)
+        (ok if not f41b and f41c
+         else bad)(f'R4-1 컨트롤: 면제가 «발표순» 장 번호를 따른다 (2장면제={len(f41b)} 1장면제={len(f41c)})')
+
+        # R4-2 [S] `<a:t xml:space="preserve">` 를 못 읽어 런을 통째로 건너뛰었다
+        r42 = build(os.path.join(d, 'r42.pptx'),
+                    [run('본문', 'Brand Display Bold'), run_xmlspace('코드', 'Comic Sans MS')])
+        f42, _ = lane_font.scan(cfg_for(r42, tpl, GOOD), d)
+        (ok if [x for x in f42 if 'Comic Sans' in x[3]]
+         else bad)('R4-2 [S]: xml:space 속성이 붙은 a:t 도 읽는다')
+
+        # R4-3 [S] 템플릿의 endParaRPr 잔재가 허용 집합으로 «승격»되면 안 된다
+        tpl43 = build(os.path.join(d, 'tpl43.pptx'),
+                      [run('본문', 'Brand Display Bold'), end_para('Comic Sans MS')])
+        r43 = build(os.path.join(d, 'r43.pptx'),
+                    [run('본문', 'Brand Display Bold'), run('코드', 'Comic Sans MS')])
+        f43, _ = lane_font.scan(cfg_for(r43, tpl43), d)   # allow 미선언 → 템플릿에서 유도
+        (ok if [x for x in f43 if 'Comic Sans' in x[3]]
+         else bad)('R4-3 [S]: 템플릿의 렌더 안 되는 끝 서식은 허용으로 승격되지 않는다')
+
+        # R4-4 [S] `<a:sym>` 기호 글꼴 슬롯
+        r44 = build(os.path.join(d, 'r44.pptx'),
+                    [run('본문', 'Brand Display Bold'), sym_run('Wingdings')])
+        f44, _ = lane_font.scan(cfg_for(r44, tpl, GOOD), d)
+        (ok if [x for x in f44 if 'Wingdings' in x[3]]
+         else bad)('R4-4 [S]: a:sym 기호 슬롯의 이탈도 잡는다')
 
         # R2-6b 대조 — 갈라진 부품에 «새로» 들인 서체는 여전히 잡힌다 (과교정 방지)
         LAY_NEW = LAY_T.replace('</p:sldLayout>', '<a:latin typeface="Papyrus"/></p:sldLayout>')
