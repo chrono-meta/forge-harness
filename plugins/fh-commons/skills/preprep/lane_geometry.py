@@ -110,6 +110,14 @@ def shapes(z, sn):
     """
     x = z.read('ppt/slides/slide%d.xml' % sn).decode('utf-8')
     out = {}
+    # R5 A3: 그룹의 xfrm 이 뒤집히면 자식도 뒤집힌다 — 자식 구간마다 «그룹 뒤집힘» 을 합성한다
+    grp_flips = []   # [(start, end, 'H'/'V'/'HV')]
+    for gm in re.finditer(r'<p:grpSp\b[^>]*>.*?</p:grpSp>', x, re.S):
+        gx = re.search(r'<p:grpSpPr\b[^>]*>.*?<a:xfrm\b([^>]*)>', gm.group(0), re.S)
+        if gx:
+            fl = ''.join(k for k in ('H', 'V') if re.search(r'\bflip%s="(1|true)"' % k, gx.group(1)))
+            if fl:
+                grp_flips.append((gm.start(), gm.end(), fl))
     for m in re.finditer(r'<p:(sp|cxnSp)\b[^>]*>.*?</p:\1>', x, re.S):   # R3 A6: 여는 태그에 속성이 있어도 도형이다
         b = m.group(0)
         nm = re.search(r'name="([^"]*)"', b)
@@ -118,9 +126,14 @@ def shapes(z, sn):
         if not (nm and o):
             continue
         # R3 A7: 런 경계는 글자가 아니다(attr 레인과 같은 규칙) — 문단 안 '' · 문단 사이 ' '
-        t = re.sub(r'\s+', ' ', ' '.join(html.unescape(''.join(re.findall(r'<a:t>([^<]*)</a:t>', pm)))   # R4 A6: &amp; == &#38;
+        t = re.sub(r'\s+', ' ', ' '.join(html.unescape(''.join(re.findall(r'<a:t\b[^>]*>([^<]*)</a:t>', pm)))   # R4 A6: &amp; == &#38;
                                           for pm in re.findall(r'<a:p\b[^>]*>.*?</a:p>', b, re.S))).strip()
         flip = ''.join(k for k in ('H', 'V') if re.search(r'\bflip%s="(1|true)"' % k, b))   # "true" 도 참이다(python-pptx 실물)
+        for gs, ge, fl in grp_flips:                       # 부모 그룹 뒤집힘 합성(같은 축 두 번이면 원상)
+            if gs <= m.start() < ge:
+                for k in fl:
+                    flip = flip.replace(k, '') if k in flip else flip + k
+        flip = ''.join(k for k in ('H', 'V') if k in flip)
         out.setdefault(nm.group(1), []).append((o[0], o[1], o[2], o[3], t, flip))
     return {k: v[0] for k, v in out.items() if len(v) == 1}
 

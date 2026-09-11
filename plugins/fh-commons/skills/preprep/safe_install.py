@@ -100,9 +100,16 @@ def probe_bytes(data):
         raise ValueError('python-pptx 가 없다 — 오라클 없이는 판정불가')
     prs = _Presentation(io.BytesIO(data))
     n_pptx = 0
+    def _walk(shapes):
+        for shp in shapes:
+            _ = (shp.shape_id, shp.name, shp.shape_type)   # R4 S1: 도형 하나하나 — nvSpPr 없는 도형은 여기서 죽는다
+            st = shp.shape_type
+            if st is not None and int(st) == 6:            # GROUP — R5 S1: 자식도 같은 검사(그룹 안의 깨진 도형)
+                _walk(shp.shapes)
+            elif st is not None and int(st) == 13:         # PICTURE — R5 S2: 참조 부품이 실제로 있어야 한다
+                _ = shp.image.blob[:1]
     for sl in prs.slides:
-        for shp in sl.shapes:       # R4 S1: 도형 «수» 가 아니라 도형 «하나하나» 를 읽게 한다 — nvSpPr 없는 도형은 여기서 죽는다
-            _ = (shp.shape_id, shp.name, shp.shape_type)
+        _walk(sl.shapes)
         n_pptx += 1
     if not (n_struct[0] == n_struct[1] == n_struct[2] == n_pptx):
         raise ValueError(f'구조 계수 파일/목록/도달 {n_struct} 와 python-pptx 장 수 {n_pptx} 가 어긋난다 — 두 제공자가 불일치')

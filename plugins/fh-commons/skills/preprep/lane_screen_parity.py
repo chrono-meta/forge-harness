@@ -82,7 +82,7 @@ def deck_screens_grouped(path):
         for sm in re.finditer(r'<p:(sp|cxnSp|pic|graphicFrame)\b[^>]*>.*?</p:\1>', x, re.S):   # R3 A6
             paras = []
             for pm in re.finditer(r'<a:p\b[^>]*>.*?</a:p>', sm.group(0), re.S):
-                t = html.unescape(''.join(re.findall(r'<a:t>([^<]*)</a:t>', pm.group(0)))).strip()
+                t = html.unescape(''.join(re.findall(r'<a:t\b[^>]*>([^<]*)</a:t>', pm.group(0)))).strip()
                 if t:
                     paras.append(t)
             if paras:

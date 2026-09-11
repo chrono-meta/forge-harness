@@ -80,9 +80,10 @@ def _xfrm(b):
 
 
 def _slide_size_in(z):
-    m = re.search(r'<p:sldSz cx="(\d+)" cy="(\d+)"',
-                  z.read('ppt/presentation.xml').decode('utf-8'))
-    return (int(m.group(1)) / EMU_IN, int(m.group(2)) / EMU_IN) if m else (13.333, 7.5)
+    tag = re.search(r'<p:sldSz\b[^>]*>', z.read('ppt/presentation.xml').decode('utf-8'))   # R5 A4: 속성 순서 무관
+    cx = re.search(r'\bcx="(\d+)"', tag.group(0)) if tag else None
+    cy = re.search(r'\bcy="(\d+)"', tag.group(0)) if tag else None
+    return (int(cx.group(1)) / EMU_IN, int(cy.group(1)) / EMU_IN) if (cx and cy) else (13.333, 7.5)
 
 
 def _shapes(z, sn):
@@ -115,7 +116,7 @@ def _shapes(z, sn):
             rb = rm.group(1)
             szm = re.search(r'<a:rPr\b[^>]*\bsz="(\d+)"', rb)
             sz = int(szm.group(1)) / 100 if szm else None
-            ln_ = len(html.unescape(''.join(re.findall(r'<a:t>([^<]*)</a:t>', rb))))
+            ln_ = len(html.unescape(''.join(re.findall(r'<a:t\b[^>]*>([^<]*)</a:t>', rb))))
             if ln_ == 0:
                 continue
             if spans and spans[-1][1] == sz:
@@ -136,7 +137,7 @@ def _shapes(z, sn):
             lnw=lnw, dash=dash.group(1) if dash else None,
             # R2 A8: 런 경계는 글자가 아니다 — 문단 안 런은 '' 로, 문단 사이만 ' ' 로 잇는다
             text=re.sub(r'\s+', ' ', ' '.join(
-                html.unescape(''.join(re.findall(r'<a:t>([^<]*)</a:t>', pm))) for pm in re.findall(r'<a:p\b[^>]*>.*?</a:p>', b, re.S)
+                html.unescape(''.join(re.findall(r'<a:t\b[^>]*>([^<]*)</a:t>', pm))) for pm in re.findall(r'<a:p\b[^>]*>.*?</a:p>', b, re.S)
             )).strip()))   # R3 A12: &amp; 와 &#38; 는 같은 글자
     return out
 
@@ -184,8 +185,23 @@ def _intent_index(intended):
     return idx, errs
 
 
+AMBIG = '\u2205'   # «같은 장 안에 같은 이름 둘» — 선언으로 못 가르는 표식(R5 A6). 어떤 선언과도 안 맞는다.
+
+
+def _mark_ambig(names_by_slide):
+    """[(slide, name) …] → 이름 목록. 한 장 안에서 이름이 겹치면 AMBIG 를 덧붙여 면제를 막는다."""
+    seen = collections.Counter(names_by_slide)
+    names = [n for _s, n in names_by_slide]
+    if any(c > 1 for c in seen.values()):
+        names.append(AMBIG)
+    return names
+
+
 def _why_all(idx, axis, slide, names):
-    """이 장·축·도형 집합에 걸리는 «모든» 선언 [(why, n) …]. R3 B14: 첫 선언만 고르면 순서 의존이 된다."""
+    """이 장·축·도형 집합에 걸리는 «모든» 선언 [(why, n) …]. R3 B14: 첫 선언만 고르면 순서 의존이 된다.
+    R5 A6: 같은 이름이 둘이면 «어느 것» 인지 선언으로 못 가른다 — 면제 불가(집합화가 셋째 도형을 지웠다)."""
+    if AMBIG in names:
+        return []
     got = sorted(set(names))
     return [(why, n) for want, why, n in idx.get((axis, int(slide)), []) if not want or list(want) == got]
 
@@ -209,7 +225,7 @@ def ax_dash(S, sw, cfg):
             if len(byw) > 1:
                 detail = ' ↔ '.join(f"{w}pt({','.join(n[:10] for n in ns[:2])})"
                                     for w, ns in sorted(byw.items()))
-                yield sn, [n for ns in byw.values() for n in ns], \
+                yield sn, _mark_ambig([(sn, n) for ns in byw.values() for n in ns]), \
                     f"{sn:>3}p [dash]   «{d}» 굵기가 갈린다 — {detail}"
 
 
@@ -223,7 +239,7 @@ def ax_algn(S, sw, cfg):
         for (w, y), v in rows.items():
             if len(v) > 1 and len({a['algn'] for a in v}) > 1:
                 detail = ' · '.join(f"{a['name'][:12]}={'/'.join(a['algn'])}" for a in v)
-                yield sn, [a['name'] for a in v], \
+                yield sn, _mark_ambig([(sn, a['name']) for a in v]), \
                     f"{sn:>3}p [algn]   폭 {w}\" y {y}\" 한 줄인데 정렬이 갈린다 — {detail}"
 
 
@@ -246,9 +262,11 @@ def ax_mirror(S, sw, cfg):
                     continue
                 if abs(ca - cb) < 1.0:                      # 너무 붙어 있으면 쌍이 아니다
                     continue
-                # R4 B8: 거울 쌍은 글자가 다른 게 정상이라 «글자 수» 는 비교 대상이 아니다 — 크기 «순열» 만(인접 동일 크기 합침)
-                if _size_seq(a['spans']) != _size_seq(b['spans']):
-                    yield sn, [a['name'], b['name']], (
+                # R4 B8: 거울 쌍은 글자가 다른 게 정상이라 «글자 수» 는 비교 대상이 아니다 — 크기 «순열» 만.
+                # R5 A5: 단, 글자가 «같으면» 구간 전체를 비교한다(AB@28+CD@32 vs A@28+BCD@32 — B 가 커졌다)
+                differs = (a['spans'] != b['spans']) if a['text'] == b['text'] else (_size_seq(a['spans']) != _size_seq(b['spans']))
+                if differs:
+                    yield sn, _mark_ambig([(sn, a['name']), (sn, b['name'])]), (
                         f"{sn:>3}p [mirror] 좌우 대칭인데 크기가 갈린다 — "
                         f"{a['name'][:12]} {'/'.join(map(str, a['szs']))}pt «{a['text'][:14]}» ↔ "
                         f"{b['name'][:12]} {'/'.join(map(str, b['szs']))}pt «{b['text'][:14]}»")
@@ -279,7 +297,7 @@ def ax_echo(S, sw, cfg):
             what.append('크기 ' + ' ↔ '.join('+'.join(f'{n_}자@{sz}pt' for n_, sz in s) for s in sorted(szset, key=str)))
         if len(xset) > 1:
             what.append('x ' + ' ↔ '.join(f'{x}"' for x in sorted(xset)))
-        yield tuple(slides), [a['name'] for a in v], (   # R2 A7: 면제는 그룹의 «모든» 장이 선언돼야 걸린다
+        yield tuple(slides), _mark_ambig([(a['slide'], a['name']) for a in v]), (   # R2 A7 · R5 A6(장 안 중복만 모호)
             f"{'·'.join(str(s) for s in slides[:6])}p [echo]   «{t[:30]}» 가 "
             f"{len(slides)}장에서 갈린다 — {' · '.join(what)}")
 

@@ -459,6 +459,38 @@ def run_safe_install(fx_dir):
         if blocked_while_held and res.get('rc') == 1 and slides(lock_dest) == slides(src) and '줄었다' in res.get('out', '') \
         else ng(f'S2 blocked={blocked_while_held} rc={res.get("rc")} dest={slides(lock_dest)}장\n{res.get("out","")[:300]}')
 
+    # ── R5 (codex 09-11 18:13) 설치 표면 ──
+    # S1 그룹 안의 깨진 도형(nvSpPr 없음) — 실물 pptx 를 python-pptx 로 만들어(그룹+텍스트박스) XML 을 깬다
+    from pptx import Presentation as _Pres
+    from pptx.util import Inches as _In
+    gp = os.path.join(fx_dir, 'si_group_src.pptx'); prs = _Pres(); sl = prs.slides.add_slide(prs.slide_layouts[6])
+    grp = sl.shapes.add_group_shape(); tb = grp.shapes.add_textbox(_In(1), _In(1), _In(2), _In(1)); tb.text_frame.text = 'child'
+    prs.save(gp)
+    g_dest = os.path.join(fx_dir, 'si_group_dest.pptx'); shutil.copyfile(gp, g_dest)
+    gbad = os.path.join(fx_dir, 'si_group_bad.pptx')
+    gnames = [n for n in zipfile.ZipFile(gp).namelist() if re.match(r'ppt/slides/slide\d+\.xml$', n)]
+    rezip(gp, gbad, {gnames[0]: (None, lambda d: re.sub(rb'<p:sp>\s*<p:nvSpPr>.*?</p:nvSpPr>', b'<p:sp>', d, count=1, flags=re.S))})
+    r = subprocess.run([sys.executable, here, gbad, g_dest], capture_output=True, text=True)
+    r_ok = subprocess.run([sys.executable, here, gp, g_dest, '--dry-run'], capture_output=True, text=True)
+    ok('S1 그룹 자식의 nvSpPr 결손 → 거부 · 정상 그룹 덱 컨트롤 통과') if r.returncode == 1 and '못 읽는다' in r.stdout and r_ok.returncode == 0 \
+        else ng(f'S1 bad rc={r.returncode} ctrl rc={r_ok.returncode}\n{r.stdout[:200]}{r_ok.stdout[:200]}')
+    # S2 그림 부품이 zip 에서 빠진 덱 → 거부
+    pp = os.path.join(fx_dir, 'si_pic_src.pptx'); prs = _Pres(); sl = prs.slides.add_slide(prs.slide_layouts[6])
+    png = os.path.join(fx_dir, 'dot.png')
+    with open(png, 'wb') as f:
+        f.write(bytes.fromhex('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8cfc0f01f0005000102afd4cb0f0000000049454e44ae426082'))
+    sl.shapes.add_picture(png, _In(1), _In(1)); prs.save(pp)
+    p_dest = os.path.join(fx_dir, 'si_pic_dest.pptx'); shutil.copyfile(pp, p_dest)
+    pbad = os.path.join(fx_dir, 'si_pic_bad.pptx')
+    zi = zipfile.ZipFile(pp); zo = zipfile.ZipFile(pbad, 'w', zipfile.ZIP_DEFLATED)
+    for n in zi.namelist():
+        if not n.startswith('ppt/media/'): zo.writestr(n, zi.read(n))
+    zo.close()
+    r = subprocess.run([sys.executable, here, pbad, p_dest], capture_output=True, text=True)
+    r_ok = subprocess.run([sys.executable, here, pp, p_dest, '--dry-run'], capture_output=True, text=True)
+    ok('S2 그림 부품 결손 → 거부 · 정상 그림 덱 컨트롤 통과') if r.returncode == 1 and '못 읽는다' in r.stdout and r_ok.returncode == 0 \
+        else ng(f'S2 bad rc={r.returncode} ctrl rc={r_ok.returncode}\n{r.stdout[:200]}{r_ok.stdout[:200]}')
+
 
 def _mini_deck(path, slides_xml, sld_attr_order='id-first', rel_attr_order='id-first'):
     """최소 pptx. slides_xml = [슬라이드 본문 XML …] (발표 순서). 속성 순서를 골라 «순서에 기댄 정규식»을 잡는다."""
@@ -764,6 +796,51 @@ def run_codex_audit_regressions(fx_dir):
     S9b, sw9b = LA.load(os.path.join(fx_dir, 'r2_order.pptx'))
     ok('B8 mirror: 글자 수만 다른 쌍 0 · 크기 순열 다른 쌍 1') if len(list(LA.ax_mirror(S8, sw8, {}))) == 0 and len(list(LA.ax_mirror(S9b, sw9b, {}))) == 1 \
         else ng('B8 len-only=%d order=%d' % (len(list(LA.ax_mirror(S8, sw8, {}))), len(list(LA.ax_mirror(S9b, sw9b, {})))))
+
+    # ── R5 (codex 09-11 18:13) 레인 A3–A7 ──
+    # A3 그룹 xfrm 의 flipH 가 자식에 합성된다
+    d = os.path.join(fx_dir, 'r5_grpflip.pptx')
+    child = _sp('arrow', 0, 0, 100, 100, 'x')
+    grp_flipped = ('<p:grpSp><p:nvGrpSpPr><p:cNvPr id="9" name="g"/></p:nvGrpSpPr><p:grpSpPr><a:xfrm flipH="1"><a:off x="0" y="0"/><a:ext cx="100" cy="100"/>'
+                   '<a:chOff x="0" y="0"/><a:chExt cx="100" cy="100"/></a:xfrm></p:grpSpPr>' + child + '</p:grpSp>')
+    grp_plain = grp_flipped.replace('<a:xfrm flipH="1">', '<a:xfrm>')
+    _mini_deck(d, [grp_plain, grp_flipped])
+    l3, st3, _s, _e = LG.p1_lines(LG.load_slides(d), 200000)
+    ok('A3 그룹 뒤집힘이 자식에 합성 → 뒤집힘 1건') if any('뒤집힘' in l for l in l3) else ng('A3 lines=%r st=%r' % (l3, st3))
+    # A4 sldSz 속성 순서 뒤집혀도 폭 20.0 (기본값 13.333 로 안 떨어진다)
+    d = os.path.join(fx_dir, 'r5_sldsz.pptx'); _mini_deck(d, [_sp('a', 0, 0, 100, 100, 'x')])
+    import zipfile
+    zi = zipfile.ZipFile(d); data = {n: zi.read(n) for n in zi.namelist()}; zi.close()
+    data['ppt/presentation.xml'] = data['ppt/presentation.xml'].replace(b'<p:sldSz cx="12192000" cy="6858000"/>', b'<p:sldSz cy="6858000" cx="18288000"/>')
+    zo = zipfile.ZipFile(d, 'w'); [zo.writestr(n, v) for n, v in data.items()]; zo.close()
+    _S4, sw4b = LA.load(d)
+    ok('A4 sldSz cy·cx 순서 → 폭 %.1f (20.0)' % sw4b) if abs(sw4b - 20.0) < 0.01 else ng('A4 sw=%r' % sw4b)
+    # A5 같은 글자면 구간 전체 비교 — AB@28+CD@32 vs A@28+BCD@32 (B 가 커졌다) → mirror 1
+    d = os.path.join(fx_dir, 'r5_sametext.pptx')
+    _mini_deck(d, [_runs('L', 914400, ('AB', 2800), ('CD', 3200)) + _runs('R', 7620000, ('A', 2800), ('BCD', 3200))])
+    S5, sw5 = LA.load(d)
+    ok('A5 같은 글자·다른 경계 → mirror 1') if len(list(LA.ax_mirror(S5, sw5, {}))) == 1 else ng('A5 spans=%r/%r' % (S5[0][0]['spans'], S5[0][1]['spans']))
+    # A6 한 장에 같은 이름 둘 — 선언 ["A","B"] 가 셋째 A 를 같이 면제하지 못한다
+    d = os.path.join(fx_dir, 'r5_dupname.pptx')
+    def _ln(name, x, w_emu, dash='dash'):
+        return ('<p:sp><p:nvSpPr><p:cNvPr id="1" name="%s"/></p:nvSpPr><p:spPr><a:xfrm><a:off x="%d" y="0"/><a:ext cx="100" cy="100"/></a:xfrm>'
+                '<a:ln w="%d"><a:prstDash val="%s"/></a:ln></p:spPr><p:txBody><a:p><a:r><a:rPr/><a:t>l</a:t></a:r></a:p></p:txBody></p:sp>' % (name, x, w_emu, dash))
+    _mini_deck(d, [_ln('A', 0, 12700) + _ln('B', 1000000, 25400) + _ln('A', 2000000, 63500)])
+    l6, s6, e6, _ = LA.collect(d, {'axes': ['dash'], 'intended': [{'axis': 'dash', 'slides': [1], 'shapes': ['A', 'B'], 'why': 'w'}]})
+    _mini_deck(d, [_ln('A', 0, 12700) + _ln('B', 1000000, 25400)])
+    l6b, s6b, e6b, _ = LA.collect(d, {'axes': ['dash'], 'intended': [{'axis': 'dash', 'slides': [1], 'shapes': ['A', 'B'], 'why': 'w'}]})
+    # 두 번째 팔: shapes 없는 «그 장 전체» 선언도 이름이 겹치는 그룹은 못 면제한다(AMBIG 가드의 고유 몫)
+    _mini_deck(d, [_ln('A', 0, 12700) + _ln('B', 1000000, 25400) + _ln('A', 2000000, 63500)])
+    l6c, s6c, e6c, _ = LA.collect(d, {'axes': ['dash'], 'intended': [{'axis': 'dash', 'slides': [1], 'why': 'w'}]})
+    ok('A6 같은 이름 둘 → 면제 안 됨(후보 1, 장 전체 선언도 1) · 이름 유일 컨트롤 → 면제 1') \
+        if len(l6) == 1 and not s6 and not l6b and len(s6b) == 1 and len(l6c) == 1 and not s6c \
+        else ng('A6 dup: lines=%d sup=%d · uniq: lines=%d sup=%d · whole-slide: lines=%d sup=%d' % (len(l6), len(s6), len(l6b), len(s6b), len(l6c), len(s6c)))
+    # A7 <a:t xmlns:a=…> 도 글자다 (parity · attr · geometry)
+    d = os.path.join(fx_dir, 'r5_xmlns_t.pptx')
+    _mini_deck(d, [_sp('u', 0, 0, 100, 100, 'UNLISTED').replace('<a:t>', '<a:t xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">')])
+    t_par = LS.deck_screens(d)[0]; t_attr = LA.load(d)[0][0][0]['text']; t_geo = LG.load_slides(d)[0]['u'][4]
+    ok('A7 xmlns 붙은 <a:t>: parity %r · attr %r · geo %r' % (t_par, t_attr, t_geo)) if t_par == ['UNLISTED'] and t_attr == 'UNLISTED' and t_geo == 'UNLISTED' \
+        else ng('A7 par=%r attr=%r geo=%r' % (t_par, t_attr, t_geo))
 
 
 def run_baseline_delta(fx_dir):
