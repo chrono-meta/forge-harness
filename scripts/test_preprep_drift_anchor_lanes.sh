@@ -10,7 +10,9 @@ set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; A="$HERE/scripts/test_preprep_drift_anchor.sh"
 SRC="$HERE/plugins/fh-commons/skills/preprep"; T=$(mktemp -d); pass=0; fail=0
 chk(){ if [ "$1" = 0 ]; then echo "  ✅ $2"; pass=$((pass+1)); else echo "  ❌ $2"; fail=$((fail+1)); fi; }
-mk(){ mkdir -p "$1"; for f in preprep.py interslide_deps.py lane_progression.py lane_adjacent_dup.py lane_promise.py; do cp "$SRC/$f" "$1/$f"; done; }
+# 🟥 2026-09-11: 앵커(D2)는 «디렉터리의 *.py 전부» 를 돈다(2026-09-10 덱 세션 정정). 여기 목록이 5개로 박혀 있어
+#    새 레인 파일(lane_attr_consistency 등)이 «부재 드리프트» 로 읽혀 L2/L4 가 CI 에서 빨개졌다 — 앵커와 같은 규칙으로.
+mk(){ mkdir -p "$1"; for f in "$SRC"/*.py; do cp "$f" "$1/$(basename "$f")"; done; }
 echo "[preprep-drift-anchor] D2 known pairs"
 # L1 nothing set → D2 SKIP (skip != pass), rc 0 (D2 is not a FAIL)
 out=$(env -u PREPREP_STANDALONE_DIR FH_COMPANION_STORE="$T/nostore" bash "$A" 2>&1); printf '%s' "$out" | grep -q "D2 .*SKIPPED"; chk $? "L1 var unset + no companion preprep → D2 SKIPPED (not PASS)"
