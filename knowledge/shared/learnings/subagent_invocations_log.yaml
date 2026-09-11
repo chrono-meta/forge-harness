@@ -3599,3 +3599,43 @@
   evidence: 94 주장 + 빈 7런 · quote 축자 검증 0 실패(에이전트 자체 기계 검증) · 컨트롤(축② 판정 수 대조) |차|>2 = 3런(g03 r1 빈 답 · g04 r3 · h05 r1) → 손대조 대상으로 기록
   cost: subagent_tokens 183,138 · 5분
   residual: 추출은 판단이다(F_gen 은 파이프라인 typed) — O 유리 방향 비대칭을 부록 4 잔여로 명시. 추출자 결정 2건(위치별 분할 · 자기부정 항목 제외) 그대로 채택
+  agent: agy(gemini-3.1-pro-high · gemini-3.8-flash-high) · cross-family adversarial reviewer
+  mode: sidecar
+  context: "preprep L15 서체 일관성 레인 신설(PR #697, MERGED bffa1a0) 의 적대 검토. 4라운드 연속."
+  dispatched_by: governor
+  outcome: accepted
+  evidence: |
+    R1 3.1-Pro-High 8건 · R2 3.8-Flash-High 6건 · R3 3.8-Flash-High 5건 · R4 3.1-Pro-High 4건
+    = **지적 23건 중 22건 수용·전건 실적발**, 1건 기각(하네스 전역 계약 → fh_signal 로 기록).
+    🟥 **자력 적발 0** — 23건 다 못 봤다.
+    🟥 라운드를 쌓은 것이 하중이었다: **R2 가 R1 의 수리를, R4 가 R3 의 수리를 뒤집었다.**
+      · R1 의 「템플릿 자신이 쓰는 서체는 노트로 강등」 → R2 가 fail-open 으로 지목(배포 템플릿은
+        쓰이지도 않는 자리에 Office 기본값을 들고 있어서, 강등하면 본문에 써도 종료코드가 안 움직인다)
+      · R3 의 「속성 순서 가정 제거」가 쓴 `(\w+)=` 가 네임스페이스 콜론을 못 먹어 `r:id` 유실 →
+        R4 가 지목. 실물 덱이 그 형태라 장 순서가 내내 파일명 순 폴백으로 돌고 있었다
+    🟥 그리고 **R3 에서 그걸 막으라고 넣은 레인이 초록이었다** — 픽스처가 1장짜리라 폴백과 정상
+      경로가 같은 답을 냈다(「초록인 이유를 확인하라」의 교과서적 재현). 2장 픽스처 + 면제-장번호
+      컨트롤로 교체.
+    실물 탐지 표면 173 → 647 → 804회. self-test 30항 · 출하본 rc=0 PASS=6.
+  tokens_subagent: UNMEASURED
+  dispatch_count_measured: 6  # R1~R4 본검토 4 + 실패 재시도 2(헤드리스 권한 1 · print-timeout 1)
+  residual: |
+    🟥 **NOT-CONVERGED.** 4라운드에 4건을 고쳤으므로 5라운드가 남았다. 네 라운드 연속으로 새
+    결함이 나왔고 자력 적발이 0 이라, 이 레인은 아직 굳지 않았다.
+    ⚠️ 배선 함정 둘(둘 다 «조용한 0» 이 될 수 있었다): ⓐ 백그라운드 실행에서 agy 가
+    「command 권한이 헤드리스에서 auto-deny」로 **출력 0** — 포그라운드 재실행으로 해소
+    ⓑ 기본 print-timeout 5분이 27KB 프롬프트에 부족 → `--print-timeout 600s` 필요(메모리에
+    이미 있던 함정을 재현했다).
+  notes: "판정은 전부 거버너가 소스로 재현한 뒤 수용했다 — 지적을 믿고 고친 것이 아니라, 예컨대 자식 있는 defRPr 정규식 조기종료는 재현부터 돌려 서체가 버려지는 것을 보고 나서 고쳤다. 사이드카 발견은 «증거 후보» 이지 판정이 아니라는 규율대로."
+
+- date: 2026-09-12
+  agent: agy(gemini-3.1-pro-high) · cross-family adversarial reviewer
+  mode: sidecar
+  context: "preprep L15 4라운드 — 자정을 넘겨 실행된 분. 본체 기록은 2026-09-11 엔트리에 통합돼 있다"
+  dispatched_by: governor
+  outcome: accepted
+  evidence: "4건 지적 전건 실적발·수리. 그중 하나가 **R3 수리가 심은 결함**(`(\\w+)=` 가 네임스페이스 콜론을 못 먹어 `r:id` 유실 → 장 순서가 파일명 순 폴백). 나머지 셋도 fail-open: `<a:t xml:space=\"preserve\"> 미독 · `<a:sym>` 슬롯 미포함(실물 157개) · 템플릿 endParaRPr 이 허용 집합으로 승격"
+  tokens_subagent: UNMEASURED
+  dispatch_count_measured: 위 2026-09-11 엔트리에 통합 (클래스 통합)
+  residual: "NOT-CONVERGED — 5라운드가 남았다"
+  notes: "🟥 이 엔트리가 따로 있는 이유는 세션이 자정을 넘겼기 때문이다. ④-e 는 «오늘» 기준으로 세므로, 날짜 경계를 넘긴 세션은 양쪽 날짜에 기록이 필요하다 — 원장을 하루 단위로 읽는 계기의 성질이고, 통합 서술만 두면 오늘 자가 0 으로 보인다"
