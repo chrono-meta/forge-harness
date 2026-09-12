@@ -1890,6 +1890,122 @@ else
   no "L114 round2-blind" "blind_has_B1=$(/usr/bin/grep -c '"B1"' "$P114" 2>/dev/null) ctrl_has_B1=$(/usr/bin/grep -c '"B1"' "$P114c" 2>/dev/null) $(printf '%s' "$O114" | /usr/bin/grep '^FLEET round2 members')"
 fi
 
+# ── L115~L121 짝지음(paired) 설계 — 공유 round-1 을 한 번 만들고 round-2 만 두 번 가른다 ──
+# 🟥 존재 이유: F_gen(146) 과 F_r2ctrl(136) 이 round-1 부터 다른 실행이어서 r1→r2 증가율 비교가
+#   «한 변수 비교» 가 아니었다(RESULT §15 최대 잔여). 이 플래그들이 그 잔여를 구조로 없앤다.
+
+# L115 --r1-only: 1차만 돌고 끝난다 — 2차 산출(part2_/peer_/raw2_)이 «하나도» 없어야 한다
+O115=$(bash "$FLEET_SH2" "$D/r2t.py" --out "$D/pr1" --fleet "$D/fleetR2.tbl" --r1-only 2>&1); R115=$?
+_N115=$(/usr/bin/grep -c . "$D/pr1/findings.jsonl" 2>/dev/null || echo 0)
+_R2ART=$(ls "$D/pr1"/part2_*.jsonl "$D/pr1"/peer_*.txt "$D/pr1"/raw2_*.txt 2>/dev/null | /usr/bin/wc -l | /usr/bin/tr -d ' ')
+if [ "$R115" -eq 0 ] && [ "$_N115" -gt 0 ] && [ "$_R2ART" -eq 0 ] && printf '%s' "$O115" | /usr/bin/grep -q 'FLEET r1-only'; then
+  ok "L115 --r1-only: rc=0 · 1차 $_N115 건 · 2차 산출 0개"
+else
+  no "L115 --r1-only" "rc=$R115 r1=$_N115 r2_artifacts=$_R2ART out='$(printf '%s' "$O115" | /usr/bin/tail -1)'"
+fi
+
+# L116 짝지음 불변식: 두 분기의 findings_r1.jsonl 이 공유 소스와 «바이트 동일» — 이게 설계의 전부다
+bash "$FLEET_SH2" "$D/r2t.py" --out "$D/pA" --reuse-r1 "$D/pr1" --round2       >/dev/null 2>&1
+bash "$FLEET_SH2" "$D/r2t.py" --out "$D/pB" --reuse-r1 "$D/pr1" --round2-blind  >/dev/null 2>&1
+if /usr/bin/cmp -s "$D/pr1/findings.jsonl" "$D/pA/findings_r1.jsonl" \
+   && /usr/bin/cmp -s "$D/pr1/findings.jsonl" "$D/pB/findings_r1.jsonl" \
+   && /usr/bin/grep -q '"B1"' "$D/pA/prompt2_codex_logic.txt" \
+   && ! /usr/bin/grep -q '"B1"' "$D/pB/prompt2_codex_logic.txt"; then
+  ok "L116 짝지음: 두 분기가 같은 r1(바이트 동일) 위에서 갈린다 — informed 는 상대 보임, blind 는 안 보임"
+else
+  no "L116 짝지음 불변식" "A_same=$(/usr/bin/cmp -s "$D/pr1/findings.jsonl" "$D/pA/findings_r1.jsonl" && echo y || echo n) B_same=$(/usr/bin/cmp -s "$D/pr1/findings.jsonl" "$D/pB/findings_r1.jsonl" && echo y || echo n)"
+fi
+
+# L117 🟥 인자가 실제로 «잡히는가» — known-pair. 파이썬 이스케이프 사고로 REUSE_R1 에 리터럴
+#   '${2:-}' 이 박혔던 적이 있고 `bash -n` 은 그걸 못 잡았다. 오류문에 «내가 준 경로» 가 나와야 한다.
+O117=$(bash "$FLEET_SH2" "$D/r2t.py" --out "$D/p117" --reuse-r1 "$D/ZZnope" --round2 2>&1); R117=$?
+if [ "$R117" -eq 2 ] && printf '%s' "$O117" | /usr/bin/grep -q 'ZZnope' && ! printf '%s' "$O117" | /usr/bin/grep -q '{2:-}'; then
+  ok "L117 🟥 --reuse-r1 인자 포착: 없는 경로를 «그 경로 이름으로» 거부(rc=2) · 리터럴 \${2:-} 아님"
+else
+  no "L117 인자 포착" "rc=$R117 (2 기대) out='$(printf '%s' "$O117" | /usr/bin/tail -1)'"
+fi
+
+# L118 fail-closed: --reuse-r1 인데 --round2 가 없으면 «아무것도 안 하는» 실행이 되므로 거부
+O118=$(bash "$FLEET_SH2" "$D/r2t.py" --out "$D/p118" --reuse-r1 "$D/pr1" 2>&1); R118=$?
+# 컨트롤: 같은 소스에 --round2 를 붙이면 통과한다(거부가 «항상» 이 아님을 증명)
+bash "$FLEET_SH2" "$D/r2t.py" --out "$D/p118c" --reuse-r1 "$D/pr1" --round2 >/dev/null 2>&1; R118c=$?
+if [ "$R118" -eq 2 ] && [ "$R118c" -eq 0 ]; then
+  ok "L118 --reuse-r1 단독 → rc=2 · 컨트롤(--round2 동반) → rc=0"
+else
+  no "L118 reuse-r1 단독 거부" "alone=$R118 (2 기대) with_round2=$R118c (0 기대)"
+fi
+
+# L119 소스와 --out 이 같으면 자기 소스를 덮는다 → 거부
+O119=$(bash "$FLEET_SH2" "$D/r2t.py" --out "$D/pr1" --reuse-r1 "$D/pr1" --round2 2>&1); R119=$?
+if [ "$R119" -eq 2 ] && printf '%s' "$O119" | /usr/bin/grep -q 'same as --out'; then
+  ok "L119 소스 == --out → rc=2 (자기 소스 덮기 거부)"
+else
+  no "L119 소스==out" "rc=$R119 (2 기대) out='$(printf '%s' "$O119" | /usr/bin/tail -1)'"
+fi
+
+# L120 «빈 1차» 재사용 거부 — 빈 것을 측정된 것처럼 쓰면 부재가 0 으로 렌더된다
+/bin/mkdir -p "$D/pempty"; : > "$D/pempty/findings.jsonl"; cp "$D/fleetR2.tbl" "$D/pempty/fleet.txt"
+O120=$(bash "$FLEET_SH2" "$D/r2t.py" --out "$D/p120" --reuse-r1 "$D/pempty" --round2 2>&1); R120=$?
+# 컨트롤: part_ 는 있고 findings 만 빈 경우도 같이 막히는가 → 위와 같은 분기라 한 번만 확인
+if [ "$R120" -eq 2 ] && printf '%s' "$O120" | /usr/bin/grep -q 'empty round-1'; then
+  ok "L120 빈 1차 재사용 → rc=2 (미측정을 0 으로 렌더하지 않는다)"
+else
+  no "L120 빈 1차" "rc=$R120 (2 기대) out='$(printf '%s' "$O120" | /usr/bin/tail -1)'"
+fi
+
+# L121 옛 2차 잔재 제거 — 재사용한 r1 위에 남의 2차가 섞이면 그 자리는 측정이 아니라 잔재다
+/bin/mkdir -p "$D/p121"
+printf '{"title":"STALE2","file":"x","line":1,"severity":"S","category":"c","detail":"d"}\n' > "$D/p121/part2_codex_logic.jsonl"
+printf 'STALEPEER\n' > "$D/p121/peer_codex_logic.txt"
+bash "$FLEET_SH2" "$D/r2t.py" --out "$D/p121" --reuse-r1 "$D/pr1" --round2 >/dev/null 2>&1
+if ! /usr/bin/grep -rq 'STALE2' "$D/p121/findings.jsonl" 2>/dev/null \
+   && ! /usr/bin/grep -q 'STALEPEER' "$D/p121/peer_codex_logic.txt" 2>/dev/null; then
+  ok "L121 옛 2차 잔재(part2_·peer_)가 재사용 시점에 제거된다 — 결과에 안 섞인다"
+else
+  no "L121 옛 2차 잔재" "stale_in_findings=$(/usr/bin/grep -c 'STALE2' "$D/p121/findings.jsonl" 2>/dev/null) stale_peer=$(/usr/bin/grep -c 'STALEPEER' "$D/p121/peer_codex_logic.txt" 2>/dev/null)"
+fi
+
+# ── L122~L123 파이프라인 층 짝지음 통과 ──────────────────────────────────────────
+# L122 --r1-only: status=R1_ONLY rc=0 · 🟥 씨앗을 선언하면 rc=2 (검증이 안 도는데 컨트롤이
+#      «통과» 로 읽히는 것을 막는다 — fail-closed known-pair: 씨앗 없으면 통과, 있으면 거부)
+O122=$(bash "$PIPE" "$D/r2t.py" --out "$D/pp122" --fleet "$D/fleetR2.tbl" --r1-only 2>&1); R122=$?
+O122s=$(bash "$PIPE" "$D/r2t.py" --out "$D/pp122s" --fleet "$D/fleetR2.tbl" --r1-only --seeded s1 2>&1); R122s=$?
+if [ "$R122" -eq 0 ] && printf '%s' "$O122" | /usr/bin/grep -q 'status=R1_ONLY' \
+   && [ "$R122s" -eq 2 ] && printf '%s' "$O122s" | /usr/bin/grep -q 'would never be judged'; then
+  ok "L122 파이프라인 --r1-only: rc=0 status=R1_ONLY · 씨앗 동반 → rc=2 (미판정 컨트롤 거부)"
+else
+  no "L122 파이프라인 r1-only" "rc=$R122 (0) seeded_rc=$R122s (2) '$(printf '%s' "$O122" | /usr/bin/grep -o 'status=[A-Z_]*' | head -1)'"
+fi
+
+# L123 --reuse-r1 이 파이프라인 out 을 주면 그 안 fleet/ 로 «내려가고», 두 분기가 같은 r1 해시를 찍는다
+O123a=$(FH_CODEX_BIN="$D/fake_ok.sh" FH_AGY_BIN="$D/fake_ok.sh" bash "$PIPE" "$D/r2t.py" --out "$D/pp123a" --fleet "$D/fleetR2.tbl" --reuse-r1 "$D/pp122" --round2 2>&1)
+O123b=$(FH_CODEX_BIN="$D/fake_ok.sh" FH_AGY_BIN="$D/fake_ok.sh" bash "$PIPE" "$D/r2t.py" --out "$D/pp123b" --fleet "$D/fleetR2.tbl" --reuse-r1 "$D/pp122" --round2-blind 2>&1)
+_H123a=$(printf '%s' "$O123a" | /usr/bin/grep -o 'reuse_r1 resolved=[^ ]* sha256=[0-9a-f]*' | head -1)
+_H123b=$(printf '%s' "$O123b" | /usr/bin/grep -o 'sha256=[0-9a-f]*' | head -1)
+_H123c=$(printf '%s' "$O123a" | /usr/bin/grep -o 'sha256=[0-9a-f]*' | head -1)
+if printf '%s' "$_H123a" | /usr/bin/grep -q '/fleet sha256=' && [ -n "$_H123b" ] && [ "$_H123b" = "$_H123c" ]; then
+  ok "L123 파이프라인 --reuse-r1: out/fleet 으로 해소 · 두 분기가 같은 r1 해시($_H123b)"
+else
+  no "L123 파이프라인 reuse-r1" "resolved='$_H123a' openA='$_H123c' blindB='$_H123b'"
+fi
+
+# ── L124 🟥 --r1-only 에서 «빈 1차» 가 «사용 가능» 으로 통과하던 fail-OPEN (cross-family codex 적발) ──
+# 기전: `n=$(grep -c . f || echo 0)` — grep -c 는 빈 파일에서 «0 을 찍고 rc=1» 이라 폴백이 줄을
+# 하나 더 붙여 n="0\n0" 이 되고, `[ "$n" -eq 0 ]` 이 구문오류로 **거짓**이 되어 R1_UNUSABLE 분기를
+# 건너뛴다. 픽스처는 «뚫리는 표기» 그대로 — 아무것도 안 뱉는 멤버.
+printf '#!/bin/sh\ncat >/dev/null\nexit 0\n' > "$D/m_silent.sh"; chmod +x "$D/m_silent.sh"
+printf 'codex|logic|sh %s\n' "$D/m_silent.sh" > "$D/f124.tbl"
+O124=$(bash "$PIPE" "$D/r2t.py" --out "$D/pp124" --fleet "$D/f124.tbl" --r1-only 2>&1); R124=$?
+# 컨트롤: 발견을 내는 멤버면 같은 경로가 rc=0 R1_ONLY 로 간다(거부가 «항상» 이 아님)
+O124c=$(bash "$PIPE" "$D/r2t.py" --out "$D/pp124c" --fleet "$D/fleetR2.tbl" --r1-only 2>&1); R124c=$?
+if [ "$R124" -eq 3 ] && printf '%s' "$O124" | /usr/bin/grep -q 'status=R1_UNUSABLE' \
+   && ! printf '%s' "$O124" | /usr/bin/grep -q 'findings=0$(printf "\n")0' \
+   && [ "$R124c" -eq 0 ] && printf '%s' "$O124c" | /usr/bin/grep -q 'status=R1_ONLY'; then
+  ok "L124 🟥 빈 1차 → rc=3 status=R1_UNUSABLE · 컨트롤(발견 있음) → rc=0 R1_ONLY"
+else
+  no "L124 빈 1차 fail-open" "empty_rc=$R124 (3 기대) '$(printf '%s' "$O124" | /usr/bin/grep -o 'status=[A-Z_0-9]*' | head -1)' ctrl_rc=$R124c (0 기대)"
+fi
+
 /bin/rm -rf "$D"
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ] && { echo "FAILED=0"; exit 0; } || { echo "FAILED=1"; exit 1; }

@@ -387,16 +387,25 @@ EOS
   [ "$fails" -eq 0 ] && { echo "SELFTEST: PASS"; return 0; } || { echo "SELFTEST: FAIL"; return 1; }
 }
 
-[ $# -ge 1 ] || { echo "usage: $0 <target-file> --out <dir> [--fleet <table>] [--round2|--round2-blind] | --selftest" >&2; exit 2; }
+[ $# -ge 1 ] || { echo "usage: $0 <target-file> --out <dir> [--fleet <table>] [--round2|--round2-blind] [--r1-only] [--reuse-r1 <dir>] | --selftest" >&2; exit 2; }
 [ "$1" = "--selftest" ] && { selftest; exit $?; }
 TARGET="$1"; shift
-OUT=""; FLEET=""; ROUND2=0; ROUND2_BLIND=0
+OUT=""; FLEET=""; ROUND2=0; ROUND2_BLIND=0; R1_ONLY=0; REUSE_R1=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --out) OUT="${2:-}"; shift 2 ;;
     --fleet) FLEET="${2:-}"; shift 2 ;;
     --round2) ROUND2=1; shift ;;
     --round2-blind) ROUND2=1; ROUND2_BLIND=1; shift ;;   # F_r2ctrl: 2차 패스는 돌리되 상대 계열 목록을 «감춘다» — «탈상관 효과» 와 «두 번 본 효과» 를 가른다
+    # ── 짝지음(paired) 설계 (F_pair, 2026-09-12) ────────────────────────────────
+    # 🟥 왜 있나: F_gen 과 F_r2ctrl 을 «독립 두 팔» 로 돌렸더니 round-1 기저가 146 vs 136 (7.4 %)
+    #   으로 이미 달랐다. 블라인드는 round-2 에만 걸렸는데 round-1 부터 다른 실행이라,
+    #   r1→r2 증가율 비교가 «한 변수 비교» 가 아니었다 (RESULT §15 최대 잔여). 그래서:
+    #   round-1 을 **한 번** 돌려 두고(--r1-only), 그 **같은** r1 에서 round-2 를 두 번 가른다
+    #   (--reuse-r1 <r1dir> --round2  /  --reuse-r1 <r1dir> --round2-blind).
+    #   부수 효과로 더 싸다 — r1 을 두 번 안 돌린다.
+    --r1-only)   R1_ONLY=1; shift ;;
+    --reuse-r1)  REUSE_R1="${2:-}"; shift 2 ;;
     *) echo "unknown flag: $1" >&2; exit 2 ;;
   esac
 done
@@ -408,20 +417,57 @@ done
 # 프롬프트 파일은 소스 전문을 담는다 — umask 022 면 0644 로 남아 다른 계정이 읽는다.
 umask 077
 [ -n "$OUT" ] || { echo "--out is required" >&2; exit 2; }
+
+# ── 짝지음 플래그 상호 배타 검사 (fail-closed: 모순 조합은 조용히 한쪽을 고르지 않고 거부) ──
+[ "$R1_ONLY" -eq 1 ] && [ -n "$REUSE_R1" ] && { echo "finding_fleet: --r1-only and --reuse-r1 are mutually exclusive" >&2; exit 2; }
+[ "$R1_ONLY" -eq 1 ] && [ "$ROUND2" -eq 1 ] && { echo "finding_fleet: --r1-only cannot be combined with --round2/--round2-blind" >&2; exit 2; }
+[ -n "$REUSE_R1" ] && [ "$ROUND2" -eq 0 ] && { echo "finding_fleet: --reuse-r1 requires --round2 or --round2-blind (otherwise it would do nothing)" >&2; exit 2; }
+
 mkdir -p "$OUT"
-if [ -n "$FLEET" ]; then cp "$FLEET" "$OUT/fleet.txt"; else default_fleet > "$OUT/fleet.txt"; fi
 
-: > "$OUT/members.txt"
-/bin/rm -f "$OUT/INTENTIONAL_EMPTY"   # R3 #8: a stale marker from an earlier run must not certify this one
-while IFS='|' read -r fam role cmd; do
-  [ -n "${fam:-}" ] || continue
-  case "$fam" in \#*) continue ;; esac
-  run_member "$fam" "$role" "$cmd" "$TARGET" "$OUT" >> "$OUT/members.txt" 2>&1 &
-done < "$OUT/fleet.txt"
-wait
+if [ -n "$REUSE_R1" ]; then
+  # 공유 round-1 을 이 OUT 으로 씨앗 놓는다. round-1 멤버는 **돌리지 않는다**.
+  [ -d "$REUSE_R1" ] || { echo "finding_fleet: --reuse-r1 dir not found: $REUSE_R1" >&2; exit 2; }
+  _src="$(cd "$REUSE_R1" && pwd -P)"; _dst="$(cd "$OUT" && pwd -P)"
+  [ "$_src" = "$_dst" ] && { echo "finding_fleet: --reuse-r1 dir is the same as --out — refusing (would overwrite its own source)" >&2; exit 2; }
+  [ -s "$REUSE_R1/findings.jsonl" ] || { echo "finding_fleet: --reuse-r1 source has no non-empty findings.jsonl — an empty round-1 must not be reused as if measured" >&2; exit 2; }
+  [ -f "$REUSE_R1/fleet.txt" ] || { echo "finding_fleet: --reuse-r1 source has no fleet.txt — the roster must be identical across paired branches" >&2; exit 2; }
+  # 로스터가 갈리면 두 분기가 «같은 r1» 을 쓰는 의미가 사라진다 — 명시된 --fleet 와 불일치면 거부
+  if [ -n "$FLEET" ] && ! /usr/bin/cmp -s "$FLEET" "$REUSE_R1/fleet.txt"; then
+    echo "finding_fleet: --fleet differs from the reused r1 roster ($REUSE_R1/fleet.txt) — refusing (paired branches must share one roster)" >&2; exit 2
+  fi
+  set -- "$REUSE_R1"/part_*.jsonl
+  [ -e "$1" ] || { echo "finding_fleet: --reuse-r1 source has no part_*.jsonl (per-member round-1 output) — the per-member fallback would silently see nothing" >&2; exit 2; }
+  cp "$REUSE_R1/fleet.txt" "$OUT/fleet.txt"
+  cp "$REUSE_R1"/part_*.jsonl "$OUT/" 2>/dev/null || :
+  cp "$REUSE_R1/findings.jsonl" "$OUT/findings.jsonl"
+  # 🟥 이 OUT 에 남아 있을 수 있는 **옛 round-2 산출**은 지운다 — 재사용한 r1 위에 남의 2차가
+  #    섞이면 그 자리는 측정이 아니라 잔재다 (stale-artifact 부류).
+  /bin/rm -f "$OUT"/part2_*.jsonl "$OUT"/raw2_*.txt "$OUT"/err2_*.txt "$OUT"/peer_*.txt "$OUT/findings_r2merged.jsonl"
+  : > "$OUT/members.txt"
+  /bin/rm -f "$OUT/INTENTIONAL_EMPTY"
+  echo "FLEET r1 reused from=$REUSE_R1 (round-1 members NOT run here)" >> "$OUT/members.txt"
+else
+  if [ -n "$FLEET" ]; then cp "$FLEET" "$OUT/fleet.txt"; else default_fleet > "$OUT/fleet.txt"; fi
 
-cat "$OUT"/part_*.jsonl > "$OUT/findings.jsonl" 2>/dev/null || : > "$OUT/findings.jsonl"
+  : > "$OUT/members.txt"
+  /bin/rm -f "$OUT/INTENTIONAL_EMPTY"   # R3 #8: a stale marker from an earlier run must not certify this one
+  while IFS='|' read -r fam role cmd; do
+    [ -n "${fam:-}" ] || continue
+    case "$fam" in \#*) continue ;; esac
+    run_member "$fam" "$role" "$cmd" "$TARGET" "$OUT" >> "$OUT/members.txt" 2>&1 &
+  done < "$OUT/fleet.txt"
+  wait
+
+  cat "$OUT"/part_*.jsonl > "$OUT/findings.jsonl" 2>/dev/null || : > "$OUT/findings.jsonl"
+fi
 R1_TOTAL=$(/usr/bin/wc -l < "$OUT/findings.jsonl" | /usr/bin/tr -d ' ')
+
+# --r1-only: 공유 round-1 을 남기고 여기서 끝낸다. round-2 는 --reuse-r1 로 두 번 갈라 돈다.
+if [ "$R1_ONLY" -eq 1 ]; then
+  echo "FLEET r1-only r1=$R1_TOTAL out=$OUT — reuse with: --reuse-r1 $OUT --round2 | --round2-blind"
+  exit 0
+fi
 
 # ── 생성시점 탈상관 (2차 패스) ─────────────────────────────────────────────────
 # 🟥 여기가 이 플래그의 논지다. 선별 시점에 계열을 교차시키면(«이 발견이 맞나» 를 남에게 묻는 것)

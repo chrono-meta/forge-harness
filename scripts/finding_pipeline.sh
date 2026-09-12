@@ -30,8 +30,8 @@ set -uo pipefail
 
 SUPPORTED_FAMILIES="codex gemini"          # must match finding_verifier.sh's own case statement
 
-TARGET=""; OUT=""; FLEET=""; SEEDED_IDS=""; SEEDED_FILE=""; SEEDS_ROUTED=""; ROUND2=0; ROUND2_BLIND=0
-usage() { echo "usage: finding_pipeline.sh <target-file> --out <dir> [--fleet <table>] [--round2|--round2-blind] [--seeded <ids>] [--seeded-file <path>]" >&2; exit 2; }
+TARGET=""; OUT=""; FLEET=""; SEEDED_IDS=""; SEEDED_FILE=""; SEEDS_ROUTED=""; ROUND2=0; ROUND2_BLIND=0; R1_ONLY=0; REUSE_R1=""
+usage() { echo "usage: finding_pipeline.sh <target-file> --out <dir> [--fleet <table>] [--round2|--round2-blind] [--r1-only] [--reuse-r1 <dir>] [--seeded <ids>] [--seeded-file <path>]" >&2; exit 2; }
 need() { [ $# -ge 2 ] || { echo "finding_pipeline: $1 needs a value" >&2; exit 2; }; }
 [ $# -ge 1 ] || usage
 TARGET="$1"; shift
@@ -39,6 +39,9 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --round2)      ROUND2=1; shift ;;
     --round2-blind) ROUND2=1; ROUND2_BLIND=1; shift ;;
+    # 짝지음(paired) — 플래그만 fleet 으로 통과시킨다(측정 층은 fleet 이다). RESULT §15 잔여 참조.
+    --r1-only)     R1_ONLY=1; shift ;;
+    --reuse-r1)    REUSE_R1="${2:-}"; shift 2 ;;
     --seeded)      need "$@"; SEEDED_IDS="$2"; shift 2 ;;
     --seeded-file) need "$@"; SEEDED_FILE="$2"; shift 2 ;;
     --out)   need "$@"; OUT="$2"; shift 2 ;;    # `shift 2` on a trailing flag consumes nothing and
@@ -110,8 +113,46 @@ argv_json() {  # each argument becomes one JSON string — no shell ever parses 
 FA=(); [ -n "$FLEET" ] && FA=(--fleet "$FLEET")
 # 생성시점 탈상관은 fleet 층의 일이다 — 드라이버는 플래그만 통과시킨다.
 R2ARGS=(); [ "$ROUND2" -eq 1 ] && R2ARGS=(--round2); [ "$ROUND2_BLIND" -eq 1 ] && R2ARGS=(--round2-blind)
-bash "$FLEET_SH" "$TARGET" --out "$OUT/fleet" ${FA[@]+"${FA[@]}"} ${R2ARGS[@]+"${R2ARGS[@]}"} 2>&1 | tee "$OUT/fleet_run.log"
+
+# ── 짝지음 인자 해석 ────────────────────────────────────────────────────────────────
+# 🟥 --r1-only 는 검증·드롭감사·씨앗 판정을 «돌리지 않는다». 그러므로 씨앗을 선언한 채로는
+#    거부한다 — 선언된 컨트롤이 돈 적 없이 통과로 읽히는 것이 이 레포가 이름 붙인 결함이다.
+PAIRARGS=()
+if [ "$R1_ONLY" -eq 1 ]; then
+  [ "$ROUND2" -eq 1 ] && { echo "finding_pipeline: --r1-only cannot be combined with --round2/--round2-blind" >&2; exit 2; }
+  [ -n "$REUSE_R1" ] && { echo "finding_pipeline: --r1-only and --reuse-r1 are mutually exclusive" >&2; exit 2; }
+  [ -n "$ALL_SEEDS" ] && { echo "finding_pipeline: --r1-only runs no verification — refusing to accept seeds that would never be judged" >&2; exit 2; }
+  PAIRARGS=(--r1-only)
+fi
+if [ -n "$REUSE_R1" ]; then
+  [ "$ROUND2" -eq 1 ] || { echo "finding_pipeline: --reuse-r1 requires --round2 or --round2-blind" >&2; exit 2; }
+  # 호출자가 파이프라인 out 을 줬으면 그 안의 fleet/ 로 내려간다. 어느 쪽을 골랐는지 «찍는다».
+  _R1SRC="$REUSE_R1"
+  [ -s "$REUSE_R1/fleet/findings.jsonl" ] && _R1SRC="$REUSE_R1/fleet"
+  [ -s "$_R1SRC/findings.jsonl" ] || { echo "finding_pipeline: --reuse-r1 resolved to '$_R1SRC' which has no non-empty findings.jsonl" >&2; exit 2; }
+  echo "PIPELINE reuse_r1 resolved=$_R1SRC sha256=$(/usr/bin/shasum -a 256 "$_R1SRC/findings.jsonl" | /usr/bin/cut -c1-16)"
+  PAIRARGS=(--reuse-r1 "$_R1SRC")
+fi
+
+bash "$FLEET_SH" "$TARGET" --out "$OUT/fleet" ${FA[@]+"${FA[@]}"} ${R2ARGS[@]+"${R2ARGS[@]}"} ${PAIRARGS[@]+"${PAIRARGS[@]}"} 2>&1 | tee "$OUT/fleet_run.log"
 FLEET_RC=${PIPESTATUS[0]}
+
+# --r1-only: 공유 round-1 만 남기고 끝낸다(검증 단계 없음 — 위에서 씨앗을 이미 거부했다)
+if [ "$R1_ONLY" -eq 1 ]; then
+  # 🟥 `|| echo 0` 을 쓰면 안 된다 — `grep -c .` 는 빈 파일에서 «0 을 찍고 rc=1» 이라 폴백이
+  #    한 줄을 더 붙여 `_n1="0\n0"` 이 되고, `[ "$_n1" -eq 0 ]` 은 **구문오류로 거짓**이 되어
+  #    빈 round-1 이 «사용 가능» 으로 통과한다(fail-OPEN). cross-family codex 가 적발, 자력 0.
+  #    [[feedback_pipefail_fallback_disarms_guard]] — 질문은 «폴백 붙였나» 가 아니라
+  #    «실패 시 stdout 이 비는가» 다. 여기서는 안 빈다.
+  _n1=$(/usr/bin/grep -c . "$OUT/fleet/findings.jsonl" 2>/dev/null)
+  case "${_n1:-}" in ''|*[!0-9]*) _n1=0 ;; esac
+  if [ "$FLEET_RC" -ne 0 ] || [ "$_n1" -eq 0 ]; then
+    echo "PIPELINE target=$(basename "$TARGET") fleet_rc=$FLEET_RC findings=$_n1 status=R1_UNUSABLE rc=3"
+    exit 3
+  fi
+  echo "PIPELINE target=$(basename "$TARGET") fleet_rc=0 findings=$_n1 status=R1_ONLY r1_dir=$OUT/fleet sha256=$(/usr/bin/shasum -a 256 "$OUT/fleet/findings.jsonl" | /usr/bin/cut -c1-16) rc=0"
+  exit 0
+fi
 FINDINGS="$OUT/fleet/findings.jsonl"
 if [ "$FLEET_RC" -eq 0 ] && [ ! -s "$FINDINGS" ] && [ -f "$OUT/fleet/INTENTIONAL_EMPTY" ]; then
   # 🟥 R3 #8: every member completed round 2 and withdrew everything — that is a REVIEWED empty result,
