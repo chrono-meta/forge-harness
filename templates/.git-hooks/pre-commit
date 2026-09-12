@@ -805,8 +805,25 @@ validate_defense_leg() { # $1 = marker path — fires ONLY at the floor tiers (s
 # would block every in-flight branch and teach `--no-verify`, which disarms the Destructive-Op
 # gate sharing this hook.
 RESIDENCY_TOKEN_GRACE_DATE="2026-09-05"
+# 🟥 `evidence=` — panel(...) 이 «무엇을 받았는지» 를 적게 한다. 2026-09-12 신설, 근거는 외부 실측이다:
+#   arXiv:2609.10969 (48 템플릿 · 2,880 시나리오 · **고정예산 2×2**) 에서 «같은 증거를 읽는 교차-모델
+#   투표» 는 위험 제안의 **62.9 %** 를 승인하고 «독립 출처» 는 **22.9 %** — 출처 효과 40.9 %p 대
+#   모델 다양성 11.3 %p, **3.6 배**. 즉 이 훅이 이미 하드 차단하는 축(계열)이 약한 쪽이고,
+#   `panel(codex, gemini)` 가 **같은 diff 를 읽은 패널**이면 그것은 62.9 % 팔인데 기록은 강한 값으로
+#   남는다. 그 구분을 닫는 토큰이다. 🟥 새 필드도 새 게이트도 만들지 않는다 — residency= 와 같은
+#   자리(crossfamily 의 grounds) 에 같은 문법으로 얹는다.
+EVIDENCE_TOKEN_GRACE_DATE="2026-09-12"
+# 🟥 `standpoint:` tier2+ grounds — 2026-09-12 부로 **advisory 에서 차단으로**. 근거가 바뀌었다:
+#   이 carve-out 은 증거가 FH 자기 관찰 n=4+8 뿐일 때 합리적이었다. arXiv:2609.10969 이 같은 비교를
+#   n=2,880 에서 **40.9 %p 대 11.3 %p** 로 재면서, 「강한 축의 grounds 를 advisory 로 두고 약한 축을
+#   하드 차단한다」가 더는 균형이 아니게 됐다. §Mechanization Boundary 검사는 여전히 통과한다 —
+#   «저자가 실행한 명령과 본 출력을 명명했는가» 는 **기록의 속성**(존재·비공허·귀속가능)이지 결론이 아니다.
+#   🟥 정직한 범위: 이 게이트는 **기록의 형태**만 막는다. 그 실행이 진짜였는지는 여전히 안 본다 —
+#   게임 가능성은 §Mechanization Boundary 가 사람에게 남긴 의도된 잔여이고 이 변경이 닫는 구멍이 아니다.
+STANDPOINT_GROUNDS_GRACE_DATE="2026-09-12"
 validate_crossfamily_leg() { # $1 = marker path
   local m="$1" line val reason fams mdate _res_active _res_tokens _res_ntok _res_wellformed _res_kind
+  local _ev_active _ev_tokens _ev_ntok _ev_full _ev_nfull _ev_wellformed _ev_kind _ev_body _ev_grace _ev_strip
   if [ ! -f "$m" ] || ! grep -qE '^[[:space:]]*crossfamily:[[:space:]]*[^[:space:]]' "$m"; then
     echo "  ❌ FAIL — load-bearing file staged with no 'crossfamily:' line in the Axes 2-3 marker."
     echo "     Verdict/gate/irreversible-surface code shares the author's blind spot with a"
@@ -868,6 +885,31 @@ validate_crossfamily_leg() { # $1 = marker path
   [ "$_res_ntok" -eq 1 ] && [ "$_res_nfull" -eq 1 ] && _res_wellformed=1
   _res_kind=""
   [ "$_res_wellformed" -eq 1 ] && _res_kind=$(printf '%s' "$_res_full" | sed -E 's/^residency=([A-Za-z_]*)\(.*$/\1/')
+
+  # evidence= token — same grammar and same presence-first rule as residency= above. REQUIRED for
+  # panel(...) on markers dated >= EVIDENCE_TOKEN_GRACE_DATE; format-only-if-present elsewhere.
+  # 🟥 상수를 «먼저» 평가한다(cross-family agy 적발). 이걸 mdate 검사 뒤에 두면 두 결함이 같이 난다:
+  #    ⓐ 미주입 시 `[ "$mdate" \< "" ]` 이 거짓이 되어 **grace 가 통째로 꺼지고** pre-grace 마커가
+  #      전부 막힌다(실측 확인) ⓑ mdate 가 비면 단축평가로 `:?` 가드가 아예 안 돈다.
+  _ev_grace="${EVIDENCE_TOKEN_GRACE_DATE:?EVIDENCE_TOKEN_GRACE_DATE unset — partial extraction of this hook? refusing to guess a grace date}"
+  _ev_active=1
+  if [ -n "$mdate" ] && [ "$mdate" \< "$_ev_grace" ]; then _ev_active=0; fi
+  _ev_tokens=$(printf '%s' "$reason" | grep -oE 'evidence=[^[:space:]]*' 2>/dev/null || true)
+  _ev_ntok=0
+  [ -n "$_ev_tokens" ] && _ev_ntok=$(printf '%s\n' "$_ev_tokens" | grep -c .)
+  # 🟥 `[^)]*` 는 중첩 괄호에서 안쪽 `)` 에 끊긴다 — `evidence=MIXED(codex(diff), gemini(repo))` 의
+  #    본문이 `codex(diff` 로 잘려 «공허» 판정을 받고 **정당한 기록이 하드 차단**됐다(실측).
+  #    한 겹 중첩을 허용한다(두 겹은 여전히 형식 위반 — 무한 중첩을 정규식으로 쫓지 않는다).
+  _ev_full=$(printf '%s' "$reason" | grep -oE 'evidence=(SHARED|INDEPENDENT|MIXED)\(([^()]|\([^()]*\))*\)' 2>/dev/null || true)
+  _ev_nfull=0
+  [ -n "$_ev_full" ] && _ev_nfull=$(printf '%s\n' "$_ev_full" | grep -c .)
+  _ev_wellformed=0
+  [ "$_ev_ntok" -eq 1 ] && [ "$_ev_nfull" -eq 1 ] && _ev_wellformed=1
+  _ev_kind=""; _ev_body=""
+  if [ "$_ev_wellformed" -eq 1 ]; then
+    _ev_kind=$(printf '%s' "$_ev_full" | sed -E 's/^evidence=([A-Z]*)\(.*$/\1/')
+    _ev_body=$(printf '%s' "$_ev_full" | sed -E 's/^evidence=[A-Z]*\(//; s/\)$//')
+  fi
 
   case "$val" in
     declined)
@@ -1022,6 +1064,81 @@ validate_crossfamily_leg() { # $1 = marker path
           return 1
         fi
       fi
+      # evidence= — WHAT the panel received. Same four checks in the same order as residency=
+      # (duplicate → absent → shape → meaning). Why this exists at all: arXiv:2609.10969 measured
+      # the two axes against each other at fixed call budget (48 templates, 2,880 scenarios) and a
+      # cross-model vote over SHARED evidence approved 62.9% of unsafe proposals vs 22.9% with an
+      # independent source — 40.9pp vs 11.3pp for model diversity. A `panel(codex, gemini)` that
+      # read the same diff is that 62.9% arm while recording as this enum's STRONG value. The token
+      # makes the distinction sayable; it does not make shared evidence illegal.
+      # 🟥 grace 여부와 무관하게, 토큰이 «있으면» 형식은 본다 — residency 가 `DEGRADED_*` 에서 하는
+      #    약속과 같은 모양이다. 이게 없으면 pre-grace 마커의 `evidence=PARTIAL(...)` 이 조용히
+      #    통과한다(실측). 부재는 grace 가 면제하지만, **잘못 쓴 것은 면제하지 않는다.**
+      if [ "$_ev_active" -eq 0 ] && [ "$_ev_ntok" -gt 0 ] && [ "$_ev_wellformed" -ne 1 ]; then
+        echo "  ❌ FAIL — 'evidence=' token present but malformed (pre-grace marker: the token is"
+        echo "     OPTIONAL here, but a token that IS written must be well-formed):"
+        printf '%s\n' "$_ev_tokens" | sed 's/^/       /'
+        echo "     Closed set evidence=(SHARED|INDEPENDENT|MIXED)(...) with a closing paren."
+        return 1
+      fi
+      if [ "$_ev_active" -eq 1 ]; then
+        if [ "$_ev_ntok" -gt 1 ]; then
+          echo "  ❌ FAIL — grounds carries MORE THAN ONE 'evidence=' token."
+          printf '%s\n' "$_ev_tokens" | sed 's/^/       /'
+          echo "     Same trap as two crossfamily: lines — the reader takes the first. Leave one."
+          return 1
+        fi
+        if [ "$_ev_ntok" -eq 0 ]; then
+          echo "  ❌ FAIL — panel(...) with no 'evidence=' token in grounds."
+          echo "     State WHAT the panel received, because that axis carries ~3.6x the effect of"
+          echo "     family diversity (arXiv:2609.10969: shared evidence approves 62.9% of unsafe"
+          echo "     proposals vs 22.9% independent; 40.9pp vs 11.3pp). One of:"
+          echo "       evidence=SHARED(<what every family read — e.g. the same diff>)"
+          echo "       evidence=INDEPENDENT(<what each got separately — own checkout, own run>)"
+          echo "       evidence=MIXED(<which member got which>)"
+          echo "     e.g. crossfamily: panel($fams) — residency=CLEAN(files=3) · evidence=SHARED(same"
+          echo "          staged diff to both) · R1..R2, 4 findings"
+          echo "     🟥 SHARED is a legal, common answer — it is not a failure. Recording it as if"
+          echo "     it were INDEPENDENT is the failure this token exists to stop."
+          return 1
+        fi
+        if [ "$_ev_wellformed" -ne 1 ]; then
+          echo "  ❌ FAIL — 'evidence=' token present but not one well-formed"
+          echo "     evidence=(SHARED|INDEPENDENT|MIXED)(...) token:"
+          printf '%s\n' "$_ev_tokens" | sed 's/^/       /'
+          echo "     Closed set with a closing paren — same shape as residency=, same reason: a"
+          echo "     malformed token must be malformed, never invisible."
+          return 1
+        fi
+        # Meaning check, and it is deliberately only on SHARED/MIXED: those are the values whose
+        # whole content is "which evidence did they actually share", so an empty body says nothing.
+        # INDEPENDENT is self-describing; over-blocking it would train the override.
+        # 🟥 본문 검사, 두 층 — cross-family agy 가 초판의 두 결함을 다 지목했다:
+        #   ⓐ **빈 본문과 자리표시자는 세 값 모두 차단**한다. 초판은 INDEPENDENT 를 통째로 면제해서
+        #     `evidence=INDEPENDENT()` 와 `evidence=INDEPENDENT(<what>)` 가 **통과했다**(실측 fail-open).
+        #     «자기서술적이라 본문 검사 면제» 는 «본문이 없어도 된다» 와 다른 말이었는데 초판이 접었다.
+        #   ⓑ 길이 바는 **문자 수**로 센다. `wc -w` 는 `same-diff` 도 `동일diff` 도 1 낱말로 세서
+        #     정당한 한국어/하이픈 기록을 막았다(실측) — 한국어로 근거를 쓰는 이 레포에서 이건 상습 과차단이다.
+        _ev_strip=$(printf '%s' "$_ev_body" | tr -d '[:space:]')
+        if [ -z "$_ev_strip" ] \
+           || printf '%s' "$_ev_body" | grep -qE '^[[:space:]]*(TBD|tbd|N/?A|n/?a|없음|미정|-+|\?+|<[^>]*>)[[:space:]]*$'; then
+          echo "  ❌ FAIL — evidence=$_ev_kind(...) has an EMPTY or placeholder body: '$_ev_body'"
+          echo "     All three values need a body — 'self-describing' meant it is not length-checked,"
+          echo "     never that it can be blank. Name what each member actually received."
+          return 1
+        fi
+        case "$_ev_kind" in
+          SHARED|MIXED)
+            # 문자 수 기준(공백 제외). 4자 미만이면 «diff» 같은 한 토큰이고, 그건 어느 산출물인지
+            # 말하지 않는다. 🟥 낱말 수로 세지 않는다 — CJK 와 하이픈 복합어가 전부 1 낱말이 된다.
+            if [ "$(printf '%s' "$_ev_strip" | wc -m | tr -d ' ')" -lt 6 ]; then
+              echo "  ❌ FAIL — evidence=$_ev_kind(...) body too thin to identify the artifact: '$_ev_body'"
+              echo "     Name it (\"same staged diff\", \"one findings.jsonl\", \"동일 프롬프트 파일\")."
+              echo "     A bare $_ev_kind(diff) records the weak arm as if it were documented."
+              return 1
+            fi ;;
+        esac
+      fi
       echo "  ✅ cross-family leg: $val${reason:+ — $(printf '%s' "$reason" | cut -c1-60)}" ;;
     DEGRADED_SINGLE_FAMILY|DEGRADED_PANEL_UNUSED|UNKNOWN)
       # A degrade is allowed; being silent about WHICH degrade, or about its grounds, is not.
@@ -1129,6 +1246,7 @@ validate_crossfamily_leg() { # $1 = marker path
 # and 0 over-blocks. Anchor: scripts/test_marker_standpoint_lanes.sh
 validate_standpoint_leg() { # $1 = marker path
   local m="$1" line val reason n quoted=""
+  local _sp_mdate _sp_block _sp_grace
   n=$(grep -cE '^[[:space:]]*standpoint:' "$m" 2>/dev/null); n=${n:-0}
   if [ "$n" -eq 0 ]; then
     echo "  ❌ FAIL — load-bearing file staged with no 'standpoint:' line in the Axes 2-3 marker."
@@ -1174,13 +1292,41 @@ validate_standpoint_leg() { # $1 = marker path
     tier1b\(*\)|tier2\(*\)|tier2b\(*\)|tier3\(*\))
       case "$val" in
         tier2\(*\)|tier2b\(*\)|tier3\(*\))
+          # 🟥 키워드에 «뒤따르는 공백» 을 박아두면 정당한 기록이 막힌다 — cross-family agy 적발,
+          #    실측 확인: `cargo check` · `python scripts/eval.py` · `ran: ./ci.sh` 가 전부 BLOCK 이었다.
+          #    advisory 일 때는 경고 한 줄이었지만 **차단이 된 순간 이건 override 를 훈련시키는 결함**이다.
+          #    ⇒ ⓐ 경계를 «비-알파벳» 으로 바꾸고(콜론·세미콜론·줄끝 허용) ⓑ 흔한 러너를 넣고
+          #      ⓒ «출력» 의 형태(`30/30`, `rc=`, `./path`)도 실행의 증거로 받는다.
+          #    ⚠️ 방향: 이건 **느슨하게** 만드는 변경이다. 막고 싶은 것은 «명령도 출력도 안 적은 줄» 이고,
+          #    길이 20 자 하한은 그대로 남는다.
           if [ "${#reason}" -lt 20 ] || ! printf '%s' "$reason" \
-              | grep -qiE 'ran |run |실행|돌렸|호출|invok|call|rc=|exit |output|출력|suite|스위트|test|bash |grep |npm |pytest|command|커맨드|arm'; then
-            echo "  ⚠️  standpoint leg: $val — recorded, but the grounds do not NAME an execution."
-            echo "     ${val%%(*} asserts code RAN in the target. The discriminator is mechanical:"
-            echo "     name the command you ran and the output you saw. If you only read files,"
-            echo "     the honest rung is tier1b — weaker on purpose, so the owed arm stays visible."
-            echo "     Advisory by design (see the named residual above this function)."
+              | grep -qiE '(^|[^[:alpha:]])(ran|run|runs|exec|invoke[ds]?|call|calls|called|exit|output|suite|test|tests|tested|bash|sh|zsh|grep|npm|pnpm|yarn|pytest|python|python3|cargo|make|go|gradle|mvn|dotnet|node|command)([^[:alpha:]]|$)|실행|돌렸|돌린|돌려|호출|출력|스위트|커맨드|rc=|[0-9]+/[0-9]+|\./'; then
+            # Grace: markers dated before STANDPOINT_GROUNDS_GRACE_DATE keep the old advisory
+            # behaviour (no retro-blocking), same pattern as the residency=/evidence= tokens.
+            _sp_mdate=$(printf '%s' "$m" | sed -nE 's/.*_([0-9]{4}-[0-9]{2}-[0-9]{2})\.marker$/\1/p')
+            _sp_block=1
+            # Unreadable date → NOT exempt. The hook stamps TODAY into every marker filename it
+            # creates, so an unparseable date is an unexpected shape, not evidence of age.
+            # 🟥 상수를 «먼저» 평가한다 — 초판은 `[ -n "$_sp_mdate" ] && [ ... ${VAR:?} ]` 였고,
+            #    mdate 가 비면 단축평가로 `:?` 가드가 **아예 안 돌았다**(agy 적발). 가드가 있다고
+            #    적어놓고 안 도는 것은 장식이다([[feedback_anchor_can_be_decorative]]).
+            _sp_grace="${STANDPOINT_GROUNDS_GRACE_DATE:?STANDPOINT_GROUNDS_GRACE_DATE unset — partial extraction of this hook? refusing to guess a grace date}"
+            if [ -n "$_sp_mdate" ] && [ "$_sp_mdate" \< "$_sp_grace" ]; then _sp_block=0; fi
+            if [ "$_sp_block" -eq 1 ]; then
+              echo "  ❌ FAIL — standpoint leg: $val — the grounds do not NAME an execution."
+              echo "     ${val%%(*} asserts code RAN in the target. The discriminator is mechanical:"
+              echo "     name the command you ran and the output you saw. If you only read files,"
+              echo "     the honest rung is tier1b — weaker on purpose, so the owed arm stays visible."
+              echo "       standpoint: tier2(<harness>) — ran \`bash scripts/x.sh\` there, output: 30/30 PASS"
+              echo "     🟥 BLOCKING since 2026-09-12 (was advisory). Why it changed:"
+              echo "     arXiv:2609.10969 measured evidence-source diversity at 40.9pp against 11.3pp"
+              echo "     for model diversity (n=2,880, fixed call budget) — this is the STRONGER axis,"
+              echo "     and leaving its grounds advisory while hard-blocking the weaker one was not a"
+              echo "     balance. Honest scope: this blocks on the RECORD's shape, never on whether the"
+              echo "     run was real."
+              return 1
+            fi
+            echo "  ⚠️  standpoint leg: $val — grounds name no execution (pre-$STANDPOINT_GROUNDS_GRACE_DATE marker, advisory)."
           else
             echo "  ✅ standpoint leg: $val$quoted"
           fi ;;

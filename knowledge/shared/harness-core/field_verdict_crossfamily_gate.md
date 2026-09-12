@@ -219,6 +219,27 @@ changes which ground truth the review is checked against — they are orthogonal
 that maxes out the first while leaving the second at zero has not raised its coverage of
 standpoint-dependent defects at all.*
 
+🟢 **External number, 2026-09-12 — and it is large.** `arXiv:2609.10969` (*Engineering Reliable
+Commit Gates for Agentic AI: Cost-Aware Verification Portfolios under Common-Mode Data Failures*,
+2026-09-10, cs.SE) built this comparison as a benchmark: 48 task templates → **2,880 scenarios**,
+**fixed-call 2×2** so budget is held constant and the comparison is about the axis rather than about
+spending more. Result: a **cross-model vote over shared evidence approves 62.9 % of unsafe proposals**,
+versus **22.9 % with an independent source** — source effect **40.9 pp** against **11.3 pp** for model
+diversity, i.e. **3.6×**. 🟥 **Read that against which axis FH mechanizes**: `crossfamily:` is a closed
+enum with a hard commit block and a fixtures lane, while `standpoint:`'s grounds check — the axis the
+number says carries 3.6× the effect — **was advisory by design until 2026-09-12**
+(`validate_standpoint_leg()` printed `⚠️` and did not `return 1` on a `tier2` naming no command).
+🟢 **Both gaps were closed the same day this number landed**: the `tier2`+ grounds check now
+**blocks** (`STANDPOINT_GROUNDS_GRACE_DATE=2026-09-12`, no retro-blocking — lanes N8/N8b/N8c/N8d),
+and `crossfamily:`'s `panel(...)` now requires an **`evidence=SHARED|INDEPENDENT|MIXED`** token in its
+grounds (`EVIDENCE_TOKEN_GRACE_DATE=2026-09-12`, lanes e1–e10), because a cross-family panel reading
+the **same diff** is, in their terms, the 62.9 % arm while recording as this enum's strong value.
+🟥 `SHARED` stays a legal answer — the defect was that it was unsayable, not that it is wrong. Until 2026-09-12 this section rested on FH's own
+n=4+4/4+8 observations; the direction is unchanged and the magnitude is now external.
+⚠️ Scope: their unsafe-approval rates are from their fault-injection benchmark, not from FH's corpus —
+cite the **asymmetry**, not the absolute percentages, as a property of FH's own gate.
+(Numbers re-read off the abstract on 2026-09-12 rather than recalled — §Instrument Calibration.)
+
 **Relationship to the isolation axis — standpoint is isolation whose scope moved up to the
 harness (operator, 2026-08-18).** Operator wording: *"요는 이것도 '격리' 프레이밍이 하네스 단위로
 확장되는 거지 … 그 하네스 자체의 입장을 돌리는 거니까 (하네스라는 껍질에 모델이라는 알맹이를
@@ -548,7 +569,7 @@ one variable at a time — `banana(qasp)` → **blocked (enum)** · `tier2` with
 **passes**.
 
 **What is actually true, stated at the right width**: the enum IS closed and enforced; the `tier2`+
-execution grounds are **advisory** (a thin `tier2` records and warns, it does not block); and nothing
+execution grounds **blocked** from 2026-09-12 (before that a thin `tier2` recorded and warned); and nothing
 checks whether the recorded value is *true*. The old sentence collapsed all three into "no validation",
 which suppresses use of a control that exists — the quietest kind of drift, because it reads as
 honest modesty.
@@ -579,7 +600,7 @@ grep the function name, not a line number) blocks on **six** distinct `return 1`
 duplicated one, a value outside the closed enum, a `crossfamily:` token contaminating this axis, a
 bare `not-applicable`, and a bare `DEGRADED_*`/`UNKNOWN`. Lanes: `scripts/test_marker_standpoint_lanes.sh`.
 **What is actually reserved is one narrow slot**: for `tier2`+ the «did you name a command you ran»
-grounds test emits `⚠️` and **does not** return 1 — the hook labels it *"Advisory by design"*. So the
+grounds test emitted `⚠️` and did **not** return 1 until 2026-09-12 (the hook labelled it *"Advisory by design"*); it now returns 1 for markers dated on/after `STANDPOINT_GROUNDS_GRACE_DATE`. So the
 accurate three-way split is: **enum → blocked · non-vacuity of grounds → blocked · truth of the value,
 and execution-naming on `tier2`+ → not checked.** Do not read this as "now mechanized"; read it as
 **"the channel is checked in more places than this file used to admit, and the judgment is still not
@@ -922,7 +943,7 @@ time, because the first version of this correction varied two and mis-attributed
 `banana(qasp)` → blocked (enum) · `tier2` without parens → blocked (enum) · `tier2(qasp)` with **no**
 execution grounds → **passes with a warning** · with grounds → passes. 🟥 So the first fix's claim
 that "grounds are non-empty" are checked **over-shot, and a different-family reviewer caught it**:
-the `tier2`+ execution grounds are **advisory**. Two residuals remain and both are real — grounds are
+the `tier2`+ execution grounds **block as of 2026-09-12** (they were advisory before). Two residuals remain and both are real — grounds are
 not enforced, and whether `tier2` is *true* is still self-attested. What was wrong was only the claim
 that nothing validated the field at all. Three artifacts, one carrying two
 independent trials (forge-harness PR #368, a sibling field harness's PR #8 reps=3 and its

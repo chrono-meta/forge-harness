@@ -229,6 +229,46 @@ format-checked `residency=(CLEAN|TAINTED|NOT_SCANNED)(...)` token on `DEGRADED_*
 `declined`. Fixtures: `scripts/test_marker_crossfamily_lanes.sh` (`r1`–`r13`). This is the SAME
 typed field Step 6 already emits into — one channel, not a second marker line.
 
+## Step 4.6 — `evidence=` : say WHAT the panel received (mandatory with `panel(...)`, 2026-09-12)
+
+`residency=` says the payload was safe to send. `evidence=` says **what was sent** — and that is the
+axis the outside world just measured as the dominant one. `arXiv:2609.10969` (48 task templates →
+2,880 scenarios, **fixed call budget** so the comparison is about the axis and not about spending
+more): a cross-model vote over **shared** evidence approved **62.9 %** of unsafe proposals against
+**22.9 %** with an **independent source** — source effect **40.9 pp** vs **11.3 pp** for model
+diversity, i.e. **3.6×**.
+
+Decide it from **how this run actually dispatched**, not from intent:
+
+| What happened | Token |
+|---|---|
+| Every member got the **same** payload (one prompt file / one diff fanned out) | `evidence=SHARED(<name the artifact>)` |
+| Each member produced its **own** evidence — own checkout, own run, own extraction | `evidence=INDEPENDENT(<what each got>)` |
+| Some of each | `evidence=MIXED(<which member got which>)` |
+
+🟥 **This skill's default flow is `SHARED`, by construction.** Step 4 builds **one** payload and fans
+it out, so a panel dispatched the ordinary way through this skill is the **62.9 % arm** — the axis it
+raises is model family, which the paper prices at 11.3 pp. That is not a reason to stop using it: a
+finder is worth its recall, and this skill's value was never precision
+(`[[feedback_decorrelation_is_a_cheap_finder]]`). It **is** a reason to stop recording that run as if
+it carried the stronger axis. Write `SHARED` and mean it.
+
+🟢 **`SHARED` is a legal, expected answer.** The hook does not block it; it blocks a `panel(...)` that
+does not say which it was, a value outside the closed three, a malformed or duplicated token, and a
+**vacuous body** on `SHARED`/`MIXED` (name the artifact — *"same staged diff"*, *"one findings.jsonl"*,
+*"identical prompt file"*). `INDEPENDENT` is self-describing and is not body-checked, deliberately:
+over-blocking the honest strong answer would train the override.
+
+**Where it lands**: the same grounds line as `residency=`, in the same `crossfamily:` field —
+`crossfamily: panel(codex) — residency=CLEAN(files=3) · evidence=SHARED(same staged diff to both) · R1, 3 findings`.
+Hook: `validate_crossfamily_leg` (grace `EVIDENCE_TOKEN_GRACE_DATE`, no retroactivity).
+Fixtures: `scripts/test_marker_crossfamily_lanes.sh` `e1`–`e10`.
+
+⚠️ **Named gap, not built today**: this skill has **no independent-source mode**. Giving it one
+(each member reconstructs the evidence itself rather than reading the author's payload) is the change
+that would move it onto the 40.9 pp axis; it is a design question, not a wiring one, and it is
+recorded as a signal rather than improvised here.
+
 🟥 **A stripped file is invisible to the reviewer, and a reviewer's default read of invisible is
 "absent," not "redacted"** (governor dogfood, 2026-09-05, same-day live use of this Step): two
 TAINTED files were stripped from a real payload and the CLEAN remainder sent cross-family — the

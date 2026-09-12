@@ -1,5 +1,66 @@
 # forge-harness (fh-meta) Changelog
 
+### [3.4.0] — 2026-09-12 — 탈상관의 «강한 축» 을 기계로 옮긴다 (외부 실측 기인)
+
+**BREAKING (gate):** 마커 두 자리가 조인다. 둘 다 **grace date 로 소급하지 않는다** — 그 날짜 이전
+파일명의 마커는 종전대로다.
+① `crossfamily: panel(<families>)` 는 이제 grounds 에 **`evidence=SHARED|INDEPENDENT|MIXED(...)`**
+   토큰을 요구한다(`EVIDENCE_TOKEN_GRACE_DATE=2026-09-12`). 처방 = 한 토큰 추가:
+   `crossfamily: panel(codex) — residency=CLEAN(files=3) · evidence=SHARED(same staged diff to both) · …`
+② `standpoint:` 의 `tier2`/`tier2b`/`tier3` grounds 검사가 **advisory → 차단**
+   (`STANDPOINT_GROUNDS_GRACE_DATE=2026-09-12`). 처방 = 돌린 **명령과 본 출력을 명명**하거나,
+   실행을 안 했으면 정직하게 `tier1b`(grounds 미검사)로 내린다.
+🟥 **소비자 install 도 같다** — 설치된 훅은 그 레포의 마커를 같은 기준으로 본다.
+
+**왜 지금인가 — 근거가 내부 관찰에서 외부 실측으로 바뀌었다.** `arXiv:2609.10969`
+(*Engineering Reliable Commit Gates for Agentic AI: Cost-Aware Verification Portfolios under
+Common-Mode Data Failures*, 2026-09-10, cs.SE)이 탈상관 두 축을 **고정 호출예산 2×2**로 분리해
+48 템플릿 · **2,880 시나리오**에서 쟀다: 「같은 증거를 읽는 교차-모델 투표」는 위험 제안의 **62.9 %**
+를 승인하고 「독립 출처」는 **22.9 %** — 출처 효과 **40.9 %p** 대 모델 다양성 **11.3 %p**, **3.6 배**.
+즉 FH 가 **하드 차단하던 축이 약한 쪽**이었고, 강한 쪽의 grounds 는 advisory 였다. 그 불균형을 뒤집는다.
+
+**`SHARED` 는 합법이다.** 결함은 «같은 diff 를 읽은 패널» 이 틀렸다는 것이 아니라 그 사실이 **기록에
+적힐 수 없었다**는 것 — 그런 런이 이 enum 의 가장 강한 값으로 남았다. 차단되는 것은: 어느 쪽인지 안
+적은 `panel(...)` · 닫힌 셋 밖의 값 · 형식 위반/중복 토큰 · `SHARED`/`MIXED` 의 공허한 본문
+(`INDEPENDENT` 는 자기서술적이라 본문 검사 없음 — 정직한 답을 과차단하면 override 를 훈련시킨다).
+
+🟥 **막는 것은 «기록의 형태» 이고 «진위» 가 아니다.** 저자가 명령을 명명했는지는 기록의 속성이지만,
+그 실행이 진짜였는지는 이 게이트가 보지 않는다 — §Mechanization Boundary 가 사람에게 남긴 의도된 잔여다.
+
+**함께 — 도구 쪽 정직성 (`auto-decorrelation` Step 4.6 신설).** 🟥 **이 스킬의 기본형이 곧 약한 팔이다**:
+Step 4 가 payload 하나를 만들어 팬아웃하므로 평범하게 돌린 패널은 구조적으로 62.9 % 팔이다. 그 사실을
+스킬 본문에 적고, 토큰 값을 «의도가 아니라 실제 디스패치 형태로» 정하게 했다. **독립 출처 모드는 없다** —
+비용 구조·residency 경계·«독립» 의 정의가 전부 미결이라 설계 문제로 이름만 남겼다
+(`tracks/_meta/fh_signal_2026-09-12_independent-source-axis.md`, CHAMBER-CANDIDATE).
+
+**frontier-digest — 목록 경로의 ID↔제목 짝짓기.** 429 폴백 경로에서 **위치로 짝지으면 안 된다**:
+2026-09-12 실측에 목록이 **ID 51개 · 제목 50개**를 내서 두 병렬 추출이 중간부터 밀렸고, 그 뒤 짝은
+**형식은 멀쩩한데 전부 틀렸다**(`2609.10550` 외 2건). 한 항목을 **한 단위로** 읽고, 그게 확인되기 전까지
+**항목별 `abs/{id}` 재해소가 의무**이며 제목 불일치는 **버린다**. 훅은 없다(파싱이 세션 안에서 일어난다).
+
+🟥 **이 게이트의 초판이 여섯 군데 틀렸고, 다른 계열이 그걸 찾았다 (자력 적발 0).**
+같은 diff 를 `agy`(gemini-3.8-flash-high)에 보냈고 여섯 건 전부 **실행 프로브로 재현한 뒤** 고쳤다.
+방향이 중요하다 — **넷은 과차단**이었다. 새 게이트가 advisory 가 아니라 차단이 된 순간, 과차단은
+경고 한 줄이 아니라 `--no-verify` 를 훈련시키는 결함이 된다:
+
+| # | 부류 | 초판 동작 | 수리 |
+|:-:|---|---|---|
+| ① | **과차단 S** | `evidence=MIXED(codex(diff), gemini(repo))` 의 본문이 안쪽 `)` 에서 잘려 «공허» 로 판정 → 정당한 기록 하드 차단 | 중첩 **한 겹** 허용(두 겹은 여전히 형식 위반) |
+| ② | **fail-open S** | `evidence=INDEPENDENT()` 와 `INDEPENDENT(<what>)` 가 **통과** — «길이 미검사» 를 «본문 없어도 됨» 으로 접었다 | 빈 본문·자리표시자는 **세 값 모두** 차단, 길이 바만 SHARED/MIXED |
+| ③ | **과차단 S** | `standpoint:` 키워드에 뒤따르는 공백이 박혀 `cargo check` · `python scripts/eval.py` · `ran: ./ci.sh` 가 전부 차단 | 경계를 비-알파벳으로 + 흔한 러너 추가 + `30/30`·`rc=`·`./path` 도 실행 증거로 |
+| ④ | **fail-open S** | `EVIDENCE_TOKEN_GRACE_DATE` 미주입 시 grace 가 **조용히 꺼져** pre-grace 마커를 전부 차단 | 상수를 mdate 검사 **앞에서** `:?` 로 평가 → 크게 죽는다 |
+| ⑤ | **fail-open A** | pre-grace 마커의 `evidence=PARTIAL(...)` 이 조용히 통과 | 부재는 면제, **오작성은 면제 아님**(residency 와 같은 약속) |
+| ⑦ | **과차단 A** | `wc -w` 가 `same-diff` 도 `동일diff` 도 1 낱말로 세어 정당한 **한국어** 기록을 차단 | 길이 바를 **문자 수**로 |
+
+⑥(가드 단축평가 — `[ -n "$mdate" ] && [ ... ${VAR:?} ]` 에서 mdate 가 비면 `:?` 가 **아예 안 돈다**)도
+같이 고쳤다. 🟥 **가드가 있다고 적어두고 안 도는 것은 장식이다**(`[[feedback_anchor_can_be_decorative]]`).
+
+**레인**: `test_marker_crossfamily_lanes.sh` **82 픽스처**(신규 `e1`–`e15`, 위 여섯 건이 각각 컨트롤과 짝) ·
+`test_marker_standpoint_lanes.sh` `N8`~`N8i`. 되돌림 프로브 두 종 — evidence 요구를 떼면
+**정확히 6개**(e1·e5·e6·e7·e8·e8c)만 적색, standpoint 차단을 떼면 **N8 하나만** 적색.
+🟥 두 레인 러너가 새 grace 상수를 주입하지 않으면 기존 픽스처가 통째로 오판하는 자리였다(standpoint 쪽은
+실제로 깨졌다) — 러너에 주입을 넣고, 훅에는 `:?` 가드를 박아 부분 추출이 **조용히 통과하지 않게** 했다.
+
 ### [3.3.0] — 2026-09-12 — 짝지음(paired) 측정: 한 round-1 을 두 분기가 나눠 먹는다
 
 **① 새 자산 — `--r1-only` · `--reuse-r1 <dir>` (`finding_fleet.sh` · `finding_pipeline.sh`).**

@@ -38,7 +38,8 @@ sed -n '/^validate_crossfamily_leg()/,/^}/p' "$HOOK" > "$T/fn.sh"
 # itself lives OUTSIDE the function (same placement as DEFEATER_GRACE_DATE next to
 # validate_defeater_leg), so it is not part of this extraction and is supplied by the harness
 # below, exactly like GRACE_RES is.
-if ! grep -q 'DEGRADED_PANEL_UNUSED' "$T/fn.sh" || ! grep -q '_res_active' "$T/fn.sh"; then
+if ! grep -q 'DEGRADED_PANEL_UNUSED' "$T/fn.sh" || ! grep -q '_res_active' "$T/fn.sh" \
+   || ! grep -q '_ev_active' "$T/fn.sh"; then
   echo "❌ HARNESS-ERROR — validate_crossfamily_leg did not extract from $HOOK (or the residency"
   echo "   token block is missing from it). Fixtures below would measure an empty/stale function."
   exit 1
@@ -46,6 +47,11 @@ fi
 
 GRACE_RES=$(grep -m1 '^RESIDENCY_TOKEN_GRACE_DATE=' "$HOOK" | sed -E 's/.*"(.*)"/\1/')
 [ -n "$GRACE_RES" ] || { echo "❌ HARNESS-ERROR — RESIDENCY_TOKEN_GRACE_DATE 를 못 읽었다"; exit 1; }
+# 🟥 evidence= (2026-09-12) 도 같은 자리에 산다. 이 값을 «안 주입하면» 함수 안에서 빈 문자열이 되고
+#    `[ "$mdate" \< "" ]` 은 언제나 거짓 → grace 가 통째로 무효 → panel 을 쓰는 **기존 픽스처 전부**가
+#    evidence 없다는 이유로 BLOCK 된다. 실행해 보지 않으면 안 보이는 자리라 가드를 둔다.
+GRACE_EV=$(grep -m1 '^EVIDENCE_TOKEN_GRACE_DATE=' "$HOOK" | sed -E 's/.*"(.*)"/\1/')
+[ -n "$GRACE_EV" ] || { echo "❌ HARNESS-ERROR — EVIDENCE_TOKEN_GRACE_DATE 를 못 읽었다"; exit 1; }
 # Every fixture below this point (k*/b*/x*/c*) tests crossfamily's PRE-EXISTING shape rules —
 # panel format, embedding/reranker filters, declined, degrade grounds — none of them are testing
 # the residency-token addition. So mk()/run() stamp a date BEFORE RESIDENCY_TOKEN_GRACE_DATE into
@@ -61,7 +67,7 @@ PRE_RES="2026-08-01"   # < RESIDENCY_TOKEN_GRACE_DATE (2026-09-05) by constructi
 # every pre-existing fixture was silently treated as un-exempt).
 mk() { printf "$1" > "$T/.axes_23_passed_fix_x_$2_${PRE_RES}.marker"; }   # $1=body $2=fixture name
 run() {
-  bash -c "RESIDENCY_TOKEN_GRACE_DATE='$GRACE_RES'; source '$T/fn.sh'; validate_crossfamily_leg '$T/.axes_23_passed_fix_x_$1_${PRE_RES}.marker'" \
+  bash -c "RESIDENCY_TOKEN_GRACE_DATE='$GRACE_RES'; EVIDENCE_TOKEN_GRACE_DATE='$GRACE_EV'; source '$T/fn.sh'; validate_crossfamily_leg '$T/.axes_23_passed_fix_x_$1_${PRE_RES}.marker'" \
     >/dev/null 2>&1
 }
 
@@ -197,7 +203,7 @@ check c5 BLOCK "qwen-embedding — same overlap, other direction"
 # Same ordering requirement as mk()/run() above — date LAST, immediately before `.marker`.
 resfix() { printf "%s\n" "$1" > "$T/.axes_23_passed_fix_x_$3_$2.marker"; }   # $1=body $2=date $3=fname
 resrun() {   # $1=date $2=fname → rc
-  bash -c "RESIDENCY_TOKEN_GRACE_DATE='$GRACE_RES'; source '$T/fn.sh'; validate_crossfamily_leg '$T/.axes_23_passed_fix_x_$2_$1.marker'" \
+  bash -c "RESIDENCY_TOKEN_GRACE_DATE='$GRACE_RES'; EVIDENCE_TOKEN_GRACE_DATE='$GRACE_EV'; source '$T/fn.sh'; validate_crossfamily_leg '$T/.axes_23_passed_fix_x_$2_$1.marker'" \
     >/dev/null 2>&1
 }
 rescheck() {   # $1=fname $2=date $3=body $4=expect(PASS|BLOCK) $5=label
@@ -249,6 +255,72 @@ rescheck r16 "$GRACE_RES" 'crossfamily: panel(codex) — residency=CLEAN(files=3
   PASS  "r16 panel + CLEAN token whose payload contains a space and a comma (legal inside the parens)"
 rescheck r17 "$GRACE_RES" 'crossfamily: panel(codex) — residency=CLEAN(files=3, stripped=2) — stripped files were named to the reviewer' \
   PASS  "r17 control — a second em-dash in the grounds does not break the token parse"
+
+echo
+echo "── evidence= token in crossfamily grounds (grace = $GRACE_EV) ──"
+# 🟥 왜 있나 — arXiv:2609.10969 이 고정예산 2×2(48 템플릿 · 2,880 시나리오)로 두 축을 분리해 재니
+#   «같은 증거를 읽는 교차-모델 투표» 가 위험 제안의 62.9 % 를 승인하고 «독립 출처» 는 22.9 % 였다
+#   (출처 40.9 %p vs 모델 다양성 11.3 %p = 3.6 배). 이 훅이 하드 차단하는 축이 약한 쪽이고,
+#   `panel(codex, gemini)` 가 «같은 diff» 를 읽은 패널이면 62.9 % 팔인데 기록은 강한 값으로 남는다.
+#   이 토큰은 그 구분을 «말할 수 있게» 만든다 — SHARED 를 불법으로 만드는 것이 아니다.
+EVOK='residency=CLEAN(files=3)'
+evcheck() { rescheck "$1" "$GRACE_EV" "$3" "$4" "$2"; }   # $1=fname $2=label $3=body $4=expect
+
+evcheck e1 "e1 panel + residency 만 있고 evidence= 없음 → BLOCK (구분이 안 적히면 강한 값으로 오독된다)" \
+  "crossfamily: panel(codex) — $EVOK · R1..R2, 4 findings" BLOCK
+evcheck e2 "e2 evidence=SHARED(...) — 정직한 약한 팔도 **통과한다**(불법이 아니다)" \
+  "crossfamily: panel(codex) — $EVOK · evidence=SHARED(same staged diff sent to both) · R1, 3 findings" PASS
+evcheck e3 "e3 evidence=INDEPENDENT(...) → PASS" \
+  "crossfamily: panel(codex, gemini) — $EVOK · evidence=INDEPENDENT(each ran its own checkout) · R1..R2" PASS
+evcheck e4 "e4 evidence=MIXED(...) → PASS" \
+  "crossfamily: panel(codex, gemini) — $EVOK · evidence=MIXED(codex got the diff, gemini ran the repo) · R1" PASS
+evcheck e5 "e5 닫힌 집합 밖 evidence=PARTIAL(...) → BLOCK" \
+  "crossfamily: panel(codex) — $EVOK · evidence=PARTIAL(some) · R1" BLOCK
+evcheck e6 "e6 닫는 괄호 없는 evidence=SHARED(x → 형식 위반(부재로 읽히면 fail-open)" \
+  "crossfamily: panel(codex) — $EVOK · evidence=SHARED(same diff · R1" BLOCK
+evcheck e7 "e7 토큰 두 개 → BLOCK (읽는 쪽이 첫 것만 취한다)" \
+  "crossfamily: panel(codex) — $EVOK · evidence=SHARED(same diff to both) · evidence=INDEPENDENT(no) · R1" BLOCK
+evcheck e8 "e8 SHARED 본문이 공허(한 낱말) → BLOCK — 약한 팔을 «기록된 것처럼» 남기지 못한다" \
+  "crossfamily: panel(codex) — $EVOK · evidence=SHARED(diff) · R1, 3 findings" BLOCK
+evcheck e8b "e8b 컨트롤 — INDEPENDENT 는 자기서술적이라 한 낱말도 통과(과차단이 override 를 훈련시킨다)" \
+  "crossfamily: panel(codex) — $EVOK · evidence=INDEPENDENT(rerun) · R1, 3 findings" PASS
+evcheck e8c "e8c SHARED 본문이 자리표시자 <...> → BLOCK" \
+  "crossfamily: panel(codex) — $EVOK · evidence=SHARED(<what>) · R1" BLOCK
+evcheck e9 "e9 컨트롤 — 패널이 안 돌았으면(DEGRADED) evidence= 는 요구하지 않는다(전면 요구가 아니다)" \
+  'crossfamily: DEGRADED_SINGLE_FAMILY — residency=CLEAN(files=0) probed codex/agy/gemini, 0 reachable' PASS
+rescheck e10 "2026-09-11" "crossfamily: panel(codex) — $EVOK · R1..R2, 4 findings" PASS \
+  "e10 grace 경계 — grace 하루 전 날짜의 마커는 evidence= 없이도 통과(소급 없음)"
+
+echo "· cross-family(agy) 가 초판 evidence= 에서 찾은 여섯 결함 — 전부 실행으로 재현 후 수리 ·"
+evcheck e11 "e11 🟥 중첩 한 겹은 정당하다 — MIXED(codex(diff), gemini(repo)) (초판은 본문이 'codex(diff' 로 잘려 과차단)" \
+  "crossfamily: panel(codex) — $EVOK · evidence=MIXED(codex(diff), gemini(repo)) · R1" PASS
+evcheck e11b "e11b 두 겹 중첩은 여전히 형식 위반(무한 중첩을 정규식으로 쫓지 않는다)" \
+  "crossfamily: panel(codex) — $EVOK · evidence=SHARED(a(b(c))) · R1" BLOCK
+evcheck e12 "e12 🟥 INDEPENDENT() 빈 본문 → BLOCK (초판은 통과 — «길이 미검사» 를 «본문 없어도 됨» 으로 접었다)" \
+  "crossfamily: panel(codex) — $EVOK · evidence=INDEPENDENT() · R1" BLOCK
+evcheck e12b "e12b 🟥 INDEPENDENT(<what>) 자리표시자 → BLOCK (초판 통과)" \
+  "crossfamily: panel(codex) — $EVOK · evidence=INDEPENDENT(<what>) · R1" BLOCK
+evcheck e12c "e12c 컨트롤 — INDEPENDENT(rerun) 은 짧아도 통과(길이 바는 SHARED/MIXED 에만)" \
+  "crossfamily: panel(codex) — $EVOK · evidence=INDEPENDENT(rerun) · R1" PASS
+evcheck e13 "e13 🟥 하이픈 복합어 SHARED(same-diff) → PASS (초판은 wc -w 로 1 낱말이라 과차단)" \
+  "crossfamily: panel(codex) — $EVOK · evidence=SHARED(same-diff) · R1" PASS
+evcheck e13b "e13b 🟥 한국어 본문 SHARED(동일 프롬프트 파일) → PASS — 이 레포는 근거를 한국어로 쓴다" \
+  "crossfamily: panel(codex) — $EVOK · evidence=SHARED(동일 프롬프트 파일) · R1" PASS
+evcheck e13c "e13c 컨트롤 — SHARED(diff) 는 여전히 너무 얇다(어느 산출물인지 안 말한다)" \
+  "crossfamily: panel(codex) — $EVOK · evidence=SHARED(diff) · R1" BLOCK
+rescheck e14 "2026-09-11" "crossfamily: panel(codex) — $EVOK · evidence=PARTIAL(some) · R1" BLOCK \
+  "e14 🟥 pre-grace 라도 «쓴 토큰» 의 형식은 본다 — 부재는 면제, 오작성은 면제 아님(초판 통과)"
+rescheck e14b "2026-09-11" "crossfamily: panel(codex) — $EVOK · R1..R2, 4 findings" PASS \
+  "e14b 컨트롤 — pre-grace + 토큰 부재는 그대로 통과(면제가 살아 있다)"
+# e15 — 상수 미주입이 «조용히 grace 를 끄는» 것이 아니라 크게 죽는지. 다른 레인과 러너가 달라 직접 돈다.
+N=$((N+1))
+resfix "crossfamily: panel(codex) — $EVOK · R1..R2" "2026-09-11" e15
+_E15=$(bash -c "RESIDENCY_TOKEN_GRACE_DATE='$GRACE_RES'; source '$T/fn.sh'; validate_crossfamily_leg '$T/.axes_23_passed_fix_x_e15_2026-09-11.marker'" 2>&1)
+if printf '%s' "$_E15" | grep -q 'EVIDENCE_TOKEN_GRACE_DATE unset'; then
+  echo "✅ e15 🟥 상수 미주입 → 크게 죽는다(초판은 조용히 grace 를 꺼서 pre-grace 마커 전부를 막았다) → BLOCK"
+else
+  echo "❌ e15 상수 미주입 — 가드가 안 울렸다: $(printf '%s' "$_E15" | head -2)"; FAIL=1
+fi
 
 echo
 if [ "$FAIL" -eq 0 ]; then echo "✅ all $N fixtures behave"; else echo "❌ regression ($N fixtures run)"; fi

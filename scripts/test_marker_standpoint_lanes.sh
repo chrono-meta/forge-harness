@@ -42,11 +42,19 @@ if ! grep -q 'DEGRADED_NO_TARGET_ACCESS' "$T/fn.sh"; then
   exit 1
 fi
 
+# 🟥 STANDPOINT_GROUNDS_GRACE_DATE 는 함수 «바깥» 에 살아서 이 추출에 안 들어온다. 주입하지 않으면
+#    `set -u` 아래에서 그 확장이 죽거나(날짜 있는 마커) 조용히 grace 를 무효화한다(날짜 없는 마커).
+#    훅 쪽에도 `:?` 가드를 뒀으므로 미주입은 이제 **크게** 죽는다 — 그래서 여기서 반드시 읽어 온다.
+GRACE_SP=$(grep -m1 '^STANDPOINT_GROUNDS_GRACE_DATE=' "$HOOK" | sed -E 's/.*"(.*)"/\1/')
+[ -n "$GRACE_SP" ] || { echo "❌ HARNESS-ERROR — STANDPOINT_GROUNDS_GRACE_DATE 를 못 읽었다"; exit 1; }
+# 마커명에 날짜를 박는다 — validate_standpoint_leg 의 mdate 추출은 `.*_(YYYY-MM-DD)\.marker$` 다.
+# 기본은 grace «이후» 로 둔다: 새 계약이 기본값이어야 한다.
+POST_SP="$GRACE_SP"
 FAIL=0
-lane() { # $1 = id  $2 = expect(BLOCK|PASS)  $3 = marker body
-  local id="$1" expect="$2" body="$3" rc out
-  printf '%s\n' "$body" > "$T/m.marker"
-  out=$( bash -c 'set -uo pipefail; . "$1"; validate_standpoint_leg "$2"' _ "$T/fn.sh" "$T/m.marker" 2>&1 ); rc=$?
+lane() { # $1 = id  $2 = expect(BLOCK|PASS)  $3 = marker body  [$4 = marker date]
+  local id="$1" expect="$2" body="$3" mdate="${4:-$POST_SP}" rc out
+  printf '%s\n' "$body" > "$T/m_${mdate}.marker"
+  out=$( bash -c "set -uo pipefail; STANDPOINT_GROUNDS_GRACE_DATE='$GRACE_SP'; . \"\$1\"; validate_standpoint_leg \"\$2\"" _ "$T/fn.sh" "$T/m_${mdate}.marker" 2>&1 ); rc=$?
   local got=PASS; [ $rc -ne 0 ] && got=BLOCK
   if [ "$got" = "$expect" ]; then
     printf '  ✅ %-34s %s\n' "$id" "$got"
@@ -76,8 +84,25 @@ lane N5-deg-grounded   PASS  'standpoint: DEGRADED_NOT_RUN — 표적 접근 가
 lane N6-deg-targets    PASS  'standpoint: DEGRADED_NOT_RUN(qasp-dev · pmh-dev) — 전파 자산이라 해당되나 대상 레포에서 아무것도 실행 안 했다'
 lane N7-quoted-value   PASS  'standpoint: "tier2(pmh-dev) — 그 레포 로컬 클론에서 실제로 실행, 양·음 arm 확인"'
 
-echo "== WARN side — recorded, not blocking (the named residual above) =="
-lane N8-tier2-vague    PASS  'standpoint: tier2(pmh-dev) — 그쪽 레포 기준으로 판단했다'
+echo "== tier2+ grounds — BLOCKING since 2026-09-12 (was advisory) =="
+# ⚠️ 계약 변경 2026-09-12 — 이 픽스처는 PASS 를 단언하고 있었다(advisory 시절). 뒤집는 이유:
+#   arXiv:2609.10969 이 출처 축을 40.9 %p, 모델 축을 11.3 %p 로 재면서(n=2,880, 고정 호출예산)
+#   «강한 축의 grounds 를 advisory 로 두고 약한 축을 하드 차단» 이 균형이 아니게 됐다. 옛 기대값은
+#   조용히 지우지 않고 여기서 이유와 함께 뒤집는다(crossfamily k3 의 선례와 같은 형태).
+lane N8-tier2-vague    BLOCK 'standpoint: tier2(pmh-dev) — 그쪽 레포 기준으로 판단했다'
+lane N8b-tier2-named   PASS  'standpoint: tier2(pmh-dev) — 그 클론에서 `bash scripts/x.sh` 를 돌렸고 출력은 30/30 PASS 였다'
+lane N8c-tier1b-vague  PASS  'standpoint: tier1b(pmh-dev) — 그쪽 파일만 읽었다, 실행은 안 했다'
+# grace 경계 — 하루 전 날짜의 마커는 종전 advisory 대로 통과(소급 없음)
+lane N8d-pre-grace     PASS  'standpoint: tier2(pmh-dev) — 그쪽 레포 기준으로 판단했다' 2026-09-11
+
+echo "== 과차단 수리 (cross-family agy 적발 — 차단이 된 순간 이건 override 를 훈련시키는 결함이다) =="
+# 초판 키워드에 «뒤따르는 공백» 이 박혀 있어 콜론·다른 러너가 전부 막혔다. 실측으로 셋 다 BLOCK 이었다.
+lane N8e-cargo         PASS  'standpoint: tier2(pmh-dev) — 그쪽 클론에서 cargo check 로 확인했고 결과는 0 errors 였다'
+lane N8f-python        PASS  'standpoint: tier2(pmh-dev) — python scripts/eval.py 를 그 레포에서 수행, 12 passed 나왔다'
+lane N8g-colon         PASS  'standpoint: tier2(pmh-dev) — ran: ./ci.sh 결과 30/30 초록이었다'
+lane N8h-output-only   PASS  'standpoint: tier2(pmh-dev) — 그 레포에서 스위트를 돌렸고 53/53 으로 끝났다'
+# 컨트롤 — 느슨하게 만든 뒤에도 «명령도 출력도 안 적은 줄» 은 여전히 막힌다(과교정 방지)
+lane N8i-still-vague   BLOCK 'standpoint: tier2(pmh-dev) — 그쪽 관점에서 충분히 검토했다고 판단한다'
 
 [ $FAIL -eq 0 ] && { echo "✅ all standpoint lanes behave"; exit 0; }
 echo "❌ standpoint lane regression"; exit 1
