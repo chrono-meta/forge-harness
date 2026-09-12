@@ -3647,3 +3647,65 @@
   dispatch_count_measured: 위 2026-09-11 엔트리에 통합 (클래스 통합)
   residual: "NOT-CONVERGED — 5라운드가 남았다"
   notes: "🟥 이 엔트리가 따로 있는 이유는 세션이 자정을 넘겼기 때문이다. ④-e 는 «오늘» 기준으로 세므로, 날짜 경계를 넘긴 세션은 양쪽 날짜에 기록이 필요하다 — 원장을 하루 단위로 읽는 계기의 성질이고, 통합 서술만 두면 오늘 자가 0 으로 보인다"
+
+- date: 2026-09-12
+  agent: Explore ×2 (local Claude) · general-purpose ×1 (local Claude) · agy(gemini) ×2 CLI
+  mode: sidecar
+  context: "clawd-on-desk «destructive-action reminder» PR — 필드 게이트 ②단(cross-family + 독립 출처)과 배선 지도"
+  dispatched_by: governor
+  outcome: accepted
+  evidence: |
+    🟥 **자력 적발 0. 두 축이 서로 다른 HIGH 를 잡았고 겹치지 않았다.**
+    ⓐ **독립 출처 팔**(general-purpose, owner 사양만 주고 체크리스트를 먼저 쓰게 함, 내 diff 서술
+      미제공) → **원격전용(버블 비활성) 경로가 통째로 스탬프 안 됨.** 알려진 짝으로 실측을 제시했고
+      (`A 통상 stamp=hold` / `B 원격전용 stamp=undefined · sweep gate=true`), 내 «호출수 동일»
+      불변식이 그 형태를 **구조적으로 못 본다**는 것까지 지목(둘 다 없으면 수가 같다).
+    ⓑ **계열 팔**(agy) → **`execute_bash`·`powershell`·`run_shell_command` 가 자동승인 적격인데
+      매처의 `SHELL_TOOLS` 에 없어 스캔 자체가 안 됨**(거버너가 3/3 재현). 추가로 과차단 3건
+      (`--help` · `rm -rf dist/*` · automation-off 에서 거짓 «내가 멈췄다» 표시).
+    ⓒ Explore ×2 → 설정 배선 6파일 순서·i18n 7로케일 패리티 테스트·라우트 테스트 헬퍼 지도.
+      그중 «수락 기준과 똑같은 단언이 이미 레포에 있다」(`server-route-permission.test.js:353`)가
+      테스트 설계를 바꿨다 — 새로 짓지 않고 그 형태를 재사용.
+  tokens_subagent: "Explore 91,253 + 102,170 · general-purpose 211,666 · agy UNMEASURED · 거버너 UNMEASURED"
+  dispatch_count_measured: 5  # 서브에이전트 3 + agy 2(1차는 print-timeout 5분에 절단 → --print-timeout 25m 재발주)
+  residual: |
+    🟥 **codex 는 한도 소진**(15:44 창을 F_pair 사전등록 실험이 선점) ⇒ 외부 계열은 **agy 단독**.
+    그래서 `crossfamily: panel(gemini-agy) evidence=MIXED` 로 기록했다 — 계열은 SHARED(같은 diff),
+    출처는 INDEPENDENT(사양만). arXiv:2609.10969 의 40.9%p vs 11.3%p 를 읽고 의도적으로 축을 갈랐고,
+    **이번 실측이 그 방향과 일치한다**(출처 팔이 내 불변식의 사각을 잡았고 계열 팔이 매처의 사각을 잡았다).
+    ⚠️ n=1 PR 이므로 «출처 축이 더 세다» 로 일반화하지 않는다 — 겹침 0 이라는 사실만 기록한다.
+  notes: "agy 1차는 기본 print-timeout 5분에 절단돼 출력 1줄이었다(메모리에 있던 함정 재현). `--print-timeout 25m` 로 해소. 모든 지적은 거버너가 소스에서 재현한 뒤 수용했고, 수리 11건 전부 fail-before 되돌림 프로브로 앵커 생존을 확인했다."
+
+- date: 2026-09-13
+  invoked_by: "FH 세션 773e7d1d (자율주행)"
+  agent: "workflow: qasp-maturity-diagnostic (렌즈 9 + 건별 적대 반증)"
+  purpose: |
+    운영자 요청 «qasp dev 를 전체적으로 성숙화» → FH §Field-Harness Diagnostic 의 9 렌즈를
+    워크플로로 팬아웃하고, 원시 발견마다 **반증 전용 팔 1개**를 붙여 살아남은 것만 랭크했다.
+    🟥 전 에이전트에 «쓰기 금지 · 웹 금지 · 제한 환경 리터럴 반출 금지 · 벤더 경로 제외» 를 박았다(제한 환경 레포).
+  outcome: accepted
+  evidence: |
+    렌즈 9(residency · split · salience · structure · degrade · loop · unwired · triad · reps)
+    → 원시 발견 83 → 적대 반증 → **생존 48(M 3 · S 25 · R 20) · 탈락 35(42 %)**.
+    🟥 **M 3건이 서로 다른 렌즈에서 나왔고 겹치지 않았다**:
+      ⓐ loop/residency — 무장된 가드 사본이 최신 보호경로 3건을 모른다(**유출 방향 fail-open, 현재 열림**).
+        설치 스냅샷 38 vs 소스 41. 훅 자신의 drift 통지는 경고만 내고 차단하지 않는다(의도된 설계).
+      ⓑ degrade — 회귀 판정이 부분집합 공집합을 `all([])=True` 로 접어 결함을 **거짓 CLOSED**.
+        🟢 소비처가 이미 3값(`Optional[bool]`, None→보류)인데 호출부가 안 쓴다 = 순수 배선 결함.
+        형제 드라이버에는 같은 가드가 주석까지 달려 있다 — **반쪽-픽스 미전파**.
+      ⓒ structure — 스킬 1개 Done-When 부재(레포 10개 중 유일). 성문 기준상 자동 M.
+    🟢 **탈락 35건의 이유를 전건 보존**했다 — 안 남기면 다음 진단이 같은 35건을 재발견으로 올린다.
+    🟢 **미측정 1건을 그 자리에서 닫았다**: R 등급 «origin 공개 여부 미측정» → `gh repo view` 로
+      **PRIVATE 실측**. 그 칸이 잔류 판정 전부를 떠받치고 있었고, 확인되자 내부 호스트 리터럴 96건이
+      발견에서 빠졌다(설계상 정상). 🟥 렌즈의 처방(가시성을 fail-closed 게이트로)은 여전히 유효하다.
+  tokens_subagent: "12,248,795 (92 에이전트 · tool_uses 483 · 벽시계 약 33분, 2회 실행)"
+  dispatch_count_measured: 92
+  residual: |
+    🟥 **계열 축이 비어 있다** — 전 팔이 같은 계열(Claude)이다. 제한 환경 레포라 외부 계열로 못 보낸다(잔류).
+      `[[feedback_decorrelation_axis_is_what_you_send]]` 기준으로 **탈상관은 «렌즈»(관점)로만 걸렸고
+      «계열»로는 안 걸렸다.** 그래서 계열 공통 사각은 이 진단이 구조적으로 못 본다.
+    🟥 **읽기 전용이라 「돌려보니」는 미측정**이다. M 중 둘(degrade·loop)은 실행 재현이 다음 단계다.
+    🟥 **렌즈당 상한 14건** — 넘은 렌즈는 뒤가 잘렸다(기록에 표시). 잘린 것은 «없다» 가 아니다.
+    ⚠️ 1차 실행이 세션 한도로 27 검증 팔에서 죽었고 `resumeFromRunId` 로 재개했다 — 캐시 65 재생 + 27 재실행.
+      **한도 소진이 「발견 0」으로 렌더될 수 있는 자리**였고, 워크플로가 failures 를 명시해서 갈렸다.
+  notes: "발견은 전부 파일:줄로만 지목하고 제한 환경 값은 옮기지 않았다. 기록 = tracks/_meta/qasp_maturity_diagnostic_2026-09-13.md(gitignored). 아무것도 자동 수정하지 않았다 — 진단의 산출은 랭크된 목록이고 실행은 운영자 승인 뒤다."
