@@ -1,9 +1,39 @@
 # forge-harness (fh-meta) Changelog
 
-### [Unreleased] — harness-pr-reviewer: 이름과 Axis 2·3 강제 배선
+### [3.3.0] — 2026-09-12 — 짝지음(paired) 측정: 한 round-1 을 두 분기가 나눠 먹는다
+
+**① 새 자산 — `--r1-only` · `--reuse-r1 <dir>` (`finding_fleet.sh` · `finding_pipeline.sh`).**
+round-1 을 **한 번** 돌려 두고, 그 **같은** round-1 에서 round-2 를 두 번 갈라 돌린다
+(`--reuse-r1 <dir> --round2` / `--round2-blind`). 왜 필요했나: «round-2 에서 상대 계열의 목록을
+보여주는가» 를 A/B 하려고 두 팔을 독립 실행했더니 **round-1 기저부터 달랐다**(146 vs 136, 7.4 %) —
+즉 한 변수 비교가 아니었다. 이 플래그들은 그 교란을 설득이 아니라 **설계**로 없앤다.
+부수 효과로 더 싸다 — round-1 을 두 번 돌리지 않는다(멤버콜 −25 %).
+
+기계 보증(레인 `test_finding_pipeline_lanes.sh` L115~L124, 122 → **132**):
+두 분기의 `findings_r1.jsonl` 이 공유 소스와 **바이트 동일** · 파이프라인이 r1 **sha256** 을 두 분기
+로그에 찍어 사후 대조 가능 · **빈 r1 재사용 거부**(미측정을 0 으로 렌더하지 않는다) · 옛 round-2
+잔재 제거 · 소스==out 거부 · `--reuse-r1` 단독 거부 · `--r1-only` 은 검증을 안 돌리므로 **씨앗 선언을
+거부**한다(선언된 컨트롤이 돈 적 없이 «통과» 로 읽히는 것을 막는다).
+
+**② fail-open 수리 (`--r1-only`, cross-family 적발).** `--r1-only` 이 **빈 round-1 을 «사용 가능»
+으로 통과**시켰다. 기전: `grep -c . f || echo 0` 은 빈 파일에서 «`0` 을 찍고 rc=1» 이라 폴백이 줄을
+하나 더 붙여 `_n1="0\n0"` 이 되고, `[ "$_n1" -eq 0 ]` 이 **구문오류로 거짓**이 되어 `R1_UNUSABLE`
+분기를 건너뛴다. ⚠️ **새 경로라 종전 동작 변화는 없다** — 기존 팔(플래그 미사용)의 경로는 불변이고
+레인 122개가 그대로 통과한다. 질문은 «폴백을 붙였나» 가 아니라 **«실패 시 stdout 이 비는가»** 다.
+
+**③ 출하 누락 수리 — `plugins/fh-commons/README.md` 를 `files[]` 에 명시.** npm 11 은 중첩 README 를
+암묵 포함했는데 **npm 12 는 뺀다**(실측: `npx npm@latest pack --dry-run` 에서 0건). 발행 경로가
+npm@latest 이므로 그대로 두면 3.2.0 에서 이미 빠져 나갔을 파일이다.
+
+**자릿수 근거**: 새 capability **instance** 가 아니라 새 플래그 둘 + 레인 10 + 출하 파일 1 —
+§Version-Digit-Policy 의 minor(새 자산 · 새 게이트 레인)다. **`BREAKING (gate):` 없음** — 소비자의
+게이트 수용을 깨지 않는다(새 플래그는 opt-in, 기존 호출 경로 불변).
+
+**④ harness-pr-reviewer (개명 + Axis 2·3 의무 배선) — 이 릴리스가 싣는다.**
 - **RENAME** `hub-cc-pr-reviewer` → `harness-pr-reviewer` (운영자 결정 2026-09-12): 실제 쓰임이 «현장 하네스가 자기 PR 을 FH 리뷰 능력으로 검증하는 standalone 창구» 라서. 옛 이름 발화·참조는 그대로 라우팅(별칭), 리다이렉트 스텁 없음(phantom-quench 선례).
 - Step 3.5 «Axis 2·3 의무 디스패치 레인» — 트리거 3항(8-matrix ❌ · load-bearing 경로 grep · 머지 권고 요청)을 PR 에서 계산, Axis 2 = auto-decorrelation 재사용 + `crossfamily:` 닫힌 enum, Axis 3 = phantom-quench(N/A 는 `--name-only` 로), 판정형 질문 reps≥3. Self-Catch 는 «판정이 아니라 cue». 플로어 sim: 현행 0/3 → 수정 3/3 (pmh-dev #77).
 
+**⑤ `gate_shape_scan.sh` 여러 줄 docstring 안쪽 오탐 수리 + 판정형 질문 reps≥3 교리** (pmh-dev #76 역수확, #699): `"""`/`'''` 짝 상태를 추적해 docstring 내부를 판정 어휘 스캔에서 뺀다(selftest 8 → 10, 레인 9 → 11, L8b 되돌림 프로브 포함).
 ### [3.2.0] — 2026-09-09 — 판정 파이프라인이 실제로 돌고, 축에 이름이 붙었다
 
 **BREAKING (gate):** `scripts/**/*.py` 가 이제 HEAVY 다 — 마커 없는 파이썬 단독 커밋이 막힌다.

@@ -22,6 +22,9 @@ CODEX="${FH_CODEX_BIN:-$(command -v codex 2>/dev/null || echo "$HOME/.npm-global
 AGY="${FH_AGY_BIN:-$(command -v agy 2>/dev/null || echo "$HOME/.local/bin/agy")}"
 
 FAMILY=""; TARGET=""; MODE="verify"; KEEP=""
+# 호출자(파이프라인)가 env 로 보존 경로를 줄 수 있다 — 검증 패스의 CLI stderr(토큰 회계)가 여기서 산다.
+# --keep 플래그가 뒤에서 덮으므로 env 는 «폴백» 이지 강제가 아니다. (2026-09-10: 0바이트 ≠ 0 토큰)
+KEEP="${FH_VERIFIER_KEEP:-}"
 usage() { echo "usage: finding_verifier.sh --family codex|gemini --target <file> [--audit] [--keep <dir>]" >&2; exit 2; }
 # `shift 2` with only one word left FAILS and consumes nothing, so the loop spins forever. Under
 # `set -uo pipefail` (no errexit) nothing stops it. codex reproduced a hang on a trailing --family.
@@ -52,7 +55,33 @@ fi
 umask 077
 
 WORK="$(mktemp -d 2>/dev/null)" || { echo "finding_verifier: mktemp failed" >&2; exit 3; }
-cleanup() { [ -n "$KEEP" ] && cp "$WORK"/* "$KEEP"/ 2>/dev/null; rm -rf "$WORK"; }
+# 🟥 R2 #7: 검증과 감사가 같은 keep 을 쓰면 감사가 검증 err.txt(토큰 회계)를 덮는다 — 드롭이 있는 런에서
+#    «바로 그 런» 의 회계가 또 버려진다. MODE 별 하위 디렉터리로 가른다. R2 #1: 심링크 잎은 복사 전에 거부.
+# 🟥 R3 #3: the root is checked BEFORE the mode dir is appended — appended first, a symlink root became
+#    an ancestor and passed both the dir check and the leaf check (path probe: INPUT_IS_SYMLINK → GUARD_ALLOWS).
+# R4 #2: `link/` makes -L false (the trailing slash resolves through the link) — strip separators first, keep "/" intact.
+# R6 #5: `link/.` and `link//.` also resolve through the link — strip trailing "/." and "/" until stable.
+while [ "${#KEEP}" -gt 1 ]; do
+  case "$KEEP" in
+    */.) KEEP="${KEEP%/.}" ;;
+    */)  KEEP="${KEEP%/}" ;;
+    *)   break ;;
+  esac
+done
+if [ -n "$KEEP" ] && [ -L "$KEEP" ]; then echo "finding_verifier: --keep root is a symlink: $KEEP — refusing" >&2; exit 2; fi
+if [ -n "$KEEP" ] && [ -z "${FH_VERIFIER_KEEP_FLAT:-}" ]; then KEEP="$KEEP/keep_$MODE"; fi
+cleanup() {
+  if [ -n "$KEEP" ]; then
+    [ -L "$KEEP" ] && { echo "finding_verifier: refusing to keep through a symlink: $KEEP" >&2; rm -rf "$WORK"; return; }
+    mkdir -p "$KEEP" 2>/dev/null
+    for _f in "$WORK"/*; do
+      _dst="$KEEP/$(basename "$_f")"
+      [ -L "$_dst" ] && { echo "finding_verifier: refusing to keep through a symlink: $_dst" >&2; continue; }
+      cp "$_f" "$_dst" 2>/dev/null
+    done
+  fi
+  rm -rf "$WORK"
+}
 trap cleanup EXIT
 
 cat > "$WORK/findings.jsonl"
@@ -95,7 +124,7 @@ fi
 case "$FAMILY" in
   codex)  "$CODEX" exec --sandbox read-only --skip-git-repo-check -m gpt-6-astra \
             -c model_reasoning_effort="high" < "$WORK/prompt.txt" > "$WORK/raw.txt" 2>"$WORK/err.txt" ;;
-  gemini) "$AGY" --model gemini-3.8-flash-high --output-format text --print-timeout 5m \
+  gemini) "$AGY" --mode plan --sandbox --model gemini-3.8-flash-high --output-format text --print-timeout 20m \
             -p "$(cat "$WORK/prompt.txt")" < /dev/null > "$WORK/raw.txt" 2>"$WORK/err.txt" ;;
   *) echo "finding_verifier: unknown family '$FAMILY' (codex|gemini)" >&2; exit 2 ;;
 esac

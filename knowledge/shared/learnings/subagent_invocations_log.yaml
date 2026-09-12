@@ -3575,6 +3575,37 @@
   outcome: accepted
   evidence: "① 델타 진술 + 제목 3 + thesis 2, 각각 defeater 동반 ② 외부 선행 11건(URL 열어 확인) + 미확인 4건 라벨 분리 ③ FH 결손 6건(G-1~G-6, 전부 기계화 가능). 🟥 G-4(finding_verify.py 의 자기검증 가드가 옵셔널 필드에 걸린 fail-open)는 내가 소스 확인 + 알려진 쌍 재현 후 **이 릴리스에서 닫았다**(PR #694). 사이드카 원 주장은 배선 경로도 뚫린다는 함의였는데 파이프라인이 라우팅을 거부하므로 좁혀서 채택 — 사이드카 발견은 «증거 후보» 이지 판정이 아니라는 규율대로"
   residual: "🟥 자기보고 잔여를 스스로 6항 적어 왔다(EU AI Act 미열람 · preprint 자기보고 수치 · 우리 표의 커버리지 불일치). 그 정직성 자체가 채택 근거의 일부. 외부 인용은 **아직 재검증 안 함** — 논문에 싣기 전에 URL 을 내가 직접 연다"
+- date: 2026-09-10
+  agent: sidecar-codex (gpt-6-astra high) + sidecar-agy (gemini-3.8-flash-high) + local ollama qwen3.8:27b@4090
+  task: B-2 F_typed 팔 24런(+15 재실행) · F_gen 9런 · 채점 32+16+16+3 단위 · cross-family 수리 검토 1
+  count: 37 (SubagentStop 집계) — 사이드카 CLI 호출은 별도(팔 ~140, 채점 ~70)
+  outcome: accepted
+  evidence: tracks/_meta/dominance_B2/RESULT_2026-09-10_scoring-calibration.md §1~§10 · fh_axes23_2026-09-10_verifier-roster.md · cross-family 6/6 실적발 전건 수리(L73~L78)
+  cost: codex 577k(F_typed 리뷰) + 한도 3회 소진 · 로컬 4090 무료 · 거버너 UNMEASURED
+  note: 통합 1항목. 사이드카는 auditor 로만(트리 쓰기 0). 자력 적발 0/6(cross-family) · 계기 축 자력 2(L72 · quota 오탐)
+- date: 2026-09-10
+  agent: general-purpose ×5 (Claude, 로컬 격리 워크트리 · 사이드카 0 — residency)
+  task: qasp-dev PR 스택 7건(#278–#284) 거버너 검증 — 레인 실행 · 되돌림 프로브 · 표본 손검증 · known-pair (#279 · #280+#281 · #282 · #283 · #284) + 거버너 직접 #278·스택 전수
+  count: 5
+  outcome: accepted
+  evidence: tracks/_meta/field_gate_review_2026-09-10_qasp-stack7.md — #281 BLOCK(coverage.py:142 파생 fail-open 재현 + 정본 :41), 5건 A 소견 전부 file:line·재현 동반 · 스택 전수 4092/0
+  cost: subagent_tokens 163k+184k+215k+200k+195k ≈ 957k · 거버너 UNMEASURED
+  note: 통합 1항목. crossfamily=DEGRADED_SINGLE_FAMILY(corp-context 어휘 — residency). 자력(거버너) 적발 0 — 다섯 A 전부 에이전트 실행이 잡음; 저자 자기검토도 다섯 다 놓친 자리(«거버너 1종» 이 실제로 «기계 1종+의미 0종» 이라는 저자 정정은 채택)
+- date: 2026-09-12
+  agent: general-purpose(sonnet) ×6 — persona-commons 1기 웹 리뷰 캐스트 첫 실사용(designer · ux-writer · fe-dev · be-dev · qa · a11y 렌즈, 격리·병렬)
+  task: 공개 화면(FH 지도 페이지 캡처 33요소/5k자) 에 각 렌즈 파일+캡처만 주고 parallax 출력 + Unique-to-this-seat 자기 태그. 거버너가 렌즈별 고유 발견을 세어 장식 렌즈를 가른다(한계효용 정지)
+  count: 6
+  outcome: accepted
+  evidence: 결과는 tracks/_meta/persona_cast_trial_2026-09-12.md 에 표로
+  note: 렌즈 파일은 워크트리 초안(feat/persona-commons). 회사 데이터 0(공개 페이지)
+- date: 2026-09-12
+  agent: codex sidecar(gpt-6-astra) — Axis 2 cross-family 감사, 짝지음 설계 diff 18,771 bytes
+  task: finding_fleet.sh · finding_pipeline.sh · run_pair.sh 의 diff 를 읽고 결함 열거(S/A/B + 트리거 입력). «두 분기가 바이트 동일한 r1 을 먹어야 하고 드리프트는 크게 틀어져야 한다» 를 요구사항으로 명시
+  count: 1
+  outcome: accepted
+  evidence: S 1건 적발 — `--r1-only` 이 빈 round-1 을 R1_ONLY(사용가능) 로 통과시키는 fail-OPEN(`grep -c . || echo 0` 이 "0\n0" 을 만들어 `[ -eq 0 ]` 이 구문오류로 거짓). 프로브 출력까지 받아 재현, 레인 L124 + fail-before 실행 증명으로 수리. 판정 원문 = tracks/_meta/dominance_B2/PREREG_ADDENDUM6_NOTE_2026-09-12.md
+  cost: tokens 46,877 · 거버너 UNMEASURED
+  note: 🟥 부분 완주 — 한도 소진으로 중단(리셋 15:44), 남은 표면(run_pair.sh phase2 동시성) 미검. 자력 적발 0 — 내가 20분 전에 쓴 코드였다. 회사 데이터 0(FH 자기 스크립트)
 - date: 2026-09-11
   agent: agy(gemini-3.1-pro-high · gemini-3.8-flash-high) · cross-family adversarial reviewer
   mode: sidecar
