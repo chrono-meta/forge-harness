@@ -87,6 +87,31 @@ FH asset modified → Axis 1 (templates/regression_guard.sh --pr {BRANCH})
       (`residency=(CLEAN|TAINTED|NOT_SCANNED)(...)`), and BLOCKS a `panel(...)` line that co-carries
       `residency=TAINTED(` or `residency=NOT_SCANNED(` — a sent payload and an unscreened/tainted
       one cannot both be true on the same line. Same fixtures file, cases `r1`–`r13`;
+      🟥 **since 2026-09-12 (`EVIDENCE_TOKEN_GRACE_DATE`, no retroactivity), a `panel(<families>)`
+      value ALSO requires an `evidence=` token in the same grounds** — a closed set of three:
+      `evidence=SHARED(<what every family read>)` · `evidence=INDEPENDENT(<what each got separately>)` ·
+      `evidence=MIXED(<which member got which>)`. e.g.
+      `crossfamily: panel(codex) — residency=CLEAN(files=3) · evidence=SHARED(same staged diff to both) · R1, 3 findings`.
+      **Why**: `arXiv:2609.10969` separated the two decorrelation axes at a fixed call budget
+      (48 templates, 2,880 scenarios) and a cross-model vote over SHARED evidence approved **62.9 %**
+      of unsafe proposals against **22.9 %** with an independent source — source effect **40.9 pp**
+      vs **11.3 pp** for model diversity. A `panel(codex, gemini)` that read the *same diff* is that
+      62.9 % arm while recording as this enum's strongest value; the token makes the distinction
+      sayable. 🟥 **`SHARED` is legal and common — it is not a failure.** What is blocked is a
+      `panel(...)` that does not say which it was, a value outside the three, a malformed/duplicated
+      token, and a vacuous body on `SHARED`/`MIXED` (those two are the values whose whole content is
+      *which* evidence was shared; `INDEPENDENT` is self-describing and is not body-checked, because
+      over-blocking the honest answer trains the override). Same fixtures file, cases `e1`–`e10`;
+      🟥 **`standpoint:`'s `tier2`+ grounds check BLOCKS since 2026-09-12**
+      (`STANDPOINT_GROUNDS_GRACE_DATE`, no retroactivity) — it printed `⚠️` and returned 0 before.
+      `tier2`/`tier2b`/`tier3` assert code RAN in the target, so the grounds must **name the command
+      and the output** (`ran \`bash scripts/x.sh\` there, output: 30/30 PASS`); if you only read
+      files the honest rung is `tier1b`, which is not grounds-checked. Same external number is the
+      reason: leaving the STRONGER axis advisory while hard-blocking the weaker one was not a
+      balance. Fixtures `scripts/test_marker_standpoint_lanes.sh` `N8`(blocks) / `N8b`(named command
+      passes) / `N8c`(tier1b exempt) / `N8d`(pre-grace still advisory). 🟥 Both changes gate the
+      **shape of the record**, never whether the run was real — §Mechanization Boundary's deliberate
+      residual is untouched;
       **recorded-by-convention, validated by nothing**: `axis2-rounds` (per-round yield vector) —
       steel-quench §Convergence Criteria consumes it, and a hook check for it was built and then
       REMOVED the same day for firing on 100% of markers. The convergence claim it supports is
