@@ -125,7 +125,7 @@ The forge-harness bundles **rules, skills, and session protocols** into one envi
 | `harvest-loop` | Weekly audit + self-evolution pipeline + Phase 2+ PR auto-proposal |
 | `verify-bidirectional` | Bidirectional self-verification + user-AI baseline update circuit |
 | `frontier-digest` | External-facing asset cross-ref + frontier trend + per-audience guide |
-| `hub-cc-pr-reviewer` | PR diff → baseline coherence check → review comment auto-generation |
+| `harness-pr-reviewer` | PR diff → baseline coherence check → review comment auto-generation |
 | `context-doctor` | `.claudeignore` auto-generation + large file detection + `/clear` timing guidance |
 | `harness-doctor` | Harness structure L1~L4 diagnosis + M/S/R prescription |
 | `sim-conductor` | External scenario/internal audit/ideation scan autonomous execution + M-tier auto PR |
@@ -156,7 +156,7 @@ The forge-harness bundles **rules, skills, and session protocols** into one envi
 | "can I use what's in another project?", "what's available?" | Ecosystem synergy discovery | `cross-ecosystem-synergy-detection` |
 | "manage my context", "want to save tokens" | Context optimization | `context-doctor` |
 | "wrap up this week's work", "want to reflect" | Weekly audit | `harvest-loop` |
-| "review my PR", "please review" | PR audit | `hub-cc-pr-reviewer` |
+| "review my PR", "please review" | PR audit | `harness-pr-reviewer` |
 | "check harness structure", "confirm everything's running well" | Structure diagnosis | `harness-doctor` |
 | "what are the latest AI tools?", "tell me about frontier trends" | External asset discovery | `frontier-digest` |
 | "want to share this pattern", "can I post this here?" | Pattern harvesting | `field-harvest` |

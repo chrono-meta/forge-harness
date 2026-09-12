@@ -41,7 +41,7 @@ to FH itself and to the field harnesses it emits.
 | 42001 A.7 data (A.7.2–A.7.6) | acquisition, quality, provenance, preparation | FH holds no training data but does hold **evaluation data** (probes, corpora, transcripts, logs): provenance = sim header `corpus_head_date` · quality = known-pair calibration · preparation = residency strip · **company residency is absolute** | `probes_live.yaml`, `scripts/residency_closure_scan.py` | 🟡 provenance/preparation present; no written acquisition or quality criteria for evaluation data |
 | ISO/IEC 5338 life cycle | define · control · execute · improve | incubator (chamber) → EMIT → field → harvest-loop compounding | `harness_incubator_doctrine.md`, `hub_compounding_loop.md` | ✅ |
 | ISO/IEC 23894 risk management | identify · analyse · evaluate · treat | ship-readiness grades · Surface-Class Degrade Invariant (irreversible = fail-closed) | `ship_readiness_gate.md`, `CLAUDE.md §Irreversibility Gates` | ✅ partial |
-| ISO/IEC 20246 reviews | work-product reviews | cross-family review · `/apex-review` · `hub-cc-pr-reviewer` · cold read (`beginner`) | `plugins/fh-meta/agents/` | ✅ |
+| ISO/IEC 20246 reviews | work-product reviews | cross-family review · `/apex-review` · `harness-pr-reviewer` · cold read (`beginner`) | `plugins/fh-meta/agents/` | ✅ |
 
 ## What a field harness inherits
 A harness FH emits gets the same rows for free where it adopts the templates (`templates/.git-hooks/*`, the marker schema, the

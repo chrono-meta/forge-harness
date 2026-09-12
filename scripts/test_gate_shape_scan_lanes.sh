@@ -32,5 +32,16 @@ bash "$SCAN" "$D/au.py" >/dev/null 2>&1; R1=$?; bash "$SCAN" "$D/az.py" >/dev/nu
 MUT="$D/scan_mut.sh"; /usr/bin/sed 's/^EXPOSURE_RE=.*/EXPOSURE_RE='"'"'(NEVER_MATCHES_XYZ)'"'"'/' "$SCAN" > "$MUT"
 bash "$MUT" "$D/serve.go" >/dev/null 2>&1; RC=$?
 [ "$RC" -eq 1 ] && ok "L7 되돌림: EXPOSURE 제거 → serve.go 가 NOT 로 떨어진다 (레인이 실물을 잰다)" || no "L7 되돌림" "rc=$RC (제거해도 초록이면 앵커가 장식)"
+# L8 — pmh-dev #76: 여러 줄 docstring 안쪽 줄은 게이트가 아니다 (""" · ''' · 컨트롤 = docstring 뒤 실제 판정 줄)
+printf 'def t():\n    """docstring\n    PASS allow true\n    """\n    return 1\n' > "$D/doc3.py"
+printf "def t():\n    '''docstring\n    return Verdict.ALLOW in prose\n    '''\n    return 1\n" > "$D/doc1.py"
+printf 'def t():\n    """docstring\n    PASS allow true\n    """\n    return Verdict.ALLOW\n' > "$D/doc_ctrl.py"
+bash "$SCAN" "$D/doc3.py" >/dev/null 2>&1; R1=$?; bash "$SCAN" "$D/doc1.py" >/dev/null 2>&1; R2=$?; bash "$SCAN" "$D/doc_ctrl.py" >/dev/null 2>&1; R3=$?
+[ "$R1" -eq 1 ] && [ "$R2" -eq 1 ] && [ "$R3" -eq 0 ] && ok "L8 docstring 안쪽(triple-double · triple-single)은 NOT · 그 뒤 실제 판정 줄은 GATE-SHAPED" || no "L8 docstring" "triple=$R1 single=$R2 ctrl=$R3"
+# L8b — 되돌림: 짝 상태 추적을 죽이면 L8 이 빨개지는가
+MUT2="$D/scan_mut2.sh"; /usr/bin/sed 's/if (n % 2 == 1) { indoc=1; next }/if (0) { indoc=1; next }/' "$SCAN" > "$MUT2"
+bash "$MUT2" "$D/doc3.py" >/dev/null 2>&1; RC=$?
+[ "$RC" -eq 0 ] && ok "L8b 되돌림: 짝 상태 제거 → doc3.py 가 GATE-SHAPED 로 돌아간다 (레인이 실물을 잰다)" || no "L8b 되돌림" "rc=$RC"
+
 /bin/rm -rf "$D"
 echo "PASS=$PASS FAIL=$FAIL"; [ "$FAIL" -eq 0 ] && { echo "FAILED=0"; exit 0; } || { echo "FAILED=1"; exit 1; }

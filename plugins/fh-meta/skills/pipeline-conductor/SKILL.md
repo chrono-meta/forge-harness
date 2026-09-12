@@ -246,7 +246,7 @@ Resume is scope-bound — the scope from Step 0 is preserved across resume calls
 After a `CLEAN (--full)` or `PENDING` sweep, the following are natural follow-ons:
 
 - `field-harvest` — harvest patterns surfaced during the sweep
-- `hub-cc-pr-reviewer` — if sweep was run pre-PR, feed results into PR review
+- `harness-pr-reviewer` — if sweep was run pre-PR, feed results into PR review
 - `agent-composer` — if multiple fix tasks are needed across the Pending list, compose agents to resolve them in parallel
 - `return-path-gate --all` — if Step 0.5 surfaced OPEN chains, run a full chain closure audit
 

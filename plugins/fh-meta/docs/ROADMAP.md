@@ -28,7 +28,7 @@ tags: [roadmap, v1.0, milestones]
 - C5: harness-doctor · context-doctor · sim-conductor each at v0.3 with Three-Doctor Loop linkage sections complete
 
 **C1 incomplete status** (based on utterance coverage audit 2026-05-17):
-- ✅ Natural utterance possible: 9/17 (plugin-recommender · install-wizard · context-doctor · audit-learnings · verify-bidirectional · sim-conductor · hub-cc-pr-reviewer · install-doctor + 1)
+- ✅ Natural utterance possible: 9/17 (plugin-recommender · install-wizard · context-doctor · audit-learnings · verify-bidirectional · sim-conductor · harness-pr-reviewer · install-doctor + 1)
 - ⚠️ Internal vocabulary dependent: 8/17 (deliberation · harness-doctor · marketplace-gate · agent-composer · field-harvest · asset-placement-gate · cross-ecosystem-synergy-detection · meta-prompt-builder)
 - v1.0 declaration criteria: ✅ 9 + S-tier top 2 (deliberation · agent-composer) improvements complete
 

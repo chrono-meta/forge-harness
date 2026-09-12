@@ -1,6 +1,6 @@
 ---
-name: hub-cc-pr-reviewer-detail
-description: On-demand detail for hub-cc-pr-reviewer — step bash commands, comment template, sister-asset utilization, external-environment adaptation, disable path, and persona synergy handling. Read when executing a step or operating in an external/own-PRS/deep-insight environment.
+name: harness-pr-reviewer-detail
+description: On-demand detail for harness-pr-reviewer — step bash commands, comment template, sister-asset utilization, external-environment adaptation, disable path, and persona synergy handling. Read when executing a step or operating in an external/own-PRS/deep-insight environment.
 load: on-demand
 ---
 

@@ -27,7 +27,7 @@ updated: 2026-05-26
 | plugin-recommender | 2026-05-12 | 2 | 🟡 Low Frequency |
 | verify-bidirectional | 2026-05-20 | 3 | 🟡 Low Frequency |
 | sim-conductor | 2026-05-26 | 6+ | ✅ Active |
-| hub-cc-pr-reviewer | 2026-05-18 | 3 | 🟡 Low Frequency |
+| harness-pr-reviewer | 2026-05-18 | 3 | 🟡 Low Frequency |
 | apex-review | 2026-05-10 | 1 | ⚠️ Under Observation |
 | deep-clarify | 2026-05-26 | 0 | 🆕 New |
 | frontier-digest | 2026-05-24 | 3 | 🟡 Low Frequency |

@@ -98,7 +98,7 @@ When queried for a specific capability (e.g., "adversarial reviewer for bash cod
 ⚠️ **A failed or empty discovery lane is NOT "no candidates".** Both CLIs above list only *configured* marketplaces, and a non-zero exit / empty array means the lane did not answer — not that nothing exists. Report each lane's state explicitly (`EXECUTED` / `EMPTY` / `FAILED: <stderr>`) and never render a `FAILED` lane as a zero result; a lane that could not run must be re-run or replaced by the web-search fallback (Priority 3) before you tell the user nothing was found.
 
 **Discovery priority**: built-in (Tier 0) > installed > FH native > Tier 1 (any platform) > Tier 2 > Tier 3 > Tier 4
-**Tier 0 guard**: FH native wins over a built-in only when the FH skill adds governance the built-in lacks (e.g. `/goal` → `goal-quench` adds budget+quality gates; code diff review stays with built-in `/code-review`, FH-asset coherence with `hub-cc-pr-reviewer`)
+**Tier 0 guard**: FH native wins over a built-in only when the FH skill adds governance the built-in lacks (e.g. `/goal` → `goal-quench` adds budget+quality gates; code diff review stays with built-in `/code-review`, FH-asset coherence with `harness-pr-reviewer`)
 
 **When sim-conductor chains here for persona discovery**: apply the same platform-aware search scoped to persona/simulation/review capability tags. Return discovered agents with their Tier rating so sim-conductor can decide whether to install or use a built-in brief.
 

@@ -15,7 +15,7 @@
 #    구분하려면 stdout 의 `REGRESSION_GUARD_RESULT=skip` 을 보라. 종료코드만 보는 호출자는
 #    미검사를 통과로 읽는다(2026-07-22: pre-commit 이 정확히 그랬고, AGENTS.md 변경이
 #    그 경로로 '✅ PASS' 를 받고 지나갔다).
-#    배선 현황: pre-commit ✅ / harness-doctor · harvest-loop · hub-cc-pr-reviewer ·
+#    배선 현황: pre-commit ✅ / harness-doctor · harvest-loop · harness-pr-reviewer ·
 #    self_evolution_routine = **미배선(종료코드만 판정)** — 알려진 잔여.
 #
 # PR mode rationale: using 'main' as BASE_REF for a PR branch includes changes from OTHER

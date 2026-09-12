@@ -93,6 +93,12 @@ it?) before acting — mechanical anchor over agreement.
 2. **Cross-family adversarial review** — `auto-decorrelation` recruits ≥1 different-family auditor
    (e.g. `codex` gpt-5.5 / high for repo-grounded verdict code). The same standing verifier the
    4-axis gate uses for load-bearing FH assets, now applied to **field** load-bearing changes.
+   🟥 **Judgment-type questions need reps ≥ 3** (pmh-dev #76, 2026-09-11): the same «is this silent
+   fallback by-design or fail-open?» prompt at the same temperature returned DESIGN / DEFECT / DESIGN
+   across three runs of one auditor. A single run of a judgment question therefore cannot be recorded
+   as `panel(...)` CONCUR — run it ≥3×, report the split, and treat a split as *unresolved*, not as
+   whichever side came first. Fact-type questions (grep, existence, «does line N call X») are stable
+   across reps and families and need neither repetition nor a family change.
 3. **Confirm → fix → re-verify loop** — iterate until the cross-family pass is **CONVERGED**: no
    reachable false-PASS / false-CONFIRMED / masked-FAIL / crash-where-safe-fail-required. **Each fix
    ships a mechanical regression test** reproducing the closed hole — a *required* convergence

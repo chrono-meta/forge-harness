@@ -29,6 +29,11 @@ npm@latest 이므로 그대로 두면 3.2.0 에서 이미 빠져 나갔을 파�
 §Version-Digit-Policy 의 minor(새 자산 · 새 게이트 레인)다. **`BREAKING (gate):` 없음** — 소비자의
 게이트 수용을 깨지 않는다(새 플래그는 opt-in, 기존 호출 경로 불변).
 
+**④ harness-pr-reviewer (개명 + Axis 2·3 의무 배선) — 이 릴리스가 싣는다.**
+- **RENAME** `hub-cc-pr-reviewer` → `harness-pr-reviewer` (운영자 결정 2026-09-12): 실제 쓰임이 «현장 하네스가 자기 PR 을 FH 리뷰 능력으로 검증하는 standalone 창구» 라서. 옛 이름 발화·참조는 그대로 라우팅(별칭), 리다이렉트 스텁 없음(phantom-quench 선례).
+- Step 3.5 «Axis 2·3 의무 디스패치 레인» — 트리거 3항(8-matrix ❌ · load-bearing 경로 grep · 머지 권고 요청)을 PR 에서 계산, Axis 2 = auto-decorrelation 재사용 + `crossfamily:` 닫힌 enum, Axis 3 = phantom-quench(N/A 는 `--name-only` 로), 판정형 질문 reps≥3. Self-Catch 는 «판정이 아니라 cue». 플로어 sim: 현행 0/3 → 수정 3/3 (pmh-dev #77).
+
+**⑤ `gate_shape_scan.sh` 여러 줄 docstring 안쪽 오탐 수리 + 판정형 질문 reps≥3 교리** (pmh-dev #76 역수확, #699): `"""`/`'''` 짝 상태를 추적해 docstring 내부를 판정 어휘 스캔에서 뺀다(selftest 8 → 10, 레인 9 → 11, L8b 되돌림 프로브 포함).
 ### [3.2.0] — 2026-09-09 — 판정 파이프라인이 실제로 돌고, 축에 이름이 붙었다
 
 **BREAKING (gate):** `scripts/**/*.py` 가 이제 HEAVY 다 — 마커 없는 파이썬 단독 커밋이 막힌다.
