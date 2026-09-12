@@ -1,5 +1,5 @@
 ---
-name: hub-cc-pr-reviewer
+name: harness-pr-reviewer
 description: Checks a submitted PR against the environment's baseline assets (CLAUDE.md, memory, naming, asset classification) and attaches a review comment with a merge recommendation. 5 steps — diff read, 8-area consistency check, self-catch, comment, merge recommendation.
 user-invocable: true
 allowed-tools: ["Bash", "Read", "Grep", "Glob"]
@@ -15,13 +15,21 @@ complexity_routing:
 
 > **Note:** The original developer is the forge-harness original developer (development source + meta-monitoring home). In external user install environments, the install environment user themselves is the baseline integrity gate operator (following path B generalization baseline / `SKILL_detail.md §External User Environment Adaptation Path` §).
 
-# hub-cc-pr-reviewer — Hub Gate Operation Rule Automation
+# harness-pr-reviewer — Hub Gate Operation Rule Automation
 
 When a PR is submitted, checks consistency against the user environment's baseline assets (CLAUDE.md · memory · naming · asset classification) and attaches a review comment. 5-step: diff read → 8-matrix check → self-catch → comment attachment → merge recommendation.
 
 ## Activation Triggers
 
-1. **PR #N input**: *"Review PR #N"* / *"Check PR #N"* / *"hub review"* / *"baseline consistency check"*
+> **Renamed from `hub-cc-pr-reviewer` (2026-09-12, operator decision).** The old name said where it
+> was born (the hub's own cc reviewing its own PRs). What it actually is — measured on qasp/pmh PRs in
+> 2026-09 — is the **standalone doorway through which a field harness verifies its own submitted PR
+> with FH's review capability**. Old-name utterances ("hub-cc-pr-reviewer", "hub review", "hub cc
+> review") still route here; downstream forks that carry the old directory name (PMH) keep working
+> until they sync. No redirect stub directory is shipped (same policy as `phantom-quench`).
+
+
+1. **PR #N input**: *"Review PR #N"* / *"Check PR #N"* / *"hub review"* (old-name alias) / *"harness PR review"* / *"baseline consistency check"*
 2. **Action leader cc → hub sync point**: Large decision area PR catch (following Option C Hybrid policy — memory creation / CLAUDE.md change / CATALOG round / skill v0.x evolution / policy change / asset synergy branch judgment)
 3. **Hub cc session entry**: Layer A auto-read recent external commit catch (auto-discover new PRs)
 
@@ -74,6 +82,54 @@ Self-precision catch areas after first cc review (following previous PR self-cat
 - Check explicit statement of organization-specific areas
 
 Self-catch areas 0 items = skip this entire catch matrix — do not pad with token-filling to make the section look populated.
+
+🟥 **Self-catch is a CUE, not a verdict.** Its output is the *input* to Step 3.5 below. A self-catch
+that finds nothing does not clear Axis 2 or Axis 3 — measured 2026-09-08/11: a reviewer session with
+no external cue ran the load-bearing gate **0/51**, and a PMH session reviewing qasp PR #13 dispatched
+the cross-family panel only after the operator pushed (pmh-dev #77). The self-check *is* the reviewer;
+it cannot be its own decorrelation.
+
+### Step 3.5. Axis 2 · Axis 3 — mandatory dispatch lane (mechanical trigger, typed degrade)
+
+Axis 1 above is wired at mandatory strength (`--pr` mode, typed verdict). Until 2026-09-12 Axis 2
+(adversarial panel) and Axis 3 (phantom-quench) had **no dispatch block in this skill at all** — only
+the self-catch matrix — so they fired only when someone said so. This step closes that with a trigger
+that is decided from the PR, never from the reviewer's feel.
+
+**Trigger — mandatory if ANY of these holds** (compute all three; record which fired):
+
+```
+(i)   Step 2 matrix has ≥1 ❌  (Inconsistent)
+(ii)  the PR touches a load-bearing FH asset: SKILL.md · SKILL_detail.md · .claude/rules/*.md ·
+      knowledge/shared/rules/*.md · templates/** · scripts/**/*.sh · scripts/**/*.py ·
+      plugins/*/agents/**   (same list as CLAUDE.md §FH Improvement 4-Axis Auto-Gate)
+      → gh pr diff "$PR" --name-only | grep -E '(^|/)SKILL(_detail)?\.md$|^\.claude/rules/|^knowledge/shared/rules/|^templates/|^scripts/.*\.(sh|py)$|^plugins/[^/]+/agents/'
+(iii) a merge recommendation (Step 5) will be issued for this PR
+```
+
+None of the three → record `axis2: not-triggered(reason)` · `axis3: not-triggered(reason)` in the
+comment capsule and continue. This is the *only* non-run path, and it is stated, never silent.
+
+**Axis 2 — cross-family adversarial panel.** Dispatch **`auto-decorrelation`** on the PR diff (reuse,
+not a new engine — its Step 1 load-bearing predicate, Step 4.5 residency screen and Step 6 degrade
+ladder all apply unchanged). What this step owns is only the *decision to dispatch*. The result lands
+as the typed `crossfamily:` value: `panel(<families>)` with the source-grounded findings, or one of
+`declined` · `DEGRADED_SINGLE_FAMILY` · `DEGRADED_PANEL_UNUSED` · `UNKNOWN` **with grounds** — e.g.
+consent OFF, no different-family sidecar reachable, quota exhausted. A degrade value is allowed; an
+*absent* value is not. 🟥 A judgment-type question put to the panel (by-design vs fail-open, is this
+a regression) needs **reps ≥ 3**; a 1-of-3 split is recorded as *unresolved*, never as CONCUR
+(`field_verdict_crossfamily_gate.md` §4-2).
+
+**Axis 3 — phantom-quench.** Run `/phantom-quench` over the PR's changed documentation surfaces
+(any `*.md` in the diff, plus every path/citation the PR body asserts). Mechanical N/A only when
+`gh pr diff --name-only` has zero `*.md` files **and** the PR body cites no path — record
+`axis3: N/A(no doc surface)`. A phantom finding is a ❌ in the comment capsule, and it flips the Step 5
+recommendation the same way an Axis 1 M-tier block does.
+
+**Degrade direction.** This is a review surface (reversible): tooling-down does not block the
+*comment*, but the merge recommendation must carry the degrade value verbatim and read
+**NOT-CONVERGED** while Axis 2 is a `DEGRADED_*`/`UNKNOWN` value on a load-bearing PR. Silent
+same-family pass is the one outcome this step forbids.
 
 ### Step 4. Review Comment Attachment
 
@@ -175,6 +231,22 @@ All 5 Steps completed
   — mandatory-pass: result is `pass` or `block`. `skip` and exit 3 are NOT
     passes; they mean Axis 1 did not examine this PR and the recommendation
     may not cite it as green
+
++ Step 3.5 trigger computed from the PR (matrix ❌ count · load-bearing path
+  grep · merge-recommendation requested) and recorded with which clause fired
+  — measured: the three booleans appear in the comment capsule. Absent = the
+    step did not run, which is the pre-2026-09-12 defect (pmh-dev #77)
+
++ Axis 2 dispatched via auto-decorrelation when triggered, landing a typed
+  `crossfamily:` value (panel(...) or a DEGRADED_*/UNKNOWN value WITH grounds)
+  — mandatory-pass: the value exists and is one of the closed enum. A
+    load-bearing PR whose value is DEGRADED_*/UNKNOWN leaves the merge
+    recommendation NOT-CONVERGED; judgment-type panel questions carry reps ≥ 3
+    or are recorded unresolved
+
++ Axis 3 phantom-quench run over the PR's doc surfaces when triggered, or
+  N/A(no doc surface) decided by `--name-only` grep, never by feel
+  — mandatory-pass: a phantom finding is a ❌ that flips the recommendation
 
 + /public-surface-audit run over the composed comment text BEFORE any
   gh pr comment

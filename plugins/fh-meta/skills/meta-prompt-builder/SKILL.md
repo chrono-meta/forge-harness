@@ -53,7 +53,7 @@ When Goal is provided in natural language (e.g., "I need to report to the team l
 | "analyze", "diagnose", "something seems off" | harness-doctor → context-doctor | Structural + contextual diagnosis simultaneously |
 | "simulate", "validate", "meta" | sim-conductor (D-code or Area B) | Multi-perspective validation |
 | "install", "setup", "onboarding" | plugin-recommender → install-wizard | Recommend then install |
-| "review", "code check" | sim-conductor D-code → hub-cc-pr-reviewer | Code review chain |
+| "review", "code check" | sim-conductor D-code → harness-pr-reviewer | Code review chain |
 
 Output format:
 ```

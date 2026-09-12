@@ -35,7 +35,7 @@ Meaning of isolation: The Critic reads the synthesizer conclusion but does not i
 - FAIL after re-synthesis → auto-persist as `fh_signal` on hold (no additional retries)
 - Maximum retries: **1**
 
-**Post-Core-Skill Critic Verdict Connection**: Following core skills can have Critic called inline after completion: harness-doctor · verify-bidirectional · hub-cc-pr-reviewer · context-doctor · sim-conductor. Trigger: immediately after completion announcement + "steel-quench" / "re-validate" / "run Critic" utterance.
+**Post-Core-Skill Critic Verdict Connection**: Following core skills can have Critic called inline after completion: harness-doctor · verify-bidirectional · harness-pr-reviewer · context-doctor · sim-conductor. Trigger: immediately after completion announcement + "steel-quench" / "re-validate" / "run Critic" utterance.
 
 ---
 
@@ -150,7 +150,7 @@ grep -rl "complexity_routing" plugins/*/skills/*/SKILL.md
 
 # 2. Aggregate escalation records from fh_signal files
 grep -rh "" tracks/_meta/fh_signal_*.md 2>/dev/null | \
-  grep -oE "(harness-doctor|verify-bidirectional|hub-cc-pr-reviewer|context-doctor|sim-conductor|agent-composer|harvest-loop|steel-quench)" | \
+  grep -oE "(harness-doctor|verify-bidirectional|harness-pr-reviewer|context-doctor|sim-conductor|agent-composer|harvest-loop|steel-quench)" | \
   sort | uniq -c | sort -rn
 ```
 

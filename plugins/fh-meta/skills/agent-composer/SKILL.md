@@ -172,7 +172,7 @@ Default composition table by task type.
 | Plugin recommendation | plugin-recommender (S) | — |
 | Install conflict diagnosis | install-doctor (S) | — |
 | Onboarding install | install-wizard (S) — ⚠️ interactive; `--dry-run` for bg parallel | — |
-| Hub PR review | hub-cc-pr-reviewer (S) — requires PR number first | — |
+| Hub PR review | harness-pr-reviewer (S) — requires PR number first | — |
 | **Decision-maker approval review** | apex-review (S) — CTO/tech lead/QA lead personas + HTML deck | — |
 | **Project local skills** | LOCAL_SKILL_REGISTRY lookup → relevant project skill (A/S) | Per project |
 
@@ -360,7 +360,7 @@ After fan-in report, evaluate conditions and auto-suggest the next Wave:
 
 | Condition | Wave suggestion |
 |---|---|
-| ① M-tier > 0 | **Wave next-M**: fact-checker (A) → hub-cc-pr-reviewer (S) |
+| ① M-tier > 0 | **Wave next-M**: fact-checker (A) → harness-pr-reviewer (S) |
 | ② persona-innovator naming candidates > 0 | **Wave next-I**: delegate to user + asset-placement-gate (S) |
 | ③ External absorption signal High > 0 | **Wave next-E**: persona-innovator Mode E (A) + meta-prompt-builder (S) |
 | ⑤ Design conflict / 2+ conflicting suggestions | **Wave next-D**: deliberation (S) — verdict folds back into Step 4-b |

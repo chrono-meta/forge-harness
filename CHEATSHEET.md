@@ -567,7 +567,7 @@ Claude agents feature
 | Skill | What it does | Say this |
 |---|---|---|
 | `install-wizard` | First-install onboarding (zshrc, sentinels, the FH self-gate) | "first-time setup", "run the install wizard" |
-| `hub-cc-pr-reviewer` | Reads a PR diff → 8-matrix baseline-consistency check → review comment + merge call | "review this PR", "check this diff" |
+| `harness-pr-reviewer` | Reads a PR diff → 8-matrix baseline-consistency check → review comment + merge call | "review this PR", "check this diff" |
 | `salience-splitter` | Splits an over-large SKILL.md that "does everything" into scoped files | "this skill is bloated", "SKILL.md too large", "split this skill" |
 
 ### Agents (sub-agents, dispatched — not slash commands)

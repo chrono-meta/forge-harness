@@ -32,7 +32,7 @@ operations or steel-quench.
 | `expert` | `plugins/fh-meta/agents/expert.md` | Web-grounded domain accuracy and current practice | `sim-conductor` Area E/D, paper review, direct |
 | `challenger` | `plugins/fh-meta/agents/challenger.md` | Evidence-cited adversarial evaluation | `steel-quench`, `harvest-loop`, `sim-conductor`, direct |
 | `fact-checker` | `plugins/fh-meta/agents/fact-checker.md` | Pre-recommendation duplicate and stale-fact search | Before new asset creation or recommendation |
-| `hub-persona-auditor` | `plugins/fh-meta/agents/hub-persona-auditor.md` | External-facing pre-publication persona audit | `hub-cc-pr-reviewer`, `sim-conductor`, direct |
+| `hub-persona-auditor` | `plugins/fh-meta/agents/hub-persona-auditor.md` | External-facing pre-publication persona audit | `harness-pr-reviewer`, `sim-conductor`, direct |
 | `quench-challenger` | `plugins/fh-commons/agents/quench-challenger.md` | Steel-quench attack plus concrete fix direction | `steel-quench` Wave 1, `install-doctor`, `marketplace-gate` |
 | `persona-innovator` | `plugins/fh-meta/agents/persona-innovator.md` | Naming gaps, frame proposals, frontier signals | `sim-conductor` Area A, `harvest-loop`, direct |
 
@@ -274,7 +274,7 @@ control; FH supplies the quality gate after goal completion.
 |---|---|---|
 | **M1 — Full** | No Claude-native dependency | `token-budget-gate`, `asset-placement-gate`, `phantom-quench`, `deep-clarify`, `convergence-loop`, `ko-tech-writer` (visual-QA steps degrade to text-only) |
 | **M2 — Partial** | Core works; native agent or slash-command steps need adaptation | `deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop` |
-| **M3 — Claude-only** | Requires a Claude hook or session-scoped dispatch | `goal-quench`, `hub-cc-pr-reviewer`, `install-wizard` |
+| **M3 — Claude-only** | Requires a Claude hook or session-scoped dispatch | `goal-quench`, `harness-pr-reviewer`, `install-wizard` |
 
 > **Detail**: See `knowledge/shared/harness-core/agents_md_runtime_details.md §Invocation-patterns`
 > — single, parallel, and wave composition examples — read when choosing a dispatch shape.
