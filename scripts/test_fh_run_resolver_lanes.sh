@@ -20,6 +20,23 @@
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$HERE" || exit 2
+
+# ── TTL 게이트 (pmh-dev #80 ⓑ 제보, 2026-09-14) ──────────────────────────────
+# 🟥 `timeout` 은 **GNU coreutils** 이고 macOS 기본에는 없다. 맨몸으로 부르면 그 머신에서
+#    레인이 «실패» 로 뜨는데 그건 **회귀가 아니라 계기 부재**다 — 둘이 같은 빨강으로 읽힌다.
+#    (이 레포에 이미 같은 부류의 전례가 있다: 로컬 6/6 · CI 0/6 — `stat -f` BSD-first.)
+# 순서: timeout → gtimeout → **없으면 그냥 실행**. 🟥 없을 때 «건너뛰지» 않는다 — 레인은
+#    돌아야 하고, 잃는 것은 «무한 대기 보호» 뿐이므로 그 사실만 한 줄로 남긴다.
+_TTL=""
+if command -v timeout  >/dev/null 2>&1; then _TTL="timeout"
+elif command -v gtimeout >/dev/null 2>&1; then _TTL="gtimeout"
+else
+  printf '  ⚠️  timeout/gtimeout 없음 — 시간 제한 없이 돈다(레인은 그대로 돈다, 건너뛰지 않는다)\n'
+fi
+_ttl() {   # _ttl <초> <명령…>
+  local sec="$1"; shift
+  if [ -n "$_TTL" ]; then "$_TTL" "$sec" "$@"; else "$@"; fi
+}
 PASS=0; FAIL=0
 ok(){ printf '  ✅ %s\n' "$1"; PASS=$((PASS+1)); }
 ng(){ printf '  ❌ %s\n' "$1"; FAIL=$((FAIL+1)); }
@@ -33,7 +50,7 @@ ng(){ printf '  ❌ %s\n' "$1"; FAIL=$((FAIL+1)); }
 # ⚠️ 명명된 잔여: 「백엔드 부재」가 「스킬 못 찾음」을 **가린다**(순서상 먼저 죽는다).
 #    더 쓸모 있는 순서는 해석이 먼저지만, 그건 이 PR 의 범위가 아니라 별건이다.
 resolve(){
-  FH_DRY_RUN=1 timeout 60 bash "$HERE/scripts/fh-run.sh" --backend codex --skill "$1" 2>&1 \
+  FH_DRY_RUN=1 _ttl 60 bash "$HERE/scripts/fh-run.sh" --backend codex --skill "$1" 2>&1 \
     | /usr/bin/grep -oE 'plugins/[A-Za-z0-9_-]+/skills/[A-Za-z0-9_.-]+/SKILL\.md' | head -1
 }
 
@@ -54,7 +71,7 @@ esac
 
 echo
 echo "== 🟥 컨트롤 — 아무 이름이나 닿으면 위 둘은 아무것도 증명 안 한다 =="
-OUT=$(FH_DRY_RUN=1 timeout 60 bash "$HERE/scripts/fh-run.sh" --backend codex --skill zz_no_such_skill_probe 2>&1); RC=$?
+OUT=$(FH_DRY_RUN=1 _ttl 60 bash "$HERE/scripts/fh-run.sh" --backend codex --skill zz_no_such_skill_probe 2>&1); RC=$?
 if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | /usr/bin/grep -q 'unable to resolve'; then
   ok "F3 없는 이름 → rc=$RC · «unable to resolve» (판별력 있음)"
 else
@@ -100,7 +117,7 @@ echo "== 백엔드 바이너리가 없는 환경에서도 같은 답인가 (CI �
 # 🟥 `timeout` 이 `env` «앞»이어야 한다 — GNU coreutils 의 timeout 은 /usr/bin 에 없어서
 #    PATH 를 깎은 «뒤»에 찾으면 command-not-found 로 죽는다. 초판이 그렇게 써서 F7 이
 #    로컬에서도 빨갰고, 그게 사실은 «이 레인이 계기 고장을 잡았다»는 증거다.
-R7=$(timeout 60 env PATH=/usr/bin:/bin FH_DRY_RUN=1 bash "$HERE/scripts/fh-run.sh" \
+R7=$(_ttl 60 env PATH=/usr/bin:/bin FH_DRY_RUN=1 bash "$HERE/scripts/fh-run.sh" \
        --backend codex --skill preprep 2>&1 \
      | /usr/bin/grep -oE 'plugins/[A-Za-z0-9_-]+/skills/[A-Za-z0-9_.-]+/SKILL\.md' | head -1)
 case "${R7}" in

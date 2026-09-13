@@ -10,8 +10,25 @@ set -euo pipefail
 FH_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # Single source of truth: read version from the package.json shipped alongside this script.
 # No jq dependency (users may not have it); fall back to "unknown" if unreadable.
-VERSION="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$FH_ROOT/package.json" 2>/dev/null | head -1)"
-VERSION="${VERSION:-unknown}"
+# 🟥 `set -euo pipefail` 아래에서 이 줄이 **런 전체를 무음으로 죽였다** (pmh-dev #80 ⓐ 제보,
+#    2026-09-14 FH 에서 재현: package.json 없는 트리 → **출력 0줄 · rc=1**). `sed` 가 파일을
+#    못 읽으면 rc=2 이고 `2>/dev/null` 이 메시지를 숨기며 `pipefail` 이 그 2 를 파이프 밖으로
+#    내보낸다 — `head` 가 성공해도 소용없다. FH 자기 트리에는 package.json 이 있어서 증상이
+#    안 났고, 그래서 **FH_ROOT 가 잘못 잡히는 순간에만** 터진다. 가장 나쁜 조합이다:
+#    진단이 필요한 바로 그때 아무 말도 안 하고 죽는다.
+# 🟥 `|| true` 로 덮지 않는다 — 그러면 버전이 **빈 문자열**이 되고 «못 읽었다» 가 «없다» 가 된다.
+#    읽은 값과 못 읽은 값을 갈라 적는다(이 레포의 `not found ≠ 0` 규율).
+if [ -r "$FH_ROOT/package.json" ]; then
+  VERSION="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$FH_ROOT/package.json" | head -1)"
+  [ -n "$VERSION" ] || VERSION="UNPARSED"
+else
+  # 🟥 값에 공백·괄호를 넣지 않는다 (cross-family gpt-oss:20b 지목, 2026-09-14).
+  #    두 호출부가 지금은 둘 다 따옴표 안이라 단어분리는 안 나지만, 버전 문자열은 남이
+  #    grep 하는 토큰이다 — 토큰 모양을 유지하고, 진단은 별도 줄로 «크게» 낸다.
+  VERSION="UNKNOWN-no-package-json"
+  printf 'WARN: package.json not readable at %s — version reported as %s\n' \
+    "$FH_ROOT" "$VERSION" >&2
+fi
 _TMPDIR="${TMPDIR:-/tmp}"
 
 FH_BACKEND="${FH_BACKEND:-auto}"
