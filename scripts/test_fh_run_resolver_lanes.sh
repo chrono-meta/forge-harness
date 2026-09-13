@@ -25,8 +25,15 @@ ok(){ printf '  ✅ %s\n' "$1"; PASS=$((PASS+1)); }
 ng(){ printf '  ❌ %s\n' "$1"; FAIL=$((FAIL+1)); }
 
 # 해석된 파일 경로만 뽑는다. 못 찾으면 빈 문자열.
+# 🟥 `--backend codex` 를 **명시**한다. 안 그러면 `fh-run` 이 해석보다 **먼저** 백엔드를
+#    자동탐지하고, `codex`·`claude` 가 없는 환경(=CI 러너)에서 `exit 10` 으로 죽는다.
+#    초판 레인이 그걸 빼먹어 **로컬 6/6 · CI 0/6** 이 났다 — 컨트롤(F3)까지 빨개서 «해석 전에
+#    죽는다»가 드러났고 그래서 오진하지 않았다. 명시하면 `FH_DRY_RUN=1` 이 실제 호출 전에
+#    돌아오므로 바이너리가 없어도 된다.
+# ⚠️ 명명된 잔여: 「백엔드 부재」가 「스킬 못 찾음」을 **가린다**(순서상 먼저 죽는다).
+#    더 쓸모 있는 순서는 해석이 먼저지만, 그건 이 PR 의 범위가 아니라 별건이다.
 resolve(){
-  FH_DRY_RUN=1 timeout 60 bash "$HERE/scripts/fh-run.sh" --skill "$1" 2>&1 \
+  FH_DRY_RUN=1 timeout 60 bash "$HERE/scripts/fh-run.sh" --backend codex --skill "$1" 2>&1 \
     | /usr/bin/grep -oE 'plugins/[A-Za-z0-9_-]+/skills/[A-Za-z0-9_.-]+/SKILL\.md' | head -1
 }
 
@@ -47,7 +54,7 @@ esac
 
 echo
 echo "== 🟥 컨트롤 — 아무 이름이나 닿으면 위 둘은 아무것도 증명 안 한다 =="
-OUT=$(FH_DRY_RUN=1 timeout 60 bash "$HERE/scripts/fh-run.sh" --skill zz_no_such_skill_probe 2>&1); RC=$?
+OUT=$(FH_DRY_RUN=1 timeout 60 bash "$HERE/scripts/fh-run.sh" --backend codex --skill zz_no_such_skill_probe 2>&1); RC=$?
 if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | /usr/bin/grep -q 'unable to resolve'; then
   ok "F3 없는 이름 → rc=$RC · «unable to resolve» (판별력 있음)"
 else
@@ -84,6 +91,22 @@ R=$(resolve "fh-preprep:preprep")
 case "$R" in
   plugins/fh-preprep/skills/preprep/SKILL.md) ok "F6 plugin:name 형태도 해석된다" ;;
   *) ng "F6 명시 지정 실패: ${R:-(없음)}" ;;
+esac
+
+echo
+echo "== 백엔드 바이너리가 없는 환경에서도 같은 답인가 (CI 형태) =="
+# 🟥 이 레인이 있는 이유: 초판이 로컬에서만 통과하고 CI 에서 6/6 빨갰다. PATH 를 깎아
+#    codex·claude 를 **실제로 없앤** 상태에서 재는 것이 그 차이를 로컬에서도 재현한다.
+# 🟥 `timeout` 이 `env` «앞»이어야 한다 — GNU coreutils 의 timeout 은 /usr/bin 에 없어서
+#    PATH 를 깎은 «뒤»에 찾으면 command-not-found 로 죽는다. 초판이 그렇게 써서 F7 이
+#    로컬에서도 빨갰고, 그게 사실은 «이 레인이 계기 고장을 잡았다»는 증거다.
+R7=$(timeout 60 env PATH=/usr/bin:/bin FH_DRY_RUN=1 bash "$HERE/scripts/fh-run.sh" \
+       --backend codex --skill preprep 2>&1 \
+     | /usr/bin/grep -oE 'plugins/[A-Za-z0-9_-]+/skills/[A-Za-z0-9_.-]+/SKILL\.md' | head -1)
+case "${R7}" in
+  plugins/fh-preprep/skills/preprep/SKILL.md) ok "F7 백엔드 바이너리 0개인 환경에서도 해석된다 (CI 와 같은 답)" ;;
+  "") ng "F7 백엔드 없는 환경에서 해석 실패 — 이 레인은 로컬 전용이다(= CI 에서 빨개진다)" ;;
+  *)  ng "F7 엉뚱한 곳으로: ${R7}" ;;
 esac
 
 echo
