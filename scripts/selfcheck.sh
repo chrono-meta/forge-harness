@@ -653,6 +653,8 @@ for _pair in \
   "plugins/fh-preprep/skills/preprep/usage_ledger.py|scripts/test_usage_ledger_lanes.sh" \
   `# fh-run 의 이름→스킬 해석기 (2026-09-13 신설). preprep 승격이 --skill preprep 을 조용히 깨뜨렸고, fh-qp 의 4개는 애초부터 안 닿고 있었다. 소비자 대면 경로인데 커버리지가 0이었다.` \
   "scripts/fh-run.sh|scripts/test_fh_run_resolver_lanes.sh" \
+  `# 채널 인벤토리 (2026-09-13 신설). «부재» 주장 전에 디렉터리의 채널을 세고, 읽었다고 선언한 것과 대조한다. 같은 날 세 번 낸 실수 — 내가 연 채널에만 없는 것을 무기록으로 단정 — 의 기계층.` \
+  "scripts/channel_inventory.sh|scripts/test_channel_inventory_lanes.sh" \
   "scripts/degrade_probe_capability.sh|scripts/test_capability_entrypoint_shipping.sh" \
   "scripts/chamber_run.sh|scripts/test_chamber_run_lanes.sh" \
   "scripts/chamber_candidate_collect.sh|scripts/test_chamber_sig_lanes.sh" \

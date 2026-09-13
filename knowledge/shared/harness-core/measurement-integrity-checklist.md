@@ -301,3 +301,39 @@ as a factual claim.
 - Adversarial pairing for the judged part ("is this instrument valid for this corpus?"): the
   known-negative **is** the adversarial case — it is chosen to be one the instrument should *not* flag,
   so a flag there is a refutation, not a finding.
+
+## §Channel-Counting — 「기록이 없다」를 주장하기 전에 채널을 센다 (2026-09-13 신설)
+
+**실사고, 하루 세 번.** 셋 다 **채널 하나만 보고 판정**했고 셋 다 **다른 채널을 열자 뒤집혔다**:
+
+| # | 무엇을 단정했나 | 어디에 있었나 |
+|---|---|---|
+| ① | 「부재 = 0」 | 값 채널 밖 |
+| ② | 되돌림 프로브의 `❌` 를 실패로 | 바로 다음 줄의 `✅ LIVENESS: anchor is LIVE` |
+| ③ | 「거절 113 건이 무기록으로 사라졌다」 (논문에 절로 씀) | `pipeline.log` 의 `status=UNREVIEWED` |
+
+③의 로그는 우리가 말하려던 것을 **먼저** 적고 있었다 — *"an empty finding list here means
+UNREVIEWED, not clean"*. 전수 확인 결과 113 건 **전부** 타입된 상태를 갖고 「로그 없음」은 **0 건**.
+
+🟥 **앞의 `not found ≠ 0` 일곱 얼굴과 자리가 다르다.** 거기서는 **계기가** 값을 잘못 렌더한다.
+여기서는 **계기가 옳은데 읽는 쪽이** 틀린다 — 같은 처방(모름을 적을 자리를 준다)이 **안 듣는다**.
+
+### 절차
+
+```
+bash scripts/channel_inventory.sh <dir>                      # 채널 종류·개수·«비었음» 열거
+bash scripts/channel_inventory.sh <dir> --read a.jsonl,b.log # 안 연 채널을 이름으로 (rc=1)
+```
+
+- 「있는데 비었음」과 「아예 없음」을 **갈라서** 센다 — 그 둘을 섞는 것이 이 가족의 본체다.
+- 디렉터리/파일 부재는 `rc=2` — **계기 오류이지 부재 판정이 아니다.**
+- 레인 `scripts/test_channel_inventory_lanes.sh` 7개. 🟥 **C6 의 픽스처는 합성이 아니라 ③에서
+  실제로 틀린 그 디렉터리**다 — 합성으로 바꾸면 「내가 틀린 경우」가 아니라 「내가 상상한 경우」를 잰다.
+
+### 명명된 잔여
+
+🟥 **호출해야 돈다.** 트리거가 의도(「부재를 주장하려 한다」)라 훅이 없다 — 이 문서 §Instrument-
+Calibration 이 이미 그 부류에 기계 floor 가 없다고 적고 있다. 산문 + 레인이 가용한 가장 강한 층이다.
+그리고 채널 «종류» 를 파일명 정규화로 뽑으므로 같은 종류를 다른 이름으로 쓰면 두 채널로 센다
+(과대계상 = 안전한 방향). `maxdepth 2` 라 더 깊은 채널은 못 본다.
+

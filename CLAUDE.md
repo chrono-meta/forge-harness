@@ -313,6 +313,15 @@ it is **never asking whether this instrument is valid for this corpus at all**.
 bare number, and never as the basis of a tier/verdict. A missing measurement is not a zero
 (`not found` ≠ `0` — a file that does not exist is not an empty file).
 
+🟥 **그 규율은 «값» 만이 아니라 «채널» 에도 걸린다.** 「기록이 없다」는 **「내가 연 채널에
+없다」와 다르다** — 앞 문단과 자리가 다르다(거기는 **계기가**, 여기는 **읽는 쪽이** 틀린다). 그래서
+«시스템에 모름을 적을 자리를 준다» 는 처방이 안 듣고, 고칠 대상은 **판정자의 커버리지**다.
+⇒ **부재 주장의 최소 형태 = «채널 N 개 중 N 개를 열었고 그 어디에도 없다».**
+기계층: `bash scripts/channel_inventory.sh <dir> --read a,b,c` — 안 연 채널을 이름으로, 하나라도
+있으면 `rc=1`(「있는데 비었음」≠「아예 없음」 · 디렉터리 부재는 `rc=2` = 계기 오류).
+> **Detail**: `measurement-integrity-checklist.md §Channel-Counting` — 2026-09-13 하루 세 번의 실사고와
+> 레인 C6(그 디렉터리 자체가 픽스처) — **부재를 주장하기 전에 읽어라.**
+
 **Why resident**: the trigger is *intent* ("I am about to trust / publish this output"), not a file, and
 **no hook can catch it** — there is no mechanical backstop by nature, so salience is the only layer.
 (Measured 2026-07-20, one session, 3×: an always-loaded footprint scan that omitted 61% of the surface ·

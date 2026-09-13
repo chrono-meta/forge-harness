@@ -79,6 +79,8 @@
     "scripts/usage_report.py",
     "scripts/test_usage_ledger_lanes.sh",
     "scripts/test_fh_run_resolver_lanes.sh",
+    "scripts/channel_inventory.sh",
+    "scripts/test_channel_inventory_lanes.sh",
     "scripts/test_version_lockstep_lanes.sh",
     "scripts/package_coverage_check.sh",
     "scripts/files_manifest_shipping_check.sh",
