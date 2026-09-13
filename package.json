@@ -75,6 +75,8 @@
     "scripts/version_lockstep_check.sh",
     "scripts/test_selfcheck_state_lanes.sh",
     "scripts/test_lane_runner_lanes.sh",
+    "scripts/usage_report.py",
+    "scripts/test_usage_ledger_lanes.sh",
     "scripts/test_version_lockstep_lanes.sh",
     "scripts/package_coverage_check.sh",
     "scripts/files_manifest_shipping_check.sh",

@@ -649,6 +649,8 @@ fi
 # resolves to "SKIP (subject not in files[], and absent)" — the anchor arm is never reached.
 _LANE_TO=""; command -v timeout >/dev/null 2>&1 && _LANE_TO="timeout 300"
 for _pair in \
+  `# 사용 원장 (2026-09-13 신설). SUBJECT 를 원장 모듈로 잡는다 — 배선이 끊기는 자리는 preprep.py 의 __main__ 한 줄이 아니라 모듈이 사라지는 쪽이고, import 가 try/except 라 모듈이 없으면 조용히 무동작으로 돌아간다. 그 무음이 이 레인이 잡을 것이다.` \
+  "plugins/fh-commons/skills/preprep/usage_ledger.py|scripts/test_usage_ledger_lanes.sh" \
   "scripts/degrade_probe_capability.sh|scripts/test_capability_entrypoint_shipping.sh" \
   "scripts/chamber_run.sh|scripts/test_chamber_run_lanes.sh" \
   "scripts/chamber_candidate_collect.sh|scripts/test_chamber_sig_lanes.sh" \
