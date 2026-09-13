@@ -157,7 +157,7 @@ model: sonnet
 ## 쓰는 법
 
 ```bash
-SKILL=plugins/fh-commons/skills/preprep     # 이 스킬의 위치
+SKILL=plugins/fh-preprep/skills/preprep     # 이 스킬의 위치
 cd "$ASSET_ROOT"                            # 발표 자산군의 루트
 cp "$SKILL/surfaces.example.yaml" surfaces.yaml   # 표면 목록은 사람이 적는다
 python3 "$SKILL/preprep.py"

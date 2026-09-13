@@ -12,7 +12,7 @@
 # 종료코드: 0 pass · 1 레인 실패 · 2 대상 부재 · 10 setup 실패
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 10
-LANE=plugins/fh-commons/skills/preprep/lane_slide_refs.py
+LANE=plugins/fh-preprep/skills/preprep/lane_slide_refs.py
 [ -f "$LANE" ] || { echo "ⓘ $LANE absent — subject missing (NOT a pass)"; exit 2; }
 command -v python3 >/dev/null 2>&1 || { echo "ⓘ python3 absent — setup broke"; exit 10; }
 T=$(mktemp -d) || exit 10; trap 'rm -rf "$T"' EXIT
@@ -20,7 +20,7 @@ T=$(mktemp -d) || exit 10; trap 'rm -rf "$T"' EXIT
 #    판별자를 뮤턴트로 바꿨다가 원본을 복원했는데 **스테일 __pycache__ 가 뮤턴트를 계속
 #    먹여** 「복원했는데도 적색」이 나왔다. 반대 방향이 더 위험하다 — 뮤턴트를 넣었는데
 #    캐시가 원본을 먹이면 «되돌려도 초록» 이 되어 **앵커가 죽은 것을 못 본다**.
-rm -rf plugins/fh-commons/skills/preprep/__pycache__
+rm -rf plugins/fh-preprep/skills/preprep/__pycache__
 PASS=0; FAIL=0
 ok(){ echo "  ✅ $1"; PASS=$((PASS+1)); }
 ng(){ echo "  ❌ $1"; FAIL=$((FAIL+1)); }
@@ -28,7 +28,7 @@ ng(){ echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 RUN=$T/run.py
 cat > "$RUN" <<'PY'
 import sys, os, types
-sys.path.insert(0, 'plugins/fh-commons/skills/preprep')
+sys.path.insert(0, 'plugins/fh-preprep/skills/preprep')
 
 # 🟥 python-pptx 를 **의존하지 않는다**. 이 스위트는 «분류» 를 재는 것이고, 그 입력은
 #    「장 → 화면 텍스트 · 노트」라는 **작은 오리 타입**이 전부다(lane 의 _texts/
@@ -151,7 +151,7 @@ echo "$OUT" | grep -q 'SLIDE 1' \
 
 echo "== 배선·퇴화 =="
 OUT=$(python3 -c "
-import sys; sys.path.insert(0,'plugins/fh-commons/skills/preprep')
+import sys; sys.path.insert(0,'plugins/fh-preprep/skills/preprep')
 import lane_slide_refs as L
 print(L.scan({}, '.')[1][0])
 print(L.scan({'surfaces_by_id':{'built_deck':{'path':'/nope/none.pptx'}}}, '.')[1][0])
@@ -160,7 +160,7 @@ echo "$OUT" | grep -q 'NOT_CONFIGURED' && echo "$OUT" | grep -q 'UNMEASURED' \
   && ok "L8 미선언 → NOT_CONFIGURED · 실물 없음 → UNMEASURED (둘 다 0 아님)" \
   || ng "L8 퇴화 표기가 0 으로 접힌다: $OUT"
 
-grep -q "import lane_slide_refs" plugins/fh-commons/skills/preprep/preprep.py \
+grep -q "import lane_slide_refs" plugins/fh-preprep/skills/preprep/preprep.py \
   && ok "L9 배선: preprep.py 가 이 레인을 부른다" \
   || ng "L9 배선 없음 — 정의만 있고 아무도 안 부른다(built-but-not-wired)"
 

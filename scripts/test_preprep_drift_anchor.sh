@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # test_preprep_drift_anchor.sh — 이원화의 단일-소스 앵커.
 #
-# preprep 은 두 진입점을 갖는다: FH 안의 스킬(plugins/fh-commons/skills/preprep/)과,
+# preprep 은 두 진입점을 갖는다: FH 안의 스킬(plugins/fh-preprep/skills/preprep/)과,
 # 거기서 뽑아 세우는 standalone 현장 하네스. 🟥 **코드 사본이 둘이면 갈린다** —
 # FH 자신의 규칙이 그것을 «single source of truth collapse · double maintenance burden»
 # 이라 부른다. 그래서 이원화는 «복사본 둘»이 아니라 «단일 소스 + 얇은 두 진입점»이어야 하고,
@@ -14,7 +14,7 @@
 #   D3 진입점 문서가 단일 소스를 가리키나 (죽은 포인터 금지)
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SRC="$HERE/plugins/fh-commons/skills/preprep"
+SRC="$HERE/plugins/fh-preprep/skills/preprep"
 # standalone 배포 위치는 환경변수로 받는다. 기본값을 박으면 다른 머신에서 거짓 SKIP 이 된다.
 # 🟥 2026-09-03 — 그런데 «아무도 그 변수를 안 걸어서» D2 가 여태 SKIP 이었고, 그 사이 컴패니언
 #    저장소의 fork(724줄)가 정본(789줄)과 갈라져 L9~L11 을 안 부르고 있었다 — 정본 주석이 이미

@@ -8,7 +8,7 @@
 # explicit var still wins · nothing set → SKIP (never a silent PASS).
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; A="$HERE/scripts/test_preprep_drift_anchor.sh"
-SRC="$HERE/plugins/fh-commons/skills/preprep"; T=$(mktemp -d); pass=0; fail=0
+SRC="$HERE/plugins/fh-preprep/skills/preprep"; T=$(mktemp -d); pass=0; fail=0
 chk(){ if [ "$1" = 0 ]; then echo "  ✅ $2"; pass=$((pass+1)); else echo "  ❌ $2"; fail=$((fail+1)); fi; }
 # 🟥 2026-09-11: 앵커(D2)는 «디렉터리의 *.py 전부» 를 돈다(2026-09-10 덱 세션 정정). 여기 목록이 5개로 박혀 있어
 #    새 레인 파일(lane_attr_consistency 등)이 «부재 드리프트» 로 읽혀 L2/L4 가 CI 에서 빨개졌다 — 앵커와 같은 규칙으로.

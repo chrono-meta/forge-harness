@@ -1,6 +1,6 @@
 {
   "name": "@chrono-meta/fh-gate",
-  "version": "3.4.0",
+  "version": "3.5.0",
   "description": "FH runtime adapters — run FH governance, skills, and agents via Claude or Codex with machine-parseable gates.",
   "homepage": "https://github.com/chrono-meta/forge-harness#readme",
   "bugs": {
@@ -77,6 +77,7 @@
     "scripts/test_lane_runner_lanes.sh",
     "scripts/usage_report.py",
     "scripts/test_usage_ledger_lanes.sh",
+    "scripts/test_fh_run_resolver_lanes.sh",
     "scripts/test_version_lockstep_lanes.sh",
     "scripts/package_coverage_check.sh",
     "scripts/files_manifest_shipping_check.sh",
@@ -325,6 +326,9 @@
     "scripts/test_utterance_intake_lanes.sh",
     "scripts/worktree_reclaim.sh",
     "scripts/test_worktree_reclaim_lanes.sh",
+    "plugins/fh-preprep/.claude-plugin/plugin.json",
+    "plugins/fh-preprep/README.md",
+    "plugins/fh-preprep/skills",
     "plugins/fh-qp/.claude-plugin/plugin.json",
     "plugins/fh-qp/README.md",
     "plugins/fh-qp/qp_profile.example.yaml",

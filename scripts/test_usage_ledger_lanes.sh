@@ -12,7 +12,7 @@
 # 실행: bash scripts/test_usage_ledger_lanes.sh
 set -u
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PREPREP="$REPO_ROOT/plugins/fh-commons/skills/preprep"
+PREPREP="$REPO_ROOT/plugins/fh-preprep/skills/preprep"
 PASS=0; FAIL=0; SKIP=0
 ok(){ printf '  ✅ %s\n' "$1"; PASS=$((PASS+1)); }
 ng(){ printf '  ❌ %s\n' "$1"; FAIL=$((FAIL+1)); }

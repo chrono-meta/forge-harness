@@ -11,7 +11,7 @@
 #   J4 처방     몇 자 / 몇 % / 어느 문장인지를 내나 — 숫자 없는 지적은 처방이 아니다
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SKILL="$HERE/plugins/fh-commons/skills/preprep"
+SKILL="$HERE/plugins/fh-preprep/skills/preprep"
 PASS=0; FAIL=0
 ok(){ echo "  ✅ $1"; PASS=$((PASS+1)); }
 ng(){ echo "  ❌ $1"; FAIL=$((FAIL+1)); }

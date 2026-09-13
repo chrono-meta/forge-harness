@@ -1,0 +1,22 @@
+{
+  "name": "fh-preprep",
+  "version": "3.5.0",
+  "engines": {
+    "claudeCode": ">=1.0.0"
+  },
+  "description": "preprep — a presentation-preparation harness. One CLI over 17 lanes (7 built-in + 10 module) that reads a declared surface manifest and checks a talk's assets against each other: canonical-term ledger, jargon glosses, retired vocabulary, inter-slide dependencies, pacing, get/put round-trips, adjacent duplication, slide relations, geometry, attribute consistency, fonts, diagrams, slide refs, and screen-parity between manuscript and deck. Verdict contract: exit 0 pass / 1 findings / 2 cannot-judge — a surface that could not be read is UNMEASURED, never 0. Every lane ships a known-pair fixture.",
+  "author": {
+    "name": "chrono-meta",
+    "email": "chrono-meta@users.noreply.github.com"
+  },
+  "keywords": [
+    "presentation",
+    "deck-review",
+    "ooxml",
+    "pptx",
+    "terminology",
+    "screen-parity",
+    "known-pair",
+    "verdict-contract"
+  ]
+}

@@ -14,7 +14,7 @@
 #    «굽힘» 쪽 실사용은 tracks-meta/dispatch/2026-09-05_archify-preprep/REPORT.md 가 기록한다.
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SKILL="$HERE/plugins/fh-commons/skills/preprep"
+SKILL="$HERE/plugins/fh-preprep/skills/preprep"
 PASS=0; FAIL=0
 ok(){ echo "  ✅ $1"; PASS=$((PASS+1)); }
 ng(){ echo "  ❌ $1"; FAIL=$((FAIL+1)); }

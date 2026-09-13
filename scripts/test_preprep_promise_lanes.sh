@@ -13,7 +13,7 @@
 #   Q4 판정보류 «맞나» 로 사람에게 넘기지 «틀렸다» 고 단정하지 않는다
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SKILL="$HERE/plugins/fh-commons/skills/preprep"
+SKILL="$HERE/plugins/fh-preprep/skills/preprep"
 PASS=0; FAIL=0
 ok(){ echo "  ✅ $1"; PASS=$((PASS+1)); }
 ng(){ echo "  ❌ $1"; FAIL=$((FAIL+1)); }

@@ -149,7 +149,7 @@ skill_canon_emit() {
 SKEOF
   [ -z "$SENT_DIR" ] || : > "$SENT_DIR/skill-$_sk" 2>/dev/null || true
 }
-skill_canon_emit preprep "plugins/fh-commons/skills/preprep" \
+skill_canon_emit preprep "plugins/fh-preprep/skills/preprep" \
   "발표" "장표" "슬라이드" "덱" "대본" "리허설" "presentation" "keynote"
 
 # 매핑된 프로젝트 = tracks/ 하위 디렉토리(언더스코어 접두는 메타라 제외)

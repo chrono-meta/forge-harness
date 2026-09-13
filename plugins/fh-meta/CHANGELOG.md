@@ -1,5 +1,27 @@
 # forge-harness (fh-meta) Changelog
 
+### [3.5.0] — 2026-09-13 — preprep 를 자기 플러그인으로 승격 (`fh-preprep`)
+
+**BREAKING (gate):** 스킬 경로가 **이동한다**.
+`plugins/fh-commons/skills/preprep/` → `plugins/fh-preprep/skills/preprep/`
+🟥 **그 경로를 직접 부르던 스크립트·문서·설정은 깨진다.** 처방 = 경로 한 곳 치환:
+`sed -i '' 's|fh-commons/skills/preprep|fh-preprep/skills/preprep|g' <파일>`
+플러그인으로 설치해 쓰는 경우(스킬 이름으로 호출)는 영향이 없다 — 이름은 `preprep` 그대로다.
+
+**왜 옮겼나**: 스킬 하나가 레인 17개(내장 7 + 모듈 10)·픽스처군·오라클을 들면서
+**역할이 갈렸다**(라우팅 / 판정 / 오라클). 규모가 아니라 역할 분기가 근거다.
+
+- 새 `plugins/fh-preprep/` — 자기 `plugin.json` · README(종료코드 계약 명시) · `skills/preprep/`
+- marketplace 항목 3 → **4**. 버전 락스텝 8개 문자열 전부 3.5.0
+- `files[]` 에 `plugins/fh-preprep/{plugin.json,README.md,skills}` 등재 — 빼먹으면 조용한 출하 누락
+- 드리프트 앵커·레인 12개·`field_canon_preload.sh`·`selfcheck.sh` 의 경로 참조를 같이 옮겼다
+
+**승격 전에 닫은 것**(순서가 근거다 — 앵커 수리와 이동이 한 diff 에 섞이면 귀속이 안 갈린다):
+① #702 머지로 드리프트 앵커 초록 · ② 실물 14 표면 완주(rc=1 확정) 로 Done-When #1·#6 닫힘
+(#705 에서 「설정을 못 읽음」이 `rc=1`(=발견 있음)으로 나가던 선재 결함을 `rc=2` 로 수리).
+
+🟥 **승격이 닫지 않는 것**: preprep Done-When #5(죽은 선언 12개)는 여전히 미충족이고 다른 축이다.
+
 ### [3.4.0] — 2026-09-12 — 탈상관의 «강한 축» 을 기계로 옮긴다 (외부 실측 기인)
 
 **BREAKING (gate):** 마커 두 자리가 조인다. 둘 다 **grace date 로 소급하지 않는다** — 그 날짜 이전

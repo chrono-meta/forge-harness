@@ -12,7 +12,7 @@
 #   R4 처방     대체어를 finding 에 싣나 (처방 없는 판정은 절반이다)
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SKILL="$HERE/plugins/fh-commons/skills/preprep"
+SKILL="$HERE/plugins/fh-preprep/skills/preprep"
 PASS=0; FAIL=0
 ok(){ echo "  ✅ $1"; PASS=$((PASS+1)); }
 ng(){ echo "  ❌ $1"; FAIL=$((FAIL+1)); }
@@ -60,7 +60,7 @@ case "$(g use msg)" in *측정하다*) ok "R4 처방: 대체어를 finding 에 �
 #
 # 여기서 재는 것: 설정 부재·깨짐·계약 미달 셋이 전부 **2** 로 확정되나, 그리고 정상 설정은
 # 여전히 2 가 «아닌» 값을 내나(컨트롤 — 항상 2 면 판별력이 0 이다).
-PP="$HERE/plugins/fh-commons/skills/preprep/preprep.py"
+PP="$HERE/plugins/fh-preprep/skills/preprep/preprep.py"
 CT=$(mktemp -d); trap 'rm -rf "$CT"' EXIT
 
 _rc(){ ( cd "$CT" && python3 "$PP" "$1" >/dev/null 2>&1 ); printf '%s' "$?"; }

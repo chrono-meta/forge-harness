@@ -16,15 +16,15 @@
 # 종료코드: 0 pass · 1 레인 실패 · 2 대상 부재 · 10 setup 실패
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 10
-LANE=plugins/fh-commons/skills/preprep/lane_font.py
-SELFTEST=plugins/fh-commons/skills/preprep/test_lane_font.py
-PROBE=plugins/fh-commons/skills/preprep/fixtures/font_revert_probe.py
+LANE=plugins/fh-preprep/skills/preprep/lane_font.py
+SELFTEST=plugins/fh-preprep/skills/preprep/test_lane_font.py
+PROBE=plugins/fh-preprep/skills/preprep/fixtures/font_revert_probe.py
 [ -f "$LANE" ] || { echo "ⓘ $LANE absent — subject missing (NOT a pass)"; exit 2; }
 [ -f "$SELFTEST" ] || { echo "ⓘ $SELFTEST absent — subject missing (NOT a pass)"; exit 2; }
 [ -f "$PROBE" ] || { echo "ⓘ $PROBE absent — subject missing (NOT a pass)"; exit 2; }
 command -v python3 >/dev/null 2>&1 || { echo "ⓘ python3 absent — setup broke"; exit 10; }
 # 🟥 스테일 바이트코드가 뮤턴트/복원을 가린다 — 이웃 레인이 실측한 사고다(2026-09-06).
-rm -rf plugins/fh-commons/skills/preprep/__pycache__
+rm -rf plugins/fh-preprep/skills/preprep/__pycache__
 PASS=0; FAIL=0
 ok(){ echo "  ✅ $1"; PASS=$((PASS+1)); }
 ng(){ echo "  ❌ $1"; FAIL=$((FAIL+1)); }
@@ -42,7 +42,7 @@ fi
 
 echo "== 배선·퇴화 — self-test 밖에서 한 번 더 =="
 OUT=$(python3 -c "
-import sys; sys.path.insert(0,'plugins/fh-commons/skills/preprep')
+import sys; sys.path.insert(0,'plugins/fh-preprep/skills/preprep')
 import lane_font as L
 print(L.scan({}, '.')[1][0])
 print(L.scan({'surfaces_by_id':{'built_deck':{'path':'/nope/none.pptx'}}}, '.')[1][0])
@@ -51,11 +51,11 @@ echo "$OUT" | grep -q 'NOT_CONFIGURED' && echo "$OUT" | grep -q 'UNMEASURED' \
   && ok "미선언 → NOT_CONFIGURED · 실물 없음 → UNMEASURED (둘 다 0 아님)" \
   || ng "퇴화 표기가 0 으로 접힌다: $OUT"
 
-grep -q "import lane_font" plugins/fh-commons/skills/preprep/preprep.py \
+grep -q "import lane_font" plugins/fh-preprep/skills/preprep/preprep.py \
   && ok "배선: preprep.py 가 이 레인을 부른다" \
   || ng "배선 없음 — 정의만 있고 아무도 안 부른다(built-but-not-wired)"
 
-grep -q "lane_font" plugins/fh-commons/skills/preprep/SKILL.md \
+grep -q "lane_font" plugins/fh-preprep/skills/preprep/SKILL.md \
   && ok "명세: SKILL.md 가 이 레인을 적는다(고아 구현 아님)" \
   || ng "SKILL.md 에 없다 — 명세 없는 구현"
 

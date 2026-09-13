@@ -153,10 +153,23 @@ resolve_unit() {
     if [[ -n "$plugin" ]]; then
       candidates+=("$FH_ROOT/plugins/$plugin/skills/$bare/SKILL.md")
     fi
+    # 🟥 2026-09-13 — 종전엔 이 목록이 fh-meta·fh-commons **둘만** 하드코딩했다. 그래서
+    #    `fh-qp` 의 스킬 4개는 **처음부터** 이름만으로 안 잡혔고(선재 갭 — `--skill qp` 가
+    #    «unable to resolve»), preprep 을 자기 플러그인으로 승격하자 거기에 하나가 더 붙었다.
+    #    cross-family(codex)가 그 이동에서 이걸 지목했다 — 레포 어느 검사도 이 해석 경로를
+    #    안 보고 있었다. ⇒ 목록을 **플러그인 전체로 일반화**한다.
+    #    우선순위는 보존한다: 명시 지정 → fh-meta → fh-commons → 나머지(사전순, 결정적).
+    #    이름이 겹칠 때 종전 해석이 안 바뀌게 하려는 것이고, 정렬은 파일시스템 순서에
+    #    기대지 않기 위해서다.
     candidates+=(
       "$FH_ROOT/plugins/fh-meta/skills/$bare/SKILL.md"
       "$FH_ROOT/plugins/fh-commons/skills/$bare/SKILL.md"
     )
+    local _p
+    while IFS= read -r _p; do
+      case "$_p" in */fh-meta/*|*/fh-commons/*) continue ;; esac
+      candidates+=("$_p")
+    done < <(ls -d "$FH_ROOT"/plugins/*/skills/"$bare"/SKILL.md 2>/dev/null | sort)
     for f in "${candidates[@]}"; do
       [[ -f "$f" ]] && printf "%s\n" "$f" && return 0
     done

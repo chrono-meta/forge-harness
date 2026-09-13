@@ -64,7 +64,7 @@ Resolution order:
 
 | Unit type | Lookup |
 |---|---|
-| `--skill name` | `plugins/fh-meta/skills/name/SKILL.md`, then `plugins/fh-commons/skills/name/SKILL.md` |
+| `--skill name` | `plugins/fh-meta/skills/name/SKILL.md`, then `plugins/fh-commons/skills/name/SKILL.md`, then **every other `plugins/*/skills/name/SKILL.md`** (alphabetical). Before 3.5.0 the search stopped after the first two, so skills in `fh-qp` and `fh-preprep` were unreachable by bare name. |
 | `--agent name` | `.claude/agents/name.md`, then `plugins/fh-meta/agents/name.md`, then `plugins/fh-commons/agents/name.md` |
 | `--agent plugin:name` | `plugins/plugin/agents/name.md` first |
 | `--unit path` | explicit file path |

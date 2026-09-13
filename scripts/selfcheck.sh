@@ -650,7 +650,9 @@ fi
 _LANE_TO=""; command -v timeout >/dev/null 2>&1 && _LANE_TO="timeout 300"
 for _pair in \
   `# 사용 원장 (2026-09-13 신설). SUBJECT 를 원장 모듈로 잡는다 — 배선이 끊기는 자리는 preprep.py 의 __main__ 한 줄이 아니라 모듈이 사라지는 쪽이고, import 가 try/except 라 모듈이 없으면 조용히 무동작으로 돌아간다. 그 무음이 이 레인이 잡을 것이다.` \
-  "plugins/fh-commons/skills/preprep/usage_ledger.py|scripts/test_usage_ledger_lanes.sh" \
+  "plugins/fh-preprep/skills/preprep/usage_ledger.py|scripts/test_usage_ledger_lanes.sh" \
+  `# fh-run 의 이름→스킬 해석기 (2026-09-13 신설). preprep 승격이 --skill preprep 을 조용히 깨뜨렸고, fh-qp 의 4개는 애초부터 안 닿고 있었다. 소비자 대면 경로인데 커버리지가 0이었다.` \
+  "scripts/fh-run.sh|scripts/test_fh_run_resolver_lanes.sh" \
   "scripts/degrade_probe_capability.sh|scripts/test_capability_entrypoint_shipping.sh" \
   "scripts/chamber_run.sh|scripts/test_chamber_run_lanes.sh" \
   "scripts/chamber_candidate_collect.sh|scripts/test_chamber_sig_lanes.sh" \
@@ -678,7 +680,7 @@ for _pair in \
   "templates/.git-hooks/pre-commit|scripts/test_gate_two_verdicts_lanes.sh" \
   `# ── fh-qp (QP) — chamber run #18 EMIT 2026-09-05: qp_tools.sh known-pair + residency lanes ──` \
   "plugins/fh-qp/scripts/qp_tools.sh|scripts/test_fh_qp_lanes.sh" \
-  "plugins/fh-commons/skills/preprep/diagram_from_json.py|scripts/test_preprep_diagram_lanes.sh" \
+  "plugins/fh-preprep/skills/preprep/diagram_from_json.py|scripts/test_preprep_diagram_lanes.sh" \
   `# ── action.yml — the GitHub Action wrapper: its exit-code mapping is where a typed verdict could become a boolean ──` \
   "action.yml|scripts/test_action_yml_lanes.sh" \
   "scripts/sim_isolated_run.sh|scripts/test_sim_path_isolation_lanes.sh" \
@@ -709,13 +711,13 @@ for _pair in \
   "scripts/fh-goal.sh|scripts/test_fh_goal_change_detection_lanes.sh" \
   "scripts/utterance_skill_probe.sh|scripts/test_utterance_skill_probe_lanes.sh" \
   `# ── preprep 스킬(2026-08-29). 주체는 스킬 안의 모듈이라 scripts/ 밖이다 ──` \
-  "plugins/fh-commons/skills/preprep/preprep.py|scripts/test_preprep_retired_lanes.sh" \
-  "plugins/fh-commons/skills/preprep/lane_progression.py|scripts/test_preprep_progression_lanes.sh" \
-  "plugins/fh-commons/skills/preprep/lane_adjacent_dup.py|scripts/test_preprep_adjacent_dup_lanes.sh" \
-  "plugins/fh-commons/skills/preprep/lane_promise.py|scripts/test_preprep_promise_lanes.sh" \
-  "plugins/fh-commons/skills/preprep/lane_slide_refs.py|scripts/test_preprep_slide_refs_lanes.sh" \
-  "plugins/fh-commons/skills/preprep/lane_font.py|scripts/test_preprep_font_lanes.sh" \
-  "plugins/fh-commons/skills/preprep/SKILL.md|scripts/test_preprep_drift_anchor.sh" \
+  "plugins/fh-preprep/skills/preprep/preprep.py|scripts/test_preprep_retired_lanes.sh" \
+  "plugins/fh-preprep/skills/preprep/lane_progression.py|scripts/test_preprep_progression_lanes.sh" \
+  "plugins/fh-preprep/skills/preprep/lane_adjacent_dup.py|scripts/test_preprep_adjacent_dup_lanes.sh" \
+  "plugins/fh-preprep/skills/preprep/lane_promise.py|scripts/test_preprep_promise_lanes.sh" \
+  "plugins/fh-preprep/skills/preprep/lane_slide_refs.py|scripts/test_preprep_slide_refs_lanes.sh" \
+  "plugins/fh-preprep/skills/preprep/lane_font.py|scripts/test_preprep_font_lanes.sh" \
+  "plugins/fh-preprep/skills/preprep/SKILL.md|scripts/test_preprep_drift_anchor.sh" \
   "scripts/test_preprep_drift_anchor.sh|scripts/test_preprep_drift_anchor_lanes.sh" \
   "scripts/field_canon_preload.sh|scripts/test_skill_canon_preload_lanes.sh" \
   `# ── round/ 회차 계기 4종(2026-09-01). 넷 다 한 스위트가 잡는다 — 주체별로 행을 둔다 ──` \

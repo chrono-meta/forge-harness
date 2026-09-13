@@ -8,7 +8,7 @@
 # 🟥 P3 이 없으면 선언을 지우는 것만으로 이 레인이 조용해진다(가장 싼 무마 경로).
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SKILL="$HERE/plugins/fh-commons/skills/preprep"
+SKILL="$HERE/plugins/fh-preprep/skills/preprep"
 PASS=0; FAIL=0
 ok(){ echo "  ✅ $1"; PASS=$((PASS+1)); }
 ng(){ echo "  ❌ $1"; FAIL=$((FAIL+1)); }
