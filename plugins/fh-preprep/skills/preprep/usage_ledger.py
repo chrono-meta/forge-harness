@@ -43,9 +43,48 @@ _ENV_AUTHOR = "FH_USAGE_AUTHOR"
 _ENV_SALT = "FH_USAGE_SALT"
 
 
+_OFF = ("off", "no", "none", "0", "false", "decline", "거절")
+
+
 def _dir():
     d = os.environ.get(_ENV_DIR, "").strip()
-    return d or None
+    if not d or d.lower() in _OFF:
+        return None
+    return d
+
+
+def notice(stream=None):
+    """미설정이면 «아직 안 정했다» 로 보고 안내를 낸다. 정하면 조용해진다.
+
+    🟥 **세 상태를 가른다** — 이 저장소의 동의 규율 그대로다(부재 ≠ 승인, 그리고 거절도 기록이다):
+      · 미설정        아직 안 정함  → 매 실행 안내 (정할 때까지 계속 뜬다)
+      · 경로 지정     동의          → 조용, 기록 시작
+      · `off`         명시적 거절   → 조용, 기록 안 함
+
+    🟥 **안내는 stderr 로만 간다.** stdout 은 이 도구의 판정 출력이고 기계가 읽는다 —
+       거기에 한 줄이라도 끼면 부르는 쪽의 파싱이 깨진다(관측이 대상을 바꾸는 것과 같은 부류).
+    🟥 **문구는 참인 이유만 쓴다.** 이 변수가 없어도 도구는 **완전히 같게** 동작하고 종료코드도
+       같다(레인이 직접 잰다). 그러니 «제대로 안 돈다» 는 거짓이다 — 못 보는 것은 **우리 관측**이지
+       그 사람의 도구가 아니다. 거짓으로 받은 동의는 그 동의로 얻은 숫자의 값도 같이 떨어뜨린다.
+    """
+    import sys as _sys
+    raw = os.environ.get(_ENV_DIR, "").strip()
+    if raw:                       # 경로든 off 든 — 정했으면 조용
+        return False
+    out = stream if stream is not None else _sys.stderr
+    try:
+        out.write(
+            "\n[usage] 이 도구가 얼마나 쓰이는지 아직 못 재고 있습니다 — 기본값이 꺼짐이라 그렇습니다.\n"
+            "        켜기:  export FH_USAGE_LEDGER=\"$HOME/.fh-usage\"\n"
+            "        끄기:  export FH_USAGE_LEDGER=off      (그러면 이 안내가 사라집니다)\n"
+            "        기록되는 것: 시각(분)·도구명·진입점·실행시간·종료코드·익명 ID.\n"
+            "        기록 안 되는 것: 인자·경로·파일명·티켓번호·URL·사용자명·호스트명.\n"
+            "        ⚠️ 켜든 끄든 도구 동작과 종료코드는 **완전히 같습니다**. 못 보는 것은\n"
+            "           여러분의 도구가 아니라 «여러분이 어디서 막히는지» 입니다.\n\n")
+        out.flush()
+    except Exception:
+        return False
+    return True
 
 
 def _salt(d):
@@ -171,6 +210,7 @@ def observe(harness, entry, fn, *args, **kwargs):
     🟥 이 함수는 판정을 만들지도 바꾸지도 않는다. 종료코드는 `fn` 이 정하고 여기는 읽기만 한다.
     그래서 게이트 코드가 아니다 — 관측이 판정을 바꾸는 순간 그 숫자는 아무 의미가 없다.
     """
+    notice()
     t0, c0 = time.monotonic(), time.process_time()
     rc, outcome = None, "ERROR"
     try:

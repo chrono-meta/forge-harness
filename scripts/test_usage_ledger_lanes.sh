@@ -235,6 +235,47 @@ printf '%s' "$Z1" | /usr/bin/grep -q "비저자 표본 ≥0" \
   && ok "재사용률도 같은 분기에서 강등된다" \
   || ng "🟥 재사용률이 「표본 0」을 확정값으로 낸다"
 
+
+echo "== ⑫ 첫 실행 안내 — 세 상태가 갈리나 (미정 / 동의 / 거절) =="
+# 🟥 이 저장소의 동의 규율 그대로다: 부재 ≠ 승인, 그리고 **거절도 기록이다**.
+#    미설정은 «아직 안 정함» 이라 계속 뜨고, `off` 는 «싫다» 라 조용해진다. 나가는 문이
+#    거짓말(«도구가 고장난다»)이 아니라 `off` 여야 동의의 값이 안 떨어진다.
+_N_OUT(){ ( cd "$PREPREP" && env $1 python3 preprep.py 2>/dev/null ); }
+_N_ERR(){ ( cd "$PREPREP" && env $1 python3 preprep.py 2>&1 >/dev/null ); }
+
+if printf '%s' "$(_N_ERR "-u FH_USAGE_LEDGER")" | /usr/bin/grep -q '\[usage\]'; then
+  ok "⑫-1 미설정 → stderr 에 안내 (아직 안 정한 사람에게는 계속 뜬다)"
+else
+  ng "⑫-1 미설정인데 안내가 없다 — 아무도 켤 이유를 못 듣는다"
+fi
+if printf '%s' "$(_N_OUT "-u FH_USAGE_LEDGER")" | /usr/bin/grep -q '\[usage\]'; then
+  ng "🟥 ⑫-2 안내가 **stdout 을 오염**시킨다 — 부르는 쪽의 판정 파싱이 깨진다"
+else
+  ok "⑫-2 stdout 은 깨끗하다 (안내는 stderr 전용 — 관측이 대상을 안 바꾼다)"
+fi
+if printf '%s' "$(_N_ERR "FH_USAGE_LEDGER=off")" | /usr/bin/grep -q '\[usage\]'; then
+  ng "🟥 ⑫-3 `off` 로 거절했는데도 계속 뜬다 — 거절이 기록으로 안 받아들여진다"
+else
+  ok "⑫-3 off → 조용 (명시적 거절도 «정한 것»이다)"
+fi
+D12="$TMPROOT/notice"; mkdir -p "$D12"
+if printf '%s' "$(_N_ERR "FH_USAGE_LEDGER=$D12")" | /usr/bin/grep -q '\[usage\]'; then
+  ng "🟥 ⑫-4 경로를 줬는데도 안내가 뜬다"
+else
+  ok "⑫-4 경로 지정 → 조용 + 기록 시작 (행 $(rows "$D12"))"
+fi
+D12b="$TMPROOT/notice_off"; mkdir -p "$D12b"
+( cd "$PREPREP" && FH_USAGE_LEDGER=off python3 preprep.py >/dev/null 2>&1 )
+[ -z "$(ls -A "$D12b" 2>/dev/null)" ] && ok "⑫-5 off 는 행을 안 남긴다 (거절이 곧 무동작)" \
+                                      || ng "🟥 ⑫-5 off 인데 뭔가 남았다"
+( cd "$PREPREP" && env -u FH_USAGE_LEDGER python3 preprep.py >/dev/null 2>&1 ); _r1=$?
+( cd "$PREPREP" && FH_USAGE_LEDGER=off       python3 preprep.py >/dev/null 2>&1 ); _r2=$?
+( cd "$PREPREP" && FH_USAGE_LEDGER="$D12"    python3 preprep.py >/dev/null 2>&1 ); _r3=$?
+if [ "$_r1" = "$_r2" ] && [ "$_r2" = "$_r3" ]; then
+  ok "⑫-6 종료코드가 세 상태에서 동일 ($_r1) — «안 켜면 제대로 안 돈다» 는 **거짓**이다"
+else
+  ng "🟥 ⑫-6 상태마다 종료코드가 다르다 (미정=$_r1 off=$_r2 켜짐=$_r3)"
+fi
 echo
 echo "════════════════════════════════════════"
 printf '  PASS %s   FAIL %s   SKIP %s\n' "$PASS" "$FAIL" "$SKIP"
