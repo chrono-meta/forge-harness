@@ -136,7 +136,8 @@ def load(path):
 # ── 면제 채널 (P1 과 같은 규율: 선언되었나만 본다 · 사유 필수 · 조용히 안 삼킨다) ──────
 
 def _intent_index(intended):
-    idx, errs = collections.defaultdict(list), []
+    """(idx, errs, by_n). `by_n[n] = (axis, shapes_tuple, declared_slides)` — 죽은 선언의 근사 진단용."""
+    idx, errs, by_n = collections.defaultdict(list), [], {}
     for n, e in enumerate(intended or [], 1):
         if not isinstance(e, dict):
             errs.append(f'attr_consistency.intended[{n}] : 매핑이 아니다 — 면제 안 함')
@@ -163,7 +164,10 @@ def _intent_index(intended):
             continue
         for s in sl:
             idx[(ax, int(s))].append((tuple(sorted(e.get('shapes') or [])), why, n))
-    return idx, errs
+        # 🟥 선언별 원장 — «죽은 선언» 을 보고할 때 «왜» 죽었는지 말하려면 선언 자신을 다시 봐야 한다.
+        #    idx 는 (축,장) 으로 흩어 놓은 형태라 선언 하나를 되짚을 수 없다.
+        by_n[n] = (ax, tuple(sorted(e.get('shapes') or [])), sorted(int(v) for v in sl))
+    return idx, errs, by_n
 
 
 AMBIG = '\u2205'   # «같은 장 안에 같은 이름 둘» — 선언으로 못 가르는 표식(R5 A6). 어떤 선언과도 안 맞는다.
@@ -176,6 +180,39 @@ def _mark_ambig(shapes_):
     if any(s_.get('dup') for s_ in shapes_):
         names.append(AMBIG)
     return names
+
+
+def _dead_intent_msg(n, intent_by_n, seen_groups):
+    """죽은 선언 한 줄 — **왜** 죽었는지까지 말한다.
+
+    🟥 이 함수가 있는 이유(2026-09-13 실측). 이 덱에서 죽은 선언이 **12개** 나왔는데, 원인은
+    전부 하나였다: `shapes` 는 정확히 맞는데 `slides` 에 그룹의 **한 장만** 적혀 있었다.
+    echo 후보는 여러 장에 걸치고, 매칭은 «그 장 전부가 같은 선언에 걸려야» 면제한다(R3 B14 —
+    부분 선언이 완전 선언을 가리지 않게 한 그 규칙). 그 규칙이 들어올 때 기존 설정이 안 따라왔다.
+
+    종전 메시지는 「지우거나 고쳐라」뿐이라, 사람이 12줄을 받아들고 **무엇이 어긋났는지를
+    직접 재현해야** 했다. 어긋남을 아는 쪽은 기계다. 그래서 여기서 말한다.
+
+    ⚠️ 근사 진단이지 판정이 아니다 — 이름집합이 같은 후보 그룹을 찾아 장 차집합을 보일 뿐이고,
+       「그러니 그 장들을 적어라」는 사람이 정한다(그 후보가 정말 같은 의도인지는 의미 판단이다).
+    """
+    base = f'attr_consistency.intended[{n}] : 🟥 죽은 선언 — 이 덱에서 아무 후보도 면제하지 않는다. 지우거나 고쳐라'
+    rec = intent_by_n.get(n)
+    if not rec:
+        return base
+    ax, want, declared = rec
+    if not want:
+        # shapes 를 안 적은 선언 = 그 장의 그 축 전체. 그 축 후보가 그 장에 아예 없다는 뜻이다.
+        return base + f'  (축 {ax} · 선언 장 {declared} — 그 장에 이 축 후보가 없다)'
+    got = seen_groups.get((ax, want))
+    if got is None:
+        return base + f'  (축 {ax} · 도형 {list(want)} — 이 이름 조합의 후보 자체가 없다. 도형 이름이 바뀌었나)'
+    missing = [s_ for s_ in got if s_ not in declared]
+    if missing:
+        return (base + f'  ← 근사: 도형 {list(want)} 는 맞는데 **장이 모자란다** — '
+                       f'선언 {declared} · 실제 후보 그룹 {got} (빠진 장 {missing}). '
+                       '면제는 «그룹의 모든 장» 이 같은 선언에 걸려야 성립한다')
+    return base + f'  (축 {ax} · 도형 {list(want)} · 장 {declared} — 후보 그룹 {got} 와 장은 맞는데 안 걸렸다)'
 
 
 def _why_all(idx, axis, slide, names):
@@ -210,15 +247,43 @@ def ax_dash(S, sw, cfg):
                     f"{sn:>3}p [dash]   «{d}» 굵기가 갈린다 — {detail}"
 
 
+def _algn_key(a):
+    """도형의 «정렬» 비교 키 — 균일하면 그 값 하나, 섞였으면 문단 패턴 그대로.
+
+    문단 수가 정렬 차이로 둔갑하지 않게 하면서(실물 47·48p), 순서 차이는 그대로 남긴다(A11).
+    """
+    al = tuple(a['algn'])
+    uniq = set(al)
+    return next(iter(uniq)) if len(uniq) == 1 else al
+
+
 def ax_algn(S, sw, cfg):
-    """같은 장에서 «같은 폭 · 같은 y»(= 한 줄)인데 정렬 방식이 갈리는가."""
+    """같은 장에서 «같은 폭 · 같은 y»(= 한 줄)인데 정렬 방식이 갈리는가.
+
+    🟥 비교 키는 «시퀀스 그대로» 가 아니다 (2026-09-13 실측 수리). 종전에는 문단별 정렬을
+    튜플 그대로 비교해서 `('ctr','ctr')` 과 `('ctr',)` 이 «갈린다» 로 보고됐다 — **문단 수가
+    다를 뿐 전부 가운데 정렬인데도.** 실물 덱 47·48p 가 정확히 그 형태였고(도형 다섯 전부
+    `ctr`, `rv-b1` 만 문단이 둘), 그 둘이 이 덱의 마지막 P4 후보였다. 축이 자기 docstring 의
+    질문(«정렬 방식이 갈리는가»)이 아니라 다른 질문(«시퀀스가 갈리는가»)을 답하고 있었다.
+
+    🟥 그런데 **집합으로 바꾸면 반대쪽이 깨진다.** 기존 레인 A11 이 `('ctr', 기본)` 과
+    `(기본, 'ctr')` 을 «갈린다» 로 못 박고 있고 그건 옳다 — 문단 수가 같고 **순서가 다르면**
+    첫 문단이 한쪽은 가운데, 다른 쪽은 기본이다. 실제로 갈린 것이다.
+    (초판이 집합으로 바꿨다가 A11 이 빨개져서 잡혔다. 기존 레인이 내 과교정을 막았다.)
+
+    ⇒ 판별자는 **«균일하면 그 값 하나, 섞였으면 패턴 그대로»** 다:
+         ('ctr','ctr') → 'ctr'      ('ctr',) → 'ctr'          → 같다 (실물 47·48p)
+         ('ctr', 기본) → 그 튜플     (기본,'ctr') → 그 튜플     → 다르다 (A11)
+    한 도형이 한 가지 정렬만 쓰면 그 도형의 정렬은 문단 수와 무관하게 그 값이고, 섞어 쓰면
+    그 패턴 자체가 그 도형의 정렬이다.
+    """
     for sn, sh in enumerate(S, 1):
         rows = collections.defaultdict(list)
         for a in sh:
             if a['text']:                      # 글자 있는 도형만이 «정렬»을 가진다 — 크기가 상속이어도 정렬은 있다
                 rows[(round(a['w'], 2), round(a['y'], 1))].append(a)
         for (w, y), v in rows.items():
-            if len(v) > 1 and len({a['algn'] for a in v}) > 1:
+            if len(v) > 1 and len({_algn_key(a) for a in v}) > 1:
                 detail = ' · '.join(f"{a['name'][:12]}={'/'.join(a['algn'])}" for a in v)
                 yield sn, _mark_ambig(v), \
                     f"{sn:>3}p [algn]   폭 {w}\" y {y}\" 한 줄인데 정렬이 갈린다 — {detail}"
@@ -291,7 +356,7 @@ AXIS_FN = {'dash': ax_dash, 'algn': ax_algn, 'mirror': ax_mirror, 'echo': ax_ech
 def collect(path, cfg):
     """(lines, suppressed, errors, stats)"""
     S, sw = load(path)
-    idx, errors = _intent_index(cfg.get('intended'))
+    idx, errors, intent_by_n = _intent_index(cfg.get('intended'))
     want = [a for a in (cfg.get('axes') or AXES) if a in AXIS_FN]
     unknown = [a for a in (cfg.get('axes') or []) if a not in AXIS_FN]
     errors += [f'attr_consistency.axes : 모르는 축 «{a}» — 무시 (있는 축: {AXES})' for a in unknown]
@@ -301,9 +366,15 @@ def collect(path, cfg):
     stats['shapes'] = sum(len(sh) for sh in S)
     stats['sized'] = sum(1 for sh in S for a in sh if a['szs'])
     hits = collections.Counter()
+    # 🟥 (축, 이름집합) → 그 후보 그룹이 실제로 걸친 장 목록. «죽은 선언» 의 근사 진단에 쓴다.
+    #    정확 키(면제)가 이미 있어도 이걸 같이 모은다 — 근사 스캔을 «정확 키가 없을 때만» 돌리면
+    #    「왜 안 걸렸나」를 물어야 하는 바로 그 순간에 자료가 없다.
+    seen_groups = {}
     for ax in want:
         for slide, names, line in AXIS_FN[ax](S, sw, cfg):
             slides_all = list(slide) if isinstance(slide, tuple) else [slide]
+            _key = (ax, tuple(sorted(set(n_ for n_ in names if n_ != AMBIG))))
+            seen_groups.setdefault(_key, sorted(set(int(x) for x in slides_all)))
             # 그룹이 여러 장에 걸치면(echo) 전부 «같은 선언 n» 에 걸려야 면제 — R3 B14: 장마다 첫 선언을 고르지 말고
             # 장 전체에 공통인 n 을 찾는다(부분 선언이 완전 선언을 가리지 않게)
             per = [dict((n_, w_) for w_, n_ in _why_all(idx, ax, sl_, names)) for sl_ in slides_all]
@@ -321,7 +392,7 @@ def collect(path, cfg):
     # 🟥 죽은 선언 보고 — 아무 후보도 안 거는 intended 항목(덱 세션 실측 09-11: 유령 후보에 붙은 why)
     for n in sorted({n for v in idx.values() for _w, _y, n in v}):
         if hits.get(n, 0) == 0:
-            errors.append(f'attr_consistency.intended[{n}] : 🟥 죽은 선언 — 이 덱에서 아무 후보도 면제하지 않는다. 지우거나 고쳐라')
+            errors.append(_dead_intent_msg(n, intent_by_n, seen_groups))
             stats['dead_intended'] += 1
     return lines, suppressed, errors, dict(stats)
 

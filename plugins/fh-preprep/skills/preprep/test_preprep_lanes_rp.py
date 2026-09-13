@@ -656,6 +656,52 @@ def run_codex_audit_regressions(fx_dir):
     ok('A9 attr: 산 선언 1 면제 · 죽은 선언 1 보고') if len(sup2) == 1 and len(dead2) == 1 and 'intended[2]' in dead2[0] \
         else ng('A9 attr sup=%d errs=%r' % (len(sup2), errs2))
 
+    # ── A9b 죽은 선언의 «근사 진단» (2026-09-13) ────────────────────────────────
+    # 🟥 왜 이 레인이 있나: 실물 덱에서 죽은 선언이 **12개** 나왔고 원인이 전부 하나였다 —
+    #    `shapes` 는 정확히 맞는데 `slides` 에 그룹의 **한 장만** 적혀 있었다(echo 후보는
+    #    여러 장에 걸치고, 매칭은 그 장 전부가 같은 선언에 걸려야 면제한다 — R3 B14).
+    #    종전 메시지는 「지우거나 고쳐라」뿐이라 사람이 12줄을 받아들고 어긋남을 직접
+    #    재현해야 했다. 어긋남을 아는 쪽은 기계다.
+    # known-pair: ⓐ 장이 모자란 선언 → «장이 모자란다» + 빠진 장을 이름으로
+    #             ⓑ 이름이 아예 다른 선언 → «이 이름 조합의 후보 자체가 없다» (다른 문구)
+    #             ⓒ shapes 없는 선언 → «그 장에 이 축 후보가 없다» (또 다른 문구)
+    #    셋이 같은 문구로 뭉치면 진단이 진단이 아니다.
+    dnm = os.path.join(fx_dir, 'ma_dead_nearmiss.pptx')
+    # 같은 문자열이 세 장에 서로 다른 크기로 — echo 후보 그룹이 [1,2,3] 이 된다
+    _mini_deck(dnm, [
+        _sp('n1', 914400, 914400, 3000000, 400000, '여덟글자가넘는문장입니다', sz=3200),
+        _sp('n1', 914400, 914400, 3000000, 400000, '여덟글자가넘는문장입니다', sz=3400),
+        _sp('n1', 914400, 914400, 3000000, 400000, '여덟글자가넘는문장입니다', sz=4600),
+    ])
+    def _nm(intended):
+        _l3, _s3, e3, _t3 = LA.collect(dnm, {'axes': ['echo'], 'intended': intended})
+        return [e for e in e3 if '죽은 선언' in e]
+
+    # ⓐ 그룹은 [1,2,3] 인데 선언은 [1] 만
+    a_msg = _nm([{'axis': 'echo', 'slides': [1], 'shapes': ['n1'], 'why': 'w'}])
+    ok('A9b 근사①: 장이 모자란 선언이 «빠진 장» 을 이름으로 말한다') \
+        if len(a_msg) == 1 and '장이 모자란다' in a_msg[0] and '[2, 3]' in a_msg[0] \
+        else ng('A9b 근사① %r' % a_msg)
+
+    # ⓑ 이름이 아예 없는 선언 — 다른 문구여야 한다
+    b_msg = _nm([{'axis': 'echo', 'slides': [1], 'shapes': ['ghost'], 'why': 'w'}])
+    ok('A9b 근사②: 없는 이름 조합은 «후보 자체가 없다» 로 갈린다') \
+        if len(b_msg) == 1 and '후보 자체가 없다' in b_msg[0] and '장이 모자란다' not in b_msg[0] \
+        else ng('A9b 근사② %r' % b_msg)
+
+    # ⓒ shapes 를 안 적은 선언 — 또 다른 문구
+    c_msg = _nm([{'axis': 'dash', 'slides': [9], 'why': 'w'}])
+    ok('A9b 근사③: shapes 없는 선언은 «그 장에 이 축 후보가 없다» 로 갈린다') \
+        if len(c_msg) == 1 and '이 축 후보가 없다' in c_msg[0] \
+        else ng('A9b 근사③ %r' % c_msg)
+
+    # ⓓ known-negative — 장을 다 적으면 죽은 선언이 **사라진다**(진단이 가리키는 수리가 실제로 듣는다)
+    _l4, s4, e4, _t4 = LA.collect(dnm, {'axes': ['echo'], 'intended': [
+        {'axis': 'echo', 'slides': [1, 2, 3], 'shapes': ['n1'], 'why': 'w'}]})
+    ok('A9b 근사④ known-negative: 빠진 장을 채우면 면제되고 죽은 선언 0') \
+        if len(s4) == 1 and not [e for e in e4 if '죽은 선언' in e] \
+        else ng('A9b 근사④ sup=%d errs=%r' % (len(s4), e4))
+
     # ── R2 (codex 09-11 13:04) 레인 A5–A10 · B11–B12 ──
     mp3 = os.path.join(fx_dir, 'r2_man.md')
     def _man(lines):
@@ -755,7 +801,7 @@ def run_codex_audit_regressions(fx_dir):
     ok('A8 delta: 새 1 · 사라짐 1 (이름 전체가 신원)') if len(new8) == 1 and len(gone8) == 1 else ng('A8 new=%d gone=%d' % (len(new8), len(gone8)))
     # A9 문자열 shapes 선언은 오류 (geometry · attr)
     _i9, e9 = LG._intent_index([{'slides': [1, 2], 'shapes': 'ab', 'attrs': ['x'], 'why': 'w'}])
-    _i9b, e9b = LA._intent_index([{'axis': 'dash', 'slides': [1], 'shapes': 'ab', 'why': 'w'}])
+    _i9b, e9b, _b9b = LA._intent_index([{'axis': 'dash', 'slides': [1], 'shapes': 'ab', 'why': 'w'}])
     ok('A9 shapes:"ab" → geometry·attr 둘 다 선언 오류(면제 0)') if len(e9) == 1 and not _i9 and len(e9b) == 1 and not _i9b \
         else ng('A9 geo errs=%r idx=%r · attr errs=%r idx=%r' % (e9, dict(_i9), e9b, dict(_i9b)))
     # A10 구간: AB@28+CD@32 vs A@28+BCD@32 는 다르다 · ABCD@28 vs AB@28+CD@28 은 같다
@@ -780,6 +826,30 @@ def run_codex_audit_regressions(fx_dir):
     S11, sw11 = LA.load(d)
     ok('A11 정렬 슬롯 %s vs %s → 갈림 1' % (S11[0][0]['algn'], S11[0][1]['algn'])) if S11[0][0]['algn'] != S11[0][1]['algn'] and len(list(LA.ax_algn(S11, sw11, {}))) == 1 \
         else ng('A11 algn=%r/%r' % (S11[0][0]['algn'], S11[0][1]['algn']))
+    # A11b 문단 «수» 는 정렬 차이가 아니다 (2026-09-13 실물 47·48p)
+    # 🟥 종전에는 ('ctr','ctr') 과 ('ctr',) 이 «정렬이 갈린다» 로 보고됐다 — 전부 가운데인데도.
+    #    실물 덱의 마지막 P4 후보 2건이 이 형태였고, 축이 자기 질문이 아닌 «시퀀스가 갈리는가»
+    #    를 답하고 있었다. A11(순서 차이)은 여전히 갈려야 하므로 둘을 같이 건다.
+    d = os.path.join(fx_dir, 'r3_algn_count.pptx')
+    _mini_deck(d, [_paras('a', 0, 'ctr', 'ctr') + _paras('b', 5000000, 'ctr')])
+    S11b, sw11b = LA.load(d)
+    ok('A11b 문단 수만 다르고 전부 ctr → 갈림 0 (%s vs %s)' % (S11b[0][0]['algn'], S11b[0][1]['algn'])) \
+        if S11b[0][0]['algn'] != S11b[0][1]['algn'] and len(list(LA.ax_algn(S11b, sw11b, {}))) == 0 \
+        else ng('A11b algn=%r/%r hits=%d' % (S11b[0][0]['algn'], S11b[0][1]['algn'], len(list(LA.ax_algn(S11b, sw11b, {})))))
+    # A11c known-positive 컨트롤 — 진짜로 방식이 다르면 여전히 잡는다(수리가 축을 죽이지 않았다)
+    d = os.path.join(fx_dir, 'r3_algn_real.pptx')
+    _mini_deck(d, [_paras('a', 0, 'ctr', 'ctr') + _paras('b', 5000000, 'r')])
+    S11c, sw11c = LA.load(d)
+    ok('A11c 컨트롤: ctr/ctr vs r → 갈림 1(축이 죽지 않았다)') \
+        if len(list(LA.ax_algn(S11c, sw11c, {}))) == 1 else ng('A11c hits=%d' % len(list(LA.ax_algn(S11c, sw11c, {}))))
+    # A11d 화면대조 정규화도 엔티티를 푼다 (2026-09-13 실물 119p)
+    # 🟥 실물 원고에 `Q &amp; A` 가 문자 그대로 들어 있고 화면은 `Q&A` 라, 같은 문자열이
+    #    «문구만 다른 줄» 로 보고됐다. 덱 쪽은 이미 풀려 나오는데 원고 쪽만 안 풀려 있던
+    #    **한쪽만 관대한 정규화**였다. known-pair 로 양방향을 건다.
+    ok('A11d 정규화: «Q &amp; A» 와 «Q&A» 가 같다') \
+        if LS._norm('Q &amp; A') == LS._norm('Q&A') else ng('A11d %r vs %r' % (LS._norm('Q &amp; A'), LS._norm('Q&A')))
+    ok('A11d 컨트롤: 진짜로 다른 문자열은 여전히 다르다') \
+        if LS._norm('Q &amp; A') != LS._norm('Q &amp; B') else ng('A11d 컨트롤 — 정규화가 너무 관대하다')
     # A12 엔티티 동치: &amp; 와 &#38; 는 같은 문장
     d = os.path.join(fx_dir, 'r3_entity.pptx')
     _mini_deck(d, [_sp('e', 0, 0, 100, 100, 'Research &amp; Development', 2800), _sp('e', 0, 0, 100, 100, 'Research &#38; Development', 3200)])
@@ -824,7 +894,7 @@ def run_codex_audit_regressions(fx_dir):
     l6, st6, _s, _e = LG.p1_lines(LG.load_slides(d), 200000)
     ok('A6 geometry: 엔티티 표기가 달라도 결박(mismatch 0) · 후보 1') if len(l6) == 1 and st6.get('mismatch', 0) == 0 else ng('A6 lines=%r st=%r' % (l6, st6))
     # A7 slides 원소 1.9 · true 는 오류
-    _i7, e7 = LA._intent_index([{'axis': 'dash', 'slides': [1.9], 'why': 'w'}, {'axis': 'dash', 'slides': [True], 'why': 'w'}])
+    _i7, e7, _b7 = LA._intent_index([{'axis': 'dash', 'slides': [1.9], 'why': 'w'}, {'axis': 'dash', 'slides': [True], 'why': 'w'}])
     ok('A7 slides [1.9]·[true] → 선언 오류 2 · 면제 0') if len(e7) == 2 and not _i7 else ng('A7 errs=%r idx=%r' % (e7, dict(_i7)))
     # B8 mirror: 글자 수 다른 AB / ABCDE 같은 28pt → 후보 0 · (28,32)/(32,28) 는 여전히 1
     d = os.path.join(fx_dir, 'r4_mirror_len.pptx')
@@ -1150,7 +1220,7 @@ def run_r8_regressions(fx_dir):
         if nie and rc_c == 0 and rc_d == 0 else ng('A2 nie=%r cand=%s dest=%s\n%s' % (nie, rc_c, rc_d, (out_c + out_d)[-300:]))
 
     # ── A3: intended shapes 원소가 섞이면 «그 항목만» 오류, 레인은 산다 ──
-    idx3, errs3 = LA._intent_index([{'axis': 'dash', 'slides': [1], 'shapes': ['A', 1], 'why': 'r'},
+    idx3, errs3, _b3 = LA._intent_index([{'axis': 'dash', 'slides': [1], 'shapes': ['A', 1], 'why': 'r'},
                                     {'axis': 'dash', 'slides': [1], 'shapes': ['B'], 'why': 'r'}])
     ok('A3 shapes=["A",1] → 오류 1 · 정상 항목은 색인됨 %s' % (dict(idx3),)) \
         if len(errs3) == 1 and ('dash', 1) in idx3 and len(idx3[('dash', 1)]) == 1 else ng('A3 errs=%r idx=%r' % (errs3, dict(idx3)))
