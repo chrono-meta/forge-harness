@@ -794,7 +794,30 @@ def main():
     print(f"   레인 {len(_mods)}(모듈): {' · '.join(m[5:] for m in _mods) if _mods else '🟥 없음 — 갈라진 사본일 수 있다'}")
     cfg_path = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith('--') \
                else os.path.join(HERE, 'surfaces.yaml')
-    cfg = load(cfg_path)
+    # 🟥 2026-09-13 — 설정을 못 읽는 것은 «발견» 이 아니라 «판정불가» 다.
+    #    종전엔 `load()` 가 그대로 터져 트레이스백 + rc=1 이었고, 이 파일의 선언(SKILL.md:164
+    #    「0 통과 · 1 발견 · 2 판정불가(계기오류/미측정)」)에서 **1 은 「발견 있음」**이다.
+    #    즉 「아무것도 못 쟀다」가 「뭔가 찾았다」와 **같은 종료코드**로 나갔다 — 부르는 쪽이
+    #    둘을 못 가른다. 이 저장소가 이름으로 관리하는 「미측정을 0(또는 남의 값)으로 렌더」의
+    #    한 얼굴이다. 그래서 여기서 잡아 **2** 로 확정한다(설정이 없으면 레인은 한 줄도 안 돌았다).
+    try:
+        cfg = load(cfg_path)
+    except FileNotFoundError:
+        print(f"\n{ANSI_BAD} 설정을 못 찾았다: {cfg_path}")
+        print(f"   이 디렉터리에 surfaces.example.yaml 이 있다 — 복사해서 surfaces.yaml 로 쓰거나,")
+        print(f"   설정 경로를 첫 인자로 줘라:  python3 preprep.py <설정.yaml>")
+        print(f"   ⚠️ 이것은 «발견 0» 이 아니라 «한 줄도 안 쟀다» 다 (exit 2 = 판정불가).")
+        return 2
+    except Exception as e:
+        print(f"\n{ANSI_BAD} 설정을 읽을 수 없다: {cfg_path}\n   {type(e).__name__}: {e}")
+        print(f"   ⚠️ «발견 0» 이 아니라 «한 줄도 안 쟀다» 다 (exit 2 = 판정불가).")
+        return 2
+    if not isinstance(cfg, dict) or 'root' not in cfg or 'surfaces' not in cfg:
+        # 파싱은 됐는데 계약이 아니다 — 빈 파일(`yaml.safe_load` → None)이 여기로 온다.
+        # 이것도 「돌았는데 발견 0」이 아니라 「돌 수 없었다」다.
+        print(f"\n{ANSI_BAD} 설정에 필수 키가 없다: {cfg_path} (root · surfaces)")
+        print(f"   ⚠️ «발견 0» 이 아니라 «한 줄도 안 쟀다» 다 (exit 2 = 판정불가).")
+        return 2
     root = os.path.expanduser(cfg['root'])
     surf = {s['id']: s for s in cfg['surfaces']}
 

@@ -50,5 +50,48 @@ g(){ python3 -c "import json,sys;d=json.loads(sys.argv[1]);print(d[sys.argv[2]][
 case "$(g use msg)" in *측정하다*) ok "R4 처방: 대체어를 finding 에 싣는다" ;;
                        *) ng "R4 실패 — 처방 없는 판정이다: $(g use msg)" ;; esac
 
-echo "retired lanes: $PASS passed, $FAIL failed"
+
+# ── C 갈래 (2026-09-13 신설) — 설정을 못 읽은 것이 «발견» 으로 나가지 않나 ─────────────
+#
+# 실사고: `python3 preprep.py` 를 인자 없이 돌리면 **트레이스백으로 죽고 rc=1** 이었다.
+# 이 도구의 선언(SKILL.md:164)은 「0 통과 · 1 발견 · 2 판정불가(계기오류/미측정)」이므로
+# 🟥 **1 은 「뭔가 찾았다」** 다 — 즉 「한 줄도 못 쟀다」가 「발견 있음」과 **같은 값**으로 나갔고
+# 부르는 쪽이 둘을 못 갈랐다. Done-When #1(「종료코드가 0/1/2 로 확정」)이 잡으라는 바로 그것이다.
+#
+# 여기서 재는 것: 설정 부재·깨짐·계약 미달 셋이 전부 **2** 로 확정되나, 그리고 정상 설정은
+# 여전히 2 가 «아닌» 값을 내나(컨트롤 — 항상 2 면 판별력이 0 이다).
+PP="$HERE/plugins/fh-commons/skills/preprep/preprep.py"
+CT=$(mktemp -d); trap 'rm -rf "$CT"' EXIT
+
+_rc(){ ( cd "$CT" && python3 "$PP" "$1" >/dev/null 2>&1 ); printf '%s' "$?"; }
+
+C1=$(_rc "$CT/does_not_exist.yaml")
+[ "$C1" = "2" ] && ok "C1 설정 부재 → rc=2 (판정불가 · 발견 아님)"                 || ng "C1 설정 부재가 rc=$C1 — «발견 있음»(1)이나 트레이스백과 안 갈린다"
+
+printf 'root: [ unclosed
+' > "$CT/broken.yaml"
+C2=$(_rc "$CT/broken.yaml")
+[ "$C2" = "2" ] && ok "C2 YAML 깨짐 → rc=2" || ng "C2 깨진 설정이 rc=$C2"
+
+printf '' > "$CT/empty.yaml"
+C3=$(_rc "$CT/empty.yaml")
+[ "$C3" = "2" ] && ok "C3 빈 설정(파싱은 됨 · 계약 미달) → rc=2"                 || ng "C3 빈 설정이 rc=$C3 — 「돌았는데 발견 0」으로 읽힌다"
+
+# 🟥 컨트롤 — 정상 설정에서는 2 가 «안» 나와야 한다. 안 그러면 위 셋은 아무것도 증명 못 한다.
+# 🟥 `kind` 가 빠지면 도구가 **옳게** «기계 어댑터 없음 → UNMEASURED → rc=2» 를 낸다.
+#    초판 픽스처가 그걸 빠뜨려 컨트롤이 죽었고(정상 설정도 2) C1~C3 이 아무것도 증명하지
+#    못했다 — 컨트롤이 대상과 같이 죽으면 차이가 사라진다. 도구가 아니라 픽스처가 틀렸다.
+printf 'root: %s
+surfaces:
+  - id: s1
+    path: deck.md
+    kind: markdown
+' "$CT" > "$CT/ok.yaml"
+printf '# 제목
+본문 한 줄.
+' > "$CT/deck.md"
+C4=$(_rc "$CT/ok.yaml")
+[ "$C4" != "2" ] && ok "C4 컨트롤: 정상 설정은 2 가 아니다 (실측 rc=$C4) — 판별력 있음"                  || ng "C4 컨트롤 죽음: 정상 설정도 rc=2 — 위 셋은 아무것도 증명하지 않는다"
+
+echo "retired + config-verdict lanes: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ] || exit 1
