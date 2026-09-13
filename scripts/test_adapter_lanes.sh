@@ -80,6 +80,21 @@ W="$ADAPTER_DIR/qasp_web_rules.sh"
 # (빈 **문자열**이 아니다 — 그건 「어디를 볼지 자체가 없다」는 다른 명제이고 전제 파손이다.)
 EMPTY_WORLD="$T/empty_world"; mkdir -p "$EMPTY_WORLD"
 
+# 🟥 **상속된 `FH_CLUSTER_ROOTS` 를 여기서 끊는다 — pmh-dev #80 ⓑ 제보 (2026-09-14).**
+#    `fh_peer_resolve` 는 `FH_CLUSTER_ROOTS` 가 있으면 **그것이 전부**다(다른 팔을 안 본다).
+#    그래서 운영자가 그 변수를 export 해 두면 픽스처 세계를 지어 놓고도 레인이 **실물 머신**을
+#    읽는다. 계기가 자기 대상 대신 저자의 환경을 재는 형태다.
+#    🟥 실측(이 레포, 같은 날): pin 을 export 한 채 돌리면 **레인 9개가 빨개진다**
+#    (M2 M3 M2b M2c M5 M6 P1 P2 P3) — 회귀가 아니라 **환경 누수**인데 같은 빨강으로 읽힌다.
+#    PMH 는 4건으로 봤고 실제로는 더 넓었다.
+#    ⇒ 여기서 한 번 끊고, **필요한 레인은 호출 시점에 인라인으로 다시 준다**(이미 그렇게 쓰고 있다:
+#      `FH_CLUSTER_ROOTS="$GS_ROOT" _rc bash …`). 값을 «비우는» 게 아니라 **unset** 이다 —
+#      빈 문자열은 「어디를 볼지 자체가 없다」는 다른 명제라 전제 파손으로 읽힌다.
+if [ -n "${FH_CLUSTER_ROOTS:-}" ]; then
+  printf '  ℹ️  상속된 FH_CLUSTER_ROOTS 를 끊는다(픽스처 격리) — 원래 값: %s\n' "$FH_CLUSTER_ROOTS"
+fi
+unset FH_CLUSTER_ROOTS
+
 _rc() { "$@" >/dev/null 2>&1; printf '%s' "$?"; }   # 판정은 파이프를 통과시키지 않는다
 
 # 실물 peer 루트 — 있으면 alias/control 레인을 돌리고, 없으면 그 레인은 SKIP 으로 **말한다**.
@@ -304,6 +319,28 @@ else
   # P3 컨트롤 — 별칭 해소가 실제로 살아 있나(P 레인이 통째로 공허하지 않다는 증거)
   FH_PROJECTS_HOME="$_PW" fh_peer_resolve aliased >/dev/null 2>&1; _prc=$?
   _lane P3 resolve-alias "'-dev' 별칭이 해소된다" 0 "$_prc"
+  # ── P4·P5 — 파일 머리의 `unset FH_CLUSTER_ROOTS` 가 **장식이 아님**을 박는다 ──────────
+  # 🟥 pmh-dev #80 ⓑ. `FH_CLUSTER_ROOTS` 가 있으면 그것이 **전부**이고 `FH_PROJECTS_HOME` 팔은
+  #    아예 안 돈다. 그래서 운영자가 그 변수를 export 해 두면 픽스처 세계를 지어 놓고도 레인이
+  #    실물 머신을 읽는다 — 실측 9개 적색(M2 M3 M2b M2c M5 M6 P1 P2 P3).
+  #    아래 둘이 그 **기전**을 직접 잰다. 머리의 unset 을 지우면 이 둘이 무의미해지는 게 아니라,
+  #    이 둘이 살아 있으므로 «왜 unset 이 필요한가» 가 기록으로 남는다.
+  _DECOY="$(mktemp -d)"; mkdir -p "$_DECOY/aliased"   # 미끼 세계: 'aliased' 가 **정확히** 있다
+  # P4 known-positive — 미끼가 켜져 있으면 픽스처 세계(aliased-dev)가 아니라 미끼가 이긴다
+  _got="$(FH_CLUSTER_ROOTS="$_DECOY/aliased" FH_PROJECTS_HOME="$_PW" fh_peer_resolve aliased 2>/dev/null)"
+  case "$_got" in
+    "$_DECOY/aliased") _prc=0 ;;
+    *)                 _prc=1 ;;
+  esac
+  _lane P4 env-dominance "FH_CLUSTER_ROOTS 가 있으면 FH_PROJECTS_HOME 팔을 **덮는다**(그래서 머리에서 unset 한다)" 0 "$_prc"
+  # P5 컨트롤 — 미끼를 끄면 같은 호출이 픽스처 세계로 돌아온다(P4 가 항상-참이 아니다)
+  _got="$(FH_PROJECTS_HOME="$_PW" fh_peer_resolve aliased 2>/dev/null)"
+  case "$_got" in
+    "$_PW/aliased-dev") _prc=0 ;;
+    *)                  _prc=1 ;;
+  esac
+  _lane P5 control "미끼를 끄면 픽스처 세계로 돌아온다 — P4 가 항상-참이 아니다" 0 "$_prc"
+  rm -rf "$_DECOY"
   rm -rf "$_PW"
   fi
 fi
