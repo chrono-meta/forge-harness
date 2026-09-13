@@ -134,6 +134,58 @@ deterministic** (a grep never has an attention lapse and costs nothing) — dete
 survival axis, orthogonal to capability. A deterministic check that replaces a per-session judged
 step keeps paying even when the model no longer needs the help.
 
+## What a harness sells — ceiling-extraction, not ceiling-raising (operator formulation, 2026-09-13)
+
+**Operator, verbatim**: *"하네스란 각 모델들의 한계치를 뛰어넘는 게 아니라 각 모델들을 안정적으로
+한계치까지 뽑아내는 거라고 생각해. … 하네스의 능력을 넘어서는 근육형 짓기야 오퍼스나 페이블이 더
+잘하겠지만, 그게 아닌 하네스 활용형 단계에서는 이게 잘 돌아가야겠지."*
+
+This names the **value proposition** the floor exists to protect, and it is not the same statement as
+the floor itself. The floor says *where* base ops must run; this says *what the harness is selling*:
+
+| | claim | who does it better |
+|---|---|---|
+| **근육형 (raw build)** | exceed what the substrate can produce | a stronger model — Opus, Fable. **Explicitly out of the harness's claim.** |
+| **활용형 (harness-mediated)** | reach the substrate's own ceiling, **stably, every run** | the harness. This is the whole claim. |
+
+Two consequences that were not previously written down:
+
+**① Variance, not mean, is the quantity.** If the sale is "reach the ceiling reliably", then the
+metric is **dispersion across runs of the same design**, not average yield. A pipeline whose mean
+output is higher but whose run-to-run spread exceeds the effect has not delivered this — it has
+delivered a lottery with a better expected value, which is a different product.
+🟥 **Measured instance, and it is ours**: in the dominance-B2 study two runs of the same design
+scored **15/24 and 20/24** while the effect under test contributed **3 and 2**. The spread was
+larger than the effect. That study's primary metric was yield; under this formulation it should
+have been spread. (Detail: `tracks/_meta/dominance_B2/PAPER2_DRAFT_2026-09-12.md` §3.1 · §9.2.)
+
+**② Floor-tier operation is a PORTABILITY TEST, not only an accessibility floor.**
+
+🟥 **And the substrate swap is not hypothetical — it is in production** (operator, 2026-09-13).
+A gateway-served model (glm-5.3-flash) is routed into a Claude Code shell via the org's CLI, and
+the Claude-Code-compatible field harnesses (pmh, qasp) run there, orchestrating gateway sidecars.
+The desktop client is set up the same way on the other network. **It already works.** The operator's
+stated goal is the harder one: *"정말 '보증하는' 잘 돌아감 환경"* — not "it runs" but "we can
+guarantee it runs."
+
+That reframes the floor. The operator's estimate puts that substrate at roughly Sonnet 4.7–5,
+so the reasoning is: *"우리 설계가 기본 소넷급이라면 어렵지 않을 거임."* The floor tier is the
+**locally runnable proxy** for a deployment that is otherwise only observable inside the org.
+
+So a floor-tier failure is now **two** findings, not one: the base op is tier-gated (the existing
+defect class), **and** it predicts a failure in a deployment that is currently carrying real work.
+That raises the stakes of a floor miss without changing the remedy — the remedy is still to make
+the rule fire (§Prescription ladder), never to conclude the tier is too weak.
+
+⚠️ **Honest scope — what is missing is the COMPARISON, not the deployment.** The substrate runs;
+nobody has yet taken a floor-tier sim set and run the same set on it to report the **disagreement
+count**. Until that exists, "floor-tier pass predicts substrate pass" is **the operator's reasoning,
+recorded as such** — and the tier estimate (≈ Sonnet 4.7–5) is likewise an estimate, not a
+benchmark result. 🟥 The measurement is therefore **cheap and available**, not blocked: the arms
+already exist on both sides. A nonzero disagreement refutes the prediction and is worth more than
+another floor-tier run. 🟥 Residency note: that comparison runs **inside the org**; its per-case
+outputs are company-resident and only a disagreement **count** crosses back.
+
 ## Done When (for any change citing this doctrine)
 
 - No availability-gate remains in the touched surface *(check class: measured — tier-reference
