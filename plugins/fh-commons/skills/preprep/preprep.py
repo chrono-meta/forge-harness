@@ -938,4 +938,13 @@ def main():
 #    못 쓴다(레인 하나만 부르려 해도 전체가 돌고 종료한다). 배포본이 된 뒤에 드러난 결함이다:
 #    스킬 문서가 «레인을 골라 부를 수 있다»는 인상을 주는데 실제로는 CLI 한 형태뿐이었다.
 if __name__ == '__main__':
-    sys.exit(main())
+    # ── 사용 원장 (2026-09-13) — 🟥 **옵트인**이다. `FH_USAGE_LEDGER` 가 없으면 완전 무동작이고
+    #    배포본에서 아무것도 안 남긴다(동의 없는 계측 금지 · 부재 ≠ 승인).
+    #    🟥 **판정을 안 바꾼다**: `observe` 는 `main()` 의 반환값을 그대로 통과시키고, 원장 쓰기가
+    #    실패해도 예외를 여기로 올리지 않는다. 관측이 대상을 바꾸면 그 숫자는 의미가 없다.
+    #    모듈이 없어도(부분 설치) 종전과 같이 돈다 — 그게 이 try 의 유일한 목적이다.
+    try:
+        from usage_ledger import observe as _observe
+    except Exception:
+        _observe = None
+    sys.exit(_observe('preprep', 'cli', main) if _observe else main())
