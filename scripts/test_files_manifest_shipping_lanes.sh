@@ -253,6 +253,37 @@ else
 fi
 rm -rf "$D10"
 
+# ── P 갈래 (2026-09-13) — 파이썬 바이트코드가 발행 집합에 실리지 않나 ──────────────────
+#
+# 실사고: `plugins/*/skills` 가 디렉터리 항목이라 그 아래 `__pycache__/*.pyc` 를 통째로 끌어갔고,
+# .pyc 안에는 **빌드한 머신의 절대 경로와 계정명**이 박혀 있다. 로컬 `npm pack` 이 그걸 실었다.
+# 🟢 발행된 3.4.0·3.1.4 는 깨끗했다 — CI 가 «깨끗한 체크아웃»에서 패킹하기 때문이고, 그건
+#    **우연히 안전했던 것**이지 막혀 있던 게 아니다(폴백 = 로컬 발행 경로는 그대로 샜다).
+# 🟥 `files[]` 가 있으면 `.npmignore` 도 `files[]` 부정 패턴도 이 자리에 안 먹는다(둘 다 실측).
+#    그래서 막는 자리는 **`prepack`** 뿐이다.
+echo
+echo "== P: 발행 집합에 .pyc 가 없나 =="
+_P_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if ! /usr/bin/grep -q '"prepack"' "$_P_ROOT/package.json"; then
+  bad "P1 package.json 에 prepack 이 없다 — .pyc 를 막는 유일한 자리가 비었다"
+else
+  ok "P1 prepack 선언 실재"
+  _PD="$_P_ROOT/plugins/fh-preprep/skills/preprep/__pycache__"
+  mkdir -p "$_PD" && printf 'x' > "$_PD/_probe_lane.cpython-313.pyc"
+  _PT=$(mktemp -d)
+  if ( cd "$_P_ROOT" && npm pack --pack-destination "$_PT" >/dev/null 2>&1 ); then
+    _n=$(tar tzf "$_PT"/*.tgz 2>/dev/null | /usr/bin/grep -c '[.]pyc$')
+    _c=$(tar tzf "$_PT"/*.tgz 2>/dev/null | /usr/bin/grep -c 'skills/preprep/lane_')
+    if [ "${_n:-x}" = "0" ]; then ok "P2 심어둔 .pyc 가 패킹본에 없다 (실측 ${_n}개)"
+    else bad "P2 .pyc ${_n}개가 실렸다 — prepack 이 안 돌거나 범위를 못 덮는다"; fi
+    if [ "${_c:-0}" -ge 5 ]; then ok "P3 컨트롤: 실물 lane 모듈은 그대로 실린다 (${_c}개) — 과삭제 아님"
+    else bad "P3 컨트롤 죽음: lane 모듈이 ${_c}개뿐 — prepack 이 너무 많이 지운다"; fi
+  else
+    bad "P2 npm pack 실패 — 계기 오류(판정 아님)"
+  fi
+  rm -rf "$_PT"; rm -f "$_PD/_probe_lane.cpython-313.pyc"
+fi
+
 echo "files-manifest-shipping lanes: $pass passed, $fail failed"
 if [ "$fail" -gt 0 ]; then
   exit 1

@@ -28,6 +28,7 @@
     "fh-codex-doctor": "bin/fh-codex-doctor.js"
   },
   "scripts": {
+    "prepack": "find plugins -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null; true",
     "prepare": "chmod +x bin/fh-gate.js bin/fh-run.js bin/fh-goal.js bin/fh-codex-doctor.js scripts/fh-gate.sh scripts/fh-run.sh scripts/fh-goal.sh",
     "postinstall": "node scripts/postinstall_notice.js",
     "test": "bash scripts/selfcheck.sh",
