@@ -168,9 +168,32 @@ The desktop client is set up the same way on the other network. **It already wor
 stated goal is the harder one: *"정말 '보증하는' 잘 돌아감 환경"* — not "it runs" but "we can
 guarantee it runs."
 
-That reframes the floor. The operator's estimate puts that substrate at roughly Sonnet 4.7–5,
-so the reasoning is: *"우리 설계가 기본 소넷급이라면 어렵지 않을 거임."* The floor tier is the
-**locally runnable proxy** for a deployment that is otherwise only observable inside the org.
+🟥 **And the tier estimate was revised DOWN the same day — which inverts the comfortable reading.**
+The first estimate put that substrate near Sonnet 4.7–5, and the reasoning followed: *"우리 설계가
+기본 소넷급이라면 어렵지 않을 거임."* The operator then revised it (2026-09-13, same session):
+
+| substrate | operator's estimate |
+|---|---|
+| glm-5.3-flash (the production routing) | **Claude 3.5 Sonnet / 3.7 일반 모드 초기~중기 체급** |
+| qwen3.8:27b (the dominance-B2 scorer) | Claude 3.7 Sonnet 기본 추론 모드 근처 |
+
+**If that is right, the floor is set ABOVE the substrate that is actually carrying the work.**
+«Runs at current Sonnet» then does **not** imply «runs on glm-5.3-flash» — there is a real gap
+between the proxy and the target, and the proxy sits on the easy side of it. The inference
+«floor pass ⇒ substrate pass» is therefore **not conservative**; it is optimistic in the exact
+direction that hides failures.
+
+Two things follow, and they are the opposite of "this is easy":
+- The portability claim needs **the substrate's own tier**, not the floor tier, as its test bed.
+  A floor-tier sim that passes says little about a deployment two generations below it.
+- Or the floor itself is mis-set: if the org's real substrate is 3.5/3.7-class, then a base op
+  that needs current-Sonnet is **already tier-gated for that deployment** — the existing defect
+  class, just measured against the wrong reference tier.
+
+⚠️ **Both estimates are the operator's, not benchmark results**, and they disagree with each other
+by roughly two model generations. 🟥 **That disagreement is itself the finding**: nobody has
+measured it, and the two readings prescribe opposite amounts of work. Settle it with the
+comparison below before either is used to plan.
 
 So a floor-tier failure is now **two** findings, not one: the base op is tier-gated (the existing
 defect class), **and** it predicts a failure in a deployment that is currently carrying real work.
