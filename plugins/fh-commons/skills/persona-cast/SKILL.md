@@ -1,6 +1,6 @@
 ---
 name: persona-cast
-description: One-line doorway that lets a field harness review an artifact (a screen, a spec, a PR, a page) through a pre-built cast of review-shaped personas — web-review cast by default (designer, ux-writer, fe-dev, be-dev, qa, a11y) — dispatched in isolation, merged with a marginal-coverage stop so a lens that finds nothing unique is reported as decorative, not padded. Triggers: "이 화면 리뷰해줘", "페르소나로 봐줘", "디자이너·QA 눈으로 봐줘", "review this screen with the cast", "persona cast", "persona-cast".
+description: 'One-line doorway that lets a field harness review an artifact (a screen, a spec, a PR, a page) through a pre-built cast of review-shaped personas — web-review cast by default (designer, ux-writer, fe-dev, be-dev, qa, a11y) — dispatched in isolation, merged with a marginal-coverage stop so a lens that finds nothing unique is reported as decorative, not padded. Triggers: "이 화면 리뷰해줘", "페르소나로 봐줘", "디자이너·QA 눈으로 봐줘", "review this screen with the cast", "persona cast", "persona-cast".'
 version: 0.1
 ---
 
