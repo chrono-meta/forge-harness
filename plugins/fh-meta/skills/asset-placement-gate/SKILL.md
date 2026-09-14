@@ -124,6 +124,22 @@ autonomous pass — a `steel-quench` Wave scoped to adversarial (not merely acci
 framing is a candidate follow-up, but the gate-design decision belongs to human review
 (§Mechanization Boundary — judgment stays with evolution).
 
+🟥 **The paper's fourth stage is the one aimed at THIS gate, and the paragraph above left it out**
+(caught 2026-09-14 by reading the abstract directly rather than re-reading the citing paragraph — the
+omission is invisible to a re-read, which is the whole argument for opening the source). Verbatim:
+*"In Governance, semantic evasion strategies cause malicious skills to avoid a blocking verdict in
+**36.5%-100%** of cases."* Discovery and selection describe **which skill gets picked**; governance
+describes **how a blocking verdict gets dodged** — and an admission gate is exactly a blocking-verdict
+surface, so that band is a measurement of this gate's own evasion ceiling, not of a neighbouring
+concern. Read it against what Step 0.5 actually holds: the grep leg is literal, so semantic evasion
+passes it by construction, and the judged leg is a model reading descriptions — the same modality the
+36.5%-100% was measured on. **The honest reading is narrow in both directions**: that band is a
+different registry, a different threat model (deliberately adversarial submissions, where this gate's
+common case is accidental duplication), and an upper end of 100% means *some* configuration blocked
+nothing at all, not that this gate does. What it does establish is that "semantic paraphrase evades a
+literal check" is measured, not speculative, on a governance surface. Still no mechanized check is
+added — for the reason the previous paragraph gives, unchanged.
+
 ## Step 0.6. Tier-0/1 Official-Corpora Check (grounds criterion ③)
 
 Besides the FH roster (Step 0.5), check the proposal against the official corpora: platform
