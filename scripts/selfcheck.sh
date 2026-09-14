@@ -1418,6 +1418,28 @@ else
   fail=1
 fi
 
+# temper_check lanes — 🟥 `templates/temper_check.sh` 는 게이트체인 7경로 중 **유일하게 실행 레인이
+# 0** 이었다(2026-09-14 frontier-digest 후보 #1 → 독립 재현으로 참 판정). 참조 6곳이 전부 비실행
+# 이었고, 그중 하나가 **바로 이 파일의 `bash -n` 목록**이다 — 즉 selfcheck 자신이 «구문 검사» 를
+# «검증» 으로 세고 있었다. steel-quench SKILL.md 의 T-1 행은 그 사이 그것을 `measured` 로 선언한다.
+# `bash -n` 은 계기가 아니다([[feedback_gate_verification_must_execute]]) — 아래가 그 자리를 실행으로
+# 바꾼다. 레인은 격리 픽스처(실물 내용 · 실제 두 커밋 쌍)를 쓰고 네트워크·API 를 안 탄다.
+#
+# ⚠️ Subject-absent 는 여기서도 FAIL 이다(SKIP 아님) — `templates/temper_check.sh` 는 package.json
+# files[] 에 있으므로 부재는 «정당한 미출하» 가 아니라 삭제다. 위 branch_claim 블록과 같은 근거.
+# rc=2 는 계기 오류(HARNESS-ERROR)라 rc=1 과 같이 fail 로 접는다 — «못 쟀다» 는 «통과» 가 아니다.
+if [ ! -f templates/temper_check.sh ]; then
+  echo "FAIL  templates/temper_check.sh is in package.json files[] but absent — a deleted subject, not a skip"
+  fail=1
+elif [ -f scripts/test_temper_check_lanes.sh ]; then
+  if ! bash scripts/test_temper_check_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_temper_check_lanes.sh: temper_check.sh present but its anchor is missing"
+  fail=1
+fi
+
 # listing_watch — 같은 형태. 🟥 이 블록을 «레인을 짓는 같은 커밋에서» 붙인다: 바로 위 주석이
 # 기록한 「레인은 지었는데 selfcheck 배선을 안 했다」 재발이 **최소 다섯 번**이고, 그 다섯 다 CI 나
 # lane-runner 가 뒤늦게 잡았다. 순서를 바꾸는 것이 유일한 처방이라 여기서 그렇게 한다.
