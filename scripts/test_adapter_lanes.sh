@@ -307,6 +307,10 @@ else
   else
   _PW="$(mktemp -d)"
   mkdir -p "$_PW/sp ace" "$_PW/aliased-dev" "$_PW/dual" "$_PW/dual-dev"
+  # 🟥 2026-09-14 (pmh-dev #80 B안 «exact match wins»): `dual` 은 이제 **정확 일치라 이긴다** —
+  #    그래서 그걸로 «모호 검출이 살아 있나» 를 물으면 컨트롤이 대상과 같이 죽는다.
+  #    진짜 모호는 **정확 일치가 없는** 자리다: my_repo(없음) · my_repo-dev · my-repo.
+  mkdir -p "$_PW/my_repo-dev" "$_PW/my-repo"
   # P0 컨트롤 — 계기가 대상을 실제로 부르는가. 이게 초록이 아니면 아래 셋은 의미가 없다.
   FH_PROJECTS_HOME="$_PW" fh_peer_resolve nosuchpeer >/dev/null 2>&1; _prc=$?
   _lane P0 control "계기 생존 — 없는 peer 는 부재(1)로 온다(rc=0 무음이면 대상을 안 부른 것)" 1 "$_prc"
@@ -314,8 +318,12 @@ else
   FH_PROJECTS_HOME="$_PW" fh_peer_resolve 'sp ace' >/dev/null 2>&1; _prc=$?
   _lane P1 resolve-guard "공백 이름 1건은 정상 해소 — 거짓 AMBIGUOUS 아님" 0 "$_prc"
   # P2 컨트롤 — 진짜 모호는 여전히 거부해야 한다(P1 의 통과가 모호검출을 죽인 게 아니다)
+  FH_PROJECTS_HOME="$_PW" fh_peer_resolve my_repo >/dev/null 2>&1; _prc=$?
+  _lane P2 control "진짜 모호(정확 일치 없음: my_repo-dev + my-repo)는 여전히 고르지 않는다" 2 "$_prc"
+  # P2-b (신규) — 정확 일치가 있으면 별칭이 같이 있어도 이긴다. 제보 증상 그 자체
+  #    (한 노드에 ~/projects/<name> + ~/projects/<name>-dev 공존 → 종전엔 AMBIGUOUS → M2/M3 가 HARNESS_ERROR)
   FH_PROJECTS_HOME="$_PW" fh_peer_resolve dual >/dev/null 2>&1; _prc=$?
-  _lane P2 control "진짜 모호(dual + dual-dev)는 여전히 고르지 않는다" 2 "$_prc"
+  _lane P2b resolve-exact "exact match wins — dual+dual-dev 에서 dual 로 해소(제보 증상)" 0 "$_prc"
   # P3 컨트롤 — 별칭 해소가 실제로 살아 있나(P 레인이 통째로 공허하지 않다는 증거)
   FH_PROJECTS_HOME="$_PW" fh_peer_resolve aliased >/dev/null 2>&1; _prc=$?
   _lane P3 resolve-alias "'-dev' 별칭이 해소된다" 0 "$_prc"

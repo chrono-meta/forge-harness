@@ -27,18 +27,26 @@ mkdir -p "$P/plainname/.git"          # 이름 그대로 + git
 mkdir -p "$P/withdev-dev/.git"        # `-dev` 별칭만 존재
 mkdir -p "$P/under-score/.git"        # 밑줄→하이픈 별칭만 존재 (track 이름은 under_score)
 mkdir -p "$P/nogit"                   # 디렉토리는 있고 .git 없음 — 술어 분기용
-mkdir -p "$P/ambi" "$P/ambi-dev"      # 둘 다 존재 → 모호
+mkdir -p "$P/ambi" "$P/ambi-dev"      # 정확 일치 + 별칭 → exact match wins (pmh-dev #80 B안)
+# 🟥 정확 일치가 **없는** 모호 — 이 픽스처가 「exact match wins」와 「first match wins」를 가른다.
+#    후보는 my_repo(없음) · my_repo-dev(있음) · my-repo(있음). 넓은 규약이었다면 my_repo-dev 를
+#    조용히 골랐을 자리이고, 좁은 규약은 여기서 AMBIGUOUS 를 유지한다.
+mkdir -p "$P/my_repo-dev" "$P/my-repo"
 
 echo "── 1. 별칭 3종이 각각 맞는가 (닫힌 목록) ──"
 want "plain: 이름 그대로, note 비어야"      "$P/plainname|"                 "$(fh_resolve_track_root plainname "$P" dir)"
 want "alias -dev"                          "$P/withdev-dev|alias:withdev-dev" "$(fh_resolve_track_root withdev "$P" dir)"
 want "alias _→-  (실제로 뚫렸던 표기)"      "$P/under-score|alias:under-score" "$(fh_resolve_track_root under_score "$P" dir)"
 
-echo "── 2. 모호는 «고르지 않는다» ──"
-got=$(fh_resolve_track_root ambi "$P" dir)
+echo "── 2. 정확 일치는 이기고, 정확 일치가 «없으면» 여전히 고르지 않는다 ──"
+# 2-a (2026-09-14, pmh-dev #80 B안): 한 노드에 `~/projects/<name>` + `~/projects/<name>-dev` 공존.
+want "2-a exact match wins — 별칭이 같이 있어도 정확 일치가 이긴다" "$P/ambi|" "$(fh_resolve_track_root ambi "$P" dir)"
+# 2-b 🟥 좁힌 규약의 반례 — 이 레인이 「exact match wins」와 「first match wins」를 가른다.
+#     넓은 규약이면 여기서 my_repo-dev 가 조용히 뽑힌다. 그건 이 가드의 존재 이유 그 자체다.
+got=$(fh_resolve_track_root my_repo "$P" dir)
 case "$got" in
-  *"|AMBIGUOUS:ambi,ambi-dev") ok "둘 다 맞으면 AMBIGUOUS, 조용히 첫째를 고르지 않음" ;;
-  *) no "모호를 고르지 않아야 한다" "$got" ;;
+  *"|AMBIGUOUS:"*) ok "2-b 정확 일치가 없으면 AMBIGUOUS 유지 — 조용히 첫째를 고르지 않음" ;;
+  *) no "2-b 정확 일치 없는 모호를 골랐다 — 「first match wins」로 넓어졌다" "$got" ;;
 esac
 
 echo "── 3. 부재는 UNRESOLVED — «0» 이나 빈 문자열이 아니다 ──"
@@ -71,7 +79,8 @@ echo "── 6. 종료코드도 판정을 싣는다 (0 해소 · 1 UNRESOLVED ·
 #    rc 를 타입화했다 — 두 채널이 같은 판정을 실으면 어느 쪽만 읽어도 fail-closed 다.
 fh_resolve_track_root plainname "$P" dir >/dev/null; want "해소 → rc=0" "0" "$?"
 fh_resolve_track_root ghost     "$P" dir >/dev/null; want "UNRESOLVED → rc=1 (성공으로 안 접힌다)" "1" "$?"
-fh_resolve_track_root ambi      "$P" dir >/dev/null; want "AMBIGUOUS → rc=2 (성공으로 안 접힌다)" "2" "$?"
+fh_resolve_track_root my_repo   "$P" dir >/dev/null; want "AMBIGUOUS → rc=2 (성공으로 안 접힌다)" "2" "$?"
+fh_resolve_track_root ambi      "$P" dir >/dev/null; want "exact match wins → rc=0 (모호로 안 떨어진다)" "0" "$?"
 
 echo "── 6-b. 🟥 전제 파손은 «못 찾음» 이 아니다 — ARGS(rc=3). 전부 cross-family 가 실행으로 찾았다 ──"
 # ⓐ n="" → 첫 후보가 "" 라 `[ -d "$root/" ]` = `[ -d "/" ]` 가 참이 되던 자리
@@ -108,7 +117,9 @@ echo "── 8. 🟥 회귀 앵커 — 이름에 공백이 있어도 거짓 AMBI
 mkdir -p "$P/spaced name"
 want "공백 이름 1건은 정상 해소 (거짓 AMBIGUOUS 아님)" "$P/spaced name|" "$(fh_resolve_track_root 'spaced name' "$P" dir)"
 # 컨트롤: 진짜 모호는 여전히 발화해야 한다 — 위 레인의 침묵이 공허하지 않다는 증거
-got=$(fh_resolve_track_root ambi "$P" dir)
+# 🟥 컨트롤의 과녁을 `ambi` → `my_repo` 로 옮겼다(2026-09-14). `ambi` 는 이제 exact match wins 로
+#    **정상 해소**되므로, 그걸로 «모호 검출이 살아 있나» 를 물으면 컨트롤이 대상과 같이 죽는다.
+got=$(fh_resolve_track_root my_repo "$P" dir)
 case "$got" in
   *"|AMBIGUOUS:"*) ok "컨트롤: 진짜 모호는 여전히 발화(레인 8 이 모호 검출을 죽인 게 아님)" ;;
   *) no "컨트롤 실패 — 모호 검출이 죽었다" "$got" ;;
@@ -151,6 +162,39 @@ else
   esac
   rm -rf "$W"
 fi
+
+echo "── 10. 🟥 되돌림 프로브 — exact-match-wins 절이 실제로 일하나 ──"
+# 그 절을 떼어낸 사본으로 2-a 를 다시 돌린다. AMBIGUOUS 로 **되돌아가야** 그 줄이 앵커다.
+_RVD=$(mktemp -d); _RV="$_RVD/rv.sh"
+sed -E 's@^  case "\$hits" in$@  case "NEVER_MATCH_ZZZ" in@' "$LIB" > "$_RV"
+if /usr/bin/grep -q 'NEVER_MATCH_ZZZ' "$_RV"; then
+  if ( unset -f fh_resolve_track_root 2>/dev/null; . "$_RV"
+       case "$(fh_resolve_track_root ambi "$P" dir)" in *"|AMBIGUOUS:"*) exit 0 ;; *) exit 1 ;; esac ); then
+    ok "10 되돌림: 절을 떼면 2-a 가 AMBIGUOUS 로 돌아온다 — 장식이 아니다"
+  else
+    no "10 되돌림 실패 — 절을 떼도 여전히 해소된다(다른 것이 하고 있다)" "reverted still resolves"
+  fi
+else
+  no "10 계기 오류 — 되돌림 치환이 안 먹었다(대상 줄 표기가 바뀌었나)" "no substitution"
+fi
+rm -rf "$_RVD"
+
+echo "── 11. 🟥 degrade 경로(스텁)도 같은 규약인가 ──"
+# 라이브러리를 못 읽는 상황에서 peer_resolve 의 스텁이 «정상 실행» 과 다른 답을 내면 안 된다.
+_STD=$(mktemp -d)
+sed -n '/^type fh_resolve_track_root/,/^}$/p' "$(dirname "$LIB")/adapters/peer_resolve.sh" \
+  | sed '1s/^type[^|]*|| //' > "$_STD/stub.sh"
+if /usr/bin/grep -q '^fh_resolve_track_root() {' "$_STD/stub.sh"; then
+  if ( unset -f fh_resolve_track_root 2>/dev/null; . "$_STD/stub.sh"
+       case "$(fh_resolve_track_root ambi "$P" dir)" in *"/ambi|") exit 0 ;; *) exit 1 ;; esac ); then
+    ok "11 스텁도 exact match wins — degrade 경로가 다른 답을 안 낸다"
+  else
+    no "11 스텁이 정본과 갈린다 — 정상/degrade 가 조용히 다른 답" "$( . "$_STD/stub.sh" 2>/dev/null; fh_resolve_track_root ambi "$P" dir )"
+  fi
+else
+  no "11 계기 오류 — 스텁 추출 실패(peer_resolve.sh 의 가드 표기가 바뀌었나)" "no stub extracted"
+fi
+rm -rf "$_STD"
 
 echo
 echo "PASS=$PASS FAIL=$FAIL"

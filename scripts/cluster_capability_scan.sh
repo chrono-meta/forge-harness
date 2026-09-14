@@ -93,6 +93,10 @@ type fh_resolve_track_root >/dev/null 2>&1 || fh_resolve_track_root() {
     hits="$hits $c"; [ -n "$first" ] || first="$c"
   done
   local nh; nh=$(printf '%s' "$hits" | wc -w | tr -d ' ')
+  # exact match wins (2026-09-14 · pmh-dev #80 B안) — 정본 fh_track_resolve.sh 와 **같은 규약**.
+  # 🟥 스텁은 라이브러리 부재 시의 degrade 경로다. 여기에 규약을 안 실으면 «정상 실행» 과
+  #    «degrade 실행» 이 **다른 답**을 내고, 그 차이는 조용하다.
+  case " $hits " in *" $n "*) printf '%s|' "$root/$n"; return 0 ;; esac
   if [ "${nh:-0}" -gt 1 ]; then
     printf '%s|AMBIGUOUS:%s' "$root/$n" "$(printf '%s' "$hits" | sed 's/^ //;s/ /,/g')"; return 0
   fi
@@ -514,9 +518,24 @@ EOF
   # ── L12 모호는 **고르지 않는다** — 죽은 가드였던 자리를 레인으로 고정한다 ──
   #   초판은 이 판정을 전역 변수에 담았고 소비자가 **다른 서브셸**이라 값이 안 넘어갔다.
   #   가드는 있었는데 **발동 불가능**했고, 그건 실제 출력(별칭 칸이 빔)을 보고서야 드러났다.
-  mkdir -p "$PH/eta" "$PH/eta-dev" "$TR/eta"
+  #   🟥 2026-09-14 (pmh-dev #80 B안 «exact match wins»): 과녁을 옮겼다. `eta` + `eta-dev` 는
+  #   이제 **정확 일치라 이기므로** 그걸로 «모호 검출이 살아 있나» 를 물으면 컨트롤이 대상과
+  #   같이 죽는다. 진짜 모호는 **정확 일치가 없는** 자리다 — eta_x(없음) · eta_x-dev · eta-x.
+  mkdir -p "$PH/eta_x-dev" "$PH/eta-x" "$TR/eta_x"
   out="$(FH_PROJECTS_HOME="$PH" FH_TRACKS_ROOT="$TR" bash "$SELF" discover 2>&1)"; rc=$?
-  _lane "L12 후보 둘이면 고르지 않고 AMBIGUOUS" 4 "$rc" "AMBIGUOUS" "$out"
+  _lane "L12 정확 일치가 없고 후보 둘이면 고르지 않고 AMBIGUOUS" 4 "$rc" "AMBIGUOUS" "$out"
+
+  # ── L12b (신규) exact match wins — 정확 일치가 있으면 별칭이 같이 있어도 이긴다 ──
+  #   🟥 **격리된 트리에서 돌린다.** L12 의 모호 픽스처가 $PH/$TR 에 남아 있으므로 같은 트리에서
+  #   돌리면 rc=4 가 eta 때문인지 eta_x 때문인지 **귀속이 안 된다**(초판이 그렇게 틀렸다).
+  _PH2="$(mktemp -d)"; _TR2="$(mktemp -d)"
+  mkdir -p "$_PH2/eta" "$_PH2/eta-dev" "$_TR2/eta"
+  out="$(FH_PROJECTS_HOME="$_PH2" FH_TRACKS_ROOT="$_TR2" bash "$SELF" discover 2>&1)"; rc=$?
+  case "$out" in
+    *AMBIGUOUS*) _lane "L12b exact match wins — eta+eta-dev 에서 모호로 안 떨어진다" 0 4 "" "$out" ;;
+    *)           _lane "L12b exact match wins — eta+eta-dev 에서 모호로 안 떨어진다" "$rc" "$rc" "" "$out" ;;
+  esac
+  rm -rf "$_PH2" "$_TR2"
 
   # ── L13 같은 id 를 여러 선언이 주장하면 **이름으로 표면화**한다 ────────────
   #   recall arm(2026-08-16 dominance 측정)이 지목한 결함이고, **기계 스캔 초판은 못 봤다.**

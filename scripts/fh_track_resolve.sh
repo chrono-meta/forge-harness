@@ -92,6 +92,28 @@ fh_resolve_track_root() {
   #    초판은 «항상 0, 판정은 note 로» 였는데 cross-family 가 지목했다: 종료코드만 읽는 호출자에게
   #    AMBIGUOUS 와 UNRESOLVED 가 **둘 다 성공**으로 보였다. note 는 그대로 두되 rc 를 타입화한다.
   #      0 = 해소 · 1 = UNRESOLVED · 2 = AMBIGUOUS · 3 = ARGS(전제 파손, «peer 없음» 이 아니다)
+  # ── exact match wins (2026-09-14 · pmh-dev #80 B안, 하류 포크 운영자 결정) ───────
+  # 상황: 한 노드에 `~/projects/<name>`(실물)와 `~/projects/<name>-dev`(대응 포크)가 동시에
+  # 있어 `mate` 가 AMBIGUOUS(rc=2)로 떨어지고 어댑터 레인 M2/M3 가 HARNESS_ERROR(10) 였다.
+  # 그 노드의 운영자 결정: «실물 쪽(`<name>`)이어야 한다».
+  #
+  # 🟥 제안은 「first match wins」였고, 그것을 **「exact match wins」로 좁혀서** 받았다.
+  #    후보 1번이 언제나 정확 일치라 `mate` 사례에선 두 규약이 **같은 답**을 낸다 — 갈리는 것은
+  #    **정확 일치가 없을 때**다. `my_repo` 가 없고 `my_repo-dev` · `my-repo` 가 둘 다 있으면
+  #    「first match wins」는 `my_repo-dev` 를 **조용히** 고르는데, 그건 이 AMBIGUOUS 가드가
+  #    막으려고 존재하는 바로 그 형태다. 넓은 쪽을 받으면 가드가 자기 목적을 잃는다.
+  #    ⇒ 정확 일치가 **있을 때만** 우선하고, 없으면 종전대로 AMBIGUOUS 다.
+  #
+  # ⚠️ 잃는 것을 이름으로 남긴다: 정확 일치가 이겼을 때 «별칭도 존재한다» 는 사실이 출력에
+  #    안 실린다(note 가 비어서 단독 해소와 바이트 동일하다). 출력 계약을 안 건드리는 쪽을
+  #    골랐다 — 소비자 4종과 pmh 레인이 이 문자열을 읽는다. 알고 싶으면 호출자가 디렉터리를
+  #    직접 세면 된다(정보가 파괴되는 게 아니라 이 채널에 안 싣는 것이다).
+  case "$hits" in
+    *"/$n/"*)
+      printf '%s|' "$root/$n"
+      return 0 ;;
+  esac
+
   if [ "$nh" -gt 1 ]; then
     printf '%s|AMBIGUOUS:%s' "$root/$n" "$list"
     return 2

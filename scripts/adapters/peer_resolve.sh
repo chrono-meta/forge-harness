@@ -59,6 +59,10 @@ type fh_resolve_track_root >/dev/null 2>&1 || fh_resolve_track_root() {
     hits="$hits $c"; [ -n "$first" ] || first="$c"
   done
   nh=$(printf '%s' "$hits" | wc -w | tr -d ' ')
+  # exact match wins (2026-09-14 · pmh-dev #80 B안) — 정본 fh_track_resolve.sh 와 **같은 규약**.
+  # 🟥 스텁은 라이브러리 부재 시의 degrade 경로다. 여기에 규약을 안 실으면 «정상 실행» 과
+  #    «degrade 실행» 이 **다른 답**을 내고, 그 차이는 조용하다.
+  case " $hits " in *" $n "*) printf '%s|' "$root/$n"; return 0 ;; esac
   if [ "${nh:-0}" -gt 1 ]; then
     printf '%s|AMBIGUOUS:%s' "$root/$n" "$(printf '%s' "$hits" | sed 's/^ //; s/ /,/g')"; return 0
   fi
