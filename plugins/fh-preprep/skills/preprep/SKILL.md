@@ -200,9 +200,15 @@ python3 "$SKILL/preprep.py"
 같은 85건이 있다**(해시 동일, 2026-09-11 실측). 저자는 그 글자를 찍은 적이 없다. 진짜 이탈은 3런
 하나뿐이었고(코드 데모의 고정폭 서체) 그건 «의도»였다. ⇒ 판별자는 **영역 + 템플릿 해시 대조**이지
 서체 이름이 아니다. 뒤집으면, 템플릿에서 **갈라진** 마스터·레이아웃은 반대로 **저자 책임**이라 그
-사실을 따로 보고한다. 코드: `lane_font.py` · self-test: `test_lane_font.py`(21항) · 레인 래퍼 `scripts/test_preprep_font_lanes.sh`
+사실을 따로 보고한다. 코드: `lane_font.py` · self-test: `test_lane_font.py`(**42항** — 5라운드에서 30→42) · 레인 래퍼 `scripts/test_preprep_font_lanes.sh`
 (되돌림 프로브 `fixtures/font_revert_probe.py`). known-negative 가 «서체 하나뿐인 덱»이 아니라
 **«마스터에 이질 서체가 있지만 템플릿과 동일한 덱»** 인 것이 핵심이다 — 그게 실제로 틀렸던 자리다.
+
+🟥 **이 레인이 «안 읽는» 자리는 0 이 아니라 UNMEASURED 로 나간다** (5라운드 신설). 차트
+(`ppt/charts/`)·SmartArt(`ppt/diagrams/`) 안의 글자는 화면에 렌더되지만 `slides/` 밖이라 스캔
+범위가 아니고, DrawingML 을 `a` 가 아닌 접두사로 묶은 장도 이 정규식 스캐너가 못 읽는다. 둘 다
+**그런 자리가 있으면 세어서 노트로 낸다** — 「안 읽었다」를 「이탈 없다」로 렌더하지 않는 것이
+이 레인 전체의 규율이다([[feedback_not_found_is_not_zero_family]]).
 
 🟥 **cross-family 2라운드가 판정을 한 번 뒤집었고, 그 되돌림 자체가 계약이다.** 1라운드는
 «템플릿 자신의 마스터/레이아웃이 쓰는 서체는 오탐이니 노트로 강등하라»고 했고 그렇게 고쳤다.

@@ -41,15 +41,17 @@ import test_lane_font as T     # noqa: E402
 
 def _widen(z):
     """뮤턴트: 상속 영역까지 판정 대상에 넣는다 = 영역 분리를 죽인다."""
-    rows, n = _widen.orig(z)
+    # 🟥 반환 모양은 slide_runs 의 계약이다 — 2026-09-14(5라운드)에 `(rows, n)` 에서
+    #    `(rows, n, foreign_ns)` 로 늘었고, 이 프로브가 **옳게 빨개졌다**(BASE 0 MUT 0 —
+    #    뮤턴트가 2-튜플을 돌려줘 scan() 이 «계기 오류» 로 떨어졌다). 지우지 말고 교체한다.
+    rows, n, foreign = _widen.orig(z)
     for name in z.namelist():
         if re.match(r'ppt/(slideMasters|slideLayouts)/[^/]+\.xml$', name):
             for tf in L._typefaces(z, name):
                 if tf and not L.THEME_REF.match(tf):
-                    # 🟥 튜플 모양은 slide_runs 의 계약이다 — (장, 서체, 슬롯, 텍스트, 출처).
-                    #    계약이 바뀌면 이 프로브가 빨개진다. 빨개지는 것이 옳다.
+                    # 🟥 행 모양도 계약이다 — (장, 서체, 슬롯, 텍스트, 출처).
                     rows.append((0, tf, 'latin', '(상속)', 'inherited'))
-    return rows, n
+    return rows, n, foreign
 
 
 def separation(d):

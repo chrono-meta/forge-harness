@@ -39,6 +39,11 @@ Mono, 그리고 그건 «의도»였다). ⇒ 판별자는 **영역 + 템플릿 
 🟥 **이 레인이 구조적으로 못 보는 것**: ⓐ 이미지에 구워진 글자 ⓑ 폰트가 설치돼 있는지
    (파일은 이름만 적는다 — 없는 서체는 렌더러가 조용히 대체한다) ⓒ 같은 가족의 굵기 변형이
    실제로 존재하는지. 셋 다 **파일 밖**의 사실이라 여기서 0 으로 세지 않는다.
+   ⓓ **차트(`ppt/charts/`)·SmartArt(`ppt/diagrams/`) 안의 글자** — 화면에 렌더되지만 별도
+   부품이라 `slides/` 스캔이 안 닿는다(cross-family R5/codex 지목, 실측 재현). 셋과 달리
+   이건 **파일 «안»**의 사실이라 언젠가 읽을 수 있다 ⇒ 0 으로 세지 않고 **그런 부품이
+   있으면 «UNMEASURED» 노트로 세어 낸다**(`_unscanned_text_parts`). 「안 읽었다」를
+   「이탈 없다」로 렌더하지 않는 것이 이 레인 전체의 규율이다.
 """
 import os
 import re
@@ -66,7 +71,22 @@ _FONT_TAG = re.compile(r'<a:(latin|ea|cs|sym)\b([^>]*?)/?>')
 #    `r:id="rId2"` 를 `id="rId2"` 로 잘못 읽고 **엉뚱한 값을 `id` 키에 넣는다** — 3라운드에서
 #    속성 순서를 고치며 내가 심은 결함이고, 4라운드가 잡았다(실측: 실물 덱이 그 형태라
 #    장 순서가 계속 파일명 순 폴백으로 돌고 있었다).
-_ATTR = re.compile(r'([\w:.-]+)="([^"]*)"')
+# 🟥 XML 은 **작은따옴표 속성**도 허용한다. 큰따옴표만 읽으면 `typeface='X'` 를 통째로
+#    놓치고 — 그런데 **다른 토큰이 하나라도 읽히면 UNMEASURED 도 안 나간다**(아래 참조).
+#    즉 «부분 추출 실패»가 자신 있는 0 으로 렌더된다(cross-family R5/codex 지목).
+_ATTR_RAW = re.compile(r'([\w:.-]+)=(?:"([^"]*)"|\'([^\']*)\')')
+
+
+class _Attr:
+    """`findall` 이 (이름, 값) 쌍을 내도록 감싼다 — 호출부(`dict(_ATTR.findall(...))`)를
+    안 바꾸려고. 큰따옴표 값이 비어 있으면 작은따옴표 조에서 온 값을 쓴다(둘 중 하나만 찬다)."""
+
+    @staticmethod
+    def findall(x):
+        return [(k, dq if dq else sq) for k, dq, sq in _ATTR_RAW.findall(x)]
+
+
+_ATTR = _Attr()
 
 
 def font_refs(xml):
@@ -85,6 +105,18 @@ def font_names(xml):
     return [t for _, t in font_refs(xml)]
 
 
+# 🟥 **주석은 어디서도 렌더되지 않는다** — 그런데 정규식 스캔에는 그대로 잡힌다.
+#    cross-family R5(codex) 지적: 템플릿 장표에 주석으로 남은 `<a:latin typeface="X"/>` 가
+#    허용 집합으로 «승격»되어, 덱의 진짜 X 이탈이 조용히 통과한다(실측 재현).
+#    읽는 모든 자리에서 먼저 죽인다 — 유도 쪽과 판정 쪽 **양쪽**에.
+_XML_COMMENT = re.compile(r'<!--.*?-->', re.S)
+
+
+def live_xml(x):
+    """렌더 후보만 남긴 XML — 주석 제거. 유도·판정 어느 쪽에서도 같은 것을 본다."""
+    return _XML_COMMENT.sub('', x)
+
+
 _PART = re.compile(r'ppt/(slides|slideLayouts|slideMasters|theme)/[^/]+\.xml$')
 
 
@@ -100,7 +132,7 @@ def _parts(z):
 
 def _typefaces(z, name):
     """한 부품이 쓰는 서체 이름들 (등장 순서 유지, 중복 포함)."""
-    return font_names(z.read(name).decode('utf-8', 'replace'))
+    return font_names(live_xml(z.read(name).decode('utf-8', 'replace')))
 
 
 def theme_fonts(z):
@@ -108,7 +140,7 @@ def theme_fonts(z):
     got = set()
     for n in z.namelist():
         if re.match(r'ppt/theme/theme\d+\.xml$', n):
-            x = z.read(n).decode('utf-8', 'replace')
+            x = live_xml(z.read(n).decode('utf-8', 'replace'))
             for tag in ('majorFont', 'minorFont'):
                 m = re.search(r'<a:%s>.*?</a:%s>' % (tag, tag), x, re.S)
                 if m:
@@ -135,6 +167,7 @@ def _occurrences(xml, where):
        달라졌다»로 떴다(2026-09-11). 있지도 않은 글자의 서체는 이탈이 아니다.
     """
     out = []
+    xml = live_xml(xml)
     # ① 런과 필드 — 찍힌 글자가 있다
     for tag in ('r', 'fld'):
         for m in re.finditer(r'<a:%s[ >].*?</a:%s>' % (tag, tag), xml, re.S):
@@ -191,12 +224,13 @@ def slide_runs(z):
         # 순서를 못 읽어도 «못 읽었다»로 끝내지 않는다 — 파일명 순으로라도 센다(번호는 근사).
         order = sorted(int(re.search(r'slide(\d+)', n).group(1)) for n in z.namelist()
                        if re.match(r'ppt/slides/slide\d+\.xml$', n))
-    rows = []
+    rows, foreign = [], set()
     for i, sn in enumerate(order, 1):
         x = z.read('ppt/slides/slide%d.xml' % sn).decode('utf-8', 'replace')
+        foreign |= set(foreign_dml_prefixes(x))
         for tf, slot, txt, src in _occurrences(x, 'slide'):
             rows.append((i, tf, slot, txt, src))
-    return rows, len(order)
+    return rows, len(order), sorted(foreign)
 
 
 def drifted_occurrences(z, drifted, zt=None):
@@ -221,12 +255,13 @@ def drifted_occurrences(z, drifted, zt=None):
             try:
                 before = set(font_names(re.sub(
                     r'<a:endParaRPr\b[^>]*(?:/>|>.*?</a:endParaRPr>)', '',
-                    zt.read(name).decode('utf-8', 'replace'), flags=re.S)))
+                    live_xml(zt.read(name).decode('utf-8', 'replace')), flags=re.S)))
             except Exception:
                 before = set()      # 템플릿에 없던 부품(신설) — 전부가 새 것이다
         # 🟥 렌더되지 않는 자리는 여기서도 안 센다 — `_occurrences` 만 엄격하고 여기는
         #    파일 전체를 훑으면, 빈 문단의 `endParaRPr` 하나로 갈라짐 오탐이 난다(R3-5).
-        scanned = re.sub(r'<a:endParaRPr\b[^>]*(?:/>|>.*?</a:endParaRPr>)', '', x, flags=re.S)
+        scanned = re.sub(r'<a:endParaRPr\b[^>]*(?:/>|>.*?</a:endParaRPr>)', '',
+                         live_xml(x), flags=re.S)
         for slot, tf in font_refs(scanned):
             if not THEME_REF.match(tf) and tf not in before:
                 rows.append((area, name, tf, slot))
@@ -234,21 +269,27 @@ def drifted_occurrences(z, drifted, zt=None):
 
 
 def _allow_from_template(zt):
-    """템플릿의 slides/ 가 실제로 쓰는 서체 = 허용 집합. 「덱 자신의 분포가 기준」.
+    """템플릿의 slides/ 가 실제로 **렌더하는** 서체 = 허용 집합. 「덱 자신의 분포가 기준」.
 
     🟥 **마스터·레이아웃은 일부러 안 넣는다.** 넣으면 상속된 잠재 기본값(이 코퍼스의
     Helvetica Neue)까지 «규정된 서체»가 되어 탐지력이 깎인다. 대신 `_template_own_fonts()`
     가 그 집합을 따로 들고, 거기 있는 서체의 지적은 **finding 이 아니라 노트로 강등**한다
-    (cross-family agy 지적 A2 — 오탐이되, 허용으로 승격시킬 일은 아니다)."""
+    (cross-family agy 지적 A2 — 오탐이되, 허용으로 승격시킬 일은 아니다).
+
+    🟥 **유도는 판정과 «같은 함수»로 한다 — 이 비대칭이 두 번 뚫렸다.**
+    4라운드(R4-3)가 템플릿 `endParaRPr` 잔재의 승격을 잡았고 그 한 자리만 깁었는데,
+    5라운드(codex)가 **같은 뿌리의 다른 자리**를 냈다: 글자 없는 빈 런(`<a:r>` 에 `<a:t>`
+    가 비었거나 없음)의 서체도 승격된다 — 실측 재현, 컨트롤(빈 런 없는 템플릿)은 finding 1.
+    한 군데씩 깁는 대신 **`_occurrences()` 를 그대로 재사용**한다: 판정이 세지 않는 것은
+    유도도 못 센다. 한쪽만 관대한 정규화가 «한쪽에서만 통과하는 입력» 을 만드는 형태다
+    ([[feedback_divergent_leniency_duplicate_normalizers]] ·
+     [[feedback_half_fix_propagation_boundary]])."""
     got = set()
     for n in zt.namelist():
         if re.match(r'ppt/slides/slide\d+\.xml$', n):
-            # 🟥 템플릿의 «렌더 안 되는» 끝 서식은 허용 집합에 넣지 않는다 — 넣으면 템플릿의
-            #    보이지도 않는 잔재가 덱 전체의 합법 서체로 **승격**된다(4라운드 지목).
-            #    판정 쪽(`_occurrences`)만 엄격하고 유도 쪽이 헐거우면 그 비대칭이 곧 누수다.
-            x = re.sub(r'<a:endParaRPr\b[^>]*(?:/>|>.*?</a:endParaRPr>)', '',
-                       zt.read(n).decode('utf-8', 'replace'), flags=re.S)
-            got |= {t for t in font_names(x) if t and not THEME_REF.match(t)}
+            x = zt.read(n).decode('utf-8', 'replace')
+            got |= {tf for tf, _slot, _t, _src in _occurrences(x, 'slide')
+                    if tf and not THEME_REF.match(tf)}
     return got | theme_fonts(zt)
 
 
@@ -259,6 +300,44 @@ def _template_own_fonts(zt):
         if re.match(r'ppt/(slideMasters|slideLayouts)/[^/]+\.xml$', n):
             got |= {t for t in _typefaces(zt, n) if t and not THEME_REF.match(t)}
     return got
+
+
+_DML_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main'
+_NS_DECL = re.compile(r'xmlns:([\w.-]+)="' + re.escape(_DML_NS) + r'"')
+
+
+def foreign_dml_prefixes(xml):
+    """DrawingML 네임스페이스를 `a` 가 아닌 접두사로 묶은 자리 — 이 레인은 못 읽는다.
+
+    🟥 XML 에서 접두사는 «이름»이 아니라 **바인딩**이라 `a:` 가 의무가 아니다. PowerPoint 는
+       항상 `a:` 를 쓰지만 제3자 생성기는 그렇지 않을 수 있다. 정규식 스캐너는 그걸 못 읽고,
+       더 나쁘게는 **다른 런이 하나라도 읽히면 `seen` 이 비지 않아 UNMEASURED 도 안 나간다**.
+       ⇒ 0 으로 세지 말고 **못 쟀다고 세라**(cross-family R5/codex 지목, 실측 재현).
+    """
+    return sorted({p for p in _NS_DECL.findall(xml) if p != 'a'})
+
+
+_TEXT_PART = re.compile(r'ppt/(charts|diagrams|notesSlides)/[^/]+\.xml$')
+
+
+def _unscanned_text_parts(z):
+    """`slides/` 밖인데 **서체를 들고 있는** 부품 — 이 레인이 안 읽는 자리.
+
+    🟥 반환은 «개수»다. 0 이면 「그런 부품이 없다」이고, N 이면 「N 개를 **안 쟀다**」다.
+       둘을 같은 0 으로 접으면 그것이 이 저장소가 이름으로 관리하는
+       [[feedback_not_found_is_not_zero_family]] 다."""
+    out = collections.Counter()
+    for n in z.namelist():
+        m = _TEXT_PART.match(n)
+        if not m:
+            continue
+        try:
+            x = live_xml(z.read(n).decode('utf-8', 'replace'))
+        except Exception:
+            continue
+        if [t for t in font_names(x) if t and not THEME_REF.match(t)]:
+            out[m.group(1)] += 1
+    return out
 
 
 def _norm(s):
@@ -326,7 +405,7 @@ def scan(cfg, root):
 
     try:
         z = zipfile.ZipFile(deck)
-        rows, nslides = slide_runs(z)
+        rows, nslides, foreign_ns = slide_runs(z)
         parts = _parts(z)
         th = theme_fonts(z)
     except Exception as e:
@@ -446,6 +525,16 @@ def scan(cfg, root):
                  f'허용 {len(allow)}가족 · 이탈 {len(offenders)}종 · 선언 면제 {sum(exempted.values())}회 · '
                  f'그중 템플릿 자신도 쓰는 이름 {sum(demoted.values())}회'
                  + ('' if rows else ' — 🟥 0 이면 UNMEASURED, 「이탈 없음」이 아니다'))
+    if foreign_ns:
+        notes.append('L15 font : 🟥 DrawingML 을 `a` 가 아닌 접두사로 묶은 장이 있다 ('
+                     + ' · '.join(foreign_ns) + ') — 이 스캐너는 `a:` 만 읽는다. '
+                       '그 자리의 서체는 UNMEASURED (0 아님)')
+    unscanned = _unscanned_text_parts(z)
+    if unscanned:
+        notes.append('L15 font : 🟥 이 레인이 **안 읽는** 부품에 서체가 있다 — '
+                     + ' · '.join(f'{k} {v}개' for k, v in sorted(unscanned.items()))
+                     + '. 화면에 렌더되지만 `slides/` 밖이라 스캔 범위가 아니다 — '
+                       'UNMEASURED (0 아님. 「이탈 없음」으로 읽지 마라)')
     if inherited_ok:
         notes.append('L15 font : 상속 확인(템플릿과 해시 동일) — ' + ' · '.join(sorted(inherited_ok))
                      + ' 의 서체는 저자 산물이 아니므로 판정하지 않는다')

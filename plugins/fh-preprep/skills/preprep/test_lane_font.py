@@ -160,34 +160,71 @@ def build(path, slide_runs, master_font='Helvetica Neue', theme_font='Brand Disp
     return path
 
 
-# 🟥 장 순서를 실제로 재려면 **2장 이상**이어야 한다. 1장짜리로는 파일명 순 폴백과
-#    정상 경로가 같은 답을 내서 «초록인 이유»를 구분할 수 없다 — R3-4 레인이 그래서
-#    엉뚱한 이유로 초록이었고, 4라운드가 그 뒤의 진짜 결함(r:id 파싱)을 잡았다.
+# 🟥 장 순서를 실제로 재려면 **2장 이상이면서 발표순 ≠ 파일명순** 이어야 한다.
+#    1장짜리로는 파일명 순 폴백과 정상 경로가 같은 답을 내서 «초록인 이유»를 구분할 수 없다 —
+#    R3-4 레인이 그래서 엉뚱한 이유로 초록이었고, 4라운드가 그 뒤의 진짜 결함(r:id 파싱)을 잡았다.
+# 🟥 **그런데 4라운드가 그 자리에 놓은 2장 픽스처도 안 꼬여 있었다**(5라운드 실측, 자력 적발 0 —
+#    되돌림 프로브와 cross-family(codex)가 «독립적으로» 같은 것을 지목했다). 옛 판은
+#    `rId2→slide1 · rId1→slide2` 라 **발표순이 [slide1, slide2] = 파일명순**이었다. 그래서
+#    `_ATTR` 의 네임스페이스 수리(R4-1)를 **통째로 되돌려도 self-test 가 30/30 초록**이었다.
+#    지금은 `rId2→slide2` 로 묶어 **발표순 [slide2, slide1] ≠ 파일명순 [slide1, slide2]** 다.
+#    같은 되돌림에 이제 이 레인이 적색이 된다(BASE «slides 2» → MUT «slides 1»).
 PRES_2 = ('<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" '
           'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
           '<p:sldIdLst><p:sldId id="256" r:id="rId2"/><p:sldId id="257" r:id="rId1"/>'
           '</p:sldIdLst></p:presentation>')
-# rId2→slide1, rId1→slide2 : 즉 «발표 1장 = slide1.xml, 2장 = slide2.xml» 이 아니라 그 반대가
-# 되도록 일부러 꼬아 둔다. 파일명 순 폴백이면 순서가 뒤집혀 면제가 엉뚱한 장에 걸린다.
+# rId2→slide2, rId1→slide1 : 발표 1장 = slide2.xml, 발표 2장 = slide1.xml.
+# 파일명 순 폴백이면 순서가 뒤집혀 장 번호가 어긋나고 면제가 엉뚱한 장에 걸린다.
 PRES_RELS_2 = ('<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-               '<Relationship Id="rId2" Target="slides/slide1.xml" '
+               '<Relationship Id="rId2" Target="slides/slide2.xml" '
                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide"/>'
-               '<Relationship Id="rId1" Target="slides/slide2.xml" '
+               '<Relationship Id="rId1" Target="slides/slide1.xml" '
                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide"/>'
                '</Relationships>')
+# 🟥 R3-4 전용 — 위와 같은 꼬임에 **Target 이 Id 보다 앞에** 온다. 둘을 같이 걸어야
+#    «rels 속성 순서»의 수리가 되돌려질 때 적색이 된다(1장짜리로는 폴백과 같은 답).
+PRES_RELS_2_TARGET_FIRST = (
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    '<Relationship Target="slides/slide2.xml" Id="rId2" '
+    'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide"/>'
+    '<Relationship Target="slides/slide1.xml" Id="rId1" '
+    'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide"/>'
+    '</Relationships>')
 
 
-def build2(path, runs1, runs2, tpl_theme='Brand Display Bold'):
-    """2장 덱. 발표순 1장=slide1, 2장=slide2 (rId 로 그렇게 묶는다)."""
+def build2(path, runs1, runs2, tpl_theme='Brand Display Bold', rels_xml=None):
+    """2장 덱. **발표순** 1장=runs1 · 2장=runs2.
+
+    🟥 파일명순은 그 반대다 — runs1 은 `slide2.xml`, runs2 는 `slide1.xml` 에 들어간다.
+       그래야 «장 순서를 못 읽고 파일명 순으로 떨어지는» 결함이 **관측 가능한 차이**를 낸다.
+    """
     with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as z:
         z.writestr('[Content_Types].xml', CT)
         z.writestr('ppt/presentation.xml', PRES_2)
-        z.writestr('ppt/_rels/presentation.xml.rels', PRES_RELS_2)
-        z.writestr('ppt/slides/slide1.xml', slide(runs1))
-        z.writestr('ppt/slides/slide2.xml', slide(runs2))
+        z.writestr('ppt/_rels/presentation.xml.rels', rels_xml or PRES_RELS_2)
+        z.writestr('ppt/slides/slide2.xml', slide(runs1))
+        z.writestr('ppt/slides/slide1.xml', slide(runs2))
         z.writestr('ppt/slideMasters/slideMaster1.xml', master('Helvetica Neue'))
         z.writestr('ppt/theme/theme1.xml', theme(tpl_theme))
     return path
+
+
+def slot_run(text, font, slot):
+    """`<a:ea>` / `<a:cs>` 슬롯에만 서체가 있는 런 — 한중일·아랍 문자의 글꼴 자리."""
+    return (f'<a:r><a:rPr lang="ko-KR"><a:{slot} typeface="{font}"/></a:rPr>'
+            f'<a:t>{text}</a:t></a:r>')
+
+
+def comment_run(text, font):
+    """**주석 처리된 런** — 도형을 통째로 주석으로 남긴 형태. 어디서도 렌더되지 않는다.
+
+    🟥 픽스처는 «뚫리는 표기»여야 한다. 벌거벗은 `<!-- <a:latin .../> -->` 로는 이 레인이
+       못 판별한다 — 그건 런 밖이라 `_occurrences` 가 어차피 안 본다(주석 제거를 되돌려도
+       초록이었다, 5라운드 자기 되돌림 실측). 런 «안»에 넣어야 주석 제거가 하중을 진다
+       ([[feedback_fixture_must_use_the_breaking_spelling]]).
+    """
+    return (f'<!-- <a:r><a:rPr lang="ko-KR"><a:latin typeface="{font}"/></a:rPr>'
+            f'<a:t>{text}</a:t></a:r> -->')
 
 
 def sym_run(font):
@@ -244,8 +281,11 @@ def main():
         k4 = build(os.path.join(d, 'k4.pptx'), [run('본문', 'Brand Display Bold')],
                    theme_font='Papyrus')
         f4, _ = lane_font.scan(cfg_for(k4, tpl, GOOD), d)
-        (ok if [x for x in f4 if x[1] == 'font-theme']
-         else bad)('K4: 테마 이탈이 테마 1건으로 보고된다')
+        # 🟥 5라운드(codex) 지적 — 옛 판은 «있다»만 봤다. 이름이 «테마 **1건**으로»인데
+        #    2건이 나와도 초록이었다(중복 지적을 심어 실측: 30/30 그대로). 개수를 박는다.
+        _f4t = [x for x in f4 if x[1] == 'font-theme']
+        (ok if len(_f4t) == 1 and not [x for x in f4 if x[1] == 'font']
+         else bad)(f'K4: 테마 이탈이 테마 «1건»으로만 보고된다 (theme={len(_f4t)} · slide={len([x for x in f4 if x[1] == "font"])})')
 
         # K5 — 선언 면제
         f5, n5 = lane_font.scan(
@@ -295,13 +335,20 @@ def main():
         (ok if [x for x in f11 if 'Comic Sans' in x[3]]
          else bad)('K11 [S3]: 장 번호 필드(a:fld)의 이탈이 잡힌다')
 
-        # K12 [A3+오탐] 렌더 안 되는 둘은 잡으면 안 된다 — 빈 런 · endParaRPr
+        # K12 [A3] 빈 런은 렌더 안 되므로 이탈이 아니다
+        # 🟥 5라운드(codex) 지적으로 **쪼갰다** — 옛 판은 빈 런과 endParaRPr 을 한 픽스처에
+        #    넣고 `not f12` 만 봤다. 통과가 둘 중 어느 쪽에 귀속되는지 알 수 없었다.
         k12 = build(os.path.join(d, 'k12.pptx'),
-                    [run('본문', 'Brand Display Bold'), empty_run('Comic Sans MS'),
-                     end_para('Papyrus')])
+                    [run('본문', 'Brand Display Bold'), empty_run('Comic Sans MS')])
         f12, _ = lane_font.scan(cfg_for(k12, tpl, GOOD), d)
         (ok if not f12
-         else bad)(f'K12 [A3]: 빈 런·endParaRPr 는 렌더 안 되므로 이탈 아님 (실제 {len(f12)}건)')
+         else bad)(f'K12 [A3]: 빈 런은 렌더 안 되므로 이탈 아님 (실제 {len(f12)}건)')
+        # K12b endParaRPr 단독 — 같은 이유로 따로 잰다
+        k12b = build(os.path.join(d, 'k12b.pptx'),
+                     [run('본문', 'Brand Display Bold'), end_para('Papyrus')])
+        f12b, _ = lane_font.scan(cfg_for(k12b, tpl, GOOD), d)
+        (ok if not f12b
+         else bad)(f'K12b: 빈 문단 endParaRPr 은 렌더 안 되므로 이탈 아님 (실제 {len(f12b)}건)')
 
         # K13 [R2-3, 1라운드 A2 되돌림] 템플릿 마스터가 쓰는 서체여도 **finding 은 남는다**.
         #     억제하면 저자가 Office 기본값(Arial·Calibri)으로 본문을 찍어도 종료코드가 안 움직인다.
@@ -363,10 +410,14 @@ def main():
          else bad)('R3-2 [S]: 속성 순서와 무관하게 서체를 읽는다')
 
         # R3-4 [S/A] rels 의 Id/Target 순서가 뒤집혀도 장 순서를 읽는다
-        r3b = build(os.path.join(d, 'r3b.pptx'), [run('코드', 'Comic Sans MS')],
-                    rels_xml=PRES_RELS_REVERSED)
+        # 🟥 5라운드 교체 — 옛 판은 **1장 픽스처**라 파일명 순 폴백과 정상 경로가 같은 답
+        #    («slides 1»)을 냈다. rels 수리를 되돌려도 초록이었다(실측). 2장 + 꼬임 +
+        #    Target-before-Id 로 바꿔 **되돌리면 «slides 1» 로 어긋나게** 만든다.
+        r3b = build2(os.path.join(d, 'r3b.pptx'),
+                     [run('본문', 'Brand Display Bold')], [run('코드', 'Comic Sans MS')],
+                     rels_xml=PRES_RELS_2_TARGET_FIRST)
         f3b, n3b = lane_font.scan(cfg_for(r3b, tpl, GOOD), d)
-        (ok if [x for x in f3b if 'slides 1' in x[2]]
+        (ok if [x for x in f3b if 'slides 2' in x[2]]
          else bad)(f'R3-4 [S]: rels 속성 순서가 달라도 장 번호가 맞다 ({[x[2] for x in f3b]})')
 
         # R3-3 [A] 테마 이탈도 선언 면제를 존중한다
@@ -433,6 +484,104 @@ def main():
         f44, _ = lane_font.scan(cfg_for(r44, tpl, GOOD), d)
         (ok if [x for x in f44 if 'Wingdings' in x[3]]
          else bad)('R4-4 [S]: a:sym 기호 슬롯의 이탈도 잡는다')
+
+        # ── R5: 5라운드 (cross-family codex + 되돌림 프로브) ────────────────────
+        # R5-1 [S] 템플릿의 «렌더 안 되는» 토큰이 허용 집합으로 승격되면 안 된다.
+        #      4라운드가 endParaRPr 한 자리만 깁었고, 같은 뿌리의 다른 자리가 남아 있었다:
+        #      글자 없는 빈 런 · XML 주석. 유도를 판정과 같은 함수(`_occurrences`)로 통일했다.
+        tpl51 = build(os.path.join(d, 'tpl51.pptx'),
+                      [run('본문', 'Brand Display Bold'), empty_run('Comic Sans MS')])
+        r51 = build(os.path.join(d, 'r51.pptx'),
+                    [run('본문', 'Brand Display Bold'), run('코드', 'Comic Sans MS')])
+        f51, _ = lane_font.scan(cfg_for(r51, tpl51), d)      # allow 미선언 → 템플릿에서 유도
+        (ok if [x for x in f51 if 'Comic Sans' in x[3]]
+         else bad)(f'R5-1 [S]: 템플릿의 «빈 런» 서체는 허용으로 승격되지 않는다 (실제 {len(f51)}건)')
+        # R5-1 컨트롤 — 템플릿이 그 서체를 **실제로 찍으면** 허용이 맞다(과교정 방지)
+        tpl51c = build(os.path.join(d, 'tpl51c.pptx'),
+                       [run('본문', 'Brand Display Bold'), run('코드', 'Comic Sans MS')])
+        f51c, _ = lane_font.scan(cfg_for(r51, tpl51c), d)
+        (ok if not f51c
+         else bad)(f'R5-1 컨트롤: 템플릿이 실제로 찍는 서체는 허용된다 (실제 {len(f51c)}건)')
+        # R5-1b [S] 주석 안의 서체 선언도 승격되면 안 된다 — 어디서도 렌더되지 않는다
+        tpl51b = build(os.path.join(d, 'tpl51b.pptx'),
+                       [comment_run('주석 처리된 도형', 'Comic Sans MS'), run('본문', 'Brand Display Bold')])
+        f51b, _ = lane_font.scan(cfg_for(r51, tpl51b), d)
+        (ok if [x for x in f51b if 'Comic Sans' in x[3]]
+         else bad)(f'R5-1b [S]: 템플릿 주석의 서체는 허용으로 승격되지 않는다 (실제 {len(f51b)}건)')
+        # R5-1c 판정 쪽에서도 주석은 안 센다 (같은 규칙이 양쪽에 걸린다 — 비대칭 재발 방지)
+        r51c = build(os.path.join(d, 'r51c.pptx'),
+                     [run('본문', 'Brand Display Bold'), comment_run('주석 처리된 도형', 'Papyrus')])
+        f51d, _ = lane_font.scan(cfg_for(r51c, tpl, GOOD), d)
+        (ok if not f51d
+         else bad)(f'R5-1c: 덱 쪽 주석도 이탈로 세지 않는다 (실제 {len(f51d)}건)')
+
+        # R5-3 [S] `ea`/`cs` 슬롯 — 1라운드(A1)가 연 자리인데 **레인이 없었다**.
+        #      `_FONT_TAG` 에서 `ea|cs` 를 빼도 self-test 가 30/30 초록이었다(되돌림 실측).
+        r53 = build(os.path.join(d, 'r53.pptx'),
+                    [run('본문', 'Brand Display Bold'), slot_run('한자', 'Comic Sans MS', 'ea')])
+        f53, _ = lane_font.scan(cfg_for(r53, tpl, GOOD), d)
+        (ok if [x for x in f53 if 'Comic Sans' in x[3] and 'ea' in x[4]]
+         else bad)(f'R5-3 [S]: a:ea 슬롯의 이탈도 잡고 슬롯 이름을 낸다 (실제 {len(f53)}건)')
+        r53b = build(os.path.join(d, 'r53b.pptx'),
+                     [run('본문', 'Brand Display Bold'), slot_run('نص', 'Papyrus', 'cs')])
+        f53b, _ = lane_font.scan(cfg_for(r53b, tpl, GOOD), d)
+        (ok if [x for x in f53b if 'Papyrus' in x[3] and 'cs' in x[4]]
+         else bad)(f'R5-3b [S]: a:cs 슬롯의 이탈도 잡는다 (실제 {len(f53b)}건)')
+
+        # R5-4 [A] 차트·SmartArt — 렌더되지만 `slides/` 밖이라 안 읽는다.
+        #      5라운드(codex) 지목: 옛 판은 그 상태에서 «이탈 0종» 을 자신 있게 찍었다.
+        #      스캔 범위를 넓히는 것은 별도 작업이고, 여기서 닫는 것은 **0 으로 렌더하지 않기**다.
+        CHART = ('<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" '
+                 'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:title>'
+                 '<c:tx><c:rich><a:p><a:r><a:rPr><a:latin typeface="Comic Sans MS"/></a:rPr>'
+                 '<a:t>차트 제목</a:t></a:r></a:p></c:rich></c:tx></c:title></c:chart></c:chartSpace>')
+        r54 = build(os.path.join(d, 'r54.pptx'), [run('본문', 'Brand Display Bold')])
+        with zipfile.ZipFile(r54, 'a', zipfile.ZIP_DEFLATED) as _z:
+            _z.writestr('ppt/charts/chart1.xml', CHART)
+        f54, n54 = lane_font.scan(cfg_for(r54, tpl, GOOD), d)
+        (ok if any('안 읽는' in x and 'UNMEASURED' in x for x in n54)
+         else bad)('R5-4 [A]: 안 읽는 부품(차트)에 서체가 있으면 UNMEASURED 로 센다')
+        # R5-4 컨트롤 — 그런 부품이 없으면 그 노트는 안 나온다 (계기가 «항상 찍는» 게 아니다)
+        f54b, n54b = lane_font.scan(cfg_for(build(os.path.join(d, 'r54b.pptx'),
+                                                  [run('본문', 'Brand Display Bold')]),
+                                            tpl, GOOD), d)
+        (ok if not any('안 읽는' in x for x in n54b)
+         else bad)('R5-4 컨트롤: 그런 부품이 없으면 노트도 없다')
+
+        # R5-5 [S] 작은따옴표 속성 — XML 이 허용한다. 못 읽으면 «부분 추출 실패»가
+        #      다른 런 덕에 UNMEASURED 도 못 타고 자신 있는 «이탈 0종» 으로 나간다.
+        r55 = build(os.path.join(d, 'r55.pptx'),
+                    [run('본문', 'Brand Display Bold'),
+                     "<a:r><a:rPr lang=\'ko-KR\'><a:latin typeface=\'Comic Sans MS\'/>"
+                     "</a:rPr><a:t>코드</a:t></a:r>"])
+        f55, _ = lane_font.scan(cfg_for(r55, tpl, GOOD), d)
+        (ok if [x for x in f55 if 'Comic Sans' in x[3]]
+         else bad)(f'R5-5 [S]: 작은따옴표 속성의 서체도 읽는다 (실제 {len(f55)}건)')
+
+        # R5-6 [A] DrawingML 을 `a` 아닌 접두사로 묶은 장 — 못 읽는다. 0 이 아니라 «못 쟀다».
+        FOREIGN = ('<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" '
+                   'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
+                   'xmlns:dm="http://schemas.openxmlformats.org/drawingml/2006/main">'
+                   '<p:cSld><p:spTree><p:sp><p:txBody><a:p>'
+                   '<a:r><a:rPr><a:latin typeface="Brand Display Bold"/></a:rPr><a:t>ok</a:t></a:r>'
+                   '<dm:r><dm:rPr><dm:latin typeface="Comic Sans MS"/></dm:rPr>'
+                   '<dm:t>bad</dm:t></dm:r>'
+                   '</a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>')
+        r56 = os.path.join(d, 'r56.pptx')
+        with zipfile.ZipFile(r56, 'w', zipfile.ZIP_DEFLATED) as _z:
+            _z.writestr('[Content_Types].xml', CT)
+            _z.writestr('ppt/presentation.xml', PRES)
+            _z.writestr('ppt/_rels/presentation.xml.rels', PRES_RELS)
+            _z.writestr('ppt/slides/slide1.xml', FOREIGN)
+            _z.writestr('ppt/slideMasters/slideMaster1.xml', master('Helvetica Neue'))
+            _z.writestr('ppt/theme/theme1.xml', theme('Brand Display Bold'))
+        f56, n56 = lane_font.scan(cfg_for(r56, tpl, GOOD), d)
+        (ok if any('접두사' in x and 'UNMEASURED' in x for x in n56)
+         else bad)('R5-6 [A]: `a` 아닌 DrawingML 접두사는 UNMEASURED 로 센다 («이탈 0» 아님)')
+        # R5-6 컨트롤 — 평범한 장에서는 그 노트가 안 나온다
+        _, n56b = lane_font.scan(cfg_for(k1, tpl, GOOD), d)
+        (ok if not any('접두사' in x for x in n56b)
+         else bad)('R5-6 컨트롤: `a:` 만 쓰는 장에는 그 노트가 없다')
 
         # R2-6b 대조 — 갈라진 부품에 «새로» 들인 서체는 여전히 잡힌다 (과교정 방지)
         LAY_NEW = LAY_T.replace('</p:sldLayout>', '<a:latin typeface="Papyrus"/></p:sldLayout>')
