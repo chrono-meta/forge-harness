@@ -236,6 +236,20 @@ Task:
      tracks/_meta/.axes_23_passed_<branch>_<date>.marker with fields axis2-engine / axis2-model /
      floor-status / axis2-evidence. If a skill is unavailable, note "skipped (skill unavailable)".
    - Axis 4: append a one-line predicted-impact entry to tracks/_meta/edit_manifest.yaml.
+5b. 🟥 **COPY the marker's axis lines INTO THE COMMIT MESSAGE.** The marker file lives under
+   `tracks/**`, which is **gitignored** — on a node whose checkout is ephemeral (a cloud session,
+   a throwaway clone) it evaporates the moment the run ends, and CI cannot see gitignored files at
+   all. So the marker must ride the one channel that survives: the commit itself. Put these three
+   lines, verbatim values, in the commit message body:
+       axes-run: ⓐ=… ⓑ=→standpoint ⓒ=… ⓓ=… ⓔ=… ⓕ=…
+       crossfamily: <value> — <grounds>
+       standpoint: <value> — <grounds>
+   Measured 2026-09-14, every `claude/`-prefixed merged PR to date: **#675 and #716, 2 of 2**,
+   changed an FH asset and left **no marker anywhere reachable** — and both were green, because
+   `validate` is structurally blind to `tracks/**`. `scripts/remote_marker_gate.sh` now fails a
+   `claude/*` PR that touches an FH asset without these lines. 🟥 It checks the **form** only —
+   whether the record travelled — never whether the values are true; that judgment stays with the
+   merger (§Mechanization Boundary).
 6. Commit (the hook enforces the gate), push the claude/frontier-auto-* branch, and open a DRAFT pull
    request titled "frontier-auto: <one-line summary>" describing the signal it came from and the
    predicted impact. IF Axis 2 (challenger/steel-quench) was skipped (skill unavailable), the FIRST

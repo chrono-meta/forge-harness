@@ -242,4 +242,39 @@ jobs:
           # lane FAILS rather than skipping — a red CI, not a silent pass. That is the correct
           # direction, and it is written here so the next reader diagnoses it in one step instead
           # of trusting a claim of hermeticity this file used to make.
+
           bash scripts/selfcheck.sh
+
+      # ── 플로어 없는 채널의 4축 마커 (2026-09-14 신설) ─────────────────────────
+      # 4축 게이트의 증거(마커)는 `tracks/**` 에 살고 그건 **gitignored** 다. 저작 노드가 이
+      # 레포의 작업 트리면 맞는 설계다 — 마커는 로컬에 남고 사람이 읽는다.
+      # 🟥 그런데 원격 자율 노드(클라우드 세션)는 작업 트리가 휘발한다. `claude/*` 브랜치가
+      #    FH 자산을 커밋하면 마커가 그 체크아웃과 함께 사라지고, 이 워크플로는 gitignored
+      #    파일을 **구조적으로 못 본다** — 즉 마커 없는 FH 자산 커밋이 **초록으로** 들어온다.
+      #    실측 2026-09-14, `claude/` 접두사 머지 PR 전수: #675·#716 **2/2 마커 없음**.
+      #    그리고 그 채널은 주간 캐이던스로 매주 돈다(self_evolution_routine.md §5).
+      # 이 스텝은 **그 채널에만** 건다. 보통 브랜치는 pre-commit 이 이미 하드 차단하므로
+      # 여기서 또 물으면 만족 불가능한 이중 요구가 되고, 그건 override 를 훈련시킨다.
+      # 🟥 형식만 본다 — 값의 진위도 enum 멤버십도 안 본다(enum 정본은 저작 노드의 훅).
+      - name: Floorless-channel 4-axis marker (claude/* branches touching FH assets)
+        env:
+          RMG_CHANNEL_NAME: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -uo pipefail
+          # 얕은 클론이라 base 를 직접 받아온다. 못 받으면 그건 HARNESS-ERROR 로 떨어져야지
+          # «비교할 게 없다 → 통과» 로 접히면 안 된다.
+          git fetch --no-tags --depth=50 origin main 2>/dev/null || true
+          BODY_FILE=""
+          if [ -n "${PR_BODY:-}" ]; then
+            BODY_FILE="$RUNNER_TEMP/pr_body.txt"
+            printf '%s' "$PR_BODY" > "$BODY_FILE"
+          fi
+          RMG_BASE_REF=origin/main RMG_HEAD_REF=HEAD RMG_BODY_FILE="$BODY_FILE" \
+            bash scripts/remote_marker_gate.sh
+          rc=$?
+          # 10 = 계기 고장. 조용한 통과가 아니라 빨강으로 띄운다.
+          if [ "$rc" -eq 10 ]; then
+            echo "::error::remote_marker_gate HARNESS-ERROR — 계기가 고장났다(미측정 ≠ 통과)"
+          fi
+          exit $rc

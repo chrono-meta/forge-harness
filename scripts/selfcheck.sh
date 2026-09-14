@@ -698,6 +698,9 @@ for _pair in \
   "docs/map/fh_assets.architecture.json|scripts/test_fh_map_paths_lanes.sh" \
   `# ── 지도 후처리(2026-09-06): 발행 폭 하한 + SVG 재생성. 리터럴 드리프트를 fail-closed 로 잡는다 ──` \
   "scripts/map_postprocess.py|scripts/test_map_postprocess_lanes.sh" \
+  `# ── 플로어 없는 채널(2026-09-14): 원격 자율 노드가 FH 자산을 바꾸면 마커가 tracks/ 와 함께 휘발한다. 실측 2/2(#675·#716). CI 가 gitignored 마커를 구조적으로 못 보므로, 그 채널에만 «마커가 커밋 기록에 실려 왔나» 를 건다 ──` \
+  "scripts/remote_marker_gate.sh|scripts/test_remote_marker_gate_lanes.sh" \
+  ".github/workflows/validate.yml|scripts/test_remote_marker_gate_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_precommit_staged_drift_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_address_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_precommit_pointer_index_lanes.sh" \
