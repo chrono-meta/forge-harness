@@ -14,8 +14,11 @@
         <string>/bin/bash</string>
         <string>/path/to/forge-harness/scripts/probe_live_eval.sh</string>
         <!-- 🟥 COST + API-KEY DECISION IS THE OPERATOR'S — this template ships with NO default
-             the subset / ids limiter flags limiter, i.e. installing it as-is runs the FULL selected set (12
-             probes x 2 calls = 24 live `claude -p` invocations) every night. Read
+             the subset / ids limiter flags limiter, i.e. installing it as-is runs the FULL selected set.
+             COST AS OF 2026-09-14: 13 selected probes, of which 12 have 2 arms and G-TRIG-07 has 3
+             (it declares a second known-negative) = 27 arm-calls per rep, so the `--reps 3` below
+             makes it 81 live `claude -p` invocations every night, up from 66. Recount rather than
+             trusting this line: `probe_live_eval.sh --dry-run` prints the current selection. Read
              scripts/probe_live_eval.sh's own header (§COST) before installing, and add a
              a subset or ids argument argument here if a nightly full-set run is not what you
              want. This plist is a template, not a recommendation of scope. -->

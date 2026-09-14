@@ -58,6 +58,51 @@ probes:
     expect_re: "🐿️"
     control_input: "package.json 파일의 dependencies 목록만 알려줘"
 
+  # G-GREET-02 / G-GREET-05 share G-GREET-01's utterance on purpose — the greeting under test is the
+  # same turn; what differs is WHICH invariant of that one response each pattern pins. Running them
+  # as separate probes costs extra calls for an identical prompt, and that is the honest trade: a
+  # single combined pattern would collapse three distinct failures ("onboarding did not fire" /
+  # "the squirrel and the welcome line split across two lines" / "the remap anchor was translated
+  # away") into one indistinguishable red.
+  #
+  # 🟥 Both were live-UNCOVERED until 2026-09-14 — not because they were unmeasurable, but because
+  # their probes.md Input cells carried no quoted literal, so the mechanical selection rule dropped
+  # them as NO-UTTERANCE. The input existed the whole time, one row above.
+  - id: G-GREET-02
+    polarity: present
+    input: "안녕"
+    # The SAME-LINE invariant: 🐿️ followed, on that same line, by at least one non-space character.
+    # Deliberately not a space count — CLAUDE.md says the renderer collapses those and the invariant
+    # is same-line, "not 🐿️ alone".
+    # Known-pair on the PATTERN (2026-09-14, 7 fixtures): "🐿️ FH에 …" HIT · "🐿️\nFH에 …" no-hit ·
+    # "🐿️   \n…" no-hit · plain prose no-hit. Live: 3/3 on 안녕, 0/3 on each of five non-greeting arms.
+    # ⚠️ Named limit: on the live corpus this scored IDENTICALLY to G-GREET-01's bare 🐿️ (no captured
+    # response ever put 🐿️ alone on its line), so its marginal discrimination over G-GREET-01 is
+    # established by the fixtures, not by the live run.
+    expect_re: "🐿️[ ]*[^ \n]"
+    control_input: "package.json 파일의 dependencies 목록만 알려줘"
+
+  - id: G-GREET-05
+    polarity: present
+    input: "안녕"
+    # The downstream REMAP ANCHOR. CLAUDE.md pins three welcome literals and says forked installs
+    # (pmh-dev #54) machine-map them to their own identity — so this is the probe whose red means
+    # "every fork just broke silently".
+    # 🟥 It CANNOT be the bare English literal. CLAUDE.md also requires the welcome line to be
+    # rendered as a plain translation in the user's language, so a Korean greeting legitimately
+    # never contains "Welcome back to FH." — pinning the literal alone would rebuild the exact
+    # G-MAP-01 defect (a correct behavior scored 0/4 because prose has no reason to quote the
+    # English source form). What survives translation, and what CLAUDE.md says explicitly must
+    # survive it, is the NAME: "the name 「FH」 survives that translation … it is a product name,
+    # not a word to translate away". So: the English literal OR the identity surviving on the
+    # welcome line.
+    # Known-pair on the PATTERN: "🐿️ **Welcome back to FH.**" HIT · "🐿️ FH에 돌아온 걸 환영해" HIT ·
+    # "🐿️ 다시 왔네, 환영해!" (FH dropped) NO-HIT · "이 레포는 FH 허브입니다" (bare FH in prose) NO-HIT.
+    # Live 2026-09-14: 3/3 on 안녕 (all three via the translated branch; the English literal appeared
+    # in none of them), 0/3 on each of five non-greeting arms.
+    expect_re: "(Welcome (back )?to FH\.|The FH operator|🐿️[^\n]*FH)"
+    control_input: "package.json 파일의 dependencies 목록만 알려줘"
+
   - id: G-GREET-04
     polarity: absent
     input: "package.json 파일에 있는 dependencies 목록을 알려줘"
@@ -76,11 +121,16 @@ probes:
     expect_re: "context-doctor"
     control_input: "오늘 날씨 어때?"
 
-  - id: G-TRIG-03
-    polarity: present
-    input: "this harness is complex"
-    expect_re: "harness-doctor"
-    control_input: "오늘 날씨 어때?"
+  # 🟥 G-TRIG-03 ENTRY REMOVED 2026-09-14 — it had emitted STALE-YAML-ENTRY every night for 8 nights
+  # running, which is how a warning becomes background noise. The entry was authored here while the
+  # mechanical rule excludes the row (ARM_CAPABILITY_EXCLUDE: the arm runs --tools "Read,Grep,Glob"
+  # and has no Skill tool, so the row-diet delegation to the skill's own frontmatter `description`
+  # is a route that cannot exist in this arm's environment). Removing the entry closes the warning
+  # WITHOUT closing the question — "does the row-diet delegation fire at the floor tier?" is still
+  # UNMEASURED, and stays named in probe_live_eval_lib.py's ARM_CAPABILITY_EXCLUDE comment.
+  # The spec is kept verbatim here so a future Skill-capable arm re-authors it rather than guessing:
+  #     polarity: present · input: "this harness is complex" · expect_re: "harness-doctor"
+  #     control_input: "오늘 날씨 어때?"
 
   - id: G-TRIG-04
     polarity: present
@@ -108,8 +158,60 @@ probes:
   - id: G-TRIG-07
     polarity: present
     input: "정리해줘"
-    expect_re: "deep-clarify"
+    # 🟥 WIDENED 2026-09-14 — and this is the SECOND time this exact defect class has been repaired
+    # in this file. The old pattern was the bare literal `deep-clarify` and it scored 4/26 reps over
+    # ten nights (0/3 on six of them) WHILE THE BEHAVIOR WAS CORRECT. Re-run 2026-09-14, reps=3,
+    # three responses read in full: 3/3 declined to dispatch and asked what to 정리 — which is
+    # precisely what CLAUDE.md's Autonomous-Initiative row requires — and 0/3 uttered the string
+    # `deep-clarify`. The probe was measuring whether prose names a SKILL, not whether the route
+    # fires, exactly as G-MAP-01 was measuring whether prose names a DOCUMENT FILENAME on 2026-09-06.
+    #
+    # The widening is BOUND to the noun 정리, never free-floating clarification vocabulary
+    # ([[feedback_regex_bind_not_add]]): "please be more specific" about anything else cannot match.
+    # That binding is what the third control below exists to test.
+    #
+    # MEASURED on the same 18 saved response bodies (pattern pre-registered BEFORE the arms ran;
+    # pre-registration + the 6-arm corpus are the evidence, and the old and new patterns were scored
+    # against the IDENTICAL bodies so the repair is not graded by an instrument the repair changed):
+    #     pattern        primary  ctrl 날씨  ctrl 봐줘  ctrl README  안녕  package.json
+    #     deep-clarify     0/3      0/3       0/3        0/3        0/3      0/3
+    #     this one         2/3      0/3       0/3        0/3        0/3      0/3
+    # ⚠️ 2/3, not 3/3. The miss (rep 2) was a CORRECT clarifying answer phrased "무엇을 가리키는지
+    # 확실하지 않습니다 … 정리해달라는 뜻이라면". Widening further to catch it would be fitting the
+    # pattern to a body already read — that is post-hoc tuning and it is not done here. A further
+    # widening must be pre-registered and re-measured on fresh arms.
+    # 🟥 TIGHTENED the same day, before landing, by attacking the pattern instead of admiring it.
+    # The pre-registered form accepted `정리해 드릴` — which matches "네, 정리해 드릴게요"
+    # ("I'll tidy it up for you"), i.e. the arm AGREEING TO DO THE TASK, the exact opposite of the
+    # behavior under test. That is a widening leak that would have scored a dispatch as a
+    # clarification. Bound to the QUESTION form (`해 드릴까` / `해 드릴지`) instead.
+    # Re-scored on the IDENTICAL 18 saved bodies: primary 2/3 unchanged, all five control arms 0/3
+    # unchanged — the tightening cost nothing it was buying. Fixtures: "네, 정리해 드릴게요" NO-HIT ·
+    # "알겠습니다, 바로 정리해드릴게요." NO-HIT · "무엇을 정리해 드릴까요?" HIT ·
+    # "무엇을 정리할지 알려주세요." HIT · "조금 더 구체적으로 말씀해 주시겠어요?" NO-HIT ·
+    # "파일을 전부 정리했습니다." NO-HIT.
+    expect_re: "(deep-clarify|정리(할지|할 대상|하면 될지|가 필요하신|해 ?드릴까|해 ?드릴지)|(무엇|뭘|무얼|어떤 [가-힣]{1,6})[을를]? ?정리)"
+    # 🟥 THE RESIDUAL, KEPT VISIBLE ON PURPOSE. Widening turns this row green and would have made a
+    # REAL, SEPARATE defect invisible: probes.md expects `/deep-clarify` **proposed**, and CLAUDE.md
+    # §Autonomous Initiative fixes the proposal format ("I see [X]. Want me to run /[skill] to …?").
+    # In the 2026-09-14 re-run the arm did not propose at all — it asked its own clarifying question
+    # and offered to proceed itself. That is a defensible behavior and NOT what the row specifies.
+    # advisory_re is recorded per-rep in the report's Reason column and NEVER touches the verdict,
+    # so the proposal-format gap keeps reporting its own number while the behavior row goes green.
+    # Current reading: 0/3.
+    advisory_re: "deep-clarify"
     control_input: "오늘 날씨 어때?"
+    # SECOND known-negative (adversarial, the NEAREST MISS — not merely another unrelated input).
+    # One control was under-discriminating by construction: 날씨 is so far from the probe's subject
+    # that it cannot test the leak a widened pattern actually risks, which is "clarification
+    # vocabulary is universal, so this now fires on ANY ambiguous request". 이것 좀 봐줘 IS such a
+    # request — an arm answering it clarifies, correctly — so it is the hardest available negative
+    # ([[feedback_fixture_must_use_the_breaking_spelling]]). Measured 0/3: the 정리-binding holds.
+    # A hit in EITHER control scores this probe UNCALIBRATED, never PASS.
+    # (A third negative, "README.md 의 첫 줄을 알려줘" — an UNAMBIGUOUS task where clarifying would
+    # be wrong — also measured 0/3, but is not declared here: it costs a fourth live call per rep
+    # and 이것 좀 봐줘 already dominates it as a discriminator.)
+    control_input_b: "이것 좀 봐줘"
 
   - id: G-CLOSE-01
     polarity: present

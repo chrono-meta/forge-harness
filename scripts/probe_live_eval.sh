@@ -26,10 +26,16 @@
 # hand-curated CLI-event filter) and scripts/probe_live_eval_lib.py for the implementation. Run
 # `--dry-run` to see the full 33-row breakdown: which probes are selected, which are excluded and
 # why, and which pass the mechanical rule but have no authored expect/control yet
-# (NOT-YET-AUTHORED — an honest gap, not a silent drop; G-LINT-01 is the current example, deferred
-# because scoring a full /harness-doctor Step 5 run needs more than a keyword regex).
+# (NOT-YET-AUTHORED — an honest gap, not a silent drop). As of 2026-09-14 that bucket is EMPTY:
+# G-LINT-01, its long-standing occupant, moved to ARM_CAPABILITY_EXCLUDE because the real blocker
+# is that its route needs the Skill layer the arm does not have — an unauthored spec was never the
+# reason. See probe_live_eval_lib.py for the three named exclude sets and what each one does and
+# does not claim.
 #
-# COST. Each selected probe costs TWO live `claude -p` calls (primary + control). Do not run the
+# COST. Each selected probe costs TWO live `claude -p` calls (primary + control) — THREE if it
+# declares `control_input_b`, a second known-negative (only G-TRIG-07 does, as of 2026-09-14).
+# At the current 13-probe selection that is 27 arm-calls per rep; the nightly plist passes
+# `--reps 3`, so a full night is 81 live calls. Do not run the
 # full selected set casually — use --subset N or --ids P1,P2 for a spot-check, and read
 # sim_isolated_run.sh's own header before running unattended (isolation guarantees, what "observe"
 # mode does and does not prevent, the three-valued rc/bytes verdict for a timeout vs an empty
@@ -85,6 +91,30 @@ SIM_RUNNER="${FH_SIM_RUNNER_BIN:-$REPO_ROOT/scripts/sim_isolated_run.sh}"
 # ── file-header constant — the "문턱" the design brief calls for. Change here, not per-invocation. ──
 THRESHOLD="0.8"
 
+# ── EVIDENCE PRESERVATION (2026-09-14) ────────────────────────────────────────────────────────
+# 🟥 WHY. Until today every run's response bodies were written into a `mktemp -d` and destroyed
+# with it, and the launchd log carries only the runner's console tail — no answer text. So when
+# 09-12 came back at pass_rate 0.18 and 09-13 came back 0/3 on EVERY probe, there was no way to
+# tell a model-availability blip from a rate limit from a clone failure from a real regression.
+# Both nights are now PERMANENTLY UNATTRIBUTABLE. That is the cost this block exists to stop
+# paying: a nightly instrument that throws away its own evidence can report a number but can
+# never explain one.
+#
+# WHAT IS KEPT, AND WHAT IS NOT. Only the FLAT artifacts each arm dir holds — the response `.txt`,
+# its `.stderr.txt`, the `.prompt.txt`, the `.meta.tsv` (corpus_head_date / model / cutoff) and the
+# runner console log. 🟥 NOT the clones: sim_isolated_run.sh puts each rep's full
+# `git clone --local --no-hardlinks` under `<out>/w_<arm>_r<n>/repo`, and this repo's tracked tree
+# is ~260MB, so preserving `--out` wholesale would deposit tens of GB per night. `find -maxdepth 1
+# -type f` is what draws that line: the clone trees live at depth 2+ and are never copied.
+#
+# WHERE. tracks/_meta/live_eval_runs/<date>/ — gitignored via `.gitignore:45 tracks/**` (verified
+# with `git check-ignore -v`), same zone as the report the run already writes.
+EVIDENCE_ROOT_DEFAULT="tracks/_meta/live_eval_runs"
+# Retention: a nightly full set is ~66 small text files (a few hundred KB). 14 days is chosen to
+# span the weekly cadence with a margin, so a Monday session can still read the previous week's
+# incident. Override with FH_LIVE_EVAL_KEEP_DAYS; 0 disables pruning entirely (never auto-deletes).
+KEEP_DAYS="${FH_LIVE_EVAL_KEEP_DAYS:-14}"
+
 MODEL="sonnet"
 # ── reps — 프로브당 반복 횟수. 기본 1(종전 행동 그대로), 무인 런은 plist 에서 3 을 준다. ──
 # 🟥 왜 1 이 기본이면서 야간은 3 인가 (2026-09-06 실측): 유효 런 3 개를 재채점하니 12 프로브 중
@@ -99,6 +129,7 @@ SUBSET=""
 IDS=""
 OUTDIR=""
 REPORT_OUT=""   # --report-out: where the markdown report lands (default: tracks/_meta/live_eval_<date>.md)
+NO_EVIDENCE=0   # --no-evidence: skip the preserved-artifact copy (lanes / throwaway spot-checks)
 while [ $# -gt 0 ]; do
   case "$1" in
     --subset)   SUBSET="${2:-}"; shift 2 ;;
@@ -108,6 +139,7 @@ while [ $# -gt 0 ]; do
     --dry-run)  DRYRUN=1; shift ;;
     --out)      OUTDIR="${2:-}"; shift 2 ;;
     --report-out) REPORT_OUT="${2:-}"; shift 2 ;;   # lanes/spot-checks MUST pass this — never the live path
+    --no-evidence) NO_EVIDENCE=1; shift ;;
     *) echo "unknown flag: $1" >&2; exit 2 ;;
   esac
 done
@@ -168,6 +200,54 @@ RUN_DATE="$(date +%Y-%m-%d)"
 OUTDIR="${OUTDIR:-$WORKDIR/run}"
 mkdir -p "$OUTDIR"
 
+# ── evidence dir + retention prune ────────────────────────────────────────────────────────────
+EVIDENCE_DIR=""
+if [ "$NO_EVIDENCE" -eq 0 ]; then
+  # Overridable for the lanes ONLY — a lane that wrote into the live evidence path would be the
+  # same class of defect as the 2026-09-05 incident where a lane overwrote that night's report
+  # ([[feedback_sim_with_write_tools_is_a_fleet]]). Note the prune guard below deliberately
+  # REFUSES to prune an overridden root, so this flag can never be used to point the delete at
+  # something else.
+  EVIDENCE_ROOT="${FH_LIVE_EVAL_EVIDENCE_ROOT:-$REPO_ROOT/$EVIDENCE_ROOT_DEFAULT}"
+  mkdir -p "$EVIDENCE_ROOT"
+  EVIDENCE_DIR="$EVIDENCE_ROOT/$RUN_DATE"
+  # A second run on the same day gets its own dir rather than overwriting the first. The report
+  # path already learned this lesson the hard way (2026-09-05 10:18, a lane overwrote the 02:30
+  # record); evidence is the artifact you go back to *because* the record looked wrong, so losing
+  # the earlier one is worse here, not better.
+  [ -d "$EVIDENCE_DIR" ] && EVIDENCE_DIR="$EVIDENCE_ROOT/${RUN_DATE}_$(date +%H%M%S)"
+  mkdir -p "$EVIDENCE_DIR"
+
+  # Prune. Guarded three ways, because this is the one line in this script that deletes anything:
+  #   (a) the root must be the literal path built above, under $REPO_ROOT/tracks/_meta
+  #   (b) only DIRECTORIES exactly one level down whose name is date-shaped
+  #   (c) only older than KEEP_DAYS; KEEP_DAYS=0 disables pruning outright
+  # `-mtime +N` is portable across BSD (macOS) and GNU find; `-mindepth/-maxdepth 1` pins depth so
+  # a nested path can never be reached.
+  case "$EVIDENCE_ROOT" in
+    "$REPO_ROOT/tracks/_meta/"*)
+      if [ "$KEEP_DAYS" -gt 0 ] 2>/dev/null; then
+        while IFS= read -r _old; do
+          [ -n "$_old" ] || continue
+          echo "  🧹 pruning evidence older than ${KEEP_DAYS}d: $_old"
+          rm -rf "$_old"
+        done < <(find "$EVIDENCE_ROOT" -mindepth 1 -maxdepth 1 -type d \
+                      -name '20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]*' -mtime "+$KEEP_DAYS" 2>/dev/null)
+      fi
+      ;;
+    *) echo "  ⚠️  evidence root outside tracks/_meta — refusing to prune: $EVIDENCE_ROOT" >&2 ;;
+  esac
+fi
+
+# Copy ONLY the flat per-arm artifacts out of a probe dir. The full clone trees live at
+# <probe_out>/w_<arm>_r<n>/repo/** — `-maxdepth 1 -type f` is what keeps them out (see the header
+# block: preserving them wholesale would be tens of GB a night).
+preserve_probe_evidence() {   # $1 = probe_out dir, $2 = probe id
+  [ -n "$EVIDENCE_DIR" ] || return 0
+  mkdir -p "$EVIDENCE_DIR/$2" || return 0
+  find "$1" -maxdepth 1 -type f -exec cp {} "$EVIDENCE_DIR/$2/" \; 2>/dev/null || true
+}
+
 echo ""
 echo "── live run: $SELECTED_COUNT probe(s), model=$MODEL, out=$OUTDIR ──────────────────────"
 
@@ -214,6 +294,30 @@ while IFS= read -r id; do
     echo "   Partial run artifacts kept at: $OUTDIR" >&2
     exit 2
   fi
+
+  # OPTIONAL second known-negative — a THIRD live call per rep, spent only where one control has
+  # been measured to under-discriminate. Keyed off the spec file's existence, which the selector
+  # writes only when `control_input_b` is declared (so "file absent" can only mean "not declared",
+  # never "declared but empty").
+  if [ -f "$SPEC_DIR/$id.control_b.txt" ]; then
+    control_b_text="$(cat "$SPEC_DIR/$id.control_b.txt")"
+    echo "▶ $id — control_b"
+    bash "$SIM_RUNNER" --arm control_b --reps "$REPS" --prompt "$control_b_text" \
+         --mode observe --model "$MODEL" --out "$probe_out" \
+         > "$probe_out/_runner_control_b.log" 2>&1
+    runner_rc=$?
+    tail -n 6 "$probe_out/_runner_control_b.log"
+    if [ "$runner_rc" -eq 2 ]; then
+      echo "" >&2
+      echo "❌ $id control_b runner call exited 2 (preflight failure, before \`claude\` ran)." >&2
+      echo "   Aborting the whole run rather than burning the remaining clones." >&2
+      echo "   Runner log:   $probe_out/_runner_control_b.log" >&2
+      echo "   Partial run artifacts kept at: $OUTDIR" >&2
+      exit 2
+    fi
+  fi
+
+  preserve_probe_evidence "$probe_out" "$id"
 done < "$SPEC_DIR/selected_ids.txt"
 
 echo ""
@@ -232,6 +336,16 @@ python3 "$LIB" score \
   --run-date "$RUN_DATE" \
   --reps "$REPS"
 score_rc=$?
+
+if [ -n "$EVIDENCE_DIR" ]; then
+  # The report is part of the evidence: a preserved body set with no verdict beside it forces the
+  # next reader to re-derive what the run concluded.
+  cp "$REPORT_PATH" "$EVIDENCE_DIR/_report.md" 2>/dev/null || true
+  _kept=$(find "$EVIDENCE_DIR" -type f 2>/dev/null | wc -l | tr -d ' ')
+  _size=$(du -sh "$EVIDENCE_DIR" 2>/dev/null | cut -f1)
+  echo ""
+  echo "📦 response bodies preserved: $EVIDENCE_DIR  ($_kept files, ${_size:-?}; retention ${KEEP_DAYS}d)"
+fi
 
 echo ""
 echo "run artifacts kept at: $OUTDIR"

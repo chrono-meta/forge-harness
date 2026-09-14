@@ -45,7 +45,34 @@ CLI_EVENT_EXCLUDE = {"G-CODE-01", "G-CODE-02", "G-CODE-03"}
 # arm that can see the skill layer), and building one re-calibrates all 12 probes, so it is not a
 # calibration-week change. Named here so the gap stays greppable instead of dissolving into a
 # permanently-red lane nobody reads.
-ARM_CAPABILITY_EXCLUDE = {"G-TRIG-03"}
+#
+# G-LINT-01 joined this set 2026-09-14, same root cause, different symptom. It had emitted
+# NOT-YET-AUTHORED every night for eight nights — "the rule selects it but nobody wrote a spec" —
+# which reads like a to-do and is not one: its Input Pattern is `/harness-doctor` run in FH cwd, so
+# scoring it requires an arm that can INVOKE a skill, and this arm cannot. Eight identical warnings
+# is how a warning stops being read; the honest close is to name the real blocker, not to author a
+# regex against a route the arm cannot take. Same UNMEASURED note applies: whether harness-doctor's
+# L4 knowledge cross-ref lint fires is not answered by excluding it here.
+ARM_CAPABILITY_EXCLUDE = {"G-TRIG-03", "G-LINT-01"}
+
+# The THIRD judgment call, and deliberately a SEPARATE set from the one above — "the arm lacks the
+# TOOL" and "the arm cannot reach the STATE that decides the right answer" are different facts, and
+# collapsing them would render an unreachable fixture as a missing capability (the same
+# separate-values-on-purpose discipline CLAUDE.md applies to the `crossfamily:` degrade triad).
+#
+# G-GREET-03 checks the FIXED 4-DOOR MENU, which renders only on the RETURNING branch. The branch
+# test is mechanical and is `bash scripts/mapped_tracks.sh` — but an observe-mode arm runs with
+# `--tools "Read,Grep,Glob"` and has no Bash, and `tracks/**` is gitignored so the disposable clone
+# carries no session files or mapped-project dirs either. The arm therefore cannot reach the state
+# that decides WHICH door set is correct, and a regex asserting ①②③④ would score a NEW-user 2-door
+# menu — the correct answer for that clone — as a failure.
+#
+# 🟥 THIS IS AN OPEN GAP, NOT AN ANSWER. "Does the fixed 4-door menu render at the floor tier?" is
+# UNMEASURED. Closing it needs an arm with a fixture (a real FILE under tracks/{name}/ — an empty
+# dir is invisible to Glob, measured 2026-08-29 in sim_isolated_run.sh's own header) plus a branch
+# the arm can observe without Bash. Named here so the gap stays greppable instead of dissolving
+# into a decorative always-red probe.
+ARM_STATE_EXCLUDE = {"G-GREET-03"}
 
 
 def parse_probes_md(path):
@@ -135,7 +162,14 @@ def classify(id_, input_pat, class_tok):
     if id_ in CLI_EVENT_EXCLUDE:
         return 'EXCLUDED', 'NOT-CHAT-UTTERANCE (shell command, not a chat turn)'
     if id_ in ARM_CAPABILITY_EXCLUDE:
-        return 'EXCLUDED', 'NOT-LIVE-MEASURABLE (skill-description route; the arm has no Skill tool)'
+        return 'EXCLUDED', 'NOT-LIVE-MEASURABLE (needs the Skill layer; the arm has no Skill tool)'
+    # Checked BEFORE the utterance-shape rule on purpose: G-GREET-03's cell carries no quoted
+    # literal either, so NO-UTTERANCE would win the race and report a true-but-irrelevant reason
+    # ("nobody typed it") for a row whose real blocker is that the arm cannot reach the branch
+    # state. An honest reason column is the whole point of naming these sets.
+    if id_ in ARM_STATE_EXCLUDE:
+        return 'EXCLUDED', ('NOT-LIVE-MEASURABLE (branch-state route; the arm has no Bash to run '
+                            'the branch test and the clone carries no tracks/** fixture)')
     if not UTTERANCE_RE.search(input_pat):
         return 'EXCLUDED', 'NO-UTTERANCE (no quoted/backticked literal a user would type)'
     return 'SELECTABLE', None
@@ -185,13 +219,25 @@ def build_selection(probes_md_rows, live_rows):
             warnings.append("BAD-POLARITY: %s declares polarity=%r (must be present|absent)"
                              % (row['id'], spec['polarity']))
             continue
-        selected.append({
+        entry = {
             'id': row['id'],
             'input': spec['input'],
             'control_input': spec['control_input'],
             'polarity': spec['polarity'],
             'expect_re': spec['expect_re'],
-        })
+        }
+        # Optional, and optional on purpose — a second known-negative costs a THIRD live call per
+        # rep, so it is spent only where one control has been shown to under-discriminate. Key name
+        # has no digit: parse_probes_live's key regex is `[a-z_]+`, so `control_input_2` would be
+        # silently dropped (the leniency class [[feedback_declaration_silently_dropped_by_parse]]).
+        if spec.get('control_input_b'):
+            entry['control_input_b'] = spec['control_input_b']
+        # ADVISORY channel — recorded, never scored. See score_run(): a probe can be widened to
+        # measure a BEHAVIOR while a narrower pattern keeps measuring the ROUTE, so that turning the
+        # row green does not also erase the residual the widening stopped seeing.
+        if spec.get('advisory_re'):
+            entry['advisory_re'] = spec['advisory_re']
+        selected.append(entry)
 
     # Dead-pointer guard: an id in probes_live.yaml that does not exist in probes.md AT ALL.
     for p in live_rows:
@@ -335,11 +381,42 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
             rows.append({'id': pid, 'verdict': 'UNKNOWN-ID', 'primary_hit': None, 'control_hit': None})
             continue
         base = os.path.join(run_root, pid)
+        has_ctrl_b = bool(spec.get('control_input_b'))
+        adv_re = spec.get('advisory_re')
+        adv_pat = re.compile(adv_re) if adv_re else None
+        adv_hits = 0
+        ctrl_b_absent = False   # rep-1 only, diagnostic: which arm actually produced nothing
         per_rep = []          # [(verdict, phit, chit, primary_text, control_text)]
         for i in range(1, reps + 1):
             pt = _read_text(os.path.join(base, 'primary_r%d.txt' % i))
             ct = _read_text(os.path.join(base, 'control_r%d.txt' % i))
+            ct_first_arm_ran = bool(ct)
+            if has_ctrl_b:
+                # A declared second control that produced nothing did NOT run — and a probe whose
+                # calibration arm did not run has not been calibrated. Collapsing that into "the
+                # control stayed silent, so the pattern discriminates" is the not-found-is-not-zero
+                # defect pointed at the calibration channel instead of the measurement channel.
+                ctb = _read_text(os.path.join(base, 'control_b_r%d.txt' % i))
+                if not ctb:
+                    ct = None
+                    if i == 1 and ct_first_arm_ran:
+                        # Keep WHICH arm died attributable. Without this the reason column blames
+                        # `control:` — the arm that ran fine — for the absence of `control_b:`,
+                        # which is a diagnostic pointing at the wrong file. Caught by lane CB2.
+                        ctrl_b_absent = True
+                elif ct:
+                    # Concatenated, so a hit in EITHER known-negative sets control_hit. For
+                    # polarity=present that is the strict direction (more controls can only push a
+                    # probe toward UNCALIBRATED, never toward PASS).
+                    # 🟥 For polarity=absent it is the LENIENT direction — the control is a
+                    # known-POSITIVE there, and concatenation makes "the pattern can fire at all"
+                    # easier to satisfy. Do not declare control_input_b on an absent-polarity probe
+                    # without re-deriving this; none currently does.
+                    ct = ct + '\n----- control_b -----\n' + ctb
             v, ph, ch = score_probe(pt, ct, spec['polarity'], spec['expect_re'])
+            if adv_pat is not None and pt:
+                if adv_pat.search(pt):
+                    adv_hits += 1
             per_rep.append((v, ph, ch, pt, ct))
 
         ran_reps = [r for r in per_rep if r[0] != FAILED_TO_RUN]
@@ -356,13 +433,23 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
         # primary_hit/control_hit stay single-valued for backward compatibility with the existing
         # report columns and lanes: they report rep 1, and `reps` carries the spread.
         phit, chit = per_rep[0][1], per_rep[0][2]
+        # INSTRUMENT-SILENT: the pattern matched in NEITHER arm, in NO rep that ran. Per probe this
+        # is ordinary (a rule that did not fire looks exactly like this). Across a WHOLE run it is
+        # the signature of a blind instrument — see the run-level branch below.
+        silent = bool(ran_reps) and not any(r[1] or r[2] for r in ran_reps)
         row = {'id': pid, 'verdict': verdict, 'primary_hit': phit, 'control_hit': chit,
                'polarity': spec['polarity'], 'reason': '',
                'reps': '%d/%d' % (len(pass_reps), len(ran_reps)) if ran_reps else '0/0',
                'reps_requested': reps,
+               'silent': silent,
                'rep_verdicts': [r[0] for r in per_rep]}
         if len(ran_reps) > 1 and 0 < len(pass_reps) < len(ran_reps):
             row['reason'] = 'FLAKY across reps (%s)' % ','.join(r[0] for r in per_rep)
+        if adv_pat is not None:
+            row['advisory'] = '%d/%d' % (adv_hits, len(ran_reps) if ran_reps else 0)
+            row['advisory_re'] = adv_re
+            note = 'advisory[%s] %s' % (adv_re, row['advisory'])
+            row['reason'] = (row['reason'] + '; ' + note) if row['reason'] else note
         if verdict == FAILED_TO_RUN:
             # Diagnostic only — score_probe already decided the verdict above from exactly the
             # same texts; this never changes it, only explains it. Reported from rep 1.
@@ -370,10 +457,56 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
             primary_text, control_text = per_rep[0][3], per_rep[0][4]
             if primary_text is None or primary_text == '':
                 reasons.append('primary: %s' % _failure_reason(base, 'primary'))
-            if control_text is None or control_text == '':
+            if ctrl_b_absent:
+                reasons.append('control_b: %s' % _failure_reason(base, 'control_b'))
+            elif control_text is None or control_text == '':
                 reasons.append('control: %s' % _failure_reason(base, 'control'))
             row['reason'] = '; '.join(reasons)
         rows.append(row)
+
+    # ── RUN-BLACKOUT / BLACKOUT-SUSPECT (2026-09-14) ──────────────────────────────────────────
+    # WHY. On 2026-09-13 every one of 11 probes scored 0/3 — including G-GREET-01, which is 3/3 on
+    # every other night in the record, and G-GREET-04, whose polarity=absent control is a
+    # known-POSITIVE and also never fired. The report rendered that as ten FAIL rows: "the harness
+    # did not fire", when what actually happened is "nothing was measured". That is the
+    # not-found-is-not-zero defect (CLAUDE.md §Instrument-Calibration), and the existing
+    # UNCALIBRATED value already means exactly the right thing — it was simply never reachable from
+    # this shape, because the per-probe rule only fires when a pattern hits a known-negative.
+    # This is a CONDITION EXTENSION onto the existing value, not a new verdict.
+    #
+    # WHERE THE BOUNDARY IS, AND WHY THERE.
+    #   silent_fraction = (scored probes whose pattern matched in NEITHER arm in ANY rep) / (scored)
+    #   Measured over the 10 nights on record: 09-05..09-11 and 09-14 sit at 0.00–0.18.
+    #   09-12 = 0.73. 09-13 = 1.00.
+    #   * silent_fraction == 1.00 AND >= 3 scored probes  -> RUN-BLACKOUT (verdict UNCALIBRATED)
+    #     At 1.00 there is literally no evidence any channel worked: N independent patterns, each
+    #     authored against a different rule, matched nothing anywhere across 2N..6N responses.
+    #   * 0.50 <= silent_fraction < 1.00                  -> BLACKOUT-SUSPECT, ADVISORY ONLY.
+    #     The verdict is left exactly as computed. This is the deliberate narrow edge: 09-12 lands
+    #     here (0.73) and stays FAIL, because its greeting anchors were ALIVE — G-GREET-01 3/3 and
+    #     G-GREET-04 3/3 — so at least two channels demonstrably worked and a genuine broad
+    #     regression is a live hypothesis that must not be laundered into "nothing was measured".
+    #     🟥 This is the failure mode the extension itself must not cause: widen the hard condition
+    #     below 1.00 and a REAL full regression starts rendering as UNCALIBRATED. The 0.50 line is
+    #     a majority, chosen for that meaning and not fitted to 0.73; any cut in (0.18, 0.73] would
+    #     separate the observed classes, which is exactly why it may NOT carry the hard branch.
+    #   * >= 3 scored probes is required so the guard cannot fire on a one-probe spot-check, where
+    #     "the single probe did not fire" is the ordinary, informative answer.
+    #
+    # HONEST SCOPE: n = 10 nights, one instrument, one repo. The 0.50 line is provisional and the
+    # distribution that would refine it is exactly what the newly-preserved run artifacts build.
+    scored = [r for r in rows if r['verdict'] in (PASS, FAIL, UNCALIBRATED)]
+    silent_rows = [r for r in scored if r.get('silent')]
+    silent_fraction = (len(silent_rows) / float(len(scored))) if scored else None
+    blackout = bool(scored) and len(scored) >= 3 and len(silent_rows) == len(scored)
+    blackout_suspect = (not blackout) and silent_fraction is not None and silent_fraction >= 0.5
+
+    if blackout:
+        for r in scored:
+            r['verdict'] = UNCALIBRATED
+            note = ('RUN-BLACKOUT: no pattern matched in either arm in any rep, across every '
+                    'probe in this run — the instrument, not the rule, is what failed')
+            r['reason'] = (r['reason'] + '; ' + note) if r.get('reason') else note
 
     failed_to_run = [r for r in rows if r['verdict'] == FAILED_TO_RUN]
     uncalibrated = [r for r in rows if r['verdict'] == UNCALIBRATED]
@@ -409,6 +542,11 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
         'overall': overall,
         'rc': rc,
         'model': model,
+        'silent': len(silent_rows),
+        'scored': len(scored),
+        'silent_fraction': silent_fraction,
+        'blackout': blackout,
+        'blackout_suspect': blackout_suspect,
     }
 
 
@@ -442,6 +580,25 @@ def render_report_md(select_result, score_result, run_date):
         lines.append("**Overall: %s** — ran=%d failed_to_run=%d uncalibrated=%d passed=%d pass_rate=%s"
                       % (score_result['overall'], score_result['ran'], score_result['failed_to_run'],
                          score_result['uncalibrated'], score_result['passed'], pr_s))
+        lines.append("")
+        sf = score_result.get('silent_fraction')
+        if sf is not None:
+            lines.append("- instrument-silent probes: %d/%d (%.2f) — a probe is *silent* when its "
+                          "pattern matched in NEITHER arm in ANY rep."
+                          % (score_result.get('silent', 0), score_result.get('scored', 0), sf))
+        if score_result.get('blackout'):
+            lines.append("")
+            lines.append("🟥 **RUN-BLACKOUT** — every scored probe was instrument-silent. This run "
+                          "measured NOTHING; it is not evidence that any rule stopped firing. Read "
+                          "the preserved response bodies under `tracks/_meta/live_eval_runs/` before "
+                          "attributing this to the harness.")
+        elif score_result.get('blackout_suspect'):
+            lines.append("")
+            lines.append("⚠️ **BLACKOUT-SUSPECT (advisory — the verdict above is unchanged)** — a "
+                          "majority of probes were instrument-silent while at least one channel "
+                          "demonstrably worked. Both a broad real regression and a partial "
+                          "instrument failure produce this shape, and this file cannot tell them "
+                          "apart; the preserved response bodies can.")
         lines.append("")
     lines.append("## Excluded (from probes.md, 33-row snapshot)")
     lines.append("")
@@ -500,6 +657,11 @@ def _cmd_select(args):
                 f.write(p['input'])
             with open(os.path.join(args.spec_dir, p['id'] + '.control.txt'), 'w', encoding='utf-8') as f:
                 f.write(p['control_input'])
+            # Written ONLY when declared — probe_live_eval.sh keys the third live call off this
+            # file's existence, so an absent file must mean "no second control", never "empty one".
+            if p.get('control_input_b'):
+                with open(os.path.join(args.spec_dir, p['id'] + '.control_b.txt'), 'w', encoding='utf-8') as f:
+                    f.write(p['control_input_b'])
         with open(os.path.join(args.spec_dir, 'selected_ids.txt'), 'w', encoding='utf-8') as f:
             for p in filtered:
                 f.write(p['id'] + '\n')
@@ -532,6 +694,17 @@ def _cmd_score(args):
     print("total=%d ran=%d failed_to_run=%d uncalibrated=%d passed=%d pass_rate=%s threshold=%.2f"
           % (score_result['total'], score_result['ran'], score_result['failed_to_run'],
              score_result['uncalibrated'], score_result['passed'], pr_s, score_result['threshold']))
+    sf = score_result.get('silent_fraction')
+    if sf is not None:
+        print("instrument-silent: %d/%d (%.2f)"
+              % (score_result.get('silent', 0), score_result.get('scored', 0), sf))
+    if score_result.get('blackout'):
+        print("🟥 RUN-BLACKOUT — every scored probe was silent in BOTH arms. Nothing was measured;")
+        print("   this is not evidence any rule stopped firing. Read the preserved response bodies.")
+    elif score_result.get('blackout_suspect'):
+        print("⚠️  BLACKOUT-SUSPECT (advisory, verdict unchanged) — majority of probes silent while")
+        print("   at least one channel worked. Real broad regression and partial instrument failure")
+        print("   look identical here; the preserved response bodies tell them apart.")
     print("OVERALL: %s (rc=%d)" % (score_result['overall'], score_result['rc']))
 
     if args.report_out:

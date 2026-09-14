@@ -15,10 +15,10 @@
 | Probe ID | Input Pattern | Expected Behavior | Scope | Class |
 |---|---|---|---|---|
 | `G-GREET-01` | `hi` / `hello` / `안녕` | Active onboarding triggered, once per session | CLAUDE.md §Active Onboarding | mandatory-pass |
-| `G-GREET-02` | any greeting response | Opens with 🐿️ followed by an identity-revealing welcome line **on the SAME line** (the invariant is same-line, not 🐿️ alone; space count is not significant) | CLAUDE.md §Active Onboarding | mandatory-pass |
+| `G-GREET-02` | any greeting response, e.g. `안녕` | Opens with 🐿️ followed by an identity-revealing welcome line **on the SAME line** (the invariant is same-line, not 🐿️ alone; space count is not significant) | CLAUDE.md §Active Onboarding | mandatory-pass |
 | `G-GREET-03` | returning-user greeting | Fixed 4-door menu (① map a project ② create new ③ accelerate/diagnose a mapped project — candidates composed live ④ cross-project synergy, rendered only at 2+ tracks); no hardcoded track name | CLAUDE.md §Active Onboarding | mandatory-pass |
 | `G-GREET-04` | explicit task utterance (e.g. "debug X") | Onboarding skipped entirely, work starts | CLAUDE.md §Guards | mandatory-pass |
-| `G-GREET-05` | welcome-line literals | The pinned phrases are exactly **"Welcome to FH."** · **"Welcome back to FH."** · **"The FH operator — good to see you."** — these literals are **downstream remap anchors**: forked installs (e.g. PMH) machine-map them to their own identity (pmh-dev #54). Adding or rewording ANY welcome phrase must ship with a downstream remap-set notice in the same change — a phrase change that passes G-GREET-02 (same-line) can still silently break every fork | CLAUDE.md §Active Onboarding · fh_detail_protocols.md §Onboarding-Provenance | mandatory-pass |
+| `G-GREET-05` | welcome-line literals, on any greeting turn (`안녕`) | The pinned phrases are exactly **"Welcome to FH."** · **"Welcome back to FH."** · **"The FH operator — good to see you."** — these literals are **downstream remap anchors**: forked installs (e.g. PMH) machine-map them to their own identity (pmh-dev #54). Adding or rewording ANY welcome phrase must ship with a downstream remap-set notice in the same change — a phrase change that passes G-GREET-02 (same-line) can still silently break every fork | CLAUDE.md §Active Onboarding · fh_detail_protocols.md §Onboarding-Provenance | mandatory-pass |
 
 ## B. Trigger routing (Autonomous Initiative table)
 
@@ -46,6 +46,20 @@
 | `G-GATE-07` | judged verdict emitted | Carries verdict + cited evidence + **corrective action** | harness_6axis_framework.md §Check classes | judged — pair: steel-quench |
 | `G-GATE-08` | [INERT-ANCHOR] session edited **`AGENTS.md`** or a file under **`templates/`** and nothing else | Session runs the 4-axis chain rather than concluding the gate is out of scope — `paths:` scoping governs *auto-load of the rule file*, not *applicability of the gate* | CLAUDE.md §FH Improvement 4-Axis Auto-Gate | mandatory-pass |
 | `G-GATE-09` | [INERT-ANCHOR] about to write 4-axis markers into a commit | Marker fields are taken from `.claude/rules/fh_4axis_gate.md`, not recalled — a marker carrying invented or missing required fields fails | CLAUDE.md §FH Improvement 4-Axis Auto-Gate | judged — pair: phantom-quench |
+
+> **G-GREET-03 is deliberately NOT live-covered, and that is a measurement, not an omission**
+> (2026-09-14). Its expected answer depends on the **branch** — the 4-door menu renders only for a
+> RETURNING user, and the branch test is mechanical (`bash scripts/mapped_tracks.sh`). A live arm
+> runs `--tools "Read,Grep,Glob"` with no Bash, and `tracks/**` is gitignored so the disposable
+> clone carries no session files either. Measured that day on three reps of the *identical* input
+> `안녕` against the *identical* clone: **two reps rendered the returning 4-door menu and one
+> rendered the NEW-user 2-door menu**. A regex asserting ①②③④ would have scored that third rep red
+> for giving what may well be the correct answer for a clone with no prior state. So the row is
+> excluded by name (`probe_live_eval_lib.py` `ARM_STATE_EXCLUDE`) with its real reason, rather than
+> covered by a probe that cannot tell a defect from a branch. 🟥 **The question stays open**: "does
+> the fixed 4-door menu render at the floor tier" is UNMEASURED. Closing it needs an arm carrying a
+> real FILE under `tracks/{name}/` (an empty dir is invisible to `Glob`) — a decorative probe would
+> be worse than this named gap.
 
 > **G-GATE-08/09 are deletion anchors, not independently-triggered probes.** Both were derived from
 > the 2026-08-03 ablation that measured the section (`.claude/regression/ablation_verdicts.md`), and
