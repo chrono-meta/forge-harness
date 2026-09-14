@@ -110,6 +110,20 @@ both the judge (cutoff) and the grep (literal); that residual leans on the judge
 enumerated descriptions above** (grounded comparison, not pure memory), not on full mechanization. A
 shared common word is a judged-review flag, **not** a hard fail.
 
+**External grounding (2026-09-14 frontier signal, citation verified live before inclusion)**: Saha,
+Faghih & Feizi, *"Under the Hood of SKILL.md: Semantic Supply-chain Attacks on AI Agent Skill
+Registry"* (arXiv:2605.11418, May 2026 — https://arxiv.org/abs/2605.11418). Using real registry
+mechanisms (not a hypothetical), it measures SKILL.md-only attacks that manipulate which skill gets
+**discovered** (adversarial phrasing wins embedding-retrieval visibility: up to 86% pairwise win rate,
+80% Top-10 placement) and **selected** (description-only framing biases the agent toward a
+functionally-equivalent adversarial variant in 77.6% of paired trials on average). This is external
+confirmation that the paraphrase/semantic gap named just above — the grep grounds *literal* reuse
+only — sits on a measured admission-time attack surface, not a theoretical edge case. **This note does
+not close the residual**: no new mechanized check is added here, and none should be added by an
+autonomous pass — a `steel-quench` Wave scoped to adversarial (not merely accidental) trigger/description
+framing is a candidate follow-up, but the gate-design decision belongs to human review
+(§Mechanization Boundary — judgment stays with evolution).
+
 ## Step 0.6. Tier-0/1 Official-Corpora Check (grounds criterion ③)
 
 Besides the FH roster (Step 0.5), check the proposal against the official corpora: platform
