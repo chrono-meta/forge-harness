@@ -399,7 +399,14 @@ DIRTY=0   # cp-fallback mode can't count cheaply → mark work done, let git-dif
 # so a hub that somehow holds tracks/_meta/manifests/<peer>.yaml pushed it path-for-path onto the
 # peer's LIVE re-homed file and tripped the destination-newer abort on the other node. Symmetric
 # now: a directory that exists only as a re-home target is never mirrored as ordinary content.
-SYNC_EXCLUDES=('.gitkeep' '*.marker' 'logs/' '.fh_node_state' '.close_stamps_*' 'manifests/' '_index/')
+# '.git/' (2026-09-15, 4th recurrence): a NESTED repo's .git/index under tracks/ was picked up by
+# check_dest_newer and produced a false abort. It is written by git, not by the mirror, so the
+# question this guard asks ("who edited this?") does not apply to it at all.
+# NAMED RESIDUAL (cross-family codex, 2026-09-15): this also excludes a *payload* directory that
+# happens to be named '.git'. Accepted — that shape has never occurred here, and the alternative
+# is the false abort that has now recurred four times. A '.git' that is a FILE (submodule/worktree
+# link) is NOT matched by '*/.git/*' and stays guarded, which is the conservative direction.
+SYNC_EXCLUDES=('.gitkeep' '*.marker' 'logs/' '.fh_node_state' '.close_stamps_*' 'manifests/' '_index/' '.git/')
 
 NEWER_HITS=""
 
@@ -447,7 +454,7 @@ check_dest_newer() {   # $1 = src dir, $2 = dst dir
     # array-expanded safely here, so they are duplicated — the one place this file tolerates it.
     # Changing SYNC_EXCLUDES without changing this line reopens the false-abort/false-pass gap;
     # scripts/sync_guard_check.sh asserts the two stay equivalent.
-  done < <(find "$src" -type f ! -name '.gitkeep' ! -name '*.marker' ! -name '.fh_node_state' ! -name '.close_stamps_*' ! -path '*/logs/*' ! -path '*/manifests/*' ! -path '*/_index/*' 2>/dev/null)
+  done < <(find "$src" -type f ! -name '.gitkeep' ! -name '*.marker' ! -name '.fh_node_state' ! -name '.close_stamps_*' ! -path '*/logs/*' ! -path '*/manifests/*' ! -path '*/_index/*' ! -path '*/.git/*' 2>/dev/null)
 }
 
 # ── Shared abort message for BOTH destination-newer sites ─────────────────────

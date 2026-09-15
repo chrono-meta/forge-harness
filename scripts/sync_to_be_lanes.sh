@@ -534,6 +534,28 @@ out="$(GIT_DIR="$PUBLIC/.git" GIT_WORK_TREE="$BEX" MID=lanea run 2>&1)"; rc=$?
 [ ! -e "$BEX/tracks-meta" ]; chk $? "nothing was mirrored"
 [ "$(git -C "$PUBLIC" log --oneline 2>/dev/null | grep -c .)" -eq 0 ] && [ -z "$(git -C "$PUBLIC" diff --cached --name-only 2>/dev/null)" ]; chk $? "the env-selected repository received neither a commit nor staged files"
 
+echo "── B9 a NESTED repo's .git/ in the destination does not trip the destination-newer guard (2026-09-15, 4th recurrence) ──"
+new_env b9
+fake_rp 'echo "[sync-from-be] (dry-run) pulled 1 file(s) companion → hub  (clean 1 · review 0)"; exit 0'
+mkdir -p "$HUB/tracks/_meta/nested/.git"
+printf 'real content\n'  > "$HUB/tracks/_meta/nested/real.md"
+printf 'git-index-v1\n'  > "$HUB/tracks/_meta/nested/.git/index"
+printf 'hub-v1\n'        > "$HUB/tracks/_meta/card.md"
+MID=lanea run >/dev/null 2>&1
+[ -f "$BEX/tracks-meta/nested/real.md" ]; chk $? "CONTROL: a real file under the nested repo still syncs (the exclusion is not over-broad)"
+[ ! -e "$BEX/tracks-meta/nested/.git/index" ]; chk $? "the nested .git/ is never mirrored"
+sleep 2
+mkdir -p "$BEX/tracks-meta/nested/.git"
+printf 'git-wrote-this-later\n' >> "$BEX/tracks-meta/nested/.git/index"
+[ "$BEX/tracks-meta/nested/.git/index" -nt "$HUB/tracks/_meta/nested/.git/index" ]; chk $? "CONTROL: the destination .git/index IS newer + divergent (the incident is reproduced)"
+out="$(MID=lanea run 2>&1)"; rc=$?
+[ "$rc" -eq 0 ]; chk $? "a newer .git/index in the destination does NOT abort the sync (got rc=$rc)"
+printf '%s' "$out" | grep -q 'SYNC ABORTED'; [ $? -ne 0 ]; chk $? "no abort wall is printed"
+sleep 2
+printf 'peer-node-added-this\n' >> "$BEX/tracks-meta/card.md"
+out="$(MID=lanea run 2>&1)"; rc=$?
+[ "$rc" -ne 0 ]; chk $? "KNOWN-POSITIVE: a newer REAL file still trips the guard (got rc=$rc) — excluding .git/ did not disarm it"
+
 echo ""
 echo "════ lanes: $PASS passed · $FAIL failed ════"
 [ "$FAIL" -eq 0 ]

@@ -56,11 +56,19 @@ else
       # -F: these predicates contain glob metacharacters (*), and matching them as REGEX
       # silently fails — measured on this anchor's own first run, where `*.marker` was reported
       # missing while sitting in the file. Literal matching is the only honest comparison here.
-      logs/) grep -qF -- "! -path '*/logs/*'" "$SYNC" || missing="$missing $e" ;;
-      # directory excludes (2026-09-03): re-home targets, same -path form as logs/.
-      manifests/) grep -qF -- "! -path '*/manifests/*'" "$SYNC" || missing="$missing $e" ;;
-      _index/)    grep -qF -- "! -path '*/_index/*'"    "$SYNC" || missing="$missing $e" ;;
-      *)     grep -qF -- "! -name '$e'" "$SYNC"       || missing="$missing $e" ;;
+      # Directory excludes (trailing '/') take the -path form; everything else -name.
+      # 🟥 This parity is TEXTUAL, not semantic: -F matches the predicate literally, so an entry
+      # carrying glob metacharacters ('*.marker', 'a[b]/') passes parity while find would read it
+      # as a glob. That is inherited from the '*)' branch below, not introduced here (see the -F
+      # note above), and it is the honest trade — regex matching reported a present '*.marker' as
+      # missing on this anchor's own first run.
+      # 2026-09-15: this was a hardcoded per-directory list (logs/ manifests/ _index/), so every NEW
+      # directory exclude needed a THIRD edit here -- and '.git/' fell through to the '*)' branch,
+      # which looks for "! -name '.git/'" and reports a false parity miss. Generalizing removes that
+      # third site. Known-negative held: a directory added to SYNC_EXCLUDES but NOT to the find
+      # predicate still reports PARITY-FAIL.
+      */) _d="${e%/}"; grep -qF -- "! -path '*/$_d/*'" "$SYNC" || missing="$missing $e" ;;
+      *)  grep -qF -- "! -name '$e'" "$SYNC" || missing="$missing $e" ;;
     esac
   done
   if [ -n "$missing" ]; then
