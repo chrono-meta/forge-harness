@@ -360,6 +360,53 @@ else
   echo "  ✅ PASS"
 fi
 
+# ── Nested-repo gitlink guard — a submodule entry BYPASSES .gitignore ─────────
+# 🟥 WHY THIS IS NOT COVERED BY THE BLOCK ABOVE. That one reads `--name-only`, which lists a
+# gitlink by path like any file — so a `tracks/` gitlink would be caught by it. What it does NOT
+# cover is the reason a gitlink gets staged at all: **`.gitignore` does not apply to a nested
+# repository.** `tracks/**` ignores every file under `tracks/`, but a directory containing its own
+# `.git` is offered to the index as a mode-160000 entry regardless, so `git add -A` stages it while
+# the author believes the whole subtree is ignored. Measured 2026-09-16 on
+# `tracks/_meta/dominance_bench_B/recovered_2026-09-09/benchB/target_repo_O` (a benchmark's target
+# repo, whose git history IS the evidence and must not be deleted): `git add -A --dry-run` staged it.
+#
+# 🟥 SAME ROOT AS THE SYNC DEFECT, DIFFERENT SURFACE. A nested `.git` under `tracks/` also made
+# `sync-to-be.sh`'s destination-newer guard abort falsely four times (fixed separately). That one was
+# noisy; this one is silent — a gitlink committed to a public repo points at a URL the clone cannot
+# fetch, and nothing in the commit output says so.
+#
+# SCOPE, deliberately narrow. Under `tracks/` a gitlink is provably wrong (the lane is local-only),
+# so it BLOCKS. Anywhere else this repo has no submodules today, but declaring that a defect would
+# over-block a legitimate future one — and a gate that over-blocks trains `--no-verify`, which
+# disarms the Destructive-Op gate living in this same hook. So elsewhere it SURFACES and proceeds.
+# Override for a reviewed case: TRACKS_GITLINK_OK=1 (same channel shape as TRACKS_PUBLIC_OK).
+echo "[Privacy] nested-repo gitlink..."
+GITLINK_BLOCKED=0; GITLINK_SEEN=0
+while IFS= read -r p; do
+  [ -z "$p" ] && continue
+  GITLINK_SEEN=1
+  case "$p" in
+    tracks/*)
+      if [ "${TRACKS_GITLINK_OK:-0}" = "1" ]; then
+        echo "  ⚠️  gitlink under tracks/ allowed by TRACKS_GITLINK_OK=1: $p"
+      else
+        echo "  ❌ FAIL — nested repo staged as a gitlink under tracks/: $p"
+        GITLINK_BLOCKED=1; FAILED=1
+      fi ;;
+    *)
+      echo "  ⚠️  gitlink staged outside tracks/ (surfaced, not blocked): $p" ;;
+  esac
+done <<GITLINK_EOF
+$(git -c core.quotePath=false diff --cached --raw --no-renames --diff-filter=ACMR 2>/dev/null | awk -F'\t' '$1 ~ / 160000 / {print $2}')
+GITLINK_EOF
+if [ "$GITLINK_BLOCKED" -eq 1 ]; then
+  echo "  A gitlink records a commit SHA in another repository — a clone cannot fetch it, so the"
+  echo '  content is lost while the tree still looks complete. .gitignore never applies to it.'
+  echo "  Fix: git rm --cached <path>   (the working directory and its history stay untouched)."
+elif [ "$GITLINK_SEEN" -eq 0 ]; then
+  echo "  ✅ PASS"
+fi
+
 # ── Confidentiality guard — public-surface scan on staged tracked content ─────
 # A commit to a PUBLIC repo is an effective PUBLISH of its content, so the confidentiality boundary is
 # checked here as well as at push/publish. Pattern loading and matching come from
