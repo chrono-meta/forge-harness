@@ -181,6 +181,96 @@ this that with from have been will your about would should could there which the
 path host tmp home HOME
 then than when what where because those these into over under more most only just'''.split())
 
+# ── 고유명사 별칭 + 길이 대역 ────────────────────────────────────────────────
+# 🟥 **왜 「가장 긴 것 3 개」 만으로는 안 되나** (2026-09-16 실측, 09-15 전사본 × 그날 기록).
+#    운영자는 붙여쓴다 — `이건이미끝난것같은데` · `지난히스토리봐서알겠지`. 한글 토큰화는
+#    공백에서만 끊기므로 **절 하나가 토큰 하나**가 되고, 그것은 **정의상 가장 길면서**
+#    기록에 축자로 다시 나타날 확률이 **가장 낮다.** 즉 길이 정렬이 최악의 키를 적극적으로
+#    고른다. 미착지 고유 키 59 건을 눈으로 분류했을 때 ~42(71%)가 이 부류였다.
+#
+# 🟥 **그런데 길이 상한만 두면 진짜 고유명사가 같이 죽는다** — `프렌즈온데스크`(7)·
+#    `클로드온데스크`(7) 는 길지만 **기록에 그대로 나타나고 실제로 착지하던** 키다.
+#    그래서 상한에 **별칭표 예외**를 건다: 표에 있는 이름은 길이와 무관하게 키가 된다.
+#
+# 🟥 **비순환 조건 — 표는 «기록» 이 아니라 손으로 얼린 어휘다.** 과잉 일반화를 막으려고
+#    고유명사/도구명만 넣는다. `하네스` · `커밋` 같은 일반어를 넣으면 우연 일치가 늘고,
+#    이 검사는 advisory 라 **거짓 착지가 조용한 방향**이다(미착지는 시끄럽다).
+#    표에서 뽑은 후보를 기록에서 찾아 채우는 것은 **금지** — 그건 정의상 항상 맞는다.
+KEY_MIN_KO, KEY_MAX_KO = 3, 6      # 한글 키 길이 대역. 초과분은 2군(3 개를 못 채울 때만)
+
+# 표기 변형. 키(대표 표기) → 같이 볼 표기들. 값에 ERE 메타문자를 넣지 않는다(아래에서 검증).
+ALIAS = {
+    '클로드코드':       ['Claude Code', 'claude-code'],
+    '클로드온데스크':   ['clawd-on-desk', 'Clawd on Desk'],
+    '프렌즈온데스크':   ['friends-on-desk', 'Friends on Desk'],
+    '오픈코드':         ['opencode'],
+    '데스크탑':         ['Desktop'],
+    '코덱스':           ['Codex'],
+    '텔레그램':         ['Telegram', '텔레그렘'],
+    '컴퓨터유즈':       ['computer use', 'computer-use', '컴퓨터 유즈'],
+    '거버넌스엔지니어링': ['governance engineering', '거버넌스 엔지니어링'],
+    '워크트리':         ['worktree'],
+    '오르카':           ['orca', 'Orca'],
+    '춘식이':           ['chunsik'],
+}
+# 🟥 메타문자 검증 — 값이 정규식으로 새면 TARGET 의 의미가 바뀐다. 조용히 거르지 않고 죽는다.
+_META = re.compile(r'[.^$*+?()\[\]{}|\\]')
+for _k, _vs in ALIAS.items():
+    for _v in _vs:
+        if _META.search(_v):
+            sys.stderr.write("FATAL: ALIAS 값에 ERE 메타문자: %s\n" % _v)
+            sys.exit(10)
+
+# 긴 것부터 — `클로드온데스크` 가 `클로드` 보다 먼저 걸려야 한다.
+_ALIAS_KEYS = sorted(ALIAS, key=len, reverse=True)
+
+# 🟥 **부분 문자열만 보면 다른 낱말을 도구명으로 오인한다** (cross-family codex, A/B1):
+#    `오픈코드리뷰` 는 `오픈코드`(opencode) 가 아니다. 그래서 «남는 쪽» 을 본다 — 앞에 붙은
+#    것은 접속어, 뒤에 붙은 것은 짧은 파생 접미사일 때만 같은 지시대상으로 인정한다.
+#    🟥 목록은 **작고 언 판단**이다. 못 알아보면 **교대를 안 붙일 뿐**이라 실패가
+#    조용한 쪽(거짓 착지)이 아니라 시끄러운 쪽(미착지)으로 떨어진다 — 그래서 허용한다.
+_LEAD_OK = ('그리고', '그래서', '근데', '그런데', '그', '이', '저', '그럼')
+_TAIL_OK = ('앱', '쪽', '판', '건', '용', '들', '팀')
+
+def alias_extract(tok):
+    """붙여쓴 절에 삼켜진 고유명사를 꺼낸다. 없으면 None.
+    `그리고프렌즈온데스크` → `프렌즈온데스크`. 기록을 안 보므로 순환하지 않는다."""
+    for name in _ALIAS_KEYS:
+        if name == tok or name not in tok:
+            continue
+        i = tok.index(name)
+        lead, tail = tok[:i], tok[i + len(name):]
+        if lead and lead not in _LEAD_OK:
+            continue
+        if tail and tail not in _TAIL_OK:
+            continue
+        return name
+    return None
+
+def key_pattern(key):
+    """TARGET 의 정규식. 별칭이 있으면 교대, 없으면 맨 토큰 그대로.
+    🟥 교대는 «같은 것의 다른 표기» 안에서만 쓴다 — 서로 다른 낱말을 OR 로 묶으면
+    1/3 이 «전부 착지» 로 렌더된다(그래서 키마다 한 행이라는 기존 규약은 그대로다)."""
+    # 정확 일치가 없으면 **포함**도 본다 — 키가 `데스크탑앱` 인데 표에는 `데스크탑` 만
+    # 있는 형태. 🟥 이때 키를 짧게 바꾸지 않고 **교대에 더하기만** 한다: 키를 깎으면
+    # 한글 쪽 특이도가 떨어져 우연 일치(조용한 거짓 착지)가 늘어난다.
+    exact = key in ALIAS
+    name = key if exact else alias_extract(key)
+    if not name:
+        return key
+    # 🟥 **포함 일치일 때는 짧은 한글 이름을 교대에 넣지 않는다** (cross-family codex, A1).
+    #    초판은 `(데스크탑앱|데스크탑|Desktop)` 를 냈는데, 그러면 더 짧고 흔한 `데스크탑` 으로
+    #    착지가 성립한다 — 「키를 안 깎는다」는 주석과 정반대 효과였다
+    #    ([[feedback_rule_misdescribes_its_own_machine]]). 교대가 나르는 것은 **표기 변형**
+    #    (라틴/오타)이지 «더 넓은 한국어 낱말» 이 아니다.
+    members = [key] + ALIAS[name] if not exact else [key] + ALIAS[key]
+    return "(" + "|".join(list(dict.fromkeys(members))) + ")"
+
+def band_ok(s):
+    if re.match(r'^[\uac00-\ud7a3]+$', s):
+        return KEY_MIN_KO <= len(s) <= KEY_MAX_KO or s in ALIAS
+    return True
+
 def strip_particle(tok):
     if not re.match(r'^[\uac00-\ud7a3]+$', tok):
         return tok
@@ -191,6 +281,7 @@ def strip_particle(tok):
 
 n_rows = 0
 n_unprobeable = 0
+n_dropped = 0
 for line in sys.stdin:
     line = line.rstrip('\n')
     if not line:
@@ -216,8 +307,28 @@ for line in sys.stdin:
         seen.add(s)
         cand.append(s)
     # 가장 긴 것부터 3 개. 동률은 먼저 나온 것(발화 앞쪽이 대개 주제어).
-    cand.sort(key=lambda s: -len(s))
-    keys = cand[:3]
+    # 붙여쓴 절에 삼켜진 고유명사를 꺼내 **대신** 세운다(원본 절은 어차피 안 맞는다).
+    pulled = []
+    for s in cand:
+        if band_ok(s):
+            pulled.append(s)
+            continue
+        got = alias_extract(s)
+        pulled.append(got if (got and got not in pulled) else s)
+    cand = pulled
+    # 1군 = 대역 안(또는 별칭 등재) · 2군 = 붙여쓴 절. 2군은 3 개를 못 채울 때만 쓴다 —
+    # 버리지 않는다(«프로브불가» 로 접으면 미측정을 0 으로 렌더하는 쪽이 된다).
+    tier1 = [s for s in cand if band_ok(s)]
+    tier2 = [s for s in cand if not band_ok(s)]
+    tier1.sort(key=lambda s: -len(s))
+    tier2.sort(key=lambda s: -len(s))
+    ordered = tier1 + tier2
+    keys = ordered[:3]
+    # 🟥 **드롭을 센다** (cross-family codex, A2). `[:3]` 자체는 종전부터 있었지만, 대역 정렬이
+    #    들어오면서 «붙여쓴 하중 절»이 **체계적으로** 잘리는 쪽으로 바뀌었다 — `절대자동승격하지마라`
+    #    같은 키가 사라지고 남은 흔한 셋으로 발화가 「착지」로 렌더되면 그건 내가 만든 fail-open 이다.
+    #    막을 수는 없다(축자로 다시 안 나타나는 것은 사실이니까). 대신 **조용하지 않게** 만든다.
+    n_dropped += len(ordered) - len(keys)
     if not keys:
         # 프로브를 만들 수 없는 발화 — **버리지 않고 센다**(not found != 0).
         n_unprobeable += 1
@@ -228,11 +339,11 @@ for line in sys.stdin:
     # (codex finding 1). Keys are bare tokens ([가-힣]+ / [A-Za-z0-9_]+): no ERE metacharacters,
     # never dash-first, so the landing checker reads them as literals.
     for k_i, key in enumerate(keys, 1):
-        print("TARGET\t%s\t#%s.%d/%d %s" % (key, idx, k_i, len(keys), text[:36]))
+        print("TARGET\t%s\t#%s.%d/%d %s" % (key_pattern(key), idx, k_i, len(keys), text[:36]))
     MAP.write("%s\t%s\t%s\t%d\n" % (idx, label, text[:60], len(keys)))
     n_rows += 1
 MAP.close()
-sys.stderr.write("probe utterances=%d · 프로브불가=%d\n" % (n_rows, n_unprobeable))
+sys.stderr.write("probe utterances=%d · 프로브불가=%d · 키드롭=%d\n" % (n_rows, n_unprobeable, n_dropped))
 PY
   python3 "$_py" "$1"
 }

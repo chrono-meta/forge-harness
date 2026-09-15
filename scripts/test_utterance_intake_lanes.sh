@@ -408,6 +408,137 @@ N23=$(python3 "$EXTRACT" "$T/tr23.jsonl" --min-chars 20 2>/dev/null | grep -c .)
 python3 "$EXTRACT" "$T/tr23.jsonl" --min-chars 20 2>/dev/null | grep -q "표시가 없는" && ok "L23b known-positive: 남은 것이 표시 없는 발화다" || ng "L23b 표시 없는 발화까지 버렸다"
 python3 "$EXTRACT" "$T/tr23.jsonl" --min-chars 20 2>/dev/null | grep -q "메타표시레코드\|사이드체인" && ng "L23c 표시된 레코드가 살아남았다" || ok "L23c 표시된 레코드는 없다 (known-negative)"
 
+# ── L24  키 선택: 별칭 + 길이 대역 (2026-09-16) ──────────────────────────────
+# WHY. 「가장 긴 토큰 3 개」 휴리스틱이 **붙여쓴 절**을 키로 고른다 — 절은 정의상 가장 길고
+# 기록에 축자로 다시 나올 확률은 가장 낮다. 09-15 전사본 실측에서 미착지 고유 키 59 중
+# ~42(71%)가 이 부류였고, 09-15 기록이 스스로 지목한 「음차 별칭」은 2~3(5%)뿐이었다.
+# 그래서 수리는 두 축이다: ⓐ 표기 별칭(교대) ⓑ 한글 키 길이 대역 + 삼켜진 고유명사 꺼내기.
+# 🟥 두 축이 **같이** 있어야 듣는다 — 각각은 ⌈n/2⌉ 를 못 넘긴다(한쪽만 켜면 키 3 중 1).
+_probes() {  # $1=발화 텍스트 → probes 의 TARGET 패턴들(한 줄에 하나)
+  printf '1\t2026-09-16T00:00:00Z\t%s\n' "$1" \
+    | "$SUT_PROBE_RUNNER" 2>/dev/null | awk -F'\t' '$1=="TARGET"{print $2}'
+}
+# mkprobes.py 를 SUT 에서 **그대로 뽑아** 돌린다 — 두 번째 사본을 쓰면 관대함이 갈린다
+# ([[feedback_divergent_leniency_duplicate_normalizers]]).
+awk "/^  cat > \"\\\$_py\" <<'PY'\$/{f=1;next} /^PY\$/{f=0} f" "$SUT" > "$T/mkprobes_sut.py"
+if [ ! -s "$T/mkprobes_sut.py" ]; then
+  echo "❌ L24-setup mkprobes.py 추출 실패 — SUT 의 heredoc 앵커가 바뀌었다 (계기 오류)"
+  FAIL=$((FAIL+1))
+else
+  SUT_PROBE_RUNNER="$T/run_mkprobes.sh"
+  { echo '#!/usr/bin/env bash'; echo "exec python3 \"$T/mkprobes_sut.py\" \"$T/l24.map\""; } > "$SUT_PROBE_RUNNER"
+  chmod +x "$SUT_PROBE_RUNNER"
+
+  # L24  별칭이 교대로 나간다 — `데스크탑` 키가 `Desktop` 도 본다
+  _probes '클로드 데스크탑앱에서 한번 테스트해봤는데 춘식이 반응이 움직이네' > "$T/l24.out"
+  grep -q 'Desktop' "$T/l24.out" \
+    && ok "L24 음차 별칭이 교대로 나간다 (데스크탑 → Desktop)" \
+    || ng "L24 별칭 교대 없음 — $(tr '\n' ' ' < "$T/l24.out")"
+
+  # L24b known-negative: 별칭표에 없는 일반어는 **맨 토큰 그대로** 나간다.
+  #   표를 일반어로 넓히면 우연 일치가 늘고, 이 검사는 advisory 라 거짓 착지가 조용한 쪽이다.
+  _probes '오늘은 그 배선을 확실하게 정리하고 나서 넘어가려고 한다 지금' > "$T/l24b.out"
+  grep -q '(' "$T/l24b.out" \
+    && ng "L24b 일반어에 교대가 붙었다 — 별칭표가 넓다: $(tr '\n' ' ' < "$T/l24b.out")" \
+    || ok "L24b known-negative: 별칭 없는 토큰은 맨 토큰 그대로"
+
+  # L24c  붙여쓴 절이 키 1군에서 밀린다 — `이건이미끝난것같은데`(10자) 는 대역 밖
+  _probes '이건이미끝난것같은데 담당팀에서 대기실 테스트 돌리는 중이고 배선도 끝났다' > "$T/l24c.out"
+  grep -qx '이건이미끝난것같은데' "$T/l24c.out" \
+    && ng "L24c 붙여쓴 절이 여전히 1군 키다 — 대역이 안 먹었다" \
+    || ok "L24c 붙여쓴 절(10자)이 대역 밖으로 밀린다"
+
+  # L24d  절에 삼켜진 고유명사를 꺼낸다 — `그리고프렌즈온데스크` → `프렌즈온데스크`
+  #   🟥 이게 없으면 별칭표가 토큰 경계를 못 넘어 무용지물이 된다(실측 미착지 4 건이 이 모양).
+  _probes '그리고프렌즈온데스크 릴리즈는 어제 판이라 다시 구워야 맞을 것 같은데' > "$T/l24d.out"
+  grep -q 'friends-on-desk' "$T/l24d.out" \
+    && ok "L24d 절에 삼켜진 고유명사를 꺼낸다 (그리고프렌즈온데스크 → 프렌즈온데스크)" \
+    || ng "L24d 삼켜진 고유명사 미추출 — $(tr '\n' ' ' < "$T/l24d.out")"
+
+  # L24e  긴 고유명사는 대역 상한의 **예외**다 — `프렌즈온데스크`(7자) 가 죽으면 안 된다.
+  #   길이 상한만 두면 실제로 착지하던 키가 같이 죽는다(대역의 부작용, 명시적으로 막는다).
+  _probes '프렌즈온데스크 쪽은 그대로 두고 나머지만 먼저 정리하자 오늘은' > "$T/l24e.out"
+  grep -q '프렌즈온데스크' "$T/l24e.out" \
+    && ok "L24e 별칭 등재 고유명사는 길이 상한 예외 (7자 생존)" \
+    || ng "L24e 긴 고유명사가 대역에 죽었다 — $(tr '\n' ' ' < "$T/l24e.out")"
+
+  # L24f  되돌림 프로브 — 별칭표를 비우면 L24/L24d 가 **정확히** 빨개진다.
+  #   🟥 앵커가 장식이 아님을 증명하는 유일한 방법이다([[feedback_anchor_can_be_decorative]]).
+  # 🟥 뮤테이션은 «텍스트가 바뀌었나» 가 아니라 «의미가 바뀌었나» 로 확인한다.
+  #    초판은 `ALIAS = {} or {`(파이썬에서 뒤 딕셔너리로 평가 = **무효 뮤턴트**)를 썼고,
+  #    텍스트 grep 은 통과했다. 그때 이 레인이 초록이었던 이유는 앵커가 살아서가 아니라
+  #    **대상이 깨져 있어서**였다 — [[feedback_three_reasons_a_lane_is_green]] 의 ②.
+  sed 's/^_META = re.compile/ALIAS = {}\'$'\n''_META = re.compile/' "$T/mkprobes_sut.py" > "$T/mkprobes_neutered.py"
+  _applied=$(printf '1\t2026-09-16T00:00:00Z\t%s\n' '프렌즈온데스크 쪽은 그대로 두고 나머지만 먼저 정리하자 오늘' \
+             | python3 "$T/mkprobes_neutered.py" "$T/l24f0.map" 2>/dev/null | awk -F'\t' '$1=="TARGET"{print $2}')
+  case "$_applied" in
+    ''|*'friends-on-desk'*) ng "L24f 되돌림 **의미** 적용 실패 — 뮤턴트가 여전히 별칭을 낸다/죽었다 (계기 오류)" ;;
+    *)
+    _n_out=$(printf '1\t2026-09-16T00:00:00Z\t%s\n' '클로드 데스크탑앱에서 한번 테스트해봤는데 춘식이 반응이 움직이네' \
+             | python3 "$T/mkprobes_neutered.py" "$T/l24f.map" 2>/dev/null | awk -F'\t' '$1=="TARGET"{print $2}')
+    case "$_n_out" in
+      *Desktop*) ng "L24f 별칭표를 비웠는데도 Desktop 이 나온다 — 앵커가 장식이다" ;;
+      '')        ng "L24f 뮤턴트가 출력 0 — 되돌림이 스크립트를 죽였다(레인 무효)" ;;
+      *)
+        # 🟥 L24d 의 되돌림도 같이 본다 (cross-family codex, B2). 초판은 `Desktop` 소멸만 봐서
+        #    「삼켜진 고유명사 추출이 죽는가」는 **검증하지 않았다** — 레인 주석이 주장하는 범위와
+        #    실제 검사 범위가 어긋난 자리다([[feedback_rule_misdescribes_its_own_machine]]).
+        _n_d=$(printf '1\t2026-09-16T00:00:00Z\t%s\n' '그리고프렌즈온데스크 릴리즈는 어제 판이라 다시 구워야 맞을 것 같은데' \
+               | python3 "$T/mkprobes_neutered.py" "$T/l24f2.map" 2>/dev/null | awk -F'\t' '$1=="TARGET"{print $2}')
+        case "$_n_d" in
+          *friends-on-desk*|*'|'*) ng "L24f 뮤턴트인데 삼켜진 고유명사 추출이 살아 있다" ;;
+          '')                      ng "L24f 뮤턴트 출력 0 (레인 무효)" ;;
+          *) ok "L24f 되돌림: 교대 **와** 삼켜진-고유명사 추출이 함께 사라진다 (앵커 생존)" ;;
+        esac
+        ;;
+    esac
+    ;;
+  esac
+
+  # L24g  ALIAS 값에 ERE 메타문자가 섞이면 **죽는다** — 조용히 거르지 않는다.
+  #   정규식으로 새면 TARGET 의 의미가 바뀌고, 그건 「미착지」가 아니라 계기 고장이다.
+  sed "s/^    '오르카':.*/    '오르카': ['or(ca'],/" "$T/mkprobes_sut.py" > "$T/mkprobes_meta.py"
+  printf '1\t2026-09-16T00:00:00Z\t%s\n' '오르카 워크트리를 하나 더 띄워서 거기서 돌리자 오늘' \
+    | python3 "$T/mkprobes_meta.py" "$T/l24g.map" >/dev/null 2>&1
+  [ "$?" -eq 10 ] \
+    && ok "L24g ALIAS 에 ERE 메타문자 → rc=10 (계기 고장이지 미착지가 아니다)" \
+    || ng "L24g 메타문자가 조용히 통과했다"
+
+  # L24h  A1 회귀 — 포함 일치일 때 **짧은 한글 이름**이 교대에 들어가면 안 된다.
+  #   `(데스크탑앱|데스크탑|Desktop)` 은 더 흔한 `데스크탑` 으로 착지를 성립시킨다 =
+  #   조용한 거짓 착지. 교대가 날라야 하는 것은 **표기 변형**이지 더 넓은 한국어 낱말이 아니다.
+  _probes '클로드 데스크탑앱에서 한번 테스트해봤는데 춘식이 반응이 움직이네' > "$T/l24h.out"
+  if grep -q 'Desktop' "$T/l24h.out" && ! grep -qE '\(데스크탑앱\|데스크탑\|' "$T/l24h.out"; then
+    ok "L24h A1: 포함 일치 교대에 짧은 한글 이름이 없다 (Desktop 만 더한다)"
+  else
+    ng "L24h A1 회귀 — $(tr '\n' ' ' < "$T/l24h.out")"
+  fi
+
+  # L24i  B1 회귀 — 부분 문자열 충돌. `오픈코드리뷰` 는 `오픈코드`(opencode) 가 아니다.
+  #   남는 쪽(`리뷰`)이 허용 접미사가 아니므로 교대를 붙이지 않는다.
+  _probes '오픈코드리뷰 기준은 여기서 따로 정하자 오늘 우리끼리' > "$T/l24i.out"
+  grep -q 'opencode' "$T/l24i.out" \
+    && ng "L24i B1 회귀 — `오픈코드리뷰` 를 opencode 로 오인했다: $(tr '\n' ' ' < "$T/l24i.out")" \
+    || ok "L24i B1: 부분 문자열 충돌(오픈코드리뷰)에 교대를 안 붙인다"
+
+  # L24i-b  known-positive 짝 — 허용 접미사는 **여전히 붙어야** 한다. 없으면 L24i 는
+  #   「아무것도 안 붙인다」로도 초록이 되어 판별력이 없다.
+  _probes '데스크탑앱 쪽 설정만 먼저 보고 나머지는 내일 정리하자 오늘은' > "$T/l24ib.out"
+  grep -q 'Desktop' "$T/l24ib.out" \
+    && ok "L24i-b known-positive: 허용 접미사(앱)는 여전히 교대가 붙는다" \
+    || ng "L24i-b 경계 방어가 정상 파생어까지 죽였다 — $(tr '\n' ' ' < "$T/l24ib.out")"
+
+  # L24j  A2 회귀 — 3 개를 넘겨 잘린 키를 **센다**. 「미측정을 0 으로」 접지 않는다.
+  #   대역 정렬이 들어오면서 붙여쓴 하중 절이 체계적으로 잘리게 됐고, 그 드롭이 조용하면
+  #   남은 흔한 셋으로 발화가 「착지」로 렌더된다 = 이 수리가 만든 fail-open.
+  _drop=$(printf '1\t2026-09-16T00:00:00Z\t%s\n' '절대자동승격하지마라 담당팀 대기실 배선도 테스트 먼저 보자 오늘' \
+          | "$SUT_PROBE_RUNNER" 2>&1 >/dev/null | grep -o '키드롭=[0-9]*')
+  case "$_drop" in
+    키드롭=0|'') ng "L24j A2: 드롭이 0 으로 보고됐다 (조용한 드롭) — [$_drop]" ;;
+    *)           ok "L24j A2: 잘린 키를 센다 ($_drop)" ;;
+  esac
+fi
+
 echo
 echo "── utterance-intake lanes: PASS=$PASS FAIL=$FAIL ──"
 [ "$FAIL" -eq 0 ] || exit 1
