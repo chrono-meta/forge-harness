@@ -702,6 +702,7 @@ for _pair in \
   "scripts/remote_marker_gate.sh|scripts/test_remote_marker_gate_lanes.sh" \
   ".github/workflows/validate.yml|scripts/test_remote_marker_gate_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_precommit_staged_drift_lanes.sh" \
+  "templates/.git-hooks/pre-commit|scripts/test_precommit_gitlink_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_address_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_precommit_pointer_index_lanes.sh" \
   "scripts/residency_closure_scan.py|scripts/test_residency_closure_lanes.sh" \
