@@ -72,7 +72,7 @@ Collect from five sources (bash per source in §Collection-Bash):
 | HackerNews | Algolia API `search_by_date` (date-sorted, never `/search`), score > 30, keyword-relevant | 15 items |
 | arxiv | export API, latest by submittedDate | 6 items |
 | TLDR AI | RSS, title + link | 5 items |
-| The Batch (deeplearning.ai) | HTML scraping, title + issue slug | 5 items |
+| The Batch (deeplearning.ai) | HTML scraping, `aria-label` + `/the-batch/issue-N` href (the JSON `slug` shape died 2026-09-11) | 5 items, or `UNMEASURED` |
 | GeekNews (news.hada.io) | Atom feed (`/rss/news` path), title + link, AI/agent/LLM-relevant | 5 items |
 
 Report progress: `📡 HN 15 items · arxiv 5 items · TLDR 5 items · Batch 5 items · GeekNews 5 items collected`
