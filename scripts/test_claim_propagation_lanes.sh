@@ -28,12 +28,12 @@
 #   output to a file and reads `$?` directly. No `cmd | grep -q` either (SIGPIPE under pipefail).
 #   And no backtick inside a double-quoted lane message — a backtick pair there EXECUTES.
 #
-# Usage:  bash scripts/test_claim_propagation_lanes.sh        (PYTHON=<interp> to pin one)
+# Usage:  bash scripts/test_claim_propagation_lanes.sh        (PATH=<interp-dir>:$PATH to pin an interpreter — a $PY invoker is unreadable to new_code_anchor_check.sh)
 # Exit:   0 = every lane passed · 1 = a lane failed (or the instrument itself broke)
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCAN="$HERE/claim_propagation_scan.py"
-PY="${PYTHON:-python3}"
+PY=python3   # 🟥 literal on purpose: the new-code-anchor gate reads a literal invoker, and a `"$PY"` invoker scored MENTION_ONLY on CI (PR #748). Interpreter override = PATH, not a variable
 pass=0; fail=0
 ok(){ pass=$((pass+1)); printf '  ✅ PASS %s\n' "$1"; }
 no(){ fail=$((fail+1)); printf '  ❌ FAIL %s — %s\n' "$1" "${2:-}"; }
@@ -41,7 +41,7 @@ T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 
 # run <outfile> <scanner args…>  — sets RC (global). Never call inside $( ).
 RC=0
-run(){ local out="$1"; shift; "$PY" "$SCAN" "$@" >"$out" 2>&1; RC=$?; }
+run(){ local out="$1"; shift; python3 "$SCAN" "$@" >"$out" 2>&1; RC=$?; }
 # runwith <scanner.py> <outfile> <args…> — same, for a mutant copy
 runwith(){ local s="$1" out="$2"; shift 2; "$PY" "$s" "$@" >"$out" 2>&1; RC=$?; }
 live_n(){ grep -c '🟥 LIVE' "$1"; }                      # prints 0 when none (grep rc ignored)
