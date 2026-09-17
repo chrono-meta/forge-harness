@@ -227,8 +227,14 @@ fi
 #   ~G-LINT-01 — moved from NOT-YET-AUTHORED into ARM_CAPABILITY_EXCLUDE. Excluded either way, so
 #     the counts are unaffected; what changed is that it no longer emits a nightly warning that
 #     reads like a to-do for a spec nobody can write against a route the arm cannot take.
-_lane S2 select-guard "selected count == 13 (11 + G-GREET-02 + G-GREET-05)" "13" "$sel_count"
-_lane S3 select-guard "excluded count == 20 (33 probes.md rows - 13 selected)" "20" "$exc_count"
+#   ~G-TRIG-01 — 2026-09-17: moved into ARM_CAPABILITY_EXCLUDE, the TWIN of G-TRIG-03 above and
+#     for the identical reason (fh_detail_protocols.md:443-444 lists the two on adjacent lines
+#     of one row-diet removal list; neither route exists for an arm without the Skill tool).
+#     Unlike G-LINT-01 this DOES move the counts — it had been selected and authored — so 13 -> 12
+#     and 20 -> 21. It should have moved on 2026-09-14 with its twin; leaving it behind is the
+#     half-fix shape, and these three pinned numbers are what surfaced it.
+_lane S2 select-guard "selected count == 12 (13 - G-TRIG-01, 2026-09-17)" "12" "$sel_count"
+_lane S3 select-guard "excluded count == 21 (33 probes.md rows - 12 selected)" "21" "$exc_count"
 
 # S7/S8: the two newly-covered rows must actually be IN the selection, and the state-excluded row
 # must carry its OWN reason rather than the generic utterance-shape one. Counting alone would pass
@@ -239,6 +245,21 @@ import json; s=json.load(open('$SELECT_JSON'))['selected']
 ids={p['id'] for p in s}
 print('yes' if {'G-GREET-02','G-GREET-05'} <= ids else 'no')")
 _lane S7 select-guard "G-GREET-02 and G-GREET-05 are selected BY NAME (not just a count of 13)" "yes" "$greet_new"
+
+# S10: the count-drift guard's other half — S2/S3 would pass again if some unrelated row swapped in
+# to replace G-TRIG-01. Assert the IDENTITY on both sides: excluded by name, AND with the twin's own
+# reason (not the generic utterance-shape one), AND that its live neighbour is still selected.
+# 🟥 A pass here is NOT evidence that the row-diet delegation fires at the floor tier — that stays
+# UNMEASURED. This asserts only that the exclusion is the one we meant.
+trig01=$(python3 -c "
+import json; d=json.load(open('$SELECT_JSON'))
+exc={x['id']: x['reason'] for x in d['excluded']}
+sel={p['id'] for p in d['selected']}
+ok = ('G-TRIG-01' in exc and 'Skill' in exc['G-TRIG-01']
+      and exc.get('G-TRIG-01') == exc.get('G-TRIG-03')
+      and 'G-TRIG-02' in sel)
+print('yes' if ok else 'no')")
+_lane S10 select-guard "G-TRIG-01 excluded BY NAME with its twin's exact reason, G-TRIG-02 still selected" "yes" "$trig01"
 
 g03_reason=$(python3 -c "
 import json; e=json.load(open('$SELECT_JSON'))['excluded']
@@ -313,10 +334,10 @@ _lane R1 dry-run "probe_live_eval.sh --dry-run exits 0" "0" "$dry_rc"
 _lane R2 dry-run "--dry-run creates no OUTDIR (no live run attempted)" "absent" "$([ -d "$DRY_OUT" ] && echo present || echo absent)"
 # Pinned like S2/S3 and for the same reason — see the S2 note for why 11 became 13 on 2026-09-14.
 case "$dry_stdout" in
-  *"SELECTED (13)"*) r3=yes ;;
+  *"SELECTED (12)"*) r3=yes ;;
   *) r3=no ;;
 esac
-_lane R3 dry-run "--dry-run stdout shows the real 13-probe selection" "yes" "$r3"
+_lane R3 dry-run "--dry-run stdout shows the real 12-probe selection" "yes" "$r3"
 
 # ── fail-fast: probe_live_eval.sh aborts on the FIRST rc=2 runner call, not after burning the
 # rest of the selected set (2026-09-05, the launchd incident this exists for) ────────────────────
