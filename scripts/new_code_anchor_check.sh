@@ -20,7 +20,9 @@
 #   scripts/package_coverage_check.sh  is SHIPPING coverage (does a referenced path make the
 #       tarball), not test coverage.
 #   scripts/gate_anchor_check.sh   is a known-pair harness for the git HOOKS specifically.
-#   .github/workflows/regression-guard.yml  is Axis 1, `paths:`-filtered to docs/rules.
+#   .github/workflows/regression-guard.yml  is Axis 1 — since 2026-08-29 (#552) its `paths:`
+#       covers every 4-axis asset class (scripts/** included), but it compares SECTIONS of
+#       existing files; it never asks whether a new executable is exercised.
 #   ⇒ Nothing in the repo asked "is this NEW executable exercised by anything". That is the hole.
 #
 # ── THE TRAP THIS FILE IS BUILT AROUND: anchor EXISTENCE ≠ anchor OPERATION ───────────────────

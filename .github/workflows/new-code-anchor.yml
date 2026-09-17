@@ -12,9 +12,11 @@ name: New-code anchor
 # log gets diagnosed as "selfcheck is red again". Same reasoning validate.yml states for keeping
 # the count-consistency step separate from the selfcheck step that also runs it.
 #
-# ⚠️ NOT A REQUIRED CHECK unless someone makes it one. Branch protection on this repo lists
-# `validate` and nothing else, so as shipped this job REPORTS and does not gate the merge button.
-# That is stated rather than implied: CLAUDE.md's §FH-Improvement-4-Axis-Auto-Gate already had to
+# 🟥 REQUIRED CHECK as of 2026-09-17 (measured on both protection layers: legacy contexts =
+# `validate` + `new-code-anchor`; rulesets = non_fast_forward only). The paragraph that stood here
+# said "NOT A REQUIRED CHECK … branch protection lists `validate` and nothing else" — true when
+# written, stale once this job was promoted, and it was still being cited as current. Kept as
+# history rather than deleted: CLAUDE.md's §FH-Improvement-4-Axis-Auto-Gate already had to
 # correct a stale claim about which checks are required, and a workflow that describes itself as a
 # floor it is not is the same defect. Promoting it is an operator decision.
 

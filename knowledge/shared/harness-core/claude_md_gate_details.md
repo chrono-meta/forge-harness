@@ -477,11 +477,15 @@ as-is rather than rewritten).
 > ⚠️ A *different* residual on `main` is still real and must not be folded into the one just
 > retracted — but the residual's own description was itself stale and needed correction on
 > 2026-08-12 (live re-check, `[[reference_github_protection_two_layers]]`): legacy
-> `required_status_checks.contexts` is **`["validate"]`**, not `[]` — a green `validate` check IS
-> required before a PR can merge, and `GET /rules/branches/main` carries no competing
-> `required_status_checks` rule, so the legacy field is the effective one here. `validate`
+> `required_status_checks.contexts` is **`["validate", "new-code-anchor"]`**, not `[]` — 🟥 re-read
+> 2026-09-17 (both layers): the 2026-08-12 line said `["validate"]` and that had gone stale once
+> `new-code-anchor` was promoted; a green `validate` AND a green `new-code-anchor` are required
+> before a PR can merge, and `GET /rules/branches/main` carries only `non_fast_forward` — no
+> competing `required_status_checks` rule, so the legacy field is the effective one here. `validate`
 > (`.github/workflows/validate.yml`) is a **separate job from Axis 1** (`regression-guard.yml`) —
-> Axis 1 is still not required, see the 4-axis section below. The gap on `validate` is
+> Axis 1 is still not required, see the 4-axis section below. 🟥 But since 2026-08-29 (#552) Axis 1
+> **does run** on every 4-axis asset class (its `paths:` was widened); the remaining gap is
+> "runs but not required", not "does not run". The gap on `validate` is
 > `strict: false`: that check re-runs on every push to the PR branch, but nothing re-forces it
 > against a **moving** main after it last ran — so a check that passed can still land behind
 > concurrent merges it never saw.

@@ -87,11 +87,13 @@ jobs:
                 # the finding. Recorded rather than quietly deleted, because the same
                 # read-truncation produced a second wrong claim the same session.
                 #
-                # The real relation, measured: this workflow's `paths:` is a SUBSET of
-                # GUARD_PATHSPEC (the script also gates knowledge/**, AGENTS.md, docs/*.md,
-                # scripts/*.sh, templates/.git-hooks/*, agent definitions — none of which
-                # trigger this workflow at all; that direction is a separate, already-recorded
-                # gap in CLAUDE.md). So a SKIP here should be RARE: if the workflow triggered,
+                # The real relation, measured 2026-09-17: this workflow's `paths:` (above) was
+                # widened on 2026-08-29 (d5fceac, #552) to cover the GUARD_PATHSPEC classes —
+                # knowledge/**, AGENTS.md, docs/*.md, scripts/**, templates/.git-hooks/*, agent
+                # definitions and more — so those changes DO trigger this workflow now. 🟥 The
+                # comment that stood here said they "trigger this workflow at all" NOT, and it
+                # outlived the widening by 19 days inside the very file whose `paths:` refuted it.
+                # So a SKIP here should be RARE: if the workflow triggered,
                 # a gated file changed. That is exactly why it must not print "PASS" — a skip
                 # in CI means the run compared nothing, and the honest reading of "compared
                 # nothing" is not "clean". Surfaced rather than blocked: the state is unproven
