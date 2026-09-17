@@ -53,7 +53,25 @@ CLI_EVENT_EXCLUDE = {"G-CODE-01", "G-CODE-02", "G-CODE-03"}
 # is how a warning stops being read; the honest close is to name the real blocker, not to author a
 # regex against a route the arm cannot take. Same UNMEASURED note applies: whether harness-doctor's
 # L4 knowledge cross-ref lint fires is not answered by excluding it here.
-ARM_CAPABILITY_EXCLUDE = {"G-TRIG-03", "G-LINT-01"}
+#
+# G-TRIG-01 joined this set 2026-09-17 — the TWIN of G-TRIG-03, and it should have moved on
+# 2026-09-14 with it. Same route, same arm, same impossibility: fh_detail_protocols.md:443-444
+# names them on ADJACENT lines of the SAME row-diet removal list ("platform-native skill matching
+# owns those: plugin-recommender - harness-doctor - ..."), and this arm runs
+# --tools "Read,Grep,Glob" with no Skill tool, so that route cannot exist here either. Leaving one
+# twin behind is the half-fix propagation shape this repo names by that word.
+# Measured before moving it: it has NEVER scored 3/3 across 13 nightly runs (first run 2026-09-05),
+# rep-level firing 6/12 over the post-calibration window = a ~50% chance of failing any given day,
+# which alone held a 13-probe / 0.80-threshold Overall hostage. The three surviving rep transcripts
+# (2026-09-15/16/17, 9 reps) show IDENTICAL behavior in every rep — the arm asks what "this" refers
+# to — and PASS/FAIL turned only on whether the skill NAME happened to appear while asking.
+# 🟥 SEPARATE, AND NOT FIXED BY THIS: probes.md's Source cell for the row cites
+# "CLAUDE.md §Autonomous Initiative", whose `/plugin-recommender` routing row was DELETED in
+# 1ff84b8 (2026-07-17) — 50 days before the probe's first run. Control: context-doctor's routing
+# row is still live at CLAUDE.md:978. That dead pointer is corrected in probes.md, not here.
+# Same UNMEASURED note as its twin: whether the row-diet delegation actually fires at the floor
+# tier is NOT answered by excluding it.
+ARM_CAPABILITY_EXCLUDE = {"G-TRIG-01", "G-TRIG-03", "G-LINT-01"}
 
 # The THIRD judgment call, and deliberately a SEPARATE set from the one above — "the arm lacks the
 # TOOL" and "the arm cannot reach the STATE that decides the right answer" are different facts, and

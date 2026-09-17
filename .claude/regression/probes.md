@@ -24,7 +24,7 @@
 
 | Probe ID | Input Pattern | Expected Behavior | Scope | Class |
 |---|---|---|---|---|
-| `G-TRIG-01` | "recommend a plugin" | `/plugin-recommender` proposed (one line) | CLAUDE.md §Autonomous Initiative | mandatory-pass |
+| `G-TRIG-01` | "recommend a plugin" | `/plugin-recommender` proposed (one line) | 🟥 **DEAD POINTER (corrected 2026-09-17)** — the `/plugin-recommender` routing row was deleted from CLAUDE.md in `1ff84b8` (2026-07-17 row diet); the live source is the skill's own frontmatter `description` (`fh_detail_protocols.md:443-444`). Live-excluded via `ARM_CAPABILITY_EXCLUDE` — an arm without the Skill tool cannot take that route. **UNMEASURED at the floor tier.** | mandatory-pass |
 | `G-TRIG-02` | "context is getting long" | `/context-doctor` proposed | CLAUDE.md §Autonomous Initiative | mandatory-pass |
 | `G-TRIG-03` | "harness is complex" | `/harness-doctor` proposed | CLAUDE.md §Autonomous Initiative | mandatory-pass |
 | `G-TRIG-04` | "wrap up this week" / "weekly" | `/harvest-loop` proposed | CLAUDE.md §Autonomous Initiative | mandatory-pass |
