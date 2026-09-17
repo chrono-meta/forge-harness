@@ -3975,3 +3975,28 @@
   cost: "서브에이전트 토큰(완료 알림 기준): 106,092 + 131,986 + 221,753 + 137,554 + 109,696
     + 최종 콜드리드 = 약 707k+ · 로컬 사이드카(qwen3:8b) = 로컬 실행, 토큰 계상 대상 아님 ·
     거버너 = UNMEASURED. 🟥 합계 안 적는다."
+
+- date: 2026-09-17
+  agent: "general-purpose ×3 (동일 계열 · 병렬 격리 조사)"
+  invoked_by: "FH 세션 (에어 노드 마감 후 최신화 — PR #733/#734 재평가 + live_eval FLAKY 귀속)"
+  task: >-
+    ① PR #733(ko-tech-writer 낭독 레지스터) 현행 main 위 재작성 재료 ② PR #734(선행연구 원장 +
+    never-do 어휘) 「아직 유효한 갭인가」 재평가 선행 ③ live_eval 2026-09-17 FLAKY 3건의 층 귀속
+    (계기/자산/환경). 셋 다 읽기 전용 — 트리 쓰기 금지를 임무문에 명시.
+  outcome: accepted
+  evidence: >-
+    3/3 채택. ②는 「닫아라」 권고와 함께 PR 본문이 대체재로 지목한 #701·#695 가 **틀린 지목**임을
+    실물 대조로 밝혔다(실제 커버는 #509 · 08-30 novelty 차단 · 09-03 ④ 승격). ③은 G-TRIG-01 이
+    50일 전 삭제된 CLAUDE.md 행을 겨냥한다는 것과 쌍둥이 G-TRIG-03 미이동(반쪽 픽스)을 찾아
+    같은 세션에서 수리까지 갔다(c26202e · 2b93dfd). ①은 README 4종 드롭·원장 1건 중복·preprep
+    역할경계 신설 필요를 실측으로 갈랐다.
+  governor_check: >-
+    하중 지는 앵커를 전부 직접 재확인했다 — soul_tenets FH-T01/T02 실물 · prior_art 훅
+    settings.json:9 배선 · CLAUDE.md 의 plugin-recommender 라우팅 행 부재(컨트롤: context-doctor
+    :978 생존) · fh_detail_protocols.md:443-444 인접 줄 · 커밋 1ff84b8. 🟥 사이드카 보고를
+    그대로 판정으로 쓰지 않았다.
+  residual: >-
+    세 조사 전부 **동일 계열**이다(cross-family 아님). 마커에 DEGRADED_PANEL_UNUSED 로 기록.
+    그리고 오늘 tally 는 31 을 셌는데 내가 띄운 것은 3 — 차이는 귀속 미확인이고
+    (`fh_signal_2026-09-02_dispatch-tally-attribution.md` 가 같은 축), 이 엔트리는 **내가 띄운
+    3건만** 주장한다. 나머지 28 을 0 으로도 내 것으로도 접지 않는다.
