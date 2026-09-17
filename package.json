@@ -349,6 +349,10 @@
     "scripts/test_remote_marker_gate_lanes.sh",
     "scripts/test_codex_doctor_root_lanes.sh",
     "scripts/claim_propagation_scan.py",
-    "scripts/test_claim_propagation_lanes.sh"
+    "scripts/test_claim_propagation_lanes.sh",
+    "scripts/citation_key_check.py",
+    "scripts/numeric_token_diff.py",
+    "scripts/section_ref_check.py",
+    "scripts/test_paper_integrity_lanes.sh"
   ]
 }

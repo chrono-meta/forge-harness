@@ -1613,6 +1613,25 @@ else
   fail=1
 fi
 
+# Paper-integrity lanes — the three checks the governor ran BY HAND with ad-hoc python on 2026-09-17
+# (paper 2; the sister paper had just been rejected by arXiv for 11/17 reference mismatches): every
+# cited key defined and every defined key cited (+ NEAR-MISS pairing for [MF24]↔[MF22]-style
+# renumbering), no number dropped or invented by a shrink pass, every §N / Sec. N / 섹션 N / 부록 N
+# cross-reference resolving to a heading. One suite for three subjects; the pairing key is
+# citation_key_check.py and the suite itself asserts numeric_token_diff.py and section_ref_check.py
+# exist (L1, FAIL not skip). Same pairing rule as above: the lane exists only because the scanner
+# does, so its absence beside a present subject is a FAIL, not a skip.
+if [ ! -f scripts/citation_key_check.py ]; then
+  _absent_subject_verdict "test_paper_integrity_lanes.sh" "scripts/citation_key_check.py" || fail=1
+elif [ -f scripts/test_paper_integrity_lanes.sh ]; then
+  if ! bash scripts/test_paper_integrity_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_paper_integrity_lanes.sh: citation_key_check.py present but its anchor is missing"
+  fail=1
+fi
+
 # The infra-delta half of the same subject. Separate suite, same pairing rule: it exists only because
 # fh_node_check.sh does, so its absence beside a present subject is a FAIL, not a skip.
 if [ ! -f scripts/fh_node_check.sh ]; then
