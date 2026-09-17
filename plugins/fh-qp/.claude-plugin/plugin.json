@@ -1,6 +1,6 @@
 {
   "name": "fh-qp",
-  "version": "3.10.0",
+  "version": "3.11.0",
   "engines": {
     "claudeCode": ">=1.0.0"
   },
