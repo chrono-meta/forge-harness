@@ -349,10 +349,42 @@ Zenodo `10.5281/zenodo.20680080`(concept DOI — 항상 최신판을 가리킨�
   🟥 **그리고 논문을 여는 방식이 금지됐다 — «처방만 있고 집행이 없다» 로 시작하지 마라.**
   **Davis, J. L. & Ruster, L. P.** "The gaps that never were: reconsidering responsible AI's
   principle-practice problem," *FAccT 2025*, pp. 350–360, DOI `10.1145/3715275.3732024` 이
-  **그 격차 프레이밍 자체를 심문**한다. ⚠️ **조사가 이 논문을 못 읽었다**(dl.acm.org 403 · 초록은
-  2차 출처) — 🟥 **우리를 때릴 논문이 미독 상태다. 직독하기 전에 §2 프레임을 확정하지 마라.**
-  ⇒ 주장 가능한 형태: «저들은 못 만들었다»(반증됨)도 «처방만 있다»(FAccT 에 걸린다)도 아니고,
-  **«우리는 이 모양으로 만들었고, 만들 때 무엇이 깨졌는지를 보인다»** 까지다.
+  **그 격차 프레이밍 자체를 심문**한다.
+  🟢 **5라운드에서 직독했고 판정이 역전됐다. 🟥 저자 순서도 정정 — 지면은 `Ruster, L. P. &
+  Davis, J. L.`(ANU / Vanderbilt) 다.** 초록 축자: *"the field has produced an array of **bridging
+  instruments in the form of toolkits, guidelines, and frameworks** … **Yet, the principle-practice
+  problem persists.** Rather than propose new and better bridging devices, we step back to
+  interrogate the metaphor itself."* 결론 = *"principles and practices are **integrated, nonlinear,
+  and subject to dynamic values** that transform across time and circumstance."* (Morley et al.
+  2020 이 학술 문헌만 **425건**을 셌다.)
+  ⇒ 🟢 **그들이 공격하는 것은 «브리징 도구를 하나 더 만드는 것» 이다 — 우리는 426번째가 아니다.**
+  우리 산출은 «기계화한 경계가 무엇을 했는가» 의 기록이고, 그건 그들이 실측한 «integrated ·
+  nonlinear · dynamic» 과 **정합한다**(우리 실패 로그가 그 모양이다).
+  ⇒ **§2 를 이렇게 연다**: 「격차가 있다」가 아니라 **「425건이 나왔고 문제는 남았다. 우리는
+  426번째를 내지 않는다 — 기계화한 경계가 무엇을 했는지 보고한다.」**
+  ⚠️ 🟥 **그래도 «처방만 있고 집행이 없다» 는 여전히 금지다**(ActPlane 이 반증). 금지는 «집행이
+  없다» 이고 허용은 «도구를 더 내지 않는다» 다 — 둘을 섞지 마라.
+
+  🟢 **5라운드가 ①②③ 을 각각 시험해서 셋 다 통과했다:**
+  ⓐ **Opdebeeck, R. 외 6인**, "An Empirical Study of Policy as Code: Adoption, Purpose, and
+  Maintenance," *MSR '26*, DOI `10.1145/3793302.3793355`(10,560 파일 · 499 레포 · 9 도구)의
+  **다섯 enforcement strategy 가 전부 «집행 시점·위치» 다**(Admission 34.29 % · User-Invoked
+  22.86 % · CI · Event-Triggered 20 % · Scheduled 5.71 %) — **degrade 방향 분기는 없다** ⇒ ① 생존.
+  ⚠️ 단 RQ3 가 *"policies tend to become **stricter more often than more lenient**"* 라고 실측하므로,
+  «과차단이 override 를 훈련시킨다» 를 쓸 때 **대상이 다름을 본문에 적어라**(그쪽 = 정책 내용의
+  엄격도 / 우리 = 비가역 표면의 override 채널).
+  ⓑ **Nogueira, L. & Resende, A.**, *Computers* **15(7):453**, 2026, DOI
+  `10.3390/computers15070453` 은 🟥 **«CI 우회» 를 정면으로 다룬다** — *"Kubernetes admission
+  control **mitigated all evaluated CI bypass scenarios**"*(29 매니페스트 · 37 시나리오 · 261 단언)
+  ⇒ **인용 의무.** 🟢 그런데 처방이 «배치 시점에 두 번째 집행 단계를 둔다»(층 추가)이고, 전수
+  grep 에 **advisory · audit mode · blocking 모드 · override · 비가역성 어휘가 전부 없다** ⇒
+  ①② 생존. 그리고 «duplicate 구현이 **policy drift** 를 만든다» 는 §gate-locality 의 **외부 근거**다.
+  ⓒ 🟡 **SRE Workbook** "Error Budget Policy"(**Thurgood, S.**, 2018-02-19)에서 **L3 의 이웃을
+  찾았다** — *"escalated to the **CTO** to make a decision."* 🟥 **«우리만 사람을 종단에 둔다» 로
+  쓰면 안 된다.** **정확한 차이**: SRE 는 문턱을 **수치가 열고 닫고**(*"halt all changes and
+  releases other than P0 issues or security fixes"*) 사람은 **«계산에 대한 이견»을 해결**한다.
+  우리는 **수치가 애초에 문을 안 열고** 사람/기록된 override 가 **문 자체**다. ⇒ 대비를 «사람을
+  두는가» 가 아니라 **«수치가 문을 여는가»** 로 진술한다.
 
 - ~~🟢 **그래서 델타가 좁아지고 선명해진다 — «α 를 무엇이 정하는가».**~~ 🟥 **위에서 철회됨**
   선행 계보 전체에서 α(또는 기각비용·손실)는 **사용자가 지정하는 하나의 스칼라**이고 기계는 그 아래서
