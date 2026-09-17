@@ -204,11 +204,21 @@ Zenodo `10.5281/zenodo.20680080`(concept DOI — 항상 최신판을 가리킨�
   > 조차 표면·배치를 건너 운반되지 않는다.** 이 다리가 논거를 자평에서 외부 실측으로 올린다.
   > **L2 자기측정 + 구매 가능성.** 그 오류율은 **통과권을 받을 같은 시스템 계열이 자기를 재서**
   > 낸 값이고, **행동을 고치지 않고 주장을 버려서** 낮출 수 있다 — 조작 방향이 저자에게 유리하다.
-  > 🟥 **조상은 Goodhart(1975)다** — 그걸 우리 발견처럼 쓰면 이 문서가 경계하는 동작이다. 최근
-  > 형식화(**Majka & El-Mhamdi**, arXiv:2505.23445, 거버너 직독)는 proxy↔goal 커플링을 다루고
-  > 🟢 **우리 두 형태(자기측정 · 버려서 좋아짐)는 안 다룬다.** ⇒ 우리 것은 관찰이 아니라
-  > **기계화된 거절**이다: `scripts/finding_verify.py` 가 **드롭이 감사되지 않은 실행의 완료를
-  > 거부한다**(정밀도는 삭제로 살 수 있으므로 삭제의 오류율을 같이 보고할 때만 읽을 수 있다).
+  > 🟥 **조상이 둘 있고 둘 다 명명해야 한다.** ⓐ **Goodhart(1975)** — 측정이 목표가 되면 측정이
+  > 아니게 된다. 최근 형식화(**Majka & El-Mhamdi**, arXiv:2505.23445, 직독)는 proxy↔goal 커플링을
+  > 다루고 우리 두 형태는 안 다룬다. ⓑ 🟥 **NIST AI 100-1 `MEASURE 1.3`(2023)** — *"**Internal
+  > experts who did not serve as front-line developers** for the system and/or **independent
+  > assessors** are involved in regular assessments."* ⇒ **«만든 쪽이 자기를 채점하면 안 된다» 는
+  > 이미 표준 규범이다.**
+  > ⚠️ **초판이 여기서 과주장했다(2026-09-17, 같은 날 정정)** — «이 형태는 D1 목록 어디에도 없다»
+  > 고 적었는데 `MEASURE 1.3` 이 그 자리다. 조사 에이전트가 *"«어디에도 없다»로 쓰기 **전에** 이
+  > 줄을 봐라"* 라고 재료로 올려서 잡혔다.
+  > 🟢 **그래서 남는 것은 «우려» 가 아니라 «메커니즘 + 집행» 둘이다**: ① `ε̂` 은 **드롭되지 않은
+  > 항목에 대해서만** 계산되므로 `ε̂ = ε̂(π)` 이고 **`ε` 을 안 낮추면서 `ε̂` 을 낮추는 π 가 존재
+  > 한다**(구성적) — `MEASURE 1.3` 도 Goodhart 형식화도 이 등식을 쓰지 않는다 ② 그래서 우리 것은
+  > 관찰이 아니라 **기계화된 거절**이다: `scripts/finding_verify.py` 가 **드롭이 감사되지 않은
+  > 실행의 완료를 거부한다.** 규범은 «독립 평가자를 둬라» 까지고, 우리 것은 «드롭 감사 없이는
+  > 실행이 완료로 표시되지 않는다» 다.
   > **L3 권한 — lexicographic.** 종단 책임자가 **사람 또는 기록된 override** 여야 한다는 것은
   > 기대효용 «위» 의 hard constraint다. 비용 계산으로 살 수 있는 것이 아니다.
   ⇒ 🟥 **«비가역 손실은 무한하다» 로 쓰지 마라.** 「그 측정이 운반되지 않고(L1) · 자기이해적이며
@@ -222,6 +232,34 @@ Zenodo `10.5281/zenodo.20680080`(concept DOI — 항상 최신판을 가리킨�
   성질이다** — action-conditional risk guarantee(Zhu et al.)는 **행위에 조건을 걸어 T1 을 덮지만
   T3 는 덮지 않는다**(같은 행위라도 손실을 지는 쪽이 동의했는지는 action 의 함수가 아니다).
   죽은 버전은 이 구분 없이 «표면» 이라고만 써서 «action 으로 번역하면 같다» 를 그대로 맞았다.
+
+- 🟢 **policy mapping — D4 의 네 번째 칸이 채워졌다 (2026-09-17, 1차 출처 직독).**
+  🟥 **규범 층은 표면별 차등을 이미 갖고 있다. 그런데 판별자가 우리와 다르다 — 그게 매핑의 요점이다.**
+
+  | 규범 | 요구 | 🟥 차등의 판별자 |
+  |---|---|---|
+  | **EU AI Act** Art. 14(3) (Reg. (EU) 2024/1689) | 감독은 *"commensurate with the **risks, level of autonomy and context of use**"* | **위험등급 · Annex 분류** — 성능이 아니다 |
+  | 같은 조 14(4)(d)(e) | *"decide … to **disregard, override or reverse** the output"* · *"**'stop' button** or a similar procedure"* | **감독자 개인의 능력 요건** — 수치 문턱이 아니다 |
+  | 같은 조 14(4)(b) | *"remain aware of the possible tendency of **automating bias**"* | 자동화 의존 자체를 명시적 위험으로 |
+  | 같은 조 **14(5)** | Annex III **1(a)** 에 한해 *"**separately verified and confirmed by at least two natural persons**"* | 🟥 **범위가 좁다** — «원격 생체인식 **식별**» 만이고 생체 **검증(verification)** 은 명시적 제외, **법집행·이주·국경·망명은 예외**. 「규정이 2인 검증을 요구한다」로 일반화하면 그게 지적 거리다 |
+  | **NIST AI 100-1** MAP 3.2 / 3.3 / 3.5 (+ **GOVERN 3.2**) | 오류 비용 · targeted application scope · 인간 감독 프로세스를 **문서화** | «조직의 risk tolerance 에 연결» — **문서화 요구**이고 차단 규칙이 아니다 |
+  | 같은 문서 MEASURE 2.6 | *"**residual negative risk does not exceed the risk tolerance**, and it can **fail safely** … beyond its knowledge limits"* | 🟥 **표준 안에서 «오류예산» 에 가장 가까운 자리** — §SRE 대비를 쓸 때 «표준·학술엔 없다» 로 쓰면 여기서 걸린다 |
+  | 같은 문서 Appendix B | *"**Some AI systems may not require human oversight** … Other systems may **specifically require** human oversight"* | 🟢 **차등 문제를 «더 연구가 필요한 쟁점» 으로 열어 둔다** — 우리 기여의 자리가 남의 문서에 명시돼 있다 |
+
+  ⇒ **매핑의 결론 한 줄**: 규범은 **범주(위험등급·Annex·조직 tolerance)로 차등**하고 그것을
+  **문서화하라**고 요구한다. 🟢 우리 것은 ⓐ 차등의 판별자를 **T1~T3(되돌림·제3자 관측·손실 귀속과
+  동의)** 로 명시하고 ⓑ 그것을 **문서가 아니라 집행**으로 둔다(가역=advisory / 비가역=fail-closed +
+  기록된 override). ⚠️ 그리고 **`MEASURE 2.6` 과 `Appendix B` 는 우리 편이다** — 전자는 표준이
+  이미 «tolerance 초과 금지 + fail safely» 를 말한다는 뜻이고, 후자는 «어느 시스템에 감독이
+  필요한가» 를 **미해결로 명시**한다.
+
+- ⚠️ **같은 조사가 `formal model` 선택지 ⓐ 를 약화시켰다.** ⓐ(«우리는 비용이 아니라 제약을 쓴다»
+  로 lexicographic 을 선언)는 **Franc, Prusa & Voracek**, *JMLR* **24(11):1–49**, 2023 이
+  **정리로 막는다**: *"despite their different formulations the **three rejection models lead to the
+  same prediction strategy**"* — 비용 기반 · bounded-improvement · bounded-abstention 이 **동일
+  전략으로 수렴**한다. ⇒ «제약 형식으로 바꿨다» 는 것 자체로는 **형식적 이득이 없다.**
+  🟢 **ⓑ(«추정량이 그 양이 아니다»)는 이 정리에 안 걸린다** — Franc et al. 은 **참 위험을 안다고
+  가정**하고 최적 전략을 논하므로, 인식론(추정량의 식별·유인)을 공격하는 ⓑ와 층이 다르다.
 
   🟥 **그리고 논문의 델타는 여기가 아니다.** 선행조사 20여 건 어디에도 없었던 형태는 **§9 ⓐ** 다 —
   *재는 자를 결과 보기 전에 고정해 판별력을 실측하고, **그 자로 우리 자신의 주효과를 죽였다***.
