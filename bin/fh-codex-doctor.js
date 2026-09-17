@@ -40,10 +40,59 @@ function parseArgs(argv) {
   return out;
 }
 
+// The root predicate is derived from what buildReport() actually READS, not from what "FH root"
+// suggests. Two surfaces are load-bearing:
+//   · AGENTS.md            — documentedTiers()'s only source; absent ⇒ INSTRUMENT_ERROR (exit 10)
+//   · plugins/**/SKILL.md  — collectSkills()/collectAgents()'s only subject
+// `package.json` used to be required here and in main(). It is never OPENED anywhere in this file
+// (the only two references were this predicate and main()'s gate), so the gate asserted a property
+// nothing downstream consumes — and it made a shipped npm binary structurally unusable for every
+// non-npm consumer harness that has all the audited surfaces (measured on a consumer harness that
+// carries AGENTS.md with
+// a tier table, plugins/ with 41 SKILL.md, .claude/registry/agent_cards.json — and no package.json).
+//
+// 🟥 The inverse error is the real hazard, so this is NOT merely a loosening. A random directory
+// must not produce a confident empty report: the SKILL.md leg requires plugins/ to hold at least one
+// skill, because an EMPTY plugins/ would otherwise yield `Skills scanned: 0` / `Findings: none` /
+// `Status: OK` — "not found rendered as zero", this repo's named failure family. Degrade direction
+// is unchanged: a genuinely wrong root still exits 11, loudly, naming each missing surface.
+//
+// 🟥 THREE NON-ZERO CLASSES, KEPT DISTINCT. The loosened predicate's hazard is not only fail-open,
+// it is EXIT-CODE COLLAPSE: any surface whose shape the predicate stopped asserting used to reach
+// `readdirSync`/`readFileSync` and throw, and an uncaught node exception is rc=1 — which is already
+// spoken for by "--strict found HIGH drift". A caller cannot then tell "the harness broke" from
+// "the harness found something". So:
+//     11 = wrong root      (a surface is absent, or present with the wrong SHAPE)
+//     10 = instrument/input error (a surface is there but unusable: unreadable, unparseable)
+//      1 = --strict with HIGH findings   ← reserved. Nothing structural may land here.
+function missingAuditSurfaces(dir, inputErrors) {
+  const missing = [];
+  const sink = inputErrors || [];
+  if (!exists(path.join(dir, 'AGENTS.md'))) {
+    missing.push('AGENTS.md — the tier table this doctor measures every skill against');
+  }
+  const pluginsDir = path.join(dir, 'plugins');
+  if (!exists(pluginsDir)) {
+    missing.push('plugins/ — the skill/agent surface to be audited');
+  } else if (!isDirectory(pluginsDir)) {
+    // `plugins` present but not a directory (a file, a device node, a symlink to one). This is a
+    // ROOT-SHAPE fault, so it belongs at 11 alongside absence — measured before this branch existed:
+    // walk() called readdirSync on it, threw ENOTDIR uncaught, and exited 1.
+    missing.push('plugins/ — present but NOT a directory, so it cannot hold skills/agents');
+  } else {
+    const found = walk(pluginsDir, (p) => path.basename(p) === 'SKILL.md', sink);
+    // 🟥 `sink.length` guard: a plugins/ that cannot be ENUMERATED yields 0 hits for a reason that
+    // is not absence. Claiming "holds no skill" there would be this repo's not-found-is-zero family
+    // wearing an exit code. Enumeration failure is an input error (10), handled by the caller.
+    if (found.length === 0 && sink.length === 0) {
+      missing.push('plugins/**/SKILL.md — plugins/ exists but holds no skill to classify');
+    }
+  }
+  return missing;
+}
+
 function looksLikeFHRoot(dir) {
-  return exists(path.join(dir, 'package.json')) &&
-    exists(path.join(dir, 'plugins')) &&
-    exists(path.join(dir, 'AGENTS.md'));
+  return missingAuditSurfaces(dir).length === 0;
 }
 
 function defaultRoot() {
@@ -73,14 +122,32 @@ function exists(file) {
   }
 }
 
-function walk(dir, predicate) {
+function isDirectory(p) {
+  try {
+    return fs.statSync(p).isDirectory();
+  } catch (_err) {
+    return false;
+  }
+}
+
+// `errors` is an optional sink. A directory that EXISTS but cannot be enumerated must not return
+// [] silently — that is a measurement failure rendered as an empty subject. With a sink the caller
+// classifies it (→ exit 10); without one it throws, so the fault can never be swallowed by default.
+function walk(dir, predicate, errors) {
   const results = [];
   if (!exists(dir)) return results;
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch (err) {
+    if (!errors) throw err;
+    errors.push(`${dir}: directory exists but cannot be enumerated — ${err.code || err.message}`);
+    return results;
+  }
   for (const entry of entries) {
     const p = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      results.push(...walk(p, predicate));
+      results.push(...walk(p, predicate, errors));
     } else if (!predicate || predicate(p)) {
       results.push(p);
     }
@@ -228,29 +295,126 @@ function classify(docTier, primitives) {
   return 'codex-native-candidate';
 }
 
-function collectSkills(root) {
+// `inputErrors` is required, not optional. A SKILL.md that walk() listed but readText() cannot open
+// — chmod 000, a broken symlink, a file deleted between the scan and the read — used to throw out of
+// here uncaught: rc=1, the same code as "--strict found HIGH drift". The subject being unreadable is
+// an INPUT fault (10), and the diagnostic names the path so the caller can fix the input rather than
+// re-run hunting for a finding that was never made.
+function collectSkills(root, inputErrors) {
   const skillsRoot = path.join(root, 'plugins');
-  const files = walk(skillsRoot, (p) => path.basename(p) === 'SKILL.md');
-  return files.sort().map((file) => {
-    const text = readText(file);
+  const files = walk(skillsRoot, (p) => path.basename(p) === 'SKILL.md', inputErrors);
+  const skills = [];
+  for (const file of files.sort()) {
+    let text;
+    try {
+      text = readText(file);
+    } catch (err) {
+      inputErrors.push(`${rel(root, file)}: skill input unreadable — ${err.code || err.message}`);
+      continue;
+    }
     const fm = parseFrontmatter(text);
     const skillName = fm.name || path.basename(path.dirname(file));
-    return {
+    skills.push({
       type: 'skill',
       name: skillName,
       path: rel(root, file),
       frontmatter: fm,
+      // An empty or frontmatter-less SKILL.md gave the classifier nothing to classify. It already
+      // lands in `unclassified`, but `unclassified` is also where a merely-undocumented-but-real
+      // skill lands, so the two are indistinguishable in the summary. WARN (not HIGH, not 10):
+      // the run did measure the surface, it just measured an empty one.
+      emptyInput: text.trim() === '' || Object.keys(fm).length === 0,
       primitives: scanPrimitives(text),
-    };
-  });
+    });
+  }
+  return skills;
 }
 
-function collectAgents(root) {
+// Plugin namespaces are DISCOVERED, not hardcoded. The previous list was ['fh-meta','fh-commons'],
+// which renders "Agents scanned: 0" for any consumer whose plugins carry a different prefix
+// (a consumer harness names its namespaces after ITSELF, e.g. <prefix>-meta/ and <prefix>-commons/,
+// each with an agents/ dir) — the same not-found-is-zero family
+// as the gate above, and it would have been the first thing a newly-unblocked consumer saw.
+// No change for FH itself: its other plugin dirs (fh-preprep, fh-qp) ship no agents/ dir, so walk()
+// returns [] for them and the count stays 14. Sorted for determinism.
+//
+// 🟥 DISCOVERED-BY-SHAPE, NOT BY NAME, AND NOT BY "any subdirectory". The first version accepted
+// every directory immediately under plugins/, so `plugins/node_modules/`, a stale copy, a scratch
+// dir, or `plugins/not-a-plugin/agents/ghost.md` all INFLATED `Agents scanned` — "the count is true
+// but the referent drifted". The discriminator is the plugin manifest, because that is the file a
+// real plugin must carry (verified present in all 4 FH plugins and in both plugins of a consumer
+// harness measured off-tree) and it is
+// prefix-independent: a consumer's <prefix>-meta/ resolves exactly as fh-meta/ does. A NAME filter
+// would have re-broken the consumer axis lane6 exists to hold.
+function isPluginShaped(dir) {
+  return exists(path.join(dir, '.claude-plugin', 'plugin.json'));
+}
+
+// Two degrade rules, both aimed at the same failure family:
+//   · NO manifest anywhere → shape is UNDETECTABLE on this root, which is not the same as "zero
+//     plugins". Fall back to every subdirectory so a manifest-less consumer stays auditable, and
+//     WARN that the count is unfiltered — a reader must not read it as shape-verified.
+//   · Manifests exist but a dir lacks one AND still carries agents/ or skills/ → that is exactly
+//     the material the old code counted. It is DROPPED, so the drop is named in a WARN. A silent
+//     drop and a silent over-count are the same defect pointing opposite ways.
+function pluginNamespaces(root, warnings) {
+  const base = path.join(root, 'plugins');
+  if (!isDirectory(base)) return [];
+  let entries;
+  try {
+    entries = fs.readdirSync(base, { withFileTypes: true });
+  } catch (err) {
+    if (warnings) {
+      warnings.push({
+        severity: 'WARN',
+        code: 'PLUGIN_DIR_UNENUMERABLE',
+        path: rel(root, base),
+        message: `plugins/ could not be enumerated for agent discovery — ${err.code || err.message}`,
+      });
+    }
+    return [];
+  }
+  const dirs = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
+  const shaped = dirs.filter((name) => isPluginShaped(path.join(base, name)));
+  if (shaped.length === 0) {
+    if (warnings && dirs.length > 0) {
+      warnings.push({
+        severity: 'WARN',
+        code: 'PLUGIN_SHAPE_UNDETECTABLE',
+        path: rel(root, base),
+        message: `no .claude-plugin/plugin.json under any of ${dirs.length} plugins/ subdirectories — agent discovery fell back to UNFILTERED subdirectory scan (${dirs.join(', ')})`,
+      });
+    }
+    return dirs;
+  }
+  const shapedSet = new Set(shaped);
+  for (const name of dirs) {
+    if (shapedSet.has(name)) continue;
+    const dir = path.join(base, name);
+    if (!isDirectory(path.join(dir, 'agents')) && !isDirectory(path.join(dir, 'skills'))) continue;
+    if (!warnings) continue;
+    warnings.push({
+      severity: 'WARN',
+      code: 'PLUGIN_NAMESPACE_NOT_PLUGIN_SHAPED',
+      path: rel(root, dir),
+      message: `plugins/${name}/ carries agents/ or skills/ content but no .claude-plugin/plugin.json — EXCLUDED from agent discovery, so it is not counted`,
+    });
+  }
+  return shaped;
+}
+
+function collectAgents(root, inputErrors, warnings) {
   const agents = [];
-  for (const plugin of ['fh-meta', 'fh-commons']) {
+  for (const plugin of pluginNamespaces(root, warnings)) {
     const dir = path.join(root, 'plugins', plugin, 'agents');
-    for (const file of walk(dir, (p) => p.endsWith('.md')).sort()) {
-      const text = readText(file);
+    for (const file of walk(dir, (p) => p.endsWith('.md'), inputErrors).sort()) {
+      let text;
+      try {
+        text = readText(file);
+      } catch (err) {
+        inputErrors.push(`${rel(root, file)}: agent input unreadable — ${err.code || err.message}`);
+        continue;
+      }
       agents.push({
         type: 'agent',
         name: path.basename(file, '.md'),
@@ -279,7 +443,9 @@ function loadAgentCards(root) {
 
 function buildReport(root) {
   const docs = documentedTiers(root);
-  const skills = collectSkills(root).map((skill) => {
+  const inputErrors = [];
+  const shapeWarnings = [];
+  const skills = collectSkills(root, inputErrors).map((skill) => {
     const doc = docs.tiers.get(skill.name);
     return {
       ...skill,
@@ -288,10 +454,22 @@ function buildReport(root) {
       codexMode: classify(doc && doc.tier, skill.primitives),
     };
   });
-  const agents = collectAgents(root);
+  const agents = collectAgents(root, inputErrors, shapeWarnings);
   const skillNames = new Set(skills.map((s) => s.name));
   const compatMentions = compatDocTierMentions(root, skillNames);
   const findings = [];
+  findings.push(...shapeWarnings);
+
+  for (const item of skills) {
+    if (item.emptyInput) {
+      findings.push({
+        severity: 'WARN',
+        code: 'SKILL_MD_HAS_NO_CLASSIFIABLE_CONTENT',
+        path: item.path,
+        message: `${item.name} is empty or carries no parseable frontmatter — it was counted as a skill but nothing could be classified from it`,
+      });
+    }
+  }
 
   for (const item of skills) {
     if (item.documentedTier === 'M1') {
@@ -351,10 +529,14 @@ function buildReport(root) {
     // INSTRUMENT_ERROR outranks both: without a tier table this run measured nothing, and
     // "measured nothing" must not be reported as OK (nor as DRIFT, which would claim a
     // finding it never made).
-    status: docs.sourceErrors.length > 0
+    // An UNREADABLE SUBJECT sits in the same class as an unreadable instrument: the run did not
+    // measure what it claims to have measured, so it may not report OK — and it may not report
+    // rc=1 either, which would be indistinguishable from a real drift finding.
+    status: (docs.sourceErrors.length > 0 || inputErrors.length > 0)
       ? 'INSTRUMENT_ERROR'
       : findings.some((f) => f.severity === 'HIGH') ? 'DRIFT' : 'OK',
     instrumentErrors: docs.sourceErrors,
+    inputErrors,
     root,
     counts,
     agentCards: loadAgentCards(root),
@@ -418,12 +600,25 @@ function main() {
     return;
   }
   const root = args.root;
-  if (!exists(path.join(root, 'package.json'))) {
-    process.stderr.write(`ERROR: root does not look like a package/repo root: ${root}\n`);
-    process.exit(11);
+  // One gate, one predicate — see missingAuditSurfaces(). It names every missing surface rather
+  // than the first, so a consumer fixes the root in one pass instead of one exit code at a time.
+  // The sink separates the two classes at the ONE place they are both visible: an absent or
+  // wrong-shaped surface is a wrong root (11); a present-but-unenumerable one is an input fault (10).
+  const preflightErrors = [];
+  const missing = missingAuditSurfaces(root, preflightErrors);
+  if (preflightErrors.length > 0) {
+    for (const err of preflightErrors) {
+      process.stderr.write(`ERROR: audited surface unusable — ${err}\n`);
+    }
+    process.stderr.write('  The surface exists but could not be read, so nothing was measured. Failing closed.\n');
+    process.exit(10);
   }
-  if (!looksLikeFHRoot(root)) {
-    process.stderr.write(`ERROR: root is missing required FH surfaces (AGENTS.md and plugins/): ${root}\n`);
+  if (missing.length > 0) {
+    process.stderr.write(`ERROR: root is missing the surfaces this doctor audits: ${root}\n`);
+    for (const item of missing) {
+      process.stderr.write(`  - missing: ${item}\n`);
+    }
+    process.stderr.write('  Nothing could be classified from this root. Failing closed.\n');
     process.exit(11);
   }
   const report = buildReport(root);
@@ -438,6 +633,9 @@ function main() {
   if (report.status === 'INSTRUMENT_ERROR') {
     for (const err of report.instrumentErrors) {
       process.stderr.write(`ERROR: tier source unusable — ${err}\n`);
+    }
+    for (const err of report.inputErrors) {
+      process.stderr.write(`ERROR: audited input unusable — ${err}\n`);
     }
     process.stderr.write('  Nothing was classified, so no drift could be detected. Failing closed.\n');
     process.exit(10);

@@ -346,6 +346,7 @@
     "scripts/test_preprep_font_lanes.sh",
     "scripts/test_action_yml_lanes.sh",
     "scripts/remote_marker_gate.sh",
-    "scripts/test_remote_marker_gate_lanes.sh"
+    "scripts/test_remote_marker_gate_lanes.sh",
+    "scripts/test_codex_doctor_root_lanes.sh"
   ]
 }

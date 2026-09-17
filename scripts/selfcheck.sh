@@ -1576,6 +1576,24 @@ else
   fail=1
 fi
 
+# The codex-doctor root gate. Its subject is a SHIPPED npm binary (package.json files[]), and the
+# lane exists because that binary refused every non-npm consumer: it gated on a package.json it
+# never reads, so a consumer harness holding every surface the doctor actually audits — AGENTS.md,
+# plugins/, SKILL.md — got exit 11 instead of a report. The lanes pin both directions at once:
+# the non-npm root now audits, and an empty plugins/ still fails closed rather than printing a
+# confident "Skills scanned: 0". Same pairing rule as above — the lane exists only because the
+# binary does, so its absence beside a present subject is a FAIL, not a skip.
+if [ ! -f bin/fh-codex-doctor.js ]; then
+  _absent_subject_verdict "test_codex_doctor_root_lanes.sh" "bin/fh-codex-doctor.js" || fail=1
+elif [ -f scripts/test_codex_doctor_root_lanes.sh ]; then
+  if ! bash scripts/test_codex_doctor_root_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_codex_doctor_root_lanes.sh: fh-codex-doctor.js present but its anchor is missing"
+  fail=1
+fi
+
 # The infra-delta half of the same subject. Separate suite, same pairing rule: it exists only because
 # fh_node_check.sh does, so its absence beside a present subject is a FAIL, not a skip.
 if [ ! -f scripts/fh_node_check.sh ]; then

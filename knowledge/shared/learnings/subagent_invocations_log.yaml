@@ -4026,3 +4026,36 @@
     그리고 오늘 tally 는 31 을 셌는데 내가 띄운 것은 3 — 차이는 귀속 미확인이고
     (`fh_signal_2026-09-02_dispatch-tally-attribution.md` 가 같은 축), 이 엔트리는 **내가 띄운
     3건만** 주장한다. 나머지 28 을 0 으로도 내 것으로도 접지 않는다.
+- date: 2026-09-17
+  agent: general-purpose ×8 (거버너 위임) + codex gpt-5.5 사이드카 ×1
+  invoked_by: FH 거버너 세션 (b87e3d89) — 운영자 지시 «거버너로서 팔을 띄우면 되잖아 너는 논문만 파»
+  task: >-
+    네 갈래 병렬(qasp-dev PR #315 수리 / pmh-dev #83 외부 대응 조사 / pmh-dev #81 회신 초안 /
+    fh-codex-doctor 과차단 수리) + 파급분석 2건(AX Lobby 보고서 v1·v2) + 수렴 라운드 1건
+    (codex 지적 4건 수리) + v3 검증 1건. 사이드카 1건 = `.js` cross-family 적대 심사
+    (`degrade_direction_scan.sh` 가 `.js` 를 커버하지 않아 그 축의 대체).
+  outcome: accepted
+  evidence: >-
+    PR #315 6/6 SUCCESS 후 MERGED(12:45) · pmh-dev #83·#81 코멘트 게시 · qasp-dev #316 신규 이슈 ·
+    doctor 레인 8팔→15팔(fail-before 9/15 RED → 15/15 GREEN) · `lane-runner: 120→121 suites,
+    121 wired`. 🟥 팔들이 **발주문에 없던 실물을 찾았다**: PR #315 의 세 번째 실패(같은 잡 2번째
+    스텝이 «SRC_FILES 를 손으로 다시 적던» 같은 결함의 두 번째 인스턴스) · 그 blocking 레인이
+    #314 때부터 **만성 빨강**이었다는 사실 · doctor 의 역방향 결함(빈 `plugins/` → `Status: OK ·
+    Skills scanned: 0 · rc=0`) · `collectAgents()` 하드코딩이 pmh 의 8을 0으로 보고.
+  governor_check: >-
+    하중 지는 판정을 전부 내 손으로 재확인했다 — 레인 스위트 직접 재실행(15/15) · PR #315 롤업
+    직독(비-SUCCESS 0건) 후 머지 · AX로비 v2 의 핵심 지적 2건(2건↔4건 충돌 · §1 정량표 diff 0건)
+    을 `git diff` 로 재현 · `fh_shared_sync.sh` 오귀속을 컨트롤 붙여 반증(FH 부재 + 컨트롤
+    `fh_session_load` 는 살아 있는 SKILL.md 히트) · `[FPV23]`·`[EBP18]`·`[C70]`·`[GE17]` 1차 출처
+    직독. 🟥 **팔 보고를 액면가로 받지 않았고, 한 건은 오귀속으로 판정해 기각했다.**
+  residual: >-
+    ⓐ 🟥 **내가 계기 오염을 하나 만들었다** — 수리 팔이 `doctor.js`·레인 파일을 편집하는 동안
+    `selfcheck.sh` 를 띄웠다. 그 런의 해당 두 레인 판정은 «반쯤 편집된 대상» 을 잰 것이라
+    인용하지 않는다(정본은 스테이징 후 재실행분).
+    ⓑ Lane A 가 자기 보고를 **정정**했다 — «selfcheck UNMEASURED» 는 틀렸고 실제로 RED 였으며
+    원인이 내 미스테이징이었다. 즉 팔의 1차 보고에 계기 결함이 있었고(표시용 필터가 실패 블록을
+    잘랐다) 스스로 잡았다.
+    ⓒ 팔 여섯이 **동일 계열**이다(general-purpose). cross-family 는 codex 1건뿐이고, 그 1건이
+    MAJOR 3 을 냈다 — 같은 계열 여섯이 못 본 것을 다른 계열 하나가 봤다.
+    ⓓ 8건은 «내가 띄운 것» 만이다. 훅 tally 와 어긋나면 그 차이는 귀속 미확인이고, 0 으로도
+    내 것으로도 접지 않는다.
