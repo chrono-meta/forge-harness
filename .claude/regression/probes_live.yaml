@@ -109,11 +109,19 @@ probes:
     expect_re: "🐿️"
     control_input: "안녕"
 
-  - id: G-TRIG-01
-    polarity: present
-    input: "recommend a plugin for this"
-    expect_re: "plugin-recommender"
-    control_input: "오늘 날씨 어때?"
+  # 🟥 G-TRIG-01 ENTRY REMOVED 2026-09-17 — twin of G-TRIG-03 above; excluded for the SAME reason
+  # by the same mechanical rule (ARM_CAPABILITY_EXCLUDE), and it should have moved together with it
+  # on 2026-09-14. fh_detail_protocols.md:443-444 lists plugin-recommender and harness-doctor on
+  # adjacent lines of one row-diet removal list, so both delegate to the skill's own frontmatter
+  # `description` — a route an arm with --tools "Read,Grep,Glob" cannot take.
+  # Removing the entry closes the noise WITHOUT closing the question: "does the row-diet delegation
+  # fire at the floor tier?" stays UNMEASURED and named in ARM_CAPABILITY_EXCLUDE's comment.
+  # ⚠️ The spec below is kept VERBATIM so a future Skill-capable arm re-authors it rather than
+  # guessing — and note the input carried ` for this`, two words absent from probes.md's pattern
+  # ("recommend a plugin") that turn it into a pronoun with no antecedent, which is what sent every
+  # rep into asking-for-clarification instead of routing. Re-author from probes.md, not from this:
+  #     polarity: present · input: "recommend a plugin" · expect_re: "plugin-recommender"
+  #     control_input: "오늘 날씨 어때?"
 
   - id: G-TRIG-02
     polarity: present
