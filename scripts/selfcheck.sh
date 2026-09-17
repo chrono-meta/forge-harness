@@ -1594,6 +1594,25 @@ else
   fail=1
 fi
 
+# Claim propagation — the scanner that catches a RETRACTED NUMBER surviving in another file after the
+# canon withdrew it. halffix_propagation_scan.sh cannot: its token rule needs a letter-start ≥10-char
+# identifier or a path, so «2.7 %» / «다섯 팔» are structurally invisible to it (measured 2026-09-17:
+# a withdrawn five-arm figure sat in CLAUDE.md twice after the canon retracted it, and the scanner's
+# output did not list CLAUDE.md at all). Numeric-retraction only, advisory (rc=2 = LIVE), never a
+# commit gate — prose-claim retractions are OUT OF SCOPE by measurement (0/8 precision). Same pairing
+# rule: the lane exists only because the scanner does, so its absence beside a present subject is a
+# FAIL, not a skip.
+if [ ! -f scripts/claim_propagation_scan.py ]; then
+  _absent_subject_verdict "test_claim_propagation_lanes.sh" "scripts/claim_propagation_scan.py" || fail=1
+elif [ -f scripts/test_claim_propagation_lanes.sh ]; then
+  if ! bash scripts/test_claim_propagation_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_claim_propagation_lanes.sh: claim_propagation_scan.py present but its anchor is missing"
+  fail=1
+fi
+
 # The infra-delta half of the same subject. Separate suite, same pairing rule: it exists only because
 # fh_node_check.sh does, so its absence beside a present subject is a FAIL, not a skip.
 if [ ! -f scripts/fh_node_check.sh ]; then

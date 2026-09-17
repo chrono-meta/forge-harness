@@ -347,6 +347,8 @@
     "scripts/test_action_yml_lanes.sh",
     "scripts/remote_marker_gate.sh",
     "scripts/test_remote_marker_gate_lanes.sh",
-    "scripts/test_codex_doctor_root_lanes.sh"
+    "scripts/test_codex_doctor_root_lanes.sh",
+    "scripts/claim_propagation_scan.py",
+    "scripts/test_claim_propagation_lanes.sh"
   ]
 }
