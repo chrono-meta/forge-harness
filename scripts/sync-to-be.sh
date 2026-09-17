@@ -681,7 +681,14 @@ sync_dir() {
   else
     # rsync absent (default Windows git-bash): tar-pipe mirror with the same excludes,
     # no --delete (append-only). Source is canonical, so overwriting be's copy is correct.
-    if ( cd "$src" && tar cf - --exclude='.gitkeep' --exclude='*.marker' --exclude='.fh_node_state' --exclude='.close_stamps_*' --exclude='logs' --exclude='manifests' --exclude='_index' . ) \
+    # 🟥 **목록을 손으로 다시 적지 않는다 — `SYNC_EXCLUDES` 를 그대로 쓴다.**
+    #    2026-09-16 에 rsync 경로(:675)는 배열로 닫혔는데 이 폴백은 자기 목록을 따로 적고 있었고,
+    #    그래서 `.git/` 가 여기로만 새어 나갔다. #735 머지에서 그 재작성이 떨어져 나가
+    #    **어느 PR 에도 안 실린 채** 남아 있었다(peer 가 2026-09-17 에 실측으로 잡았다).
+    #    ⚠️ 슬래시를 벗긴다: rsync 는 `logs/` 를 디렉터리로 읽지만 tar 는 `logs` 를 원한다.
+    #    그 표기 차이가 «손으로 다시 적은» 원래 이유이고, 변환 한 줄이 그 이유를 없앤다.
+    tex=(); for e in "${SYNC_EXCLUDES[@]}"; do tex+=("--exclude=${e%/}"); done
+    if ( cd "$src" && tar cf - "${tex[@]}" . ) \
          | ( cd "$dst" && tar xf - ); then
       DIRTY=1; log "mirrored (cp mode) → $dst"; stamp_banner "$dst" "$src"
     else

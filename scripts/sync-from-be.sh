@@ -388,7 +388,10 @@ pull_dir() {   # $1 = companion (source) dir, $2 = hub (destination) dir, $3 = l
   # produced zero lines and a cheerful all-clear — the absence-without-a-control trap.
   # (cross-family M1, 2026-08-02.) -print0/-d '' so newlines in filenames cannot split a path.
   listing="$(mktemp)" || { warn "mktemp failed — cannot enumerate $label"; ERRORS=$((ERRORS+1)); return 0; }
+  # 🟥 `! -path '*/.git/*'` — 복귀 경로도 중첩 레포의 .git 을 끌어오고 있었다. 나가는 쪽만
+  #    막으면 돌아오는 쪽으로 들어온다. ④와 같은 뿌리(목록을 손으로 다시 적는다).
   if ! find "$src" -type f ! -name '.gitkeep' ! -name '*.marker' \
+         ! -path '*/.git/*' \
          ! -path '*/logs/*' ! -path '*/manifests/*' ! -path '*/_index/*' \
          ! -path '*/substrate/*' \
          ! -name '.fh_node_state' ! -name 'MEMORY.md' ! -name 'edit_manifest.yaml' \

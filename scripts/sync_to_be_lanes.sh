@@ -556,6 +556,69 @@ printf 'peer-node-added-this\n' >> "$BEX/tracks-meta/card.md"
 out="$(MID=lanea run 2>&1)"; rc=$?
 [ "$rc" -ne 0 ]; chk $? "KNOWN-POSITIVE: a newer REAL file still trips the guard (got rc=$rc) — excluding .git/ did not disarm it"
 
+# ── tar 폴백 × SYNC_EXCLUDES 패리티 (2026-09-17) ────────────────────────────────
+# 🟥 왜 있나: rsync 경로(:675)는 SYNC_EXCLUDES 배열을 쓰는데 **tar 폴백은 목록을 손으로 다시
+#    적고 있었다.** 그래서 2026-09-16 에 배열에 `.git/` 를 넣었는데 폴백만 안 닫혔고, #735
+#    머지에서 그 재작성이 떨어져 나가 **어느 PR 에도 안 실린 채** 남았다(peer 실측 2026-09-17).
+#    ⚠️ 표기가 달라서 손으로 적었던 것이다(rsync `logs/` ↔ tar `logs`). 변환 한 줄이 그 이유를 없앴다.
+echo ""
+echo "── tar fallback × SYNC_EXCLUDES parity ──"
+
+_sync_src() { sed -n '1,$p' "$REPO/scripts/sync-to-be.sh" 2>/dev/null; }
+REPO="${REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+
+# E: 계기가 대상을 못 읽으면 INSTRUMENT-ERROR 다 — «제외가 잘 된다» 로 접지 않는다.
+_ex_line="$(_sync_src | grep -n '^SYNC_EXCLUDES=' | head -1)"
+if [ -z "$_ex_line" ]; then
+  FAIL=$((FAIL+1)); printf '  ❌ %s
+' "E: INSTRUMENT-ERROR — SYNC_EXCLUDES 정의를 못 읽었다 (이 아래 판정은 무효)"
+else
+  ok "E: SYNC_EXCLUDES 정의를 읽었다 (계기 살아 있음)"
+
+  # A: 현행이 배열을 쓰는가. 손목록으로 되돌아가면 여기서 적색.
+  if _sync_src | grep -q 'tar cf - "\${tex\[@\]}"'; then
+    ok "A: tar 폴백이 SYNC_EXCLUDES 배열을 쓴다 (손목록 아님)"
+  else
+    FAIL=$((FAIL+1)); printf '  ❌ %s
+' "A: tar 폴백이 배열을 안 쓴다 — 손목록으로 되돌아갔다"
+  fi
+
+  # C: 🟥 **클래스를 닫는 팔 — 그리고 초판은 장식이었다(2026-09-17 되돌림이 잡았다).**
+  #    초판은 배열→tar 변환을 **이 레인 안에서 새로 적어** 테스트했다. 그래서 대상(sync-to-be.sh)을
+  #    손목록으로 되돌려도 C 는 자기 합성 서브셸만 돌아 **통과했다** — A 만 빨개졌다.
+  #    앵커가 대상을 안 보면 그것은 앵커가 아니다([[feedback_anchor_can_be_decorative]]).
+  #    ⇒ 변환 줄을 **대상 소스에서 추출해서** 쓴다. 손목록으로 돌아가면 추출이 실패하고 C 가 적색.
+  _tex_line="$(_sync_src | grep -m1 'tex+=("--exclude=')"
+  if [ -z "$_tex_line" ]; then
+    FAIL=$((FAIL+1)); printf '  ❌ %s\n' "C: tar 폴백에 배열 변환 줄이 없다 — 목록이 갈라졌다(클래스 열림)"
+  else
+    _c_tmp="$(mktemp -d)"
+    mkdir -p "$_c_tmp/src/zzz_probe_dir" "$_c_tmp/dst"
+    echo probe > "$_c_tmp/src/zzz_probe_dir/x.txt"
+    echo real  > "$_c_tmp/src/keep.md"
+    # 대상에서 뽑은 그 줄을 그대로 실행한다 — 우리가 다시 적지 않는다.
+    /bin/bash -c '
+      SYNC_EXCLUDES=(".gitkeep" "zzz_probe_dir/")
+      tex=()
+      '"$_tex_line"'
+      ( cd "'"$_c_tmp"'/src" && tar cf - "${tex[@]}" . ) | ( cd "'"$_c_tmp"'/dst" && tar xf - )' 2>/dev/null
+    if [ ! -f "$_c_tmp/dst/zzz_probe_dir/x.txt" ] && [ -f "$_c_tmp/dst/keep.md" ]; then
+      ok "C: 대상에서 뽑은 변환 줄이 새 항목을 제외한다 (클래스가 닫혔다 · 실물은 통과)"
+    else
+      FAIL=$((FAIL+1)); printf '  ❌ %s\n' "C: 대상의 변환 줄이 새 항목을 반영 안 한다"
+    fi
+    rm -rf "$_c_tmp"
+  fi
+
+  # 복귀 경로도 같은 뿌리다 — 나가는 쪽만 막으면 돌아오는 쪽으로 들어온다.
+  if grep -q "! -path '\*/\.git/\*'" "$REPO/scripts/sync-from-be.sh" 2>/dev/null; then
+    ok "R: 복귀 경로(sync-from-be) 도 .git 을 제외한다"
+  else
+    FAIL=$((FAIL+1)); printf '  ❌ %s
+' "R: 복귀 경로에 .git 제외가 없다 — 돌아오는 쪽으로 들어온다"
+  fi
+fi
+
 echo ""
 echo "════ lanes: $PASS passed · $FAIL failed ════"
 [ "$FAIL" -eq 0 ]
