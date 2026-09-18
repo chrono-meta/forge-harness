@@ -4108,3 +4108,20 @@
     공통 = 내 모형으로 지은 계기는 내가 상상 못 한 것을 못 만든다 ⓑ FoD 설정창은 cross-family 미실행
     (codex 가 두 라운드 점유) — 이름으로 남김 ⓒ 훅 tally 294 와의 차이는 배경 bash 태스크 포함으로 추정,
     귀속 미확인. 이 엔트리는 내가 띄운 Agent/codex 만 센다.
+- date: 2026-09-18
+  agent: "야간 자율주행 — 4 에이전트 + codex 사이드카 3라운드 (통합 엔트리)"
+  purpose: "잔여 갈래 병렬 집행 — qasp #322/#323 · FoD 패치 3종 · archify #328 준비 · qasp 교리+README"
+  dispatch_count: 4          # Agent 툴 4회 (레포당 1개 원칙 — 같은 체크아웃에 둘 안 띄움; qasp 는 워크트리로 분리)
+  sidecar_count: 3           # codex exec — FH 팔 diff · cod #1021 R14 · FoD 문서축
+  outcome: accepted
+  evidence: |
+    에이전트 4: qasp N1+N2(PR #322/#323, CI 6/6 ×2) · FoD 패치 3종(PR #37) ·
+    archify #328 준비(취약점 재현 성공, 푸시 안 함) · qasp 교리 §9+README(PR #325, CI 6/6 ×2).
+    codex 3: FH 팔 diff → S급 2·A급 4 (S2·A2 수리) · cod R14 → 같은 부류 fail-open 4개 (전부 수리+레인) ·
+    FoD 문서축 → A급 1 반증, B급에서 거짓 주석 발견·정정.
+    🟥 받은 것을 액면으로 안 옮겼다: codex 주장 중 **실측 반증 3건**(A3 7건 중 5건 · FoD [A] · FoD [B] 예시).
+    🟥 내 계기가 한 번 죽었다(FoD 금지목록 파싱이 빈 리스트) — 함수 직접 호출 + known-pair 로 재측정.
+  residual: |
+    마감검사 ④-e 가 «797 dispatch / 2 로그» 로 셌다. 이 엔트리가 3번째다.
+    🟥 797 은 훅 tally 이고 Agent 툴 호출 수가 아니다 — 두 수는 같은 것을 세지 않는다.
+    그 차이를 해소하지 않고 이름으로 남긴다(엔트리 하나가 클래스 하나를 덮는 것은 프로토콜이 허용).
