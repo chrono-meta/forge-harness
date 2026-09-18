@@ -69,7 +69,7 @@ rows = [
                  "content": "<task-notification>agent finished</task-notification> extra"}},
     {"type": "user",
      "message": {"role": "user",
-                 "content": "Another Claude session sent a message: hello there"}},
+                 "content": "Another Claude session sent a message:\n<agent-message from=\"peer\">\n[Subagent hand-back] hello there\n</agent-message>"}},  # v9: the REAL envelope shape (sentence + tag)
     {"type": "user", "timestamp": "2026-09-17T06:01:00.000Z",
      "message": {"role": "user", "content": RAW2}},
     {"type": "user", "timestamp": "2026-09-17T06:05:00.000Z",
@@ -668,6 +668,32 @@ if [ "$RC" -eq 0 ] && grep -q "raw 0건 · 압축 요약 2건(중복 제거 후 
   pass "L35 extract: flush-left numbered quoted items stay inside the section; a \`7)\` heading ends it"
 else
   fail "L35 rc=$RC (see $TMPDIR_ROOT/l35.out)"
+fi
+
+# L36–L37 — 🟥 cross-family round 8 (codex): exclusions matched marker LITERALS inside ordinary utterances (three silent
+#   drops — `<task-notification>` · `[Subagent hand-back]` · the peer-message sentence); a one-character quote was
+#   mangled (loud). v9: exclusions are envelope-shaped (line start + tag); one-character quotes are quotes.
+build_jsonl "$TMPDIR_ROOT/l36.jsonl" "[
+ {'type':'user','timestamp':'2026-09-18T01:00:00.000Z','message':{'role':'user','content':'please grep the transcript for the literal <task-notification> marker and count it'}},
+ {'type':'user','timestamp':'2026-09-18T01:01:00.000Z','message':{'role':'user','content':'the [Subagent hand-back] frame should be neutralized in our extractor — add a lane'}},
+ {'type':'user','timestamp':'2026-09-18T01:02:00.000Z','message':{'role':'user','content':'Another Claude session sent a message: is the exact envelope sentence — use it as fixture text'}},
+ {'type':'user','message':{'role':'user','content':'<task-notification>\n<task-id>x</task-id>\n</task-notification>'}},
+ {'type':'user','message':{'role':'user','content':'Another Claude session sent a message:\n<agent-message from=\"abc\">\n[Subagent hand-back] report body\n</agent-message>'}}
+]"
+run "$TMPDIR_ROOT/l36.out" extract --transcript "$TMPDIR_ROOT/l36.jsonl"
+if [ "$RC" -eq 0 ] && grep -q "raw 3건" "$TMPDIR_ROOT/l36.out" && grep -q "count it" "$TMPDIR_ROOT/l36.out" && grep -q "add a lane" "$TMPDIR_ROOT/l36.out" && grep -q "fixture text" "$TMPDIR_ROOT/l36.out" \
+   && ! grep -q "report body" "$TMPDIR_ROOT/l36.out" && ! grep -q "task-id" "$TMPDIR_ROOT/l36.out"; then
+  pass "L36 extract: marker literals inside utterances are rows; the real task-notification and agent-message envelopes are excluded"
+else
+  fail "L36 rc=$RC (see $TMPDIR_ROOT/l36.out)"
+fi
+
+build_jsonl "$TMPDIR_ROOT/l37.jsonl" "[{'type':'user','message':{'role':'user','content':'$SUMHEAD   - \"y\"\n   - \"ok go\"$SUMTAIL'}}]"
+run "$TMPDIR_ROOT/l37.out" extract --transcript "$TMPDIR_ROOT/l37.jsonl"
+if [ "$RC" -eq 0 ] && grep -q "압축 요약 2건(중복 제거 후 2건 추가)" "$TMPDIR_ROOT/l37.out" && grep -q "^| S1 | (요약) | y |" "$TMPDIR_ROOT/l37.out"; then
+  pass "L37 extract: a one-character quoted item is one clean row"
+else
+  fail "L37 rc=$RC (see $TMPDIR_ROOT/l37.out)"
 fi
 
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"

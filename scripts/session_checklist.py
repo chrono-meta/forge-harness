@@ -169,7 +169,7 @@ TOPLEVEL_NUMBERED_RE = re.compile(r"^\d+[.)]\s+(?!['\"\u201c])[^'\"\u201c\n]*$")
 # contain escaped inner quotes (`\"quoted\"`); the v1 regex stopped at the first newline / inner quote,
 # which silently dropped the utterance or split it in two. Items are joined first (bullet + its
 # continuation lines), then quotes are pulled from each item.
-QUOTE_RE = re.compile(r'"((?:[^"\\]|\\.){2,}?)"|\u201c((?:[^\u201d\\]|\\.){2,}?)\u201d', re.S)
+QUOTE_RE = re.compile(r'"((?:[^"\\]|\\.){1,}?)"|\u201c((?:[^\u201d\\]|\\.){1,}?)\u201d', re.S)
 ITEM_START_RE = re.compile(r"^\s*(?:[-*\u2022]\s+|\d+[.)]\s+)")
 FENCE_RE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
 
@@ -203,12 +203,13 @@ def is_excluded(text, entry):
     for p in EXCLUDE_PREFIXES:
         if stripped.startswith(p):
             return True
-    head200 = text[:200]
-    if "<task-notification>" in head200:
+    # v9 (codex round 8): exclusions are ENVELOPE-shaped, never substring matches — an operator utterance that
+    # merely contains a marker literal (`<task-notification>` · `[Subagent hand-back]` · the peer-message sentence)
+    # is a request. The real envelopes: a task notification STARTS with its tag (or with the SYSTEM NOTIFICATION
+    # banner, handled above); a peer/subagent message STARTS with the sentence AND carries an `<agent-message` tag.
+    if stripped.startswith("<task-notification>"):
         return True
-    if stripped.startswith("Another Claude session sent a message:"):
-        return True
-    if "[Subagent hand-back]" in head200:
+    if stripped.startswith("Another Claude session sent a message:") and "<agent-message" in text:
         return True
     return False
 
@@ -249,7 +250,7 @@ def extract_quotes_from_summary(text):
         body = ITEM_START_RE.sub("", it, count=1).strip()
         # v2: an item that IS one quote (opens and closes with a quote char) is taken whole — an inner
         # unescaped quote (`"… the "quoted" word …"`) must not split it into two utterances
-        if len(body) >= 4 and body[0] in '"“' and body[-1] in '"”':
+        if len(body) >= 3 and body[0] in '"“' and body[-1] in '"”':
             quotes.append(body[1:-1].replace('\\"', '"'))
             continue
         # v3 (codex round 2): an item that OPENS with a quote is one utterance — only its leading quote
