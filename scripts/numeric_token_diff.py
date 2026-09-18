@@ -28,11 +28,13 @@ WHAT IT DOES NOT DO — read before trusting a 0
      negative: «range 3-5 only» → «range 3 only» was IDENTICAL rc=0. It survives only as the ablation
      arm `--hyphen-rule alnum`. `100-1` (NIST AI 100-1) is now two tokens — the price of the fix.
      A number after a Hangul syllable (`8케이스`, `제3장`) is kept. `.5` (leading-dot decimal) is kept
-     as `5`. A SIGN glued to the number is part of it (`−196` · `-196` · `–196` → `-196`) when nothing
-     word-like precedes it — so `−196` → `196` is a DROPPED + INVENTED pair, not IDENTICAL (v19; codex
-     round 17 fixture, silent in v1–v18 and documented as such — the reader sees the sign). `3-5` is
-     still a range (the `-` follows a digit); `- 196` (a list marker) is not a sign. Ablation arm:
-     `--no-sign`. Numbers inside code spans / fences ARE
+     as `.5` (v21 — it was `5`; a glued sign binds to it: `−.5` → `-.5`, codex round 19). A SIGN glued to the number is part of it (`−196` · `-196` · `–196` → `-196`) when nothing
+     word-like precedes it (start, whitespace, an opening bracket incl. full-width, or an operator
+     `= < > ≤ ≥ ≈ : ; , | / + * × ÷`) — so `−196` → `196` is a DROPPED + INVENTED pair, not IDENTICAL
+     (v19; codex round 17 fixture, silent in v1–v18 and documented as such — the reader sees the sign).
+     The sign survives a statistical prefix too: `p = −0.3` → `p=-0.3` (v20 — the v19 prefixed form
+     dropped it, codex round 18). `3-5` is still a range (the `-` follows a digit); `- 196` (a list
+     marker) is not a sign. Ablation arm: `--no-sign`. Numbers inside code spans / fences ARE
      tokens (a DOI or a quoted `p<0.001` that disappears is still a drop).
   🟥 Multiset semantics by default: a common small integer (`3`) that appears 12× before and 9×
      after is reported as REDUCED. That is correct and noisy — `--distinct` compares sets instead
@@ -71,13 +73,16 @@ import sys
 from collections import Counter
 
 WS = "[\\s   ]*"
-NUM = r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?"
+# v21 (codex round 19): a leading-dot decimal is a number of its own (`.5`, `.05`) so a glued sign can bind to it
+NUM = r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?|\.\d+"
 PREFIX = r"(?:(?P<pre>p|n|N|k|CI|df|α|β)" + WS + r"(?P<op>=|<|>|≤|≥|≈)" + WS + r")?"
 # v19 (codex round 17 fixture): a sign glued to the number — ASCII hyphen-minus, U+2212 MINUS, U+2013 EN DASH —
 # is part of the token ONLY when what precedes it is nothing, whitespace, an opening bracket, or an operator —
 # so `3-5` / `3–5` stay ranges, `x-5` stays an identifier, and a truncated DOI `…-00191-3` (the real paper,
 # measured) stays the fragment `00191` it was; `(?=\d)` keeps a list marker `- 196` and a spaced dash `– 5` out.
-SIGN = r"(?P<sign>(?<![^\s(\[{=<>≤≥≈:;,|/])[-−–](?=\d))?"
+# v20 (codex round 18): arithmetic operators (`+ * × ÷`) also license a sign — `x = y +−5` is a signed
+# number — and full-width brackets are mapped to ASCII before extraction (`（−5）`).
+SIGN = r"(?P<sign>(?<![^\s(\[{=<>≤≥≈:;,|/+*×÷])[-−–](?=\d|\.\d))?"
 TAIL = r"(?:" + WS + r"(?P<pct>%)|/(?P<den>\d+(?:\.\d+)?)(?!\d)(?!\.\d))?"
 # Left boundary: not glued to a Latin letter or digit, not `digit.` / `digit,` (a fraction or
 # thousands tail). Right boundary: not followed by a digit, `.digit` or `,ddd`.
@@ -87,7 +92,7 @@ RIGHT = r"(?!\d)(?!\.\d)(?!,\d{3})"
 DATE = r"(?P<date>\d{4}-\d{2}-\d{2})(?!\d)"
 EXP = r"(?P<exp>[eE][+-]?\d+(?![A-Za-z])|[⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺]+|\^[+-]?\d+)?"
 SUPER = str.maketrans("⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺", "0123456789-+")
-FULLWIDTH = str.maketrans("０１２３４５６７８９％．，＋－", "0123456789%.,+-")
+FULLWIDTH = str.maketrans("０１２３４５６７８９％．，＋－（）［］｛｝", "0123456789%.,+-()[]{}")
 SCI_CHAIN_RE = re.compile(r"^\d+(?:\.\d+)?[eE][+-]?\d+$")
 HEADING_NUM_RE = re.compile(r"^(#{1,6}\s+)(?:§\s*)?(?:\d+(?:\.\d+)*(?:-?[a-z])?[.)]?|[A-Z](?:\.\d+)+|(?:부록|Appendix)\s*\S+)(?=\s|$)")
 LIST_RE = re.compile(r"^(\s*)\d+[.)]\s")
@@ -127,7 +132,8 @@ def normalise(m):
         num += ("e" + e[1:].lstrip("+")) if e[0] in "eE" else ("^" + e.translate(SUPER).lstrip("^").lstrip("+"))
     tok = ("-" + num) if m.group("sign") else num
     if m.group("pre"):
-        tok = m.group("pre") + m.group("op") + num
+        # v20 (codex round 18): the prefixed form rebuilt the token from the unsigned `num` — `p = −0.3` → `p = 0.3` read IDENTICAL.
+        tok = m.group("pre") + m.group("op") + tok
     if m.group("pct"):
         tok += "%"
     elif m.group("den"):

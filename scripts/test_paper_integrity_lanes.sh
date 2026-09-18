@@ -1435,6 +1435,38 @@ else
   fi
 fi
 
+# L11ad — 🟥 codex round 18 (2026-09-18): three holes in the v19 sign rule itself (the repair was the defect source):
+#         the statistical-prefix form rebuilt the token from the unsigned `num` (`p = −0.3` → `p = 0.3` IDENTICAL);
+#         a full-width opening bracket `（−5）` was not a sign context; an arithmetic operator `+−5` was not either.
+#         v20: prefixed tokens carry the sign; `（）［］｛｝` map to ASCII before extraction; `+ * × ÷` join the
+#         allowed left context. The v19 controls (table cell · exponent · percent · range end · `3-5` · `- 196`) stay.
+printf 'β = −0.3 and p = −0.3; (−5) and （−5）; x = y +−5; | −7 | cell; 3-5 range; - 196 list\n' > "$T/n/sign2_before.md"
+printf 'β = 0.3 and p = 0.3; (5) and （5）; x = y +5; | −7 | cell; 3-5 range; - 196 list\n' > "$T/n/sign2_after.md"
+num "$T/l11ad.txt" --before "$T/n/sign2_before.md" --after "$T/n/sign2_after.md"; RCA=$RC
+num "$T/l11ad2.txt" --before "$T/n/sign2_before.md" --after "$T/n/sign2_before.md"; RCB=$RC
+if [ "$RCA" -eq 1 ] && hasre "$T/l11ad.txt" 'DROPPED +β=-0\.3 ' && hasre "$T/l11ad.txt" 'DROPPED +p=-0\.3 ' && hasre "$T/l11ad.txt" 'DROPPED +-5 +before ×3' \
+   && hasre "$T/l11ad.txt" 'INVENTED +β=0\.3 ' && hasre "$T/l11ad.txt" 'INCREASED +5 +before ×1 +→ after ×4' && ! hasre "$T/l11ad.txt" ' -7 ' \
+   && has "$T/l11ad.txt" 'DROPPED=3 REDUCED=0 INVENTED=2 INCREASED=1 ALLOWED=0 rc=1' \
+   && [ "$RCB" -eq 0 ] && has "$T/l11ad2.txt" 'IDENTICAL' && has "$T/l11ad2.txt" '9 tokens'; then
+  ok "L11ad ② sign survives a prefix (p=-0.3 · β=-0.3), a full-width bracket （−5） and an operator +−5 → DROPPED 3 (-5 ×3 · p=-0.3 · β=-0.3) / INVENTED 2 / 5 INCREASED 1→4; table-cell −7, 3-5 range and - 196 list unchanged; identity 9 tokens rc=0"
+else
+  no "L11ad ② sign in prefix / full-width bracket / operator context" "diff rc=$RCA identity rc=$RCB"; dump "$T/l11ad.txt" 12; dump "$T/l11ad2.txt" 3
+fi
+
+# L11ae — 🟥 codex round 19 (2026-09-18): the sign lookahead required a digit, so `−.5` → `.5` read IDENTICAL
+#         (leading-dot decimals were tokenised as `5`). v21: `.5` is a number of its own and the sign binds to it.
+printf 'threshold −.5 and nominal .05; version 10.5.3 stays out\n' > "$T/n/dot_before.md"
+printf 'threshold .5 and nominal .05; version 10.5.3 stays out\n' > "$T/n/dot_after.md"
+num "$T/l11ae.txt" --before "$T/n/dot_before.md" --after "$T/n/dot_after.md"; RCA=$RC
+num "$T/l11ae2.txt" --before "$T/n/dot_before.md" --after "$T/n/dot_before.md"; RCB=$RC
+if [ "$RCA" -eq 1 ] && hasre "$T/l11ae.txt" 'DROPPED +-\.5 ' && hasre "$T/l11ae.txt" 'INVENTED +\.5 ' && ! hasre "$T/l11ae.txt" '(DROPPED|INVENTED) +(10|5|3) ' \
+   && has "$T/l11ae.txt" 'DROPPED=1 REDUCED=0 INVENTED=1 INCREASED=0 ALLOWED=0 rc=1' \
+   && [ "$RCB" -eq 0 ] && has "$T/l11ae2.txt" 'IDENTICAL' && has "$T/l11ae2.txt" '2 tokens'; then
+  ok "L11ae ② a glued sign binds to a leading-dot decimal: −.5 → .5 is DROPPED -.5 / INVENTED .5; .05 stable; 10.5.3 yields nothing; identity 2 tokens rc=0"
+else
+  no "L11ae ② sign before a leading-dot decimal" "diff rc=$RCA identity rc=$RCB"; dump "$T/l11ae.txt" 8; dump "$T/l11ae2.txt" 3
+fi
+
 echo
 echo "── $pass passed, $fail failed ──"
 [ "$fail" -eq 0 ] || exit 1
