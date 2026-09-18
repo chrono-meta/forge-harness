@@ -47,6 +47,14 @@ every part is in the enum; `n.a.` is NOT an alias of `n/a` (closed enum, loud
 by design). The compaction heading is matched by an alias table (English and
 Korean spellings), and a list item that opens with a quote but never closes
 it is still one utterance.
+
+Classification of transcript entries is METADATA FIRST (v11): Claude Code marks
+entries with `origin.kind` (human · task-notification · peer), `isMeta`,
+`isCompactSummary` and `promptSource` — a human-origin entry is never excluded
+by its text (a pasted envelope literal is a request), flagged entries are
+excluded or routed by the flag, and the text-shape validators (opening marker +
+closing/companion mark) apply only to entries that carry no metadata at all;
+there a byte-identical pasted envelope is indistinguishable by design.
 """
 import argparse
 import json
@@ -154,6 +162,7 @@ def classify_status(status_cell):
 EXCLUDE_ENVELOPES = (
     ("<system-reminder>", "</system-reminder>", "end"),
     ("[SYSTEM NOTIFICATION", "</task-notification>", "end"),
+    ("<task-notification>", "</task-notification>", "end"),
     ("<local-command-stdout>", "</local-command-stdout>", "end"),
     ("<local-command-caveat>", "</local-command-caveat>", "end"),
     ("<command-name>", "<command-message>", "in"),
@@ -203,9 +212,27 @@ def get_text_and_kind(entry):
     return None, False
 
 
+def origin_kind(entry):
+    o = entry.get("origin")
+    return (o.get("kind") or "") if isinstance(o, dict) else ""
+
+
+def has_metadata(entry):
+    """Claude Code marks entries: `origin.kind` (human · task-notification · peer), `isMeta`, `isCompactSummary`,
+    `promptSource`. Measured 2026-09-18 on a real transcript: 48/48 typed utterances carry origin.kind=human."""
+    return bool(entry.get("origin")) or "isMeta" in entry or "isCompactSummary" in entry or "promptSource" in entry
+
+
 def is_excluded(text, entry):
-    if entry.get("isMeta"):
+    # v11 (codex round 10): METADATA FIRST. A human-origin entry is never excluded by its text shape — a user who
+    # pastes an envelope literal, even a byte-identical one, is still a user. Text validators below apply only to
+    # entries that carry no metadata at all (older transcripts, hand-made fixtures).
+    if origin_kind(entry) == "human" or entry.get("promptSource") in ("typed", "queued"):
+        return False
+    if entry.get("isMeta") or origin_kind(entry) in ("task-notification", "peer", "system"):
         return True
+    if has_metadata(entry) and origin_kind(entry) == "":
+        pass  # metadata present but no origin — fall through to the text validators
     stripped = text.lstrip()
     for p, companion, where in EXCLUDE_ENVELOPES:
         if not stripped.startswith(p):
@@ -216,8 +243,6 @@ def is_excluded(text, entry):
     # merely contains a marker literal (`<task-notification>` · `[Subagent hand-back]` · the peer-message sentence)
     # is a request. The real envelopes: a task notification STARTS with its tag (or with the SYSTEM NOTIFICATION
     # banner, handled above); a peer/subagent message STARTS with the sentence AND carries an `<agent-message` tag.
-    if stripped.startswith("<task-notification>"):
-        return True
     if stripped.startswith("Another Claude session sent a message:") and "<agent-message" in text:
         return True
     return False
@@ -345,6 +370,13 @@ def do_extract(transcript_path, out_path):
             if not has_text or text is None or text.strip() == "":
                 continue
             text = text.lstrip("\ufeff")  # v5: a BOM before the compaction prefix hid the summary channel
+            if entry.get("isCompactSummary") is True:
+                # v11: the flag Claude Code sets on compaction entries — primary signal; the text shape is the fallback
+                summary_texts.append(text)
+                continue
+            if origin_kind(entry) == "human" or entry.get("promptSource") in ("typed", "queued"):
+                raw_rows.append({"ts": entry.get("timestamp"), "text": text})
+                continue
             # v5 (codex round 4): the compaction prefix alone is not proof — an ordinary utterance can start with
             # it. A compaction entry also carries a «user messages» section; without one it is a raw utterance.
             if text.lstrip().startswith(COMPACTION_PREFIX) and any(USER_MESSAGES_HEADING_LINE_RE.match(l) for l in text.split("\n")) \

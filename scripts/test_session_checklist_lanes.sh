@@ -66,7 +66,7 @@ rows = [
                  "content": "<system-reminder>\nreminder body\n</system-reminder>"}},
     {"type": "user",
      "message": {"role": "user",
-                 "content": "<task-notification>agent finished</task-notification> extra"}},
+                 "content": "<task-notification>agent finished</task-notification>"}},  # v11: the real shape ends with the closing tag
     {"type": "user",
      "message": {"role": "user",
                  "content": "Another Claude session sent a message:\n<agent-message from=\"peer\">\n[Subagent hand-back] hello there\n</agent-message>"}},  # v9: the REAL envelope shape (sentence + tag)
@@ -716,6 +716,26 @@ if [ "$RC" -eq 0 ] && grep -q "raw 4건" "$TMPDIR_ROOT/l38.out" && grep -q "look
   pass "L38 extract: four envelope look-alikes are rows; the four real envelopes (with their closing marks) are excluded"
 else
   fail "L38 rc=$RC (see $TMPDIR_ROOT/l38.out)"
+fi
+
+# L39 — 🟥 cross-family round 10 (codex): a user-authored FULL envelope literal (byte-identical text) was excluded by text
+#        shape. Measured on the real transcript: Claude Code marks entries — origin.kind=human (48/48 typed utterances),
+#        origin.kind=task-notification / peer (+isMeta), isCompactSummary. v11: METADATA FIRST — a human-origin entry is
+#        never excluded by its text; flagged entries are excluded/routed by the flag; text validators only when NO metadata.
+build_jsonl "$TMPDIR_ROOT/l39.jsonl" "[
+ {'type':'user','timestamp':'2026-09-18T01:00:00.000Z','origin':{'kind':'human'},'promptSource':'typed','message':{'role':'user','content':'<system-reminder>\nthis whole envelope is what I pasted as my request\n</system-reminder>'}},
+ {'type':'user','origin':{'kind':'task-notification'},'promptSource':'system','message':{'role':'user','content':'plain looking text that is actually a notification'}},
+ {'type':'user','isMeta':True,'origin':{'kind':'peer'},'promptSource':'system','message':{'role':'user','content':'peer text without the sentence prefix'}},
+ {'type':'user','isCompactSummary':True,'message':{'role':'user','content':'Summary (no boilerplate prefix):\n\n6. All user messages:\n   - \"flagged compaction quote\"\n\n7. Pending Tasks:\n   - x\n'}},
+ {'type':'user','message':{'role':'user','content':'<system-reminder>\nno metadata at all — text fallback treats a full envelope as synthetic\n</system-reminder>'}}
+]"
+run "$TMPDIR_ROOT/l39.out" extract --transcript "$TMPDIR_ROOT/l39.jsonl"
+if [ "$RC" -eq 0 ] && grep -q "raw 1건 · 압축 요약 1건(중복 제거 후 1건 추가)" "$TMPDIR_ROOT/l39.out" \
+   && grep -q "what I pasted as my request" "$TMPDIR_ROOT/l39.out" && grep -q "flagged compaction quote" "$TMPDIR_ROOT/l39.out" \
+   && ! grep -q "actually a notification" "$TMPDIR_ROOT/l39.out" && ! grep -q "peer text" "$TMPDIR_ROOT/l39.out" && ! grep -q "no metadata at all" "$TMPDIR_ROOT/l39.out"; then
+  pass "L39 extract: metadata first — human-origin envelope text is a row; flagged notification/peer are excluded; isCompactSummary opens the summary channel; no-metadata envelope falls back to the text validator"
+else
+  fail "L39 rc=$RC (see $TMPDIR_ROOT/l39.out)"
 fi
 
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"
