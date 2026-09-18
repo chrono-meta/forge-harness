@@ -335,7 +335,10 @@ def do_extract(transcript_path, out_path):
             text = text.lstrip("\ufeff")  # v5: a BOM before the compaction prefix hid the summary channel
             # v5 (codex round 4): the compaction prefix alone is not proof — an ordinary utterance can start with
             # it. A compaction entry also carries a «user messages» section; without one it is a raw utterance.
-            if text.lstrip().startswith(COMPACTION_PREFIX) and any(USER_MESSAGES_HEADING_LINE_RE.match(l) for l in text.split("\n")):
+            if text.lstrip().startswith(COMPACTION_PREFIX) and any(USER_MESSAGES_HEADING_LINE_RE.match(l) for l in text.split("\n")) \
+                    and extract_quotes_from_summary(text):
+                # v7 (codex round 6): boilerplate + heading is still not proof — a user drafting a compaction
+                # TEMPLATE has both and no quoted items. Only a section that yields ≥1 quote is a summary.
                 summary_texts.append(text)
                 continue
             if is_excluded(text, entry):
@@ -427,16 +430,15 @@ def split_row(line):
 
 
 def is_separator_line(line):
+    """v7 (codex round 6): the delimiter row may omit the outer pipes too (`---|---|---`)."""
     s = line.strip()
-    if not s.startswith("|"):
+    if "|" not in s and "-" not in s:
         return False
     inner = s.strip("|")
     if inner == "":
         return False
-    cells = inner.split("|")
-    return all(re.fullmatch(r"[\s:\-]+", c) for c in cells if c != "" or True) and all(
-        re.fullmatch(r"[\s:\-]*", c) for c in cells
-    ) and any(c.strip() != "" for c in cells)
+    cells = SPLIT_PIPE_RE.split(inner)
+    return len(cells) >= 2 and all(re.fullmatch(r"[\s:\-]*", c) for c in cells) and any("-" in c for c in cells)
 
 
 def find_header_index(header_cells, needle):
@@ -495,7 +497,8 @@ def do_check(file_path):
         if in_fence[i] or is_code_indented(ln):
             continue
         s = ln.strip()
-        if not s.startswith("|") or "상태" not in s or i + 1 >= len(lines):
+        # v7 (codex round 6): a header row may omit the outer pipes — a line with an unescaped `|` and 상태 qualifies
+        if not SPLIT_PIPE_RE.search(s) or "상태" not in s or i + 1 >= len(lines):
             continue
         if is_code_indented(lines[i + 1]) or not is_separator_line(lines[i + 1]):
             continue  # v5: an indented delimiter row is code, so this is not a table

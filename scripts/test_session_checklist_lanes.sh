@@ -628,6 +628,36 @@ else
   fail "L32 rc=$RC (see $TMPDIR_ROOT/l32.out)"
 fi
 
+# ---------------------------------------------------------------------------
+# L33–L34 — 🟥 cross-family round 6 (codex, first round with the contract boundaries stated): two silent, in-contract.
+#   L33 a later table whose header AND delimiter omit the outer pipes was never found (its bad row unchecked)
+#   L34 a user DRAFTING a compaction template (boilerplate + heading line, no quoted items) was routed to the summary channel
+# ---------------------------------------------------------------------------
+{
+  echo "# outerless later table"; echo
+  echo "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안 |"
+  echo "|---|---|---|---|---|---|---|"
+  echo "| 1 | 09-18 05:00 | first table ok | ✅ | ev.md:1 | — | — |"
+  echo
+  echo "# | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안"
+  echo "---|---|---|---|---|---|---"
+  echo "1 | 09-18 05:01 | outerless table bad row | bogus | — | reason | next"
+} > "$TMPDIR_ROOT/l33.md"
+run "$TMPDIR_ROOT/l33.out" check --file "$TMPDIR_ROOT/l33.md"
+if [ "$RC" -eq 1 ] && grep -q "^row table 2 1 invalid 상태 (got 'bogus')" "$TMPDIR_ROOT/l33.out" && grep -q "tables=2" "$TMPDIR_ROOT/l33.out"; then
+  pass "L33 check: a table whose header and delimiter omit the outer pipes is found and checked (table 2 named)"
+else
+  fail "L33 rc=$RC (see $TMPDIR_ROOT/l33.out)"
+fi
+
+build_jsonl "$TMPDIR_ROOT/l34.jsonl" "[{'type':'user','timestamp':'2026-09-18T01:00:00.000Z','message':{'role':'user','content':'This session is being continued from a previous conversation that ran out of context. — let us use that as our template:\n\n1. Primary Request and Intent:\n   - (fill in)\n\n6. All user messages:\n   - (list them here)\n\n7. Pending Tasks:\n   - (fill in)\n'}}]"
+run "$TMPDIR_ROOT/l34.out" extract --transcript "$TMPDIR_ROOT/l34.jsonl"
+if [ "$RC" -eq 0 ] && grep -q "raw 1건 · 압축 요약 0건" "$TMPDIR_ROOT/l34.out"; then
+  pass "L34 extract: a compaction-shaped utterance with no quoted items stays a raw row"
+else
+  fail "L34 rc=$RC (see $TMPDIR_ROOT/l34.out)"
+fi
+
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
