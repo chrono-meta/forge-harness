@@ -28,7 +28,9 @@ rc contract (check):
   10  input error       — file missing, OR no markdown table whose header
                           contains 상태 was found
 
-rc contract (extract): 0 on success, 10 if the transcript file is missing.
+rc contract (extract): 0 on success, 2 if one or more JSONL lines could not be
+parsed (the table is still written — an unparsable line may have been an
+utterance, so the run is never reported clean), 10 if the transcript is missing.
 
 What `check` does NOT do: it does not open evidence links, does not verify
 a 증거 pointer actually closes the request, and does not second-guess
@@ -324,7 +326,10 @@ def do_extract(transcript_path, out_path):
             text, has_text = get_text_and_kind(entry)
             if not has_text or text is None or text.strip() == "":
                 continue
-            if text.lstrip().startswith(COMPACTION_PREFIX):
+            text = text.lstrip("\ufeff")  # v5: a BOM before the compaction prefix hid the summary channel
+            # v5 (codex round 4): the compaction prefix alone is not proof — an ordinary utterance can start with
+            # it. A compaction entry also carries a «user messages» section; without one it is a raw utterance.
+            if text.lstrip().startswith(COMPACTION_PREFIX) and USER_MESSAGES_HEADING_RE.search(text):
                 summary_texts.append(text)
                 continue
             if is_excluded(text, entry):
@@ -348,6 +353,7 @@ def do_extract(transcript_path, out_path):
     n_raw = len(raw_rows)
     n_summary_found = summary_found_total
     n_summary_added = len(summary_rows)
+    rc = 2 if parse_errors else 0  # v5: an unparsable line may have been an utterance — loud, never rc=0
 
     lines_out = []
     title = "# 세션 요청 체크리스트 (스켈레톤) — %s" % os.path.basename(transcript_path)
@@ -358,6 +364,8 @@ def do_extract(transcript_path, out_path):
         % (n_raw, n_summary_found, n_summary_added)
     )
     lines_out.append(chr(0x1F4CE) + " " + "원장 = %s (%d lines)" % (transcript_path, line_count))
+    if parse_errors:
+        lines_out.append("🟥 JSONL 파싱 실패 %d줄 — 그 줄의 발화는 이 표에 없다 (rc=2)" % parse_errors)
     lines_out.append("")
     lines_out.append(
         "| # | \uc2dc\uac01 | \ubc1c\ud654(\uc694\uc9c0) | \uc0c1\ud0dc | \uc99d\uac70 | \uc0ac\uc720 / \ub0a8\uc740 \uac83 | \uc81c\uc548(\uc774\ubc88 \uc138\uc158 vs \uc774\uc6d4) |"
@@ -391,20 +399,25 @@ def do_extract(transcript_path, out_path):
         with open(out_path, "w", encoding="utf-8") as f:
             f.write(content)
 
-    return 0
+    return rc
 
 
 # ---------------------------------------------------------------------------
 # check
 # ---------------------------------------------------------------------------
 
+SPLIT_PIPE_RE = re.compile(r"(?<!\\)\|")
+
+
 def split_row(line):
+    r"""v5 (codex round 4): `\|` is a literal pipe inside a cell (the utterance column carries them), not a
+    column boundary — a naive split shifted every later column and the checker read the wrong 상태 cell."""
     s = line.strip()
     if s.startswith("|"):
         s = s[1:]
-    if s.endswith("|"):
+    if s.endswith("|") and not s.endswith("\\|"):
         s = s[:-1]
-    return [c.strip() for c in s.split("|")]
+    return [c.strip().replace("\\|", "|") for c in SPLIT_PIPE_RE.split(s)]
 
 
 def is_separator_line(line):
@@ -421,10 +434,17 @@ def is_separator_line(line):
 
 
 def find_header_index(header_cells, needle):
-    for i, c in enumerate(header_cells):
-        if needle in c:
-            return i
-    return None
+    """v5 (codex round 4): an EXACT header cell wins; a contains-match is the fallback only when exactly one
+    cell contains the needle (`이전 상태 메모` next to `상태` used to steal the status column)."""
+    exact = [i for i, c in enumerate(header_cells) if c.strip() == needle]
+    if len(exact) == 1:
+        return exact[0]
+    if len(exact) > 1:
+        return -1  # ambiguous
+    loose = [i for i, c in enumerate(header_cells) if needle in c]
+    if len(loose) == 1:
+        return loose[0]
+    return -1 if len(loose) > 1 else None
 
 
 def do_check(file_path):
@@ -442,16 +462,16 @@ def do_check(file_path):
     # v2 (codex round 1): lines inside a code fence are not a table — a fenced example table used to be
     # picked as THE checklist and mask the real one below it (rc=0 on a file with a bad row).
     in_fence = [False] * len(lines)
-    fence_open = None
+    fence_open = None  # (char, length) — v5 (codex round 4): a closer must be the same char and at least as long
     for i, ln in enumerate(lines):
         m = FENCE_RE.match(ln)
         if m:
             tick = m.group(1)
             if fence_open is None:
-                fence_open = tick[0]
+                fence_open = (tick[0], len(tick))
                 in_fence[i] = True
                 continue
-            if tick[0] == fence_open:
+            if tick[0] == fence_open[0] and len(tick) >= fence_open[1] and ln.strip() == tick:
                 fence_open = None
                 in_fence[i] = True
                 continue
@@ -471,8 +491,8 @@ def do_check(file_path):
         s = ln.strip()
         if not s.startswith("|") or "상태" not in s or i + 1 >= len(lines):
             continue
-        if not is_separator_line(lines[i + 1]):
-            continue
+        if is_code_indented(lines[i + 1]) or not is_separator_line(lines[i + 1]):
+            continue  # v5: an indented delimiter row is code, so this is not a table
         header_idxs.append(i)
 
     if not header_idxs:
@@ -508,6 +528,14 @@ def do_check(file_path):
         idx_evidence = find_header_index(header_cells, "증거")
         idx_reason = find_header_index(header_cells, "사유")
         idx_proposal = find_header_index(header_cells, "제안")
+        # v5 (codex round 4): the canonical columns must all be present and unambiguous — a table with only
+        # `#` and 상태 is not a checklist (its rows could never carry evidence / reason / proposal)
+        missing = [n for n, ix in (("상태", idx_status), ("증거", idx_evidence), ("사유", idx_reason), ("제안", idx_proposal)) if ix is None]
+        ambiguous = [n for n, ix in (("상태", idx_status), ("증거", idx_evidence), ("사유", idx_reason), ("제안", idx_proposal)) if ix == -1]
+        if missing or ambiguous:
+            sys.stderr.write("error: checklist schema — missing columns %s, ambiguous columns %s (table %d)\n" % (missing, ambiguous, t_no))
+            print("checklist: rows=0 ok=0 violations=0 rc=10")
+            return 10
         idx_num = None
         for i, c in enumerate(header_cells):
             if c.strip() == "#":

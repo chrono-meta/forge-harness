@@ -459,6 +459,109 @@ else
   fail "L19 rc=$RC (see $TMPDIR_ROOT/l19.out)"
 fi
 
+# ---------------------------------------------------------------------------
+# L20–L27 — 🟥 cross-family round 4 (codex): six silent MAJORs at the Markdown-table / JSONL boundary.
+#   L20 `\|` inside the utterance cell shifted every later column (status read from the wrong cell)
+#   L21 a header `이전 상태 메모` before `상태` stole the status column
+#   L22 a 4-backtick fence "closed" by a 3-backtick line — the table stayed fenced code
+#   L23 an indented delimiter row (code) still made a header a table
+#   L24 an unparsable JSONL line silently dropped a user utterance (rc stayed 0)
+#   L25 an ordinary utterance that starts with the compaction phrase was routed to the summary channel
+#   L26 a BOM before the compaction prefix hid the summary channel
+#   L27 a table with only `#` and `상태` passed as a checklist (schema)
+# ---------------------------------------------------------------------------
+{
+  echo "# escaped pipe"; echo
+  echo "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안 |"
+  echo "|---|---|---|---|---|---|---|"
+  echo "| 1 | 09-18 01:00 | run a \\| b | ✅ | ev.md:1 | — | — |"
+  echo "| 2 | 09-18 01:01 | run c \\| d |  | ev.md:2 | — | — |"
+} > "$TMPDIR_ROOT/l20.md"
+run "$TMPDIR_ROOT/l20.out" check --file "$TMPDIR_ROOT/l20.md"
+if [ "$RC" -eq 1 ] && grep -q "^row 2 missing 상태" "$TMPDIR_ROOT/l20.out" && grep -q "rows=2 ok=1 violations=1" "$TMPDIR_ROOT/l20.out"; then
+  pass "L20 check: an escaped pipe inside a cell is not a column boundary (row 1 ok, row 2's empty 상태 is caught)"
+else
+  fail "L20 rc=$RC (see $TMPDIR_ROOT/l20.out)"
+fi
+
+{
+  echo "# ambiguous header"; echo
+  echo "| # | 이전 상태 메모 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안 |"
+  echo "|---|---|---|---|---|---|---|"
+  echo "| 1 | ✅ | the real status is bogus | bogus | ev.md:1 | — | — |"
+} > "$TMPDIR_ROOT/l21.md"
+run "$TMPDIR_ROOT/l21.out" check --file "$TMPDIR_ROOT/l21.md"
+if [ "$RC" -eq 1 ] && grep -q "^row 1 invalid 상태 (got 'bogus')" "$TMPDIR_ROOT/l21.out"; then
+  pass "L21 check: the exact 상태 header wins over a contains-match (bogus is caught)"
+else
+  fail "L21 rc=$RC (see $TMPDIR_ROOT/l21.out)"
+fi
+
+{
+  echo "# long fence, short closer"; echo
+  echo '````'
+  echo '```'
+  echo "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안 |"
+  echo "|---|---|---|---|---|---|---|"
+  echo "| 1 | 09-18 01:00 | still fenced | ✅ | ev.md:1 | — | — |"
+  echo '````'
+} > "$TMPDIR_ROOT/l22.md"
+run "$TMPDIR_ROOT/l22.out" check --file "$TMPDIR_ROOT/l22.md"
+L22_RC=$RC
+{
+  echo "# indented delimiter"; echo
+  echo "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안 |"
+  echo "    |---|---|---|---|---|---|---|"
+  echo "| 1 | 09-18 01:00 | not a table | ✅ | ev.md:1 | — | — |"
+} > "$TMPDIR_ROOT/l23.md"
+run "$TMPDIR_ROOT/l23.out" check --file "$TMPDIR_ROOT/l23.md"
+if [ "$L22_RC" -eq 10 ] && [ "$RC" -eq 10 ]; then
+  pass "L22/L23 check: a 4-backtick fence is not closed by 3 backticks; an indented delimiter row is not a table (both rc=10)"
+else
+  fail "L22 rc=$L22_RC L23 rc=$RC (see $TMPDIR_ROOT/l22.out $TMPDIR_ROOT/l23.out)"
+fi
+
+{
+  echo '{"type":"user","timestamp":"2026-09-18T01:00:00.000Z","message":{"role":"user","content":"first request"}}'
+  echo '{"type":"user","timestamp":"2026-09-18T01:01:00.000Z","message":{"role":"user","content":"broken line'
+  echo '{"type":"user","timestamp":"2026-09-18T01:02:00.000Z","message":{"role":"user","content":"third request"}}'
+} > "$TMPDIR_ROOT/l24.jsonl"
+run "$TMPDIR_ROOT/l24.out" extract --transcript "$TMPDIR_ROOT/l24.jsonl"
+if [ "$RC" -eq 2 ] && grep -q "JSONL 파싱 실패 1줄" "$TMPDIR_ROOT/l24.out" && grep -q "raw 2건" "$TMPDIR_ROOT/l24.out"; then
+  pass "L24 extract: an unparsable JSONL line is loud (rc=2, header names the count) instead of a silent drop"
+else
+  fail "L24 rc=$RC (see $TMPDIR_ROOT/l24.out)"
+fi
+
+build_jsonl "$TMPDIR_ROOT/l25.jsonl" "[{'type':'user','timestamp':'2026-09-18T01:00:00.000Z','message':{'role':'user','content':'This session is being continued from a previous conversation? no — I am just quoting that phrase; please treat this as my request'}}]"
+run "$TMPDIR_ROOT/l25.out" extract --transcript "$TMPDIR_ROOT/l25.jsonl"
+if [ "$RC" -eq 0 ] && grep -q "raw 1건" "$TMPDIR_ROOT/l25.out" && grep -q "^| 1 | " "$TMPDIR_ROOT/l25.out"; then
+  pass "L25 extract: an utterance that merely starts with the compaction phrase stays a raw row"
+else
+  fail "L25 rc=$RC (see $TMPDIR_ROOT/l25.out)"
+fi
+
+build_jsonl "$TMPDIR_ROOT/l26.jsonl" "[{'type':'user','message':{'role':'user','content':'﻿$SUMHEAD   - \"carried over behind a BOM\"$SUMTAIL'}}]"
+run "$TMPDIR_ROOT/l26.out" extract --transcript "$TMPDIR_ROOT/l26.jsonl"
+if [ "$RC" -eq 0 ] && grep -q "압축 요약 1건(중복 제거 후 1건 추가)" "$TMPDIR_ROOT/l26.out" && grep -q "carried over behind a BOM" "$TMPDIR_ROOT/l26.out"; then
+  pass "L26 extract: a BOM before the compaction prefix does not hide the summary channel"
+else
+  fail "L26 rc=$RC (see $TMPDIR_ROOT/l26.out)"
+fi
+
+{
+  echo "# status-only table"; echo
+  echo "| # | 상태 |"
+  echo "|---|---|"
+  echo "| 1 | n/a |"
+} > "$TMPDIR_ROOT/l27.md"
+run "$TMPDIR_ROOT/l27.out" check --file "$TMPDIR_ROOT/l27.md"
+if [ "$RC" -eq 10 ] && grep -q "schema" "$TMPDIR_ROOT/l27.out"; then
+  pass "L27 check: a table without 증거/사유/제안 columns is not a checklist (schema, rc=10)"
+else
+  fail "L27 rc=$RC (see $TMPDIR_ROOT/l27.out)"
+fi
+
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
