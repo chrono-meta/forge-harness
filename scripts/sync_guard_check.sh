@@ -44,38 +44,48 @@ echo
 # ── 1. Exclusion-set parity ───────────────────────────────────────────────────
 # The guard walks the tree with `find`; the transport copies with `rsync`. They must describe the
 # SAME file set. When they diverged, a normal sync aborted on files the transport never touches.
-# SYNC_EXCLUDES is the single source for rsync; the find predicates are hand-spelled, so this
-# check is what keeps the hand-spelled copy honest.
+# SYNC_EXCLUDES is the single source for rsync.
+#
+# 🟥 2026-09-18 — the "third spot" named in check_dest_newer's own comment (a find predicate,
+# once at the site the #740 commit message pointed at) is CLOSED, not just checked:
+# check_dest_newer() no longer hand-spells the find predicates, it BUILDS them from SYNC_EXCLUDES
+# (same '/' -> -path / else -> -name split the tar fallback uses — grep sync-to-be.sh for
+# `tex+=("--exclude=` to find that line; it moves, its name does not). So this section's job
+# changes: a TEXTUAL grep for "! -path '*/X/*'" would now search for strings that are no longer
+# written anywhere (they are generated at runtime), and would report every single entry as
+# "missing" — that is not a parity failure, it is this check reading generated code as if it were
+# still hand-spelled. Confirmed empirically 2026-09-18: after converting check_dest_newer, the OLD
+# textual loop below reported `.gitkeep *.marker .fh_node_state .close_stamps_* .git/` all
+# "missing" while the guard's actual behavior was byte-identical to before (verified by diffing
+# `find` output old vs new on a fixture tree with one file per SYNC_EXCLUDES entry plus two real
+# files — same two real files passed both ways).
+# ⚠️ Named residual in the OLD version of this check, now moot: it grepped the WHOLE FILE, not just
+# check_dest_newer()'s body, so `logs/`/`manifests/`/`_index/` were reported "present" partly
+# because those substrings also appear inside unrelated comments and inside stamp_banner/
+# strip_banner's OWN find calls — a coincidental pass, not a verified one. Scoping to the function
+# body below removes that looseness rather than inheriting it.
+#
+# What this now proves instead: (a) SYNC_EXCLUDES is still readable (instrument-error guard,
+# unchanged), (b) check_dest_newer() still exists and still BUILDS its predicates by iterating
+# SYNC_EXCLUDES — the structural fact that makes textual drift impossible. The BEHAVIORAL proof
+# that a brand-new entry is actually honored (the genericity claim) lives in
+# scripts/sync_to_be_lanes.sh's find-predicate-parity lane, which extracts and EXECUTES this same
+# conversion loop rather than re-implementing it — do not duplicate that proof here too.
 excludes=$(sed -n 's/^SYNC_EXCLUDES=(\(.*\))$/\1/p' "$SYNC" | tr -d "'" )
 if [ -z "$excludes" ]; then
   bad "cannot read SYNC_EXCLUDES from $SYNC — instrument error, NOT a pass"
 else
-  missing=""
-  for e in $excludes; do
-    case "$e" in
-      # -F: these predicates contain glob metacharacters (*), and matching them as REGEX
-      # silently fails — measured on this anchor's own first run, where `*.marker` was reported
-      # missing while sitting in the file. Literal matching is the only honest comparison here.
-      # Directory excludes (trailing '/') take the -path form; everything else -name.
-      # 🟥 This parity is TEXTUAL, not semantic: -F matches the predicate literally, so an entry
-      # carrying glob metacharacters ('*.marker', 'a[b]/') passes parity while find would read it
-      # as a glob. That is inherited from the '*)' branch below, not introduced here (see the -F
-      # note above), and it is the honest trade — regex matching reported a present '*.marker' as
-      # missing on this anchor's own first run.
-      # 2026-09-15: this was a hardcoded per-directory list (logs/ manifests/ _index/), so every NEW
-      # directory exclude needed a THIRD edit here -- and '.git/' fell through to the '*)' branch,
-      # which looks for "! -name '.git/'" and reports a false parity miss. Generalizing removes that
-      # third site. Known-negative held: a directory added to SYNC_EXCLUDES but NOT to the find
-      # predicate still reports PARITY-FAIL.
-      */) _d="${e%/}"; grep -qF -- "! -path '*/$_d/*'" "$SYNC" || missing="$missing $e" ;;
-      *)  grep -qF -- "! -name '$e'" "$SYNC" || missing="$missing $e" ;;
-    esac
-  done
-  if [ -n "$missing" ]; then
-    bad "exclusion parity — in SYNC_EXCLUDES but not in the guard's find predicates:$missing"
-    echo "     The guard would inspect files the transport never writes → false aborts."
+  cdn_body=$(awk '/^check_dest_newer\(\) \{/,/^}/' "$SYNC")
+  if [ -z "$cdn_body" ]; then
+    bad "cannot read check_dest_newer() from $SYNC — instrument error, NOT a pass"
+  # 🟥 주석에 그 문자열이 있으면 통과하던 것을 닫는다(cross-family codex 지목): 주석 줄을
+  # 먼저 떨군 뒤에 본다. 「루프는 있는데 그 출력이 production find 로 안 간다」는 남은 경로는
+  # 여기서 못 닫는다 — 그건 텍스트가 아니라 행동이라, scripts/sync_to_be_lanes.sh 의 레인이
+  # check_dest_newer() 를 **통째로 실행**해서 잡는다.
+  elif printf '%s' "$cdn_body" | grep -v '^[[:space:]]*#' | grep -qF 'for _e in ${SYNC_EXCLUDES[@]+"${SYNC_EXCLUDES[@]}"}'; then
+    pass "exclusion parity — check_dest_newer() builds its find predicates FROM SYNC_EXCLUDES (single source; drift is now structural, not textual)"
   else
-    pass "exclusion parity — every SYNC_EXCLUDES entry has a matching find predicate"
+    bad "check_dest_newer() no longer iterates SYNC_EXCLUDES — the hand-spelled duplicate may be back (see scripts/sync_to_be_lanes.sh's find-predicate-parity lane for the behavioral proof)"
   fi
 fi
 

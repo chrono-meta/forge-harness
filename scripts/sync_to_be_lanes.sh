@@ -619,6 +619,83 @@ else
   fi
 fi
 
+# ── find predicate (check_dest_newer) × SYNC_EXCLUDES parity — the THIRD spot (2026-09-18) ────
+# 🟥 왜 있나: #740 이 tar 폴백(④)과 복귀 경로(⑤)를 닫았지만, 그 커밋 자신의 메시지가 "남은 것"
+#    으로 지목한 자리는 손대지 않았다 — check_dest_newer() 의 find 술어(구 :453 주석)다. 그 자리는
+#    SYNC_EXCLUDES 를 find 문법으로 손으로 다시 적고 있었고, sync_guard_check.sh §1 은 텍스트
+#    대조만 했지 단일소스로 묶지는 않았다(대조 로직 자체가 죽거나 비면 다섯 번째로 재발한다 —
+#    실제로 ④⑤ 가 그렇게 한 번 유실됐었다, tracks/_meta/parallel_fhgate_2026-09-15.md §3-e-0-a).
+#    check_dest_newer() 는 이제 SYNC_EXCLUDES 에서 뽑은 배열을 쓴다(tar 폴백과 같은 '/' 유무 변환).
+echo ""
+echo "── find predicate (check_dest_newer) × SYNC_EXCLUDES parity — the third spot ──"
+
+# E: 계기가 대상(check_dest_newer 함수 본문)을 못 읽으면 INSTRUMENT-ERROR 다.
+_cdn_body="$(_sync_src | awk '/^check_dest_newer\(\) \{/,/^}/')"
+if [ -z "$_cdn_body" ]; then
+  no "E: INSTRUMENT-ERROR — check_dest_newer() 를 못 읽었다 (이 아래 판정은 무효)"
+else
+  ok "E: check_dest_newer() 를 읽었다 (계기 살아 있음)"
+
+  # A: 현재 find 가 배열을 쓰는가(손목록으로 되돌아가면 여기서 적색).
+  if printf '%s' "$_cdn_body" | grep -q 'find "\$src" -type f \${dexclude\[@\]'; then
+    ok "A: check_dest_newer 의 find 가 SYNC_EXCLUDES 에서 뽑은 배열을 쓴다 (손목록 아님)"
+  else
+    no "A: check_dest_newer 의 find 가 배열을 안 쓴다 — 손목록으로 되돌아갔다"
+  fi
+
+  # C: 🟥 클래스를 닫는 팔 — 2026-09-18 재작성. 초판은 «변환 루프» 만 뽑아 실행했는데,
+  #    cross-family codex 가 그 형태의 공허-초록 경로를 냈다: 루프가 옳아도 그 뒤에서
+  #    `dexclude=()` 로 끊기면 추출본은 여전히 통과하고 production `find` 만 샌다.
+  #    그래서 조각이 아니라 **함수 전체를 뽑아 실제로 호출**한다 — 실 `find` 줄이 그 안에
+  #    있으므로 «변환이 production 경로로 들어간다» 가 실행으로 증명된다.
+  _cdn_fn="$(_sync_src | awk '/^check_dest_newer\(\) \{/,/^}/')"
+  if [ -z "$_cdn_fn" ]; then
+    no "C: check_dest_newer() 전문을 못 뽑았다 (계기 오류 — 아래 판정 무효)"
+  else
+    _c_tmp="$(mktemp -d)"
+    mkdir -p "$_c_tmp/src/zzz_probe_dir" "$_c_tmp/dst/zzz_probe_dir"
+    echo real > "$_c_tmp/src/keep.md";            echo real > "$_c_tmp/dst/keep.md"
+    echo probe > "$_c_tmp/src/zzz_probe_dir/x.txt"
+    echo probe > "$_c_tmp/dst/zzz_probe_dir/x.txt"
+    # 목적지의 «제외 대상» 을 더 새롭게 만든다: 제외가 살아 있으면 NEWER_HITS 에 안 뜬다.
+    sleep 1; touch "$_c_tmp/dst/zzz_probe_dir/x.txt"
+    _run_cdn() {   # $1 = SYNC_EXCLUDES 선언 문자열
+      /bin/bash -c '
+        set -u
+        '"$1"'
+        NEWER_HITS=""
+        _dest_content_differs() { return 0; }
+        '"$_cdn_fn"'
+        check_dest_newer "'"$_c_tmp"'/src" "'"$_c_tmp"'/dst"
+        printf "%s" "$NEWER_HITS"
+      ' 2>&1
+    }
+    # ARM: 새 항목을 SYNC_EXCLUDES 에만 추가한다 — 손으로 적는 자리가 없으므로 반영돼야 한다.
+    _arm="$(_run_cdn 'SYNC_EXCLUDES=(".gitkeep" "zzz_probe_dir/")')"
+    # CONTROL: 같은 실행에서 그 항목을 빼면 «반드시» 떠야 한다. 안 뜨면 이 레인은
+    # «제외가 먹혔다» 와 «픽스처가 애초에 신호를 안 만든다» 를 구분하지 못한다.
+    _ctl="$(_run_cdn 'SYNC_EXCLUDES=(".gitkeep")')"
+    if printf '%s' "$_ctl" | grep -q 'zzz_probe_dir/x.txt'; then
+      ok "C-control: 제외에서 빼면 실제로 NEWER_HITS 에 뜬다 (픽스처가 신호를 만든다)"
+      if printf '%s' "$_arm" | grep -q 'zzz_probe_dir/x.txt'; then
+        no "C: SYNC_EXCLUDES 에 추가한 새 항목이 production find 에 반영 안 된다 — arm=[$_arm]"
+      else
+        ok "C: 새 항목이 배열에만 추가돼도 production check_dest_newer 가 제외한다 (클래스 닫힘)"
+      fi
+    else
+      no "C-control: 컨트롤이 신호를 못 만들었다 — 계기 오류 (arm 판정 무효). ctl=[$_ctl]"
+    fi
+    # E2: 빈 배열에서 죽지 않는가 (cross-family codex 지목: set -u 거짓중단)
+    _empty="$(_run_cdn 'SYNC_EXCLUDES=()')"
+    if printf '%s' "$_empty" | grep -q 'unbound variable'; then
+      no "E2: SYNC_EXCLUDES 가 비면 unbound variable 로 죽는다 — sync 전체가 거짓 중단된다"
+    else
+      ok "E2: 빈 SYNC_EXCLUDES 에서도 죽지 않는다 (거짓 중단 없음)"
+    fi
+    rm -rf "$_c_tmp"
+  fi
+fi
+
 echo ""
 echo "════ lanes: $PASS passed · $FAIL failed ════"
 [ "$FAIL" -eq 0 ]

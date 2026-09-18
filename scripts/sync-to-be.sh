@@ -439,6 +439,30 @@ _dest_content_differs() {   # $1 = src file, $2 = dst file  → 0 if they differ
 check_dest_newer() {   # $1 = src dir, $2 = dst dir
   local src="$1" dst="$2" rel s d
   [ -d "$dst" ] || return 0
+  # 🟥 세 번째 자리 닫음 (2026-09-18) — #740 이 tar 폴백(④)·복귀 경로(⑤)를 배열에 결박한 뒤 자기
+  # 커밋 메시지에서 "남은 것"으로 지목한 자리가 바로 이 find 술어였다. SYNC_EXCLUDES 를 find
+  # 문법으로 손으로 다시 적지 않는다 — sync_dir() 의 tar 폴백에 있는 배열 변환과 같은 발상:
+  # '/'로 끝나면 -path, 아니면 -name (줄 번호는 드리프트하니 이름으로 찾아라: sync_dir 함수 안,
+  # SYNC_EXCLUDES 를 순회하며 tar 의 --exclude 인자를 만드는 for 루프).
+  # SYNC_EXCLUDES 에 새 항목이 추가되면 이 배열도 같이 늘어난다 — 손으로 맞출 두 번째 자리가
+  # 이제 없다 (검사는 scripts/sync_guard_check.sh §1, 클래스 증명은 scripts/sync_to_be_lanes.sh
+  # 의 find-predicate parity 레인).
+  # 빈 배열 가드: bash 3.2 + `set -euo pipefail`(파일 상단) 에서 "${a[@]}" 는 원소 0개일 때
+  # unbound variable 로 죽는다(실측) — SYNC_EXCLUDES 가 지금은 절대 비지 않지만, 이 find
+  # 호출부가 그 가정에 기대지 않도록 ${dexclude[@]+"${dexclude[@]}"} 관용구를 쓴다(같은
+  # 관용구가 scripts/fh-dispatch.sh 에도 있다, "expands to nothing when unset instead of
+  # erroring"로 스스로 설명).
+  local dexclude=() _e
+  # 🟥 `set -u` 에서 `"${SYNC_EXCLUDES[@]}"` 는 배열이 비거나 미설정이면 그 자리에서 죽는다 —
+  # 그러면 이 함수가 sync 전체를 **거짓 중단**시킨다. 손으로 적던 옛 술어는 배열에 의존하지
+  # 않았으므로 이건 이 변경이 새로 들이는 실패 경로다(cross-family codex 지목). 같은 관용구를
+  # 아래 `dexclude` 확장과 대칭으로 쓴다.
+  for _e in ${SYNC_EXCLUDES[@]+"${SYNC_EXCLUDES[@]}"}; do
+    case "$_e" in
+      */) dexclude+=(! -path "*/${_e%/}/*") ;;
+      *)  dexclude+=(! -name "$_e") ;;
+    esac
+  done
   while IFS= read -r s; do
     [ -n "$s" ] || continue
     rel="${s#$src/}"
@@ -449,12 +473,7 @@ check_dest_newer() {   # $1 = src dir, $2 = dst dir
       NEWER_HITS="$NEWER_HITS  $d  (newer than $s)
 "
     fi
-    # shellcheck disable=SC2086
-    # NOTE: these three predicates ARE SYNC_EXCLUDES, spelled as find syntax. They cannot be
-    # array-expanded safely here, so they are duplicated — the one place this file tolerates it.
-    # Changing SYNC_EXCLUDES without changing this line reopens the false-abort/false-pass gap;
-    # scripts/sync_guard_check.sh asserts the two stay equivalent.
-  done < <(find "$src" -type f ! -name '.gitkeep' ! -name '*.marker' ! -name '.fh_node_state' ! -name '.close_stamps_*' ! -path '*/logs/*' ! -path '*/manifests/*' ! -path '*/_index/*' ! -path '*/.git/*' 2>/dev/null)
+  done < <(find "$src" -type f ${dexclude[@]+"${dexclude[@]}"} 2>/dev/null)
 }
 
 # ── Shared abort message for BOTH destination-newer sites ─────────────────────
