@@ -380,6 +380,41 @@ else
   fail "L14 rc=$RC (see $TMPDIR_ROOT/l14.out)"
 fi
 
+# ---------------------------------------------------------------------------
+# L15–L16 — 🟥 cross-family round 2 (codex): a 4-space-indented table (CommonMark code block) was read as THE
+#   checklist (rc=0 with no real table — silent); a quote inside a trailing annotation became a phantom row.
+# ---------------------------------------------------------------------------
+{
+  echo "# indented example only"; echo
+  echo "    | # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안 |"
+  echo "    |---|---|---|---|---|---|---|"
+  echo "    | 1 | 09-18 01:00 | indented clean row | ✅ | ev.md:1 | — | — |"
+} > "$TMPDIR_ROOT/l15a.md"
+run "$TMPDIR_ROOT/l15a.out" check --file "$TMPDIR_ROOT/l15a.md"
+L15A_RC=$RC
+{
+  cat "$TMPDIR_ROOT/l15a.md"; echo
+  echo "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안 |"
+  echo "|---|---|---|---|---|---|---|"
+  echo "| 1 | 09-18 01:05 | real bad row | ❌ | — |  |  |"
+} > "$TMPDIR_ROOT/l15b.md"
+run "$TMPDIR_ROOT/l15b.out" check --file "$TMPDIR_ROOT/l15b.md"
+if [ "$L15A_RC" -eq 10 ] && [ "$RC" -eq 1 ] && grep -q "rows=1 " "$TMPDIR_ROOT/l15b.out" && grep -q "^row 1 missing 사유" "$TMPDIR_ROOT/l15b.out"; then
+  pass "L15 check: a 4-space-indented table is code, not a checklist (rc=10 alone; the real table below it is the one checked)"
+else
+  fail "L15 alone_rc=$L15A_RC with_real_rc=$RC (see $TMPDIR_ROOT/l15*.out)"
+fi
+
+build_jsonl "$TMPDIR_ROOT/l16.jsonl" "[{'type':'user','message':{'role':'user','content':'$SUMHEAD   - \"Deploy the release notes\" (already \"summarized\" above)\n   - Two inline quotes in prose: \"first ask\" and then \"second ask\"$SUMTAIL'}}]"
+run "$TMPDIR_ROOT/l16.out" extract --transcript "$TMPDIR_ROOT/l16.jsonl"
+if [ "$RC" -eq 0 ] && grep -q "압축 요약 3건(중복 제거 후 3건 추가)" "$TMPDIR_ROOT/l16.out" \
+   && grep -q "^| S1 | (요약) | Deploy the release notes |" "$TMPDIR_ROOT/l16.out" && ! grep -q "summarized" "$TMPDIR_ROOT/l16.out" \
+   && grep -q "^| S2 | (요약) | first ask |" "$TMPDIR_ROOT/l16.out" && grep -q "^| S3 | (요약) | second ask |" "$TMPDIR_ROOT/l16.out"; then
+  pass "L16 extract: a quote inside a trailing annotation is not a row; a prose item still yields every quote"
+else
+  fail "L16 rc=$RC (see $TMPDIR_ROOT/l16.out)"
+fi
+
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then

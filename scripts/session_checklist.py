@@ -34,9 +34,10 @@ What `check` does NOT do: it does not open evidence links, does not verify
 a 증거 pointer actually closes the request, and does not second-guess
 whether ✅ was the right call. Form only.
 
-Form details (v2, after cross-family round 1): every table with a 상태 column is
-checked (a clean earlier table cannot mask a later one); tables inside code
-fences are ignored; a row with fewer cells than the header is a violation;
+Form details (v2/v3, after cross-family rounds 1–2): every table with a 상태 column
+is checked (a clean earlier table cannot mask a later one); tables inside code
+fences or indented 4+ spaces (CommonMark code) are ignored; a row with fewer
+cells than the header is a violation;
 compact status spellings (`✅DONE`, `DONE ✅`) are accepted on purpose — the
 enum is the SET of statuses, not a spacing rule; `/`-combos are accepted only
 when every part is in the enum.
@@ -235,7 +236,13 @@ def extract_quotes_from_summary(text):
         if len(body) >= 4 and body[0] in '"“' and body[-1] in '"”':
             quotes.append(body[1:-1].replace('\\"', '"'))
             continue
-        for m in QUOTE_RE.finditer(it):
+        # v3 (codex round 2): an item that OPENS with a quote is one utterance — only its leading quote
+        # counts; a quote inside a trailing annotation (`"…" (already "summarized")`) is not a message.
+        # An item that does not open with a quote is a prose list of several quotes: take them all.
+        matches = list(QUOTE_RE.finditer(it))
+        if body[:1] in '"“' and matches:
+            matches = matches[:1]
+        for m in matches:
             q = m.group(1) if m.group(1) is not None else m.group(2)
             quotes.append(q.replace('\\"', '"'))
     return quotes
@@ -439,9 +446,14 @@ def do_check(file_path):
 
     # v2: EVERY table with a 상태 column is checked, not only the first — a clean earlier table used to
     # mask a malformed later one.
+    # v3 (codex round 2): a line indented by 4+ spaces (or a tab) is a CommonMark indented code block,
+    # not a table row — an indented example used to be read as THE checklist (rc=0 with no real table).
+    def is_code_indented(ln):
+        return ln.startswith("    ") or ln.startswith("\t")
+
     header_idxs = []
     for i, ln in enumerate(lines):
-        if in_fence[i]:
+        if in_fence[i] or is_code_indented(ln):
             continue
         s = ln.strip()
         if not s.startswith("|") or "상태" not in s or i + 1 >= len(lines):
@@ -460,7 +472,7 @@ def do_check(file_path):
         header_cells = split_row(lines[header_idx])
         rows = []
         j = header_idx + 2
-        while j < len(lines) and lines[j].strip().startswith("|") and not in_fence[j]:
+        while j < len(lines) and lines[j].strip().startswith("|") and not in_fence[j] and not is_code_indented(lines[j]):
             rows.append(split_row(lines[j]))
             j += 1
         tables.append((header_cells, rows))
