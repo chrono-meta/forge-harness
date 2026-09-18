@@ -33,6 +33,13 @@ rc contract (extract): 0 on success, 10 if the transcript file is missing.
 What `check` does NOT do: it does not open evidence links, does not verify
 a 증거 pointer actually closes the request, and does not second-guess
 whether ✅ was the right call. Form only.
+
+Form details (v2, after cross-family round 1): every table with a 상태 column is
+checked (a clean earlier table cannot mask a later one); tables inside code
+fences are ignored; a row with fewer cells than the header is a violation;
+compact status spellings (`✅DONE`, `DONE ✅`) are accepted on purpose — the
+enum is the SET of statuses, not a spacing rule; `/`-combos are accepted only
+when every part is in the enum.
 """
 import argparse
 import json
@@ -141,7 +148,13 @@ COMPACTION_PREFIX = "This session is being continued from a previous conversatio
 
 USER_MESSAGES_HEADING_RE = re.compile(r"user messages", re.IGNORECASE)
 TOPLEVEL_NUMBERED_RE = re.compile(r"^\d+\.\s")
-QUOTE_RE = re.compile(r'["\u201c]([^"\u201d\n]{2,})["\u201d]')
+# v2 (codex round 1): a quoted span may cross a line break (summaries hard-wrap long quotes) and may
+# contain escaped inner quotes (`\"quoted\"`); the v1 regex stopped at the first newline / inner quote,
+# which silently dropped the utterance or split it in two. Items are joined first (bullet + its
+# continuation lines), then quotes are pulled from each item.
+QUOTE_RE = re.compile(r'"((?:[^"\\]|\\.){2,}?)"|\u201c((?:[^\u201d\\]|\\.){2,}?)\u201d', re.S)
+ITEM_START_RE = re.compile(r"^\s*(?:[-*\u2022]\s+|\d+[.)]\s+)")
+FENCE_RE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
 
 
 def get_text_and_kind(entry):
@@ -205,8 +218,49 @@ def extract_quotes_from_summary(text):
         if TOPLEVEL_NUMBERED_RE.match(ln) and not ln[:1].isspace():
             end_idx = j
             break
-    span = "\n".join(lines[heading_idx + 1: end_idx])
-    return QUOTE_RE.findall(span)
+    # join each list item with its continuation lines, then pull the quotes out of each item
+    items = []
+    for ln in lines[heading_idx + 1: end_idx]:
+        if not ln.strip():
+            continue
+        if ITEM_START_RE.match(ln) or not items:
+            items.append(ln.strip())
+        else:
+            items[-1] = items[-1] + " " + ln.strip()
+    quotes = []
+    for it in items:
+        body = ITEM_START_RE.sub("", it, count=1).strip()
+        # v2: an item that IS one quote (opens and closes with a quote char) is taken whole — an inner
+        # unescaped quote (`"… the "quoted" word …"`) must not split it into two utterances
+        if len(body) >= 4 and body[0] in '"“' and body[-1] in '"”':
+            quotes.append(body[1:-1].replace('\\"', '"'))
+            continue
+        for m in QUOTE_RE.finditer(it):
+            q = m.group(1) if m.group(1) is not None else m.group(2)
+            quotes.append(q.replace('\\"', '"'))
+    return quotes
+
+
+def normalize_utterance(text):
+    """Collapse whitespace and drop a trailing ellipsis so a truncated summary quote and its raw
+    original compare equal."""
+    return collapse(text).rstrip("…. ").strip()
+
+
+def is_duplicate(summary_text, raw_norms):
+    """v2 (codex round 1): the v1 rule compared only the first 40 chars, so two DISTINCT requests
+    sharing an opening phrase collapsed into one. Now: equal after normalisation, or one is a prefix
+    of the other and the shorter side is at least 40 chars (a truncated quote of the same utterance)."""
+    q = normalize_utterance(summary_text)
+    if not q:
+        return True
+    for r in raw_norms:
+        if q == r:
+            return True
+        short, long_ = (q, r) if len(q) <= len(r) else (r, q)
+        if len(short) >= 40 and long_.startswith(short):
+            return True
+    return False
 
 
 def format_ts(ts):
@@ -257,19 +311,18 @@ def do_extract(transcript_path, out_path):
                 continue
             raw_rows.append({"ts": entry.get("timestamp"), "text": text})
 
-    raw_prefixes = set()
-    for r in raw_rows:
-        raw_prefixes.add(collapse(r["text"])[:40])
+    raw_norms = [normalize_utterance(r["text"]) for r in raw_rows]
 
     summary_found_total = 0
     summary_rows = []  # [{text}]
+    seen_summary = []   # summary-vs-summary duplicates (the same quote restated by a later summary)
     for stext in summary_texts:
         quotes = extract_quotes_from_summary(stext)
         summary_found_total += len(quotes)
         for q in quotes:
-            qc = collapse(q)
-            if qc[:40] in raw_prefixes:
+            if is_duplicate(q, raw_norms) or is_duplicate(q, seen_summary):
                 continue
+            seen_summary.append(normalize_utterance(q))
             summary_rows.append({"text": q})
 
     n_raw = len(raw_rows)
@@ -361,48 +414,58 @@ def do_check(file_path):
         return 10
 
     with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-        lines = f.read().splitlines()
+        raw = f.read()
+    if raw.startswith("\ufeff"):
+        raw = raw[1:]
+    lines = raw.splitlines()
 
-    header_idx = None
+    # v2 (codex round 1): lines inside a code fence are not a table — a fenced example table used to be
+    # picked as THE checklist and mask the real one below it (rc=0 on a file with a bad row).
+    in_fence = [False] * len(lines)
+    fence_open = None
     for i, ln in enumerate(lines):
+        m = FENCE_RE.match(ln)
+        if m:
+            tick = m.group(1)
+            if fence_open is None:
+                fence_open = tick[0]
+                in_fence[i] = True
+                continue
+            if tick[0] == fence_open:
+                fence_open = None
+                in_fence[i] = True
+                continue
+        in_fence[i] = fence_open is not None
+
+    # v2: EVERY table with a 상태 column is checked, not only the first — a clean earlier table used to
+    # mask a malformed later one.
+    header_idxs = []
+    for i, ln in enumerate(lines):
+        if in_fence[i]:
+            continue
         s = ln.strip()
-        if not s.startswith("|"):
-            continue
-        if "\uc0c1\ud0dc" not in s:  # 상태
-            continue
-        if i + 1 >= len(lines):
+        if not s.startswith("|") or "상태" not in s or i + 1 >= len(lines):
             continue
         if not is_separator_line(lines[i + 1]):
             continue
-        header_idx = i
-        break
+        header_idxs.append(i)
 
-    if header_idx is None:
-        sys.stderr.write("error: no markdown table with a \uc0c1\ud0dc-column header found in %s\n" % file_path)
+    if not header_idxs:
+        sys.stderr.write("error: no markdown table with a 상태-column header found in %s\n" % file_path)
         print("checklist: rows=0 ok=0 violations=0 rc=10")
         return 10
 
-    header_cells = split_row(lines[header_idx])
-    idx_status = find_header_index(header_cells, "\uc0c1\ud0dc")
-    idx_evidence = find_header_index(header_cells, "\uc99d\uac70")
-    idx_reason = find_header_index(header_cells, "\uc0ac\uc720")
-    idx_proposal = find_header_index(header_cells, "\uc81c\uc548")
-    idx_num = None
-    for i, c in enumerate(header_cells):
-        if c.strip() == "#":
-            idx_num = i
-            break
-    if idx_num is None:
-        idx_num = 0
+    tables = []  # [(header_cells, rows)]
+    for header_idx in header_idxs:
+        header_cells = split_row(lines[header_idx])
+        rows = []
+        j = header_idx + 2
+        while j < len(lines) and lines[j].strip().startswith("|") and not in_fence[j]:
+            rows.append(split_row(lines[j]))
+            j += 1
+        tables.append((header_cells, rows))
 
-    data_start = header_idx + 2
-    rows = []
-    j = data_start
-    while j < len(lines) and lines[j].strip().startswith("|"):
-        rows.append(split_row(lines[j]))
-        j += 1
-
-    if len(rows) == 0:
+    if sum(len(r) for _, r in tables) == 0:
         print("checklist: rows=0 ok=0 violations=0 rc=4")
         return 4
 
@@ -413,53 +476,67 @@ def do_check(file_path):
 
     violations = []
     ok_count = 0
+    n_rows = 0
 
-    for pos, cells in enumerate(rows, start=1):
-        num_val = cell(cells, idx_num).strip()
-        label = num_val if num_val else str(pos)
+    for t_no, (header_cells, rows) in enumerate(tables, start=1):
+        idx_status = find_header_index(header_cells, "상태")
+        idx_evidence = find_header_index(header_cells, "증거")
+        idx_reason = find_header_index(header_cells, "사유")
+        idx_proposal = find_header_index(header_cells, "제안")
+        idx_num = None
+        for i, c in enumerate(header_cells):
+            if c.strip() == "#":
+                idx_num = i
+                break
+        if idx_num is None:
+            idx_num = 0
+        tprefix = "" if len(tables) == 1 else "table %d " % t_no
 
-        status_cell = cell(cells, idx_status)
-        if status_cell.strip() == "":
-            violations.append("row %s missing \uc0c1\ud0dc" % label)
-            continue
-        keys = classify_status(status_cell)
-        if keys is None:
-            violations.append(
-                "row %s invalid \uc0c1\ud0dc (got '%s')" % (label, status_cell.strip())
-            )
-            continue
+        for pos, cells in enumerate(rows, start=1):
+            n_rows += 1
+            num_val = cell(cells, idx_num).strip()
+            label = tprefix + (num_val if num_val else str(pos))
 
-        is_na = keys == {"N/A"}
-        contains_done = "DONE" in keys
-        purely_done = keys == {"DONE"}
+            # v2: a row shorter than the header is malformed — a truncated `| 1 | … | n/a |` used to pass
+            if len(cells) < len(header_cells):
+                violations.append("row %s short (%d cells < header %d)" % (label, len(cells), len(header_cells)))
+                continue
 
-        row_ok = True
+            status_cell = cell(cells, idx_status)
+            if status_cell.strip() == "":
+                violations.append("row %s missing 상태" % label)
+                continue
+            keys = classify_status(status_cell)
+            if keys is None:
+                violations.append("row %s invalid 상태 (got '%s')" % (label, status_cell.strip()))
+                continue
 
-        if contains_done:
-            evidence_cell = cell(cells, idx_evidence)
-            if is_empty_cell(evidence_cell):
-                violations.append("row %s DONE missing \uc99d\uac70" % label)
+            is_na = keys == {"N/A"}
+            contains_done = "DONE" in keys
+            purely_done = keys == {"DONE"}
+            row_ok = True
+
+            if contains_done and is_empty_cell(cell(cells, idx_evidence)):
+                violations.append("row %s DONE missing 증거" % label)
                 row_ok = False
 
-        if not is_na and not purely_done:
-            reason_cell = cell(cells, idx_reason)
-            if is_empty_cell(reason_cell):
-                violations.append("row %s missing \uc0ac\uc720" % label)
-                row_ok = False
-            proposal_cell = cell(cells, idx_proposal)
-            if is_empty_cell(proposal_cell):
-                violations.append("row %s missing \uc81c\uc548" % label)
-                row_ok = False
+            if not is_na and not purely_done:
+                if is_empty_cell(cell(cells, idx_reason)):
+                    violations.append("row %s missing 사유" % label)
+                    row_ok = False
+                if is_empty_cell(cell(cells, idx_proposal)):
+                    violations.append("row %s missing 제안" % label)
+                    row_ok = False
 
-        if row_ok:
-            ok_count += 1
+            if row_ok:
+                ok_count += 1
 
     for v in violations:
         print(v)
 
-    n_rows = len(rows)
     rc = 1 if violations else 0
-    print("checklist: rows=%d ok=%d violations=%d rc=%d" % (n_rows, ok_count, len(violations), rc))
+    extra = "" if len(tables) == 1 else " tables=%d" % len(tables)
+    print("checklist: rows=%d ok=%d violations=%d rc=%d%s" % (n_rows, ok_count, len(violations), rc, extra))
     return rc
 
 

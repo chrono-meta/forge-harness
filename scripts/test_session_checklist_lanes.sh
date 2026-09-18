@@ -276,6 +276,110 @@ else
   fi
 fi
 
+# ---------------------------------------------------------------------------
+# L9–L14 — 🟥 cross-family round 1 (codex, 2026-09-18): 4 MAJOR + 3 MINOR, every one silent.
+#   L9  a summary quote wrapped across two lines was dropped with no header signal
+#   L10 two DISTINCT requests sharing their first 40 chars collapsed into one (dedupe on a prefix)
+#   L11 a fenced example table was picked as THE checklist and masked the real one (rc=0)
+#   L12 a clean earlier table masked a malformed later one (only the first table was checked)
+#   L13 a row shorter than the header passed
+#   L14 an escaped inner quote split one utterance into two rows (header over-counted)
+# ---------------------------------------------------------------------------
+build_jsonl() {  # build_jsonl <out> <python expr producing list of dicts>
+  python3 - "$1" "$2" <<'PYEOF'
+import json, sys
+out, expr = sys.argv[1], sys.argv[2]
+rows = eval(expr)
+with open(out, "w", encoding="utf-8") as f:
+    for r in rows:
+        f.write(json.dumps(r, ensure_ascii=False) + "\n")
+PYEOF
+}
+SUMHEAD='This session is being continued from a previous conversation that ran out of context.\n\nSummary:\n1. Primary Request and Intent:\n   - setup\n\n6. All user messages:\n'
+SUMTAIL='\n7. Pending Tasks:\n   - keep going\n'
+
+# L9
+build_jsonl "$TMPDIR_ROOT/l9.jsonl" "[{'type':'user','message':{'role':'user','content':'$SUMHEAD   - \"Please update the rollout checklist,\n     then verify every unchecked item\"$SUMTAIL'}}]"
+run "$TMPDIR_ROOT/l9.out" extract --transcript "$TMPDIR_ROOT/l9.jsonl"
+if [ "$RC" -eq 0 ] && grep -q "압축 요약 1건(중복 제거 후 1건 추가)" "$TMPDIR_ROOT/l9.out" \
+   && grep -q "rollout checklist, then verify every unchecked item" "$TMPDIR_ROOT/l9.out"; then
+  pass "L9 extract: a summary quote wrapped over two lines is one row (was dropped silently)"
+else
+  fail "L9 rc=$RC (see $TMPDIR_ROOT/l9.out)"
+fi
+
+# L10
+build_jsonl "$TMPDIR_ROOT/l10.jsonl" "[{'type':'user','timestamp':'2026-09-18T01:00:00.000Z','message':{'role':'user','content':'Please investigate the deployment checklist alpha path and record evidence for it.'}},{'type':'user','message':{'role':'user','content':'$SUMHEAD   - \"Please investigate the deployment checklist beta path and record a separate proposal.\"\n   - \"Please investigate the deployment checklist alpha path and record evidence for it.\"$SUMTAIL'}}]"
+run "$TMPDIR_ROOT/l10.out" extract --transcript "$TMPDIR_ROOT/l10.jsonl"
+if [ "$RC" -eq 0 ] && grep -q "압축 요약 2건(중복 제거 후 1건 추가)" "$TMPDIR_ROOT/l10.out" \
+   && grep -q "^| S1 | (요약) | Please investigate the deployment checklist beta path" "$TMPDIR_ROOT/l10.out"; then
+  pass "L10 extract: distinct request sharing the first 40 chars is ADDED; the true duplicate is dropped"
+else
+  fail "L10 rc=$RC (see $TMPDIR_ROOT/l10.out)"
+fi
+
+# L11
+{
+  echo "# code fence masks bad table"; echo
+  echo '```md'
+  echo "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안 |"
+  echo "|---|---|---|---|---|---|---|"
+  echo "| 1 | 09-18 01:00 | fenced clean row | ✅ | fx/evidence.md:1 | — | — |"
+  echo '```'; echo
+  echo "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안 |"
+  echo "|---|---|---|---|---|---|---|"
+  echo "| 1 | 09-18 01:05 | actual bad row | ❌ | — |  |  |"
+} > "$TMPDIR_ROOT/l11.md"
+run "$TMPDIR_ROOT/l11.out" check --file "$TMPDIR_ROOT/l11.md"
+if [ "$RC" -eq 1 ] && grep -q "^row 1 missing 사유" "$TMPDIR_ROOT/l11.out" && grep -q "rows=1 " "$TMPDIR_ROOT/l11.out"; then
+  pass "L11 check: a fenced example table is ignored; the real table's bad row is RED"
+else
+  fail "L11 rc=$RC (see $TMPDIR_ROOT/l11.out)"
+fi
+
+# L12
+{
+  echo "# earlier table masks bad table"; echo
+  echo "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안 |"
+  echo "|---|---|---|---|---|---|---|"
+  echo "| 1 | 09-18 01:00 | stale completed row | ✅ | old.md:1 | — | — |"; echo
+  echo "Some later checklist is the one a reviewer would inspect."; echo
+  echo "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안 |"
+  echo "|---|---|---|---|---|---|---|"
+  echo "| 1 | 09-18 01:05 | actual bad row | ❌ | — |  |  |"
+} > "$TMPDIR_ROOT/l12.md"
+run "$TMPDIR_ROOT/l12.out" check --file "$TMPDIR_ROOT/l12.md"
+if [ "$RC" -eq 1 ] && grep -q "^row table 2 1 missing 사유" "$TMPDIR_ROOT/l12.out" && grep -q "rows=2 .*tables=2" "$TMPDIR_ROOT/l12.out"; then
+  pass "L12 check: every 상태 table is checked — the later bad table is RED (table 2 named)"
+else
+  fail "L12 rc=$RC (see $TMPDIR_ROOT/l12.out)"
+fi
+
+# L13
+{
+  echo "# short row"; echo
+  echo "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안 |"
+  echo "|---|---|---|---|---|---|---|"
+  echo "| 1 | 09-18 01:00 | truncated but accepted | n/a |"
+  echo "| 2 | 09-18 01:01 | compact spelling is fine | ✅DONE | ev.md:1 | — | — |"
+} > "$TMPDIR_ROOT/l13.md"
+run "$TMPDIR_ROOT/l13.out" check --file "$TMPDIR_ROOT/l13.md"
+if [ "$RC" -eq 1 ] && grep -q "^row 1 short (4 cells < header 7)" "$TMPDIR_ROOT/l13.out" && grep -q "violations=1" "$TMPDIR_ROOT/l13.out"; then
+  pass "L13 check: a row shorter than the header is a violation; compact ✅DONE stays accepted (documented)"
+else
+  fail "L13 rc=$RC (see $TMPDIR_ROOT/l13.out)"
+fi
+
+# L14
+build_jsonl "$TMPDIR_ROOT/l14.jsonl" "[{'type':'user','message':{'role':'user','content':'$SUMHEAD   - \"Please preserve the literal \"quoted\" word and finish the task\"$SUMTAIL'}}]"
+run "$TMPDIR_ROOT/l14.out" extract --transcript "$TMPDIR_ROOT/l14.jsonl"
+if [ "$RC" -eq 0 ] && grep -q "압축 요약 1건(중복 제거 후 1건 추가)" "$TMPDIR_ROOT/l14.out" \
+   && grep -q 'preserve the literal "quoted" word and finish the task' "$TMPDIR_ROOT/l14.out"; then
+  pass "L14 extract: an escaped inner quote stays inside one row (was split in two, header over-counted)"
+else
+  fail "L14 rc=$RC (see $TMPDIR_ROOT/l14.out)"
+fi
+
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
