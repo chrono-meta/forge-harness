@@ -415,6 +415,50 @@ else
   fail "L16 rc=$RC (see $TMPDIR_ROOT/l16.out)"
 fi
 
+# ---------------------------------------------------------------------------
+# L17–L19 — 🟥 cross-family round 3 (codex): an item opening with a quote that never closes was dropped
+#   (silent); a Korean compaction heading «모든 사용자 메시지» disabled the summary channel (silent);
+#   zero-width spacing around an emoji made a valid status invalid (loud); `n.a.` stays rejected by contract.
+# ---------------------------------------------------------------------------
+build_jsonl "$TMPDIR_ROOT/l17.jsonl" "[{'type':'user','message':{'role':'user','content':'$SUMHEAD   - \"Carry the unclosed request over to the next session$SUMTAIL'}}]"
+run "$TMPDIR_ROOT/l17.out" extract --transcript "$TMPDIR_ROOT/l17.jsonl"
+if [ "$RC" -eq 0 ] && grep -q "압축 요약 1건(중복 제거 후 1건 추가)" "$TMPDIR_ROOT/l17.out" \
+   && grep -q "^| S1 | (요약) | Carry the unclosed request over to the next session |" "$TMPDIR_ROOT/l17.out"; then
+  pass "L17 extract: an item that opens with a quote and never closes it is still one row"
+else
+  fail "L17 rc=$RC (see $TMPDIR_ROOT/l17.out)"
+fi
+
+build_jsonl "$TMPDIR_ROOT/l18.jsonl" "[{'type':'user','message':{'role':'user','content':'This session is being continued from a previous conversation that ran out of context.\n\n요약:\n1. 주요 요청:\n   - 준비\n\n6. 모든 사용자 메시지:\n   - \"한국어 헤딩 아래의 발화\"\n\n7. 남은 작업:\n   - 계속\n'}}]"
+run "$TMPDIR_ROOT/l18.out" extract --transcript "$TMPDIR_ROOT/l18.jsonl"
+if [ "$RC" -eq 0 ] && grep -q "압축 요약 1건(중복 제거 후 1건 추가)" "$TMPDIR_ROOT/l18.out" \
+   && grep -q "^| S1 | (요약) | 한국어 헤딩 아래의 발화 |" "$TMPDIR_ROOT/l18.out"; then
+  pass "L18 extract: a Korean compaction heading (모든 사용자 메시지) still opens the summary channel"
+else
+  fail "L18 rc=$RC (see $TMPDIR_ROOT/l18.out)"
+fi
+
+python3 - "$TMPDIR_ROOT/l19.md" <<'PYEOF'
+import sys
+zw = "​"; nb = " "
+rows = [
+    "# invisible spacing",
+    "",
+    "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안 |",
+    "|---|---|---|---|---|---|---|",
+    "| 1 | 09-18 01:00 | zero-width around emoji | " + zw + "✅" + zw + " | ev.md:1 | — | — |",
+    "| 2 | 09-18 01:01 | nbsp around emoji | " + nb + "✅" + nb + " | ev.md:2 | — | — |",
+    "| 3 | 09-18 01:02 | n.a. is not an alias | n.a. | — | — | — |",
+]
+open(sys.argv[1], "w", encoding="utf-8").write("\n".join(rows) + "\n")
+PYEOF
+run "$TMPDIR_ROOT/l19.out" check --file "$TMPDIR_ROOT/l19.md"
+if [ "$RC" -eq 1 ] && grep -q "^row 3 invalid" "$TMPDIR_ROOT/l19.out" && grep -q "rows=3 ok=2 violations=1" "$TMPDIR_ROOT/l19.out"; then
+  pass "L19 check: zero-width / NBSP around a status is stripped (rows 1–2 ok); n.a. stays invalid by contract (row 3)"
+else
+  fail "L19 rc=$RC (see $TMPDIR_ROOT/l19.out)"
+fi
+
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then

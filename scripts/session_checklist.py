@@ -39,8 +39,12 @@ is checked (a clean earlier table cannot mask a later one); tables inside code
 fences or indented 4+ spaces (CommonMark code) are ignored; a row with fewer
 cells than the header is a violation;
 compact status spellings (`✅DONE`, `DONE ✅`) are accepted on purpose — the
-enum is the SET of statuses, not a spacing rule; `/`-combos are accepted only
-when every part is in the enum.
+enum is the SET of statuses, not a spacing rule; invisible spacing (zero-width
+space, NBSP) around a status is stripped; `/`-combos are accepted only when
+every part is in the enum; `n.a.` is NOT an alias of `n/a` (closed enum, loud
+by design). The compaction heading is matched by an alias table (English and
+Korean spellings), and a list item that opens with a quote but never closes
+it is still one utterance.
 """
 import argparse
 import json
@@ -87,7 +91,9 @@ def is_empty_cell(cell):
 def classify_single(part):
     """Classify one '/'-separated piece of a status cell. Returns a key in
     STATUS_ENUM, 'N/A', or None (invalid)."""
-    p = (part or "").strip()
+    # v4 (codex round 3): zero-width / non-breaking spacing around the emoji is invisible to the reader —
+    # strip it before classifying. `n.a.` / `N.A.` are NOT aliases: the enum is closed on purpose (loud).
+    p = INVISIBLE_RE.sub("", (part or "")).strip()
     if not p:
         return None
     if p.lower() == "n/a":
@@ -147,7 +153,9 @@ EXCLUDE_PREFIXES = (
 
 COMPACTION_PREFIX = "This session is being continued from a previous conversation"
 
-USER_MESSAGES_HEADING_RE = re.compile(r"user messages", re.IGNORECASE)
+# v4 (codex round 3): the compaction heading is localized in Korean sessions — an alias table, not one spelling.
+USER_MESSAGES_HEADING_RE = re.compile(r"user messages|user utterances|사용자 메시지|사용자 발화|유저 메시지", re.IGNORECASE)
+INVISIBLE_RE = re.compile("[​‌‍⁠﻿ ]")
 TOPLEVEL_NUMBERED_RE = re.compile(r"^\d+\.\s")
 # v2 (codex round 1): a quoted span may cross a line break (summaries hard-wrap long quotes) and may
 # contain escaped inner quotes (`\"quoted\"`); the v1 regex stopped at the first newline / inner quote,
@@ -240,7 +248,12 @@ def extract_quotes_from_summary(text):
         # counts; a quote inside a trailing annotation (`"…" (already "summarized")`) is not a message.
         # An item that does not open with a quote is a prose list of several quotes: take them all.
         matches = list(QUOTE_RE.finditer(it))
-        if body[:1] in '"“' and matches:
+        if body[:1] in '"“':
+            if not matches:
+                # v4 (codex round 3): an item that opens with a quote whose closing quote is missing is still
+                # one utterance — capture through the item boundary instead of dropping it silently
+                quotes.append(body[1:].rstrip().replace('\\"', '"'))
+                continue
             matches = matches[:1]
         for m in matches:
             q = m.group(1) if m.group(1) is not None else m.group(2)
