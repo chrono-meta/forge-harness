@@ -1,0 +1,519 @@
+#!/usr/bin/env python3
+"""session_checklist.py — request-checklist close-report instrument («영혼 다지기» — the close-side warranty).
+
+Two subcommands:
+
+  extract --transcript <jsonl> [--out <md>]
+      Reads a Claude Code transcript JSONL and emits a checklist SKELETON in
+      Markdown: one row per operator utterance, 상태 column EMPTY. Opens TWO
+      channels — raw entries and compaction-summary "All user messages"
+      sections — and prints how many of each it found (0 found still counts
+      as OPENED, never as "not opened"). See fh_signal_2026-09-18 for the
+      doctrine this mechanizes.
+
+  check --file <md>
+      Validates a FILLED checklist. FORM ONLY — this command never judges
+      whether a status is TRUE, only whether the record is well-formed
+      (closed-enum status; non-DONE/non-n/a rows carry 사유+제안; DONE rows
+      carry 증거). Judging truth is left to the human reader, on purpose
+      (§Mechanization Boundary: a channel check ages well, a truth check
+      freezes today's judgment into tomorrow's ceiling).
+
+rc contract (check):
+  0   clean            — table found, every row well-formed
+  1   violations        — table found, one or more rows malformed
+  4   DEAD CONTROL      — a table with a 상태-column header was found but has
+                          ZERO data rows ("nothing measured" must not read
+                          as "clean")
+  10  input error       — file missing, OR no markdown table whose header
+                          contains 상태 was found
+
+rc contract (extract): 0 on success, 10 if the transcript file is missing.
+
+What `check` does NOT do: it does not open evidence links, does not verify
+a 증거 pointer actually closes the request, and does not second-guess
+whether ✅ was the right call. Form only.
+"""
+import argparse
+import json
+import os
+import re
+import sys
+
+# ---------------------------------------------------------------------------
+# Shared status enum (closed)
+# ---------------------------------------------------------------------------
+
+STATUS_ENUM = {
+    "DONE": "\u2705",          # ✅
+    "PARTIAL": "\U0001F7E1",   # 🟡
+    "IN-PROGRESS": "\u23F3",   # ⏳
+    "NOT-DONE": "\u274C",      # ❌
+    "HELD": "\u23F8",          # ⏸
+    "UNVERIFIED": "\U0001F50E",  # 🔎
+}
+
+WORD_VARIANTS = {
+    "DONE": {"DONE"},
+    "PARTIAL": {"PARTIAL"},
+    "IN-PROGRESS": {"IN-PROGRESS", "IN PROGRESS", "INPROGRESS"},
+    "NOT-DONE": {"NOT-DONE", "NOT DONE", "NOTDONE"},
+    "HELD": {"HELD"},
+    "UNVERIFIED": {"UNVERIFIED"},
+}
+
+EMPTY_PLACEHOLDERS = {"", "-", "\u2014", "tbd", "?"}  # '' '-' '—' 'tbd' '?'
+
+VARIATION_SELECTOR_RE = re.compile("[\uFE0E\uFE0F]")
+
+
+def strip_variation_selectors(s):
+    return VARIATION_SELECTOR_RE.sub("", s)
+
+
+def is_empty_cell(cell):
+    v = (cell or "").strip()
+    return v == "" or v.lower() in EMPTY_PLACEHOLDERS or v in EMPTY_PLACEHOLDERS
+
+
+def classify_single(part):
+    """Classify one '/'-separated piece of a status cell. Returns a key in
+    STATUS_ENUM, 'N/A', or None (invalid)."""
+    p = (part or "").strip()
+    if not p:
+        return None
+    if p.lower() == "n/a":
+        return "N/A"
+    p_clean = strip_variation_selectors(p)
+    for key, emoji in STATUS_ENUM.items():
+        if p_clean == emoji:
+            return key
+        if p_clean.startswith(emoji):
+            rest = p_clean[len(emoji):].strip()
+            if rest == "" or rest.upper() in WORD_VARIANTS[key]:
+                return key
+        if p_clean.endswith(emoji):
+            rest = p_clean[: -len(emoji)].strip()
+            if rest.upper() in WORD_VARIANTS[key]:
+                return key
+    p_upper = p_clean.upper()
+    for key, variants in WORD_VARIANTS.items():
+        if p_upper in variants:
+            return key
+    return None  # ENUM-MEMBERSHIP-FALLTHROUGH
+
+
+def classify_status(status_cell):
+    """Returns a set of matched keys (e.g. {'DONE'}, {'HELD','DONE'},
+    {'N/A'}), or None if the cell is empty/invalid."""
+    s = (status_cell or "").strip()
+    if s == "":
+        return None
+    if s.lower() == "n/a":
+        return {"N/A"}
+    if "/" in s:
+        keys = set()
+        for part in s.split("/"):
+            k = classify_single(part)
+            if k is None:
+                return None
+            keys.add(k)
+        return keys if keys else None
+    k = classify_single(s)
+    if k is None:
+        return None
+    return {k}
+
+
+# ---------------------------------------------------------------------------
+# extract
+# ---------------------------------------------------------------------------
+
+EXCLUDE_PREFIXES = (
+    "<system-reminder>",
+    "[SYSTEM NOTIFICATION",
+    "<local-command",
+    "<command-name>",
+    "Caveat:",
+)
+
+COMPACTION_PREFIX = "This session is being continued from a previous conversation"
+
+USER_MESSAGES_HEADING_RE = re.compile(r"user messages", re.IGNORECASE)
+TOPLEVEL_NUMBERED_RE = re.compile(r"^\d+\.\s")
+QUOTE_RE = re.compile(r'["\u201c]([^"\u201d\n]{2,})["\u201d]')
+
+
+def get_text_and_kind(entry):
+    """Returns (text, has_text_block). has_text_block is False for a
+    tool_result-only / non-text user entry."""
+    msg = entry.get("message") or {}
+    content = msg.get("content")
+    if isinstance(content, str):
+        return content, True
+    if isinstance(content, list):
+        texts = []
+        has_text_block = False
+        for b in content:
+            if isinstance(b, dict) and b.get("type") == "text":
+                has_text_block = True
+                t = b.get("text")
+                if t:
+                    texts.append(t)
+        if has_text_block:
+            return "\n".join(texts), True
+        return None, False
+    return None, False
+
+
+def is_excluded(text, entry):
+    if entry.get("isMeta"):
+        return True
+    stripped = text.lstrip()
+    for p in EXCLUDE_PREFIXES:
+        if stripped.startswith(p):
+            return True
+    head200 = text[:200]
+    if "<task-notification>" in head200:
+        return True
+    if stripped.startswith("Another Claude session sent a message:"):
+        return True
+    if "[Subagent hand-back]" in head200:
+        return True
+    return False
+
+
+def collapse(text):
+    return re.sub(r"\s+", " ", (text or "")).strip()
+
+
+def extract_quotes_from_summary(text):
+    """Find the 'All user messages' section (bounded by the next top-level
+    numbered heading, or end of text) and pull every quoted span out of it,
+    in order. Returns a list of raw (uncollapsed) quote strings."""
+    lines = text.split("\n")
+    heading_idx = None
+    for i, ln in enumerate(lines):
+        if USER_MESSAGES_HEADING_RE.search(ln):
+            heading_idx = i
+            break
+    if heading_idx is None:
+        return []
+    end_idx = len(lines)
+    for j in range(heading_idx + 1, len(lines)):
+        ln = lines[j]
+        if TOPLEVEL_NUMBERED_RE.match(ln) and not ln[:1].isspace():
+            end_idx = j
+            break
+    span = "\n".join(lines[heading_idx + 1: end_idx])
+    return QUOTE_RE.findall(span)
+
+
+def format_ts(ts):
+    if not ts:
+        return "\u2014"  # —
+    # "2026-09-17T05:56:11.019Z" -> "09-17 05:56"
+    m = re.match(r"^\d{4}-(\d{2})-(\d{2})T(\d{2}):(\d{2})", ts)
+    if not m:
+        return "\u2014"
+    mm, dd, hh, mi = m.groups()
+    return "%s-%s %s:%s" % (mm, dd, hh, mi)
+
+
+def md_escape(text):
+    return (text or "").replace("|", "\\|")
+
+
+def do_extract(transcript_path, out_path):
+    if not os.path.isfile(transcript_path):
+        sys.stderr.write("error: transcript not found: %s\n" % transcript_path)
+        return 10
+
+    raw_rows = []          # [{ts, text}]
+    summary_texts = []      # raw compaction-entry text, in order
+    line_count = 0
+    parse_errors = 0
+
+    with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line_count += 1
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entry = json.loads(line)
+            except Exception:
+                parse_errors += 1
+                continue
+            if entry.get("type") != "user":
+                continue
+            text, has_text = get_text_and_kind(entry)
+            if not has_text or text is None or text.strip() == "":
+                continue
+            if text.lstrip().startswith(COMPACTION_PREFIX):
+                summary_texts.append(text)
+                continue
+            if is_excluded(text, entry):
+                continue
+            raw_rows.append({"ts": entry.get("timestamp"), "text": text})
+
+    raw_prefixes = set()
+    for r in raw_rows:
+        raw_prefixes.add(collapse(r["text"])[:40])
+
+    summary_found_total = 0
+    summary_rows = []  # [{text}]
+    for stext in summary_texts:
+        quotes = extract_quotes_from_summary(stext)
+        summary_found_total += len(quotes)
+        for q in quotes:
+            qc = collapse(q)
+            if qc[:40] in raw_prefixes:
+                continue
+            summary_rows.append({"text": q})
+
+    n_raw = len(raw_rows)
+    n_summary_found = summary_found_total
+    n_summary_added = len(summary_rows)
+
+    lines_out = []
+    title = "# 세션 요청 체크리스트 (스켈레톤) — %s" % os.path.basename(transcript_path)
+    lines_out.append(title)
+    lines_out.append("")
+    lines_out.append(
+        "\ucc44\ub110 2/2 \uc5f4\uc74c \u2014 raw %d\uac74 \u00b7 \uc555\ucd95 \uc694\uc57d %d\uac74(\uc911\ubcf5 \uc81c\uac70 \ud6c4 %d\uac74 \ucd94\uac00)"
+        % (n_raw, n_summary_found, n_summary_added)
+    )
+    lines_out.append(chr(0x1F4CE) + " " + "원장 = %s (%d lines)" % (transcript_path, line_count))
+    lines_out.append("")
+    lines_out.append(
+        "| # | \uc2dc\uac01 | \ubc1c\ud654(\uc694\uc9c0) | \uc0c1\ud0dc | \uc99d\uac70 | \uc0ac\uc720 / \ub0a8\uc740 \uac83 | \uc81c\uc548(\uc774\ubc88 \uc138\uc158 vs \uc774\uc6d4) |"
+    )
+    lines_out.append("|---|---|---|---|---|---|---|")
+
+    n = 0
+    for r in raw_rows:
+        n += 1
+        blurb = collapse(r["text"])
+        if len(blurb) > 160:
+            blurb = blurb[:160] + "\u2026"
+        lines_out.append(
+            "| %d | %s | %s |  |  |  |  |" % (n, format_ts(r["ts"]), md_escape(blurb))
+        )
+
+    s = 0
+    for r in summary_rows:
+        s += 1
+        blurb = collapse(r["text"])
+        if len(blurb) > 160:
+            blurb = blurb[:160] + "\u2026"
+        lines_out.append(
+            "| S%d | (요약) | %s |  |  |  |  |" % (s, md_escape(blurb))
+        )
+
+    content = "\n".join(lines_out) + "\n"
+    sys.stdout.write(content)
+
+    if out_path:
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write(content)
+
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# check
+# ---------------------------------------------------------------------------
+
+def split_row(line):
+    s = line.strip()
+    if s.startswith("|"):
+        s = s[1:]
+    if s.endswith("|"):
+        s = s[:-1]
+    return [c.strip() for c in s.split("|")]
+
+
+def is_separator_line(line):
+    s = line.strip()
+    if not s.startswith("|"):
+        return False
+    inner = s.strip("|")
+    if inner == "":
+        return False
+    cells = inner.split("|")
+    return all(re.fullmatch(r"[\s:\-]+", c) for c in cells if c != "" or True) and all(
+        re.fullmatch(r"[\s:\-]*", c) for c in cells
+    ) and any(c.strip() != "" for c in cells)
+
+
+def find_header_index(header_cells, needle):
+    for i, c in enumerate(header_cells):
+        if needle in c:
+            return i
+    return None
+
+
+def do_check(file_path):
+    if not os.path.isfile(file_path):
+        sys.stderr.write("error: file not found: %s\n" % file_path)
+        print("checklist: rows=0 ok=0 violations=0 rc=10")
+        return 10
+
+    with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+        lines = f.read().splitlines()
+
+    header_idx = None
+    for i, ln in enumerate(lines):
+        s = ln.strip()
+        if not s.startswith("|"):
+            continue
+        if "\uc0c1\ud0dc" not in s:  # 상태
+            continue
+        if i + 1 >= len(lines):
+            continue
+        if not is_separator_line(lines[i + 1]):
+            continue
+        header_idx = i
+        break
+
+    if header_idx is None:
+        sys.stderr.write("error: no markdown table with a \uc0c1\ud0dc-column header found in %s\n" % file_path)
+        print("checklist: rows=0 ok=0 violations=0 rc=10")
+        return 10
+
+    header_cells = split_row(lines[header_idx])
+    idx_status = find_header_index(header_cells, "\uc0c1\ud0dc")
+    idx_evidence = find_header_index(header_cells, "\uc99d\uac70")
+    idx_reason = find_header_index(header_cells, "\uc0ac\uc720")
+    idx_proposal = find_header_index(header_cells, "\uc81c\uc548")
+    idx_num = None
+    for i, c in enumerate(header_cells):
+        if c.strip() == "#":
+            idx_num = i
+            break
+    if idx_num is None:
+        idx_num = 0
+
+    data_start = header_idx + 2
+    rows = []
+    j = data_start
+    while j < len(lines) and lines[j].strip().startswith("|"):
+        rows.append(split_row(lines[j]))
+        j += 1
+
+    if len(rows) == 0:
+        print("checklist: rows=0 ok=0 violations=0 rc=4")
+        return 4
+
+    def cell(cells, idx):
+        if idx is None or idx >= len(cells):
+            return ""
+        return cells[idx]
+
+    violations = []
+    ok_count = 0
+
+    for pos, cells in enumerate(rows, start=1):
+        num_val = cell(cells, idx_num).strip()
+        label = num_val if num_val else str(pos)
+
+        status_cell = cell(cells, idx_status)
+        if status_cell.strip() == "":
+            violations.append("row %s missing \uc0c1\ud0dc" % label)
+            continue
+        keys = classify_status(status_cell)
+        if keys is None:
+            violations.append(
+                "row %s invalid \uc0c1\ud0dc (got '%s')" % (label, status_cell.strip())
+            )
+            continue
+
+        is_na = keys == {"N/A"}
+        contains_done = "DONE" in keys
+        purely_done = keys == {"DONE"}
+
+        row_ok = True
+
+        if contains_done:
+            evidence_cell = cell(cells, idx_evidence)
+            if is_empty_cell(evidence_cell):
+                violations.append("row %s DONE missing \uc99d\uac70" % label)
+                row_ok = False
+
+        if not is_na and not purely_done:
+            reason_cell = cell(cells, idx_reason)
+            if is_empty_cell(reason_cell):
+                violations.append("row %s missing \uc0ac\uc720" % label)
+                row_ok = False
+            proposal_cell = cell(cells, idx_proposal)
+            if is_empty_cell(proposal_cell):
+                violations.append("row %s missing \uc81c\uc548" % label)
+                row_ok = False
+
+        if row_ok:
+            ok_count += 1
+
+    for v in violations:
+        print(v)
+
+    n_rows = len(rows)
+    rc = 1 if violations else 0
+    print("checklist: rows=%d ok=%d violations=%d rc=%d" % (n_rows, ok_count, len(violations), rc))
+    return rc
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+RC_CONTRACT_TEXT = """rc contract (check):
+  rc=0   clean        - table found, every row well-formed
+  rc=1   violations   - table found, one or more rows malformed
+  rc=4   DEAD CONTROL - a table with a status(\uc0c1\ud0dc) header was found but has
+                        ZERO data rows (nothing measured must not read as clean)
+  rc=10  input error  - file missing, or no table with a \uc0c1\ud0dc column found
+
+check never judges whether a status is TRUE -- form only.
+"""
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(
+        prog="session_checklist.py",
+        description="Request-checklist close-report instrument (extract / check).",
+        epilog=RC_CONTRACT_TEXT,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    sub = parser.add_subparsers(dest="cmd")
+
+    p_extract = sub.add_parser("extract", help="extract a checklist skeleton from a transcript JSONL")
+    p_extract.add_argument("--transcript", required=True)
+    p_extract.add_argument("--out", default=None)
+
+    p_check = sub.add_parser(
+        "check",
+        help="validate a filled checklist",
+        epilog=RC_CONTRACT_TEXT,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p_check.add_argument("--file", required=True)
+
+    return parser
+
+
+def main(argv=None):
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    if args.cmd == "extract":
+        return do_extract(args.transcript, args.out)
+    if args.cmd == "check":
+        return do_check(args.file)
+
+    parser.print_help()
+    return 10
+
+
+if __name__ == "__main__":
+    sys.exit(main())
