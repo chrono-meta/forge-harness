@@ -162,7 +162,9 @@ USER_MESSAGES_HEADING_RE = re.compile(r"user messages|user utterances|사용자 
 USER_MESSAGES_HEADING_LINE_RE = re.compile(r"^\s*(?:\d+[.)]\s*)?(?:#+\s*)?(?:\*\*|__)?\s*(?:all\s+)?(?:user messages|user utterances|모든 사용자 메시지|사용자 메시지|사용자 발화|유저 메시지)[^\"\u201c\n]{0,60}$", re.IGNORECASE)
 TRUNCATION_RE = re.compile(r"(?:\u2026|\.\.\.)\s*$")
 INVISIBLE_RE = re.compile("[​‌‍⁠﻿ ]")
-TOPLEVEL_NUMBERED_RE = re.compile(r"^\d+\.\s")
+# v8 (codex round 7): the section ends at the NEXT HEADING — a flush-left numbered line WITHOUT a quote
+# (`7. Pending Tasks:` / `7) …`). A flush-left numbered item that carries a quote (`1. "…"`) is an item.
+TOPLEVEL_NUMBERED_RE = re.compile(r"^\d+[.)]\s+(?!['\"\u201c])[^'\"\u201c\n]*$")
 # v2 (codex round 1): a quoted span may cross a line break (summaries hard-wrap long quotes) and may
 # contain escaped inner quotes (`\"quoted\"`); the v1 regex stopped at the first newline / inner quote,
 # which silently dropped the utterance or split it in two. Items are joined first (bullet + its

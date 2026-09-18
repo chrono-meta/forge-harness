@@ -658,6 +658,18 @@ else
   fail "L34 rc=$RC (see $TMPDIR_ROOT/l34.out)"
 fi
 
+# L35 — 🟥 cross-family round 7 (codex): flush-left numbered quoted items (`1. "…"`) ended the «All user messages»
+#        section (silent — the whole summary collapsed into one truncated raw row); a `7) Pending Tasks:` heading did
+#        not end it (loud phantom row). v8: the section ends at the next flush-left numbered line WITHOUT a quote.
+build_jsonl "$TMPDIR_ROOT/l35.jsonl" "[{'type':'user','message':{'role':'user','content':'This session is being continued from a previous conversation that ran out of context.\n\nSummary:\n1) Primary Request and Intent:\n   - setup\n\n6) All user messages:\n1. \"first flush-left numbered quote\"\n2. \"second flush-left numbered quote\"\n7) Pending Tasks:\n   - \"a quoted pending task is not a user message\"\n'}}]"
+run "$TMPDIR_ROOT/l35.out" extract --transcript "$TMPDIR_ROOT/l35.jsonl"
+if [ "$RC" -eq 0 ] && grep -q "raw 0건 · 압축 요약 2건(중복 제거 후 2건 추가)" "$TMPDIR_ROOT/l35.out" \
+   && grep -q "second flush-left numbered quote" "$TMPDIR_ROOT/l35.out" && ! grep -q "pending task" "$TMPDIR_ROOT/l35.out"; then
+  pass "L35 extract: flush-left numbered quoted items stay inside the section; a \`7)\` heading ends it"
+else
+  fail "L35 rc=$RC (see $TMPDIR_ROOT/l35.out)"
+fi
+
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
