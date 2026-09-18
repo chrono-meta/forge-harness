@@ -316,6 +316,16 @@ ACCEPTED_ABSENT=(
   # runner (labelled hub-local at the reference), which is a pointer for contributors, not a promise
   # of a shipped artifact — the skill's own save path works without it.
   "scripts/frontier_digest_daily.sh"
+  # 🟥 2026-09-18 — 발행 «확인» 3종. 이 레포 자기 릴리스 파이프라인의 부품이고 소비자 호출부가 없다.
+  # `publish_verify_poll.sh` 는 `.github/workflows/publish.yml` 의 verify 단계가 유일한 호출부이고,
+  # 워크플로 자체가 출하되지 않는다. 소비자는 `@chrono-meta/fh-gate` 를 발행하지 않으므로
+  # 이 스크립트를 부를 이유가 구조적으로 없다(PKG_NAME 으로 매개화돼 있긴 하다 — 그래서
+  # «불가능» 이 아니라 «호출부 부재» 라고 적는다).
+  # ⚠️ 그 결과 소비자 install 에서는 이 셋이 없고, selfcheck 의 해당 레인은 SKIP 으로 렌더된다.
+  # SKIP 은 PASS 가 아니다 — 이 레포에서는 레인이 실제로 돌고, 그것이 이 배선의 검증면이다.
+  "scripts/publish_verify_poll.sh"
+  "scripts/publish_verify_poll_stub_npm.sh"
+  "scripts/test_publish_verify_poll_lanes.sh"
 )
 
 # `--list-accepted`: print the ACCEPTED_ABSENT paths, one per line, and exit — no git/package.json

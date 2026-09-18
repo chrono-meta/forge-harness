@@ -700,6 +700,10 @@ for _pair in \
   "scripts/map_postprocess.py|scripts/test_map_postprocess_lanes.sh" \
   `# ── 플로어 없는 채널(2026-09-14): 원격 자율 노드가 FH 자산을 바꾸면 마커가 tracks/ 와 함께 휘발한다. 실측 2/2(#675·#716). CI 가 gitignored 마커를 구조적으로 못 보므로, 그 채널에만 «마커가 커밋 기록에 실려 왔나» 를 건다 ──` \
   "scripts/remote_marker_gate.sh|scripts/test_remote_marker_gate_lanes.sh" \
+  `# ── 발신 전 3프로브(2026-09-18): 비소유 레포에 PR 을 «열기 직전» 에 건다. 실측 — outbound 9건 중 기술 결함 지적 3건이 전부 같은 형태다: 우리 가드와 우리 테스트가 «대상의 모형» 위에서 돌았고, 메인테이너의 증거는 우리가 한 번도 안 돌린 실행이었다 ──` \
+  "scripts/outbound_pr_gate.sh|scripts/test_outbound_pr_gate_lanes.sh" \
+  `# ── 발행 «확인» 예산(2026-09-18): npm publish 는 이미 rc=0 으로 끝났고 이 스크립트는 전파만 관측한다. 둘을 한 종료코드로 접으면 성공한 발행이 빨간 잡이 되고, 그 빨강이 정확히 «손 발행» 을 훈련시킨다(v3.2.0·v3.4.0) ──` \
+  "scripts/publish_verify_poll.sh|scripts/test_publish_verify_poll_lanes.sh" \
   ".github/workflows/validate.yml|scripts/test_remote_marker_gate_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_precommit_staged_drift_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_precommit_gitlink_lanes.sh" \
@@ -2011,6 +2015,41 @@ if [ -f scripts/test_lane_runner_lanes.sh ]; then
   fi
 elif _ships_per_files "scripts/test_lane_runner_lanes.sh"; then
   echo "FAIL  test_lane_runner_lanes.sh is DECLARED SHIPPED but absent — deletion or broken install"
+  fail=1
+fi
+
+# test_outbound_pr_gate_lanes.sh — 발신 전 3프로브의 앵커. 출하물이므로 파일이 있으면 무조건 돈다.
+# 🟥 배선을 같은 변경에서 한다: 실측 — 비소유 레포 outbound 9건 중 기술 결함 지적 3건이 전부 같은
+# 형태(우리 가드·테스트가 «대상의 모형» 위에서 돌았고 메인테이너의 증거는 우리가 한 번도 안 돌린
+# 실행)였고, 규칙은 CLAUDE.md 에 이미 있었으나 배선이 없었다. 산문으로 둔 채 올리면 그 1/15 를 반복한다.
+if [ -f scripts/test_outbound_pr_gate_lanes.sh ]; then
+  if _out=$(bash scripts/test_outbound_pr_gate_lanes.sh 2>&1); then
+    echo "PASS  test_outbound_pr_gate_lanes.sh (trigger scoping · standpoint rung · enum class-closing · revert probe)"
+  else
+    echo "FAIL  test_outbound_pr_gate_lanes.sh: the outbound-PR gate's verdicts have drifted"
+    _show_failure "$_out"
+    fail=1
+  fi
+elif _ships_per_files "scripts/test_outbound_pr_gate_lanes.sh"; then
+  echo "FAIL  test_outbound_pr_gate_lanes.sh is DECLARED SHIPPED but absent — deletion or broken install"
+  fail=1
+fi
+
+# test_publish_verify_poll_lanes.sh — 발행 «확인» 예산의 앵커. 주체가 ACCEPTED_ABSENT(이 레포의
+# 릴리스 파이프라인 부품, 소비자 호출부 없음)이므로 소비자 install 에서는 파일이 없고 SKIP 이다.
+# 🟥 SKIP 은 PASS 가 아니다 — 이 레포에서 실제로 도는 것이 이 배선의 유일한 검증면이다.
+# 무엇을 지키나: 「전파 지연」과 「발행 실패」가 같은 종료코드로 접히지 않는 것. 접혔던 실측이
+# v3.12.0 이고, 그 빨강이 v3.2.0·v3.4.0 에서 손 발행을 훈련시켜 OIDC 경로를 깨뜨렸다.
+if [ -f scripts/test_publish_verify_poll_lanes.sh ]; then
+  if _out=$(bash scripts/test_publish_verify_poll_lanes.sh 2>&1); then
+    echo "PASS  test_publish_verify_poll_lanes.sh (not_yet_visible != failure · instrument-error stays distinct · calibration)"
+  else
+    echo "FAIL  test_publish_verify_poll_lanes.sh: propagation-lag and publish-failure have been conflated again"
+    _show_failure "$_out"
+    fail=1
+  fi
+elif _ships_per_files "scripts/test_publish_verify_poll_lanes.sh"; then
+  echo "FAIL  test_publish_verify_poll_lanes.sh is DECLARED SHIPPED but absent — deletion or broken install"
   fail=1
 fi
 

@@ -58,23 +58,31 @@ jobs:
       - name: publish (prepublishOnly 게이트 경유, provenance)
         run: npm publish --provenance --access public
       - name: verify on registry
-        # 🟥 왜 재시도가 필요한가 (2026-09-06, v3.1.0 실측): `npm publish` 가 성공한 직후
-        #    이 단계가 곧바로 조회했다가 **E404 «No match found for version 3.1.0»** 로 죽었다.
-        #    그런데 같은 시각 패키지는 실제로 올라가 있었다 — 1 분 뒤 로컬에서 조회하니
-        #    `latest: 3.1.0` 이었다. 즉 npm 의 읽기 복제본이 아직 전파 전이었고, 이 단계는
-        #    **eventually-consistent 한 상태를 대기 없이** 물었다.
-        #    발행은 성공인데 워크플로가 빨갛게 남는 것은 가장 나쁜 형태다 — 「발행 실패」와
-        #    「전파 지연」이 같은 얼굴이 되고, 그 게이트를 다음부터 아무도 안 읽는다.
-        #    ⚠️ 재시도가 «없는 것을 있다»고 만들지는 않는다: 마지막 시도까지 값이 안 맞으면
-        #    그대로 실패한다. 늘린 것은 **관측 창**이지 통과 조건이 아니다.
+        id: verify
+        # 🟥 2026-09-18 — 이 단계는 **발행을 판정하지 않는다.** 앞 단계의 `npm publish` 가 이미
+        #    rc=0 으로 끝났으므로 발행은 그 시점에 done 이고, 여기서 보는 것은 npm 읽기 복제본의
+        #    **전파**뿐이다. 둘을 한 종료코드로 접으면 «발행 실패» 와 «전파 지연» 이 같은 얼굴이 된다.
+        #    실측 (2026-09-18, v3.12.0): 종전 인라인 루프의 60초 예산이 npm 자신이 «몇 분» 이라고
+        #    말하는 구간보다 짧아서, **성공한 발행**(shasum 9284d86c…, provenance 붙음)이 빨간 잡으로
+        #    남았다. 판별은 레지스트리 멱등성으로 했다 — 실패 잡 재실행 → «cannot publish over 3.12.0».
+        #    🟥 그 과차단은 정확히 «손 발행» 이라는 금지 경로를 유발하는 방향으로 틀린다
+        #    (v3.2.0·v3.4.0 이 그렇게 OIDC 경로를 깨뜨렸다).
+        #    ⇒ 예산 5분 + 판정을 `outcome=` 으로 내보내고, 종료코드는 계기 오류(exit 2)에만 쓴다.
+        #    종전 주석이 적은 «재시도가 없는 것을 있다고 만들지 않는다» 는 그대로 유효하다 —
+        #    늘린 것은 관측 창이고, not_yet_visible 은 «확인 못 했다» 이지 «있다» 가 아니다.
         run: |
-          v=$(node -p "require('./package.json').version")
-          got=""
-          for i in 1 2 3 4 5 6; do
-            got=$(npm view @chrono-meta/fh-gate@"$v" version 2>/dev/null || true)
-            [ "$got" = "$v" ] && break
-            echo "  … attempt $i/6: registry has '${got:-<none>}', want '$v' — waiting 10s (read-replica lag)"
-            sleep 10
-          done
-          [ "$got" = "$v" ] || { echo "🟥 registry still shows '${got:-<none>}' not '$v' after 6 attempts (~60s)"; exit 1; }
-          echo "✅ @chrono-meta/fh-gate@$v on registry"
+          PKG_VERSION="$(node -p "require('./package.json').version")" \
+            bash scripts/publish_verify_poll.sh
+
+      - name: surface propagation lag (non-blocking)
+        if: steps.verify.outputs.outcome == 'not_yet_visible'
+        # 🟥 판정을 «빨강» 으로 바꾸는 것은 호출부의 일이고, 여기서는 일부러 경고로 둔다.
+        #    발행은 이미 끝났으므로 이 잡을 빨갛게 만들면 다음 사람이 손으로 발행하게 된다.
+        # 🟥 cross-family (codex, 2026-09-18) A급: `${{ }}` 는 셸보다 **먼저** 치환되므로 `got` 안의
+        #    작은따옴표가 인용을 깨고 나온다(`npm view` 출력이 신뢰면이 아니다 — 스텁·손상된 레지스트리).
+        #    ⇒ env 로 넘기고 셸 안에서만 참조한다. 워크플로 본문에 값을 박지 않는다.
+        env:
+          PV_WANT: ${{ steps.verify.outputs.want }}
+          PV_GOT: ${{ steps.verify.outputs.got }}
+        run: |
+          printf '::warning::published OK (npm publish returned 0); the registry read replica has not shown %s yet - got %s. This is propagation lag, NOT a publish failure. Do NOT hand-publish; re-check with: npm view @chrono-meta/fh-gate version\n' "$PV_WANT" "$PV_GOT"
