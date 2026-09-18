@@ -269,10 +269,16 @@ else
   run "$TMPDIR_ROOT/l8.out" extract --transcript "$CHECKLIST_REAL_TRANSCRIPT"
   L8_ROWCOUNT=$(grep -c '^| ' "$TMPDIR_ROOT/l8.out")
   L8_DATAROWS=$((L8_ROWCOUNT - 1))
-  if [ "$RC" -eq 0 ] && [ "$L8_DATAROWS" -ge 1 ] && grep -q "채널 2/2" "$TMPDIR_ROOT/l8.out"; then
-    pass "L8 real-transcript extract: rows=$L8_DATAROWS, channel 2/2"
+  # 🟥 known-positive of the SUMMARY channel: a string that exists only in the compaction summaries of the
+  #    real transcript (default = the night-drive delegation phrase of this author's session). v6 first cut
+  #    dropped 3 of 4 real summaries (heading `6. **All user messages:**` did not match) and only this
+  #    assertion would have said so — «rows ≥ 1» was green.
+  L8_KP="${CHECKLIST_REAL_KNOWN_POSITIVE:-야간자율주행}"
+  if [ "$RC" -eq 0 ] && [ "$L8_DATAROWS" -ge 1 ] && grep -q "채널 2/2" "$TMPDIR_ROOT/l8.out" \
+     && grep '^| S' "$TMPDIR_ROOT/l8.out" | grep -q -- "$L8_KP"; then
+    pass "L8 real-transcript extract: rows=$L8_DATAROWS, channel 2/2, summary known-positive «${L8_KP}» present"
   else
-    fail "L8 rc=$RC datarows=$L8_DATAROWS (see $TMPDIR_ROOT/l8.out)"
+    fail "L8 rc=$RC datarows=$L8_DATAROWS known-positive «${L8_KP}» in S-rows: $(grep '^| S' "$TMPDIR_ROOT/l8.out" | grep -c -- "$L8_KP") (see $TMPDIR_ROOT/l8.out)"
   fi
 fi
 
@@ -607,6 +613,19 @@ if [ "$RC" -eq 0 ] && grep -q "raw 1건" "$TMPDIR_ROOT/l31.out" && grep -q "prov
   pass "L31 extract: a real utterance starting with «Caveat:» is a row; only the synthetic local-command caveat is excluded"
 else
   fail "L31 rc=$RC (see $TMPDIR_ROOT/l31.out)"
+fi
+
+# L32 — 🟥 author-caught after v6's first cut: the heading-line rule matched `6. All user messages:` but not the two
+#        other shapes real compaction summaries use — `6. **All user messages:**` (number + bold) and
+#        `6. All user messages (verbatim, non-tool-result):` (trailing text). 3 of 4 real summaries silently
+#        vanished while «rows ≥ 1» stayed green; L8's known-positive now guards the real file, this lane the shapes.
+build_jsonl "$TMPDIR_ROOT/l32.jsonl" "[{'type':'user','message':{'role':'user','content':'This session is being continued from a previous conversation that ran out of context.\n\nSummary:\n1. Primary Request and Intent:\n   - setup\n\n6. **All user messages:**\n   - \"bold heading utterance\"\n\n7. Pending Tasks:\n   - keep going\n'}},{'type':'user','message':{'role':'user','content':'This session is being continued from a previous conversation that ran out of context.\n\nSummary:\n1. Primary Request and Intent:\n   - setup\n\n6. All user messages (verbatim, non-tool-result):\n   - \"trailing text heading utterance\"\n\n7. Pending Tasks:\n   - keep going\n'}}]"
+run "$TMPDIR_ROOT/l32.out" extract --transcript "$TMPDIR_ROOT/l32.jsonl"
+if [ "$RC" -eq 0 ] && grep -q "압축 요약 2건(중복 제거 후 2건 추가)" "$TMPDIR_ROOT/l32.out" \
+   && grep -q "bold heading utterance" "$TMPDIR_ROOT/l32.out" && grep -q "trailing text heading utterance" "$TMPDIR_ROOT/l32.out"; then
+  pass "L32 extract: number+bold and trailing-text heading shapes both open the summary channel"
+else
+  fail "L32 rc=$RC (see $TMPDIR_ROOT/l32.out)"
 fi
 
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"

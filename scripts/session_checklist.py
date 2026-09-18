@@ -159,7 +159,7 @@ COMPACTION_PREFIX = "This session is being continued from a previous conversatio
 USER_MESSAGES_HEADING_RE = re.compile(r"user messages|user utterances|사용자 메시지|사용자 발화|유저 메시지", re.IGNORECASE)
 # v6 (codex round 5): the heading must be a HEADING LINE (numbered / hashed / bold, ending in a colon) — the phrase
 # «user messages» anywhere in an ordinary utterance is not a compaction summary
-USER_MESSAGES_HEADING_LINE_RE = re.compile(r"^\s*(?:\d+\.\s*|#+\s*|\*\*)?\s*(?:all\s+)?(?:user messages|user utterances|모든 사용자 메시지|사용자 메시지|사용자 발화|유저 메시지)\s*:?\**\s*:?\s*$", re.IGNORECASE)
+USER_MESSAGES_HEADING_LINE_RE = re.compile(r"^\s*(?:\d+[.)]\s*)?(?:#+\s*)?(?:\*\*|__)?\s*(?:all\s+)?(?:user messages|user utterances|모든 사용자 메시지|사용자 메시지|사용자 발화|유저 메시지)[^\"\u201c\n]{0,60}$", re.IGNORECASE)
 TRUNCATION_RE = re.compile(r"(?:\u2026|\.\.\.)\s*$")
 INVISIBLE_RE = re.compile("[​‌‍⁠﻿ ]")
 TOPLEVEL_NUMBERED_RE = re.compile(r"^\d+\.\s")
