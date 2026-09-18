@@ -1632,6 +1632,22 @@ else
   fail=1
 fi
 
+# session_checklist.py — the «request checklist close report» (2026-09-18): every operator utterance of a
+# session (raw transcript + the compaction summaries, two channels) gets a row with an achievement status,
+# reason and carry-over proposal, so a human can review the session like a TC report. `check` is FORM only
+# (closed status enum · non-empty reason/proposal · evidence on DONE) — it never judges whether a status is
+# true. Same pairing rule as above: the lane exists only because the subject does.
+if [ ! -f scripts/session_checklist.py ]; then
+  _absent_subject_verdict "test_session_checklist_lanes.sh" "scripts/session_checklist.py" || fail=1
+elif [ -f scripts/test_session_checklist_lanes.sh ]; then
+  if ! bash scripts/test_session_checklist_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_session_checklist_lanes.sh: session_checklist.py present but its anchor is missing"
+  fail=1
+fi
+
 # The infra-delta half of the same subject. Separate suite, same pairing rule: it exists only because
 # fh_node_check.sh does, so its absence beside a present subject is a FAIL, not a skip.
 if [ ! -f scripts/fh_node_check.sh ]; then

@@ -353,6 +353,8 @@
     "scripts/citation_key_check.py",
     "scripts/numeric_token_diff.py",
     "scripts/section_ref_check.py",
-    "scripts/test_paper_integrity_lanes.sh"
+    "scripts/test_paper_integrity_lanes.sh",
+    "scripts/session_checklist.py",
+    "scripts/test_session_checklist_lanes.sh"
   ]
 }
