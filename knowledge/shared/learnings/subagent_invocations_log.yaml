@@ -4082,3 +4082,29 @@
     ⓐ 이 밤의 팔은 전부 같은 계열이고 cross-family 는 codex 하나다 — «폭이 탈상관을 대체하지 않는다» 의
     실측 ⓑ 훅 tally 와의 차이는 귀속 미확인, 이 엔트리는 내가 띄운 것만 ⓒ 제출본 빌드·무결성 v2·FoD #33
     은 이 엔트리 시점에 미완 — 완료는 fh_completed 에.
+
+- date: 2026-09-18
+  agent: general-purpose ×12 (sonnet 1 · opus 3 · Fable 8) + codex sidecar ×20
+  purpose: >-
+    주간 세션(야간 자율주행 후반 → 주간). 팔 ×12 = 논문 영문 번역 8조각(Fable, 병렬) · 체크리스트 계기
+    빌드(sonnet) · 영문 리뷰어 독회(opus) · qasp 만성 빨강 수리(opus) · FoD 설정창 테마(opus).
+    codex ×20 = 무결성 계기 R18·R19·R20(v19→v21) · 세션 체크리스트 계기 R1~R11(v1→v11) · 잔여 재현.
+  outcome: accepted
+  evidence: >-
+    MERGED — FH #749(무결성 계기 + 레인 75) · #750(체크리스트 계기 + 레인 40) · #751(릴리스 3.12.0) ·
+    FoD #34·#35·#36 · qasp #320. npm @chrono-meta/fh-gate@3.12.0 발행(OIDC, provenance).
+    🟢 codex 가 두 계기를 각각 수렴시켰다: 무결성 R20 CONVERGED(스무 라운드 · 무음 44 · 열셋은 내 수리가
+    낳음) · 체크리스트 R11 CONVERGED(11 라운드 · MAJOR 26 · 전부 무음). 번역 8팔은 수치 대조로 검증
+    (KR→EN distinct DROPPED 0 INVENTED 0).
+  governor_check: >-
+    하중 지는 판정 전부 직접 재현 — 양 레인 스위트를 2~4 환경(bash 3.2/5.3 × py 3.9/3.14)에서 재실행 ·
+    selfcheck 완주 ×5(v18~v21 · 체크리스트 v2~v11 중 착지분) · 병합 충돌 2자리 수동 해소 후 재완주 ·
+    FoD gate.sh 31/0 + 테마 레인 70/0 + dmg 검수 · 계기 3종을 실논문에 매 판본 재실행.
+    🟥 팔의 산출을 그대로 안 실었다: 번역 8조각은 이음매·용어를 거버너가 43항 수리 · 설정창 팔의 정적
+    레인 70 초록에도 실물엔 섹션이 안 떴다(그쪽 스크린샷이 잡음).
+  residual: >-
+    ⓐ 🟥 **계기가 저자를 네 번 잡았다** — 손표 칸 밀림 · v6 이 실전사본 요약 3/4 를 조용히 떨굼(«행≥1» 은
+    초록) · 로컬 패널 num_predict 8 의 거짓 사망 · 외부 PR #1025 의 테스트가 자기 패치의 창을 못 봄.
+    공통 = 내 모형으로 지은 계기는 내가 상상 못 한 것을 못 만든다 ⓑ FoD 설정창은 cross-family 미실행
+    (codex 가 두 라운드 점유) — 이름으로 남김 ⓒ 훅 tally 294 와의 차이는 배경 bash 태스크 포함으로 추정,
+    귀속 미확인. 이 엔트리는 내가 띄운 Agent/codex 만 센다.
