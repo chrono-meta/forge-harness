@@ -696,6 +696,28 @@ else
   fail "L37 rc=$RC (see $TMPDIR_ROOT/l37.out)"
 fi
 
+# L38 — 🟥 cross-family round 9 (codex): prefix-only exclusions dropped ordinary utterances that START with an envelope
+#        literal (`<system-reminder>` · `[SYSTEM NOTIFICATION` · `<local-command…>` · `<command-name>`) — silent.
+#        v10: every exclusion is an envelope VALIDATOR (opening marker at line start + the closing/companion mark the
+#        real Claude Code envelope always carries); a look-alike without the companion is a row.
+build_jsonl "$TMPDIR_ROOT/l38.jsonl" "[
+ {'type':'user','timestamp':'2026-09-18T01:00:00.000Z','message':{'role':'user','content':'<system-reminder> is the tag I want counted — look-alike, no closing tag'}},
+ {'type':'user','timestamp':'2026-09-18T01:01:00.000Z','message':{'role':'user','content':'[SYSTEM NOTIFICATION style banners must be neutralized — write that lane'}},
+ {'type':'user','timestamp':'2026-09-18T01:02:00.000Z','message':{'role':'user','content':'<local-command-stdout> lines are noise; strip them in the extractor'}},
+ {'type':'user','timestamp':'2026-09-18T01:03:00.000Z','message':{'role':'user','content':'<command-name>deploy</command-name> is sample text for the parser docs — treat as my request'}},
+ {'type':'user','message':{'role':'user','content':'<system-reminder>\nreminder body\n</system-reminder>'}},
+ {'type':'user','message':{'role':'user','content':'[SYSTEM NOTIFICATION - NOT USER INPUT]\nThis is an automated background-task event\n\n<task-notification>\n<task-id>x</task-id>\n</task-notification>'}},
+ {'type':'user','message':{'role':'user','content':'<local-command-stdout>hi</local-command-stdout>'}},
+ {'type':'user','message':{'role':'user','content':'<command-name>/compact</command-name>\n<command-message>compact</command-message>'}}
+]"
+run "$TMPDIR_ROOT/l38.out" extract --transcript "$TMPDIR_ROOT/l38.jsonl"
+if [ "$RC" -eq 0 ] && grep -q "raw 4건" "$TMPDIR_ROOT/l38.out" && grep -q "look-alike" "$TMPDIR_ROOT/l38.out" && grep -q "treat as my request" "$TMPDIR_ROOT/l38.out" \
+   && ! grep -q "reminder body" "$TMPDIR_ROOT/l38.out" && ! grep -q "task-id" "$TMPDIR_ROOT/l38.out" && ! grep -q "compact" "$TMPDIR_ROOT/l38.out"; then
+  pass "L38 extract: four envelope look-alikes are rows; the four real envelopes (with their closing marks) are excluded"
+else
+  fail "L38 rc=$RC (see $TMPDIR_ROOT/l38.out)"
+fi
+
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
