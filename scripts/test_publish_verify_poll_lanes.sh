@@ -194,5 +194,43 @@ else
 fi
 
 echo
+echo "== lane H: 스텁 자기 계약을 «직접 실행해서» 잰다 =="
+# 🟥 이 레인이 있는 이유가 둘이다.
+#  ⓐ 지금까지 스텁은 생성된 `$STUBBIN/npm` shim 을 통해서만 돌았다 — 정적 스캔에는
+#     «이름만 대고 실행 안 함»(MENTION_ONLY)으로 보이고, 실제로 `new-code-anchor` 와
+#     `caller-zero ratchet` 이 그 이유로 이 PR 을 **막았다.** 게이트가 옳았다.
+#  ⓑ 그리고 더 중요한 것: 스텁의 계약(문턱 전 = 빈 stdout + 비영 종료, 문턱 후 = 버전 출력)이
+#     **한 번도 직접 검증된 적이 없었다.** 계기의 계기를 안 잰 자리다.
+_hc="$WORK/cnt_h"; rm -f "$_hc"
+set +e
+_h1=$(STUB_TARGET_VERSION="7.7.7" STUB_CALLS_UNTIL_VISIBLE=2 STUB_COUNTER_FILE="$_hc" \
+        bash "$STUB_NPM_IMPL" view "pkg@7.7.7" version 2>/dev/null); _hr1=$?
+_h2=$(STUB_TARGET_VERSION="7.7.7" STUB_CALLS_UNTIL_VISIBLE=2 STUB_COUNTER_FILE="$_hc" \
+        bash "$STUB_NPM_IMPL" view "pkg@7.7.7" version 2>/dev/null); _hr2=$?
+set -e
+# 문턱 전(1번째 호출): 빈 stdout + 비영 — 이것이 실물 E404 의 형태다
+if [ -z "$_h1" ] && [ "$_hr1" -ne 0 ]; then
+  echo "PASS H (문턱 전: 빈 stdout + rc=$_hr1 — 실물 E404 형태)"; PASS=$((PASS + 1))
+else
+  echo "FAIL H: 문턱 전이 stdout='$_h1' rc=$_hr1 — 빈 출력 + 비영을 기대"; FAIL=$((FAIL + 1))
+fi
+# 문턱 후(2번째): 버전 출력 + rc=0
+if [ "$_h2" = "7.7.7" ] && [ "$_hr2" -eq 0 ]; then
+  echo "PASS H (문턱 후: '7.7.7' + rc=0)"; PASS=$((PASS + 1))
+else
+  echo "FAIL H: 문턱 후가 stdout='$_h2' rc=$_hr2 — '7.7.7' + rc=0 을 기대"; FAIL=$((FAIL + 1))
+fi
+# 🟥 필수 env 부재는 **조용히 통과하면 안 된다** — 카운터 없이 돌면 문턱 논리가 무의미해진다
+set +e
+( unset STUB_COUNTER_FILE; STUB_TARGET_VERSION="7.7.7" bash "$STUB_NPM_IMPL" view "pkg@7.7.7" version ) >/dev/null 2>&1
+_hr3=$?
+set -e
+if [ "$_hr3" -ne 0 ]; then
+  echo "PASS H (STUB_COUNTER_FILE 부재 -> rc=$_hr3, fail-closed)"; PASS=$((PASS + 1))
+else
+  echo "FAIL H: 카운터 없이 rc=0 — 필수 env 가 조용히 통과했다"; FAIL=$((FAIL + 1))
+fi
+
+echo
 echo "TOTAL: $PASS passed, $FAIL failed"
 [ "$FAIL" = 0 ]
