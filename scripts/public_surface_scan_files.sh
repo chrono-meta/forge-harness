@@ -175,6 +175,30 @@ while IFS= read -r f; do
     $f"
     continue
   fi
+  # 🟥 CONTAINER FORMATS: the `grep -a` below reads BYTES. For a `.pptx` (zip of XML) or a `.pdf`
+  #    (glyph-encoded) those bytes are not the document's text, so the loop matches nothing and the
+  #    file counts as clean. Measured 2026-09-19 on the real artifact: the deposit PDF carries
+  #    two operator-private tokens, and this scanner said CLEAN. The npm set ships 2 `.pptx`.
+  #    ⇒ extract first, scan the extracted text, and count a FAILED extraction as UNSCANNED —
+  #    which the block at the end already turns into a fail-closed publish refusal.
+  #    🟥 Refusing containers outright was the first design and it is wrong: it would block every
+  #    release that ships one, and this repo's doctrine says a gate that always fires trains the
+  #    override that disarms it. Extraction is what keeps the refusal rare enough to mean something.
+  scanpath="$path"; _xtmp=""
+  case "$(printf '%s' "$f" | tr 'A-Z' 'a-z')" in
+    *.pptx|*.docx|*.xlsx|*.potx|*.dotx|*.xltx|*.pdf)
+      _xtmp=$(mktemp 2>/dev/null)
+      if [ -n "$_xtmp" ] && command -v python3 >/dev/null 2>&1 \
+         && python3 "$REPO_ROOT/scripts/psa_extract_text.py" "$path" > "$_xtmp" 2>/dev/null; then
+        scanpath="$_xtmp"
+      else
+        [ -n "$_xtmp" ] && rm -f "$_xtmp"
+        _xtmp=""
+        UNSCANNED=$((UNSCANNED+1)); UNSCANNED_LIST="$UNSCANNED_LIST
+    $f (container: text extraction failed)"
+        continue
+      fi ;;
+  esac
   while IFS=$'\t' read -r sev regex; do
     [ -z "$regex" ] && continue
     case "$sev" in \#*) continue;; esac
@@ -194,8 +218,9 @@ while IFS= read -r f; do
       LEAK=1
       # -a forces every published file to scan as TEXT (challenger S1): -I skipped binary-classified
       # files, so a token in an SVG / null-byte file (docs/pillars.svg ships) would slip unscanned.
-    done <<< "$(grep -aoiE "$regex" "$path" 2>/dev/null | sort -u || true)"
+    done <<< "$(grep -aoiE "$regex" "$scanpath" 2>/dev/null | sort -u || true)"
   done <<< "$PSA_STREAM"
+  [ -n "$_xtmp" ] && { rm -f "$_xtmp"; _xtmp=""; }
 done <<< "$FILES"
 
 # 🟥 «스캔 못 한 파일»은 «깨끗한 파일»이 아니다. 발행 목록에 있는데 읽지 못했으면

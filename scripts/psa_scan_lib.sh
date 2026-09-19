@@ -566,23 +566,115 @@ psa_scan_file() {
     echo "  ⚠️  MISSING — $1 : NOT SCANNED (unmeasured, not 0 hits)" >&2
     return 3
   fi
+  # 🟥 NON-TEXT INPUT IS "NOT SCANNED", NEVER "CLEAN" (2026-09-19).
+  # The scan below is line-based (`awk` → pattern match). A PDF, docx, pptx or image is not lines:
+  # its text is glyph-subset or zip-compressed, so the patterns match nothing and the file returns
+  # rc=0 — a CLEAN verdict about bytes the instrument never read. Measured the day this was added,
+  # on the surface this gate exists to protect:
+  #     paper/forge_harness_v1.0.2.pdf   PyMuPDF: <operator-token>=1 <org-token>=1   psa_scan: rc=0 CLEAN
+  #     synthetic PDF whose text is literally "contact PSABINCANARY here"        psa_scan: rc=0 CLEAN
+  #     the SAME token in a .txt                                             psa_scan: rc=1 HIT
+  # The packaging flipped the verdict, not the content. That is
+  # [[feedback_not_found_is_not_zero_family]] on an irreversible surface, and the repo already has
+  # the correct precedent next door: gate_shape_scan.sh answers UNSCANNABLE and lets exit 3 dominate.
+  #
+  # Discriminator is a MECHANICAL PROPERTY (a NUL byte anywhere), not an extension list — a list
+  # silently passes every format nobody thought of ("목록 = 커버리지"). Calibrated on the real
+  # corpus the same day: every .md/.html/.sh here → no NUL · every .pdf here → NUL, and
+  # `file --mime-type` agreed on all 9. A UTF-16 text file also lands here; that is the safe
+  # direction, since this line-based scan cannot read it correctly either.
+  #
+  # Failure direction: if `tr` itself fails, the byte counts differ and the file is called
+  # UNSCANNABLE. An instrument that breaks must not answer "clean".
+  local _psa_bytes _psa_nonul _psa_unscannable="" _psa_why=""
+  _psa_bytes=$(wc -c < "$1" 2>/dev/null | tr -d ' ')
+  _psa_nonul=$(LC_ALL=C tr -d '\000' < "$1" 2>/dev/null | wc -c 2>/dev/null | tr -d ' ')
+  if [ -z "$_psa_bytes" ] || [ -z "$_psa_nonul" ] || [ "$_psa_bytes" != "$_psa_nonul" ]; then
+    _psa_unscannable=1; _psa_why="NUL byte present"
+  fi
+  # 🟥 NUL ALONE IS NOT ENOUGH — cross-family (codex) broke it with execution evidence, reproduced
+  # here: a valid PDF with NO NUL byte, whose text sits in a PDF hex string
+  # (`<636F6E74616374...>` = "contact PSABINCANARY here"), scanned rc=0 CLEAN. Printability is not
+  # readability: the bytes were scannable and the meaning was not.
+  #
+  # So the second signal is the mime type, and THE LIST IS ON THE SCANNABLE SIDE ON PURPOSE.
+  # A "known-binary" list fails OPEN for every format nobody listed; a "known line-scannable" list
+  # fails CLOSED — an unfamiliar type becomes UNSCANNABLE, never CLEAN. On an irreversible surface
+  # that direction is the whole point, and it is the opposite of the "목록 = 커버리지" defect.
+  #
+  # Calibrated on this repo's real scan targets the day it was added (397 files): text/* covers
+  # shellscript 234 · plain 90 · python 17 · html 13, and the ONLY non-text type that is genuinely
+  # line-scannable here is application/json (43). That one exception is listed and justified;
+  # every unlisted type is refused.
+  if [ -z "$_psa_unscannable" ]; then
+    if command -v file >/dev/null 2>&1; then
+      local _psa_mime; _psa_mime=$(file --mime-type -b "$1" 2>/dev/null)
+      case "$_psa_mime" in
+        text/*|application/json|inode/x-empty|"") ;;
+        *) _psa_unscannable=1; _psa_why="mime=$_psa_mime is not line-scannable" ;;
+      esac
+    else
+      # 🟥 `file` 부재는 «통과» 가 아니라 «약해진 판별» 이다. NUL 축만 남으므로 위 hex-string PDF
+      #    같은 ASCII 컨테이너는 못 잡는다 — 판정에 싣지는 않되 이름으로 남긴다.
+      echo "  ⚠️  DEGRADED DISCRIMINATOR — 'file' not on PATH; only the NUL-byte axis ran." >&2
+      echo "     An ASCII-only container (e.g. a PDF whose text is a hex string) will NOT be caught." >&2
+    fi
+  fi
   # `awk | psa_scan_tagged` hides an awk read failure when the caller has no pipefail: awk fails,
   # psa_scan_tagged sees an empty stream and returns 0 = clean. Materialise the tagged stream first
   # so the read is a checkable step of its own (cross-family round 1).
+  # 🟥 REFUSING IS THE FLOOR, NOT THE GOAL. Marking a container UNSCANNABLE is correct but it
+  # blocks every release that ships one — and this repo's own doctrine says a gate that always
+  # fires trains the override that disarms it. Measured: the npm published set (482 files) ships
+  # 2 `.pptx` fixtures, so a bare refusal would block every publish from here on.
+  # So we EXTRACT first and only refuse when extraction fails. `psa_extract_text.py` answers
+  # exit 0 + text, or exit 3 — never exit 0 with silence.
+  # 🟥 `${BASH_SOURCE[0]}` DOES NOT EXIST IN ZSH — the first wiring used it and the extractor
+  # silently never fired (this lib is sourced from zsh here, and its own Z-lanes exist because
+  # zsh is a supported arm). Resolve by explicit env first, then the repo root, then cwd; an
+  # unresolved extractor leaves `_psa_unscannable` set, so the failure direction stays UNSCANNABLE.
+  local _psa_src="$1" _psa_xtmp="" _psa_x="${PSA_EXTRACTOR:-}"
+  if [ -z "$_psa_x" ]; then
+    for _psa_c in \
+      "$(git rev-parse --show-toplevel 2>/dev/null)/scripts/psa_extract_text.py" \
+      "./scripts/psa_extract_text.py" \
+      "$(dirname -- "$0" 2>/dev/null)/psa_extract_text.py"; do
+      [ -f "$_psa_c" ] && { _psa_x="$_psa_c"; break; }
+    done
+  fi
+  if [ -n "$_psa_unscannable" ] && [ -n "$_psa_x" ] && [ -f "$_psa_x" ] && command -v python3 >/dev/null 2>&1; then
+    _psa_xtmp=$(mktemp 2>/dev/null)
+    if [ -n "$_psa_xtmp" ] && python3 "$_psa_x" "$1" > "$_psa_xtmp" 2>/dev/null; then
+      _psa_src="$_psa_xtmp"; _psa_unscannable=""; _psa_why=""
+      echo "  ℹ️  EXTRACTED — $1 : scanned its extracted text, not its raw bytes." >&2
+    else
+      [ -n "$_psa_xtmp" ] && { rm -f "$_psa_xtmp" || :; _psa_xtmp=""; }
+      _psa_why="${_psa_why} · extraction also failed"
+    fi
+  fi
   local tmpf
   tmpf=$(mktemp 2>/dev/null) || { echo "  ⚠️  mktemp failed; NOT SCANNED" >&2; return 3; }
-  if ! awk -v P="$1" '{print P "\t" $0}' "$1" > "$tmpf" 2>/dev/null; then
+  if ! awk -v P="$1" '{print P "\t" $0}' "$_psa_src" > "$tmpf" 2>/dev/null; then
     rm -f "$tmpf" || :
     echo "  ⚠️  READ FAILED — $1 could not be tagged for scanning; NOT SCANNED" >&2
     return 3
   fi
   if out=$(psa_scan_tagged < "$tmpf"); then rc=0; else rc=$?; fi
   rm -f "$tmpf" || :
+  [ -n "$_psa_xtmp" ] && { rm -f "$_psa_xtmp" || :; }
   # Print findings FIRST, verdict second — round 3 caught the previous order suppressing real hits:
   # an incomplete instrument returned 3 and emitted nothing, so a token the loaded patterns DID match
   # was lost. "I could not certify this" and "I saw nothing" are different, and the fix for the second
   # must not create the first. Partial evidence is reported; the verdict still refuses to say clean.
   [ -n "$out" ] && printf '%s\n' "$out"
+  if [ -n "$_psa_unscannable" ]; then
+    echo "  ⚠️  UNSCANNABLE — $1 : not line-scannable (${_psa_why}). NOT SCANNED, not clean." >&2
+    echo "     This scan reads lines; a PDF/docx/pptx/image keeps most of its text out of reach" >&2
+    echo "     (glyph subsetting, zip/flate streams). Any hit printed above is PARTIAL — it is what" >&2
+    echo "     happened to sit in readable bytes, not the file's text. Extract the text and scan" >&2
+    echo "     that, or clear it by a manual-equivalent pass. Never read this as 0 hits." >&2
+    return 3
+  fi
   if [ -n "$_incomplete" ]; then
     echo "  ⚠️  INCOMPLETE PATTERN INSTRUMENT — $_incomplete : verdict is NOT SCANNED (any hits above are partial)" >&2
     return 3

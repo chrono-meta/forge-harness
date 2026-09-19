@@ -627,12 +627,157 @@ else
 fi
 
 echo "[psa single-file lanes] pass=$pass fail=$fail"
+# ── B 레인 : 비텍스트 입력은 «깨끗함»이 아니라 UNSCANNABLE(3) (2026-09-19) ─────────────
+# 🟥 이 레인들이 막는 것: 줄 단위 스캔이 PDF/docx/이미지의 텍스트를 **원리적으로 못 읽는데**
+#    rc=0 CLEAN 을 내던 결함. 실측(추가 당일, 이 게이트가 지키는 바로 그 표면에서):
+#      paper/forge_harness_v1.0.2.pdf  PyMuPDF <operator-token>=1 <org-token>=1  ·  psa_scan rc=0 CLEAN
+#    포장이 판정을 뒤집었다. 내용이 아니라.
+_bdir=$(mktemp -d); trap 'rm -rf "$_bdir"' EXIT
+
+# 🟥 픽스처는 «머릿속 PDF» 가 아니라 **실제 PDF 바이트**여야 한다. python3+zlib 로 최소 PDF 를
+#    짓되, 토큰은 **비압축 평문 스트림**에 둔다 — 그래야 「스캐너가 읽을 수 있었는데도 안 읽었다」
+#    가 아니라 「읽을 수 없는 포장」이라는 이 레인의 논지가 선다(압축이면 자명해서 시험이 약해진다).
+python3 - "$_bdir" <<'_PYB'
+import sys, os
+d = sys.argv[1]
+body = b"BT /F1 12 Tf 72 720 Td (contact PSABINCANARY here) Tj ET"
+# 🟥 b"%PDF" 에 `%` 포맷을 쓰지 마라 — 파이썬이 `%P` 를 지시자로 읽고 죽는다. 첫 시도가 그렇게
+#    죽었고, 파일이 안 생겨 스캐너가 MISSING(3)을 냈는데 rc 만 보면 «통과»로 읽혔다.
+#    (레인이 초록인 두 번째 이유 = 입력이 코드에 안 닿음. 문자열 단언이 그걸 잡았다.)
+pdf = (b"%PDF-1.4\n"
+       b"1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
+       b"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
+       b"3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R>>endobj\n"
+       b"4 0 obj<</Length " + str(len(body)).encode() + b">>stream\n"
+       + body +
+       b"\nendstream endobj\n"
+       b"\x00\x00trailer<</Root 1 0 R>>\n%%EOF\n")   # NUL: 실물 PDF 가 압축 스트림에서 늘 갖는 것
+open(os.path.join(d, "tok.pdf"), "wb").write(pdf)
+open(os.path.join(d, "tok.txt"), "w").write("contact PSABINCANARY here\n")
+open(os.path.join(d, "clean.bin"), "wb").write(b"\x00\x01\x02 nothing interesting here\n")
+# 🟥 픽스처가 실제로 생겼고 실제로 NUL 을 갖는지 «여기서» 확인한다 — 안 하면 파일 부재가
+#    UNSCANNABLE 과 같은 rc=3 으로 읽힌다(둘은 다른 사건이다).
+for n, want_nul in (("tok.pdf", True), ("tok.txt", False), ("clean.bin", True)):
+    p = os.path.join(d, n)
+    assert os.path.exists(p), "FIXTURE MISSING: " + n
+    has = b"\x00" in open(p, "rb").read()
+    assert has == want_nul, "FIXTURE SHAPE WRONG: %s nul=%s" % (n, has)
+_PYB
+
+# 🟥 패턴은 psa_load 대신 **직접 주입**한다 — 이 레인은 «비텍스트를 어떻게 판정하나» 를 재지
+#    «운영자 오버라이드 파일이 거기 있나» 를 재는 게 아니다. 후자에 의존하면 레인이 환경을 잰다.
+_run_b() { ( . "$LIB"; export PSA_STREAM=$(printf 'HIGH\tPSABINCANARY') PSA_ALLOWLIST=/dev/null \
+             PSA_DEFAULTS_OK=1 PSA_BAD_ROWS=0 PSA_OVERRIDE_PRESENT=1; psa_scan_file "$1" 2>&1 ); }
+
+_o=$(_run_b "$_bdir/tok.pdf"); _r=$?
+# 🟥 추출기가 붙은 뒤로 이 픽스처의 기대값은 3 이 아니라 **1** 이다 — «못 읽겠다» 에서 «읽어서
+#    잡았다» 로 올라간 것이고, 그게 이 변경의 요점이다. 3 은 이제 «추출도 실패» 일 때만 나온다.
+check "B1 🟥 토큰을 품은 PDF → 추출해서 HIT(1). CLEAN(0) 은 절대 아님" 1 "$_r" "PSABINCANARY" "$_o"
+# 🟥 B1b 는 fail-before 가 만들어낸 레인이다. 첫 판은 스캔 «전에» return 3 을 했는데, 그러면
+#    옛 스캐너가 실제로 잡던 히트(비압축 스트림 PDF)가 사라졌다 — 미탐을 고치다 다른 미탐을
+#    만든 것이다. 이 파일의 `_incomplete` 주석이 이미 그 교리를 적고 있었다:
+#    "'I could not certify this' and 'I saw nothing' are different."
+check "B1b 🟥 «추출했다»를 말하고 스캔한다 (원바이트가 아니라 추출 텍스트)" 1 "$_r" "EXTRACTED" "$_o"
+
+_o=$(_run_b "$_bdir/tok.txt"); _r=$?
+check "B2 같은 토큰의 .txt → HIT(1) (기존 동작 무변경)" 1 "$_r" "PSABINCANARY" "$_o"
+
+_o=$(_run_b "$_bdir/clean.bin"); _r=$?
+check "B3 추출 불가 바이너리 → UNSCANNABLE(3) — «못 읽음»을 «깨끗함»으로 안 바꾼다" 3 "$_r" "UNSCANNABLE" "$_o"
+
+# 🟥 컨트롤 — 이게 없으면 B1·B3 의 3 이 «모든 것이 3» 인지 구별이 안 된다
+printf 'ordinary text, no tokens\n' > "$_bdir/plain.txt"
+_o=$(_run_b "$_bdir/plain.txt"); _r=$?
+check "B4 CONTROL — 평범한 텍스트는 여전히 CLEAN(0) (3이 아무 데나 안 뜬다)" 0 "$_r" "" "$_o"
+
+# 🟥 B6/B7 은 cross-family(codex) 가 «NUL 만으로는 안 된다» 를 실행으로 보여서 생긴 레인이다.
+#    B6 = 그 반례 그대로: NUL 이 «하나도 없는» 유효 PDF 인데 텍스트가 hex string 안에 있다.
+#    B7 = 그 수리(mime 축)가 과차단하지 않는가 — 이게 없으면 «전부 3» 이 통과로 보인다.
+python3 - "$_bdir" <<'_PYC'
+import sys, os
+d = sys.argv[1]
+
+# 🟥 «깨지면 안 되는 것부터» 만든다. 초판은 assert 를 앞에 뒀고, 그게 걸리자 뒤의 픽스처 둘이
+#    통째로 안 생겨서 B7/B9 가 «코드 결함처럼 보이는 MISSING(3)» 을 냈다. 한 픽스처의 실패가
+#    다른 레인을 죽이면 그 레인들은 더는 자기가 재려던 것을 안 잰다.
+open(os.path.join(d, "ok.json"), "w").write('{"note":"line-scannable, must stay CLEAN"}\n')
+_broken_body = b"BT (contact PSABINCANARY here) Tj ET"
+open(os.path.join(d, "broken.pdf"), "wb").write(
+    b"%PDF-1.4\n4 0 obj<</Length " + str(len(_broken_body)).encode() + b">>stream\n"
+    + _broken_body + b"\nendstream endobj\ntrailer\n%%EOF\n")
+
+# 🟥 NUL 이 «없는» PDF 를 손으로 조립한다. PyMuPDF 로 저장하면 같은 입력에도 NUL 유무가
+#    갈린다(실측: 822B NUL 없음 / 844B NUL 있음). 그 비결정성을 타면 이 레인이 어떤 축을
+#    시험하는지가 실행마다 바뀐다 — mime 축을 재려 했는데 NUL 축이 먼저 걸리는 식으로.
+#    아래는 xref 까지 갖춘 유효 PDF 이고 전부 ASCII 이며 본문 스트림도 비압축이다.
+def _mini_pdf(tok):
+    objs = [
+        b"<</Type/Catalog/Pages 2 0 R>>",
+        b"<</Type/Pages/Kids[3 0 R]/Count 1>>",
+        b"<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]"
+        b"/Resources<</Font<</F1 5 0 R>>>>/Contents 4 0 R>>",
+    ]
+    body = b"BT /F1 12 Tf 72 720 Td (" + tok + b") Tj ET"
+    objs.append(b"<</Length " + str(len(body)).encode() + b">>stream\n" + body + b"\nendstream")
+    objs.append(b"<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>")
+    out = bytearray(b"%PDF-1.4\n"); offs = []
+    for i, o in enumerate(objs, 1):
+        offs.append(len(out)); out += str(i).encode() + b" 0 obj" + o + b"endobj\n"
+    x = len(out)
+    out += b"xref\n0 " + str(len(objs) + 1).encode() + b"\n0000000000 65535 f \n"
+    for o in offs:
+        out += ("%010d 00000 n \n" % o).encode()
+    out += (b"trailer<</Size " + str(len(objs) + 1).encode() + b"/Root 1 0 R>>\nstartxref\n"
+            + str(x).encode() + b"\n%%EOF\n")
+    return bytes(out)
+
+_ascii = _mini_pdf(b"contact PSABINCANARY here")
+assert b"\x00" not in _ascii, "FIXTURE WRONG: NUL 이 있으면 mime 축이 아니라 NUL 축을 재게 된다"
+open(os.path.join(d, "ascii.pdf"), "wb").write(_ascii)
+_PYC
+
+_o=$(_run_b "$_bdir/broken.pdf"); _r=$?
+check "B9 🟥 컨테이너를 열었는데 0자 → UNSCANNABLE(3). «빈 추출»은 CLEAN 이 아니다" 3 "$_r" "UNSCANNABLE" "$_o"
+
+_o=$(_run_b "$_bdir/ascii.pdf"); _r=$?
+# codex 반례: NUL 이 없어 1축은 못 잡고, mime 축이 잡아 추출로 넘긴다. hex string 은 PyMuPDF 가
+# 디코드하므로 최종 판정은 HIT — 「포장으로 숨긴다」가 닫혔다는 뜻이다.
+check "B6 🟥 NUL 없는 ASCII-only PDF(토큰이 hex) → 추출해서 HIT(1) — codex 반례 닫힘" 1 "$_r" "PSABINCANARY" "$_o"
+
+_o=$(_run_b "$_bdir/ok.json"); _r=$?
+check "B7 CONTROL — application/json 은 여전히 CLEAN(0) (mime 축이 과차단 안 한다)" 0 "$_r" "" "$_o"
+
+# 🟥 B8 — 과차단 컨트롤. 출하 집합(482파일)에 `.pptx` 2건이 실린다. 단순 «컨테이너는 거절» 이면
+#    **매 릴리스가 막히고**, 그게 override 를 훈련시켜 게이트를 무장해제한다. 추출이 그걸 막는다.
+_pptx="$REPO_ROOT/plugins/fh-preprep/skills/preprep/fixtures/fixture_R3_positive.pptx"
+if [ -f "$_pptx" ]; then
+  _o=$(_run_b "$_pptx"); _r=$?
+  check "B8 CONTROL — 출하 .pptx 는 추출해서 CLEAN(0) (컨테이너를 통째로 막지 않는다)" 0 "$_r" "" "$_o"
+  _cond_lanes=$((_cond_lanes+1))
+else
+  printf '  ⏭  B8 skipped — 출하 pptx 픽스처 부재 (skip != pass)\n'
+fi
+
+# 실물 — 이 레포가 실제로 예치하는 파일
+if [ -f "$REPO_ROOT/paper/forge_harness_v1.0.2.pdf" ]; then
+  _o=$(_run_b "$REPO_ROOT/paper/forge_harness_v1.0.2.pdf"); _r=$?
+  # 🟥 이 레인은 «특정 사설 토큰이 잡히나» 가 아니라 «**기전이 걸리나**» 를 잰다. 토큰을 단언하면
+  #    그 토큰을 이 파일에 적어야 하고, 이 파일은 npm 출하 집합이다 — 레인이 자기가 막으려는
+  #    유출을 만들게 된다. (실제로 초판이 그랬고, 발행 게이트가 그걸 잡았다.)
+  #    기전 = 「원바이트가 아니라 추출 텍스트를 스캔했다」이고, 그것이 EXTRACTED 줄이다.
+  check "B5 🟥 실물 예치 PDF → 추출 경로를 탄다 (원바이트 스캔이 아니다)" 0 "$_r" "EXTRACTED" "$_o"
+  _cond_lanes=$((_cond_lanes+1))
+else
+  printf '  ⏭  B5 skipped — paper/forge_harness_v1.0.2.pdf 부재 (skip != pass)\n'
+fi
+
+
 [ "$fail" -eq 0 ] || exit 1
 # 🟥 플로어는 **조건부 레인을 반영한 값**이다. 33 = zsh 없는 러너의 기저(Z1~Z4 · E2~E5/zsh 스킵).
 #    zsh 가 있으면 +8. 상수 하나로 박으면 «스킵 = 계기 오류» 가 되어 러너를 거짓 적색으로 만든다.
 #    ⚠️ 그리고 이 수식이 말하는 진짜 사실을 잊지 마라: **zsh 축은 zsh 가 있는 곳에서만 검증된다.**
 #    CI 에 zsh 를 설치한 이유가 그것이고(.github/workflows/validate.yml), 그게 없으면 이 PR 이
 #    고친 결함의 축이 CI 에서 **한 번도** 안 돌아간다.
-_floor=$((52 + _cond_lanes))
+_floor=$((56 + _cond_lanes))
 [ "$pass" -ge "$_floor" ] || { echo "  ❌ INSTRUMENT ERROR — only $pass lanes ran; expected >=$_floor (zsh 조건부 +$_cond_lanes)"; exit 3; }
 exit 0
