@@ -89,8 +89,37 @@ count_check() { # count_check <label> <file> <expected-string>
   fi
 }
 count_check "fh-meta plugin.json"      plugins/fh-meta/.claude-plugin/plugin.json    "${meta_sk} skills + ${meta_ag} agents"
-count_check "fh-commons plugin.json"   plugins/fh-commons/.claude-plugin/plugin.json "${com_sk} skills"
+# 🟥 fh-commons 는 skills 절반만 검사하고 있었다 — 그리고 그 사이 agents 가 드리프트했다.
+#    2026-09-19 실측: 디스크 6 skills / **7** agents · plugin.json 선언 "6 skills + **1** agent"
+#    · marketplace.json 선언 "**5** skills … + 1 agent". 셋이 다 어긋났는데 COUNT-CHECK 는
+#    **PASS** 였다 — 단언 문자열이 `"6 skills"` 라 긴 문장 안에서 그대로 걸렸기 때문이다.
+#    즉 «목록=커버리지» 의 (A) 방향: 단언 목록 밖의 수치는 **조용히 통과한다.**
+#    fh-meta 와 같은 «쌍» 으로 올려 두 수치를 한 번에 결박한다.
+count_check "fh-commons plugin.json"   plugins/fh-commons/.claude-plugin/plugin.json "${com_sk} skills + ${com_ag} agents"
 count_check "marketplace.json fh-meta" .claude-plugin/marketplace.json               "${meta_sk} skills + ${meta_ag} agents"
+# 🟥 marketplace.json 은 fh-meta 만 검사하고 있었다 — fh-commons 항목은 어느 단언에도 없었다.
+# 🟥 그리고 **파일 전체 grep 으로는 per-plugin 주장을 못 한다.** 첫 수리에서 실제로 났다:
+#    `"${com_ag} agent"`(=7) 가 같은 파일 안 fh-meta 의 "35 skills + 7 agents" 에 걸려 **PASS**
+#    했다 — 대상 항목은 "1 agent" 인 채로. 장식 앵커였다. 그래서 그 항목만 «잘라내서» 본다.
+mp_desc() { # mp_desc <plugin-name-substring> → 그 항목의 description 만
+  read_tree .claude-plugin/marketplace.json | python3 -c "
+import json,sys
+try: d=json.load(sys.stdin)
+except Exception: sys.exit(3)
+for p in d.get('plugins',[]):
+    if sys.argv[1] in p.get('name',''): print(p.get('description','')); break
+" "$1"
+}
+mp_check() { # mp_check <label> <plugin-substring> <expected>
+  local body esc
+  body=$(mp_desc "$2") || { echo "FAIL  count: $1 — marketplace.json 파싱 불가 (계기 오류, 0 아님)"; fail=1; return; }
+  [ -n "$body" ] || { echo "FAIL  count: $1 — marketplace.json 에 '$2' 항목이 없다 (부재≠통과)"; fail=1; return; }
+  esc=$(printf '%s' "$3" | sed 's/[][\.*^$+?(){}|\\/]/\\&/g')
+  if printf '%s' "$body" | grep -qE "(^|[^0-9])${esc}([^0-9]|\$)"; then echo "PASS  count: $1"
+  else echo "FAIL  count: $1 — expected \"$3\" in the fh-commons marketplace entry"; fail=1; fi
+}
+mp_check "marketplace.json fh-commons skills" fh-commons "${com_sk} skills"
+mp_check "marketplace.json fh-commons agents" fh-commons "${com_ag} agent"
 # ── README 렌더링만 per-repo override 를 받는다 ──────────────────────────────────────────────
 # 왜 이 한 줄만 다른가: plugin.json·marketplace.json 의 문자열은 **기계 결합**(영문 고정,
 # 소비처가 파싱한다)이지만 README 헤더는 **사람이 읽는 산문**이라 하류 하네스가 자기 언어로 쓴다.

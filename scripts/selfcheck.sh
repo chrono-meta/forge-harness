@@ -1423,6 +1423,21 @@ else
   fail=1
 fi
 
+# prless_delta_scan lanes — «커밋은 됐는데 착륙 경로에 안 올라간» 델타를 세는 advisory 계기.
+# 🟥 레인의 하중선은 **음성 컨트롤**이다: 이 레포는 squash 머지를 쓰므로 순진한 per-commit 비교는
+#    이미 착륙한 브랜치를 «미착륙» 으로 읽는다(2026-09-19 실측: naive 33/40 · git cherry 17/40 ·
+#    이 계기 10/40). 양성만 있는 레인은 «전부 고발하는 계기» 도 통과시킨다.
+if [ -f scripts/prless_delta_scan.sh ]; then
+  if [ -f scripts/test_prless_delta_scan_lanes.sh ]; then
+    if ! bash scripts/test_prless_delta_scan_lanes.sh; then
+      fail=1
+    fi
+  else
+    echo "FAIL  test_prless_delta_scan_lanes.sh: prless_delta_scan.sh present but its anchor is missing"
+    fail=1
+  fi
+fi
+
 # temper_check lanes — 🟥 `templates/temper_check.sh` 는 게이트체인 7경로 중 **유일하게 실행 레인이
 # 0** 이었다(2026-09-14 frontier-digest 후보 #1 → 독립 재현으로 참 판정). 참조 6곳이 전부 비실행
 # 이었고, 그중 하나가 **바로 이 파일의 `bash -n` 목록**이다 — 즉 selfcheck 자신이 «구문 검사» 를
