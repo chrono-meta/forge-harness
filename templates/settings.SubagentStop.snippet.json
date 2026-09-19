@@ -1,0 +1,38 @@
+{
+  "_README": [
+    "SubagentStop hook snippet — TRACKED, so it arrives with a clone. Every .claude/settings*.json path",
+    "in this repo is gitignored, so the hook REGISTRATION cannot be tracked. This is the tracked SOURCE",
+    "that install-wizard merges into the user's local settings. Shipping the script is not the same",
+    "proposition as wiring it — this file is the difference.",
+    "",
+    "What it does: when a subagent finishes, it checks the newest session checklist for a row whose",
+    "declared BLOCKER now reads DONE while the row itself is still open, and surfaces those rows.",
+    "",
+    "WHY HERE. Measured 2026-09-19 on this repo's own checklist: rows A6/A8 declared «A13 선행», A13",
+    "landed DONE, and nothing re-read the file. Three operator requests degraded until the operator",
+    "asked again. The existing `check` passed the same file clean (rows=14 ok=14 violations=0 rc=0) —",
+    "form was never the problem. A subagent finishing IS «한 차례 끝났다», the one moment a blocker",
+    "plausibly just closed.",
+    "",
+    "DEGRADE: advisory and silent. No checklist, no dependency edges, no python3 → say nothing, exit 0.",
+    "It NEVER blocks. A noisy hook on every subagent stop trains people to ignore hooks, which disarms",
+    "the ones guarding irreversible surfaces.",
+    "",
+    "🟥 exit 0 ALWAYS. A hook that exits non-zero has its stdout DISCARDED and its stderr NOT relayed —",
+    "the warning would reach nobody. The finding travels as hookSpecificOutput.additionalContext."
+  ],
+  "hooks": {
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-$HOME/projects/forge-harness}/scripts/checklist_unblocked_hook.sh\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

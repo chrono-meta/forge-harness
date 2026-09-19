@@ -78,5 +78,43 @@ run "$T/silent.md"
 [ "$rc" -eq 4 ] && ok "L9 an UNWRITTEN dependency is NOT detected — pinned as a known blind spot, not a feature" \
                 || bad "L9 expected rc=4 (blind), got $rc — if this changed, update the doc claim"
 
+# ── H: the HOOK itself, executed (not merely named) ─────────────────────────────────────
+# 🟥 The hook is the half that actually fires. A lane that only names it is the decoration
+# `new_code_anchor_check.sh` exists to catch — and it caught exactly that here.
+HOOK="$HERE/checklist_unblocked_hook.sh"
+if [ ! -f "$HOOK" ]; then bad "H0 HARNESS-ERROR: hook missing: $HOOK"; else
+
+  # H1 known-POSITIVE: a real unblocked row → hook emits JSON naming it, and still exits 0
+  mkdir -p "$T/repo/tracks/_meta" "$T/repo/scripts"
+  cp "$SUBJ" "$T/repo/scripts/session_checklist.py"
+  printf '%s\n| A6 | sim | IN-PROGRESS | - | A13 선행 | later |\n| A13 | runner | DONE | c0ffee | - | - |\n' \
+    "$hdr" > "$T/repo/tracks/_meta/session_checklist_2026-01-01_x.md"
+  hout="$(CLAUDE_PROJECT_DIR="$T/repo" bash "$HOOK" 2>/dev/null)"; hrc=$?
+  [ "$hrc" -eq 0 ] && ok "H1 hook exits 0 even when it has a finding (non-zero would discard stdout)" \
+                   || bad "H1 hook rc=$hrc, must be 0"
+  printf '%s' "$hout" | python3 -c 'import json,sys;d=json.load(sys.stdin);a=d["hookSpecificOutput"]["additionalContext"];sys.exit(0 if "A6" in a and d["hookSpecificOutput"]["hookEventName"]=="SubagentStop" else 1)' 2>/dev/null \
+    && ok "H1b hook emits valid JSON on stdout naming the row (reaches MODEL context)" \
+    || bad "H1b bad/absent JSON: $(printf '%s' "$hout" | head -c 120)"
+
+  # H2 known-NEGATIVE: blocker still open → hook is SILENT. Same tree, one cell different.
+  printf '%s\n| A6 | sim | IN-PROGRESS | - | A13 선행 | later |\n| A13 | runner | IN-PROGRESS | - | wip | - |\n' \
+    "$hdr" > "$T/repo/tracks/_meta/session_checklist_2026-01-01_x.md"
+  hout2="$(CLAUDE_PROJECT_DIR="$T/repo" bash "$HOOK" 2>/dev/null)"; hrc2=$?
+  [ "$hrc2" -eq 0 ] && [ -z "$hout2" ] && ok "H2 nothing unblocked → hook silent, rc=0" \
+                                      || bad "H2 expected silence, got rc=$hrc2 out='$hout2'"
+
+  # H3 degrade: no checklist at all → silent, never an error
+  mkdir -p "$T/bare/scripts" "$T/bare/tracks/_meta"; cp "$SUBJ" "$T/bare/scripts/session_checklist.py"
+  hout3="$(CLAUDE_PROJECT_DIR="$T/bare" bash "$HOOK" 2>/dev/null)"; hrc3=$?
+  [ "$hrc3" -eq 0 ] && [ -z "$hout3" ] && ok "H3 no checklist → silent, rc=0 (advisory never blocks)" \
+                                      || bad "H3 expected silence, got rc=$hrc3"
+
+  # H4 degrade: subject absent → silent (a consumer without the tool must not see errors)
+  rm -f "$T/bare/scripts/session_checklist.py"
+  hout4="$(CLAUDE_PROJECT_DIR="$T/bare" bash "$HOOK" 2>/dev/null)"; hrc4=$?
+  [ "$hrc4" -eq 0 ] && [ -z "$hout4" ] && ok "H4 subject missing → silent, rc=0" \
+                                      || bad "H4 expected silence, got rc=$hrc4"
+fi
+
 printf -- '── %d passed, %d failed ──\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ] || exit 1
