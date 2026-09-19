@@ -499,22 +499,29 @@ def find_header_index(header_cells, needle):
     return -1 if len(loose) > 1 else None
 
 
-def do_check(file_path):
+def load_tables(file_path):
+    """Locate every markdown table with a 상태 column. SINGLE SOURCE for both `check` and `unblocked`.
+
+    🟥 Extracted 2026-09-19 rather than copied. This repo has a named failure for the alternative
+    («관대함 갈린 중복 정규화» — two preprocessors that disagree let an input pass one and be dropped
+    silently by the other). Every hardening below (v2–v7, cross-family rounds 1–6) is therefore shared:
+    code fences, 4-space indented blocks, outer-pipe-less rows, and the ambiguous-header guard.
+
+    Returns (tables, rc) where rc is None on success and an int rc when the caller must return it:
+      10  file missing / no 상태-header table found
+       4  DEAD CONTROL — a 상태 table exists but has ZERO data rows ("nothing measured" != "clean")
+    """
     if not os.path.isfile(file_path):
         sys.stderr.write("error: file not found: %s\n" % file_path)
-        print("checklist: rows=0 ok=0 violations=0 rc=10")
-        return 10
-
+        return None, 10
     with open(file_path, "r", encoding="utf-8", errors="replace") as f:
         raw = f.read()
     if raw.startswith("\ufeff"):
         raw = raw[1:]
     lines = raw.splitlines()
 
-    # v2 (codex round 1): lines inside a code fence are not a table — a fenced example table used to be
-    # picked as THE checklist and mask the real one below it (rc=0 on a file with a bad row).
     in_fence = [False] * len(lines)
-    fence_open = None  # (char, length) — v5 (codex round 4): a closer must be the same char and at least as long
+    fence_open = None
     for i, ln in enumerate(lines):
         m = FENCE_RE.match(ln)
         if m:
@@ -529,10 +536,6 @@ def do_check(file_path):
                 continue
         in_fence[i] = fence_open is not None
 
-    # v2: EVERY table with a 상태 column is checked, not only the first — a clean earlier table used to
-    # mask a malformed later one.
-    # v3 (codex round 2): a line indented by 4+ spaces (or a tab) is a CommonMark indented code block,
-    # not a table row — an indented example used to be read as THE checklist (rc=0 with no real table).
     def is_code_indented(ln):
         return ln.startswith("    ") or ln.startswith("\t")
 
@@ -540,32 +543,39 @@ def do_check(file_path):
     for i, ln in enumerate(lines):
         if in_fence[i] or is_code_indented(ln):
             continue
-        s = ln.strip()
-        # v7 (codex round 6): a header row may omit the outer pipes — a line with an unescaped `|` and 상태 qualifies
-        if not SPLIT_PIPE_RE.search(s) or "상태" not in s or i + 1 >= len(lines):
+        s2 = ln.strip()
+        if not SPLIT_PIPE_RE.search(s2) or "상태" not in s2 or i + 1 >= len(lines):
             continue
         if is_code_indented(lines[i + 1]) or not is_separator_line(lines[i + 1]):
-            continue  # v5: an indented delimiter row is code, so this is not a table
+            continue
         header_idxs.append(i)
 
     if not header_idxs:
         sys.stderr.write("error: no markdown table with a 상태-column header found in %s\n" % file_path)
-        print("checklist: rows=0 ok=0 violations=0 rc=10")
-        return 10
+        return None, 10
 
-    tables = []  # [(header_cells, rows)]
+    tables = []
     for header_idx in header_idxs:
         header_cells = split_row(lines[header_idx])
         rows = []
         j = header_idx + 2
-        # v6 (codex round 5): GFM rows may omit the outer pipes — a row is any non-blank, non-code line with an
-        # unescaped `|` until the first blank / pipe-less line
-        while j < len(lines) and lines[j].strip() != "" and SPLIT_PIPE_RE.search(lines[j]) and not in_fence[j] and not is_code_indented(lines[j]):
+        while (j < len(lines) and lines[j].strip() != "" and SPLIT_PIPE_RE.search(lines[j])
+               and not in_fence[j] and not is_code_indented(lines[j])):
             rows.append(split_row(lines[j]))
             j += 1
         tables.append((header_cells, rows))
 
     if sum(len(r) for _, r in tables) == 0:
+        return tables, 4
+    return tables, None
+
+
+def do_check(file_path):
+    tables, rc = load_tables(file_path)
+    if rc == 10:
+        print("checklist: rows=0 ok=0 violations=0 rc=10")
+        return 10
+    if rc == 4:
         print("checklist: rows=0 ok=0 violations=0 rc=4")
         return 4
 
@@ -676,6 +686,11 @@ def build_parser():
     p_extract.add_argument("--transcript", required=True)
     p_extract.add_argument("--out", default=None)
 
+    p_unblocked = sub.add_parser(
+        "unblocked",
+        help="surface rows whose blocker is DONE but which are still open")
+    p_unblocked.add_argument("--file", required=True)
+
     p_check = sub.add_parser(
         "check",
         help="validate a filled checklist",
@@ -687,6 +702,98 @@ def build_parser():
     return parser
 
 
+DEP_RE = re.compile(r"\b([A-Z]{1,3}\d{1,3})\s*(?:선행|착지\s*후|이후|완료\s*후|after)\b")
+
+
+def do_unblocked(file_path):
+    """Surface rows whose declared BLOCKER is now DONE but which are themselves still not DONE.
+
+    WHY THIS EXISTS (2026-09-19, measured on this repo's own checklist). Three operator requests
+    degraded mid-session. They were NOT missing from the checklist — they were ON it, marked
+    blocked on row A13, and A13 later landed DONE. Nothing re-read the checklist at that moment,
+    so A6/A8/A9 sat unblocked and idle until the operator asked again. The operator's prescription
+    was literal: "체크리스트를 쓰고 그걸 네가 테스트 한차례 끝날때마다 들여다봐야할것같아."
+
+    🟥 This is a CHANNEL check, not a judgment (§Mechanization Boundary). It asserts a property of
+    the RECORD — this row names a blocker, that blocker reads DONE, this row does not — and never
+    asserts that the row *should* now be worked. A truth check would freeze today's judgment; a
+    channel check ages well.
+
+    rc contract:
+      0   nothing is unblocked-and-idle, AND at least one dependency edge was found
+      1   one or more rows are unblocked but still idle  (the finding)
+      4   DEAD CONTROL — rows exist but ZERO dependency edges were parsed. "0 findings" from an
+          instrument that found nothing to look at is not a clean bill; it is an unread channel.
+      10  input error (file missing / no 상태 table), inherited from load_tables
+    """
+    tables, rc = load_tables(file_path)
+    if rc == 10:
+        print("unblocked: rows=0 edges=0 findings=0 rc=10")
+        return 10
+    if rc == 4:
+        print("unblocked: rows=0 edges=0 findings=0 rc=4")
+        return 4
+
+    status_by_id = {}
+    rows_flat = []
+    for header_cells, rows in tables:
+        idx_status = find_header_index(header_cells, "상태")
+        if idx_status is None or idx_status == -1:
+            continue
+        idx_num = None
+        for i, c in enumerate(header_cells):
+            if c.strip() == "#":
+                idx_num = i
+                break
+        if idx_num is None:
+            idx_num = 0
+        for cells in rows:
+            if idx_num >= len(cells):
+                continue
+            rid = re.sub(r"[^A-Za-z0-9]", "", cells[idx_num]).upper()
+            if not rid:
+                continue
+            keys = classify_status(cells[idx_status] if idx_status < len(cells) else "")
+            status_by_id[rid] = keys
+            rows_flat.append((rid, keys, cells))
+
+    edges = 0
+    findings = []
+    for rid, keys, cells in rows_flat:
+        # 🟥 EDGES ARE COUNTED FOR EVERY ROW, findings only for open ones. Counting edges only on
+        # open rows collapsed two different nothings into the same rc=4: "every dependency was
+        # resolved and closed" and "nobody ever wrote a dependency". The first is a clean run; the
+        # second is an unread channel. («not found» is not «0» — the named family in this repo.)
+        idle = not ("DONE" in keys or "n/a" in keys)
+        joined = " | ".join(cells)
+        for m in DEP_RE.finditer(joined):
+            dep = m.group(1).upper()
+            if dep == rid or dep not in status_by_id:
+                continue      # a pointer to a row that does not exist is a different defect (phantom)
+            edges += 1
+            if idle and "DONE" in status_by_id[dep]:
+                findings.append((rid, dep, m.group(0)))
+
+    # dedupe: one finding per (row, blocker)
+    seen = set()
+    uniq = []
+    for f in findings:
+        k = (f[0], f[1])
+        if k not in seen:
+            seen.add(k)
+            uniq.append(f)
+
+    for rid, dep, phrase in uniq:
+        print("  ⚠️  %s is still open, but its blocker %s reads DONE  («%s»)" % (rid, dep, phrase))
+
+    if edges == 0:
+        print("unblocked: rows=%d edges=0 findings=0 rc=4  — DEAD CONTROL: no dependency edge parsed"
+              % len(rows_flat))
+        return 4
+    print("unblocked: rows=%d edges=%d findings=%d rc=%d" % (len(rows_flat), edges, len(uniq), 1 if uniq else 0))
+    return 1 if uniq else 0
+
+
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -695,6 +802,8 @@ def main(argv=None):
         return do_extract(args.transcript, args.out)
     if args.cmd == "check":
         return do_check(args.file)
+    if args.cmd == "unblocked":
+        return do_unblocked(args.file)
 
     parser.print_help()
     return 10

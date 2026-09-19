@@ -197,6 +197,13 @@ ACCEPTED_ABSENT=(
   #       아니다. 여기 등재하는 이유도 같다: files[] 추가는 소비자-대면 변경이라 false-FAIL 이
   #       없음을 tarball 모드로 따로 증명해야 하는데, 이 델타는 **배선 델타**다. 카드로 이월.
   "scripts/test_prepush_destructive_liveness.sh"
+  #     ⓐ-2 test_liveness_echo_token_lanes.sh — ⓐ 의 **앵커**다. 주체가 위에서 «일부러 안 싣는»
+  #       파일이므로, 소비자 머신에는 이 레인이 잴 대상이 아예 없다. 실어봐야 매 실행 SKIP 이고,
+  #       그 SKIP 은 「부재」와 「건강함」을 또 같은 글자로 만든다 — 이 레인이 존재하는 이유가
+  #       바로 그 부류의 충돌이다. 🟥 이것은 **빚이 아니라 «안 싣는 게 옳은» 쪽**이다(위 ⓒ 철회가
+  #       가른 그 구분): 주체가 없어서 못 재는 것이지, 재야 하는데 미룬 게 아니다. 주체가 언젠가
+  #       출하되면 이 예외도 같이 사라져야 한다 — 소비되지 않는 예외는 다음 진짜 누락을 삼킨다.
+  "scripts/test_liveness_echo_token_lanes.sh"
   #     🟥 ⓒ 는 **철회했다 — cross-family R2 지적이 맞았다.** 초판이
   #       `templates/predelete_check.test.sh` 를 여기 넣고 «위 chamber 건과 같은 빚» 이라고 적었는데,
   #       그 둘은 같지 않다: chamber 는 «주체가 출하되는데 앵커가 안 나간다» 를 **빚으로 남긴** 것이고,

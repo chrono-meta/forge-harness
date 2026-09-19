@@ -661,6 +661,8 @@ for _pair in \
   "scripts/destructive_pre_gate.sh|scripts/test_destructive_pre_gate_lanes.sh" \
   "templates/.git-hooks/pre-push|scripts/test_prepush_destructive_lanes.sh" \
   "templates/.git-hooks/pre-push|scripts/test_prepush_destructive_liveness.sh" \
+  `# ── 증거 vs 판정 토큰 충돌(2026-09-19). SUBJECT 는 훅이 아니라 «되돌림 프로브 자신»이다 — 이 레인이 재는 것은 게이트의 동작이 아니라 그 프로브의 «출력 계약»(자기가 authored 한 줄에만 ❌ 를 쓴다)이고, 이 집계기가 ❌ 로 실패를 판정하므로 둘이 같은 채널을 공유한다. 실측: run 35426860480 의 로그를 사람이 두 번 연속 오귀속했다 ──` \
+  "scripts/test_prepush_destructive_liveness.sh|scripts/test_liveness_echo_token_lanes.sh" \
   "templates/.git-hooks/pre-push|scripts/test_push_zone_lanes.sh" \
   "scripts/push_zone_check.sh|scripts/test_push_zone_lanes.sh" \
   "scripts/session_close_check.sh|scripts/test_push_zone_lanes.sh" \
@@ -693,6 +695,12 @@ for _pair in \
   "scripts/fixture_guard_lib.sh|scripts/test_fixture_guard_lanes.sh" \
   "scripts/stray_path_scan.sh|scripts/test_stray_path_lanes.sh" \
   "scripts/session_close_check.sh|scripts/test_stray_path_lanes.sh" \
+  `# 티키타카 채점기 (2026-09-19 신설) — 다중턴 sim 의 «수렴/반영» 을 채점한다. 러너(--turns)는 있었고 채점기가 0줄이었다.` \
+  "scripts/tikitaka_score.py|scripts/test_tikitaka_score_lanes.sh" \
+  `# 체크리스트 unblocked (2026-09-19 신설) — 막혀 있던 행의 블로커가 DONE 이 됐는데 그 행이 안 움직였나.
+  #   운영자 지적: «내 발화가 도중에 열화되었다 … 테스트 한 차례 끝날 때마다 들여다봐야 할 것 같다».
+  #   SUBJECT 를 session_checklist.py 로 잡는다 — 이 레인이 재는 것은 그 도구의 판정이다.` \
+  "scripts/session_checklist.py|scripts/test_checklist_unblocked_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_hook_leg_wiring_lanes.sh" \
   ".claude/soul_tenets.txt|scripts/test_marker_soul_tenet_lanes.sh" \
   "docs/map/fh_assets.architecture.json|scripts/test_fh_map_paths_lanes.sh" \

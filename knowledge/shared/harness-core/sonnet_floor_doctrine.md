@@ -22,6 +22,77 @@ whatever the operator chose. A Sonnet-only environment is a **first-class mode**
 Sonnet, extract the harness's maximum, and name residuals honestly (below-floor / sonnet-floor
 markers) — never silently drop a capability.
 
+## The minimum-spec formulation (operator, 2026-09-19)
+
+> *"꼭 모두 기계화를 해야하는것은 아니지만 최소환경에서도 모두 돌아갈수있게 보장하는것이 중요하다.
+> 게임의 최소사양에서도 게임자체의 화질이나 디테일은 떨어지더라도 모든 기능이 정상작동하는것처럼.
+> 모델의 티어가 높아질수록 모든 기능에 가속도와 스스로 할수있는(안정적으로 돌아가면서도 자신의
+> 천장까지 도달가능한) 영역이 확장되는거지."*
+
+This sharpens the invariant above in two ways it did not previously state.
+
+**① At minimum spec, EVERY feature runs — fidelity degrades, capability does not.** A game at its
+minimum spec is not a smaller game with levels removed; it is the same game at lower resolution.
+So the floor question is never *"which features does Sonnet get?"* — it is *"does every feature
+run, more coarsely?"* A feature that is absent at the floor is a defect; a feature that is
+**slower, shallower, or less polished** at the floor is the design working.
+
+🟥 **This also bounds the mechanization reflex, and the operator bounded it first**: *"꼭 모두
+기계화를 해야하는것은 아니지만."* The obligation is **guaranteed operation at minimum spec**, not
+total mechanization. A hook, a script and a discipline are all acceptable answers — what is not
+acceptable is an answer that only works because a strong model was carrying it. Mechanization is
+one way to reach the floor and is preferred where the trigger is mechanical (§Mechanization
+Boundary decides which), but it is a means here, not the target.
+
+**② Above the floor, a tier buys acceleration AND a higher reachable ceiling.** The gain is not
+"more features unlock" — it is (a) everything goes faster, and (b) the band the session can carry
+**by itself** widens: *"안정적으로 돌아가면서도 자신의 천장까지 도달가능한"*. Two conditions, and the
+first is load-bearing — a tier that reaches further but unreliably has not widened anything.
+⇒ When a stronger tier is in use, the honest report is *"this ran faster and I carried more of it
+alone"*, never *"this was only possible here"*. The second sentence, if true, names a floor defect.
+
+**Worked example, same day.** The operator's prescription «체크리스트를 테스트 한 차례 끝날 때마다
+들여다봐라» could have shipped as a resident prose rule. At the floor that is a rule a session must
+remember mid-run — exactly the muscle-not-skeleton shape. It shipped instead as a `SubagentStop`
+hook + `session_checklist.py unblocked`: **no model in the loop** (stdlib only, zero network, zero
+model calls — verified by scan), so it fires identically at every tier. What a higher tier adds is
+what it *does* with the surfaced rows, not whether they surface.
+
+### The floor is the smallest runtime we actually run — and there, the limit is CONTEXT
+
+Operator, same day: *"우리는 qwen3.8도 있으니까 그것이 클로드 라우터 환경에서 클로드 컴패티블로
+돌아갈때도 보장할 수 있는 (우리하네스의 설계의도와 철학. 루프 등)을 물리적 한계치 안에서
+돌아갈수있도록도 해야지(물론그로인해 컴팩션이 자주일어날수야있겠지만)."*
+
+🟥 **This moves the floor.** "Sonnet-floor" names a *tier*; the operator names a *physical envelope* —
+a smaller open model served through a Claude-compatible router. There the binding constraint is not
+reasoning depth, it is **context size**, and its symptom is named in the same breath: compaction
+happens often. So at the true floor the question changes shape:
+
+> Not *"can it follow the rule?"* but **"does the rule survive the compaction that will certainly happen?"**
+
+A rule that lives only in the running conversation is, at that envelope, a rule with a half-life. What
+survives is what is **re-established from disk on the other side of a compaction**: resident CLAUDE.md,
+hooks that fire on events rather than on memory, files a session re-reads, and loops whose state is on
+disk rather than in the transcript.
+
+**This is reachable, not aspirational — the machinery is already live.** `scripts/compaction_probe.sh`
+(588 lines) seals a pointer ledger at compaction and re-injects it afterwards, wired through
+`templates/settings.Compaction.snippet.json`. Measured 2026-09-19: **65 seals on disk**, two of them
+written during that day's own session and re-read after both compactions. 🟥 A first count in that
+same session read **0** — `ls | wc -l` on a live directory — and was corrected only by counting the
+channel before asserting absence (§Instrument Calibration; `not found` is not `0`).
+
+**What this asks of every new asset**, therefore, is one extra question beyond tier-independence:
+*where does this live when the conversation is gone?* A prose rule answers "nowhere". A hook, a
+script, a file the session re-reads on wake, or a ledger entry answers it concretely.
+
+🟥 **Honest scope.** No harness asset has been run under a Qwen-class router in this project —
+**zero measurements**. What is established is the design property (disk-resident survives compaction)
+and that the compaction channel fires here. Whether a Claude-compatible router preserves hook
+semantics, system-prompt budget, or tool-call fidelity is **UNMEASURED**, and the first honest step is
+a known-pair on that runtime, not a claim about it.
+
 ## Why this is the optimization target (measured, not aspirational)
 
 - **H1 (2026-07-05)**: the anchor-emit harness reduced borderline verdict flips **more on weaker

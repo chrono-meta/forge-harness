@@ -56,6 +56,34 @@ REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 HOOK="$REPO_ROOT/templates/.git-hooks/pre-push"
 SUITE="$REPO_ROOT/scripts/test_prepush_destructive_lanes.sh"
 
+# ── EVIDENCE ECHO — the probe's EVIDENCE must not wear the AGGREGATOR's failure glyph ────────
+# 🟥 This is a seam between two individually-correct roles ([[feedback_two_roles_one_file_unowned_conflict]]).
+#   · scripts/selfcheck.sh decides a suite failed by grepping its output for `❌` (_show_failure,
+#     and the lane loop streams suite stdout straight into the CI log).
+#   · THIS file is a revert probe. Its evidence IS a red line: "I disabled the guard and the lane
+#     that backs it went red." So it re-prints the subject suite's red lines on purpose.
+# Same glyph, opposite meanings. Measured consequence (2026-09-19, run 35426860480): the CI log
+# carried `✅ P4 delete INTEGRATION branch` and `❌ P4 delete INTEGRATION branch` two seconds apart,
+# BOTH correct, and the same lane was misattributed twice in a row by a human reading the log —
+# once as "flaky", once as "selfcheck counts the intended red as a failure". Nothing was broken;
+# the log was unreadable. And one mechanical hole was left: if this probe ever exits non-zero, the
+# aggregator's report mixes intended reds with real ones and has no way to tell them apart.
+#
+# The fix belongs HERE, not in the aggregator. An exemption list in selfcheck ("liveness is
+# special") leaks again at the next revert probe; re-tokenising at the source does not.
+# The evidentiary value is the FACT that the lane reddened, never the character used to say so
+# ([[feedback_compare_beats_pinning_a_constant]] — do not pin a glyph you do not own).
+#
+# INVARIANT this establishes, and what the anchor asserts (scripts/test_liveness_echo_token_lanes.sh):
+#   `❌` appears in THIS probe's stdout only on lines THIS probe authored, at column 0.
+#   Everything re-printed from a subject suite is indented, prefixed `   | `, and its reds read
+#   `[expected-red]`. A green run therefore emits zero `❌`, and in a red run every `❌` is real.
+# 🟥 Substitution only — never deletion. A probe that hides the red line stops being evidence, so
+# the anchor also asserts the re-tokenised line is still THERE.
+_echo_evidence() {   # stdin = subject-suite output being re-printed as evidence
+  sed -e 's/❌/[expected-red]/g' -e 's/^/   | /'
+}
+
 for f in "$HOOK" "$SUITE"; do
   [ -f "$f" ] || { echo "HARNESS_ERROR — missing: $f (absent instrument is NOT a pass)"; exit 1; }
 done
@@ -161,13 +189,13 @@ out=$(FH_TEST_SUBJECT_ROOT="$C" bash "$SUITE" 2>&1); rc=$?
 if [ "$rc" -eq 0 ]; then
   echo "❌ DECORATIVE ANCHOR — the gate was disabled and the suite still PASSED."
   echo "   Every green run of test_prepush_destructive_lanes.sh certifies nothing."
-  printf '%s\n' "$out" | sed 's/^/   | /'
+  printf '%s\n' "$out" | _echo_evidence
   exit 1
 fi
 if ! printf '%s' "$out" | grep -qF "$EXPECT_LANE"; then
   echo "❌ Suite went red, but NOT on the expected lane ($EXPECT_LANE)."
   echo "   It failed for an unrelated reason, so liveness is UNPROVEN — not established, not refuted."
-  printf '%s\n' "$out" | sed 's/^/   | /'
+  printf '%s\n' "$out" | _echo_evidence
   exit 1
 fi
 
@@ -175,7 +203,11 @@ fi
 # lanes are entangled and none of them isolates what it claims to.
 reds=$(printf '%s\n' "$out" | grep -c '❌')
 echo "② suite went red on cue — reddened lanes: $reds"
-printf '%s\n' "$out" | grep -E '❌|캘리브레이션' | sed 's/^/   /'
+# 🟥 THIS is the line that fired in CI (run 35426860480) and got misread twice. It is the SUCCESS
+# path: the probe is passing, and it prints a red line as proof. It was also the only evidence echo
+# in this file printed RAW while the two failure branches above already wrapped theirs in `   | `.
+# Both halves are fixed at once — one prefix shape, one glyph policy, no per-branch exceptions.
+printf '%s\n' "$out" | grep -E '❌|캘리브레이션' | _echo_evidence
 if [ "$reds" -ne 1 ]; then
   echo "⚠️  expected exactly 1 reddened lane, got $reds — lanes may not be isolating what they name."
   exit 1
@@ -243,7 +275,7 @@ pout=$(PATH="$SHIM:$PATH" bash "$SUITE" 2>&1); prc=$?
 if [ "$prc" -ne 0 ]; then
   echo "❌ PORTABILITY REGRESSION — the suite does not run on git < 2.28 (rc=$prc)."
   echo "   Build fixtures with \`git init\` + \`git symbolic-ref HEAD refs/heads/main\`, never \`init -b\`."
-  printf '%s\n' "$pout" | grep -E '❌|HARNESS_ERROR|unknown switch|캘리브레이션' | sed 's/^/   | /' | head -10
+  printf '%s\n' "$pout" | grep -E '❌|HARNESS_ERROR|unknown switch|캘리브레이션' | _echo_evidence | head -10
   exit 1
 fi
 echo "④ portability: suite is GREEN under a git with no \`init -b\` — $(printf '%s' "$pout" | grep -c '✅') lanes"
@@ -275,11 +307,11 @@ fi
 if ! printf '%s' "$sout" | grep -qF 'HARNESS_ERROR — fixture repo not built'; then
   echo "❌ SETUP FAILURE IS UNNAMED — the suite went red without saying the fixture never built."
   echo "   An unnamed red is indistinguishable from a real finding, and the next reader 'fixes' the gate."
-  printf '%s\n' "$sout" | tail -8 | sed 's/^/   | /'; exit 1
+  printf '%s\n' "$sout" | tail -8 | _echo_evidence; exit 1
 fi
 if [ "$sgreen" -ne 0 ]; then
   echo "❌ FAIL-OPEN — $sgreen lane(s) scored ✅ with NO fixture repo. Those lanes graded the REAL tree."
-  printf '%s\n' "$sout" | grep '✅' | sed 's/^/   | /' | head -8; exit 1
+  printf '%s\n' "$sout" | grep '✅' | _echo_evidence | head -8; exit 1
 fi
 echo "⑤ setup-loudness: unbuildable fixture → rc=$src, named HARNESS_ERROR, 0 lanes scored"
 
@@ -627,7 +659,7 @@ _after=$(git_state)
 
 if [ "$crc" -ne 0 ]; then
   echo "❌ CONTAINMENT stage could not measure — the suite itself failed (rc=$crc)."
-  printf '%s\n' "$cout" | grep -E '❌|HARNESS_ERROR' | sed 's/^/   | /' | head -6; exit 1
+  printf '%s\n' "$cout" | grep -E '❌|HARNESS_ERROR' | _echo_evidence | head -6; exit 1
 fi
 if [ "$CONTAINMENT" = "skip" ]; then
   echo "⑦ containment: SKIPPED — $REPO_ROOT is not a git work tree (nothing to compare; NOT a pass)"
@@ -635,7 +667,7 @@ elif [ "$_before" != "$_after" ]; then
   echo "❌ FIXTURE LEAK — running the suite CHANGED the real repository."
   echo "   Fixtures must live only under mktemp. In a shared checkout a staged fixture file is"
   echo "   committed by whoever commits next. Diff of git state (before → after):"
-  diff <(printf '%s\n' "$_before") <(printf '%s\n' "$_after") | sed 's/^/   | /' | head -20
+  diff <(printf '%s\n' "$_before") <(printf '%s\n' "$_after") | _echo_evidence | head -20
   exit 1
 else
   echo "⑦ containment: real repo byte-identical across a full suite run (status·HEAD·refs·tags·index)"

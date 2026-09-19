@@ -1,0 +1,17 @@
+# tikitaka 채점 spec — 🟥 시나리오와 «같이» 고정한다. 결과를 보고 고치지 않는다.
+# 정본 = tracks/_meta/prereg_2026-09-19_qasp-tikitaka-sim.md §2
+
+# C2 — T2 에서 선언한 제약이 절충안 C 에 «수치로» 나타나는가.
+# 🟥 채점기가 이 토큰이 turns.txt 의 되밀기 턴에 실제로 있는지 되짚는다(SPEC-MISMATCH).
+#    결과를 본 뒤 spec 만 고쳐 통과시키는 경로를 막는 결박이다.
+constraint=4건
+constraint=2일
+
+# A2 — |A| 와 |T4| 의 차가 이 값 이하면 «원안 복귀» 로 FAIL.
+# 사전등록의 «A 의 항목 수 ≈ T4 항목 수 면 실패» 에서 ≈ 를 1 로 못박는다.
+revert_tol=1
+
+# 전사본의 어느 턴 «출력» 이 어느 역할인가. 사전등록 §2-ⓐ 의 T1·T3·T4 라벨 그대로.
+role_A=1
+role_C=3
+role_T4=4
