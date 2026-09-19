@@ -772,12 +772,97 @@ else
 fi
 
 
+# ── X 레인 : psa_extract_text.py 를 «직접» 실행한다 (2026-09-19) ───────────────────────
+# 🟥 왜 별도인가: B 레인은 이 추출기를 `psa_scan_file` 을 통해 **간접**으로만 태웠고,
+#    new-code-anchor 게이트가 그것을 잡았다 — *"a lane NAMES the file without running it …
+#    adding another mention does not clear it."* 추출기는 자기 계약(0 텍스트 · 2 사용법/부재 ·
+#    3 추출불가)을 가지므로 그 계약을 **직접** 재는 레인이 있어야 한다.
+_X="$REPO_ROOT/scripts/psa_extract_text.py"
+if [ -f "$_X" ] && command -v python3 >/dev/null 2>&1; then
+  _xd=$(mktemp -d)
+  python3 - "$_xd" <<'_PYX'
+import sys, os
+d = sys.argv[1]
+# 🟥 결정적 픽스처 — PyMuPDF 저장은 같은 입력에도 NUL 유무가 갈린다(실측 822B/844B).
+#    xref 까지 갖춘 유효 PDF 를 손으로 조립하면 그 비결정성을 안 탄다.
+def _mini_pdf(tok):
+    objs = [b"<</Type/Catalog/Pages 2 0 R>>",
+            b"<</Type/Pages/Kids[3 0 R]/Count 1>>",
+            b"<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]"
+            b"/Resources<</Font<</F1 5 0 R>>>>/Contents 4 0 R>>"]
+    body = b"BT /F1 12 Tf 72 720 Td (" + tok + b") Tj ET"
+    objs.append(b"<</Length " + str(len(body)).encode() + b">>stream\n" + body + b"\nendstream")
+    objs.append(b"<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>")
+    out = bytearray(b"%PDF-1.4\n"); offs = []
+    for i, o in enumerate(objs, 1):
+        offs.append(len(out)); out += str(i).encode() + b" 0 obj" + o + b"endobj\n"
+    x = len(out)
+    out += b"xref\n0 " + str(len(objs) + 1).encode() + b"\n0000000000 65535 f \n"
+    for o in offs:
+        out += ("%010d 00000 n \n" % o).encode()
+    out += (b"trailer<</Size " + str(len(objs) + 1).encode() + b"/Root 1 0 R>>\nstartxref\n"
+            + str(x).encode() + b"\n%%EOF\n")
+    return bytes(out)
+open(os.path.join(d, "good.pdf"), "wb").write(_mini_pdf(b"contact PSABINCANARY here"))
+_b = b"BT (contact PSABINCANARY here) Tj ET"
+open(os.path.join(d, "broken.pdf"), "wb").write(
+    b"%PDF-1.4\n4 0 obj<</Length " + str(len(_b)).encode() + b">>stream\n" + _b
+    + b"\nendstream endobj\ntrailer\n%%EOF\n")
+open(os.path.join(d, "plain.md"), "w").write("contact PSABINCANARY here\n")
+open(os.path.join(d, "junk.bin"), "wb").write(bytes(range(256)) * 2)
+_PYX
+
+  _xrun() { _xout=$(python3 "$_X" "$1" 2>/dev/null); _xrc=$?; }
+
+  _xrun "$_xd/good.pdf"
+  { [ "$_xrc" = "0" ] && printf '%s' "$_xout" | grep -q PSABINCANARY; } \
+    && ok "X1 유효 PDF → exit 0 + 본문 텍스트(글리프를 풀어 읽는다)" \
+    || bad "X1 rc=$_xrc / 토큰 미검출 — 추출기가 PDF 텍스트를 못 읽는다"
+
+  _xrun "$_xd/broken.pdf"
+  [ "$_xrc" = "3" ] \
+    && ok "X2 🟥 컨테이너가 0자를 내면 exit 3 — «열었는데 아무것도 없음»은 CLEAN 이 아니다" \
+    || bad "X2 rc=$_xrc (want 3) — 빈 추출이 통과하면 거짓 초록이 한 층 아래로 옮겨간다"
+
+  _xrun "$_xd/junk.bin"
+  [ "$_xrc" = "3" ] && ok "X3 알 수 없는 비텍스트 → exit 3 (목록 밖은 거절 방향)" \
+                    || bad "X3 rc=$_xrc (want 3)"
+
+  _xrun "$_xd/plain.md"
+  { [ "$_xrc" = "0" ] && printf '%s' "$_xout" | grep -q PSABINCANARY; } \
+    && ok "X4 CONTROL — 텍스트는 그대로 통과(0). 3 이 아무 데나 안 뜬다" \
+    || bad "X4 rc=$_xrc — 텍스트 경로가 깨졌다"
+
+  _xrun "$_xd/nope.pdf"
+  [ "$_xrc" = "2" ] && ok "X5 없는 파일 → exit 2 (사용법 오류와 추출 실패를 가른다)" \
+                    || bad "X5 rc=$_xrc (want 2)"
+
+  _xout=$(python3 "$_X" 2>/dev/null); _xrc=$?
+  [ "$_xrc" = "2" ] && ok "X6 인자 없음 → exit 2" || bad "X6 rc=$_xrc (want 2)"
+
+  # 실물 — 이 레포가 실제로 출하하는 컨테이너
+  _xp="$REPO_ROOT/plugins/fh-preprep/skills/preprep/fixtures/fixture_R3_positive.pptx"
+  if [ -f "$_xp" ]; then
+    _xrun "$_xp"
+    { [ "$_xrc" = "0" ] && [ "${#_xout}" -gt 1000 ]; } \
+      && ok "X7 출하 .pptx → exit 0 + XML 전 파트(${#_xout}자). 발행 게이트가 안을 본다" \
+      || bad "X7 rc=$_xrc / ${#_xout}자 — 출하 컨테이너를 못 읽으면 매 릴리스가 막힌다"
+    _cond_lanes=$((_cond_lanes+1))
+  else
+    printf '  ⏭  X7 skipped — 출하 pptx 픽스처 부재 (skip != pass)\n'
+  fi
+  rm -rf "$_xd"
+else
+  echo "  ❌ INSTRUMENT ERROR — psa_extract_text.py 또는 python3 부재; X 레인 미실행(스킵 아님)"
+  fail=$((fail+1))
+fi
+
 [ "$fail" -eq 0 ] || exit 1
 # 🟥 플로어는 **조건부 레인을 반영한 값**이다. 33 = zsh 없는 러너의 기저(Z1~Z4 · E2~E5/zsh 스킵).
 #    zsh 가 있으면 +8. 상수 하나로 박으면 «스킵 = 계기 오류» 가 되어 러너를 거짓 적색으로 만든다.
 #    ⚠️ 그리고 이 수식이 말하는 진짜 사실을 잊지 마라: **zsh 축은 zsh 가 있는 곳에서만 검증된다.**
 #    CI 에 zsh 를 설치한 이유가 그것이고(.github/workflows/validate.yml), 그게 없으면 이 PR 이
 #    고친 결함의 축이 CI 에서 **한 번도** 안 돌아간다.
-_floor=$((56 + _cond_lanes))
+_floor=$((62 + _cond_lanes))
 [ "$pass" -ge "$_floor" ] || { echo "  ❌ INSTRUMENT ERROR — only $pass lanes ran; expected >=$_floor (zsh 조건부 +$_cond_lanes)"; exit 3; }
 exit 0
