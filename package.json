@@ -201,6 +201,7 @@
     "scripts/proposal_hook.sh",
     "scripts/psa_probe_capability.sh",
     "scripts/psa_scan_lib.sh",
+    "scripts/psa_extract_text.py",
     "scripts/public_surface_scan_files.sh",
     "scripts/publish_freshness_check.sh",
     "scripts/push_zone_check.sh",
