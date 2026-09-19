@@ -59,6 +59,25 @@ case "${FH_STUB_MODE:-say}" in
   # L26 (2026-09-05) — a command that runs long past any sane --timeout, default SIGTERM
   # disposition (no trap): dies as soon as the watchdog signals it, so a lane can tell "the
   # deadline was enforced" from "we just waited for it to finish on its own".
+  # L28 — multi-turn. Emits the shape `--output-format json` produces and echoes back whichever
+  # session id it was resumed with, so a lane can tell "the runner plumbed --resume" apart from
+  # "it did not". A fresh call mints a NEW id from a counter file, which is what makes the
+  # ARM/CTRL pair discriminate: same id across turns = carried, different ids = cold sessions.
+  turns)    _sid=""; _prev=""; _res=0
+            for _a in "$@"; do [ "$_prev" = "--resume" ] && _sid="$_a"; _prev="$_a"; done
+            if [ -n "$_sid" ]; then _res=1; else
+              _c=$(cat "${FH_STUB_SID_COUNTER:-/dev/null}" 2>/dev/null); [ -n "$_c" ] || _c=0
+              _n=$((_c+1)); echo "$_n" > "${FH_STUB_SID_COUNTER:-/dev/null}" 2>/dev/null || true
+              _sid="SID-$_n"
+            fi
+            printf '{"session_id":"%s","result":"resumed=%s sid=%s"}\n' "$_sid" "$_res" "$_sid" ;;
+  # L28k/l/m — the three ways a multi-turn run can fail while looking clean.
+  turns_badjson) echo "not json at all {" ;;
+  turns_nosid)   printf '{"result":"answer with no session id"}\n' ;;
+  turns_die2)    _c=$(cat "${FH_STUB_SID_COUNTER:-/dev/null}" 2>/dev/null); [ -n "$_c" ] || _c=0
+                 _n=$((_c+1)); echo "$_n" > "${FH_STUB_SID_COUNTER:-/dev/null}" 2>/dev/null || true
+                 if [ "$_n" -eq 2 ]; then exit 7; fi
+                 printf '{"session_id":"SID-fixed","result":"turn %s ok"}\n' "$_n" ;;
   hang)     sleep 30 ;;
 esac
 exit 0
@@ -396,6 +415,113 @@ OUTDIR="$WORKROOT/o27c"; LOG2="$WORKROOT/argv27c.log"; : > "$LOG2"; printf '{"mc
 grep -q -- "--mcp-config $WORKROOT/mcp27.json" "$LOG2" && grep -q -- "--strict-mcp-config" "$LOG2" \
   && ok "L27c --mcp-config <file> reaches the CLI together with --strict-mcp-config (explicit allow, still strict)" \
   || no "L27c --mcp-config not plumbed (or strict dropped when a file is given)"
+
+echo "── L28 multi-turn — --turns plumbing + --no-resume CONTROL ─────────"
+# 🟥 These lanes measure the RUNNER'S WIRING (is --resume passed, is session_id parsed, are
+#    turns counted), not whether a real session carries context. The live known-pair for THAT
+#    is recorded in the marker: ARM answered the turn-1 fact at turn 2 with one session id;
+#    --no-resume answered "you never told me" with two. A stub cannot establish that, and
+#    pretending it does would be the muscle-not-skeleton defect.
+
+printf 'turn one\n# a comment turn that must be skipped\n\nturn two\nturn three\n' > "$WORKROOT/t3.txt"
+
+# ── usage guards (known-negative: a bad invocation must NOT proceed) ──
+# 🟥 rc=2 ALONE IS NOT THE ASSERTION. Before --turns existed, an unknown flag ALSO exits 2 —
+#    so a bare rc check is green for the wrong reason (lane-green reason ②: the input never
+#    reached the code under test). Each guard therefore asserts the REASON in the message.
+run_sut --arm a --reps 1 --turns "$WORKROOT/does_not_exist.txt" --out "$WORKROOT/o28a"
+{ [ "$RC" -eq 2 ] && printf '%s' "$OUT" | grep -q -- "--turns file not found"; } \
+  && ok "L28a missing --turns file → rc=2 AND the message names the file (not 'unknown flag')" \
+  || no "L28a rc=$RC / message did not name a missing --turns file"
+
+printf '# only a comment\n\n\n' > "$WORKROOT/t_empty.txt"
+run_sut --arm a --reps 1 --turns "$WORKROOT/t_empty.txt" --out "$WORKROOT/o28b"
+{ [ "$RC" -eq 2 ] && printf '%s' "$OUT" | grep -q "no turns"; } \
+  && ok "L28b comment/blank-only turns file → rc=2 naming 'no turns' (a zero-turn run must not read as clean)" \
+  || no "L28b rc=$RC / message did not name a zero-turn file — an empty conversation would score as a run"
+
+run_sut --arm a --reps 1 --prompt p --turns "$WORKROOT/t3.txt" --out "$WORKROOT/o28c"
+{ [ "$RC" -eq 2 ] && printf '%s' "$OUT" | grep -q "mutually exclusive"; } \
+  && ok "L28c --prompt + --turns → rc=2 naming the conflict (which one ran must never be ambiguous)" \
+  || no "L28c rc=$RC / message did not name the conflict"
+
+# ── ARM: resume ON ──
+OUTDIR="$WORKROOT/o28arm"; LOGA="$WORKROOT/argv28arm.log"; : > "$LOGA"; : > "$WORKROOT/sid_arm"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=turns \
+   FH_STUB_ARGV_LOG="$LOGA" FH_STUB_SID_COUNTER="$WORKROOT/sid_arm" \
+   bash "$SUT" --arm mt --reps 1 --turns "$WORKROOT/t3.txt" --out "$OUTDIR" ) >/dev/null 2>&1
+TSV="$OUTDIR/mt_r1.turns.tsv"
+NROW=$( [ -f "$TSV" ] && awk 'NR>1' "$TSV" | grep -c . || echo 0 )
+[ "$NROW" -eq 3 ] && ok "L28d 5-line file → 3 turns (blank + # skipped)" \
+                  || no "L28d turn count is $NROW, expected 3 — comment/blank skipping is off"
+NSID=$( [ -f "$TSV" ] && awk 'NR>1{print $3}' "$TSV" | sort -u | grep -c . || echo 0 )
+[ "$NSID" -eq 1 ] && ok "L28e ARM — all 3 turns share ONE session id (the conversation was carried)" \
+                  || no "L28e ARM produced $NSID distinct session ids, expected 1"
+NRES=$(grep -c -- "--resume" "$LOGA" || true)
+[ "$NRES" -eq 2 ] && ok "L28f ARM — --resume reached the CLI on turns 2..N exactly (2 of 3)" \
+                  || no "L28f ARM passed --resume $NRES times, expected 2"
+NMARK=$(grep -c '^===== turn ' "$OUTDIR/mt_r1.txt" 2>/dev/null || true)
+[ "$NMARK" -eq 3 ] && ok "L28g concatenated transcript carries all 3 turns (existing scorers read this file)" \
+                   || no "L28g transcript has $NMARK turn markers, expected 3"
+
+# ── CTRL: --no-resume. 🟥 Without this arm L28e/L28f measure nothing ──
+OUTDIR="$WORKROOT/o28ctrl"; LOGC="$WORKROOT/argv28ctrl.log"; : > "$LOGC"; : > "$WORKROOT/sid_ctrl"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=turns \
+   FH_STUB_ARGV_LOG="$LOGC" FH_STUB_SID_COUNTER="$WORKROOT/sid_ctrl" \
+   bash "$SUT" --arm mt --reps 1 --no-resume --turns "$WORKROOT/t3.txt" --out "$OUTDIR" ) >/dev/null 2>&1
+TSVC="$OUTDIR/mt_r1.turns.tsv"
+NSIDC=$( [ -f "$TSVC" ] && awk 'NR>1{print $3}' "$TSVC" | sort -u | grep -c . || echo 0 )
+[ "$NSIDC" -eq 3 ] && ok "L28h CTRL — 3 turns, 3 DISTINCT session ids (cold sessions, as designed)" \
+                   || no "L28h CTRL produced $NSIDC distinct session ids, expected 3 — the control is dead"
+NRESC=$(grep -c -- "--resume" "$LOGC" || true)
+[ "$NRESC" -eq 0 ] && ok "L28i CTRL — --resume never reached the CLI" \
+                   || no "L28i CTRL passed --resume $NRESC times, expected 0"
+
+# ── L28j 기존 단발 경로 무변경 (회귀) ──
+OUTDIR="$WORKROOT/o28j"; LOGJ="$WORKROOT/argv28j.log"; : > "$LOGJ"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say FH_STUB_ARGV_LOG="$LOGJ" \
+   bash "$SUT" --arm a --reps 1 --prompt p --out "$OUTDIR" ) >/dev/null 2>&1
+{ ! grep -q -- "--resume" "$LOGJ"; } && { ! grep -q -- "--output-format" "$LOGJ"; } \
+  && [ -s "$OUTDIR/a_r1.txt" ] && [ ! -f "$OUTDIR/a_r1.turns.tsv" ] \
+  && ok "L28j single-shot path untouched — no --resume, no --output-format, no turns.tsv" \
+  || no "L28j single-shot path changed — --turns leaked into the path every existing probe runs on"
+
+# ── 🟥 L28k/l/m — known-NEGATIVES. cross-family (codex) named these: without them the suite
+#    reported "44 passed, 0 failed" over three S/A-tier folds. A lane set that only walks the
+#    happy path measures that the happy path works, which nobody doubted.
+mt_run() {  # $1=stub mode  $2=outdir tag ; sets RC and OUTDIR
+  OUTDIR="$WORKROOT/$2"; : > "$WORKROOT/sid_$2"
+  ( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE="$1" \
+     FH_STUB_SID_COUNTER="$WORKROOT/sid_$2" \
+     bash "$SUT" --arm mt --reps 1 --turns "$WORKROOT/t3.txt" --out "$OUTDIR" ) >"$WORKROOT/o_$2.log" 2>&1
+  RC=$?
+}
+
+mt_run turns_badjson b28k
+# 🟥 The assertion is CONTAMINATED, not rc — this script ends in a deliberate `exit 0`.
+{ grep -q "RESULT: CONTAMINATED" "$WORKROOT/o_b28k.log" \
+  && grep -q "PARSE_FAILED" "$OUTDIR/mt_r1.turns.tsv" 2>/dev/null; } \
+  && ok "L28k unparseable turn output → CONTAMINATED AND note=PARSE_FAILED (not folded into 'said nothing')" \
+  || no "L28k not CONTAMINATED / PARSE_FAILED not recorded — a dead parser reads as an empty answer"
+
+mt_run turns_die2 b28l
+{ grep -q "RESULT: CONTAMINATED" "$WORKROOT/o_b28l.log" \
+  && grep -q "MULTI-TURN INCOMPLETE — first failing turn: 2" "$WORKROOT/o_b28l.log"; } \
+  && ok "L28l turn 2 dies, turn 3 succeeds → CONTAMINATED and names turn 2 (not last-turn rc only)" \
+  || no "L28l a conversation that broke mid-way still scored as clean"
+
+mt_run turns_nosid b28m
+{ grep -q "RESULT: CONTAMINATED" "$WORKROOT/o_b28m.log" \
+  && grep -q "did not demonstrably run" "$WORKROOT/o_b28m.log"; } \
+  && ok "L28m no session_id on a resume turn → CONTAMINATED (the evidence IS the claim)" \
+  || no "L28m a turn that cannot be shown to share the session passed silently"
+
+# 🟥 CONTROL for the three above: the SAME harness on a healthy stub must pass. Without this,
+#    an rc!=0 caused by something unrelated would read as three successful known-negatives.
+mt_run turns b28n
+grep -q "RESULT: CLEAN" "$WORKROOT/o_b28n.log" \
+  && ok "L28n CONTROL — healthy multi-turn run is CLEAN (k/l/m are not firing on everything)" \
+  || no "L28n CONTROL was not CLEAN — L28k/l/m prove nothing"
 
 echo "sim_isolated_run lanes: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1

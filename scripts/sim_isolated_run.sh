@@ -314,6 +314,7 @@ _PYEOF
 
 BASE_REF=""; BASE_SHA=""
 ARM=""; REPS=1; PROMPT=""; MODE="observe"; MODEL="sonnet"; TIMEOUT=900; OUTDIR=""; NOHARNESS=0; SETUP=""; EXTRA=""
+TURNS=""; NORESUME=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --arm)     ARM="${2:-}"; shift 2 ;;
@@ -329,14 +330,148 @@ while [ $# -gt 0 ]; do
     --setup)   SETUP="${2:-}"; shift 2 ;;  # shell run INSIDE each clone before the sim. See below.
     --extra-tools) EXTRA="${2:-}"; shift 2 ;;  # append tools to the mode's set. See TOOL VISIBILITY.
     --mcp-config) MCPCFG="${2:-}"; shift 2 ;;  # the ONLY MCP servers an arm may see (see MCP ISOLATION). Default: none.
+    --turns)   TURNS="${2:-}"; shift 2 ;;  # MULTI-TURN: one turn per line. See §MULTI-TURN.
+    --no-resume) NORESUME=1; shift ;;     # CONTROL arm for --turns:each turn is a fresh session. See §MULTI-TURN.
     *) echo "unknown flag: $1" >&2; exit 2 ;;
   esac
 done
 [ -n "$ARM" ]    || { echo "FAIL: --arm required" >&2; exit 2; }
-[ -n "$PROMPT" ] || { echo "FAIL: --prompt required" >&2; exit 2; }
+[ -n "$PROMPT" ] || [ -n "$TURNS" ] || { echo "FAIL: --prompt or --turns required" >&2; exit 2; }
 case "$MODE" in observe|act) ;; *) echo "FAIL: --mode must be observe|act" >&2; exit 2 ;; esac
 
 command -v claude >/dev/null 2>&1 || { echo "FAIL: claude CLI not on PATH" >&2; exit 2; }
+
+# ── §MULTI-TURN — 티키타카를 재는 자리 (2026-09-19) ──────────────────────────────
+#
+# WHY THIS EXISTS, and what it measures that the single-shot path CANNOT:
+#   A single `-p` call measures **"does it fire"** — the greeting appears, the gate blocks, the
+#   rule is reached. That is the whole existing probe vocabulary and it is a real question.
+#   It cannot reach a second class of question, because that class only exists across turns:
+#     · does a NEGOTIATION converge (user pushes back → trade-offs surface → a compromise lands)
+#     · does the compromise then get APPLIED — i.e. is turn 4 bound by what was agreed in turn 3
+#   FH had measured the first and never the second. `--turns` is that axis, not a convenience.
+#
+# HOW: turn 1 runs normally and its `session_id` is captured from `--output-format json`;
+#      turns 2..N run with `--resume <sid>`. Isolation is UNCHANGED — same disposable clone,
+#      same tool set, same `--strict-mcp-config`, same `< /dev/null`, same timeout per turn.
+#
+# 🟥 `--no-resume` IS THE CONTROL, and it is not optional when you report a number.
+#   It runs the identical turn list with NO resume, so every turn is a cold session. A behaviour
+#   that survives `--no-resume` was never carried by the conversation — it was carried by the
+#   prompt text of that one turn. Same shape as `--no-harness` above: the defect is the
+#   instrument ([[feedback_control_presence_is_not_discrimination]]).
+#
+# 🟥 A TURN IS ONE LINE. A turns file cannot express a multi-line utterance, on purpose: the
+#   alternative (a delimiter) silently swallows a turn whose text contains the delimiter, and a
+#   swallowed turn reads as a shorter conversation, not as an error.
+#   Blank lines and `#` comments are skipped. `\n` is NOT unescaped — what you write is what the
+#   session receives.
+#
+# 🟥 SESSION STATE IS NOT IN THE CLONE. `--resume` reads ~/.claude, not the working tree, so the
+#   per-rep clone does NOT isolate conversation state between reps. Each rep starts a NEW session
+#   (turn 1 has no --resume), so reps do not see each other — but a crashed rep leaves its session
+#   on disk. That is a disk-growth note, not a contamination path; nothing reads it back.
+if [ -n "$TURNS" ]; then
+  [ -f "$TURNS" ] || { echo "FAIL: --turns file not found: $TURNS" >&2; exit 2; }
+  [ -z "$PROMPT" ] || { echo "FAIL: --turns and --prompt are mutually exclusive" >&2; exit 2; }
+  TURNLIST=()
+  # 🟥 The turns file is read into an array FIRST, and this loop body runs no command.
+  #    A `while read … done < file` loop whose body invokes something hands that something the
+  #    REST OF THE FILE as stdin — that is the 2026-08-31 defect documented at the exec site
+  #    below, where every arm silently received the scoring key. Reading first removes the hazard
+  #    by construction rather than by remembering a redirect.
+  while IFS= read -r _tl || [ -n "$_tl" ]; do
+    case "$_tl" in ''|'#'*) continue ;; esac
+    TURNLIST+=("$_tl")
+  done < "$TURNS"
+  [ "${#TURNLIST[@]}" -gt 0 ] || { echo "FAIL: --turns file has no turns (blank/comment only): $TURNS" >&2; exit 2; }
+  PROMPT="${TURNLIST[0]}"   # downstream banners/dumps still have something truthful to show
+fi
+
+# fh_run_turns <rep> — runs TURNLIST in one resumed session. Writes:
+#   <arm>_r<n>.t<k>.{prompt.txt,json,txt,stderr.txt}   per turn
+#   <arm>_r<n>.txt                                     concatenated results (same shape the
+#                                                      single-shot path produces, so existing
+#                                                      scorers keep working unchanged)
+#   <arm>_r<n>.turns.tsv                               k, rc, session_id, bytes  — the audit row
+# Returns the rc of the LAST turn. 🟥 A mid-conversation failure does NOT abort the remaining
+# turns: a conversation that broke at turn 2 and a conversation that never got there look
+# identical if we stop, and only one of them is the finding.
+fh_run_turns() {
+  local _r="$1" _k=0 _sid="" _rc=0 _lastrc=0 _t _tf _res _anyfail=0 _firstbad=0 _failrc=0
+  local _base="$OUTDIR/${ARM}_r${_r}"
+  : > "${_base}.txt"
+  printf 'turn\trc\tsession_id\tresult_bytes\tnote\n' > "${_base}.turns.tsv"
+  for _t in "${TURNLIST[@]}"; do
+    _k=$((_k+1)); _tf="${_base}.t${_k}"
+    printf '%s' "$_t" > "${_tf}.prompt.txt"
+    local _resume=()
+    if [ -n "$_sid" ] && [ "$NORESUME" -eq 0 ]; then _resume=(--resume "$_sid"); fi
+    ( cd "$WORK" && fh_timeout "$TIMEOUT" claude -p "$_t" \
+          --model "$MODEL" "${TOOLS[@]}" ${MCPARGS[@]+"${MCPARGS[@]}"} \
+          ${_resume[@]+"${_resume[@]}"} --output-format json \
+          < /dev/null 2>"${_tf}.stderr.txt" ) > "${_tf}.json"
+    _rc=$?; _lastrc=$_rc
+    # 🟥 Parse with python, not grep/sed — a result body containing `"session_id"` verbatim (this
+    #    repo's own prose does) would fool a regex, and the failure would be a WRONG id, not an
+    #    empty one. Wrong-and-plausible is the expensive kind.
+    # 🟥 exit 3 = PARSE FAILURE, and it is NOT the same as an empty answer. The first build of
+    #    this wrote "" and exited 0, so unparseable output read as "the session said nothing" —
+    #    a failure folded into a benign result. cross-family (codex) named it S-tier.
+    _res=$(python3 - "${_tf}.json" "${_tf}.txt" <<'_PYT'
+import json,sys
+src,dst=sys.argv[1],sys.argv[2]
+try:
+    d=json.load(open(src,encoding="utf-8"))
+    if not isinstance(d,dict): raise ValueError("not an object")
+except Exception:
+    open(dst,"w",encoding="utf-8").write("")
+    print("\t0"); raise SystemExit(3)
+r=d.get("result")
+r="" if r is None else (r if isinstance(r,str) else json.dumps(r,ensure_ascii=False))
+open(dst,"w",encoding="utf-8").write(r)
+print("%s\t%d"%(d.get("session_id") or "", len(r.encode("utf-8"))))
+_PYT
+)
+    local _prc=$?
+    local _newsid="${_res%%	*}" _rbytes="${_res##*	}"
+    [ -n "$_newsid" ] && _sid="$_newsid"
+    local _note=""
+    [ "$_prc" -eq 3 ] && _note="PARSE_FAILED"
+    printf '%s\t%s\t%s\t%s\t%s\n' "$_k" "$_rc" "${_newsid:-NONE}" "${_rbytes:-0}" "${_note:-ok}" >> "${_base}.turns.tsv"
+    { printf '\n===== turn %s (rc=%s) =====\n' "$_k" "$_rc"; cat "${_tf}.txt" 2>/dev/null; } >> "${_base}.txt"
+    # 🟥 ANY turn that failed makes the REP failed. Returning only the last turn's rc let a
+    #    conversation that died at turn 2 and recovered at turn 3 report rc=0 — and because the
+    #    transcript always carries `===== turn` markers, bytes is never 0, so the outer verdict
+    #    printed "✅ captured" and "RESULT: CLEAN" over a broken run. cross-family S-tier.
+    if [ "$_rc" -ne 0 ] || [ "$_prc" -eq 3 ]; then
+      _anyfail=1; [ "$_firstbad" -eq 0 ] && _firstbad=$_k
+      [ "$_failrc" -eq 0 ] && { [ "$_rc" -ne 0 ] && _failrc=$_rc || _failrc=3; }
+    fi
+    # 🟥 EVERY turn, not only turn 1. A missing session_id mid-conversation means this turn did
+    #    NOT run in the same session — the one thing a multi-turn measurement asserts — and the
+    #    old code silently reused the previous id, so the evidence vanished while the run stayed
+    #    clean. cross-family A-tier.
+    if [ "$NORESUME" -eq 0 ] && [ -z "$_newsid" ]; then
+      echo "     🟥 r${_r} turn ${_k} returned NO session_id — this turn did not demonstrably run"
+      echo "        in the same session. The run is NOT a multi-turn measurement. Do not score it."
+      CONTAMINATED=1; _anyfail=1; [ "$_firstbad" -eq 0 ] && _firstbad=$_k
+      [ "$_failrc" -eq 0 ] && _failrc=3
+    fi
+  done
+  if [ "$_anyfail" -ne 0 ]; then
+    # 🟥 CONTAMINATED, not a nonzero exit. This script ends in a deliberate `exit 0`
+    #    ("Detector, never a gate") so a caller cannot be trained to skip running it — so the
+    #    channel for "do not score this" is CONTAMINATED, and a broken conversation belongs in
+    #    it. Returning nonzero here instead would have been correct-looking and invisible.
+    echo "     🟥 r${_r} MULTI-TURN INCOMPLETE — first failing turn: ${_firstbad} (see ${_base}.turns.tsv)"
+    echo "        A conversation that broke mid-way is not a shorter conversation. Do not score it."
+    CONTAMINATED=1
+    return "$_failrc"
+  fi
+  return "$_lastrc"
+}
+
 
 # ── timeout(1) resolution — see §timeout(1) RESOLUTION in the header above for WHY. ──────────────
 # GNU `timeout` → Homebrew's `gtimeout` → a bash-native watchdog. Never silently proceeds with NO
@@ -610,10 +745,17 @@ for r in $(seq 1 "$REPS"); do
   #    NONE. An arm that legitimately needs a server (e.g. Playwright for a web target) gets it
   #    explicitly via --mcp-config <file inside the clone>; nothing is inherited.
   MCPARGS=(--strict-mcp-config); [ -n "${MCPCFG:-}" ] && MCPARGS+=(--mcp-config "$MCPCFG")   # bash 3.2 + set -u: expanded with the ${a[@]+"${a[@]}"} idiom below
+  if [ -n "$TURNS" ]; then
+    # §MULTI-TURN — the single-shot branch below is left byte-identical on purpose: `--turns`
+    # adds a path, it does not modify the one every existing probe already runs on.
+    fh_run_turns "$r"
+    rc=$?
+  else
   ( cd "$WORK" && fh_timeout "$TIMEOUT" claude -p "$PROMPT" \
         --model "$MODEL" "${TOOLS[@]}" ${MCPARGS[@]+"${MCPARGS[@]}"} \
         < /dev/null 2>"$OUTDIR/${ARM}_r${r}.stderr.txt" ) > "$OUTDIR/${ARM}_r${r}.txt"
   rc=$?
+  fi
   bytes=$(wc -c < "$OUTDIR/${ARM}_r${r}.txt" | tr -d ' ')
 
   # 🟥 An empty output is NOT a "no" answer. The first version of tonight's runner used
