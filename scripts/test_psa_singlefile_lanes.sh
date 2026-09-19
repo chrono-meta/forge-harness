@@ -634,6 +634,19 @@ echo "[psa single-file lanes] pass=$pass fail=$fail"
 #    포장이 판정을 뒤집었다. 내용이 아니라.
 _bdir=$(mktemp -d); trap 'rm -rf "$_bdir"' EXIT
 
+# 🟥 PDF 추출은 «선택 의존»(pymupdf)이고 **CI 에는 없다**(`validate.yml` 은 pyyaml 만 깐다).
+#    그때 추출기는 exit 3 으로 떨어지고 스캐너는 UNSCANNABLE 을 낸다 — **그게 옳은 동작**이다.
+#    게이트는 선택 의존 없이도 서야 하고, 없을 때의 답은 «깨끗함»이 아니라 «못 읽겠다»다.
+#    ⇒ PDF 축 레인은 능력에 따라 **기대값이 갈린다**. 🟥 스킵이 아니다 — 없으면 «fail-closed 로
+#    떨어지는가»를 대신 단언한다. 그 방향이 이 변경의 본체라 오히려 더 중요한 팔이다.
+#    (이 조건부는 CI 가 B1·B1b·B6·X1 을 `want=1 got=3` 으로 떨어뜨려서 생겼다 — 코드가 아니라
+#     레인이 로컬 환경을 과도하게 고정하고 있었다.)
+if python3 -c 'import pymupdf' 2>/dev/null || python3 -c 'import fitz' 2>/dev/null; then
+  _PDFCAP=1; printf '  PDF 추출 가능(pymupdf) — PDF 축은 «추출해서 잡는가»로 잰다\n'
+else
+  _PDFCAP=0; printf '  PDF 추출 불가(pymupdf 없음) — PDF 축은 «fail-closed 로 떨어지는가»로 잰다\n'
+fi
+
 # 🟥 픽스처는 «머릿속 PDF» 가 아니라 **실제 PDF 바이트**여야 한다. python3+zlib 로 최소 PDF 를
 #    짓되, 토큰은 **비압축 평문 스트림**에 둔다 — 그래야 「스캐너가 읽을 수 있었는데도 안 읽었다」
 #    가 아니라 「읽을 수 없는 포장」이라는 이 레인의 논지가 선다(압축이면 자명해서 시험이 약해진다).
@@ -672,12 +685,20 @@ _run_b() { ( . "$LIB"; export PSA_STREAM=$(printf 'HIGH\tPSABINCANARY') PSA_ALLO
 _o=$(_run_b "$_bdir/tok.pdf"); _r=$?
 # 🟥 추출기가 붙은 뒤로 이 픽스처의 기대값은 3 이 아니라 **1** 이다 — «못 읽겠다» 에서 «읽어서
 #    잡았다» 로 올라간 것이고, 그게 이 변경의 요점이다. 3 은 이제 «추출도 실패» 일 때만 나온다.
-check "B1 🟥 토큰을 품은 PDF → 추출해서 HIT(1). CLEAN(0) 은 절대 아님" 1 "$_r" "PSABINCANARY" "$_o"
+if [ "$_PDFCAP" = "1" ]; then
+  check "B1 🟥 토큰을 품은 PDF → 추출해서 HIT(1). CLEAN(0) 은 절대 아님" 1 "$_r" "PSABINCANARY" "$_o"
+else
+  check "B1 🟥 추출기 없음 → UNSCANNABLE(3). 🟥 CLEAN(0) 만은 절대 아님" 3 "$_r" "UNSCANNABLE" "$_o"
+fi
 # 🟥 B1b 는 fail-before 가 만들어낸 레인이다. 첫 판은 스캔 «전에» return 3 을 했는데, 그러면
 #    옛 스캐너가 실제로 잡던 히트(비압축 스트림 PDF)가 사라졌다 — 미탐을 고치다 다른 미탐을
 #    만든 것이다. 이 파일의 `_incomplete` 주석이 이미 그 교리를 적고 있었다:
 #    "'I could not certify this' and 'I saw nothing' are different."
-check "B1b 🟥 «추출했다»를 말하고 스캔한다 (원바이트가 아니라 추출 텍스트)" 1 "$_r" "EXTRACTED" "$_o"
+if [ "$_PDFCAP" = "1" ]; then
+  check "B1b 🟥 «추출했다»를 말하고 스캔한다 (원바이트가 아니라 추출 텍스트)" 1 "$_r" "EXTRACTED" "$_o"
+else
+  printf '  ⏭  B1b — pymupdf 없음, 추출 경로 자체가 없다 (skip != pass; B1 이 fail-closed 를 잰다)\\n'
+fi
 
 _o=$(_run_b "$_bdir/tok.txt"); _r=$?
 check "B2 같은 토큰의 .txt → HIT(1) (기존 동작 무변경)" 1 "$_r" "PSABINCANARY" "$_o"
@@ -742,7 +763,11 @@ check "B9 🟥 컨테이너를 열었는데 0자 → UNSCANNABLE(3). «빈 추�
 _o=$(_run_b "$_bdir/ascii.pdf"); _r=$?
 # codex 반례: NUL 이 없어 1축은 못 잡고, mime 축이 잡아 추출로 넘긴다. hex string 은 PyMuPDF 가
 # 디코드하므로 최종 판정은 HIT — 「포장으로 숨긴다」가 닫혔다는 뜻이다.
-check "B6 🟥 NUL 없는 ASCII-only PDF(토큰이 hex) → 추출해서 HIT(1) — codex 반례 닫힘" 1 "$_r" "PSABINCANARY" "$_o"
+if [ "$_PDFCAP" = "1" ]; then
+  check "B6 🟥 NUL 없는 ASCII-only PDF(토큰이 hex) → 추출해서 HIT(1) — codex 반례 닫힘" 1 "$_r" "PSABINCANARY" "$_o"
+else
+  check "B6 🟥 추출기 없어도 codex 반례는 CLEAN 으로 안 샌다 → UNSCANNABLE(3)" 3 "$_r" "UNSCANNABLE" "$_o"
+fi
 
 _o=$(_run_b "$_bdir/ok.json"); _r=$?
 check "B7 CONTROL — application/json 은 여전히 CLEAN(0) (mime 축이 과차단 안 한다)" 0 "$_r" "" "$_o"
@@ -765,7 +790,11 @@ if [ -f "$REPO_ROOT/paper/forge_harness_v1.0.2.pdf" ]; then
   #    그 토큰을 이 파일에 적어야 하고, 이 파일은 npm 출하 집합이다 — 레인이 자기가 막으려는
   #    유출을 만들게 된다. (실제로 초판이 그랬고, 발행 게이트가 그걸 잡았다.)
   #    기전 = 「원바이트가 아니라 추출 텍스트를 스캔했다」이고, 그것이 EXTRACTED 줄이다.
+if [ "$_PDFCAP" = "1" ]; then
   check "B5 🟥 실물 예치 PDF → 추출 경로를 탄다 (원바이트 스캔이 아니다)" 0 "$_r" "EXTRACTED" "$_o"
+else
+  check "B5 🟥 실물 예치 PDF → 추출기 없으면 UNSCANNABLE(3), 종전의 거짓 CLEAN 아님" 3 "$_r" "UNSCANNABLE" "$_o"
+fi
   _cond_lanes=$((_cond_lanes+1))
 else
   printf '  ⏭  B5 skipped — paper/forge_harness_v1.0.2.pdf 부재 (skip != pass)\n'
@@ -815,9 +844,15 @@ _PYX
   _xrun() { _xout=$(python3 "$_X" "$1" 2>/dev/null); _xrc=$?; }
 
   _xrun "$_xd/good.pdf"
-  { [ "$_xrc" = "0" ] && printf '%s' "$_xout" | grep -q PSABINCANARY; } \
-    && ok "X1 유효 PDF → exit 0 + 본문 텍스트(글리프를 풀어 읽는다)" \
-    || bad "X1 rc=$_xrc / 토큰 미검출 — 추출기가 PDF 텍스트를 못 읽는다"
+  if [ "$_PDFCAP" = "1" ]; then
+    { [ "$_xrc" = "0" ] && printf '%s' "$_xout" | grep -q PSABINCANARY; } \
+      && ok "X1 유효 PDF → exit 0 + 본문 텍스트(글리프를 풀어 읽는다)" \
+      || bad "X1 rc=$_xrc / 토큰 미검출 — 추출기가 PDF 텍스트를 못 읽는다"
+  else
+    # 🟥 «의존이 없다»를 «빈 텍스트 + exit 0»으로 내면 호출부가 그걸 CLEAN 으로 스캔한다.
+    [ "$_xrc" = "3" ] && ok "X1 pymupdf 없음 → exit 3 (의존 부재를 «빈 성공»으로 안 낸다)" \
+                      || bad "X1 rc=$_xrc (want 3) — 의존 부재가 통과 방향으로 샌다"
+  fi
 
   _xrun "$_xd/broken.pdf"
   [ "$_xrc" = "3" ] \
