@@ -119,6 +119,83 @@ mp_check() { # mp_check <label> <plugin-substring> <expected>
   else echo "FAIL  count: $1 — expected \"$3\" in the fh-commons marketplace entry"; fail=1; fi
 }
 mp_check "marketplace.json fh-commons skills" fh-commons "${com_sk} skills"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 🟥 **전수 커버리지 — 2026-09-20 신설. 그리고 이 절은 «정정»이다.**
+#
+#   3.14.0 CHANGELOG 가 «count_check.sh 가 플러그인 전수를 본다» 고 적고 npm 에 나갔는데
+#   **거짓이었다.** #763 이 한 것은 `fh-commons` 단언을 조인 것(agents 추가 · marketplace
+#   per-plugin 스코핑)이지 전수 순회가 아니다 — `fh-preprep` · `fh-qp` 는 **안 세고 있었다.**
+#   커밋 본문의 «문제 서술»을 «수리»로 읽어서 옮긴 형태다.
+#
+#   🟥 그리고 그 사각에서 실물이 나왔다: `fh-preprep` 은 plugin.json description 에
+#   **개수 선언이 아예 없다.** 선언이 없으면 대조할 것이 없고, 그건 통과가 아니라 **미측정**이다.
+#
+#   ⇒ 이름을 손으로 적지 않는다. `plugins/*/` 를 **디스크에서 열거**한다.
+# ══════════════════════════════════════════════════════════════════════════════
+sweep_plugin() { # sweep_plugin <dir-name>
+  local pn="$1" pj="plugins/$1/.claude-plugin/plugin.json" d_sk d_ag dec
+  d_sk=$(count_active "$pn"); d_ag=$(count_agents "$pn")
+  [ -f "$pj" ] && dec=$(read_tree "$pj" | python3 -c '
+import json,re,sys
+try: d=json.load(sys.stdin)
+except Exception: print("PARSE-ERROR"); raise SystemExit
+t=d.get("description","") or ""
+sk=re.search(r"(\d+)\s+skills?", t); ag=re.search(r"(\d+)\s+agents?", t)
+print("%s %s" % (sk.group(1) if sk else "NONE", ag.group(1) if ag else "NONE"))
+') || dec="READ-ERROR"
+  case "$dec" in
+    PARSE-ERROR|READ-ERROR|"")
+      echo "FAIL  sweep: $pn — plugin.json 을 못 읽었다 ($dec) — 계기 오류지 통과가 아니다"; fail=1; return;;
+  esac
+  local dsk dag; dsk=${dec%% *}; dag=${dec##* }
+  # skills — 🟥 선언 부재는 통과가 아니다
+  if [ "$dsk" = "NONE" ]; then
+    echo "FAIL  sweep: $pn skills — description 에 개수 선언이 없다 (디스크 ${d_sk}). 부재≠통과"; fail=1
+  elif [ "$dsk" = "$d_sk" ]; then echo "PASS  sweep: $pn skills (${d_sk})"
+  else echo "FAIL  sweep: $pn skills — 선언 ${dsk} ≠ 디스크 ${d_sk}"; fail=1; fi
+  # agents — 디스크에 0 이면 선언 부재가 정상이다(적을 것이 없다). 0 이 아닌데 없으면 결함
+  if [ "$d_ag" -eq 0 ]; then
+    if [ "$dag" = "NONE" ] || [ "$dag" = "0" ]; then echo "PASS  sweep: $pn agents (0, 선언 없음이 정합)"
+    else echo "FAIL  sweep: $pn agents — 선언 ${dag} 인데 디스크 0"; fail=1; fi
+  elif [ "$dag" = "NONE" ]; then
+    echo "FAIL  sweep: $pn agents — 디스크 ${d_ag} 인데 선언이 없다. 부재≠통과"; fail=1
+  elif [ "$dag" = "$d_ag" ]; then echo "PASS  sweep: $pn agents (${d_ag})"
+  else echo "FAIL  sweep: $pn agents — 선언 ${dag} ≠ 디스크 ${d_ag}"; fail=1; fi
+  # 🟥 **marketplace.json 도 같은 순회에 태운다.** 여기서 멈추면 plugin.json 만 전수 보고
+  #    marketplace 는 4중 2로 남아, 이 절이 고치려는 바로 그 반쪽-픽스를 재현한다.
+  local mb msk mag
+  mb=$(mp_desc "$pn")
+  if [ -z "$mb" ]; then
+    echo "FAIL  sweep: $pn marketplace — 항목이 없다 (부재≠통과)"; fail=1; return
+  fi
+  msk=$(printf '%s' "$mb" | python3 -c '
+import re,sys
+t=sys.stdin.read()
+m=re.search(r"(\d+)\s+skills?", t); print(m.group(1) if m else "NONE")')
+  if [ "$msk" = "NONE" ]; then
+    echo "FAIL  sweep: $pn marketplace skills — 개수 선언이 없다 (디스크 ${d_sk}). 부재≠통과"; fail=1
+  elif [ "$msk" = "$d_sk" ]; then echo "PASS  sweep: $pn marketplace skills (${d_sk})"
+  else echo "FAIL  sweep: $pn marketplace skills — 선언 ${msk} ≠ 디스크 ${d_sk}"; fail=1; fi
+}
+
+sweep_n=0
+for _d in plugins/*/; do
+  # 🟥 글롭이 하나도 안 맞으면 **리터럴 `plugins/*/` 자체**가 루프에 들어온다.
+  #    아래 plugin.json 검사가 결국 걸러내고 sweep_n 하한 가드가 FAIL 을 내지만, 그건
+  #    **간접 방어**다 — 실패 원인이 「글롭이 죽었다」가 아니라 「플러그인이 없다」로 읽힌다.
+  [ -d "$_d" ] || continue
+  _n=$(basename "$_d")
+  [ -f "plugins/$_n/.claude-plugin/plugin.json" ] || continue
+  sweep_plugin "$_n"; sweep_n=$((sweep_n + 1))
+done
+# 🟥 **죽은 컨트롤 방어** — 열거가 0 이면 「전부 통과」와 「아무것도 안 봤다」가 같은 침묵이다
+if [ "$sweep_n" -lt 2 ]; then
+  echo "FAIL  sweep: 플러그인을 ${sweep_n}개만 열거했다 — 글롭이 죽었다(계기 오류, 0 아님)"; fail=1
+else
+  echo "PASS  sweep: 플러그인 ${sweep_n}개를 디스크에서 열거했다 (이름 손적기 0)"
+fi
+
 mp_check "marketplace.json fh-commons agents" fh-commons "${com_ag} agent"
 # ── README 렌더링만 per-repo override 를 받는다 ──────────────────────────────────────────────
 # 왜 이 한 줄만 다른가: plugin.json·marketplace.json 의 문자열은 **기계 결합**(영문 고정,

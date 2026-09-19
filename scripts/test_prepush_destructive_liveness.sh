@@ -664,9 +664,18 @@ fi
 if [ "$CONTAINMENT" = "skip" ]; then
   echo "⑦ containment: SKIPPED — $REPO_ROOT is not a git work tree (nothing to compare; NOT a pass)"
 elif [ "$_before" != "$_after" ]; then
-  echo "❌ FIXTURE LEAK — running the suite CHANGED the real repository."
-  echo "   Fixtures must live only under mktemp. In a shared checkout a staged fixture file is"
-  echo "   committed by whoever commits next. Diff of git state (before → after):"
+  # 🟥 2026-09-20 — the wording used to ASSERT the subject ("running the suite CHANGED the real
+  #    repository"). It cannot know that. The probe diffs a before/after snapshot, and in a shared
+  #    checkout that delta is equally produced by a PEER SESSION or by the operator staging a file
+  #    mid-run. Measured twice the same night: once a merged branch ref vanished (recovered: the
+  #    commit was already an ancestor of origin/main), once the author's own `git add` landed during
+  #    the run. Both were read as "the suite leaked" on first pass — the over-attribution is the
+  #    defect, not the block. The block stays: whatever the cause, THIS run's isolation claim is void.
+  echo "❌ TREE CHANGED DURING THE SUITE RUN — isolation unproven for this run."
+  echo "   🟥 The subject is NOT determined: this probe cannot separate \"the suite wrote\" from"
+  echo "   \"a peer session or the operator wrote during the run\". To attribute it, freeze the tree"
+  echo "   and re-run this probe alone. Fixtures must live only under mktemp — in a shared checkout a"
+  echo "   staged fixture file is committed by whoever commits next. Diff of git state (before → after):"
   diff <(printf '%s\n' "$_before") <(printf '%s\n' "$_after") | _echo_evidence | head -20
   exit 1
 else
