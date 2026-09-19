@@ -19,20 +19,27 @@
     "the ones guarding irreversible surfaces.",
     "",
     "🟥 exit 0 ALWAYS. A hook that exits non-zero has its stdout DISCARDED and its stderr NOT relayed —",
-    "the warning would reach nobody. The finding travels as hookSpecificOutput.additionalContext."
+    "the warning would reach nobody. The finding travels as hookSpecificOutput.additionalContext.",
+    "",
+    "🟥 SCHEMA: the hook block lives under `project_settings_json`, exactly as every other snippet",
+    "here does. A first draft put `hooks` at the top level; install-wizard then SKIPS the file",
+    "SILENTLY — the lane that caught it (SHIP-1) exists because a skipped snippet looks identical",
+    "to an absent one."
   ],
-  "hooks": {
-    "SubagentStop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR:-$HOME/projects/forge-harness}/scripts/checklist_unblocked_hook.sh\"",
-            "timeout": 15
-          }
-        ]
-      }
-    ]
+  "project_settings_json": {
+    "hooks": {
+      "SubagentStop": [
+        {
+          "matcher": "",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bash \"${CLAUDE_PROJECT_DIR:-$HOME/projects/forge-harness}/scripts/checklist_unblocked_hook.sh\"",
+              "timeout": 15
+            }
+          ]
+        }
+      ]
+    }
   }
 }

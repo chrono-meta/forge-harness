@@ -204,6 +204,16 @@ ACCEPTED_ABSENT=(
   #       가른 그 구분): 주체가 없어서 못 재는 것이지, 재야 하는데 미룬 게 아니다. 주체가 언젠가
   #       출하되면 이 예외도 같이 사라져야 한다 — 소비되지 않는 예외는 다음 진짜 누락을 삼킨다.
   "scripts/test_liveness_echo_token_lanes.sh"
+  #     ⓐ-3 test_checklist_unblocked_lanes.sh · test_tikitaka_score_lanes.sh — 같은 부류.
+  #       주체(session_checklist.py · tikitaka_score.py)의 출하 여부와 무관하게, **레인은 이 레포의
+  #       개발 표면**이다. 소비자에게 실어봐야 픽스처(scripts/fixtures/…)까지 딸려가야 하고 매 실행
+  #       SKIP 이며, 그 SKIP 은 「부재」와 「건강함」을 또 같은 글자로 만든다.
+  #       🟥 반면 checklist_unblocked_hook.sh 는 **출하한다** — 출하되는 스니펫
+  #       (templates/settings.SubagentStop.snippet.json)이 그 경로를 직접 부르므로, 안 실으면
+  #       소비자 머신에서 훅이 조용히 죽는다. 같은 PR 안에서 셋의 처분이 갈리는 이유가 그것이다.
+  "scripts/test_checklist_unblocked_lanes.sh"
+  "scripts/test_tikitaka_score_lanes.sh"
+  "scripts/tikitaka_score.py"
   #     🟥 ⓒ 는 **철회했다 — cross-family R2 지적이 맞았다.** 초판이
   #       `templates/predelete_check.test.sh` 를 여기 넣고 «위 chamber 건과 같은 빚» 이라고 적었는데,
   #       그 둘은 같지 않다: chamber 는 «주체가 출하되는데 앵커가 안 나간다» 를 **빚으로 남긴** 것이고,
