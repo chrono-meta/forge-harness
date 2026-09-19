@@ -171,6 +171,8 @@
     "scripts/frontier_digest_autopilot.sh",
     "scripts/gate_anchor_check.sh",
     "scripts/gate_pathspec_check.sh",
+    "scripts/prless_delta_scan.sh",
+    "scripts/test_prless_delta_scan_lanes.sh",
     "scripts/gate_shape_scan.sh",
     "scripts/halffix_propagation_scan.sh",
     "scripts/hook_source_lib.sh",
