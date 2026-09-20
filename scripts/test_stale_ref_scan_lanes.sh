@@ -30,15 +30,19 @@
 #   assignment's status. Every lane below redirects to a file and reads `$?` directly.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCAN="$ROOT/scripts/stale_ref_scan.py"
-PY="${PYTHON:-/usr/bin/python3}"
+cd "$ROOT" || { printf '🟥 HARNESS ERROR — 레포 루트로 못 갔다\n'; exit 10; }
+SCAN="scripts/stale_ref_scan.py"
+# 🟥 인터프리터도 «리터럴» 이어야 한다 — new_code_anchor_check 의 인보커 정규식이
+#    (bash|sh|zsh|python3?|source|.) 리터럴을 요구한다. 변수로 부르면 MENTION_ONLY 로 막힌다(실측 2회).
+# 🟥 **리터럴 경로로 부른다.** 변수 경유 호출은 `new_code_anchor_check.sh` 가 «실행» 으로
+#    못 읽어서 MENTION_ONLY 로 막았다(실측) — 그 게이트가 잡는 것이 바로 «이름만 부르는 레인» 이다.
 PASS=0; FAIL=0
 ok ()  { printf '  ✅ %s\n' "$1"; PASS=$((PASS+1)); }
 ng ()  { printf '  ❌ %s\n' "$1"; FAIL=$((FAIL+1)); }
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
-if [ ! -f "$SCAN" ]; then
-  printf '🟥 HARNESS ERROR — %s 가 없다. 「0 실패」가 아니라 계기 부재다.\n' "$SCAN"; exit 10
+if [ ! -f scripts/stale_ref_scan.py ]; then
+  printf '🟥 HARNESS ERROR — scripts/stale_ref_scan.py 가 없다. 「0 실패」가 아니라 계기 부재다.\n'; exit 10
 fi
 
 # 오프라인 픽스처 — 실물 id 관계를 그대로 옮긴다(라이브 API 직독 2026-09-20)
@@ -48,10 +52,10 @@ cat > "$TMP/fx.json" <<'JSON'
   "20397565": {"id": 22843702, "conceptrecid": "20397565"},
   "22542168": {"id": 22542168, "conceptrecid": "20397565"} }
 JSON
-run () { "$PY" "$SCAN" --offline-fixture "$TMP/fx.json" --body "$@" > "$TMP/out" 2>&1; echo $?; }
+run () { python3 scripts/stale_ref_scan.py --offline-fixture "$TMP/fx.json" --body "$@" > "$TMP/out" 2>&1; echo $?; }
 
 # ── L1 자기검사가 실제로 돈다 ─────────────────────────────────────────────────
-"$PY" "$SCAN" --self-check > "$TMP/sc" 2>&1; rc=$?
+python3 scripts/stale_ref_scan.py --self-check > "$TMP/sc" 2>&1; rc=$?
 n_pass=$(/usr/bin/grep -c '^  PASS' "$TMP/sc" || true)
 if [ "$rc" = "0" ] && [ "$n_pass" -ge 17 ]; then ok "L1 --self-check rc=0 · PASS 레인 $n_pass (>=17)"
 else ng "L1 --self-check rc=$rc · PASS $n_pass"; fi
@@ -99,8 +103,8 @@ else ng "L7 rc=$rc · $(/usr/bin/grep -o 'CONCEPT=[0-9]* CURRENT=[0-9]*' "$TMP/o
 
 # ── 되돌림 프로브 ─────────────────────────────────────────────────────────────
 probe () {   # $1=이름  $2=원문  $3=치환문
-  cp "$SCAN" "$TMP/mut.py"
-  "$PY" - "$TMP/mut.py" "$2" "$3" <<'PYX'
+  cp scripts/stale_ref_scan.py "$TMP/mut.py"
+  python3 - "$TMP/mut.py" "$2" "$3" <<'PYX'
 import io,sys
 p,a,b=sys.argv[1],sys.argv[2],sys.argv[3]
 s=io.open(p,encoding="utf-8").read()
@@ -108,7 +112,7 @@ if s.count(a)!=1: sys.exit(3)
 io.open(p,"w",encoding="utf-8").write(s.replace(a,b,1))
 PYX
   if [ $? -ne 0 ]; then ng "$1 — 뮤턴트 생성 실패(치환 대상 부재). HARNESS ERROR, 초록으로 안 읽는다"; return; fi
-  "$PY" "$TMP/mut.py" --self-check > "$TMP/mo" 2>&1; mrc=$?
+  python3 "$TMP/mut.py" --self-check > "$TMP/mo" 2>&1; mrc=$?
   if [ "$mrc" != "0" ] && /usr/bin/grep -q '^  FAIL' "$TMP/mo"; then ok "$1 — 뮤턴트가 빨개진다"
   else ng "$1 — 뮤턴트인데 self-check 가 초록이다(앵커가 장식)"; fi
 }
@@ -117,7 +121,7 @@ probe "L9  rc 지배 제거" "    if unresolved or unscannable:" "    if False:"
 probe "L10 바이너리 검사 제거" '    if b"\x00" in raw:' "    if False:"
 
 # 원본 불변 확인 — 프로브가 대상을 건드리지 않았나
-"$PY" "$SCAN" --self-check > "$TMP/sc2" 2>&1
+python3 scripts/stale_ref_scan.py --self-check > "$TMP/sc2" 2>&1
 if [ $? -eq 0 ]; then ok "L11 프로브 후에도 원본 --self-check rc=0 (사본만 건드렸다)"
 else ng "L11 원본이 오염됐다"; fi
 
