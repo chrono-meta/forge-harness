@@ -1640,6 +1640,24 @@ else
   fail=1
 fi
 
+# Stale-reference lanes — «this value is alive and resolves, but the world it points at moved».
+# Added 2026-09-20 after CITATION.cff and four paper versions were found citing the SUPERSEDED v1.0
+# record of this very work: every «does this DOI resolve» check passed, because the DOI does resolve.
+# 🟥 The suite exists because `new-code-anchor` caught the scanner shipping with no lane that RUNS
+# it — the author's own commit said «배선 안 함» and the gate turned that sentence red. A tool's own
+# `--self-check` is not an anchor until a runner surface executes it. Same pairing rule as above:
+# the lane exists only because the scanner does, so its absence beside a present subject is a FAIL.
+if [ ! -f scripts/stale_ref_scan.py ]; then
+  _absent_subject_verdict "test_stale_ref_scan_lanes.sh" "scripts/stale_ref_scan.py" || fail=1
+elif [ -f scripts/test_stale_ref_scan_lanes.sh ]; then
+  if ! bash scripts/test_stale_ref_scan_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_stale_ref_scan_lanes.sh: stale_ref_scan.py present but its anchor is missing"
+  fail=1
+fi
+
 # Paper-integrity lanes — the three checks the governor ran BY HAND with ad-hoc python on 2026-09-17
 # (paper 2; the sister paper had just been rejected by arXiv for 11/17 reference mismatches): every
 # cited key defined and every defined key cited (+ NEAR-MISS pairing for [MF24]↔[MF22]-style
