@@ -10,20 +10,30 @@ authors:
     given-names: Sungjin
 identifiers:
   - type: doi
-    value: 10.5281/zenodo.20397566
-    description: "Zenodo archive (v1.0) — permanent record"
-# preferred-citation: Zenodo technical note for now.
-# TODO: when the arXiv version goes live (currently On Hold), swap preferred-citation
-#       to the arXiv article (keep the Zenodo DOI above as the permanent archive id).
+    value: 10.5281/zenodo.20397565
+    description: "Zenodo concept DOI — always resolves to the latest version"
+# 🟥 2026-09-20 정정. 이 파일은 2026-06-04 이후 안 움직였고, 그 사이 Zenodo 가 세 번 바뀌었다.
+#    고치기 전 상태: identifiers·preferred-citation 둘 다 `zenodo.20397566`(= v1.0 의 **버전**
+#    DOI, 2026-05-30)을 가리켰고, preferred-citation 의 제목은 **arXiv 가 반려한 v1.0 의 제목**
+#    («…Engineering Methods for Robust AI Collaboration Harnesses»)이었다. 즉 GitHub 의
+#    «Cite this repository» 상자가 **반려된 초안을 폐기된 제목으로** 인용하라고 말하고 있었다.
+#    🟥 그 DOI 는 **살아 있고 정상 해석된다** — 그래서 «이 DOI 가 유효한가» 를 묻는 검사는 전부
+#    통과했다. 늙은 것은 값이 아니라 그 값이 가리키는 세계다. 「ID 가 존재한다」는 인용 검증이
+#    아니라는 교훈은 v1.0 반려 때 이미 배웠는데(참고문헌 17건 중 11건), **자기 인용에는 적용
+#    하지 않았다** — 「우리 거니까」 아무도 다시 안 본다.
+# 🟥 identifiers 는 이제 **컨셉 DOI** 다 — 버전 DOI 를 박으면 새 판이 나올 때마다 여기가 낡는다.
+#    preferred-citation 은 **지금 실제로 공개된 최신 판**(v1.0.2)이다.
+# ⚠️ v1.0.3 은 arXiv 에 제출됐으나 **on hold 라 아직 어디에도 공개 안 됐다** — 그러니 여기 적지
+#    않는다. 없는 문서를 인용하게 만드는 것이 팬텀이다. announce 되면 그때 바꾼다.
 preferred-citation:
   type: report
-  title: "forge-harness: Engineering Methods for Robust AI Collaboration Harnesses"
+  title: "Engineering Methods for Robust AI Collaboration Harnesses: Four Techniques, Validated on the Harness That Produced Them"
   authors:
     - family-names: Kwon
       given-names: Sungjin
   year: 2026
-  month: 5
-  date-released: "2026-05-30"
-  version: "1.0"
-  doi: 10.5281/zenodo.20397566
-  url: "https://zenodo.org/records/20397566"
+  month: 9
+  date-released: "2026-09-19"
+  version: "1.0.2"
+  doi: 10.5281/zenodo.22843702
+  url: "https://zenodo.org/records/22843702"
