@@ -133,29 +133,61 @@ mp_check "marketplace.json fh-commons skills" fh-commons "${com_sk} skills"
 #
 #   ⇒ 이름을 손으로 적지 않는다. `plugins/*/` 를 **디스크에서 열거**한다.
 # ══════════════════════════════════════════════════════════════════════════════
+# 🟥 **모호≠통과 — 2026-09-21 신설. #768 이 「안 닫은 것」으로 남긴 자리다.**
+#
+#   그 PR 은 순회를 전수로 넓히면서 «순회는 description 의 **첫** `N skills` 패턴만 읽는다 —
+#   과탐/미탐 방향 미측정» 이라고 스스로 적었다. 재현했다(디스크 4, 선언 3):
+#
+#     CONTROL  "3 skills", 산문에 숫자 없음                → FAIL  선언 3 ≠ 디스크 4
+#     ARM      "roughly 4 skills worth of … 3 skills"     → PASS  sweep: fh-qp skills (4)
+#
+#   **같은 결함이 초록이 된다.** 첫 매치가 산문 숫자라 낡은 선언을 아예 안 본다 —
+#   #763·#768 이 두 번 당한 부분문자열 충돌과 같은 클래스이고, 방향이 **거짓 PASS** 라 더 나쁘다.
+#
+#   ⇒ 첫 매치를 고르지 않는다. **전부 세고, 값이 갈리면 FAIL.** 「어느 쪽이 선언인가」를
+#     모르는 상태는 통과가 아니라 미측정이다 — #768 의 「부재≠통과」와 같은 판단, 한 칸 옆.
+#     같은 값이 여러 번 나오는 것은 모호가 아니므로 통과시킨다(과차단은 override 를 학습시킨다).
+_DECL_PY='
+import json,re,sys
+mode=sys.argv[1]; raw=sys.stdin.read()
+if mode=="json":
+    try: d=json.loads(raw)
+    except Exception: print("PARSE-ERROR"); raise SystemExit
+    t=d.get("description","") or ""
+else:
+    t=raw
+def one(noun):
+    # 🟥 앞이 영숫자면 선언이 아니다 — `M3 skill tier map` 의 "3 skill" 이 실물에서 걸렸다.
+    #    이것이 #768 이 「미측정」이라 적은 **과탐** 방향이고, 측정해보니 출하 트리에 1건 있었다.
+    vals=[m.group(1) for m in re.finditer(r"(?<![A-Za-z0-9_/.-])(\d+)\s+%s?" % noun, t)]
+    if not vals: return "NONE"
+    uniq=sorted(set(vals), key=int)
+    return uniq[0] if len(uniq)==1 else "AMBIG:" + "/".join(uniq)
+print("%s %s" % (one("skills"), one("agents")))
+'
+
 sweep_plugin() { # sweep_plugin <dir-name>
   local pn="$1" pj="plugins/$1/.claude-plugin/plugin.json" d_sk d_ag dec
   d_sk=$(count_active "$pn"); d_ag=$(count_agents "$pn")
-  [ -f "$pj" ] && dec=$(read_tree "$pj" | python3 -c '
-import json,re,sys
-try: d=json.load(sys.stdin)
-except Exception: print("PARSE-ERROR"); raise SystemExit
-t=d.get("description","") or ""
-sk=re.search(r"(\d+)\s+skills?", t); ag=re.search(r"(\d+)\s+agents?", t)
-print("%s %s" % (sk.group(1) if sk else "NONE", ag.group(1) if ag else "NONE"))
-') || dec="READ-ERROR"
+  [ -f "$pj" ] && dec=$(read_tree "$pj" | python3 -c "$_DECL_PY" json) || dec="READ-ERROR"
   case "$dec" in
     PARSE-ERROR|READ-ERROR|"")
       echo "FAIL  sweep: $pn — plugin.json 을 못 읽었다 ($dec) — 계기 오류지 통과가 아니다"; fail=1; return;;
   esac
   local dsk dag; dsk=${dec%% *}; dag=${dec##* }
-  # skills — 🟥 선언 부재는 통과가 아니다
+  # skills — 🟥 선언 부재는 통과가 아니다 · 🟥 선언 모호도 통과가 아니다
   if [ "$dsk" = "NONE" ]; then
     echo "FAIL  sweep: $pn skills — description 에 개수 선언이 없다 (디스크 ${d_sk}). 부재≠통과"; fail=1
+  elif [ "${dsk#AMBIG:}" != "$dsk" ]; then
+    echo "FAIL  sweep: $pn skills — description 이 개수를 여럿 말한다 (${dsk#AMBIG:} · 디스크 ${d_sk}). 모호≠통과"; fail=1
   elif [ "$dsk" = "$d_sk" ]; then echo "PASS  sweep: $pn skills (${d_sk})"
   else echo "FAIL  sweep: $pn skills — 선언 ${dsk} ≠ 디스크 ${d_sk}"; fail=1; fi
   # agents — 디스크에 0 이면 선언 부재가 정상이다(적을 것이 없다). 0 이 아닌데 없으면 결함
-  if [ "$d_ag" -eq 0 ]; then
+  # 🟥 모호는 디스크 개수와 무관하게 먼저 걸린다 — 「0 이라 선언이 없어도 된다」가
+  #    「0 이라 선언이 갈려도 된다」로 새면 안 된다.
+  if [ "${dag#AMBIG:}" != "$dag" ]; then
+    echo "FAIL  sweep: $pn agents — description 이 개수를 여럿 말한다 (${dag#AMBIG:} · 디스크 ${d_ag}). 모호≠통과"; fail=1
+  elif [ "$d_ag" -eq 0 ]; then
     if [ "$dag" = "NONE" ] || [ "$dag" = "0" ]; then echo "PASS  sweep: $pn agents (0, 선언 없음이 정합)"
     else echo "FAIL  sweep: $pn agents — 선언 ${dag} 인데 디스크 0"; fail=1; fi
   elif [ "$dag" = "NONE" ]; then
@@ -169,12 +201,12 @@ print("%s %s" % (sk.group(1) if sk else "NONE", ag.group(1) if ag else "NONE"))
   if [ -z "$mb" ]; then
     echo "FAIL  sweep: $pn marketplace — 항목이 없다 (부재≠통과)"; fail=1; return
   fi
-  msk=$(printf '%s' "$mb" | python3 -c '
-import re,sys
-t=sys.stdin.read()
-m=re.search(r"(\d+)\s+skills?", t); print(m.group(1) if m else "NONE")')
+  # 🟥 marketplace 도 같은 파서를 쓴다 — 한쪽만 고치면 이 절이 고치려는 반쪽-픽스 그대로다.
+  local mout; mout=$(printf '%s' "$mb" | python3 -c "$_DECL_PY" text); msk=${mout%% *}
   if [ "$msk" = "NONE" ]; then
     echo "FAIL  sweep: $pn marketplace skills — 개수 선언이 없다 (디스크 ${d_sk}). 부재≠통과"; fail=1
+  elif [ "${msk#AMBIG:}" != "$msk" ]; then
+    echo "FAIL  sweep: $pn marketplace skills — 개수를 여럿 말한다 (${msk#AMBIG:} · 디스크 ${d_sk}). 모호≠통과"; fail=1
   elif [ "$msk" = "$d_sk" ]; then echo "PASS  sweep: $pn marketplace skills (${d_sk})"
   else echo "FAIL  sweep: $pn marketplace skills — 선언 ${msk} ≠ 디스크 ${d_sk}"; fail=1; fi
 }

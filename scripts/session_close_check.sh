@@ -804,5 +804,72 @@ else
   echo "⏭️  ①-f push-zone UNCALIBRATED — script or owner-account list absent"
 fi
 
+# ── ①-g STALE REF (advisory) ─────────────────────────────────────────────────
+# WHY THIS IS HERE AND NOT AT COMMIT TIME. `scripts/stale_ref_scan.py` (#770) exists because the
+# three sibling instruments — halffix_propagation_scan · claim_propagation_scan · doc_claim_triad_scan
+# — all presuppose that SOMEONE TOUCHED SOMETHING. An aging reference satisfies no such trigger:
+# nobody edits a DOI on the day it stops being the latest version. #773 then shipped the tool with
+# its own residual: «배선 안 함 — 이 계기는 지금 아무도 안 부른다». Measured 2026-09-21: its only
+# call sites were its own lane suite and that suite's selfcheck wiring, BOTH `--offline-fixture`.
+# So nothing had ever asked the question of the real corpus.
+#
+# 🟥 A commit-time trigger would rebuild the exact blind spot — it would fire only when someone
+#    touches the file. A close-time sweep has no touch precondition, which is the whole point.
+# 🟥 **advisory — it never blocks.** #773 states the corpus false-positive rate is UNMEASURED and
+#    some stale citations are deliberate pins; blocking a reversible surface on an unmeasured
+#    instrument trains `--no-verify` and disarms the Destructive-Op gate in the same hook
+#    (CLAUDE.md §Surface-Class Degrade Invariant, reversible half).
+# 🟥 **못 읽음 ≠ 깨끗함.** The scanner folds SUPERSEDED and UNRESOLVED into one rc (its own header
+#    says so), so this block reads the VERDICT LINE's counters instead of the exit code — the #767
+#    lesson about scanners reporting "could not read" as "clean" applies to the caller too.
+# SCOPE: tracked files only, `tracks/**` excluded — those are past local records that must not be
+# edited, and #770 measured most corpus hits landing there. Including them would be pure noise.
+_SR_SCAN="$FH/scripts/stale_ref_scan.py"
+if [ ! -f "$_SR_SCAN" ]; then
+  echo "⏭️  ①-g stale-ref: stale_ref_scan.py 없음 — skipped, not passed (UNMEASURED)"
+elif ! command -v python3 >/dev/null 2>&1; then
+  echo "⏭️  ①-g stale-ref: python3 없음 — skipped, not passed (UNMEASURED)"
+elif ! command -v git >/dev/null 2>&1 || ! ( cd "$FH" && git rev-parse --git-dir >/dev/null 2>&1 ); then
+  # 🟥 대상 목록을 `git grep` 으로 만든다. git 이 없으면 목록이 **빈다** — 그리고 빈 목록은
+  #    아래에서 「참조 없음」으로 읽힌다. 「못 세었다」와 「0 이다」를 같은 침묵으로 두지 않는다.
+  echo "⚠️  ①-g stale-ref: git 없음/비-레포 — 대상 목록을 못 만들었다. UNMEASURED 지 「참조 없음」이 아니다"
+else
+  _sr_files=$( cd "$FH" && git grep -lI -e 'zenodo' -- '*.md' '*.cff' '*.html' '*.json' 2>/dev/null \
+                 | grep -v '^tracks/' || true )
+  if [ -z "$_sr_files" ]; then
+    echo "⏭️  ①-g stale-ref: 스캔할 Zenodo 참조가 추적 파일에 없다 — 대상 없음"
+  else
+    # 🟥 전체 상한을 건다. per-request 8초 × 서로 다른 id 수가 상한이라, 매달리는 네트워크에서
+    #    마감이 1분 가까이 멈출 수 있다 — 그것이 `--no-verify` 를 학습시키는 모양이다. 상한에
+    #    걸리면 판정 줄이 안 나오고, 그 경로는 아래에서 UNMEASURED 로 떨어진다(레인 L4).
+    #    실측(네트워크 차단, 22파일 · 서로 다른 id 7): 1초.
+    # shellcheck disable=SC2086
+    if command -v timeout >/dev/null 2>&1; then
+      _sr_out=$( cd "$FH" && timeout 45 python3 scripts/stale_ref_scan.py --timeout 8 --body $_sr_files 2>&1 )
+    else
+      _sr_out=$( cd "$FH" && python3 scripts/stale_ref_scan.py --timeout 8 --body $_sr_files 2>&1 )
+    fi
+    _sr_v=$(printf '%s\n' "$_sr_out" | grep -E '^stale-ref verdict:' | tail -1)
+    if [ -z "$_sr_v" ]; then
+      echo "⚠️  ①-g stale-ref: UNMEASURED — 스캐너가 판정 줄을 안 냈다 (0 으로 읽지 마라)"
+    else
+      _sr_sup=$(printf '%s' "$_sr_v" | sed -n 's/.*SUPERSEDED=\([0-9]*\).*/\1/p')
+      _sr_unr=$(printf '%s' "$_sr_v" | sed -n 's/.*UNRESOLVED=\([0-9]*\).*/\1/p')
+      _sr_uns=$(printf '%s' "$_sr_v" | sed -n 's/.*UNSCANNABLE=\([0-9]*\).*/\1/p')
+      if [ "${_sr_sup:-0}" -gt 0 ] 2>/dev/null; then
+        echo "⚠️  ①-g stale-ref: ${_sr_sup} 개 id 가 폐기된 버전을 가리킨다 — advisory, 막지 않는다."
+        echo "     🟥 의도한 pin 일 수 있다 — 눈으로 확인하고 고쳐라(고정이면 파일에 'stale-ref: pinned')."
+        printf '%s\n' "$_sr_out" | grep -E '^ +🟥 SUPERSEDED' | sed 's/^/     /'
+      fi
+      if [ "${_sr_unr:-0}" -gt 0 ] 2>/dev/null || [ "${_sr_uns:-0}" -gt 0 ] 2>/dev/null; then
+        echo "⚠️  ①-g stale-ref: UNRESOLVED=${_sr_unr:-?} UNSCANNABLE=${_sr_uns:-?} — 못 읽은 것이 있다. UNMEASURED 지 깨끗함이 아니다"
+      fi
+      if [ "${_sr_sup:-0}" = "0" ] && [ "${_sr_unr:-0}" = "0" ] && [ "${_sr_uns:-0}" = "0" ]; then
+        echo "✅ ①-g stale-ref: 살아있는 Zenodo 인용이 전부 최신을 가리킨다"
+      fi
+    fi
+  fi
+fi
+
 echo "── close check: $([ "$FAIL" -eq 0 ] && echo CONSISTENT || echo VIOLATIONS) ──"
 exit "$FAIL"
