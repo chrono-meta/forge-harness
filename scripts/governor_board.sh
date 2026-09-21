@@ -74,8 +74,9 @@
 #   bash scripts/governor_board.sh                    # 판을 stdout 에
 #   bash scripts/governor_board.sh --root <경로>       # 다른 체크아웃을 그린다
 #   bash scripts/governor_board.sh --emit <파일>       # 같은 판을 마크다운으로도
+#   bash scripts/governor_board.sh --emit-html <파일>  # 브라우저로 볼 판 (file:// 로 띄운다)
 #   bash scripts/governor_board.sh --no-detail        # 축 기록 블록 없이 표만
-#   bash scripts/governor_board.sh --self-test        # known-pair 레인 24개
+#   bash scripts/governor_board.sh --self-test        # 레인 — 집계 30 + 커스텀 단언 3
 #   주기적으로 보고 싶으면 내장 `/loop` 에 태워라 — 여기에 `--watch` 를 만들지 않는다
 #   (CLAUDE.md §Autonomous Initiative Layer 가 반복 감시를 `/loop` 로 라우팅한다).
 #
@@ -118,9 +119,113 @@ _probe_locale || LOCALE_OK=0
 # 근사: 비-ASCII 는 두 칸. 한글·CJK·이모지에 맞고, 폭이 애매한 기호(●○·)는 **쓰지 않는다**
 # — 터미널마다 갈려서 근사가 깨지는 자리라, 아예 후보에서 뺀다.
 _dw() {
-  local s="$1" a
-  a="${s//[^ -~]/}"
-  echo $(( ${#a} + 2 * (${#s} - ${#a}) ))
+  # 🟥 초판은 `a="${s//[^ -~]/}"` 로 ASCII 를 걸러냈는데, **글롭 브래킷의 범위는 로케일
+  #    정렬(collation) 에 의존한다.** ko_KR.UTF-8 에서 순수 ASCII `codex+gemini` 의 폭이
+  #    **23** 으로 계산됐다(기대 12) — 범위 ` -~` 가 ASCII 코드포인트 구간이 아니라 그 로케일의
+  #    정렬 구간으로 해석돼 거의 모든 글자가 «범위 밖» 으로 떨어졌기 때문이다. 결과는 조용하다:
+  #    에러 없이 **모든 칸이 과하게 잘린다** — 라이브 판이 「⚪ claim 없음」을 `claim~` 으로,
+  #    「codex+gemini」를 `codex+ge~` 로 찍고 있었고 self-test L4·L8 이 그래서 빨갰다.
+  #    실측(2026-09-21):
+  #                      기대   ko_KR.UTF-8   POSIX
+  #      ⚪ claim 없음     13        18          25
+  #      codex+gemini      12        23          12
+  #      미측정             6         6          18
+  #    #780(바이트 하한)·#784(`${#var}` 바이트) 와 **같은 일가의 새 변종**이다 — 그 둘은
+  #    «길이를 바이트로 셌다» 이고 이것은 «범위를 정렬로 읽었다» 다. 고치는 방향은 같다:
+  #    로케일이 해석할 여지가 있는 구문을 **리터럴 집합 대조**로 바꾼다.
+  # 🟥 **명명된 잔여 — 이건 근사다, 그리고 근사인 채로 둔다**(cross-family codex 지목):
+  #    결합문자·variation selector·ZWJ·제어문자는 실제 표시폭이 0 이거나 위치 의존인데 여기선
+  #    2 로 센다. 헤더가 이미 «근사: 비-ASCII 는 두 칸» 이라 적고, 폭이 애매한 기호는 판에서
+  #    **아예 쓰지 않는» 것이 이 파일의 방어선이다. 정확히 재려면 wcwidth 가 필요한데 셸에
+  #    없고, 그걸 들이는 비용이 이 판의 값어치를 넘는다. 틀리는 방향은 «더 넓게 세서 더 일찍
+  #    자른다» — 즉 과다표기가 아니라 과다절단이라, 잘린 것은 '~' 로 보인다(조용하지 않다).
+  # 레인: --self-test 의 L/H 레인 (두 로케일에서 각각).
+  local s="$1" i c n=0
+  local _ascii=' !"#$%&'"'"'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~'
+  i=0
+  while [ "$i" -lt "${#s}" ]; do
+    c="${s:$i:1}"
+    case "$_ascii" in
+      *"$c"*) n=$(( n + 1 )) ;;
+      *)      n=$(( n + 2 )) ;;
+    esac
+    i=$(( i + 1 ))
+  done
+  echo "$n"
+}
+_tsv_safe() { # TSV 한 칸에 넣기 안전하게 — 탭·개행을 공백으로. 값은 안 지운다.
+  local x="$1"
+  x="${x//$'\t'/ }"; x="${x//$'\n'/ }"; x="${x//$'\r'/ }"
+  printf '%s' "$x"
+}
+_html_escape() { # HTML 텍스트 노드용. 순서가 중요하다 — & 가 먼저다.
+  local x="$1"
+  x="${x//&/&amp;}"; x="${x//</&lt;}"; x="${x//>/&gt;}"
+  printf '%s' "$x"
+}
+_emit_html_for_test() { # $1=목적지 $2=판 본문 $3=행 TSV(없으면 표 없이 원문만)
+  # 🟥 이 페이지는 **스냅샷**이다. meta refresh 는 파일을 «다시 읽을» 뿐 판을 «다시 만들지»
+  #    않는다 — 재생성은 바깥의 /loop 가 한다. 새로고침만 두면 루프가 죽어도 페이지는 살아
+  #    보인다(이 저장소가 «거짓 판이 거짓 결론을 만든다» 라고 부르는 형태다). 그래서 **생성 후
+  #    경과 시계**를 같이 싣는다: 루프가 돌면 0 으로 돌아가고, 죽으면 계속 커진다 — 두 신호다.
+  #    (--watch 를 안 만드는 것은 저자의 결정이고 이 함수는 그걸 안 뒤집는다.)
+  local dest="$1" body="$2" tsv="${3:-}"
+  {
+    printf '%s\n' '<!doctype html><html lang="ko"><head><meta charset="utf-8">'
+    printf '%s\n' '<meta name="viewport" content="width=device-width,initial-scale=1">'
+    printf '%s\n' '<meta http-equiv="refresh" content="20">'
+    printf '%s\n' '<title>거버너 판</title><style>'
+    printf '%s\n' ':root{--bg:#fbfbfa;--fg:#22211f;--dim:#6b6862;--line:#e3e0da;--warn:#a8441c;--soft:#f3f1ed}'
+    printf '%s\n' '@media(prefers-color-scheme:dark){:root{--bg:#191817;--fg:#e8e6e1;--dim:#948f86;--line:#33312e;--warn:#e08a5a;--soft:#211f1d}}'
+    printf '%s\n' 'html{background:var(--bg)}*{box-sizing:border-box}'
+    printf '%s\n' 'body{background:var(--bg);color:var(--fg);margin:0;padding:24px 16px;'
+    printf '%s\n' 'font:15px/1.55 -apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo",sans-serif}'
+    printf '%s\n' '.wrap{max-width:1100px;margin:0 auto}'
+    printf '%s\n' 'h1{font-size:17px;font-weight:650;margin:0 0 4px;letter-spacing:-.01em}'
+    printf '%s\n' '.age{color:var(--dim);font-size:12.5px;margin:0 0 18px}.age b{color:var(--warn);font-weight:600}'
+    printf '%s\n' 'table{width:100%;border-collapse:collapse;font-size:14px}'
+    printf '%s\n' 'th{text-align:left;font-weight:600;font-size:12px;letter-spacing:.04em;color:var(--dim);'
+    printf '%s\n' 'text-transform:uppercase;padding:0 12px 8px 0;border-bottom:1px solid var(--line)}'
+    printf '%s\n' 'td{padding:10px 12px 10px 0;border-bottom:1px solid var(--line);vertical-align:top}'
+    printf '%s\n' 'tr:last-child td{border-bottom:0}'
+    printf '%s\n' 'td.br{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;word-break:break-all}'
+    printf '%s\n' 'td.fam,td.prog{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;white-space:nowrap}'
+    printf '%s\n' 'td.role{white-space:nowrap;color:var(--dim)}td.st{white-space:nowrap}'
+    printf '%s\n' 'td.last{white-space:nowrap;color:var(--dim);font-size:13px}'
+    printf '%s\n' 'details{margin-top:22px}summary{cursor:pointer;color:var(--dim);font-size:13px}'
+    printf '%s\n' 'pre{overflow-x:auto;margin:10px 0 0;padding:14px;background:var(--soft);'
+    printf '%s\n' 'border-radius:8px;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre}'
+    printf '%s\n' '@media(max-width:700px){thead{display:none}'
+    printf '%s\n' 'tr{display:block;padding:12px 0;border-bottom:1px solid var(--line)}'
+    printf '%s\n' 'td{display:flex;gap:10px;border:0;padding:2px 0}'
+    printf '%s\n' 'td::before{content:attr(data-l);color:var(--dim);font-size:12px;min-width:74px;flex:none}}'
+    printf '%s\n' '</style></head><body><div class="wrap">'
+    printf '%s\n' '<h1>🔭 거버너 판</h1>'
+    printf '<p class="age">생성 %s · 이 페이지는 <b>스냅샷</b>이다 — 경과가 계속 커지면 재생성 루프가 죽은 것이다. 경과 <span id="a">0초</span></p>\n' \
+      "$(_html_escape "$(date '+%Y-%m-%d %H:%M:%S')")"
+    if [ -n "$tsv" ] && [ -s "$tsv" ]; then
+      printf '%s\n' '<table><thead><tr><th>역할</th><th>상태</th><th>갈래</th><th>계열</th><th>진행</th><th>마지막 움직임</th></tr></thead><tbody>'
+      while IFS=$'\t' read -r _role _st _br _fam _prog _last; do
+        [ -n "$_role$_br" ] || continue
+        printf '<tr><td class="role" data-l="역할">%s</td><td class="st" data-l="상태">%s</td>' \
+          "$(_html_escape "$_role")" "$(_html_escape "$_st")"
+        printf '<td class="br" data-l="갈래">%s</td><td class="fam" data-l="계열">%s</td>' \
+          "$(_html_escape "$_br")" "$(_html_escape "$_fam")"
+        printf '<td class="prog" data-l="진행">%s</td><td class="last" data-l="움직임">%s</td></tr>\n' \
+          "$(_html_escape "$_prog")" "$(_html_escape "$_last")"
+      done < "$tsv"
+      printf '%s\n' '</tbody></table>'
+    else
+      # 🟥 행을 못 얻었으면 «표가 비었다» 가 아니라 «못 얻었다» 라고 적는다.
+      printf '%s\n' '<p class="age">⚠️ 행 데이터를 못 얻었다 — 아래 원문이 정본이다. (빈 표가 아니라 미측정이다.)</p>'
+    fi
+    printf '%s\n' '<details><summary>원문 — 범례·각주·못 연 채널 (기호의 뜻은 여기 있다)</summary>'
+    printf '<pre>%s</pre>\n' "$(_html_escape "$body")"
+    printf '%s\n' '</details></div><script>'
+    printf '%s\n' 'var t0=Date.now();setInterval(function(){var s=Math.round((Date.now()-t0)/1000);'
+    printf '%s\n' 'document.getElementById("a").textContent=s<60?s+"초":Math.floor(s/60)+"분 "+(s%60)+"초";},1000);'
+    printf '%s\n' '</script></body></html>'
+  } > "$dest"
 }
 _clip() { # $1=문자열 $2=최대 표시폭 — 넘치면 잘라서 '~'
   local s="$1" w="$2"
@@ -167,11 +272,12 @@ _ago() { # $1=epoch  → "3분 전" / "" (빈 입력은 빈 출력 — 0 으로 
 }
 
 # ─── 인자 ────────────────────────────────────────────────────────────────────
-ROOT=""; EMIT=""; DETAIL=1; SELFTEST=0
+ROOT=""; EMIT=""; EMIT_HTML=""; DETAIL=1; SELFTEST=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --root)      ROOT="${2:-}"; shift 2 ;;
     --emit)      EMIT="${2:-}"; shift 2 ;;
+    --emit-html) EMIT_HTML="${2:-}"; shift 2 ;;
     --no-detail) DETAIL=0; shift ;;
     --self-test) SELFTEST=1; shift ;;
     -h|--help)   sed -n '/^# 사용/,/^#   테스트 전용/p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
@@ -407,6 +513,21 @@ EOF
     printf '  %s%s%s%s%s%s\n' \
       "$(_pad "$role" 8)" "$(_pad "$state" 15)" "$(_pad "$b" 38)" \
       "$(_pad "$fam" 17)" "$(_pad "$prog" 9)" "$last"
+    # 🟥 HTML 표는 **패딩된 텍스트를 되파싱하지 않는다.** 폭 맞춤은 손실 변환이고(자르면 '~'),
+    #    되파싱하면 브랜치명에 공백이 없다는 가정까지 새로 생긴다. 그래서 여기서 원본 필드를
+    #    그대로 TSV 로 흘린다. `board` 는 늘 $(...) 안에서 돌아 전역이 안 새므로 **파일**이다.
+    if [ -n "${GB_ROWS_TSV:-}" ]; then
+      # 🟥 구분자 오염을 막는다. 브랜치명엔 git 이 탭·개행을 금지하지만 `state`·`fam` 은
+      #    **마커에서 온 자유 텍스트**라 보장이 없다 — 한 칸이 열을 밀면 표가 조용히 어긋난다.
+      local _t1 _t2 _t3 _t4 _t5 _t6
+      _t1="$(_tsv_safe "$role")"; _t2="$(_tsv_safe "$state")"; _t3="$(_tsv_safe "$b")"
+      _t4="$(_tsv_safe "$fam")"; _t5="$(_tsv_safe "$prog")";  _t6="$(_tsv_safe "$last")"
+      printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$_t1" "$_t2" "$_t3" "$_t4" "$_t5" "$_t6" \
+        >> "$GB_ROWS_TSV" || {
+          echo "⚠️  행 기록 실패 — HTML 표가 불완전할 수 있다: $GB_ROWS_TSV" >&2
+          GB_ROWS_TSV=""   # 🟥 부분 실패를 «완전한 표» 로 렌더하지 않는다. 통째로 끈다.
+        }
+    fi
 
     if [ -n "$mk" ]; then
       detail_block="$detail_block
@@ -596,6 +717,56 @@ selftest() {
                          || { printf '  ❌ %-40s\n' "L13 행 렌더됨"; fail=$((fail+1)); }
 
   echo
+  # ── H: --emit-html ────────────────────────────────────────────────────────
+  # H1 known-positive: 파일이 생기고 판의 행이 그 안에 있다.
+  local H="$T/board.html" HT="$T/rows.tsv"
+  : > "$HT"
+  out=$(GB_ROWS_TSV="$HT" board "$R" 2>&1)
+  _emit_html_for_test "$H" "$out" "$HT"
+  if [ -s "$H" ]; then
+    ck "H1 표 행이 셀로 들어간다"  '<td class="br" data-l="갈래">feat/arm-one</td>' "$(cat "$H")"
+    ck "H1b 표 골격"               '<table>'   "$(cat "$H")"
+    ck "H1c 스냅샷이라 적는다"     '스냅샷'    "$(cat "$H")"
+    ck "H1d 원문도 같이 싣는다"    '<pre>'     "$(cat "$H")"
+  else
+    echo "  ❌ H1 html 생성 — 파일이 비었거나 없다"; fail=1
+  fi
+  # H1e 🟥 degrade 방향: 행을 못 얻으면 «빈 표» 가 아니라 «미측정» 이라고 적어야 한다.
+  #     (빈 표는 «팔이 없다» 로 읽히고, 그건 없는 사실을 만드는 방향이다.)
+  _emit_html_for_test "$T/empty.html" "$out" "$T/does-not-exist.tsv"
+  ck "H1e 행 없음→미측정 표기"   '행 데이터를 못 얻었다' "$(cat "$T/empty.html")"
+  ck "H1f 행 없음→빈 표 아님"    '<tbody></tbody>'       "$(cat "$T/empty.html")" 0
+  # H2 over-fire control: 플래그가 없으면 아무 파일도 안 만든다.
+  rm -f "$H"
+  out=$(board "$R" 2>&1)
+  if [ -e "$H" ]; then echo "  ❌ H2 과차단 컨트롤 — 플래그 없이 html 이 생겼다"; fail=1
+  else echo "  ✅ H2 과차단 컨트롤 — 플래그 없으면 안 만든다"; fi
+  # H3 이스케이프 known-pair. 🟥 판 출력에 우연히 '<' 가 없을 수 있으므로 **헬퍼를 직접** 건다 —
+  #    대상이 비어 있는데 초록인 레인(«입력이 안 지나감»)을 만들지 않기 위해서다.
+  local _esc; _esc="$(_html_escape '<b>&"x"</b>')"
+  case "$_esc" in
+    '&lt;b&gt;&amp;"x"&lt;/b&gt;') echo "  ✅ H3 이스케이프 known-positive" ;;
+    *) echo "  ❌ H3 이스케이프 — got=[$_esc]"; fail=1 ;;
+  esac
+  # H4 TSV 위생 known-pair — 구분자가 값에 섞여도 열이 안 밀린다.
+  # 🟥 입력을 $(printf '\n') 로 만들면 **명령치환이 그 개행을 먹는다** — 초판이 그래서
+  #    「a bc」를 얻고 코드를 의심했다. 계기가 틀린 것이었다. $'...' 로 직접 넣는다.
+  local _ts; _ts="$(_tsv_safe $'a\tb\nc')"
+  case "$_ts" in
+    'a b c') echo "  ✅ H4 TSV 위생 known-positive (탭·개행 → 공백)" ;;
+    *)       echo "  ❌ H4 TSV 위생 — got=[$_ts]"; fail=1 ;;
+  esac
+  _ts="$(_tsv_safe 'panel(codex,gemini)')"
+  case "$_ts" in
+    'panel(codex,gemini)') echo "  ✅ H4b TSV 위생 known-negative (평문은 안 건드린다)" ;;
+    *) echo "  ❌ H4b TSV 위생이 평문을 바꿨다 — got=[$_ts]"; fail=1 ;;
+  esac
+  _esc="$(_html_escape 'feat/arm-one')"
+  case "$_esc" in
+    'feat/arm-one') echo "  ✅ H3b 이스케이프 known-negative (평문은 안 건드린다)" ;;
+    *) echo "  ❌ H3b 이스케이프가 평문을 바꿨다 — got=[$_esc]"; fail=1 ;;
+  esac
+
   echo "  governor_board self-test: $pass pass · $fail fail"
   [ "$fail" -eq 0 ] || return 1
   return 0
@@ -607,22 +778,43 @@ if [ "$SELFTEST" = "1" ]; then
 fi
 
 TARGET="${ROOT:-$PWD}"
+
+# 🟥 HTML 표는 **같은 실행**에서 나온 행을 쓴다. 초판은 `board` 를 두 번 돌렸는데, 그러면
+#    텍스트 판과 표가 «다른 순간의 저장소» 를 그릴 수 있다 — 브랜치가 그 사이 움직이면
+#    두 화면이 조용히 어긋나고, 사람은 한 화면으로 믿는다(cross-family codex 지목).
+#    한 번만 돌리면 그 분기가 아예 없다.
+_gb_tsv=""
+if [ -n "$EMIT_HTML" ]; then
+  # 🟥 mktemp 실패를 삼키지 않는다. 실패하면 _gb_tsv 가 비고 → 행 수집이 꺼지고 →
+  #    렌더러가 «행 데이터를 못 얻었다» 를 적는다. 빈 표로 내려가지 않는다.
+  _gb_tsv="$(mktemp -t gbrows 2>/dev/null)" || _gb_tsv=""
+  if [ -n "$_gb_tsv" ]; then
+    trap 'rm -f "$_gb_tsv"' EXIT INT TERM
+    GB_ROWS_TSV="$_gb_tsv"; export GB_ROWS_TSV
+  else
+    echo "⚠️  임시파일을 못 만들었다 — HTML 은 표 없이 원문만 싣는다(미측정으로 표기)." >&2
+  fi
+fi
+
 OUT="$(board "$TARGET")"; RC=$?
 printf '%s\n' "$OUT"
 
+# 기밀성: 판은 브랜치명·라벨·절대경로를 싣는다. 추적 표면에 쓰려 하면 크게 적는다.
+# 🟥 막지는 않는다 — 파일을 쓰는 것은 발행이 아니고, 과차단은 override 를 훈련시킨다.
+_emit_confidentiality_warn() { # $1=쓰려는 경로
+  git -C "$TARGET" rev-parse --show-toplevel >/dev/null 2>&1 || return 0
+  local _top; _top=$(git -C "$TARGET" rev-parse --show-toplevel)
+  case "$(cd "$(dirname "$1")" 2>/dev/null && pwd -P)/" in
+    "$_top"/*)
+      if ! git -C "$TARGET" check-ignore -q "$1" 2>/dev/null; then
+        echo "⚠️  $1 는 이 레포 안이고 gitignore 되지 않는다 — 이 판은 브랜치명·라벨·절대경로를 싣는다." >&2
+        echo "    추적 표면에 올리기 전에 tracks/_meta/ 같은 gitignored 자리로 옮겨라." >&2
+      fi ;;
+  esac
+}
+
 if [ -n "$EMIT" ] && [ "$RC" -eq 0 ]; then
-  # 기밀성: 판은 브랜치명·라벨·절대경로를 싣는다. 추적 표면에 쓰려 하면 크게 적는다.
-  # 🟥 막지는 않는다 — 파일을 쓰는 것은 발행이 아니고, 과차단은 override 를 훈련시킨다.
-  if git -C "$TARGET" rev-parse --show-toplevel >/dev/null 2>&1; then
-    _top=$(git -C "$TARGET" rev-parse --show-toplevel)
-    case "$(cd "$(dirname "$EMIT")" 2>/dev/null && pwd -P)/" in
-      "$_top"/*)
-        if ! git -C "$TARGET" check-ignore -q "$EMIT" 2>/dev/null; then
-          echo "⚠️  $EMIT 는 이 레포 안이고 gitignore 되지 않는다 — 이 판은 브랜치명·라벨·절대경로를 싣는다." >&2
-          echo "    추적 표면에 올리기 전에 tracks/_meta/ 같은 gitignored 자리로 옮겨라." >&2
-        fi ;;
-    esac
-  fi
+  _emit_confidentiality_warn "$EMIT"
   {
     echo "# 거버너 판 — $(date '+%Y-%m-%d %H:%M')"
     echo
@@ -630,5 +822,10 @@ if [ -n "$EMIT" ] && [ "$RC" -eq 0 ]; then
     printf '%s\n' "$OUT"
     echo '```'
   } > "$EMIT" && echo "emitted → $EMIT"
+fi
+
+if [ -n "$EMIT_HTML" ] && [ "$RC" -eq 0 ]; then
+  _emit_confidentiality_warn "$EMIT_HTML"
+  _emit_html_for_test "$EMIT_HTML" "$OUT" "$_gb_tsv" && echo "emitted → $EMIT_HTML"
 fi
 exit "$RC"
