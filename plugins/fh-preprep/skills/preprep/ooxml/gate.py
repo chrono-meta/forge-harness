@@ -1,12 +1,42 @@
 import glob,re,os,sys
 from lxml import etree
+
+# ── 종료코드 계약 (SKILL.md §쓰는 법) ────────────────────────────────────────
+#   0 통과 · 1 발견 · 2 판정불가(계기오류/미측정 — 🟥 PASS 아님)
+# 🟥 2026-09-21 수리: 이 게이트는 «판정불가»를 «발견»으로 렌더하고 있었다.
+#    실사고 — 정본 v1.4 에 `docProps/app.xml` 이 없어(python-pptx 재저장이 떨어뜨린다)
+#    ④ 의 `open('docProps/app.xml')` 이 FileNotFoundError 로 죽으면서 **rc=1** 을 냈다.
+#    읽는 쪽은 그것을 「결함을 찾았다」로 읽는다. 실제로는 **한 줄도 검사하지 못한 것**이다.
+#    ⇒ 부품 부재·계기 오류는 전부 **rc=2** 로 낸다. [[feedback_not_found_is_not_zero_family]]
+def _unmeasured(*a):
+    print('  ⚠ UNMEASURED —',*a)
+    print('GATE UNMEASURED · 판정불가 (계기오류/부품부재 — 🟥 PASS 아님)')
+    sys.stdout.flush(); os._exit(2)
+
+def _instrument_error(_t,_v,_tb):
+    import traceback
+    print('  ⚠ 계기 오류 —',''.join(traceback.format_exception_only(_t,_v)).strip())
+    print('     (게이트 자신이 죽은 것이지 덱의 결함이 아니다)')
+    print('GATE UNMEASURED · 판정불가 (계기오류 — 🟥 PASS 아님)')
+    sys.stdout.flush(); os._exit(2)
+sys.excepthook = _instrument_error
+
 # 작업 트리: 인자 > 환경변수 OOXML_ROOT > 현재 디렉터리(v4 있으면 그쪽)
 _root = sys.argv[1] if len(sys.argv)>1 else os.environ.get('OOXML_ROOT')
 if not _root:
     _root = 'v4' if os.path.isdir('v4/ppt/slides') else '.'
 if not os.path.isdir(os.path.join(_root,'ppt','slides')):
-    print('GATE FAIL · 작업 트리를 못 찾음:',_root); sys.exit(1)
+    # 🟥 「못 찾음」은 발견이 아니라 판정불가다 (예전에는 rc=1 이었다)
+    _unmeasured('작업 트리를 못 찾음:',_root)
 os.chdir(_root)
+
+# 🟥 필수 부품 선검사 — 없으면 **한 줄도 검사하지 못한다**. 트레이스백 대신 이름으로 낸다.
+_REQUIRED = ('[Content_Types].xml','ppt/presentation.xml',
+             'ppt/_rels/presentation.xml.rels','docProps/app.xml')
+_missing = [r for r in _REQUIRED if not os.path.exists(r)]
+if _missing:
+    _unmeasured('pptx 필수 부품 없음:',_missing,
+                '· docProps/app.xml 이 없으면 python-pptx 재저장을 의심해라(통짜로 떨어뜨린다)')
 ok=True; P='http://schemas.openxmlformats.org/presentationml/2006/main'
 _A='http://schemas.openxmlformats.org/drawingml/2006/main'
 def fail(*a):
@@ -126,8 +156,18 @@ for _p in sorted(glob.glob('ppt/slides/slide*.xml')):
 #    그래서 «지금»을 기준선에 박고 **늘어날 때만** 막는다. 줄면 낮추라고 알린다.
 # 🟥 기준선은 «총합»이 아니라 «굵기별»이다 — 총합만 세면 어느 굵기가 새로 생겼는지
 #    못 짚어서, 판정은 맞고 처방은 틀린 게이트가 된다.
+# 🟥 2026-09-21 수리: 기준선은 «덱별»이다. 전역 파일 하나로 판정하면 **다른 덱의 수치로
+#    이 덱을 판정**한다 — 실사고: 외부 디자인 검수본을 스캔하니 「토큰 밖 8종」이 떴는데, 직전 판과
+#    `<a:ln w=…>` 히스토그램이 사실상 동일했다. 저쪽 탓이 아니라 기준선이 이 덱 것이 아니었다.
+#    ⇒ 교정된 기준선이 없으면 **UNCALIBRATED** 로 찍고 «발견»으로 세지 않는다(rc=2).
 _C1={12700:'구조 1pt',38100:'테두리 3pt',88900:'흐름 7pt',177800:'강조 14pt'}
-_BASE=os.path.join(os.path.dirname(os.path.abspath(__file__)),'c1_baseline.txt')
+_BASE_ENV=os.environ.get('PREPREP_C1_BASELINE')
+_BASE_LOCAL='c1_baseline.txt'                       # 작업 트리 안 (cwd 가 트리다)
+_BASE_GLOBAL=os.path.join(os.path.dirname(os.path.abspath(__file__)),'c1_baseline.txt')
+if _BASE_ENV:                       _BASE,_CALIBRATED = _BASE_ENV,   True
+elif os.path.exists(_BASE_LOCAL):   _BASE,_CALIBRATED = _BASE_LOCAL, True
+else:                               _BASE,_CALIBRATED = _BASE_GLOBAL,False
+_c1_uncalibrated=False
 _seen={}
 for _p in sorted(glob.glob('ppt/slides/slide*.xml')):
     for _l in etree.parse(_p).iter('{%s}ln'%_A):
@@ -136,7 +176,20 @@ for _p in sorted(glob.glob('ppt/slides/slide*.xml')):
         _seen.setdefault(int(_w),[]).append(os.path.basename(_p))
 _now={k:len(v) for k,v in _seen.items()}
 _dump=lambda d:'\n'.join('%d %d'%(k,d[k]) for k in sorted(d))
-if os.path.exists(_BASE):
+# 🟥 미교정이면 «늘었다»도 «줄었다»도 판정하지 않는다.
+#    첫 수리는 거짓 «발견» 쪽만 막았는데, known-pair 가 **반대 방향**을 드러냈다:
+#    남의 기준선이 이 덱보다 «크면» 게이트가 그냥 조용해진다(388 → 1 을 「줄었다 ✅」로 읽었다).
+#    거짓 발견과 거짓 침묵은 같은 원인의 두 얼굴이고, 침묵 쪽이 더 위험하다(fail-open).
+#    ⇒ 미교정 + 토큰 밖이 하나라도 있으면 **측정만 하고 판정은 안 한다**(rc=2).
+if _now and not _CALIBRATED:
+    _c1_uncalibrated=True
+    print('  ⚠ C1 UNCALIBRATED — 기준선이 **이 덱 것이 아니다**(전역 폴백: %s)'%os.path.relpath(_BASE))
+    print('     🟥 이 축은 판정하지 않는다. 아래는 «측정»이지 «발견»이 아니다 — 어디에도 인용하지 마라.')
+    for _w in sorted(_now):
+        print('     w=%-7d (%.2fpt)  이 덱 %d곳   예: %s'%(_w,_w/12700,_now[_w],
+              ', '.join(sorted(set(_seen[_w]))[:3])))
+    print('     ↳ 이 덱의 기준선을 먼저 박아라:  python3 %s <트리> --write-c1-baseline'%os.path.relpath(__file__))
+elif os.path.exists(_BASE):
     _prev={}
     for _line in open(_BASE):
         _line=_line.split('#')[0].strip()
@@ -156,9 +209,18 @@ else:
     print('  ⚠ C1 기준선 없음 — 토큰 밖 %d곳(%d종). 박으려면:'%(sum(_now.values()),len(_now)))
     print('     python3 %s --write-c1-baseline'%os.path.relpath(__file__))
 if '--write-c1-baseline' in sys.argv:
+    # 🟥 전역 파일을 덮어쓰면 다음 덱이 또 남의 기준선을 물려받는다 — 기본은 **덱별 경로**다.
+    _BASE = _BASE_ENV or _BASE_LOCAL
     open(_BASE,'w').write('# C1 선 굵기 기준선 — «굵기 개수». gate.py ⑧ 이 읽는다.\n'+_dump(_now)+'\n')
     print('  ✍ 기준선 기록: %s (%d종 %d곳)'%(os.path.relpath(_BASE),len(_now),sum(_now.values())))
 
 
-print('GATE','PASS' if ok else 'FAIL','·',len(order),'장')
-sys.exit(0 if ok else 1)
+# 🟥 우선순위: 진짜 발견(1) > 판정불가(2) > 통과(0).
+#    발견이 있으면 그것을 낸다 — 미교정 축 하나 때문에 실재 결함을 2 뒤로 숨기지 않는다.
+if not ok:
+    print('GATE FAIL ·',len(order),'장'); sys.exit(1)
+if _c1_uncalibrated:
+    print('GATE UNMEASURED ·',len(order),'장 · 다른 축은 통과했으나 C1 이 미교정 (🟥 PASS 아님)')
+    sys.exit(2)
+print('GATE PASS ·',len(order),'장')
+sys.exit(0)
