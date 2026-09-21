@@ -90,7 +90,35 @@ if command -v gh >/dev/null 2>&1; then
   # why an environment with zero open PRs can never surface this, and why the 0-case alone is not a
   # calibration. Observed live the same day: 2 open PRs reported as 1.
   # Anchored by scripts/test_session_close_chain_lanes.sh lane ①-b-P3.
-  PRS=$(gh pr list --author "@me" --state open --json number 2>/dev/null | grep -o '"number"' | wc -l | tr -d ' ' || true)
+  # 🟥 `--author "@me"` ALONE counted ZERO for every cloud-session PR. Those are authored by the
+  # GitHub App `app/claude`, not by the local user (`chrono-meta`), so the sweep reported 0 while
+  # cloud PRs were open and a close passed silently as "no open PRs" — the same class of silence
+  # the occurrence-count fix above was written to end, one layer up. Measured 2026-09-21 with a
+  # known pair on MERGED PRs (the open set was empty, so the 0-case could not calibrate it):
+  #   `--author app/claude` -> #785 #784 #783 #782 #781
+  #   `--author @me`        -> #779 #773 #772 ...
+  # The two sets are DISJOINT, and the recent merges are almost all bot-authored — so this line had
+  # been blind for a long time, not just on the day it was noticed.
+  # Union the two authors and dedup by NUMBER (not by line count: the same PR must never be counted
+  # twice if the author filters ever overlap). `--author` is deliberately NOT dropped — dropping it
+  # counts other contributors' PRs in a shared repo, which over-blocks and trains the override.
+  # Anchored by scripts/test_session_close_chain_lanes.sh lane (1)-b-P4.
+  # 🟥 The number extractor tolerates whitespace after the colon ON PURPOSE. The line this replaced
+  # counted occurrences of the bare token `"number"`, which is spacing-insensitive; a naive
+  # `'"number":[0-9]*'` is NOT — on `{"number": 782}` the `[0-9]*` matches ZERO digits, `cut` yields
+  # an empty field, and the later `sed '/^$/d'` deletes it, so the sweep silently reports 0 for a
+  # pretty-printed body. Measured 2026-09-21 (cross-family codex finding, then hand-verified):
+  #   spaced JSON   -> naive 0 / this 2      <- the silent-wrong-count the fix would have introduced
+  #   compact JSON  -> naive 2 / this 2
+  #   empty array   -> naive 0 / this 0      <- over-fire control, unchanged
+  # gh currently emits compact JSON when piped, so this is hardening against a formatting change,
+  # not a live break — recorded because a count that degrades toward 0 is the same fail-open
+  # direction this whole fix exists to close.
+  _open_pr_numbers() {
+    gh pr list --author "$1" --state open --json number 2>/dev/null \
+      | grep -oE '"number":[[:space:]]*[0-9]+' | grep -oE '[0-9]+$'
+  }
+  PRS=$( { _open_pr_numbers "@me"; _open_pr_numbers "app/claude"; } | sort -u | sed '/^$/d' | wc -l | tr -d ' ')
   [ "${PRS:-0}" -gt 0 ] && echo "⚠️  ①-b $PRS open PR(s) by you — classify: self-mergeable vs awaiting-external"
 fi
 

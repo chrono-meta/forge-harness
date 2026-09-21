@@ -129,7 +129,7 @@ esac
 cp "$FX/scripts/count_check.sh" "$TMP/mut6.sh"
 # 🟥 충실한 되돌림은 «첫 매치를 텍스트 순서로» 다 — 정렬 최솟값이 아니다.
 #    sorted(set(...)) 를 vals[:1] 로 바꾸면 수리 전 `re.search` 의미가 그대로 복원된다.
-if ! sed -i 's/uniq=sorted(set(vals), key=int)/uniq=vals[:1]/' "$TMP/mut6.sh"; then
+if ! sed -i.bak 's/uniq=sorted(set(vals), key=int)/uniq=vals[:1]/' "$TMP/mut6.sh"; then
   bad "L6 HARNESS ERROR — 뮤턴트 생성 실패 (치환 대상 없음). 「안 빨개졌다」와 구별이 안 된다"
 elif ! grep -q 'uniq=vals\[:1\]' "$TMP/mut6.sh"; then
   bad "L6 HARNESS ERROR — 뮤턴트에 치환이 반영되지 않았다"
@@ -142,10 +142,11 @@ else
   esac
   cp scripts/count_check.sh "$FX/scripts/count_check.sh"
 fi
+rm -f "$TMP/mut6.sh.bak"
 
 # ── L7 revert probe: 경계를 빼면 L3 이 빨개져야 한다 ─────────────────────────
 cp "$FX/scripts/count_check.sh" "$TMP/mut7.sh"
-if ! sed -i 's/(?<!\[A-Za-z0-9_\/.-\])//' "$TMP/mut7.sh"; then
+if ! sed -i.bak 's/(?<!\[A-Za-z0-9_\/.-\])//' "$TMP/mut7.sh"; then
   bad "L7 HARNESS ERROR — 뮤턴트 생성 실패 (치환 대상 없음)"
 elif grep -q '(?<!' "$TMP/mut7.sh"; then
   bad "L7 HARNESS ERROR — 경계가 뮤턴트에 그대로 남아 있다"
@@ -158,6 +159,7 @@ else
   esac
   cp scripts/count_check.sh "$FX/scripts/count_check.sh"
 fi
+rm -f "$TMP/mut7.sh.bak"
 
 # ── L8 containment: 실제 레포는 건드리지 않았다 ──────────────────────────────
 if [ ! -s "$TMP/base/qp.json" ] || [ ! -s "$TMP/base/mp.json" ]; then

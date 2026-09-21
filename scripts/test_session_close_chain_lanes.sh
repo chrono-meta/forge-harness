@@ -280,6 +280,51 @@ _gap "①-b gh ERROR is silent (indistinguishable from zero PRs)" "$_g" \
 The sweep 'not run' and the sweep 'found nothing' look identical. Advisory surface, so not \
 fail-closed — but it should print 'sweep UNAVAILABLE' rather than nothing."
 
+# AUTHOR UNION. `--author "@me"` resolves to the LOCAL user; a PR opened by a cloud session is
+# authored by the GitHub App `app/claude`, so a sweep filtered on "@me" alone reports 0 while
+# cloud PRs are open — and the close then passes as "no open PRs". Measured 2026-09-21 on this
+# repo with a known pair over MERGED PRs (the open set was empty that day, so the 0-case could
+# not calibrate it): `--author app/claude` returned #785 #784 #783 #782 #781 and `--author @me`
+# returned #779 #773 #772 ... — DISJOINT sets. These two lanes are the known pair for the fix.
+_ghstub_author() {  # $1=repo  $2=json for @me  $3=json for app/claude
+  mkdir -p "$1/bin"
+  {
+    printf '%s\n' '#!/usr/bin/env bash'
+    printf '%s\n' '_a=""'
+    printf '%s\n' 'while [ $# -gt 0 ]; do case "$1" in --author) _a="$2"; shift 2 ;; *) shift ;; esac; done'
+    printf '%s\n' 'case "$_a" in'
+    printf '  "@me") printf %s%s%s "%s" ;;\n' "'" '%s\n' "'" "$2"
+    printf '  "app/claude") printf %s%s%s "%s" ;;\n' "'" '%s\n' "'" "$3"
+    printf '%s\n' '  *) printf "[]\n" ;;'
+    printf '%s\n' 'esac'
+    printf '%s\n' 'exit 0'
+  } > "$1/bin/gh"
+  chmod +x "$1/bin/gh"
+}
+
+# known-POSITIVE: the cloud-only case the old line was blind to. Pre-fix this printed NOTHING.
+T=$(_repo b_bot); _artifacts "$T"
+_ghstub_author "$T" '[]' '[{\"number\":782},{\"number\":785}]'
+_run_with_gh "$T"
+_line "①-b-P4 cloud-only PRs (app/claude) → sweep says 2" '①-b 2 open PR' 1 "$OUT"
+
+# OVER-COUNT CONTROL: if the two author filters ever return the SAME PR, the union must dedup by
+# number and say 1 — not 2. A union that concatenates without `sort -u` passes P4 and fails here,
+# which is why the pair is two lanes and not one.
+T=$(_repo b_overlap); _artifacts "$T"
+_ghstub_author "$T" '[{\"number\":777}]' '[{\"number\":777}]'
+_run_with_gh "$T"
+_line "①-b-P5 same PR under both authors → deduped to 1 (over-count control)" '①-b 1 open PR' 1 "$OUT"
+
+# JSON SHAPE. `gh` emits compact JSON when piped today, but the extractor must not depend on that:
+# a naive '"number":[0-9]*' matches zero digits on `{"number": 782}` and the count silently becomes
+# 0 — the same fail-open direction (toward "no open PRs") this step exists to close. Known pair:
+# this lane is the spaced body, and ①-b-P3 above is the compact body that must stay green.
+T=$(_repo b_spaced); _artifacts "$T"
+_ghstub_author "$T" '[]' '[{\"number\": 782},{\"number\": 785}]'
+_run_with_gh "$T"
+_line "①-b-P6 pretty-printed JSON (space after colon) → still says 2" '①-b 2 open PR' 1 "$OUT"
+
 echo
 echo "══ ④-log real-time completion log (the exit-1 FAIL path) ══"
 # NOTE the label: this is NOT CLAUDE.md's ④ (memory hygiene, deliberately unmechanized — see
