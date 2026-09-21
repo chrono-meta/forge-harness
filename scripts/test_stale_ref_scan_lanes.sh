@@ -13,7 +13,12 @@
 #   network arms here go through `--offline-fixture`, and the shapes are copied byte-for-byte from
 #   the real corpus (fixture shape from the artifact, not a mental model):
 #     · `10.5281/<wbr>zenodo.<wbr>20397566`   paper/forge_harness_v1.0.3.html:159
-#     · `[Zenodo](https://zenodo.org/records/22542168)`  README.md:418
+#     · `[Zenodo](https://zenodo.org/records/22542168)`  README.md:418 **as of c4b4ffa**
+#       🟥 That README line has since moved to the v1.0.2 id (`22843702`), so the pointer is
+#       pinned to a commit rather than to HEAD. The fixture KEEPS the superseded id on
+#       purpose — a stale-ref lane needs a stale ref — so this is a provenance note, not a
+#       value to sync. The lane is synthetic and stays green either way, which is exactly
+#       why the drift would otherwise be silent.
 #     · `# forge-harness (fh-meta) Changelog`  plugins/fh-meta/CHANGELOG.md:1
 #
 # THE TWO-SIGNALS RULE
