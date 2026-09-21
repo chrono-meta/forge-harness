@@ -221,6 +221,18 @@ _records=$(ls -1 "$RECDIR"/outbound_pr_"$TODAY"_*.md 2>/dev/null | wc -l | tr -d
 
 if [ "${_records:-0}" -eq 0 ]; then
   _add "no record: expected $RECDIR/outbound_pr_${TODAY}_<slug>.md — none exists."
+  # COLD START. The three field syntaxes live in the per-field "line absent" branches below, and
+  # those are unreachable when there is no file at all — so the very first session to hit this gate
+  # was told a path and nothing else, and had to read this script to learn the form. Print the
+  # skeleton here. Not a bullet: it is the continuation of the one bullet above, not a fourth
+  # reason. Deliberately a SKELETON and not an example with plausible values — a fillable example
+  # is a form to copy, and this gate exists because a record can be true in form and false in fact.
+  REASONS="${REASONS}      Write those three lines; each value owes >=20 chars of grounds naming a real run:
+        standpoint: tier2(<repo>) — ran <cmd> there, output: <what you saw>
+        generated-path: none-found(<the generator grep you ran>)  |  found(<path> -> <generator>)
+        fixture-carries: asserted(<cmd>, <what you saw>)  |  not-applicable(<grounds>)
+      Write it and re-run — any line that still does not pass is then explained in full.
+"
 else
   _sp=$(_field standpoint); _sp=${_sp#*:}
   _spv=$(printf '%s' "$_sp" | sed -E 's/^[[:space:]]*//; s/[[:space:]]*(—|--).*$//; s/[[:space:]]+$//; s/^["'"'"']//')
