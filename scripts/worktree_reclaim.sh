@@ -52,7 +52,9 @@
 #       1 = something is still worktree-only: tracks/ files not yet reclaimed · both-sides DIFF ·
 #           OUTSIDE artifacts a human must dispose of (listed, never auto-copied)
 #       2 = usage / not a worktree of a main checkout
-#       10 = harness error (list file unwritable, copy failed verification)
+#       10 = the sweep itself could not be trusted — enumerator failed (git status / diff), the
+#            enumeration was PARTIAL (a git warning), the main-worktree root did not resolve, the
+#            list file was unwritable, or a copy failed byte verification
 #
 # NEVER removes the worktree. Removal stays an explicit `git worktree remove` after this exits 0.
 set -uo pipefail
@@ -89,22 +91,38 @@ NAME="$(basename "$WT")"; TS="$(date +%Y%m%d-%H%M%S)"
 LIST="$DST/_meta/dispatch/reclaim_${NAME}_${TS}.txt"
 
 # 1. ENUMERATE — the list lands in a file FIRST (the evidence that survives the copy)
-ONLY=(); DIFF=(); OUTSIDE=(); SKIPPED=(); _DIRTY=0
+ONLY=(); DIFF=(); OUTSIDE=(); SKIPPED=(); ZONE=(); _DIRTY=0
+_p=''; _k=''   # 🟥 A-7 — `set -u` kills the loop below if a warning line arrives first
 
 # 1-a. OUTSIDE — every path git will NOT carry, outside `tracks/`. Source is git itself, not a
 #      hand-rolled find: `-uall` lists untracked files individually; `--ignored` collapses wholly
 #      ignored dirs, which is the shape the exclusion list matches on.
 # ⓐ Session runtime sentinels — rewritten by hooks on every run, and measured to be present in a
 #    real worktree on every run (this is what made «ignored blocks» an unpassable gate).
+# 🟥 THE TEST FOR THIS LIST IS «the hooks rewrite it every run», NOT «it lives under .claude/».
+#    Two entries failed that test and were REMOVED in the 3rd adversarial round (2026-09-21):
+#      `.claude/settings.json` / `.claude/settings.local.json` — written by a human or the wizard,
+#        and `[[feedback_gitignored_config_has_no_undo]]` measured that losing one has NO undo
+#        (not in `git status`, not recoverable by `git checkout`). settings.local.json is the
+#        session's PERMISSION LEDGER. A worktree holding only those two was told «safe to remove».
+#      `.playwright-mcp/*` — holds screenshots/snapshots that exist ONLY in that worktree.
+#    Both were found by adversarial review, both reproduced by execution, neither self-caught.
+# 🟥 And this list had never been cross-checked against this repo's OWN `.gitignore`: one entry of
+#    the five in the same «prior-art hook runtime sentinels» comment block was missing, so genuinely
+#    regenerable files were blocking. The lane now diffs the two (W7j) — this drift does not get
+#    re-noticed by eye.
 _runtime_sentinel() {
   case "$1" in
     .claude/.prior_art_prompted_*|.claude/.prior_art_events.tsv) return 0 ;;
     .claude/.outbound_hook_events.tsv|.claude/.proposal_hook_events.tsv) return 0 ;;
-    .claude/settings.json|.claude/settings.local.json|.claude/settings*.json.bak) return 0 ;;
+    .claude/settings*.json.bak) return 0 ;;   # 🟥 백업만. 원본은 아래 주석 참조
+    .claude/.outbound_hook_uncalibrated_notice|.claude/be_last_sync) return 0 ;;
+    .claude/worktrees/*|.claude/mcp_circuit/*|.claude/registry/*) return 0 ;;
+    .claude/skills/*|skills-lock.json|.codex/*) return 0 ;;
     .claude/*.lock|.claude/goal-quench.*) return 0 ;;
     .claude-octopus/*|.claude-octopus/) return 0 ;;
-    .playwright-mcp/*|.playwright-mcp/) return 0 ;;
     .fd_*|*/.fd_*) return 0 ;;
+    *-playwright-demo.png) return 0 ;;
     .DS_Store|*/.DS_Store) return 0 ;;
   esac
   return 1
@@ -132,7 +150,14 @@ _regenerable() {
 #    🟥 That is THIS SCRIPT'S OWN DISEASE, re-introduced one layer up: the widening meant to stop
 #    «unlooked» rendering as «none» was itself carried by an unchecked enumerator.
 #    So the enumerator's rc is now load-bearing: it cannot fail quietly.
-_ST=$(git -C "$WT" status --porcelain --ignored -uall 2>&1); _ST_RC=$?
+# 🟥 A-8 — `warning:`/`fatal:` below are ENGLISH git strings. git translates them under NLS
+#    (ko `경고:`, ja `警告:`), and a translated warning falls through to `*) continue` — which is
+#    exactly the partial-enumeration hole the `_DIRTY` branch exists to close. This ships on npm,
+#    so the consumer's locale is the target and «this machine is English» is not evidence
+#    ([[feedback_compare_beats_pinning_a_constant]]). B-5: `core.quotePath=false` so a non-ASCII
+#    path prints as itself — the script tells a human to «move or delete each one», and they cannot
+#    find a file named `\355\225\234.md`.
+_ST=$(LC_ALL=C git -C "$WT" -c core.quotePath=false status --porcelain --ignored -uall 2>&1); _ST_RC=$?
 if [ "$_ST_RC" -ne 0 ]; then
   echo "🟥 git status failed (rc=$_ST_RC) — the worktree could not be enumerated." >&2
   echo "   An empty result here is NOT «clean». Do NOT remove the worktree." >&2
@@ -154,17 +179,23 @@ while IFS= read -r _l; do
     #    as «not a line we parse». git exits 0 on `warning: could not open directory … Permission
     #    denied`, so rc alone does not see a PARTIAL enumeration — and a partial enumeration is
     #    exactly «unlooked rendered as none». Louder than the `2>/dev/null` it replaced, not quieter.
-    'warning:'*|'fatal:'*|'error:'*) printf '   %s\n' "$_l" >&2; _DIRTY=1 ;;
+    'warning:'*|'fatal:'*|'error:'*) printf '   %s\n' "$_l" >&2; _DIRTY=1; continue ;;
     *) continue ;;                      # tracked states (M/A/D/R/U…) die with nothing
   esac
   case "$_p" in '"'*'"') _p="${_p#\"}"; _p="${_p%\"}" ;; esac   # git quotes non-ASCII paths
+  # 🟥 A-10/A-11 — `tracks/` gets its OWN bucket, before anything else looks at it. The 2nd-round
+  #    code sent it through `_regenerable` (whose first case is `tracks/*`), so every tracks file was
+  #    labelled «skipped as REGENERABLE» to the reader — the measured loss class, reported as
+  #    disposable — and the SAME path printed twice, once as ONLY (blocking) and once as SKIP (not).
+  #    And where `tracks/` is NOT gitignored it arrived as `??` and blocked forever: `--apply` copied
+  #    it and the screen still said «NOT auto-copied», with rc=1 that re-running never cleared.
+  #    Both reproduced by execution. It is neither skipped nor blocked here — it is JUDGED BELOW.
+  case "$_p" in tracks/*|tracks/) ZONE+=("$_p"); continue ;; esac
   # 🟥 S-2 — the non-blocking set is a NAMED WHITELIST, and it is consulted only for `!!`.
   #    An untracked path blocks whatever it is called: a path SHAPED like build output is not
   #    evidence that it IS build output when nobody ever told git about it.
   if [ "$_k" = "I" ] && { _runtime_sentinel "$_p" || _regenerable "$_p"; }; then
     SKIPPED+=("$_p")                    # 🟥 A-2 — counted and listed, never vanished
-  elif [ "$_k" = "I" ] && _regenerable "$_p"; then
-    SKIPPED+=("$_p")
   else
     OUTSIDE+=("$_p")                    # untracked, or ignored-but-not-whitelisted → BLOCKS
   fi
@@ -176,7 +207,7 @@ EOF
 #      The first version discarded it, so an EACCES on one subdirectory gave partial output and a
 #      green verdict — in the zone that holds the MEASURED loss class. Same face as S-1.
 if [ -d "$SRC" ]; then
-  _DF=$(diff -rq "$SRC" "$DST" 2>&1); _DF_RC=$?
+  _DF=$(LC_ALL=C diff -rq "$SRC" "$DST" 2>&1); _DF_RC=$?
   if [ "$_DF_RC" -gt 1 ]; then
     echo "🟥 diff failed (rc=$_DF_RC) comparing $SRC — tracks/ could not be compared." >&2
     printf '   %s\n' "$_DF" >&2; exit 10
@@ -201,20 +232,31 @@ fi
 
 {
   echo "# worktree_reclaim — $WT → $ROOT  ($TS)"
-  echo "# blocking: only-in ${#ONLY[@]} · differ ${#DIFF[@]} · outside ${#OUTSIDE[@]}   |   non-blocking: skipped ${#SKIPPED[@]}   mode: ${MODE:-enumerate}"
+  echo "# blocking: only-in ${#ONLY[@]} · differ ${#DIFF[@]} · outside ${#OUTSIDE[@]}   |   non-blocking: skipped ${#SKIPPED[@]} · tracks-zone ${#ZONE[@]}   mode: ${MODE:-enumerate}"
   [ -d "$SRC" ] || echo "# note: worktree has no tracks/ — that ZONE is empty, which is not 'nothing to reclaim'"
   for p in ${ONLY[@]+"${ONLY[@]}"}; do echo "ONLY	$p"; done
   for p in ${DIFF[@]+"${DIFF[@]}"}; do echo "DIFF	$p"; done
   for p in ${OUTSIDE[@]+"${OUTSIDE[@]}"}; do echo "OUTSIDE	$p"; done
   for p in ${SKIPPED[@]+"${SKIPPED[@]}"}; do echo "SKIP	$p"; done
+  for p in ${ZONE[@]+"${ZONE[@]}"}; do echo "ZONE	$p"; done
 } > "$LIST" || { echo "🟥 cannot write list file $LIST" >&2; exit 10; }
 echo "── worktree_reclaim: $NAME ──"
-echo "   ⛔ blocking: only-in ${#ONLY[@]} · differ ${#DIFF[@]} · outside ${#OUTSIDE[@]}   |   ℹ️  non-blocking: skipped ${#SKIPPED[@]}"
+echo "   ⛔ blocking: only-in ${#ONLY[@]} · differ ${#DIFF[@]} · outside ${#OUTSIDE[@]}   |   ℹ️  non-blocking: skipped ${#SKIPPED[@]} · tracks-zone ${#ZONE[@]}"
 echo "   list: ${LIST#$ROOT/}"
 for p in ${ONLY[@]+"${ONLY[@]}"}; do echo "   ONLY  $p"; done
 for p in ${DIFF[@]+"${DIFF[@]}"}; do echo "   DIFF  $p   (both sides exist and differ — NOT copied, merge by hand)"; done
 for p in ${OUTSIDE[@]+"${OUTSIDE[@]}"}; do echo "   OUTSIDE  $p   (untracked — git will not carry this, NOT auto-copied)"; done
-for p in ${SKIPPED[@]+"${SKIPPED[@]}"}; do echo "   SKIP  $p   (ignored AND on the named regenerable/sentinel list — does not block)"; done
+for p in ${SKIPPED[@]+"${SKIPPED[@]}"}; do echo "   SKIP  $p   (on the named regenerable/sentinel list — does not block)"; done
+[ "${#ZONE[@]}" -gt 0 ] && echo "   ZONE  ${#ZONE[@]} path(s) under tracks/ — judged by the tracks/ zone above, not here"
+
+# 🟥 B-6 — this check used to sit AFTER the copy loop, so a partial enumeration printed a column of
+#    «✅ reclaimed …» before the warning. Copying is additive, so nothing was destroyed — but a human
+#    stops scrolling at green check marks. A partial sweep must not reach the reclaim decision.
+if [ "$_DIRTY" -ne 0 ]; then
+  echo "🟥 git reported a warning while enumerating — the sweep was PARTIAL, not clean (rc=10)." >&2
+  echo "   Nothing was reclaimed. Do NOT remove the worktree." >&2
+  exit 10
+fi
 
 # 2. RECLAIM (--apply) — copy, then verify byte-identical; a copy that cannot be verified is a harness error
 if [ "$MODE" = "--apply" ] && [ "${#ONLY[@]}" -gt 0 ]; then
@@ -250,11 +292,6 @@ if [ "${#OUTSIDE[@]}" -gt 0 ]; then
   echo "   NOT copied — the destination is a judgment call, not a default."
   echo "   Move or delete each one, then re-run. Until then: do NOT remove the worktree (rc=1)."
   exit 1
-fi
-# 🟥 A-5 — a partial enumeration never reaches the green line.
-if [ "$_DIRTY" -ne 0 ]; then
-  echo "🟥 git reported a warning while enumerating — the sweep was PARTIAL, not clean (rc=10)." >&2
-  exit 10
 fi
 # 🟥 A-4 — the green line used to be unconditional, so it said «nothing left» forty lines under a
 #    list of files it had just printed. What is skipped must ride along with the verdict.

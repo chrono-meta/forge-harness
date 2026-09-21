@@ -200,10 +200,16 @@ mk_pair "$T/q"; W="$T/q/wt"; mkdir -p "$W/tracks/_meta" "$W/blocked/inner"
 echo real > "$W/blocked/inner/artifact.md"; chmod 000 "$W/blocked" 2>/dev/null
 OUT="$(bash "$SUT" "$W" 2>&1)"; RC=$?
 chmod 755 "$W/blocked" 2>/dev/null
+# 🟥 초판은 `[ "$RC" -ne 0 ]` 하나였고, 그래서 **크래시(rc=1, `_p: unbound variable`)를 통과로
+#    인증**하고 있었다. 비정상 종료와 «옳게 막힘» 이 레인에서 같은 값이 됐다. rc 값 그 자체 ·
+#    기대 메시지 존재 · 「통과 문구」 부재 · 크래시 문자열 부재 넷을 같이 건다.
 if printf '%s' "$OUT" | grep -q "safe to"; then
   ng "W7h 읽기불가 디렉터리로 열거가 잘렸는데 «safe to remove» 를 찍었다 (rc=$RC)"
-elif [ "$RC" -ne 0 ]; then ok "W7h 부분 열거를 «깨끗함» 으로 안 읽는다 (rc=$RC)"
-else ng "W7h rc=0 — 부분 열거가 초록으로 갔다"; fi
+elif printf '%s' "$OUT" | grep -q "unbound variable"; then
+  ng "W7h 스크립트가 크래시했다 — 막힌 게 아니라 죽은 것이다 (rc=$RC)"
+elif [ "$RC" -eq 10 ] && printf '%s' "$OUT" | grep -q "PARTIAL"; then
+  ok "W7h 부분 열거 → rc=10 «PARTIAL» (크래시도 초록도 아니다)"
+else ng "W7h rc=$RC (기대 10) 또는 PARTIAL 문구 없음"; fi
 
 # W7i 🟥 A-4 — SKIP 이 0 이 아닐 때 초록 문장이 그 사실을 데리고 나가나.
 mk_pair "$T/r"; W="$T/r/wt"; mkdir -p "$W/tracks/_meta" "$W/node_modules"
@@ -212,6 +218,75 @@ OUT="$(bash "$SUT" "$W" 2>&1)"; RC=$?
 [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q "skipped as regenerable/sentinel" \
   && ok "W7i 초록 문장이 «무엇을 건너뛰었는지» 를 데리고 나간다" \
   || ng "W7i rc=$RC — «nothing left» 가 SKIP 을 가린다"
+
+echo "── W8 3라운드 적대검증 (같은 계열 + 다른 계열 두 팔) ──"
+# 🟥 셋 다 «2R 수리가 만든» 것이다. 1R→2R→3R 세 라운드 연속 같은 방향이었다.
+
+# W8a 🟥 S-3 — 화이트리스트가 «undo 가 없는» 설정 파일을 통과시켰다(같은 계열 팔).
+mk_pair "$T/s"; W="$T/s/wt"; mkdir -p "$W/tracks/_meta" "$W/.claude"
+printf 'tracks/\n.claude/settings.json*\n.claude/settings.local.json*\n' > "$W/.gitignore"
+echo '{"hooks":{}}' > "$W/.claude/settings.json"; echo '{"permissions":{}}' > "$W/.claude/settings.local.json"
+OUT="$(bash "$SUT" "$W" 2>&1)"; RC=$?
+if printf '%s' "$OUT" | grep -q "safe to"; then
+  ng "W8a settings.json + settings.local.json(권한 원장) 을 두고 «safe to remove» — undo 가 없는 클래스다"
+elif [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "settings.local.json"; then
+  ok "W8a 설정 원본은 «훅이 다시 쓰는 것» 이 아니다 — 막는다 (rc=$RC)"
+else ng "W8a rc=$RC / 출력에 파일명 없음"; fi
+# 컨트롤: `.bak` 은 여전히 통과해야 한다(진짜 재생성물)
+rm -f "$W/.claude/settings.json" "$W/.claude/settings.local.json"
+printf 'tracks/\n.claude/settings*.json.bak\n' > "$W/.gitignore"; echo x > "$W/.claude/settings.json.bak"
+OUT="$(bash "$SUT" "$W" 2>&1)"; RC=$?
+[ "$RC" -eq 0 ] && ok "W8b 컨트롤: «.bak» 은 통과한다 — 원본만 조인 것이지 통째로 막은 게 아니다" \
+                || ng "W8b «.bak» 까지 막았다 (rc=$RC) — 과차단"
+
+# W8c 🟥 다른 계열 팔의 단독 발견 — 워크트리에만 있는 스크린샷 증거.
+mk_pair "$T/t"; W="$T/t/wt"; mkdir -p "$W/tracks/_meta" "$W/.playwright-mcp"
+printf 'tracks/\n.playwright-mcp/\n' > "$W/.gitignore"; echo shot > "$W/.playwright-mcp/evidence.png"
+OUT="$(bash "$SUT" "$W" 2>&1)"; RC=$?
+[ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "evidence.png" \
+  && ok "W8c 워크트리 전용 스크린샷 증거를 막는다" \
+  || ng "W8c rc=$RC — .playwright-mcp 가 «재생성 가능» 으로 통과했다"
+
+# W8d 🟥 A-10 — 손실 클래스가 «regenerable» 로 라벨되고 같은 경로가 두 번 렌더됐다.
+mk_pair "$T/u"; W="$T/u/wt"; mkdir -p "$W/tracks/_meta"; echo sig > "$W/tracks/_meta/x.md"
+OUT="$(bash "$SUT" "$W" 2>&1)"; RC=$?
+if printf '%s' "$OUT" | grep -q "SKIP  tracks/"; then
+  ng "W8d tracks/ 파일이 «regenerable 로 건너뜀» 으로 보고됐다 — 이 도구가 지키려는 바로 그 클래스다"
+elif [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "ONLY  _meta/x.md"; then
+  ok "W8d tracks/ 는 자기 구역에서만 판정된다 — 이중 렌더 없음 (rc=$RC)"
+else ng "W8d rc=$RC / ONLY 줄 없음"; fi
+
+# W8e 🟥 A-11 — `tracks/` 가 ignored «가 아닌» 소비자 레포. 레인 픽스처엔 이 형태가 없었다.
+T2="$T/v"; mkdir -p "$T2" && ( cd "$T2" && git init -q main && cd main \
+  && git config user.email l@example.invalid && git config user.name lane \
+  && printf '# no tracks rule\n' > .gitignore && echo x > README.md \
+  && git add -A && git commit -qm init && git worktree add -q ../wt -b wt-b ) >/dev/null 2>&1
+W="$T2/wt"; M="$T2/main"; mkdir -p "$W/tracks/_meta"; echo sig > "$W/tracks/_meta/x.md"
+OUT="$(bash "$SUT" "$W" --apply 2>&1)"; RC=$?
+if printf '%s' "$OUT" | grep -q "OUTSIDE  tracks/"; then
+  ng "W8e tracks/ 가 ignored 아닌 레포에서 «NOT auto-copied» 라고 하면서 실제로는 복사했다 — 영구 rc=1"
+elif [ -f "$M/tracks/_meta/x.md" ]; then
+  OUT2="$(bash "$SUT" "$W" 2>&1)"; RC2=$?
+  [ "$RC2" -eq 0 ] && ok "W8e tracks/ 가 ignored 아니어도 회수되고, 재실행이 rc=0 으로 «풀린다»" \
+                   || ng "W8e 회수는 됐는데 재실행 rc=$RC2 — 게이트가 안 풀린다"
+else ng "W8e --apply 가 tracks/ 를 회수하지 못했다 (rc=$RC)"; fi
+
+# W8f 🟥 A-9 — 화이트리스트가 이 레포 자신의 `.gitignore` 와 대조된 적이 없었다.
+#      눈으로는 다시 안 맞춰지는 드리프트라 레인이 대조한다.
+GI="$ROOT/.gitignore"
+if [ -f "$GI" ]; then
+  miss=0; names=""
+  for tok in .claude/.outbound_hook_uncalibrated_notice .claude/be_last_sync \
+             .claude/.prior_art_events.tsv .claude/.proposal_hook_events.tsv \
+             .claude/.outbound_hook_events.tsv; do
+    grep -qF "$tok" "$GI" || continue          # 이 레포에 없는 항목은 대조 대상이 아니다
+    grep -qF "$tok" "$SUT" || { miss=$((miss+1)); names="$names $tok"; }
+  done
+  [ "$miss" -eq 0 ] && ok "W8f .gitignore 의 «훅이 매 런 쓰는» 센티널이 전부 화이트리스트에 있다" \
+                    || ng "W8f 화이트리스트에 없는 센티널 $miss 개:$names — 재생성물이 제거를 막는다"
+else
+  ng "W8f .gitignore 를 못 찾았다 — 대조 «안 한» 것이지 통과가 아니다"
+fi
 
 echo
 echo "── worktree-reclaim lanes: PASS=$PASS FAIL=$FAIL ──"
