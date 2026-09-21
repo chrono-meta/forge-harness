@@ -154,6 +154,17 @@ is, for any session that does not already know its filename, indistinguishable f
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-09-21 (3) | forge-harness | #charlen, #locale, #fail-open, #known-pair, #recurrence-lock
+**File:** `templates/.git-hooks/pre-commit` · `scripts/test_locale_invariance_lanes.sh` · 마커 스위트 4종
+#780 이 남긴 「다음 건」. 같은 로케일 클래스의 **반대 방향**이다 — `wc -w` 는 한글을 0 낱말로 읽어 **과차단**했는데, `${#var}` 와 `wc -m` 은 한글을 **바이트**로 읽어 약 3 배로 크레딧한다 → **fail-OPEN**. 10 자짜리 한글 근거가 30 바이트로 세어져 `-lt 20` 하한을 공짜로 넘는다. 즉 **영어로 쓴 같은 길이의 근거는 막히는데 한글 근거는 통과한다.**
+- **한 칸만 뒤집는 known-pair**(`validate_standpoint_leg`, 한글 10 자 근거): `old/POSIX` **0(통과)** · `old/UTF-8` 1 · `new/POSIX` **1** · `new/UTF-8` 1. ASCII 컨트롤은 네 칸 모두 0 — 계기가 한글에만 반응함을 같은 실행에서 보인다.
+- **문턱값 재교정이 필요 없다**: `_charlen` 은 UTF-8 기계에서 `${#var}` 와 **같은 수**(한글 포함, 코퍼스 6 실측). 그래서 #780 과 **같은 불변식**을 쓴다 — 바뀌는 것은 바이트 로케일뿐. 🟥 PR #780 본문이 *"방향이 반대라 이 PR 의 불변식을 깨고 8 개 레그의 문턱값 재교정이 필요하다"* 고 적었는데 **그 예측은 틀렸다**; 실측이 정정했다.
+- 🟥 **손으로 센 열거가 또 하나를 놓쳤다**: `${#var}` 만 grep 해서 «8 곳» 이라 적었는데, `wc -m` 자리(evidence= 본문 두께)가 같은 결함을 갖고 있어 **실제는 9 곳**이었다. `${#arr[@]}` 4 곳은 배열 길이라 로케일 무관 — 대상이 아니고, 레인이 그 구분을 직접 판별한다. **잠금은 목록이 아니라 «0 곳인가»(L14f)** 다.
+- 🟥 **고치자 마커 스위트 넷이 두 로케일 모두에서 빨개졌다** — 레인이 훅의 **일부만** 소싱하는데 `_charlen` 을 같이 안 뽑아서 «command not found» 로 **조용히 다른 판정**이 났다. 로케일 레인은 이걸 **구조적으로 못 잡는다**(갈리지 않고 양쪽이 똑같이 틀린다). 넷을 고치고, 관계 자체를 박는 레인(L14g)을 세웠다.
+- 🟥 **그 L14g 가 처음에 이빨이 없었고, 되돌림 프로브가 잡았다**: `set -o pipefail` 아래에서 `sed … | grep -q` 는 grep 이 첫 히트에 빠지며 sed 를 SIGPIPE 로 죽여 **파이프라인이 141** 을 내고, `|| continue` 가 걸려 레그가 통째로 건너뛰어진다. 길이에 따라 갈리는 **경합**이라 일부만 세어지고 레인은 초록으로 남았다. **L13c 가 잡은 함정의 같은 날 재발** — `grep -c` 로 바꿔 입력을 끝까지 읽게 했다.
+- **앵커**: 레인 22 → **29**(L14·L14b·L14c·L14d·L14e·L14f·L14g). 되돌림 프로브 둘(하한 되돌림 → fail-open 복귀 / 의존 추출 제거 → L14g 적발), 컨트롤 셋, 전수 잠금 하나, 문턱값 불변 하나. L14f·L14g 는 **각각 변이로 빨개지는 것을 확인**했다 — 초록만 보고 넘기지 않았다.
+- Tags: `charlen` `locale` `fail-open` `known-pair` `recurrence-lock` `pipefail` `enumeration-misses-one`
+
 ### 2026-09-21 | forge-harness | #checkout-drift, #gate-wiring, #instrument-calibration, #known-pair, #remote-node
 **File:** `scripts/env_layer_fingerprint.sh` · `scripts/test_env_layer_fingerprint_lanes.sh` · `knowledge/shared/harness-core/checkout_layer_drift.md` · `CLAUDE.md` · `scripts/selfcheck.sh`
 클라우드 클론에서 돈 세션이 **운영자 맥 체크아웃과의 드리프트**를 실측했다. FH 는 읽는 층과 막는 층이 다른 수송로로 다니고 git 은 앞의 것만 나른다 — 같은 커밋 `a9e9b29` 에서 **15개 층 중 READ 4개만 같고 ENFORCE·EVIDENCE·PATTERN 11개가 전부 반대**였다(맥: 훅 둘 다 `EXEC_FH` · 마커 491 · tracks 17,387 · 로컬 전용 파일 11종 전부 PRESENT / 클론: 전부 ABSENT). 실물 확인: 이 클론에서 FH 자산 커밋은 **무음 성공**하고, `git config core.hooksPath templates/.git-hooks` **한 줄**만 잡자 같은 커밋이 Axis 2+3·Axis 4 로 차단됐다 — 바뀐 것은 코드가 아니라 배선이다.
@@ -180,7 +191,7 @@ is, for any session that does not already know its filename, indistinguishable f
 - 🟥 **그 자리는 2026-06-13 에 이미 지적됐고 «live test 로 반박됐다»고 기록됐다**(이 파일 `#rubber-stamp-guard` 항목의 *"B1 curly-quote locale block refuted by live test"*). 반박이 틀렸던 것이 아니라 **팔이 하나뿐이었다** — UTF-8 이 걸린 기계에서만 재보면 이 결함은 구조적으로 안 보인다. «실제로 돌렸다» 가 «두 팔을 돌렸다» 를 대신하지 못한다는 사례다.
 - **L13c 가 자기 레인의 버그를 잡았다**: `set -o pipefail` 아래에서 `레그 | grep -q` 는 레그가 1 을 내면 grep 의 성공과 무관하게 파이프라인이 1 이 되어 **네 칸이 전부 pass 로 읽혔다.** 기대값이 BLOCK 인 known-negative 를 넣었기 때문에 드러났다 — 양성 팔만 있었으면 공허한 초록이 났다.
 - **엑대시 자리(`:906`·`:1324`)는 이제 측정됐다**: 실제 enum 값 11 개로 값 추출·근거 추출 둘 다 **11/11 SAME**. 구조적 이유도 있다 — 값이 항상 ASCII enum 이라 부정 클래스가 한글 선두 바이트를 만나기 전에 구분자에 도달한다. 단, «이 11 개 형태에서 안 갈린다» 이지 «그 정규식이 안전하다» 가 아니다.
-- **다음 건으로 남긴 것(방향이 반대라 이 PR 에 안 업는다)**: `${#var}` 는 POSIX 에서 **바이트**를 센다(`대상이 없다` → 16 vs 6). 훅 안에 그 형태의 문자-길이 바닥이 **8 곳** 남아 있고, 방향은 과차단이 아니라 **fail-open**(한글 근거가 3 배로 크레딧된다). 훅 자신의 주석이 `:1939`·`:2131` 에서 이미 그걸 지적하고 있다.
+- ~~**다음 건으로 남긴 것**: `${#var}` … **8 곳**~~ 🟥 **정정 + 닫힘(같은 날 별건)** — 손으로 센 «8 곳» 이 **틀렸다. 실제 9 곳**이었다: `wc -m` 자리 하나(evidence= 본문 두께 검사)가 `${#var}` 만 grep 한 열거에서 빠져 있었다. **손으로 센 열거가 또 한 번 하나를 놓친 것**이고, 그래서 이번 잠금은 목록이 아니라 «0 곳인가» 다. 상세는 아래 `#charlen` 항목.
 - Tags: `locale` `gate-wiring` `known-pair` `instrument-calibration` `cleanroom-audit` `silent-degrade` `fail-open`
 
 ### 2026-07-26 | forge-harness · forge-wiki · llmwiki-template · llmwiki-qa | #gate-locality, #sync-guard, #instrument-calibration, #sister-asset, #cross-corpus-provenance, #wiki-consolidation

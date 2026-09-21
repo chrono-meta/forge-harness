@@ -706,6 +706,26 @@ fi
 # ⚠️ **채널 검사다**: 「그 값이 옳은가」가 아니라 「이 기록이 템플릿 자신인가」를 묻는다.
 # 🟥 좁게 잡는다 — 꺾쇠를 정당하게 쓰는 기술 서술을 안 막으려고, **힌트에 실제로 등장하는
 #    문자열**만 본다. 목록이지 정규식 일반화가 아니다. 힌트를 바꾸면 여기도 같이 바꿔라.
+# ── 문자 수 — 로케일에 의존하지 않는다 (2026-09-21) ───────────────────────────
+# 🟥 `${#var}` 도 `wc -m` 도 **로케일이 센다.** `LC_CTYPE` 이 UTF-8 이 아닌 기계
+#    (베어 컨테이너 · 많은 CI 러너 · `LANG` 이 안 걸린 셸)에서는 둘 다 **바이트**를 센다:
+#      `대상이 없다`        → ${#var} 16 · wc -m 16   (실제 문자 6)
+#      `운영자가 승인했다고 한다` → ${#var} 35        (실제 문자 13)
+#    방향이 **fail-OPEN 이다** — 한글 근거가 약 3배로 크레딧돼 `-lt 20` 류 하한을 공짜로
+#    넘는다. 영어로 쓴 같은 길이의 근거는 막히는데 한글 근거는 통과한다. #780 의 `wc -w`
+#    결함과 **같은 클래스, 방향만 반대**(저쪽은 과차단, 이쪽은 fail-open).
+#    🟥 이 레포의 하한 주석들은 전부 «chars» / «자» 라고 적고 있다 — 의도는 처음부터
+#    문자였고, 계기가 그것을 구현하지 않았을 뿐이다. 이 훅 자신도 두 자리에서 이미
+#    그렇게 적어두고( `${#}` is locale-dependent ) 열두 줄 뒤에 어겼다.
+# 셈법: UTF-8 의 이어지는 바이트(0x80–0xBF)를 지우면 문자당 선두 바이트 하나만 남으므로,
+#    남은 바이트 수가 곧 문자 수다. **UTF-8 기계에서는 `${#var}` 와 같은 수**이고(한글
+#    포함, 실측) 따라서 기존 문턱값이 한 칸도 안 움직인다 — 바뀌는 것은 바이트 로케일뿐.
+# ⚠️ 명시된 잔여: 결합 문자(NFD)와 이모지 ZWJ 열은 코드포인트 단위로 세진다. 그것은
+#    `${#var}` 가 UTF-8 기계에서 하던 셈법 그대로이므로 회귀가 아니라 동등이다.
+_charlen() { # $1 = 문자열 → 문자 수 (로케일 무관)
+  printf '%s' "${1-}" | LC_ALL=C tr -d '\200-\277' | LC_ALL=C wc -c | tr -d ' '
+}
+
 _marker_template_residue() { # $1 = 줄 내용  → 0 = 템플릿 잔여
   # 🟥 **세 번째 설계다. 앞의 둘이 왜 틀렸는지 남긴다** (cross-family 3라운드, 자력 적발 0).
   #    v1 손목록  → 규칙 문서가 새 자리표시자를 실을 때마다 어긋났다(구조적 desync).
@@ -814,7 +834,7 @@ validate_defense_leg() { # $1 = marker path — fires ONLY at the floor tiers (s
     v=$(printf '%s' "$v" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')
     case "$(printf '%s' "$v" | tr 'A-Z' 'a-z')" in
       ok|yes|y|n/a|na|none|done|true|-|tbd|todo) bad="$bad $k(vacuous:'$v')" ;;
-      *) [ "${#v}" -ge 12 ] || bad="$bad $k(too short:'$v')" ;;
+      *) [ "$(_charlen "$v")" -ge 12 ] || bad="$bad $k(too short:'$v')" ;;
     esac
   done
   if [ -n "$bad" ]; then
@@ -1007,7 +1027,7 @@ validate_crossfamily_leg() { # $1 = marker path
             fi ;;
         esac
       done
-      if [ "${#reason}" -lt 20 ] || [ -z "$_cf_cited" ]; then
+      if [ "$(_charlen "$reason")" -lt 20 ] || [ -z "$_cf_cited" ]; then
         echo "  ❌ FAIL — 'declined' must cite a record that EXISTS on disk."
         echo "     declined = the OPERATOR declined sidecars, a chosen floor. It does NOT mean"
         echo "     'I judged decorrelation unnecessary here' — that is a CHOICE the author made"
@@ -1017,7 +1037,7 @@ validate_crossfamily_leg() { # $1 = marker path
         echo "       crossfamily: declined — chosen floor per CLAUDE.local.md §sidecar"
         echo "     No such record → you are not describing an operator declination:"
         echo "       crossfamily: DEGRADED_PANEL_UNUSED — codex+agy reachable, not recruited (<why>)"
-        [ "${#reason}" -ge 20 ] && echo "     (grounds were substantive but named no resolvable path)"
+        [ "$(_charlen "$reason")" -ge 20 ] && echo "     (grounds were substantive but named no resolvable path)"
         return 1
       fi
       if [ "$_res_active" -eq 1 ] && [ "$_res_ntok" -gt 0 ]; then
@@ -1185,7 +1205,7 @@ validate_crossfamily_leg() { # $1 = marker path
           SHARED|MIXED)
             # 문자 수 기준(공백 제외). 4자 미만이면 «diff» 같은 한 토큰이고, 그건 어느 산출물인지
             # 말하지 않는다. 🟥 낱말 수로 세지 않는다 — CJK 와 하이픈 복합어가 전부 1 낱말이 된다.
-            if [ "$(printf '%s' "$_ev_strip" | wc -m | tr -d ' ')" -lt 6 ]; then
+            if [ "$(_charlen "$_ev_strip")" -lt 6 ]; then
               echo "  ❌ FAIL — evidence=$_ev_kind(...) body too thin to identify the artifact: '$_ev_body'"
               echo "     Name it (\"same staged diff\", \"one findings.jsonl\", \"동일 프롬프트 파일\")."
               echo "     A bare $_ev_kind(diff) records the weak arm as if it were documented."
@@ -1198,7 +1218,7 @@ validate_crossfamily_leg() { # $1 = marker path
       # A degrade is allowed; being silent about WHICH degrade, or about its grounds, is not.
       # Two conditions, because either alone is porous: enough substance to be a statement
       # (length) AND a token naming what was actually looked at.
-      if [ "${#reason}" -lt 20 ] \
+      if [ "$(_charlen "$reason")" -lt 20 ] \
          || ! printf '%s' "$reason" | grep -qiE 'prob(e|ed|ing)|reachab|unreach|not reachable|0 |none reachable|empty|absent|declin|consent|codex|gemini|agy|copilot|gateway|cli|panel|scope|budget|offline'; then
         echo "  ❌ FAIL — $val without substantive grounds on the same line."
         case "$val" in
@@ -1357,7 +1377,7 @@ validate_standpoint_leg() { # $1 = marker path
           #      ⓒ «출력» 의 형태(`30/30`, `rc=`, `./path`)도 실행의 증거로 받는다.
           #    ⚠️ 방향: 이건 **느슨하게** 만드는 변경이다. 막고 싶은 것은 «명령도 출력도 안 적은 줄» 이고,
           #    길이 20 자 하한은 그대로 남는다.
-          if [ "${#reason}" -lt 20 ] || ! printf '%s' "$reason" \
+          if [ "$(_charlen "$reason")" -lt 20 ] || ! printf '%s' "$reason" \
               | grep -qiE '(^|[^[:alpha:]])(ran|run|runs|exec|invoke[ds]?|call|calls|called|exit|output|suite|test|tests|tested|bash|sh|zsh|grep|npm|pnpm|yarn|pytest|python|python3|cargo|make|go|gradle|mvn|dotnet|node|command)([^[:alpha:]]|$)|실행|돌렸|돌린|돌려|호출|출력|스위트|커맨드|rc=|[0-9]+/[0-9]+|\./'; then
             # Grace: markers dated before STANDPOINT_GROUNDS_GRACE_DATE keep the old advisory
             # behaviour (no retro-blocking), same pattern as the residency=/evidence= tokens.
@@ -1393,7 +1413,7 @@ validate_standpoint_leg() { # $1 = marker path
     not-applicable)
       # §7: asserting non-applicability without naming what was checked is indistinguishable from
       # UNKNOWN wearing a permissive label. Measured: 6 bare instances in this corpus.
-      if [ "${#reason}" -lt 20 ]; then
+      if [ "$(_charlen "$reason")" -lt 20 ]; then
         echo "  ❌ FAIL — bare 'not-applicable' with no grounds on the same line."
         echo "     That is UNKNOWN wearing a permissive label. Name what you checked:"
         echo "     no named peer carries this surface AND it changes no consumer-visible behavior."
@@ -1401,7 +1421,7 @@ validate_standpoint_leg() { # $1 = marker path
       fi
       echo "  ✅ standpoint leg: not-applicable$quoted" ;;
     DEGRADED_NO_TARGET_ACCESS*|DEGRADED_NOT_RUN*|UNKNOWN*)
-      if [ "${#reason}" -lt 20 ]; then
+      if [ "$(_charlen "$reason")" -lt 20 ]; then
         echo "  ❌ FAIL — $val without substantive grounds on the same line."
         echo "     could-not / did-not / did-not-look are separate values on purpose; collapsing"
         echo "     them renders an unrun probe as a zero finding. Name what you probed."
@@ -1490,7 +1510,7 @@ validate_thirdparty_leg() { # $1 = marker path
         return 1 ;;
       esac
       reason=$(printf '%s' "$line" | sed -E 's/^[^(]*\(//')
-      if [ "${#reason}" -lt 12 ]; then
+      if [ "$(_charlen "$reason")" -lt 12 ]; then
         echo "  ❌ FAIL — '$val(...)' grounds are vacuous. Name what was searched and what came back."
         return 1
       fi
