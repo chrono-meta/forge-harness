@@ -349,10 +349,20 @@ scan_file(){
       #    참인지는 안 본다. §Mechanization Boundary — 채널이지 결론이 아니다).
       case "$logical" in
         *'# pipefail-intentional:'*)
-          local _pr _prw
+          # 🟥 `wc -w` 를 쓰지 않는다 — **배포판마다 다르다.** `LC_ALL=C` 에서 한글이 섞인
+          #    " 이건 known-positive 픽스처다" 의 낱말 수가 coreutils 9.1(debian) 에선 **3**,
+          #    9.4(ubuntu/CI) 에선 **1** 이다(ASCII 만이면 양쪽 4 로 같다). 그래서 사유가 한글인
+          #    프라그마가 CI 에서만 «공허»로 판정돼 면제가 안 됐다(실측 2026-09-21, L11b).
+          #    ⇒ IFS 단어분리로 직접 센다. 그건 로케일·버전에 안 걸린다.
+          #    🟥 글롭은 끈다 — 사유에 `*` 가 있으면 파일명으로 퍼져 개수가 틀어진다.
+          local _pr _prw _pf_glob
           _pr="${logical##*# pipefail-intentional:}"
-          _prw="$(printf '%s' "$_pr" | wc -w | tr -d ' ')"
-          if [ "${_prw:-0}" -ge 2 ]; then verdict="INTENTIONAL"; fi ;;
+          case "$-" in *f*) _pf_glob=1 ;; *) _pf_glob=0 ;; esac
+          set -f
+          _prw=0
+          for _pf_w in $_pr; do _prw=$(( _prw + 1 )); done
+          [ "$_pf_glob" = 1 ] || set +f
+          if [ "$_prw" -ge 2 ]; then verdict="INTENTIONAL"; fi ;;
       esac
       printf '%s\t%s:%s\t%s\t%s\t%s\t%s\n' "$verdict" "$rel" "$lno" "$pc" "$ck" "$rc" \
         "$(printf '%s' "$logical" | cut -c1-150)"
