@@ -467,6 +467,29 @@ else
   fail=1
 fi
 
+# policy-lens scorer — the known-pair that decides whether a blind sim's numbers may be trusted.
+# 🟥 Wired here because the gate caught it MENTION_ONLY: the scorer shipped with its own
+# --selftest and no runner surface ever dispatched it, so «the suite is green» said nothing
+# about this file. That is the same shape the scorer itself was fixed for on 2026-09-21
+# (a zero-row run reporting rc=0). A calibration nobody runs is not a calibration.
+if [ ! -f scripts/score_policy_lens.sh ]; then
+  _absent_subject_verdict "policy-lens scorer lanes" "scripts/score_policy_lens.sh" || fail=1
+elif [ -f scripts/test_policy_lens_scorer_lanes.sh ]; then
+  # direct dispatch of the subject's own known pair (caller surface), then the lane suite —
+  # P2 there is the load-bearing one: it re-scores the COMMITTED round-1 runs and demands the
+  # recorded SCORES.tsv byte-for-byte, so a scorer change cannot silently restate a published
+  # number. P3 is P2's control (one tampered cell must turn it red).
+  if ! bash scripts/score_policy_lens.sh --selftest >/dev/null 2>&1; then
+    echo "FAIL  policy-lens scorer selftest: known-pair calibration failed"; fail=1
+  fi
+  if ! bash scripts/test_policy_lens_scorer_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  policy-lens scorer lanes: script present but its anchor is missing"
+  fail=1
+fi
+
 # gate-shape classifier — the mechanical half of the unmapped-file trigger of the Field-Harness
 # Load-Bearing Change Gate (2026-09-08). A classifier of scope, not a verdict; its lane holds the
 # known-pair (exposure/verdict positives · util/comment negatives · Promise reject( FP anchor).

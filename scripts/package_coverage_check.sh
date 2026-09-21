@@ -39,6 +39,15 @@ cd "$REPO_ROOT" || exit 1
 #   scripts/sync_to_be_lanes.sh             — forward-path lane suite for sync-to-be.sh, itself
 #       ACCEPTED_ABSENT above; added 2026-08-14, pmh-dev#69.
 ACCEPTED_ABSENT=(
+  # 🟥 2026-09-21 (야간) — 정책렌즈 채점기와 그 레인. **FH 자기 연구의 실험 기록**이지 소비자
+  #    능력이 아니다: 판정 대상이 `scripts/fixtures/policy_lens_knownpair_2026-09-21/` 안의
+  #    1차 런 48개 파일(236K)이고, 그것까지 실어 보내면 아무도 안 쓰는 실험 아카이브가 패키지
+  #    무게가 된다. 🟥 **조용한 통과가 아니다** — `selfcheck.sh` 의 이 블록은 `_absent_subject_verdict`
+  #    를 거치므로, 소비자 트리에서는 「files[] 에 없고 부재」→ **SKIP 으로 이름이 찍히고**,
+  #    반대로 출하 선언이 생겼는데 파일이 없으면 FAIL 로 뒤집힌다.
+  #    이걸 «수치 도구» 로 일반화해 출하할 거면 픽스처를 일반 코퍼스로 바꾸는 것이 먼저다.
+  "scripts/score_policy_lens.sh"
+  "scripts/test_policy_lens_scorer_lanes.sh"
   # 🟥 2026-09-21 — 지도 «깜빡임» 렌더 프로브 4종. 이 넷의 **판정 대상이 `docs/map/*.html`**
   #    인데 그 지도는 files[] 에 없다(발행은 GitHub Pages 로 하고 npm 으로는 안 나간다). 소비자
   #    트리에는 잴 것이 아예 없으므로 계기를 실어 보내는 것은 무게만 늘린다. 레인 자신이 그

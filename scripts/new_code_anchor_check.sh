@@ -103,9 +103,13 @@ cd "$REPO_ROOT" || exit 10
 # The 12-character floor matches the sibling gate scripts/script_caller_ratchet.sh, deliberately:
 # two thresholds for the same judgment in one repo is a coin-flip for whoever writes the next entry.
 #
-# EMPTY AT SHIP, and that is a measurement, not an oversight: this gate is diff-scoped, so on the
-# commit that introduces it the in-scope set is only the files that commit adds.
+# EMPTY AT SHIP, and that was a measurement, not an oversight: this gate is diff-scoped, so on the
+# commit that introduced it the in-scope set was only the files that commit added.
+# 🟥 NO LONGER EMPTY as of 2026-09-21 — one entry. Read the reason, not the count: an EXEMPT list
+# that grows is this gate decaying, so each entry has to say why a lane is IMPOSSIBLE rather than
+# merely absent. The one below is «running it spends model calls», which no CI runner can do.
 EXEMPT=(
+  "scripts/fixtures/policy_lens_knownpair_2026-09-21/run_arms.sh|dispatches paid model arms through sim_isolated_run.sh — executing it in CI would spend real API calls and needs network + CLI auth, so no runner can exercise it; its OUTPUT is anchored instead (runs_round1/ is committed and scripts/score_policy_lens.sh --selftest is wired into selfcheck.sh)"
 )
 
 if [ "${1:-}" = "--list-exempt" ]; then
