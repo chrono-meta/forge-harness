@@ -1632,7 +1632,7 @@ validate_defeater_leg() { # $1 = marker path
   esac
   # 비공허성 — 한글 코퍼스이므로 **낱말 수**로 센다. `${#}` 는 로케일 의존이고, 긴 한글 한 덩어리가
   # 문자 수 검사를 그냥 통과한 전례가 있다(A6 레인).
-  words=$(printf '%s' "$body" | wc -w | tr -d ' '); words=${words:-0}
+  words=$(printf '%s\n' "$body" | tr -s ' \t\n' '\n' | LC_ALL=C grep -c '.'); words=${words:-0}
   if [ "$words" -lt 6 ]; then
     echo "  ❌ FAIL — defeater 가 공허하다 ($words 낱말). **무엇이 관측될 것인가**를 적어라."
     echo "     '틀렸을 수 있다' 는 반증 조건이 아니다 — 관측 가능한 사건이어야 한다."
@@ -1640,8 +1640,12 @@ validate_defeater_leg() { # $1 = marker path
   fi
   # 🟥 기록의 속성 하나 더: defeater 가 ①영혼 줄의 **복붙**이면 두 필드가 한 필드다.
   # (이것은 «내용이 옳은가»가 아니라 «두 칸이 서로 다른 값을 담는가»다 — 채널 검사.)
-  soul_line=$(grep -m1 -E '^[[:space:]]*#*[[:space:]]*(①영혼|soul)[[:space:]]*[:—-]' "$m" 2>/dev/null \
-              | sed -E 's/^[^:—-]*[:—-][[:space:]]*//; s/[[:space:]]+$//')
+  # 🟥 A multibyte character inside a BRACKET EXPRESSION is a byte set under LC_CTYPE=POSIX, so
+  #    `[:—-]` there matches the lead byte of 「①」 and `[^:—-]*` stops on it. Measured 2026-09-21:
+  #    lane D9-copy-of-soul-blocks went BLOCK → **PASS** with LANG unset — a fail-OPEN, unlike the
+  #    word-count defect above. Alternation is byte-safe in every locale; brackets are not.
+  soul_line=$(grep -m1 -E '^[[:space:]]*#*[[:space:]]*(①영혼|soul)[[:space:]]*(:|—|-)' "$m" 2>/dev/null \
+              | sed -E 's/^[[:space:]]*#*[[:space:]]*(①영혼|soul)[[:space:]]*(:|—|-)[[:space:]]*//; s/[[:space:]]+$//')
   if [ -n "$soul_line" ] && [ "$body" = "$soul_line" ]; then
     echo "  ❌ FAIL — defeater 가 ①영혼 줄과 글자 그대로 같다. 두 칸이 한 칸이 되었다."
     echo "     성공 정의와 그 반증 조건은 다른 문장이다."
@@ -1731,7 +1735,7 @@ validate_affected_leg() { # $1 = marker path
     echo "  ❌ FAIL — affected 가 힌트의 자리표시자 그대로다 (기록이 아직 안 쓰였다)."
     return 1
   fi
-  words=$(printf '%s' "$body" | wc -w | tr -d ' '); words=${words:-0}
+  words=$(printf '%s\n' "$body" | tr -s ' \t\n' '\n' | LC_ALL=C grep -c '.'); words=${words:-0}
   if [ "$words" -lt 3 ]; then
     echo "  ❌ FAIL — affected 가 공허하다 ($words 낱말). 건드리는 것 · 열린 질문을 적어라."
     return 1
@@ -1855,7 +1859,7 @@ validate_oracle_leg() { # $1 = marker path
     echo "  ❌ FAIL — oracle 근거가 힌트의 자리표시자 그대로다 (기록이 아직 안 쓰였다)."
     return 1
   fi
-  words=$(printf '%s' "$rest" | wc -w | tr -d ' '); words=${words:-0}
+  words=$(printf '%s\n' "$rest" | tr -s ' \t\n' '\n' | LC_ALL=C grep -c '.'); words=${words:-0}
   if [ "$words" -lt 2 ]; then
     echo "  ❌ FAIL — oracle 근거가 공허하다 ($words 낱말). 무엇을 무엇과 대조했는지 적어라."
     return 1
@@ -1919,7 +1923,7 @@ validate_soul_present_leg() { # $1 = marker path
   # corpus writes «## ①영혼 — 설계 전에 쓴 …» as a heading, and P7 flipped to BLOCK when the first
   # version of this regex forbade it. The known-pair caught that in one run).
   # Prose inside a field VALUE can no longer vote.
-  _soul_src=$(grep -E '^[[:space:]]*#*[[:space:]]*(①영혼|soul|절대 안 함|성공 ?정의)[[:space:]]*[:—-]' "$m" 2>/dev/null \
+  _soul_src=$(grep -E '^[[:space:]]*#*[[:space:]]*(①영혼|soul|절대 안 함|성공 ?정의)[[:space:]]*(:|—|-)' "$m" 2>/dev/null \
               | grep -vE '^[[:space:]]*soul-check[[:space:]]*:')
   n=$(printf '%s\n' "$_soul_src" | grep -cE '①영혼|^[[:space:]]*soul:|성공 ?정의|절대 안 함'); n=${n:-0}
   if [ "$n" -eq 0 ]; then
@@ -1937,7 +1941,7 @@ validate_soul_present_leg() { # $1 = marker path
               f && /^[[:space:]]*$/{exit}
               f && seen && /^[[:space:]]*[A-Za-z][A-Za-z0-9_-]*:/{exit}
               f{print; seen=1}' <<< "$_soul_src")
-  words=$(printf '%s' "$body" | wc -w | tr -d ' '); words=${words:-0}
+  words=$(printf '%s\n' "$body" | tr -s ' \t\n' '\n' | LC_ALL=C grep -c '.'); words=${words:-0}
   # 🟥 A DECLARED ABSENCE IS A VALUE, not a gap. CLAUDE.md §자기 대조 explicitly permits
   # «없으면 `없음`», and the first version of this leg BLOCKED a bare `soul: 없음` (2 words) while
   # PASSING a 33-word paragraph whose content was «I did not write one». That punishes the honest
@@ -1948,7 +1952,7 @@ validate_soul_present_leg() { # $1 = marker path
   # 🟥 `$body` — this leg's own local. The first version read `$soul_body`, which is the OTHER
   # leg's variable name; unset here, so the case never matched and the fix was inert while the
   # lane suite stayed green ([[feedback_unedited_parts_of_my_own_file]] · half-fix).
-  _sbare=$(printf '%s' "$body" | sed -E 's/^[[:space:]]*#*[[:space:]]*(①영혼|soul|절대 안 함|성공 ?정의)[[:space:]]*[:—-]*//' | tr -d '[:space:].·]')
+  _sbare=$(printf '%s' "$body" | sed -E 's/^[[:space:]]*#*[[:space:]]*(①영혼|soul|절대 안 함|성공 ?정의)[[:space:]]*(:|—|-)*//' | tr -d '[:space:].·]')
   case "$_sbare" in
     없음|없음—|none|None|NONE|n/a|N/A|-|해당없음)
       echo "  ⚠️  ①영혼: 없음 — declared absent. Recorded, not silent."
@@ -2072,7 +2076,7 @@ DEGRADED_SINGLE_FAMILY|DEGRADED_PANEL_UNUSED|DEGRADED_NO_TARGET_ACCESS|DEGRADED_
   # corpus writes «## ①영혼 — 설계 전에 쓴 …» as a heading, and P7 flipped to BLOCK when the first
   # version of this regex forbade it. The known-pair caught that in one run).
   # Prose inside a field VALUE can no longer vote.
-  _soul_src=$(grep -E '^[[:space:]]*#*[[:space:]]*(①영혼|soul|절대 안 함|성공 ?정의)[[:space:]]*[:—-]' "$m" 2>/dev/null \
+  _soul_src=$(grep -E '^[[:space:]]*#*[[:space:]]*(①영혼|soul|절대 안 함|성공 ?정의)[[:space:]]*(:|—|-)' "$m" 2>/dev/null \
               | grep -vE '^[[:space:]]*soul-check[[:space:]]*:')
   soul_n=$(printf '%s\n' "$_soul_src" | grep -cE '①영혼|^[[:space:]]*soul:|성공 ?정의|절대 안 함'); soul_n=${soul_n:-0}
   # Body = the ①영혼 block only: stop at a blank line OR at the next ASCII field key. An earlier
@@ -2080,16 +2084,26 @@ DEGRADED_SINGLE_FAMILY|DEGRADED_PANEL_UNUSED|DEGRADED_NO_TARGET_ACCESS|DEGRADED_
   # scored as having content — the fixture G9 caught it.
   # 🟥 Counted in WORDS, not characters. `${#var}` on Korean text is bytes-or-chars depending on
   # locale, and this corpus is Korean — a char threshold silently changes meaning per machine
-  # ⚠️ Honest caveat, measured: `wc -w` is NOT a human word count on Korean either («①영혼: 완주»
+  # ⚠️ Honest caveat, measured: this is NOT a human word count on Korean either («①영혼: 완주»
   # reports 3, not 2). It is stable per-machine and monotonic, which is all a floor needs — but
   # every threshold here was calibrated by RUNNING it, never by reasoning about word counts.
-  # ([[feedback_instrument_vs_target_and_budget]], 단위 혼동). Word count is locale-independent.
+  # ([[feedback_instrument_vs_target_and_budget]], 단위 혼동).
+  # 🟥 RETRACTED 2026-09-21 — this comment used to end «Word count is locale-independent.» and
+  #    that sentence was FALSE. `wc -w` splits on whitespace as the LOCALE classifies characters:
+  #    with LANG unset (LC_CTYPE=POSIX — the default in a bare container or CI runner) a Korean
+  #    grounds line counts **0** words and a mixed line counts only its ASCII tokens. Known pair,
+  #    measured in a clean clone of a9e9b29: `LC_ALL=POSIX` → 0, `LC_ALL=C.UTF-8` → 8, same bytes.
+  #    The whole point of choosing words over `${#var}` was locale-independence, so the instrument
+  #    was selected on a property it did not have. ⇒ counted by splitting on ASCII whitespace with
+  #    `tr` and counting non-empty lines under a forced `LC_ALL=C` — byte-level, identical in both
+  #    locales, and identical to the old `wc -w` numbers on any UTF-8 machine (so no threshold moves
+  #    where the gate already worked). Anchor: scripts/test_locale_invariance_lanes.sh.
   soul_body=$(awk '/①영혼|^[[:space:]]*soul:|성공 ?정의|절대 안 함/{if (!f) f=1}
                    f && /^[[:space:]]*$/{exit}
                    f && seen && /^[[:space:]]*[A-Za-z][A-Za-z0-9_-]*:/{exit}
                    f{print; seen=1}' "$m" 2>/dev/null \
               | sed -E '1s/^[[:space:]]*(①영혼|soul)[^[:alnum:]«]*//')
-  soul_words=$(printf '%s' "$soul_body" | wc -w | tr -d ' ')
+  soul_words=$(printf '%s\n' "$soul_body" | tr -s ' \t\n' '\n' | LC_ALL=C grep -c '.')
   soul_words=${soul_words:-0}
 
   case "$val" in
@@ -2108,7 +2122,7 @@ DEGRADED_SINGLE_FAMILY|DEGRADED_PANEL_UNUSED|DEGRADED_NO_TARGET_ACCESS|DEGRADED_
       # 🟥 agy (claims axis, 2026-08-21): this leg's own comment above condemns `${#var}` on
       # Korean text and then used `${#reason}` twelve lines later — [[feedback_citing_a_rule_is_not_obeying_it]],
       # verbatim. Inherited from the sibling legs, which does not excuse it here. Word count.
-      _rwords=$(printf '%s' "$reason" | wc -w | tr -d ' '); _rwords=${_rwords:-0}
+      _rwords=$(printf '%s\n' "$reason" | tr -s ' \t\n' '\n' | LC_ALL=C grep -c '.'); _rwords=${_rwords:-0}
       if [ "$_rwords" -lt 3 ]; then
         echo "  ❌ FAIL — '$val(...)' grounds are vacuous. Name what read the ①영혼 line back,"
         echo "     against what, and what came back."

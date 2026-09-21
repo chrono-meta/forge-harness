@@ -467,6 +467,18 @@ else
   fail=1
 fi
 
+# locale-invariance — 같은 마커를 두 로케일에서 읽었을 때 판정이 같은가. 훅의 비공허성 바닥과
+# 「①영혼 복붙」 검출이 `LC_CTYPE` 에 의존했다(2026-09-21, 갓 클론한 컨테이너에서 실측: 마커
+# 레인 22건이 `LC_ALL` 만으로 뒤집혔고, 방향이 과차단·무음침묵·fail-OPEN 셋이었다).
+# 🟥 UTF-8 로케일이 없는 기계에서는 rc=2 다 — 대조군 없는 초록은 측정이 아니므로 FAIL 로 센다.
+if [ ! -f scripts/test_locale_invariance_lanes.sh ]; then
+  echo "FAIL  locale-invariance lanes: scripts/test_locale_invariance_lanes.sh 가 없다 (부재는 통과가 아니다)"
+  fail=1
+elif ! bash scripts/test_locale_invariance_lanes.sh >/dev/null 2>&1; then
+  echo "FAIL  locale-invariance lanes"
+  fail=1
+fi
+
 # package-coverage — a shipped doc must not point at a file the tarball omits. Distinct from the
 # ref-path check below: that one asks "does this path exist at all", this one asks "does the
 # CONSUMER get it". Measured 2026-07-28: 35 paths existed, were named by a shipped doc, and were
