@@ -12,7 +12,21 @@ SRC="$HERE/plugins/fh-preprep/skills/preprep"; T=$(mktemp -d); pass=0; fail=0
 chk(){ if [ "$1" = 0 ]; then echo "  ✅ $2"; pass=$((pass+1)); else echo "  ❌ $2"; fail=$((fail+1)); fi; }
 # 🟥 2026-09-11: 앵커(D2)는 «디렉터리의 *.py 전부» 를 돈다(2026-09-10 덱 세션 정정). 여기 목록이 5개로 박혀 있어
 #    새 레인 파일(lane_attr_consistency 등)이 «부재 드리프트» 로 읽혀 L2/L4 가 CI 에서 빨개졌다 — 앵커와 같은 규칙으로.
-mk(){ mkdir -p "$1"; for f in "$SRC"/*.py; do cp "$f" "$1/$(basename "$f")"; done; }
+# 🟥 **앵커와 같은 규칙으로 뽑는다.** 이 함수는 원래 `"$SRC"/*.py` 최상위만 평평하게 복사했다.
+#    2026-09-21 에 앵커 D2 가 `find` 재귀로 바뀌면서 `ooxml/gate.py` 등 하위 파일을 요구하게
+#    됐는데 픽스처가 안 따라가 **부재 드리프트**로 읽혔고 L2·L4 가 CI 에서 빨개졌다.
+#    🟥 **이 파일이 이미 한 번 겪은 사고다** — 이 스크립트 머리말(2026-09-11)이 같은 형태를
+#    적고 있고 처방도 「앵커와 같은 규칙으로」였다. 앵커만 고치고 짝을 안 고친 것이라
+#    `[[feedback_half_fix_propagation_boundary]]` 정통이다.
+#    ⇒ 상대경로를 보존해 재귀 복사한다. 앵커가 규칙을 또 바꾸면 여기도 같이 바꿔야 한다.
+mk(){
+  mkdir -p "$1"
+  while IFS= read -r f; do
+    rel="${f#$SRC/}"
+    mkdir -p "$1/$(dirname "$rel")"
+    cp "$f" "$1/$rel"
+  done < <(find "$SRC" -name '*.py' -not -path '*/__pycache__/*' -not -path '*/.pytest_cache/*' | sort)
+}
 echo "[preprep-drift-anchor] D2 known pairs"
 # L1 nothing set → D2 SKIP (skip != pass), rc 0 (D2 is not a FAIL)
 out=$(env -u PREPREP_STANDALONE_DIR FH_COMPANION_STORE="$T/nostore" bash "$A" 2>&1); printf '%s' "$out" | grep -q "D2 .*SKIPPED"; chk $? "L1 var unset + no companion preprep → D2 SKIPPED (not PASS)"
@@ -21,5 +35,27 @@ mk "$T/be/preprep"; out=$(env -u PREPREP_STANDALONE_DIR FH_COMPANION_STORE="$T/b
 # L3 companion copy drifted → D2 FAIL, rc 1 (the accident class)
 printf '\n# drift\n' >> "$T/be/preprep/preprep.py"; env -u PREPREP_STANDALONE_DIR FH_COMPANION_STORE="$T/be" bash "$A" >"$T/l3.out" 2>&1; rc=$?; [ "$rc" -ne 0 ] && grep -q "D2 드리프트.*preprep.py(갈림)" "$T/l3.out"; chk $? "L3 fallback copy drifted → D2 FAIL rc=$rc (known-positive)"
 # L4 explicit var wins over companion
-mk "$T/explicit"; out=$(PREPREP_STANDALONE_DIR="$T/explicit" FH_COMPANION_STORE="$T/be" bash "$A" 2>&1); printf '%s' "$out" | grep -q "✅ D2 .*(PREPREP_STANDALONE_DIR)"; chk $? "L4 explicit PREPREP_STANDALONE_DIR wins over drifted companion copy"
+# ── L5 🟥 «하위 디렉터리» 드리프트를 잡나 — 재귀를 지키는 유일한 레인 ──────────────
+# 2026-09-21: 앵커 D2 를 최상위 전용 → `find` 재귀로 바꿨는데(그 사각에 `ooxml/gate.py` 가
+# 있었고 실제로 회귀가 초록으로 통과했다), **그 변경을 지키는 레인이 하나도 없었다.**
+# 되돌림 프로브로 확인했다: 앵커를 최상위 전용으로 되돌려도 L1~L4 가 전부 초록이다.
+# 🟥 즉 그 수리는 장식이 될 뻔했다(`[[feedback_anchor_can_be_decorative]]`).
+# L3 는 최상위 `preprep.py` 를 갈라서 재귀 여부와 무관하게 잡힌다 — 이 레인이 그 짝이다.
+mk "$T/be2/preprep"
+_sub=$(cd "$SRC" && find . -mindepth 2 -name '*.py' -not -path '*/__pycache__/*' | head -1 | sed 's|^\./||')
+if [ -z "$_sub" ]; then
+  echo "  ⛔ L5 INSTRUMENT ERROR — 소스에 하위 디렉터리 .py 가 없다. 이 레인은 그 전제 위에 선다"
+  fail=$((fail+1))
+else
+  printf '\n# drift\n' >> "$T/be2/preprep/$_sub"
+  out=$(env -u PREPREP_STANDALONE_DIR FH_COMPANION_STORE="$T/be2" bash "$A" 2>&1); rc=$?
+  { [ "$rc" -ne 0 ] && printf '%s' "$out" | grep -q "D2 드리프트.*$(basename "$_sub")(갈림)"; }
+  chk $? "L5 하위 디렉터리 드리프트($_sub) → D2 FAIL rc=$rc (재귀가 하중을 진다)"
+fi
+
+# 🟥 이 레인은 «어느 출처가 이겼나» 를 본다. 초판은 `(PREPREP_STANDALONE_DIR)` 로 **닫는 괄호까지**
+#    붙여 잡았는데, 앵커가 PASS 문구에 `· 하위 디렉터리 포함` 을 더하자 그 리터럴이 사라져 깨졌다.
+#    ⇒ 출처 토큰 **뒤의 공백까지만** 본다 — 괄호 안에 무엇이 더 붙어도 살아남고,
+#    다른 출처(`FH_COMPANION_STORE/preprep (자동 후보)`)와는 여전히 갈린다.
+mk "$T/explicit"; out=$(PREPREP_STANDALONE_DIR="$T/explicit" FH_COMPANION_STORE="$T/be" bash "$A" 2>&1); printf '%s' "$out" | grep -q "✅ D2 .*(PREPREP_STANDALONE_DIR "; chk $? "L4 explicit PREPREP_STANDALONE_DIR wins over drifted companion copy"
 rm -rf "$T"; echo "[preprep-drift-anchor] $pass passed, $fail failed"; [ "$fail" -eq 0 ]
