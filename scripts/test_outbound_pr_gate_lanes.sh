@@ -8,6 +8,10 @@
 # templates/.git-hooks/pre-commit and fails if the gate classifies neither strong nor weak — so a
 # new enum member cannot be added without deciding what it means on the outbound surface.
 # L9 is the REVERT probe: neuter the strong-rung allow-list and L1 must go red.
+# L6b/L6c cover the COLD START (zero record FILES — rec() always writes one, so L6 is the
+# empty-record branch, a different path) and anchor its skeleton with a second revert probe.
+# L17/L17b are the WIRING arms: the snippet must register this hook, and the gate must finish
+# inside the timeout the snippet configures — a hook killed by its own timeout is fail-OPEN.
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/.." && pwd)"
@@ -40,6 +44,11 @@ rec() { # $1 = standpoint value, $2 = generated-path, $3 = fixture-carries  ("" 
   [ -n "${1:-}" ] && printf 'standpoint: %s\n' "$1" >> "$f"
   [ -n "${2:-}" ] && printf 'generated-path: %s\n' "$2" >> "$f"
   [ -n "${3:-}" ] && printf 'fixture-carries: %s\n' "$3" >> "$f"
+  return 0
+}
+norec() { # zero record FILES. rec() always CREATES the file, so rec "" "" "" is an EMPTY
+          # record, not an absent one — a different branch of the gate.
+  rm -f "$FHROOT/tracks/_meta"/outbound_pr_*.md
   return 0
 }
 FULL_SP='tier2(archify) — ran `node scripts/export.mjs` there, output: wrote 3 files, input intact'
@@ -87,6 +96,53 @@ run "L5b gh pr merge is not create" silent "gh pr merge 12 --squash"
 # ── L6 record absent entirely on a non-owned target ───────────────────────────────────────────
 rec "" "" ""
 run "L6  non-owned + no record at all" deny "gh pr create -R tt-a1i/archify --title x"
+
+# ── L6b COLD START: zero record FILES, which L6 above does NOT cover ───────────────────────
+#   rec "" "" "" writes an EMPTY file, so L6 exercises the per-field "line absent" branches. The
+#   _records=0 branch had NO lane at all, and it was the one a first-time session actually hits:
+#   it printed a path and nothing else, because the three field syntaxes live in the per-field
+#   branches that are unreachable when there is no file. Assert the skeleton by FIELD NAME.
+norec
+run "L6b zero record files (not an empty one)" deny "gh pr create -R tt-a1i/archify --title x"
+_cold_out() { # $1 = gate to run
+  norec
+  printf '{"tool_name":"Bash","tool_input":{"command":"gh pr create -R tt-a1i/archify --title x"}}' \
+    | CLAUDE_PROJECT_DIR="$FHROOT" FH_OUTBOUND_TODAY="$TODAY" \
+      FH_OUTBOUND_RECDIR="$FHROOT/tracks/_meta" bash "$1" 2>&1
+}
+_COLD=$(_cold_out "$GATE")
+for _f in standpoint generated-path fixture-carries; do
+  n=$((n+1))
+  if printf '%s' "$_COLD" | grep -q "^ *$_f:"; then
+    echo "PASS  L6b cold start names the field '$_f'"
+  else
+    echo "FAIL  L6b cold start does NOT name '$_f' — a first-time session gets a path and nothing else"
+    fail=1
+  fi
+done
+
+# ── L6c REVERT PROBE for L6b: strip the skeleton; the three field names must disappear ───────
+#   Without this, L6b would also pass on output that names the fields for some OTHER reason.
+n=$((n+1))
+COLDMUT="$TMP/coldmutant.sh"
+sed -E '/^        (standpoint|generated-path|fixture-carries): /d' "$GATE" > "$COLDMUT"
+_removed=$(( $(grep -cE '^        (standpoint|generated-path|fixture-carries): ' "$GATE") \
+             - $(grep -cE '^        (standpoint|generated-path|fixture-carries): ' "$COLDMUT") ))
+if [ "$_removed" -ne 3 ]; then
+  echo "FAIL  L6c INSTRUMENT ERROR — mutation removed $_removed skeleton lines, expected 3; the probe would pass vacuously"
+  fail=1
+elif ! bash -n "$COLDMUT" 2>/dev/null; then
+  echo "FAIL  L6c INSTRUMENT ERROR — the mutant does not parse, so its silence means nothing"
+  fail=1
+else
+  _hits=$(_cold_out "$COLDMUT" | grep -cE "^ *(standpoint|generated-path|fixture-carries):" || true)
+  if [ "$_hits" -eq 0 ]; then
+    echo "PASS  L6c revert probe: stripping the skeleton takes all three field names off the cold-start deny"
+  else
+    echo "FAIL  L6c revert probe: $_hits field name(s) survived the strip — L6b is not anchored to the skeleton"
+    fail=1
+  fi
+fi
 
 # ── L7 vacuous grounds ────────────────────────────────────────────────────────────────────────
 rec "$FULL_SP" 'none-found()' "$FULL_AR"
@@ -209,6 +265,83 @@ rec "$FULL_SP" "$FULL_GP" "$FULL_AR"
 run "L16 gh pr edit 는 여전히 NAMED GAP" silent "gh pr edit --body x -R tt-a1i/archify"
 rec "$FULL_SP" "$FULL_GP" "$FULL_AR"
 run "L16b gh pr list 는 트리거 아님" silent "gh pr list -R tt-a1i/archify"
+
+# ── L17 WIRING: does the shipped snippet actually register this hook? ────────────────────
+#   Shipping (package.json files[]) and WIRING (a settings snippet) are different propositions —
+#   v3.13.0 shipped this script and registered it nowhere, and nothing anywhere went red for it.
+#   install-wizard globs templates/settings.*.snippet.json and merges keyed on scripts/<name>.sh,
+#   so the snippet entry IS the wiring for every install; dropping it is a silent un-wiring.
+SNIP="$REPO/templates/settings.PreToolUse.snippet.json"
+_SNIP_TO=$(python3 -c '
+import json,sys
+d=json.load(open(sys.argv[1]))
+for m in d["project_settings_json"]["hooks"]["PreToolUse"]:
+    if m.get("matcher")=="Bash":
+        for h in m.get("hooks",[]):
+            if "outbound_pr_gate.sh" in h.get("command",""):
+                print(h.get("timeout","")); sys.exit(0)
+' "$SNIP" 2>/dev/null)
+n=$((n+1))
+if [ -n "$_SNIP_TO" ]; then
+  echo "PASS  L17 스니펫의 Bash matcher 가 outbound_pr_gate.sh 를 등록한다 (timeout=${_SNIP_TO}s)"
+else
+  echo "FAIL  L17 스니펫에 이 훅이 없다 — 출하되지만 배선 0 이면 게이트가 아니라 파일이다"
+  fail=1
+fi
+
+# L17a known-NEGATIVE for L17: strip the entry from a COPY and the extractor must come back empty.
+# Without this arm, an extractor that silently matched anything would pass L17 vacuously.
+n=$((n+1))
+SNIPMUT="$TMP/snippet_unwired.json"
+python3 -c '
+import json,sys
+d=json.load(open(sys.argv[1]))
+for m in d["project_settings_json"]["hooks"]["PreToolUse"]:
+    if m.get("matcher")=="Bash":
+        m["hooks"]=[h for h in m.get("hooks",[]) if "outbound_pr_gate.sh" not in h.get("command","")]
+json.dump(d,open(sys.argv[2],"w"))
+' "$SNIP" "$SNIPMUT" 2>/dev/null
+_MUT_TO=$(python3 -c '
+import json,sys
+d=json.load(open(sys.argv[1]))
+for m in d["project_settings_json"]["hooks"]["PreToolUse"]:
+    if m.get("matcher")=="Bash":
+        for h in m.get("hooks",[]):
+            if "outbound_pr_gate.sh" in h.get("command",""):
+                print(h.get("timeout","")); sys.exit(0)
+' "$SNIPMUT" 2>/dev/null)
+if [ ! -s "$SNIPMUT" ]; then
+  echo "FAIL  L17a INSTRUMENT ERROR — the un-wired copy was not produced; the arm would pass vacuously"
+  fail=1
+elif [ -z "$_MUT_TO" ]; then
+  echo "PASS  L17a un-wiring the snippet makes L17's extractor come back empty (it measures, not generates)"
+else
+  echo "FAIL  L17a the extractor still found a timeout ($_MUT_TO) in a snippet with the entry removed"
+  fail=1
+fi
+
+# ── L17b the gate must SURVIVE the timeout the snippet configures ──────────────────────
+#   A PreToolUse hook killed by its own timeout is a non-blocking error — the tool RUNS. So a deny
+#   that is too slow is fail-OPEN, with no override and no log. Measured once already on the sixth
+#   guard (10KB took 47s under bash 3.2 against a "timeout": 5). Read the budget FROM the snippet:
+#   a lane that allowed more than production does would pass a hook production lets through.
+n=$((n+1))
+[ -n "$_SNIP_TO" ] || _SNIP_TO=5
+norec
+_PAY=$(python3 -c 'import json;print(json.dumps({"tool_name":"Bash","tool_input":{"command":"gh pr create -R tt-a1i/archify --body "+"x"*20000}}))')
+printf '%s' "$_PAY" \
+  | CLAUDE_PROJECT_DIR="$FHROOT" FH_OUTBOUND_TODAY="$TODAY" \
+    FH_OUTBOUND_RECDIR="$FHROOT/tracks/_meta" timeout "$_SNIP_TO" bash "$GATE" >/dev/null 2>&1
+_rc=$?
+if [ "$_rc" -eq 124 ]; then
+  echo "FAIL  L17b 20KB 페이로드가 스니펫 timeout(${_SNIP_TO}s) 에 죽었다 — 죽은 훅은 fail-OPEN 이다"
+  fail=1
+elif [ "$_rc" -eq 2 ]; then
+  echo "PASS  L17b 20KB 페이로드도 스니펫 timeout(${_SNIP_TO}s) 안에 deny 로 끝난다"
+else
+  echo "FAIL  L17b 20KB 페이로드가 deny 가 아니다 (rc=$_rc) — 길다고 스캔을 건너뛰면 안 된다"
+  fail=1
+fi
 
 echo "── $n lanes, $( [ $fail -eq 0 ] && echo 'all green' || echo 'FAILURES above' ) ──"
 exit $fail

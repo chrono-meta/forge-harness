@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
-# test_map_postprocess_lanes.sh — scripts/map_postprocess.py 의 두 계약을 고정한다.
+# test_map_postprocess_lanes.sh — scripts/map_postprocess.py 의 세 계약을 고정한다.
 #
 # WHY: 이 후처리는 발행되는 지도 HTML 의 «폭 하한»을 바꾸고 SVG 를 다시 만든다. 둘 다 조용히
 # 실패하면 사람이 못 본다 — 패치가 안 붙어도 페이지는 뜨고(옛 폭), SVG 가 어긋나도 열리기는 한다.
 # 그래서 ⓐ 리터럴 부재 = 드리프트 = 하드 정지(3), ⓑ SVG 는 «커밋된 두 장 바이트 동일 재현»을
 # known-pair 로 잡는다. 컨트롤: 패치 문자열이 실제로 상수와 다르고 뷰포트를 참조하는가.
+#
+# ⓒ **깜빡임 억제 계약**(L10~L15 — L13b 포함 7 레인, 2026-09-21): 첫 페인트 전 테마 해소와 «게이트 없이 뛰는
+# 펄스 없음» 둘이 재생성본에 아직 있나. 이 둘은 라이트 모드에서 **첫 프레임**에만 보이는 것이라
+# 빠지면 아무 검사도 안 빨개지고, 다음에 사람이 눈을 댈 때까지 아무도 모른다.
+# 🟥 레인은 «기록의 형태»만 잰다 — 실제로 안 깜빡이는지는 사람이 실물로 본다.
 #
 # 종료코드: 0 pass · 1 레인 실패 · 2 대상 부재 · 10 setup 실패
 set -uo pipefail
@@ -20,11 +25,25 @@ command -v python3 >/dev/null 2>&1 || { echo "ⓘ python3 absent — setup broke
 TMP=$(mktemp -d) || exit 10
 trap 'rm -rf "$TMP"' EXIT
 
-mkfix() {  # $1=out path, $2=reader-width literal line (may be empty), $3=extra style blocks
+# $1=out path · $2=reader-width literal(비어도 됨) · $3=두 번째 <style> 여부
+# $4=깜빡임 계약 변형(기본 = 준수). 준수형을 기본값으로 둔 것이 L1·L2·L6·L8 의 known-positive 다.
+mkfix() {
+  THEME_SCRIPT='<script>document.documentElement.setAttribute("data-theme", theme);</script>'
+  PULSE='.pulse-dot{animation: none;} html[data-motion-capable="true"] .pulse-dot{animation: pulse 2s infinite;}'
+  HTMLTAG='<html data-theme="dark">'
+  HEAD_PRE="$THEME_SCRIPT"; BODY_PRE=''
+  case "${4:-}" in
+    late-theme)     HEAD_PRE=''; BODY_PRE="$THEME_SCRIPT" ;;   # <body> 가 시작된 뒤에야 해소
+    no-theme-apply) HEAD_PRE='' ;;
+    ungated-pulse)  PULSE='.pulse-dot{animation: pulse 2s infinite;}' ;;
+    renamed-gate)   PULSE='.pulse-dot{animation: none;} html[data-motion-ready="true"] .pulse-dot{animation: pulse 2s infinite;}' ;;
+    mixed-list)     PULSE='html[data-motion-capable="true"] .pulse-dot, .pulse-dot{animation: pulse 2s infinite;}' ;;
+    no-contract)    HTMLTAG='<html>'; HEAD_PRE=''; PULSE='.c{color:green}' ;;
+  esac
   {
-    printf '<html><head><style>.a{color:red}</style>'
+    printf '%s<head>%s<style>.a{color:red} %s</style>' "$HTMLTAG" "$HEAD_PRE" "$PULSE"
     [ -n "${3:-}" ] && printf '<style>.b{color:blue}</style>'
-    printf '</head><body>'
+    printf '</head><body>%s' "$BODY_PRE"
     printf '<svg viewBox="0 0 10 10"><rect/></svg>'
     printf '<script>%s</script></body></html>' "$2"
   } > "$1"
@@ -136,6 +155,67 @@ elif [ "$SHIPPED_OK" -eq 1 ]; then
   ok "L9 all $SHIPPED_N shipped map html carry the patched reader-width floor"
 else
   ng "L9 a shipped map html is unpatched — re-run: python3 $S docs/map/*.html"
+fi
+
+# ── L10~L13 되돌림 프로브: 깜빡임 억제를 한 조각씩 빼면 rc=3 이고 아무것도 안 쓴다
+#    (L1 이 같은 픽스처의 «준수형»으로 초록이므로, 이 넷은 계약이 하중을 진다는 증거다)
+probe_drift() {  # $1=레인 이름 · $2=변형 키 · $3=한 줄 설명
+  mkfix "$TMP/$2.html" 'var MIN_READER_WIDTH = 960;' '' "$2"
+  B=$(shasum "$TMP/$2.html" | awk '{print $1}')
+  python3 "$S" "$TMP/$2.html" >"$TMP/o_$2" 2>&1; RC=$?
+  A=$(shasum "$TMP/$2.html" | awk '{print $1}')
+  if [ $RC -eq 3 ] && [ "$B" = "$A" ] && [ ! -f "$TMP/$2.svg" ]; then
+    ok "$1 $3 -> rc=3, file untouched, no svg"
+  else
+    ng "$1 $3 not caught (rc=$RC, sha changed=$([ "$B" = "$A" ] && echo no || echo yes))"
+  fi
+}
+probe_drift L10 late-theme     "theme resolved only after <body> starts"
+probe_drift L11 no-theme-apply "<html data-theme> declared but never applied"
+probe_drift L12 ungated-pulse  "pulse runs with no data-motion-capable gate"
+probe_drift L13 renamed-gate   "gate attribute renamed - pulse runs ungated"
+# L13b 는 내가 초판에서 실제로 열어 둔 구멍이다 — 한 셀렉터 목록 안에 게이트 있는 조각과
+# 없는 조각이 같이 있으면, «첫 조각만 보는» 판독은 통과시킨다. 조각을 전부 본다.
+probe_drift L13b mixed-list   "one selector list mixes a gated and a bare .pulse-dot"
+
+# ── L14 과차단 금지: 계약 대상이 아예 없는 문서(테마 선언 없음 · 점 없음)는 통과한다
+#    없는 것을 요구하면 다른 archify 다이어그램 종류를 막고, 과차단은 override 를 훈련시킨다
+mkfix "$TMP/nc.html" 'var MIN_READER_WIDTH = 960;' '' no-contract
+python3 "$S" "$TMP/nc.html" >"$TMP/o14" 2>&1; RC=$?
+if [ $RC -eq 0 ] && [ -f "$TMP/nc.svg" ]; then
+  ok "L14 no theme declaration and no pulse rule -> contract N/A, passes (no over-block)"
+else
+  ng "L14 over-blocked a document with nothing to suppress (rc=$RC)"
+fi
+
+# ── L15 실물 되돌림: 픽스처가 아니라 **발행되는 지도 한 장**에서 한 줄을 빼도 빨개지는가
+#    (픽스처만으로는 «내가 만든 모양만 잰다» 를 못 벗어난다 — 계기≠대상)
+REAL=docs/map/fh_process.workflow.html
+if [ ! -f "$REAL" ]; then
+  ng "L15 $REAL absent - nothing measured (NOT a pass)"
+else
+  python3 - "$REAL" "$TMP/real_cut.html" <<'REALCUT'
+import sys
+s = open(sys.argv[1], encoding='utf-8').read()
+cut = s.replace("document.documentElement.setAttribute('data-theme', theme);", '', 1)
+if cut == s:
+    sys.exit(9)          # 리터럴이 없다 = 잘라낼 것이 없다 = 계기 고장
+open(sys.argv[2], 'w', encoding='utf-8').write(cut)
+REALCUT
+  SETUP=$?
+  if [ $SETUP -eq 0 ]; then
+    python3 "$S" --check "$TMP/real_cut.html" >"$TMP/o15" 2>&1; RC=$?
+    python3 "$S" --check "$REAL" >"$TMP/o15c" 2>&1; RCC=$?
+    if [ $RC -eq 3 ] && [ $RCC -eq 0 ]; then
+      ok "L15 real shipped map: pre-paint theme line removed -> rc=3 (control: intact -> rc=0)"
+    else
+      ng "L15 real shipped map: cut=$RC (expected 3), control=$RCC (expected 0)"
+    fi
+  elif [ $SETUP -eq 9 ]; then
+    ng "L15 the pre-paint theme line is already gone from $REAL - instrument had nothing to cut"
+  else
+    ng "L15 setup failed while mutating $REAL (rc=$SETUP)"
+  fi
 fi
 
 echo "── map_postprocess lanes: PASS=$PASS FAIL=$FAIL"

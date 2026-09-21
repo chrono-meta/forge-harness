@@ -122,6 +122,14 @@ rows=14 ok=14 violations=0 rc=0 으로 통과시켰다). rc=4 는 **DEAD CONTROL
 `templates/settings.PreToolUse.snippet.json` 에 히트, 이것은 0). deny 를 내는 훅이라
 `outbound_query_hook` 과 **같은 처분**이다 — 배선은 운영자 결정으로 남긴다.
 
+> 🟥 **정정 2026-09-21 — 위 두 문장 중 앞은 이제 거짓이다.** 그날 실측은 맞았고(배선 0),
+> «운영자 결정» 은 **A 로 났다** — 훅은 `templates/settings.PreToolUse.snippet.json` 의 Bash matcher 에
+> 등록됐고(SEVENTH GUARD), 레인 `L17`/`L17a`/`L17b` 가 그 등록을 고정한다. 근거는 이 레포 자신의
+> 방침이다: «배선 안 된 게이트는 근육이지 뼈대가 아니다»(§Skeleton-Not-Muscle) · 그리고 선례 —
+> `outbound_query_hook` 도 deny 를 내는데 이미 같은 스니펫에 있다. 발동 조건이 좁고
+> (FH 체크아웃 ∧ 비소유 레포 ∧ `gh pr create`) 무음 경로는 5ms 라 과차단 비용도 작다.
+> 항목 자체는 안 고친다 — 그날에는 참이었고, 지우면 왜 바뀌었는지가 사라진다.
+
 - **발신 전 3프로브 훅 (`scripts/outbound_pr_gate.sh`, #754)** — PreToolUse(Bash), 비소유 레포에 PR 을
   «열기 직전» 에 건다. 실측 근거: 비소유 레포 outbound 9건 중 기술 결함 지적 3건이 **전부 같은 형태**였다 —
   우리 가드와 테스트가 «대상의 모형» 위에서 돌았고 메인테이너의 증거는 우리가 한 번도 안 돌린 실행이었다.

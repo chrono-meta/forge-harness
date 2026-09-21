@@ -30,6 +30,11 @@ is, for any session that does not already know its filename, indistinguishable f
   override. Carries the calibrated where-it-is-not table and reproduction commands.
 - `knowledge/shared/harness-core/agents_md_runtime_details.md` — #codex, #agents-md, #entrypoint.
   Runtime detail for the non-Claude entry point.
+- `knowledge/shared/harness-core/checkout_layer_drift.md` — #checkout-drift, #gate-wiring,
+  #silent-degrade. 같은 커밋이 두 체크아웃에서 다른 판정을 내는 이유 — READ 층은 git 으로 오고
+  ENFORCE·EVIDENCE·PATTERN 층은 안 온다. 두 체크아웃 실측 15행, 세 갈림 방향, 그리고 이 측정이
+  **주장하지 않는 것**. 계기 = `scripts/env_layer_fingerprint.sh`. **드리프트나 «게이트 통과»를
+  근거로 쓰기 전에 읽어라.**
 - `knowledge/shared/harness-core/harness_terminal_correlation_and_recommendations.md` —
   #correlation, #terminal, #recommendations.
 - `knowledge/shared/rules/knowledge_layer_seam.md` — #seam, #org-knowledge, #unwired. Names FH's own
@@ -148,6 +153,16 @@ is, for any session that does not already know its filename, indistinguishable f
 ## Sessions
 
 <!-- Add entries in reverse date order (newest at top) -->
+
+### 2026-09-21 | forge-harness | #checkout-drift, #gate-wiring, #instrument-calibration, #known-pair, #remote-node
+**File:** `scripts/env_layer_fingerprint.sh` · `scripts/test_env_layer_fingerprint_lanes.sh` · `knowledge/shared/harness-core/checkout_layer_drift.md` · `CLAUDE.md` · `scripts/selfcheck.sh`
+클라우드 클론에서 돈 세션이 **운영자 맥 체크아웃과의 드리프트**를 실측했다. FH 는 읽는 층과 막는 층이 다른 수송로로 다니고 git 은 앞의 것만 나른다 — 같은 커밋 `a9e9b29` 에서 **15개 층 중 READ 4개만 같고 ENFORCE·EVIDENCE·PATTERN 11개가 전부 반대**였다(맥: 훅 둘 다 `EXEC_FH` · 마커 491 · tracks 17,387 · 로컬 전용 파일 11종 전부 PRESENT / 클론: 전부 ABSENT). 실물 확인: 이 클론에서 FH 자산 커밋은 **무음 성공**하고, `git config core.hooksPath templates/.git-hooks` **한 줄**만 잡자 같은 커밋이 Axis 2+3·Axis 4 로 차단됐다 — 바뀐 것은 코드가 아니라 배선이다.
+- **위험한 방향은 «여기 초록·저기 빨강»**: 게이트가 *통과한 것*과 *안 돈 것*은 터미널 출력이 **둘 다 무음**이라 구분이 안 간다. 반대 방향(EVIDENCE 부재로 차단)은 시끄러워서 상대적으로 안전하다.
+- **제일 조용한 세 번째 방향**: PATTERN 층이 비면 기밀성 스캔은 *돌지만* `defaults` 만 싣고 회사명·실명 클래스가 UNSCANNED 인 채 초록이 난다. 🟧 배너는 뜨고 차단은 안 한다 — 그 degrade 방향은 옳다(하드 차단하면 모든 새 클론의 첫 커밋이 막혀 `PUBLIC_SURFACE_OK` 를 반사행동으로 훈련시킨다).
+- **계기**: `env_layer_fingerprint.sh` — PRESENT/ABSENT/**UNMEASURED** 세 값만, 값은 안 싣는다(PR·스레드에 붙이는 산출물이라 유출이 곧 §Pre-Publish 위반). READ 층이 내장 대조군이고, 거기가 비면 드리프트가 아니라 **rc=2 계기 오류**다. 레인 8개(known-pair·digest 분리·유출 금지·계기오류·되돌림·tracked-FP).
+- **자기 지적**: `fh_node_check.sh` 는 바닥이 없다고 알려 줄 탐지기인데 **이 환경에서 뜨지도 않는다** — 등록이 `settings*.json`(전부 gitignored)에 살아서 탐지기가 바닥과 같은 수송로를 탄다.
+- **한계**: 맥 쪽은 계기를 직접 돌린 게 아니라 같은 경로 프로브를 1:1 로 옮긴 것이라 **digest 대조는 아직 불가**. n=2 체크아웃 1회. 맥 회신은 홈 경로·호스트명·매핑 트랙 이름 12개를 치환한 상태.
+- Tags: `checkout-drift` `gate-wiring` `known-pair` `instrument-calibration` `remote-node` `silent-degrade`
 
 ### 2026-09-21 | forge-harness | #locale, #gate-wiring, #instrument-calibration, #known-pair, #cleanroom-audit
 **File:** `templates/.git-hooks/pre-commit` · `scripts/test_locale_invariance_lanes.sh` · `scripts/daily_report.sh` · `scripts/selfcheck.sh` · `package.json`

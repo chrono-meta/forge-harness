@@ -260,6 +260,10 @@ node $A deliver  workflow     docs/map/fh_process.workflow.json     docs/map/fh_
 
 # 🟥 deliver 다음이 «끝»이 아니다 — 후처리가 의무다(폭 하한 + SVG 재생성). 안 돌리면 옛 폭으로 발행된다
 python3 scripts/map_postprocess.py docs/map/*.html      # rc=3 이면 렌더러 드리프트 — 멈추고 리터럴을 확인해라
+#   rc=3 은 폭 하한 리터럴 부재 **또는** 깜빡임 억제 계약 위반이다(메시지가 어느 쪽인지 적는다):
+#   ⓐ 첫 페인트 전 테마 해소가 <style>/<body> 뒤로 밀렸거나 사라졌다 → 라이트 모드 첫 프레임이 어둡게 뜬다
+#   ⓑ `.pulse-dot` 에 data-motion-capable 게이트 없이 애니메이션이 걸렸다 → 부팅 중·reduced-motion 에서도 깜빡인다
+#   🟥 계약 검사는 **기록의 형태**만 본다. 실물은 라이트 모드로 하드 리로드해 첫 프레임을 눈으로 본다.
 
 # PNG = 로컬 서버 + Chrome 헤드리스 라이트 스크린샷(뷰어 크롬 포함). 창 높이는 그 페이지 scrollHeight 에 맞춘다
 #       (2048×1320 고정이던 옛 방식은 폭 하한을 올린 뒤 아래쪽 카드가 잘린다 — 잘린 그림을 문서에 싣지 않는다)
@@ -269,7 +273,7 @@ python3 scripts/map_postprocess.py docs/map/*.html      # rc=3 이면 렌더러 
 #   (dataflow 는 2048×1360 · architecture 는 2048×1320)
 
 bash scripts/test_fh_map_paths_lanes.sh          # 노드 경로 전수 test -e (부재 0 이어야 초록)
-bash scripts/test_map_postprocess_lanes.sh       # 후처리 계약 9 레인 (L9 = 발행본이 실제로 패치됐나)
+bash scripts/test_map_postprocess_lanes.sh       # 후처리 계약 16 레인 (L9 = 발행본이 패치됐나 · L10~L15 = 깜빡임 억제가 아직 있나)
 ```
 
 - 렌더러는 **코드를 외부로 보내지 않는다** — `bin/archify.mjs` 에 네트워크 import 0, 렌더러 전체에서 네트워크 import 는 `renderers/shared/brand-marks.mjs`(명시적 `brands capture <url>` 만)와 `scripts/check-update.mjs`(고정 매니페스트 URL, 위 환경변수로 차단) 둘뿐(2026-09-05 grep 실측, v2.17.0-dev.1).

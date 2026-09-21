@@ -402,6 +402,24 @@ else
   fail=1
 fi
 
+# count_check's COUNT DECLARATION parser — the sweep reads "N skills"/"N agents" out of a plugin
+# description and compares it to disk. #768 shipped that sweep and wrote its own residual down:
+# «순회는 description 의 첫 N skills 패턴만 읽는다 — 과탐/미탐 방향 미측정». Both were measured
+# 2026-09-21 and both were real: a stale declaration masked by an earlier prose number went GREEN
+# (false PASS, the #763/#768 substring class a third time), and `M1/M2/M3 skill tier map` — live
+# in marketplace.json — was read AS a declaration (false FAIL). Without this anchor the "모호≠통과"
+# branch and the boundary can both be deleted with every gate still green.
+if [ ! -f scripts/count_check.sh ]; then
+  _absent_subject_verdict "count_check declaration lanes" "scripts/count_check.sh" || fail=1
+elif [ -f scripts/test_count_check_decl_lanes.sh ]; then
+  if ! bash scripts/test_count_check_decl_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  count_check declaration lanes: count_check.sh present but its anchor is missing"
+  fail=1
+fi
+
 # The public-surface scanner's SINGLE-FILE and MISUSE paths. Same subject-present/anchor-gone shape:
 # the scanner is a fail-closed gate on an irreversible surface, and its failure mode is a green that
 # was never earned — a misuse, an unloaded pattern set, or dead plumbing all used to render as clean.
@@ -464,6 +482,24 @@ elif [ -f scripts/test_gate_shape_scan_lanes.sh ]; then
   fi
 else
   echo "FAIL  gate-shape lanes: gate_shape_scan.sh present but its anchor is missing"
+  fail=1
+fi
+
+# env-layer fingerprint — 두 체크아웃(운영자 맥 ↔ 클라우드 클론)의 **층 대조**를 가능하게 하는
+# 계기. 게이트가 아니라 계기이므로 어떤 훅도 이걸 부르지 않는다 — 그래서 앵커는 여기 하나뿐이고,
+# 레인이 안 돌면 이 스크립트는 그냥 산문이 된다(lane_runner_check.sh 가 세는 클래스).
+if [ ! -f scripts/env_layer_fingerprint.sh ]; then
+  _absent_subject_verdict "env-layer lanes" "scripts/env_layer_fingerprint.sh" || fail=1
+elif [ -f scripts/test_env_layer_fingerprint_lanes.sh ]; then
+  # 주체의 자기 known-pair 를 먼저 직접 부른다(계기 교정), 그다음 레인.
+  if ! bash scripts/env_layer_fingerprint.sh --selftest >/dev/null 2>&1; then
+    echo "FAIL  env-layer selftest: known-pair calibration failed"; fail=1
+  fi
+  if ! bash scripts/test_env_layer_fingerprint_lanes.sh >/dev/null; then
+    echo "FAIL  env-layer lanes"; fail=1
+  fi
+else
+  echo "FAIL  env-layer lanes: env_layer_fingerprint.sh present but its anchor is missing"
   fail=1
 fi
 
@@ -707,6 +743,8 @@ for _pair in \
   "scripts/fixture_guard_lib.sh|scripts/test_fixture_guard_lanes.sh" \
   "scripts/stray_path_scan.sh|scripts/test_stray_path_lanes.sh" \
   "scripts/session_close_check.sh|scripts/test_stray_path_lanes.sh" \
+  `# ── ①-g stale-ref (2026-09-21 신설) — #773 이 「배선 안 함」이라 적은 자리의 호출부. SUBJECT 는 스캐너가 아니라 «마감 블록»이다: 스캐너 자체는 test_stale_ref_scan_lanes.sh 가 이미 앵커한다 ──` \
+  "scripts/session_close_check.sh|scripts/test_stale_ref_close_lanes.sh" \
   `# 티키타카 채점기 (2026-09-19 신설) — 다중턴 sim 의 «수렴/반영» 을 채점한다. 러너(--turns)는 있었고 채점기가 0줄이었다.` \
   "scripts/tikitaka_score.py|scripts/test_tikitaka_score_lanes.sh" \
   `# 체크리스트 unblocked (2026-09-19 신설) — 막혀 있던 행의 블로커가 DONE 이 됐는데 그 행이 안 움직였나.
