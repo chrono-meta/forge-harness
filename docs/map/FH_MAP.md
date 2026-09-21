@@ -262,8 +262,8 @@ node $A deliver  workflow     docs/map/fh_process.workflow.json     docs/map/fh_
 python3 scripts/map_postprocess.py docs/map/*.html      # rc=3 이면 렌더러 드리프트 — 멈추고 리터럴을 확인해라
 #   rc=3 은 폭 하한 리터럴 부재 **또는** 깜빡임 억제 계약 위반이다(메시지가 어느 쪽인지 적는다):
 #   ⓐ 첫 페인트 전 테마 해소가 <style>/<body> 뒤로 밀렸거나 사라졌다 → 라이트 모드 첫 프레임이 어둡게 뜬다
-#   ⓑ `.pulse-dot` 에 data-motion-capable 게이트 없이 애니메이션이 걸렸다 → 부팅 중·reduced-motion 에서도 깜빡인다
-#   🟥 계약 검사는 **기록의 형태**만 본다. 실물은 라이트 모드로 하드 리로드해 첫 프레임을 눈으로 본다.
+#   ⓑ `.pulse-dot` 에 data-motion-capable 게이트 없이 애니메이션이 걸렸다
+#   🟥 계약 검사는 **기록의 형태**만 본다 — 실제 렌더는 아래 `test_map_flash_render_lanes.sh` 가 잰다.
 
 # PNG = 로컬 서버 + Chrome 헤드리스 라이트 스크린샷(뷰어 크롬 포함). 창 높이는 그 페이지 scrollHeight 에 맞춘다
 #       (2048×1320 고정이던 옛 방식은 폭 하한을 올린 뒤 아래쪽 카드가 잘린다 — 잘린 그림을 문서에 싣지 않는다)
@@ -274,7 +274,29 @@ python3 scripts/map_postprocess.py docs/map/*.html      # rc=3 이면 렌더러 
 
 bash scripts/test_fh_map_paths_lanes.sh          # 노드 경로 전수 test -e (부재 0 이어야 초록)
 bash scripts/test_map_postprocess_lanes.sh       # 후처리 계약 16 레인 (L9 = 발행본이 패치됐나 · L10~L15 = 깜빡임 억제가 아직 있나)
+bash scripts/test_map_flash_render_lanes.sh      # 실제 렌더 7 레인 (~60초, 브라우저 필요 — 없으면 NOT MEASURED)
 ```
+
+- **깜빡임 억제 — 무엇이 «기록»이고 무엇이 «실물»인가 (2026-09-21 실측)**. `map_postprocess.py` 의
+  계약 검사는 억제 코드가 **문서에 있나**만 본다. 실제로 안 깜빡이는지는 `map_flash_render_probe.js`
+  가 헤드리스 크로미움으로 첫 페인트 구간을 프레임으로 떠서 잰다. 매 실행이 «사전 페인트 테마
+  해소를 제거한 쌍둥이»를 같이 재고, 그쪽이 안 빨개지면 계기 고장(rc=4)으로 죽는다.
+
+  | 팔 | 라이트 모드 첫 페인트 최저 휘도 (0~255) |
+  |---|---|
+  | 발행본 세 장 | **239.4 · 243.3 · 245.7** — 어두운 프레임 0 |
+  | 사전 페인트 해소를 제거한 쌍둥이 (known-positive) | **6.0** — 약 1.4 초간 통째로 어둡다 (CPU 6× 스로틀) |
+
+  🟥 **ⓑ 펄스 쪽은 서술을 정정한다.** 여기 「빠지면 부팅 중·reduced-motion 에서도 깜빡인다」고
+  적혀 있었는데, 실측은 **세 장 모두 점이 아예 안 뛴다**다: 모션 거버너의 `capable` 이
+  `svg[data-animation="trace"]` 를 요구하는데 이 세 문서의 DOM 에는 그런 svg 가 없어
+  `data-motion-capable` 이 **한 번도 안 켜진다**(`getComputedStyle(.pulse-dot).animationName === 'none'`,
+  3초간 픽셀 변화 0.000). 즉 ⓑ 계약이 막는 것은 **잠재 위험**이고, 오늘 화면에서 벌어지는 일이
+  아니다. 게이트를 손으로 켜면 점은 뛰고(진폭 8.2~13.1) `prefers-reduced-motion: reduce` 에서
+  다시 멈춘다(0.000) — 그 둘이 이 계기의 known-pair 다.
+
+  🟥 **그래도 사람 눈을 대체하지 않는다.** 헤드리스 합성기는 실제 화면이 아니고, 이 프로브는
+  폰트 적재·GPU 합성·주사율·색 관리를 못 본다. 분리폭(6 vs 244)이 큰 것은 **그 한 축에서만** 크다.
 
 - 렌더러는 **코드를 외부로 보내지 않는다** — `bin/archify.mjs` 에 네트워크 import 0, 렌더러 전체에서 네트워크 import 는 `renderers/shared/brand-marks.mjs`(명시적 `brands capture <url>` 만)와 `scripts/check-update.mjs`(고정 매니페스트 URL, 위 환경변수로 차단) 둘뿐(2026-09-05 grep 실측, v2.17.0-dev.1).
 - 뷰어의 고정 UI(검색 · 범례 · Export 버튼)는 영어다 — 렌더러가 한국어 UI 를 지원하지 않아 `meta.locale` 을 비웠다. 본문(노드 · 카드)은 한국어다.

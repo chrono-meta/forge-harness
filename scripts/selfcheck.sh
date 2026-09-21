@@ -744,6 +744,8 @@ for _pair in \
   "docs/map/fh_assets.architecture.json|scripts/test_fh_map_paths_lanes.sh" \
   `# ── 지도 후처리(2026-09-06): 발행 폭 하한 + SVG 재생성. 리터럴 드리프트를 fail-closed 로 잡는다 ──` \
   "scripts/map_postprocess.py|scripts/test_map_postprocess_lanes.sh" \
+  `# ── 지도 «깜빡임» 실물 렌더(2026-09-21): 위 줄은 억제 코드가 **문서에 있나**를 본다. 이 줄은 그것이 **실제 렌더에서 듣나**를 본다 — 첫 페인트 프레임과 헤더 점의 픽셀. 브라우저가 없는 머신에서는 레인이 NOT MEASURED 로 크게 적고 rc=0 으로 끝난다(되돌릴 수 있는 표면이라 advisory 로 떨어뜨린다) ──` \
+  "scripts/map_flash_render_probe.js|scripts/test_map_flash_render_lanes.sh" \
   `# ── 플로어 없는 채널(2026-09-14): 원격 자율 노드가 FH 자산을 바꾸면 마커가 tracks/ 와 함께 휘발한다. 실측 2/2(#675·#716). CI 가 gitignored 마커를 구조적으로 못 보므로, 그 채널에만 «마커가 커밋 기록에 실려 왔나» 를 건다 ──` \
   "scripts/remote_marker_gate.sh|scripts/test_remote_marker_gate_lanes.sh" \
   `# ── 발신 전 3프로브(2026-09-18): 비소유 레포에 PR 을 «열기 직전» 에 건다. 실측 — outbound 9건 중 기술 결함 지적 3건이 전부 같은 형태다: 우리 가드와 우리 테스트가 «대상의 모형» 위에서 돌았고, 메인테이너의 증거는 우리가 한 번도 안 돌린 실행이었다 ──` \
