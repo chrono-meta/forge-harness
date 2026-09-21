@@ -493,12 +493,19 @@ fi
 if [ ! -f scripts/pipefail_earlyexit_scan.sh ]; then
   _absent_subject_verdict "pipefail class-lock lanes" "scripts/pipefail_earlyexit_scan.sh" || fail=1
 elif [ -f scripts/test_pipefail_class_lock_lanes.sh ]; then
-  if ! bash scripts/pipefail_earlyexit_scan.sh --self-test >/dev/null 2>&1; then
-    echo "FAIL  pipefail class-lock selftest: known-pair calibration failed"; fail=1
-  fi
-  if ! bash scripts/test_pipefail_class_lock_lanes.sh >/dev/null 2>&1; then
-    echo "FAIL  pipefail class-lock lanes"; fail=1
-  fi
+  # 🟥 출력을 삼키지 마라. 초판은 둘 다 `>/dev/null 2>&1` 이었고, CI 에서 빨개졌을 때
+  #    «known-pair calibration failed» 한 줄만 남아 **어느 팔이 깨졌는지 알 수 없었다.**
+  #    실패는 시끄러워야 한다 — 진단을 지우면 재현이 한 라운드씩 늘어난다.
+  _pf_out="$(bash scripts/pipefail_earlyexit_scan.sh --self-test 2>&1)" || {
+    echo "FAIL  pipefail class-lock selftest: known-pair calibration failed"
+    printf '%s\n' "$_pf_out" | sed 's/^/      /'
+    fail=1
+  }
+  _pf_out="$(bash scripts/test_pipefail_class_lock_lanes.sh 2>&1)" || {
+    echo "FAIL  pipefail class-lock lanes"
+    printf '%s\n' "$_pf_out" | grep -vE '^  ✅' | sed 's/^/      /'
+    fail=1
+  }
 else
   echo "FAIL  pipefail class-lock: scanner present but its anchor is missing"
   fail=1
