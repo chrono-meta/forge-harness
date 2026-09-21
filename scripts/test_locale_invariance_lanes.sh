@@ -72,24 +72,98 @@ fi
 # ── L1: 훅이 실제로 쓰는 셈법이 두 로케일에서 같은 수를 낸다 ────────────────────
 #    표현식을 여기 다시 적지 않는다 — **훅에서 뽑아 쓴다**. 복사본을 두면 훅만 되돌아가도
 #    이 레인이 초록으로 남는다(정본이 둘이 되는 자리).
-EXPR=$(grep -m1 -oE "tr -s ' \\\\t\\\\n' '\\\\n' \| LC_ALL=C grep -c '\.'" "$HOOK")
-if [ -z "$EXPR" ]; then
-  echo "❌ HARNESS-ERROR — 훅에서 로케일 독립 셈법을 못 찾았다."
-  echo "   훅이 \`wc -w\` 로 되돌아갔거나 표현이 바뀌었다. 부재는 통과가 아니다."
+#    🟥 그러나 «기대하는 문자열과 글자 그대로 같은가»로 뽑으면 안 된다. 초판이 그렇게 뽑았고,
+#    그러면 훅이 **무엇으로 바뀌든** L1·L2 는 한 줄도 실행되지 않은 채 계기 오류로 빠진다 —
+#    즉 두 레인은 셈법을 한 번도 «판정»한 적이 없는 장식이 된다(되돌림 프로브 R2·R3 로 확인).
+#    뽑는 것은 **구조**(셈법 줄의 첫 파이프 뒤)로 하고, 그것이 옳은 수를 내는지는 L1·L2 가
+#    **실행해서** 판정한다. 줄 자체가 사라지면 그때는 부재 → 계기 오류가 맞다.
+_CNT_LINES=$(grep -nE '^[[:space:]]*(words|soul_words|_rwords)=\$\(printf ' "$HOOK")
+if [ -z "$_CNT_LINES" ]; then
+  echo "❌ HARNESS-ERROR — 훅에서 낱말 수 셈법 줄을 못 찾았다 (이름이 바뀌었나)."
+  echo "   부재는 통과가 아니다."
   exit 2
 fi
+_EXPRS=$(printf '%s\n' "$_CNT_LINES" \
+         | sed -E 's/^[0-9]+://; s/^[^|]*\|[[:space:]]*//; s/\)[[:space:]]*(;.*)?$//' | sort -u)
+EXPR=$(printf '%s\n' "$_EXPRS" | head -1)
+_n_sites=$(printf '%s\n' "$_CNT_LINES" | wc -l | tr -d ' ')
+_n_exprs=$(printf '%s\n' "$_EXPRS"    | wc -l | tr -d ' ')
+# L1a: 한 벌만 되돌아가도 L1·L2 는 **못 본다**(첫 자리만 재니까). 자리가 전부 같은 표현인지
+#      먼저 박는다 — 되돌림 프로브 R4(여섯 중 한 자리만 되돌림)가 이 팔에서만 빨개졌다.
+_t "L1a 셈법 줄 $_n_sites 개가 전부 같은 표현이다"
+if [ "$_n_exprs" -eq 1 ] && [ -n "$EXPR" ]; then _ok
+else _no "훅 안에 셈법이 $_n_exprs 벌이다 — 한 벌만 되돌아가도 L1·L2 가 못 본다:
+$(printf '%s\n' "$_EXPRS" | sed 's/^/       · /')"; fi
 c_posix=$(LC_ALL=POSIX  bash -c "printf '%s\n' \"\$1\" | $EXPR" _ "$KO")
 c_utf8=$(LC_ALL="$UTF8" bash -c "printf '%s\n' \"\$1\" | $EXPR" _ "$KO")
 _t "L1 훅의 셈법이 두 로케일에서 같은 수를 낸다"
 if [ "$c_posix" = "$c_utf8" ] && [ "$c_posix" -gt 0 ]; then _ok
 else _no "POSIX=$c_posix UTF8=$c_utf8 — 셈법이 여전히 로케일 의존이다"; fi
 
-# ── L2: 그리고 그 수는 UTF-8 기계의 옛 `wc -w` 값과 **같다** ───────────────────
-#    (문턱값은 전부 UTF-8 기계에서 실행으로 교정된 것이라, 셈법을 바꾸면서 그 값이 움직이면
-#     이미 돌던 게이트의 의미가 조용히 바뀐다. 그건 고침이 아니라 다른 결함이다.)
-_t "L2 UTF-8 기계에서는 옛 \`wc -w\` 와 같은 수 (문턱값 불변)"
-if [ "$c_utf8" = "$w_utf8" ]; then _ok
-else _no "새 셈법 $c_utf8 ≠ 옛 wc -w $w_utf8 — 문턱값의 의미가 움직인다"; fi
+# ── L2: 그 수가 «ASCII 공백으로 갈린 토큰 수»라는 의도된 의미와 같다 (문턱값 불변) ──
+#
+#    🟥 초판은 여기에 «UTF-8 기계에서는 옛 `wc -w` 와 같은 수» 라고 적었다. **그 단언은
+#    플랫폼 의존이라 macOS 에서 거짓이고, 그대로 머지하면 운영자 맥에서 selfcheck 가 빨개진다.**
+#    실측 2026-09-21 (Darwin 25.6.0 · /usr/bin/wc · 픽스처 KO = ASCII 토큰 8개):
+#        LC_ALL=POSIX       옛 wc -w = 8    새 셈법 = 8     (일치)
+#        LC_ALL=C.UTF-8     옛 wc -w = 11   새 셈법 = 8     ← 레인이 실제로 고르는 짝
+#        LC_ALL=en_US.UTF-8 옛 wc -w = 11   새 셈법 = 8
+#    BSD `wc -w` 는 UTF-8 로케일에서 한글 토큰 **안**을 쪼갠다 (토큰별 실측: `정의는`→2 ·
+#    `절대`→2 · `저것이다`→2, 나머지는 1). ASCII 컨트롤(`one two three`)은 두 로케일 모두 3 —
+#    즉 계기는 살아 있고 어긋남은 진짜다. 요컨대 **옛 값 자체가 낱말 수가 아니라 잡음**이고,
+#    그것과의 일치를 요구하는 것은 새 셈법더러 다른 플랫폼의 버그를 재현하라는 말이다.
+#
+#    지켜야 할 성질은 「옛 수와 같다」가 아니라 **「의도한 의미와 같다」**다. 훅의 문턱
+#    (defeater<6 · affected<3 · oracle<2)은 전부 «공백으로 갈린 토큰 수»를 보고 정해졌으니,
+#    그 의미가 유지되면 문턱은 안 움직인다 — 옛 계기가 어느 플랫폼에서 그 의미를 못 냈든.
+#    실측으로도 그렇다: 저자 트리의 실제 마커 **275 필드에서 문턱 판정이 뒤집힌 건 0 건**
+#    (C.UTF-8 에서 옛≠새가 272 건인데도 0 — 차이가 문턱을 넘길 만큼 크지 않았다).
+#    대조군은 훅과 **다른 프로그램**으로 짠다 (awk 기본 FS = 공백/탭/줄바꿈 · LC_ALL=C).
+_ref_words(){ printf '%s\n' "$1" | LC_ALL=C awk '{ n += NF } END { print n+0 }'; }
+
+#    계기 교정 ③ — 대조군 자신이 살아 있나. 손으로 센 값과 맞는지 **먼저** 본다.
+#    (대조군이 훅 값을 되읊기만 하면 아래 단언은 언제나 참인 장식이다. 실제로 이 단계가
+#     저자의 손셈 오류를 한 번 잡았다 — 혼합 줄을 7 로 셌는데 8 이었다.)
+_ref_dead=0
+for _p in "8:성공 정의는 이것이고 절대 안 하는 것은 저것이다" "3:one two three" "1:hello" "0:"; do
+  _exp="${_p%%:*}"; _got=$(_ref_words "${_p#*:}")
+  if [ "$_got" != "$_exp" ]; then
+    echo "❌ HARNESS-ERROR — 대조군이 «${_p#*:}» 에서 $_got 을 냈다 (손으로 센 값 $_exp)."
+    echo "   대조군이 죽었으면 아래 단언은 아무것도 안 잰다. UNMEASURED."
+    _ref_dead=1
+  fi
+done
+[ "$_ref_dead" -eq 0 ] || exit 2
+
+#    본 단언 — 훅의 셈법이 **두 로케일 × 코퍼스 전부**에서 의도한 수를 낸다.
+#    (기대값은 전부 손으로 세고 대조군으로 재확인했다. 코퍼스가 레인 «안에» 있으므로
+#     저자 트리가 아니어도 이 팔은 돈다 — 소비자 기계에서 조용히 죽는 팔이 아니다.)
+_l2=0; _l2_detail=""
+while IFS='|' read -r _exp _s; do
+  [ -n "$_exp" ] || continue
+  _r=$(_ref_words "$_s")
+  if [ "$_r" != "$_exp" ]; then
+    echo "❌ HARNESS-ERROR — 코퍼스 기대값이 대조군과 어긋난다: «$_s» exp=$_exp ref=$_r"; exit 2
+  fi
+  for _L in POSIX "$UTF8"; do
+    _h=$(LC_ALL="$_L" bash -c "printf '%s\n' \"\$1\" | $EXPR" _ "$_s")
+    if [ "$_h" != "$_exp" ]; then
+      _l2=1
+      _l2_detail="$_l2_detail
+       · $(printf '%-10s 훅=%-4s 의도=%-4s «%s»' "$_L" "$_h" "$_exp" "$_s")"
+    fi
+  done
+done <<'L2CORPUS'
+8|성공 정의는 이것이고 절대 안 하는 것은 저것이다
+3|  성공   정의는	이것이고
+8|훅 셈법과 locale 레인 — 열린 질문 없음
+3|one two three
+1|hello
+0|
+L2CORPUS
+_t "L2 훅의 셈법 = ASCII 토큰 수 (두 로케일 × 코퍼스 6 · 문턱값 불변)"
+if [ "$_l2" -eq 0 ]; then _ok
+else _no "셈법이 의도한 의미와 다르다 — 문턱값의 의미가 움직인다:$_l2_detail"; fi
 
 # ── L3–L6: 마커 레인 스위트를 **적대 로케일에서** 통째로 돌린다 ─────────────────
 #    🟥 «이 트리에 스위트가 없다» 는 **회귀가 아니라 커버리지 결손**이다 — 둘을 같은 ❌ 로 내면
@@ -142,17 +216,58 @@ fi
 sed -n '/^_marker_template_residue()/,/^}/p' "$MUT" >  "$T/fn_wc.sh"
 sed -n '/^validate_affected_leg()/,/^}/p'    "$MUT" >> "$T/fn_wc.sh"
 grep -q "wc -w" "$T/fn_wc.sh" || { echo "❌ HARNESS-ERROR — 되돌림 변이가 안 먹었다"; exit 2; }
-printf 'affected: %s\n' "$KO" > "$T/m.marker"
-_t "L7 되돌림 — \`wc -w\` 로 되돌리면 POSIX 에서 다시 막힌다"
-if LC_ALL=POSIX bash -c 'set -uo pipefail; . "$1"; validate_affected_leg "$2"' _ "$T/fn_wc.sh" "$T/m.marker" >/dev/null 2>&1; then
-  _no "되돌렸는데도 통과 — 이 레인은 셈법을 안 보고 있다(이빨 없음)"
-else _ok; fi
+# ── 픽스처를 이 기계에 맞춰 «문턱을 가로지르게» 짓는다 ─────────────────────────
+#    🟥 초판은 여기에 KO(ASCII 토큰 8개)를 박아 두고 «POSIX 에서 막힌다»를 단언했다.
+#    **그건 GNU wc 의 증상이지 지켜야 할 성질이 아니고, macOS 에서 거짓이다** — BSD wc 는
+#    POSIX 에서 한글을 ASCII 공백으로 제대로 갈라 8 을 내므로 과차단이 안 일어나고, 이 팔은
+#    (수리가 멀쩡한데) «이빨 없음»이라고 잘못 보고한다. 실측 2026-09-21 맥에서 L7 은 FAIL 이었다.
+#    성질은 **「되돌리면 게이트 판정 자체가 로케일에 따라 갈린다」**이므로, 그 갈림이 드러나는
+#    크기의 픽스처를 두 로케일의 **실측** wc -w 로 찾아서 짓는다 — 어긋남이 어느 방향이든 잡힌다.
+#    (맥: POSIX 가 옳고 UTF-8 이 부풀린다 / GNU: UTF-8 이 옳고 POSIX 가 0 으로 죽는다.)
+AFF_THR=3   # validate_affected_leg 의 문턱 (words -lt 3 → FAIL)
+_POOL='정의는 절대 저것이다 이것이고 성공 하는 것은 하나 둘 셋 넷 다섯'
+STRADDLE=""; s_p=""; s_u=""
+for _k in 1 2 3 4 5 6 7 8 9 10 11 12; do
+  _cand=$(printf '%s' "$_POOL" | LC_ALL=C awk -v k="$_k" \
+          '{ for (i = 1; i <= k && i <= NF; i++) printf "%s%s", (i > 1 ? " " : ""), $i }')
+  [ -n "$_cand" ] || continue
+  _p=$(LC_ALL=POSIX   bash -c 'printf "%s" "$1" | wc -w | tr -d " "' _ "$_cand")
+  _u=$(LC_ALL="$UTF8" bash -c 'printf "%s" "$1" | wc -w | tr -d " "' _ "$_cand")
+  if { [ "$_p" -lt "$AFF_THR" ] && [ "$_u" -ge "$AFF_THR" ]; } \
+  || { [ "$_u" -lt "$AFF_THR" ] && [ "$_p" -ge "$AFF_THR" ]; }; then
+    STRADDLE="$_cand"; s_p="$_p"; s_u="$_u"; break
+  fi
+done
+if [ -z "$STRADDLE" ]; then
+  echo "❌ HARNESS-ERROR — 되돌림 변이가 이 기계에서 문턱을 가로지르는 픽스처를 못 만든다."
+  echo "   옛 셈법의 로케일 차이가 affected 문턱($AFF_THR)을 넘길 만큼 크지 않다. UNMEASURED —"
+  echo "   되돌림 팔이 이빨을 가졌는지 «확인 불가»다. 통과로 렌더하지 않는다."
+  exit 2
+fi
+printf 'affected: %s\n' "$STRADDLE" > "$T/m.marker"
 
-# ── L8 컨트롤: 같은 변이체·같은 마커가 UTF-8 에서는 **통과한다** ───────────────
-#    (L7 이 「로케일 때문」이 아니라 「픽스처나 변이가 원래 나쁨」이어서 막힌 것이면 여기서도 막힌다)
-_t "L8 컨트롤 — 같은 변이체·같은 마커가 UTF-8 에서는 통과"
-if LC_ALL="$UTF8" bash -c 'set -uo pipefail; . "$1"; validate_affected_leg "$2"' _ "$T/fn_wc.sh" "$T/m.marker" >/dev/null 2>&1; then _ok
-else _no "UTF-8 에서도 막힌다 — L7 의 원인이 로케일이 아니다(픽스처나 변이의 결함)"; fi
+_run_aff(){ # $1=로케일 $2=함수 파일 → rc (0=통과 · 1=차단)
+  LC_ALL="$1" bash -c 'set -uo pipefail; . "$1"; validate_affected_leg "$2"' \
+    _ "$2" "$T/m.marker" >/dev/null 2>&1
+}
+
+# ── L7 되돌림: 옛 셈법으로 되돌리면 **게이트 판정이 로케일에 따라 갈린다** ──────
+_t "L7 되돌림 — 옛 셈법은 판정을 로케일에 따라 갈리게 만든다"
+m_p=0; _run_aff POSIX   "$T/fn_wc.sh" || m_p=1
+m_u=0; _run_aff "$UTF8" "$T/fn_wc.sh" || m_u=1
+if [ "$m_p" -ne "$m_u" ]; then _ok
+else _no "변이체가 두 로케일에서 같은 판정(rc=$m_p) — 이 팔은 셈법을 안 보고 있다(이빨 없음). 실측 옛 wc -w: POSIX=$s_p $UTF8=$s_u · 문턱=$AFF_THR · 픽스처=«$STRADDLE»"; fi
+
+# ── L8 컨트롤: **같은 픽스처·같은 러너**로 지금의 훅은 두 로케일 판정이 같다 ────
+#    L7 과 L8 이 known-pair 를 이룬다 — 바뀐 것은 셈법 하나뿐이므로, L7 이 갈리고 L8 이
+#    안 갈리면 그 차이의 원인은 셈법이다. (L8 혼자는 «컨트롤 있음 ≠ 판별력 있음»이다.)
+sed -n '/^_marker_template_residue()/,/^}/p' "$HOOK" >  "$T/fn_aff_ok.sh"
+sed -n '/^validate_affected_leg()/,/^}/p'    "$HOOK" >> "$T/fn_aff_ok.sh"
+_t "L8 컨트롤 — 지금의 훅은 같은 픽스처에서 두 로케일 판정이 같다"
+h_p=0; _run_aff POSIX   "$T/fn_aff_ok.sh" || h_p=1
+h_u=0; _run_aff "$UTF8" "$T/fn_aff_ok.sh" || h_u=1
+if [ "$h_p" -eq "$h_u" ]; then _ok
+else _no "POSIX rc=$h_p UTF8 rc=$h_u — 고친 훅도 이 픽스처에서 로케일에 갈린다"; fi
 
 # ── L9 되돌림 (브래킷): `(:|—|-)` 를 `[:—-]` 로 되돌리면 POSIX 에서 **fail-OPEN** ──
 #    ①영혼 줄의 복붙 검출이 조용히 통과하는 자리. 방향이 반대라서 따로 박는다.

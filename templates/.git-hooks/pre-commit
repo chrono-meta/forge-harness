@@ -903,7 +903,14 @@ validate_crossfamily_leg() { # $1 = marker path
   # `panel(codex,` — a well-formed panel rejected as malformed. An over-block on the
   # correct shape is the failure that teaches --no-verify, so it is a defect, not strictness.
   val=$(printf '%s' "$line" | sed -E 's/[[:space:]]*(—|--).*$//' | sed -E 's/[[:space:]]+$//')
-  reason=$(printf '%s' "$line" | sed -E 's/^[^—-]*(—|--)[[:space:]]*//')
+  # 🟥 `[^—-]*` 금지 — 브래킷은 비-UTF-8 로케일에서 바이트 집합이 된다
+  #    (scripts/multibyte_bracket_lint.sh 가 이 자리를 막는다). `val` 이 이미 «구분자 앞» 이므로
+  #    그 접두를 떼면 부정 클래스 없이 구해지고, 구분자가 맨 앞이라 앵커로 벗길 수 있다.
+  #    부수 효과로 로케일과 무관한 실물 버그가 닫힌다: 값에 하이픈이 있고 ASCII 이중대시를 쓰면
+  #    (`panel(a) -- 근거`) 옛 식은 아무것도 못 벗겨 reason 이 통째로 남았고, 바로 아래 비교가
+  #    그것을 **빈 근거**로 렌더해 정상 마커를 과차단했다(2026-09-21 실측).
+  reason=${line#"$val"}
+  reason=$(printf '%s' "$reason" | sed -E 's/^[[:space:]]*(—|--)[[:space:]]*//')
   [ "$reason" = "$line" ] && reason=""
 
   # residency= token — computed once, consumed by whichever branch below needs it (REQUIRED for
@@ -1321,7 +1328,11 @@ validate_standpoint_leg() { # $1 = marker path
        'standpoint: tier2' misses it; drop the quotes next time]";; esac
   line=$(printf '%s' "$line" | sed -E 's/^["'"'"']//; s/["'"'"']$//')
   val=$(printf '%s' "$line" | sed -E 's/[[:space:]]*(—|--).*$//' | sed -E 's/[[:space:]]+$//')
-  reason=$(printf '%s' "$line" | sed -E 's/^[^—-]*((—|--)[[:space:]]*)?//')
+  # 🟥 `[^—-]*` 금지 — 위 crossfamily 자리와 같은 이유·같은 처방(lint 가 막는다).
+  #    옛 식은 구분자가 없으면 `[^—-]*` 가 값의 첫 하이픈까지만 먹고 옵셔널 그룹을 건너뛰어
+  #    `not-applicable — 근거` 를 `-applicable — 근거` 로 **깨진 근거**로 만들었다(실측).
+  reason=${line#"$val"}
+  reason=$(printf '%s' "$reason" | sed -E 's/^[[:space:]]*(—|--)[[:space:]]*//')
   # Cross-axis contamination. `crossfamily:` and `standpoint:` each carry a three-way degrade
   # triad and the doctrine says the literals are DISTINCT ON PURPOSE. Borrowing the other axis's
   # token records the wrong axis while looking well-formed.
