@@ -39,7 +39,7 @@ cd "$REPO_ROOT" || exit 1
 #   scripts/sync_to_be_lanes.sh             — forward-path lane suite for sync-to-be.sh, itself
 #       ACCEPTED_ABSENT above; added 2026-08-14, pmh-dev#69.
 ACCEPTED_ABSENT=(
-  # 🟥 2026-09-21 — 지도 «깜빡임» 렌더 프로브 3종. 이 셋의 **판정 대상이 `docs/map/*.html`**
+  # 🟥 2026-09-21 — 지도 «깜빡임» 렌더 프로브 4종. 이 넷의 **판정 대상이 `docs/map/*.html`**
   #    인데 그 지도는 files[] 에 없다(발행은 GitHub Pages 로 하고 npm 으로는 안 나간다). 소비자
   #    트리에는 잴 것이 아예 없으므로 계기를 실어 보내는 것은 무게만 늘린다. 레인 자신이 그
   #    상태를 `NOT MEASURED` 로 크게 적고 rc=0 으로 끝나므로 조용한 통과도 아니다.
@@ -47,6 +47,7 @@ ACCEPTED_ABSENT=(
   "scripts/map_flash_render_probe.js"
   "scripts/png_luma.py"
   "scripts/test_map_flash_render_lanes.sh"
+  "scripts/test_png_luma_lanes.sh"
   # 🟥 2026-09-05 — outbound 가드와 그 레인은 **이 목록에서 나갔다(= 이제 출하한다).**
   # 종전 사유는 «override 층이 없으면 fail-closed 라 신선 설치를 100% 차단한다» 였는데,
   # 그 문장은 **두 가지를 뭉쳤다**: 가드가 fail-closed 인 것은 맞지만 **신선 설치에서 그 가드를
