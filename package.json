@@ -175,6 +175,7 @@
     "scripts/prless_delta_scan.sh",
     "scripts/test_prless_delta_scan_lanes.sh",
     "scripts/gate_shape_scan.sh",
+    "scripts/governor_board.sh",
     "scripts/halffix_propagation_scan.sh",
     "scripts/hook_source_lib.sh",
     "scripts/judgment_circuit_lint.sh",

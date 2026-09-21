@@ -1392,6 +1392,22 @@ else
   fi
 fi
 
+# governor_board — 거버너/워크트리/계열 판. 자기검사 24 레인(known-pair 중심).
+# 🟥 이 계기의 핵심 known-pair 는 «마커 있음 → 계열이 나온다» ↔ «마커 없음 → 미측정» 이다.
+#    그 둘이 같은 글자로 나오면 판은 측정이 아니라 생성이고, 사람이 그걸 읽고 판단한다.
+#    subject 있는데 anchor 없으면 FAIL 이지 skip 이 아니다.
+if [ ! -f scripts/governor_board.sh ]; then
+  _absent_subject_verdict "governor_board --self-test" "scripts/governor_board.sh" || fail=1
+else
+  if ! bash scripts/governor_board.sh --self-test >/dev/null 2>&1; then
+    echo "FAIL  governor_board --self-test"
+    bash scripts/governor_board.sh --self-test 2>&1 | grep '❌' | head -5
+    fail=1
+  else
+    echo "PASS  governor_board --self-test (24 lanes)"
+  fi
+fi
+
 # launchd_wiring_check — 주기 실행(frontier-digest)이 실제로 배선됐나. 자기검사 10 레인.
 # 🟥 이 검사가 없던 동안, 추적본 plist 는 «템플릿»(/path/to/ 플레이스홀더)인데 «바꿨는지»도
 #    «걸렸는지»도 보는 것이 0개였다. 소비자는 digest 가 돈다고 믿으면서 한 번도 안 도는 상태로
