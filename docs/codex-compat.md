@@ -118,6 +118,30 @@ M3 skills (`goal-quench` Phase-3 Stop hook, `harness-pr-reviewer` CC session con
 ### 4. No token accounting
 Codex token usage is billed in the Codex CLI quota and is **not** recorded in any FH session log or orchestrator measurement. Cross-family runs (Gemini/Codex) are invisible to FH's token-budget tooling by construction.
 
+### 6. 🟥 The gate may not be wired in your checkout — and a gate that never ran looks exactly like one that passed
+Every "the hook blocks this" statement in FH's docs is true only where `core.hooksPath` points at
+`templates/.git-hooks`. Git tracks the hook files; it does **not** carry that config value. Measured
+2026-09-21, same commit, two checkouts: **15 layers compared, only the 4 READ layers matched — all 11
+ENFORCE/EVIDENCE/PATTERN layers were opposite.** A third direction is quieter still: with the pattern
+layer absent the confidentiality scan still runs and still goes **green**, while company-name and
+real-name classes are silently `UNSCANNED`.
+
+```bash
+bash scripts/env_layer_fingerprint.sh            # PRESENT/ABSENT/UNMEASURED per layer, no values
+bash scripts/gate_bootstrap_ephemeral.sh --check # rc=1 while anything is missing
+bash scripts/gate_bootstrap_ephemeral.sh --apply # wires hooksPath + a UTF-8 locale
+```
+
+A UTF-8 locale is part of it, not a nicety: under `LC_CTYPE=POSIX` all four non-vacuity legs of an
+honest Korean marker are rejected as "vacuous" — over-blocking, the opposite failure. The third
+requirement is the two gitignored evidence files, and **a human writes those**; the bootstrap script
+deliberately does not create markers, because auto-generating evidence is closing the gate with a
+forgery. ⚠️ `scripts/fh_node_check.sh` cannot warn you here — it travels the same gitignored channel
+as the `settings*.json` it would read, so on an unwired node the detector is absent too.
+
+Canonical: `AGENTS.md` §Mandatory Non-Claude Checklist item **1-b** ·
+`knowledge/shared/harness-core/checkout_layer_drift.md` §8.
+
 ### 5. Cross-family sibling note (Gemini)
 The sibling pattern for Gemini is `gemini -p "$(cat <skill+artifact>)"`. Outside a trusted directory Gemini requires `--skip-trust` (or `GEMINI_CLI_TRUST_WORKSPACE=true`). Gemini's headless output may bracket identifiers (`[ID]:`) where Codex does not — parse tolerantly.
 
