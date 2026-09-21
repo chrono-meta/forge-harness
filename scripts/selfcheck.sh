@@ -501,11 +501,23 @@ elif [ -f scripts/test_pipefail_class_lock_lanes.sh ]; then
     printf '%s\n' "$_pf_out" | sed 's/^/      /'
     fail=1
   }
-  _pf_out="$(bash scripts/test_pipefail_class_lock_lanes.sh 2>&1)" || {
-    echo "FAIL  pipefail class-lock lanes"
-    printf '%s\n' "$_pf_out" | grep -vE '^  ✅' | sed 's/^/      /'
-    fail=1
-  }
+  # 🟥 **rc=1(실패)과 rc=2(계기 오류)를 갈라서 받는다.** 스위트 계약이 `0 통과 · 1 실패 ·
+  #    2 팔 하나 이상 UNMEASURED` 인데, 초판은 `||` 로 둘을 같은 값으로 읽었다.
+  #    실측 2026-09-21: 런타임 프로브의 한 표기(`… | awk "/NEEDLE/{exit}"`)가 **맥에서 5/5,
+  #    리눅스 mawk 에서 0/5** 다. 그건 이 레포의 결함이 아니라 «이 환경에서 그 결함을 만들 수
+  #    없다» 는 사실이고, FAIL 로 렌더하면 리눅스 CI 가 영구 빨강이 된다.
+  #    ⇒ rc=2 는 **시끄럽게 표면화하되 막지 않는다**(커밋은 가역 표면이고, 이 저장소가
+  #    `portability_lint`·①-b 에 쓰는 것과 같은 형태다). 🟥 «통과» 로 접지는 않는다 —
+  #    줄이 남고, 무엇이 미측정인지 이름이 찍힌다.
+  _pf_out="$(bash scripts/test_pipefail_class_lock_lanes.sh 2>&1)"; _pf_rc=$?
+  case "$_pf_rc" in
+    0) : ;;
+    2) echo "⚠️  pipefail class-lock lanes: 팔 하나 이상 UNMEASURED (계기 오류 — 통과 아님, 막지도 않음)"
+       printf '%s\n' "$_pf_out" | grep -E '^  ⬜' | sed 's/^/      /' ;;
+    *) echo "FAIL  pipefail class-lock lanes (rc=$_pf_rc)"
+       printf '%s\n' "$_pf_out" | grep -vE '^  ✅' | sed 's/^/      /'
+       fail=1 ;;
+  esac
 else
   echo "FAIL  pipefail class-lock: scanner present but its anchor is missing"
   fail=1

@@ -50,13 +50,25 @@ _pos_forms=(
   'cat "$D/over.txt" | awk "/NEEDLE/{exit}"'
   'printf "%s" "$(cat "$D/over.txt")" | grep -q NEEDLE'
 )
-_bad=""
+# 🟥 **표기별 미재현은 FAIL 이 아니라 UNMEASURED 다** — 실측 2026-09-21: 같은 표기가 OS 에 따라
+#    안 뒤집힌다(`… | awk "/NEEDLE/{exit}"` 가 맥에서 5/5, 리눅스 mawk 에서 **0/5**). 그건 이 레포의
+#    결함이 아니라 «이 환경에서 그 결함을 만들 수 없다» 는 사실이고, 둘을 같은 값으로 렌더하면
+#    **판정불가가 실패로** 읽힌다(이 저장소가 계속 이름 붙여 온 일가).
+# 🟥 다만 **하나도 안 뒤집히면 그건 계기 사망**이라 FAIL 이다 — 그때는 아래 초록이 전부 무의미하다.
+_bad=""; _flipped=0; _total=0
 for _f in "${_pos_forms[@]}"; do
-  _n="$(_flip "$_f")"; [ "$_n" -eq 5 ] || _bad="$_bad [$_f→$_n/5]"
+  _total=$(( _total + 1 ))
+  _n="$(_flip "$_f")"
+  if [ "$_n" -eq 5 ]; then _flipped=$(( _flipped + 1 )); else _bad="$_bad [$_f→$_n/5]"; fi
 done
-[ -z "$_bad" ] \
-  && ok "L1 런타임 known-positive: 취약 표기 ${#_pos_forms[@]} 종이 전부 5/5 뒤집힌다 (매치했는데 rc≠0)" \
-  || no "L1 런타임 known-positive" "안 뒤집힌 표기 —$_bad. 계기가 결함을 못 만들면 아래 초록은 증거가 아니다"
+if [ "$_flipped" -eq 0 ]; then
+  no "L1 런타임 known-positive" "취약 표기 $_total 종 중 **0 종**이 뒤집혔다 — 계기가 죽었다. 아래 초록은 증거가 아니다"
+elif [ -z "$_bad" ]; then
+  ok "L1 런타임 known-positive: 취약 표기 $_total 종이 전부 5/5 뒤집힌다 (매치했는데 rc≠0)"
+else
+  ok "L1 런타임 known-positive: $_flipped/$_total 종이 5/5 뒤집힌다 (계기 생존)"
+  um "L1-b 이 환경에서 재현 안 되는 표기" "$_bad — «안전» 이 아니라 **이 OS/도구에서 미재현**이다(맥↔리눅스 awk 차이 실측)"
+fi
 
 # ── L2 런타임 known-NEGATIVE — 과차단 방지. 컨트롤 값을 출력에 찍는다 ─────────────
 # 🟥 이 줄이 없으면 이 레인은 「파이프는 다 나쁘다」가 된다. 판별자는 «크기» 가 아니라 «잔여 바이트».
@@ -197,11 +209,16 @@ case "$(_add "$(printf 'a\nb\nc')")" in
 esac
 /bin/rm -rf "$_L12T"
 # L12c 실물: 이 레포의 지금 상태에서 delta 가 통과해야 한다(기존 부채와 무관하게 산다).
-if bash "$SCAN" changed >/dev/null 2>&1; then
-  ok "L12c 실물 델타 — 지금 작업트리에서 rc=0 (기존 113 곳이 잠금을 막지 않는다)"
-else
-  no "L12c 실물 델타" "rc!=0 — 새 취약형이 있거나 폴백 회귀가 돌아왔다"
-fi
+# 🟥 **rc 를 갈라서 받는다.** 계약은 `0 통과 · 1 발견 · 2 계기오류` 인데 초판은 `if … ; then`
+#    으로 **1 과 2 를 같은 값**으로 읽었다. 실측 2026-09-21: git 이 없는 컨테이너에서 `changed` 가
+#    rc=2(「base 를 못 정했다」)를 내는데 레인이 그걸 «새 취약형 발견» 으로 렌더했다 —
+#    판정불가가 발견으로 둔갑하는, 이 스위트가 막으려는 바로 그 형태다.
+_l12_out="$(bash "$SCAN" changed 2>&1)"; _l12_rc=$?
+case "$_l12_rc" in
+  0) ok "L12c 실물 델타 — 지금 작업트리에서 rc=0 (기존 부채가 잠금을 막지 않는다)" ;;
+  1) no "L12c 실물 델타" "rc=1 — 새 취약형이 들어왔거나 폴백 회귀가 돌아왔다: $(printf '%s' "$_l12_out" | head -2 | tr '\n' ' ')" ;;
+  *) um "L12c 실물 델타" "rc=$_l12_rc (계기 오류 — 예: git 부재로 base 미정). «통과»도 «발견»도 아니다: $(printf '%s' "$_l12_out" | head -1)" ;;
+esac
 
 echo "PASS=$PASS FAIL=$FAIL UNMEASURED=$UNMEASURED"
 if [ "$FAIL" -eq 0 ] && [ "$UNMEASURED" -gt 0 ]; then echo "rc=2 (계기 오류: 팔 하나 이상 UNMEASURED)"; exit 2; fi

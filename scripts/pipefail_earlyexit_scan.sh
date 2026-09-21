@@ -431,7 +431,10 @@ collect(){
 }
 
 case "$MODE" in
-  selftest) selftest; exit $?;;
+  # 🟥 별칭이 없으면 `--self-test` 가 case 에 안 걸려 **기본 `report` 로 떨어지고**, report 는
+  #    VULN>0 이면 rc=1 이라 «known-pair 실패» 로 오독된다. 실제로 CI 에서 그렇게 빨갰다
+  #    (2026-09-21). 레포 관례가 `--self-test`(gate_shape_scan 은 `--selftest`)라 셋 다 받는다.
+  selftest|--self-test|--selftest) selftest; exit $?;;
   list)     [ -n "$ONLY" ] && scan_file "$ONLY" || collect; exit 0;;
   changed)
     # ── 델타 잠금 — 🟥 이것이 «0 곳인가» 가 실제로 걸리는 자리다 ──────────────────────
