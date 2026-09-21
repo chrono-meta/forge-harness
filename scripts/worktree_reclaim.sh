@@ -91,7 +91,7 @@ NAME="$(basename "$WT")"; TS="$(date +%Y%m%d-%H%M%S)"
 LIST="$DST/_meta/dispatch/reclaim_${NAME}_${TS}.txt"
 
 # 1. ENUMERATE — the list lands in a file FIRST (the evidence that survives the copy)
-ONLY=(); DIFF=(); OUTSIDE=(); SKIPPED=(); ZONE=(); _DIRTY=0
+ONLY=(); DIFF=(); OUTSIDE=(); SKIPPED=(); ZONE=(); CONFIG=(); _DIRTY=0
 _p=''; _k=''   # 🟥 A-7 — `set -u` kills the loop below if a warning line arrives first
 
 # 1-a. OUTSIDE — every path git will NOT carry, outside `tracks/`. Source is git itself, not a
@@ -111,6 +111,23 @@ _p=''; _k=''   # 🟥 A-7 — `set -u` kills the loop below if a warning line ar
 #    the five in the same «prior-art hook runtime sentinels» comment block was missing, so genuinely
 #    regenerable files were blocking. The lane now diffs the two (W7j) — this drift does not get
 #    re-noticed by eye.
+# ⓒ Worktree-LOCAL config. 🟥 4th round: pulling `.claude/settings*.json` out of ⓐ (they are not
+#    «rewritten by the hooks») made them BLOCK, and a session that works in a worktree creates them
+#    there — so the gate became unclearable again, which is the `--force` training A-3 closed.
+#    Measured before deciding: a FRESH `git worktree add` carries **zero** ignored files — the main
+#    checkout's `.claude/settings.json` is NOT copied in. So a worktree's copy exists only because a
+#    session made it there, and it is scoped to that worktree's session (settings.local.json is that
+#    session's permission approvals). The main checkout's settings are never at risk from this tool.
+#    ⇒ They get their OWN verdict: they do not block, and the green line NAMES them, because
+#    «silently skipped» and «blocks forever» are both wrong here. The loss becomes visible AT the
+#    decision point instead of at neither end.
+_worktree_local_config() {
+  case "$1" in
+    .claude/settings.json|.claude/settings.local.json) return 0 ;;
+  esac
+  return 1
+}
+
 _runtime_sentinel() {
   case "$1" in
     .claude/.prior_art_prompted_*|.claude/.prior_art_events.tsv) return 0 ;;
@@ -194,7 +211,9 @@ while IFS= read -r _l; do
   # 🟥 S-2 — the non-blocking set is a NAMED WHITELIST, and it is consulted only for `!!`.
   #    An untracked path blocks whatever it is called: a path SHAPED like build output is not
   #    evidence that it IS build output when nobody ever told git about it.
-  if [ "$_k" = "I" ] && { _runtime_sentinel "$_p" || _regenerable "$_p"; }; then
+  if [ "$_k" = "I" ] && _worktree_local_config "$_p"; then
+    CONFIG+=("$_p")                     # 🟥 4R — named in the verdict, does not block
+  elif [ "$_k" = "I" ] && { _runtime_sentinel "$_p" || _regenerable "$_p"; }; then
     SKIPPED+=("$_p")                    # 🟥 A-2 — counted and listed, never vanished
   else
     OUTSIDE+=("$_p")                    # untracked, or ignored-but-not-whitelisted → BLOCKS
@@ -232,22 +251,24 @@ fi
 
 {
   echo "# worktree_reclaim — $WT → $ROOT  ($TS)"
-  echo "# blocking: only-in ${#ONLY[@]} · differ ${#DIFF[@]} · outside ${#OUTSIDE[@]}   |   non-blocking: skipped ${#SKIPPED[@]} · tracks-zone ${#ZONE[@]}   mode: ${MODE:-enumerate}"
+  echo "# blocking: only-in ${#ONLY[@]} · differ ${#DIFF[@]} · outside ${#OUTSIDE[@]}   |   non-blocking: skipped ${#SKIPPED[@]} · tracks-zone ${#ZONE[@]} · config ${#CONFIG[@]}   mode: ${MODE:-enumerate}"
   [ -d "$SRC" ] || echo "# note: worktree has no tracks/ — that ZONE is empty, which is not 'nothing to reclaim'"
   for p in ${ONLY[@]+"${ONLY[@]}"}; do echo "ONLY	$p"; done
   for p in ${DIFF[@]+"${DIFF[@]}"}; do echo "DIFF	$p"; done
   for p in ${OUTSIDE[@]+"${OUTSIDE[@]}"}; do echo "OUTSIDE	$p"; done
   for p in ${SKIPPED[@]+"${SKIPPED[@]}"}; do echo "SKIP	$p"; done
   for p in ${ZONE[@]+"${ZONE[@]}"}; do echo "ZONE	$p"; done
+  for p in ${CONFIG[@]+"${CONFIG[@]}"}; do echo "CONFIG	$p"; done
 } > "$LIST" || { echo "🟥 cannot write list file $LIST" >&2; exit 10; }
 echo "── worktree_reclaim: $NAME ──"
-echo "   ⛔ blocking: only-in ${#ONLY[@]} · differ ${#DIFF[@]} · outside ${#OUTSIDE[@]}   |   ℹ️  non-blocking: skipped ${#SKIPPED[@]} · tracks-zone ${#ZONE[@]}"
+echo "   ⛔ blocking: only-in ${#ONLY[@]} · differ ${#DIFF[@]} · outside ${#OUTSIDE[@]}   |   ℹ️  non-blocking: skipped ${#SKIPPED[@]} · tracks-zone ${#ZONE[@]} · config ${#CONFIG[@]}"
 echo "   list: ${LIST#$ROOT/}"
 for p in ${ONLY[@]+"${ONLY[@]}"}; do echo "   ONLY  $p"; done
 for p in ${DIFF[@]+"${DIFF[@]}"}; do echo "   DIFF  $p   (both sides exist and differ — NOT copied, merge by hand)"; done
 for p in ${OUTSIDE[@]+"${OUTSIDE[@]}"}; do echo "   OUTSIDE  $p   (untracked — git will not carry this, NOT auto-copied)"; done
 for p in ${SKIPPED[@]+"${SKIPPED[@]}"}; do echo "   SKIP  $p   (on the named regenerable/sentinel list — does not block)"; done
 [ "${#ZONE[@]}" -gt 0 ] && echo "   ZONE  ${#ZONE[@]} path(s) under tracks/ — judged by the tracks/ zone above, not here"
+for p in ${CONFIG[@]+"${CONFIG[@]}"}; do echo "   CONFIG  $p   (worktree-local session config — will be DESTROYED with the worktree)"; done
 
 # 🟥 B-6 — this check used to sit AFTER the copy loop, so a partial enumeration printed a column of
 #    «✅ reclaimed …» before the warning. Copying is additive, so nothing was destroyed — but a human
@@ -295,7 +316,12 @@ if [ "${#OUTSIDE[@]}" -gt 0 ]; then
 fi
 # 🟥 A-4 — the green line used to be unconditional, so it said «nothing left» forty lines under a
 #    list of files it had just printed. What is skipped must ride along with the verdict.
-if [ "${#SKIPPED[@]}" -gt 0 ]; then
+if [ "${#CONFIG[@]}" -gt 0 ]; then
+  echo "✅ nothing that needs reclaiming — safe to: git worktree remove $WT"
+  echo "   🟥 ${#CONFIG[@]} worktree-local config file(s) WILL BE DESTROYED (listed above)."
+  echo "      A fresh worktree has none; these exist because a session wrote them here."
+  [ "${#SKIPPED[@]}" -gt 0 ] && echo "      (plus ${#SKIPPED[@]} skipped as regenerable/sentinel)"
+elif [ "${#SKIPPED[@]}" -gt 0 ]; then
   echo "✅ nothing that needs reclaiming — safe to: git worktree remove $WT"
   echo "   (${#SKIPPED[@]} path(s) skipped as regenerable/sentinel — listed above, judged, not unseen)"
 else

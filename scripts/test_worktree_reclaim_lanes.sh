@@ -226,12 +226,17 @@ echo "── W8 3라운드 적대검증 (같은 계열 + 다른 계열 두 팔) 
 mk_pair "$T/s"; W="$T/s/wt"; mkdir -p "$W/tracks/_meta" "$W/.claude"
 printf 'tracks/\n.claude/settings.json*\n.claude/settings.local.json*\n' > "$W/.gitignore"
 echo '{"hooks":{}}' > "$W/.claude/settings.json"; echo '{"permissions":{}}' > "$W/.claude/settings.local.json"
+# 🟥 4R 정정: 3R 은 이걸 «차단» 으로 고쳤는데 그게 A-3(영구 rc=1 → --force 훈련) 재발이었다.
+#    실측이 결론을 바꿨다 — 갓 만든 워크트리는 ignored 파일이 **0건**이고, 워크트리의
+#    settings 는 «그 워크트리 세션이 만든 것» 이다. 그래서 차단도 무음 SKIP 도 아니고
+#    **CONFIG — 안 막되 초록 문장이 이름으로 데리고 나간다**.
 OUT="$(bash "$SUT" "$W" 2>&1)"; RC=$?
-if printf '%s' "$OUT" | grep -q "safe to"; then
-  ng "W8a settings.json + settings.local.json(권한 원장) 을 두고 «safe to remove» — undo 가 없는 클래스다"
-elif [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "settings.local.json"; then
-  ok "W8a 설정 원본은 «훅이 다시 쓰는 것» 이 아니다 — 막는다 (rc=$RC)"
-else ng "W8a rc=$RC / 출력에 파일명 없음"; fi
+if [ "$RC" -ne 0 ]; then
+  ng "W8a 워크트리-로컬 settings 로 막았다 (rc=$RC) — 거의 모든 워크트리에 있어 영구 차단이 된다"
+elif printf '%s' "$OUT" | grep -q "CONFIG  .claude/settings.local.json" \
+  && printf '%s' "$OUT" | grep -q "WILL BE DESTROYED"; then
+  ok "W8a 워크트리-로컬 settings 는 «안 막되 파괴된다고 이름으로» 말한다 (rc=0)"
+else ng "W8a rc=0 인데 CONFIG 줄이나 «WILL BE DESTROYED» 경고가 없다 — 조용히 사라진다"; fi
 # 컨트롤: `.bak` 은 여전히 통과해야 한다(진짜 재생성물)
 rm -f "$W/.claude/settings.json" "$W/.claude/settings.local.json"
 printf 'tracks/\n.claude/settings*.json.bak\n' > "$W/.gitignore"; echo x > "$W/.claude/settings.json.bak"
@@ -275,18 +280,55 @@ else ng "W8e --apply 가 tracks/ 를 회수하지 못했다 (rc=$RC)"; fi
 #      눈으로는 다시 안 맞춰지는 드리프트라 레인이 대조한다.
 GI="$ROOT/.gitignore"
 if [ -f "$GI" ]; then
-  miss=0; names=""
+  miss=0; checked=0; names=""
   for tok in .claude/.outbound_hook_uncalibrated_notice .claude/be_last_sync \
              .claude/.prior_art_events.tsv .claude/.proposal_hook_events.tsv \
              .claude/.outbound_hook_events.tsv; do
     grep -qF "$tok" "$GI" || continue          # 이 레포에 없는 항목은 대조 대상이 아니다
+    checked=$((checked+1))
     grep -qF "$tok" "$SUT" || { miss=$((miss+1)); names="$names $tok"; }
   done
-  [ "$miss" -eq 0 ] && ok "W8f .gitignore 의 «훅이 매 런 쓰는» 센티널이 전부 화이트리스트에 있다" \
-                    || ng "W8f 화이트리스트에 없는 센티널 $miss 개:$names — 재생성물이 제거를 막는다"
+  # 🟥 4R B — 종전 판은 `.gitignore` 에 토큰이 없으면 조용히 `continue` 해서 **«대조 0건인데
+  #    초록»** 을 냈다. 실증: 그 다섯 줄을 지운 `.gitignore` 로 돌려도 42/0 이었다.
+  #    이 레포 자신의 결함 일가(「미측정을 0으로」)가 레인 안에서 재발한 자리다.
+  if [ "$checked" -eq 0 ]; then
+    ng "W8f 대조한 토큰이 0개다 — 「대조했다」가 아니라 「대조할 게 없었다」(NOT a pass)"
+  elif [ "$miss" -eq 0 ]; then
+    ok "W8f .gitignore 의 센티널 $checked 개를 대조했고 전부 화이트리스트에 있다"
+  else
+    ng "W8f 화이트리스트에 없는 센티널 $miss/$checked 개:$names — 재생성물이 제거를 막는다"
+  fi
 else
   ng "W8f .gitignore 를 못 찾았다 — 대조 «안 한» 것이지 통과가 아니다"
 fi
+
+echo "── W9 4라운드 (다른 계열, 3R 수리만 겨냥) ──"
+
+# W9a 🟥 컨트롤 — CONFIG 완화가 «차단» 을 통째로 끄지 않았나.
+mk_pair "$T/w"; W="$T/w/wt"; mkdir -p "$W/tracks/_meta" "$W/.claude" "$W/knowledge"
+printf 'tracks/\n.claude/settings.json*\n.claude/settings.local.json*\nknowledge/*_draft.md\n' > "$W/.gitignore"
+echo '{}' > "$W/.claude/settings.local.json"; echo draft > "$W/knowledge/paper_draft.md"
+OUT="$(bash "$SUT" "$W" 2>&1)"; RC=$?
+[ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "paper_draft.md" \
+  && ok "W9a CONFIG 완화가 «화이트리스트 밖 ignored 내용물» 차단을 안 껐다 (rc=$RC)" \
+  || ng "W9a rc=$RC — settings 완화가 차단을 통째로 껐다"
+
+# W9b 🟥 4R B — `LC_ALL=C` 가 장식인지. 되돌려도 안 빨개졌다(diff 출력 파싱이 로케일 의존인데도).
+#      행동 레인을 못 지으니(이 머신 diff 의 NLS 유무가 미상) **기록의 성질**을 단언한다.
+#      §Mechanization Boundary: 채널(그 호출이 로케일을 고정하나)은 기계화하고, 진위는 안 묻는다.
+if grep -q 'LC_ALL=C git -C "$WT"' "$SUT" && grep -q 'LC_ALL=C diff -rq' "$SUT"; then
+  ok "W9b 열거기 둘 다 로케일 고정 — 정적 단언(행동 레인 아님, 잔여로 명시)"
+else
+  ng "W9b git status 또는 diff 의 LC_ALL=C 가 빠졌다 — 번역된 경고/출력이 조용히 폐기된다"
+fi
+
+# W9c 🟥 ZONE 이 «판정을 쥐지 않는다» 를 확인 — tracks 가 회수되면 재실행이 rc=0 으로 풀려야 한다.
+mk_pair "$T/x"; M="$T/x/main"; W="$T/x/wt"; mkdir -p "$W/tracks/_meta"; echo sig > "$W/tracks/_meta/z.md"
+bash "$SUT" "$W" --apply >/dev/null 2>&1
+OUT="$(bash "$SUT" "$W" 2>&1)"; RC=$?
+[ "$RC" -eq 0 ] && [ -f "$M/tracks/_meta/z.md" ] \
+  && ok "W9c ZONE 은 판정을 안 쥔다 — 회수 뒤 재실행이 rc=0 으로 풀린다" \
+  || ng "W9c rc=$RC / 회수됨=$([ -f "$M/tracks/_meta/z.md" ] && echo 1 || echo 0)"
 
 echo
 echo "── worktree-reclaim lanes: PASS=$PASS FAIL=$FAIL ──"
