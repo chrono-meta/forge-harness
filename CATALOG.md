@@ -154,6 +154,17 @@ is, for any session that does not already know its filename, indistinguishable f
 
 <!-- Add entries in reverse date order (newest at top) -->
 
+### 2026-09-21 | forge-harness | #gate-wiring, #ephemeral-clone, #locale, #known-pair, #remote-node
+**File:** `scripts/gate_bootstrap_ephemeral.sh` · `scripts/test_gate_bootstrap_ephemeral_lanes.sh` · `knowledge/shared/harness-core/checkout_layer_drift.md` · `scripts/selfcheck.sh` · `package.json`
+드리프트 실측(PR #775)의 **다음 칸**: 층이 없는 걸 알았으니, 그중 **무엇을 여기서 세울 수 있고 무엇이 구조적으로 못 서는가**. 클라우드 컨테이너 클론에서 `core.hooksPath` 한 줄만 조작해 축별로 재고, 결론은 예상과 반대였다 — **네 축 전부 통과시켰다**(`✅ ALL AXES PASSED`). 훅은 한 줄도 안 고쳤고 느슨하게 만든 곳도 없다.
+- **컨트롤이 갈렸다**: 같은 스테이징에서 훅 미배선 → `rc=0` **게이트 출력 한 줄도 없음**, 배선 → `🚫 BLOCKED`. 「통과했다」와 「안 돌았다」가 터미널에서 구분 안 된다는 §4-ⓐ 의 재현.
+- **통과에 필요한 셋**: ① `core.hooksPath` 배선 ② UTF-8 로케일 ③ gitignored 증거 둘(마커·매니페스트)을 **사람이** 쓰는 것.
+- **② 가 실제 차단선이었다**: `LC_CTYPE=POSIX` 에서 정직한 한글 마커의 `soul`·`reflected(...)`·`defeater`·`affected` 네 다리가 전부 「공허」로 차단되고, `LC_ALL=C.UTF-8` 로 넷 다 통과한다(ASCII 컨트롤은 두 로케일에서 동수 — 계기 생존). 🟥 **같은 날 PR #780 이 감사 경로로 찾은 것과 같은 결함을 커밋 시도 경로에서 독립 재현**했고, #780 의 훅을 가져다 POSIX 에서 돌리니 네 다리가 뒤집혔다 — 그 PR 의 두 번째 실행 근거다. `export LC_ALL` 은 우회이지 수리가 아니다.
+- **구조적으로 못 닫는 셋(이름으로)**: ⓐ 기밀성 패턴 층 — 실제 리터럴을 담아 gitignored 라 클론에 **올 수 없다**, 스캔은 defaults-only 로 돌고 초록을 낸다 ⓑ 마커·매니페스트 provenance — `tracks/**` 가 휘발해 주간 감사·`below_floor_scan` 재검증 큐에 **안 들어간다**(살아남는 채널은 커밋 메시지 — 실측: 세 필드를 실으니 `remote_marker_gate.sh` PASS) ⓒ ⓐ축 — 다른 계열 CLI 부재로 `DEGRADED_SINGLE_FAMILY` 가 정직한 최대값.
+- **계기**: `gate_bootstrap_ephemeral.sh --check/--apply` — ENFORCE 미배선(무음 통과)과 LOCALE 파손(과차단)을 **반대 방향의 고장 둘**로 각각 찍고 하나라도 남으면 `rc=1`. 🟥 **증거는 안 만든다** — 자동 생성은 게이트를 가짜로 닫는 것이라 `fh_4axis_gate.md` 가 금지한다. 레인 10(컨트롤·계기오류 2·부작용 부재 L8·전역 config 불가침 L9·되돌림 프로브 L10).
+- **한계**: n=1 컨테이너 하루. pre-push 표면은 안 쟀다. 「게이트가 돈다」이지 「검증됐다」가 아니다 — 옮긴 마커와 지어낸 마커는 여전히 바이트가 같다.
+- Tags: `gate-wiring` `ephemeral-clone` `locale` `known-pair` `remote-node` `fake-close-prohibition`
+
 ### 2026-09-21 | forge-harness | #checkout-drift, #gate-wiring, #instrument-calibration, #known-pair, #remote-node
 **File:** `scripts/env_layer_fingerprint.sh` · `scripts/test_env_layer_fingerprint_lanes.sh` · `knowledge/shared/harness-core/checkout_layer_drift.md` · `CLAUDE.md` · `scripts/selfcheck.sh`
 클라우드 클론에서 돈 세션이 **운영자 맥 체크아웃과의 드리프트**를 실측했다. FH 는 읽는 층과 막는 층이 다른 수송로로 다니고 git 은 앞의 것만 나른다 — 같은 커밋 `a9e9b29` 에서 **15개 층 중 READ 4개만 같고 ENFORCE·EVIDENCE·PATTERN 11개가 전부 반대**였다(맥: 훅 둘 다 `EXEC_FH` · 마커 491 · tracks 17,387 · 로컬 전용 파일 11종 전부 PRESENT / 클론: 전부 ABSENT). 실물 확인: 이 클론에서 FH 자산 커밋은 **무음 성공**하고, `git config core.hooksPath templates/.git-hooks` **한 줄**만 잡자 같은 커밋이 Axis 2+3·Axis 4 로 차단됐다 — 바뀐 것은 코드가 아니라 배선이다.
