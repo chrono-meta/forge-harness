@@ -104,6 +104,18 @@ ACCEPTED_ABSENT=(
   # ⚠️ **남은 갭을 이름으로**: 소비자는 자기 install 의 soul 다리를 검증할 레인을 못 받는다.
   #    `test_hook_leg_wiring_lanes.sh` 는 원리상 등록부 없이도 돌 수 있어야 하고(호출부만 보므로),
   #    그렇게 고치면 이 목록에서 빼는 것이 맞다. 오늘은 안 고쳤다 — 미측정이 아니라 미착수다.
+  # 🟥 pipefail 클래스 스캐너 + 그 레인 — **일부러 출하하지 않는다.**
+  #    ⓐ 레인 L12c 가 `changed` 모드를 돌리는데 그건 **git 레포 + `origin/main` 기준선**을
+  #      요구한다. 소비자 install(추출된 tarball·git 아님)에서는 계기 오류로 죽고, 그건
+  #      신선 설치의 selfcheck 를 막는 형태다 — `sim_isolated_run.sh` 를 안 싣는 것과 같은 이유다.
+  #    ⓑ 스캐너의 «레포 부채 113 곳» 기준선은 **이 레포의 사실**이지 소비자의 사실이 아니다.
+  #      남의 레포 숫자를 우리 기준으로 렌더하면 그건 판정이 아니라 오표기다.
+  #    ⓒ selfcheck 쪽 배선은 `_absent_subject_verdict` 를 타므로, 미출하 + 부재 = **SKIP**(통과)다.
+  #      즉 소비자는 이 레그를 조용히 건너뛰고, 이 레포에서는 실제로 돈다.
+  #    ⚠️ 남은 갭을 이름으로: 그 SKIP 규약 때문에 **이 레포에서 스캐너를 지워도 selfcheck 가
+  #      안 짖는다**(미출하 subject 공통 한계). 삭제를 잡는 것은 `lane_runner_check.sh` 쪽이다.
+  "scripts/pipefail_earlyexit_scan.sh"
+  "scripts/test_pipefail_class_lock_lanes.sh"
   "scripts/test_marker_soul_tenet_lanes.sh"
   "scripts/test_hook_leg_wiring_lanes.sh"
   "scripts/soul_trace.sh"

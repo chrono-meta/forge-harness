@@ -485,6 +485,25 @@ else
   fail=1
 fi
 
+# pipefail 조기종료 클래스 잠금 (2026-09-21) — #785 가 한 자리를 고쳤고, 그 파일에 같은 형태가
+# **아직 셋** 남아 있었다(sync_to_be_lanes.sh:153·571·599, 생산자도 같은 `_sync_src`). 목록형
+# 잠금이 왜 안 되는지의 실물 증거다. 🟥 이 스캐너는 «레포 전체 0» 을 요구하지 않는다 — 오늘
+# 113 곳이라 그건 만족 불가능한 요구이고 override 훈련이다(§Mechanization Boundary). 잠그는
+# 것은 **이 변경이 새 사례를 들여오는가 = 0** 이다. 여기서는 그 계기가 살아 있는지만 본다.
+if [ ! -f scripts/pipefail_earlyexit_scan.sh ]; then
+  _absent_subject_verdict "pipefail class-lock lanes" "scripts/pipefail_earlyexit_scan.sh" || fail=1
+elif [ -f scripts/test_pipefail_class_lock_lanes.sh ]; then
+  if ! bash scripts/pipefail_earlyexit_scan.sh --self-test >/dev/null 2>&1; then
+    echo "FAIL  pipefail class-lock selftest: known-pair calibration failed"; fail=1
+  fi
+  if ! bash scripts/test_pipefail_class_lock_lanes.sh >/dev/null 2>&1; then
+    echo "FAIL  pipefail class-lock lanes"; fail=1
+  fi
+else
+  echo "FAIL  pipefail class-lock: scanner present but its anchor is missing"
+  fail=1
+fi
+
 # 휘발 클론 부트스트랩 (2026-09-21 신설) — 클라우드 컨테이너처럼 훅·기록·패턴 층이 없는
 # 체크아웃에서 «무엇을 세울 수 있고 무엇이 구조적으로 못 서는가»를 가르는 계기. 게이트가
 # 아니라 계기다(어떤 훅도 안 부른다) — 그래서 앵커는 여기 하나뿐이고, 레인이 안 돌면 이
