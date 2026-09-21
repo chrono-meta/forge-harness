@@ -328,7 +328,8 @@ def run_self_check():
     got = [r for _, r, _, _ in scan_body("x.html", wbr)]
     lane("extract: <wbr>-split DOI", got == ["20397566"], str(got))
 
-    # ⓑ URL 형태 — README.md:418 의 실물 형태
+    # ⓑ URL 형태 — README.md:418 의 실물 형태 (as of c4b4ffa; 그 줄은 이후 v1.0.2 id
+    #    22843702 로 옮겨갔다. 픽스처는 «낡은 id» 를 일부러 유지한다 — stale-ref 레인이라서다)
     url = ['> **FH papers**: v1.0.1 methodology · [Zenodo](https://zenodo.org/records/22542168)']
     got = [r for _, r, _, _ in scan_body("x.md", url)]
     lane("extract: zenodo.org/records/<id> URL", got == ["22542168"], str(got))

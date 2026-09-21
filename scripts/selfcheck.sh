@@ -485,6 +485,35 @@ else
   fail=1
 fi
 
+# 휘발 클론 부트스트랩 (2026-09-21 신설) — 클라우드 컨테이너처럼 훅·기록·패턴 층이 없는
+# 체크아웃에서 «무엇을 세울 수 있고 무엇이 구조적으로 못 서는가»를 가르는 계기. 게이트가
+# 아니라 계기다(어떤 훅도 안 부른다) — 그래서 앵커는 여기 하나뿐이고, 레인이 안 돌면 이
+# 스크립트는 그냥 산문이 된다. 레인의 하중 지는 자리는 L8 «증거를 안 만든다»: 마커를
+# 자동 생성하는 부트스트랩은 4축을 가짜로 닫는 것이고 fh_4axis_gate.md 가 금지한다.
+if [ ! -f scripts/gate_bootstrap_ephemeral.sh ]; then
+  _absent_subject_verdict "ephemeral-bootstrap lanes" "scripts/gate_bootstrap_ephemeral.sh" || fail=1
+elif [ -f scripts/test_gate_bootstrap_ephemeral_lanes.sh ]; then
+  # 주체의 자기 known-pair 를 먼저 직접 부른다(계기 교정), 그다음 레인.
+  # 🟥 rc=1 은 «이 기계에 UTF-8 로케일이 없다»는 정직한 미측정이므로 실패로 치지 않는다.
+  #    계기 고장(rc=10)만 실패다 — 못 잰 것과 고장난 것은 다른 명제다.
+  _gbe_rc=0
+  bash scripts/gate_bootstrap_ephemeral.sh --selftest >/dev/null 2>&1 || _gbe_rc=$?
+  if [ "$_gbe_rc" = "10" ]; then
+    echo "FAIL  ephemeral-bootstrap selftest: 계기 오류(wc -w 컨트롤 사망)"; fail=1
+  elif [ "$_gbe_rc" != "0" ]; then
+    # rc=1 은 「못 쟀다」가 아니라 **측정된 결함**이다 — 이 기계에서 정직한 한글이 훅의
+    # 비공허성 바닥을 못 넘는다(LC_CTYPE). 수리는 PR #780. 여기서 FAIL 로 안 올리는 이유는
+    # 환경 조건이지 이 레포의 회귀가 아니어서다 — 과차단은 override 를 훈련시킨다.
+    echo "WARN  ephemeral-bootstrap selftest: 정직한 한글이 비공허성 바닥을 못 넘는다(LC_CTYPE) — 한국어 마커가 차단된다"
+  fi
+  if ! bash scripts/test_gate_bootstrap_ephemeral_lanes.sh >/dev/null; then
+    echo "FAIL  ephemeral-bootstrap lanes"; fail=1
+  fi
+else
+  echo "FAIL  ephemeral-bootstrap lanes: gate_bootstrap_ephemeral.sh present but its anchor is missing"
+  fail=1
+fi
+
 # env-layer fingerprint — 두 체크아웃(운영자 맥 ↔ 클라우드 클론)의 **층 대조**를 가능하게 하는
 # 계기. 게이트가 아니라 계기이므로 어떤 훅도 이걸 부르지 않는다 — 그래서 앵커는 여기 하나뿐이고,
 # 레인이 안 돌면 이 스크립트는 그냥 산문이 된다(lane_runner_check.sh 가 세는 클래스).
@@ -500,6 +529,39 @@ elif [ -f scripts/test_env_layer_fingerprint_lanes.sh ]; then
   fi
 else
   echo "FAIL  env-layer lanes: env_layer_fingerprint.sh present but its anchor is missing"
+  fail=1
+fi
+
+# locale-invariance — 같은 마커를 두 로케일에서 읽었을 때 판정이 같은가. 훅의 비공허성 바닥과
+# 「①영혼 복붙」 검출이 `LC_CTYPE` 에 의존했다(2026-09-21, 갓 클론한 컨테이너에서 실측: 마커
+# 레인 22건이 `LC_ALL` 만으로 뒤집혔고, 방향이 과차단·무음침묵·fail-OPEN 셋이었다).
+# 🟥 UTF-8 로케일이 없는 기계에서는 rc=2 다 — 대조군 없는 초록은 측정이 아니므로 FAIL 로 센다.
+if [ ! -f scripts/test_locale_invariance_lanes.sh ]; then
+  echo "FAIL  locale-invariance lanes: scripts/test_locale_invariance_lanes.sh 가 없다 (부재는 통과가 아니다)"
+  fail=1
+elif ! bash scripts/test_locale_invariance_lanes.sh >/dev/null 2>&1; then
+  echo "FAIL  locale-invariance lanes"
+  fail=1
+fi
+
+# multibyte-bracket lint — 열거로는 안 닫힌다. POSIX 브래킷은 비-UTF-8 로케일에서 바이트
+# 집합이 되고, 방향은 자리마다 다르다(2026-09-21 실측: fail-OPEN 둘 · 과차단 하나).
+# 전수를 세려던 첫 계기가 11 중 1 을 놓쳤기 때문에 사람의 열거도 자동 열거도 믿지 않는다.
+# 린트는 매 호출마다 known-pair 로 자가검정하고 그게 안 갈리면 rc=2 로 죽는다 — 여기서는 둘 다 FAIL 이다.
+if [ ! -f scripts/multibyte_bracket_lint.sh ]; then
+  echo "FAIL  multibyte-bracket lint: scripts/multibyte_bracket_lint.sh 가 없다 (부재는 통과가 아니다)"
+  fail=1
+elif ! bash scripts/multibyte_bracket_lint.sh >/dev/null 2>&1; then
+  echo "FAIL  multibyte-bracket lint (게이트 파일의 브래킷 안에 멀티바이트, 또는 자가검정 실패)"
+  fail=1
+fi
+# 그리고 린트 자신의 앵커. 내장 `_calibrate` 는 린트 파일 안에 살아서 정규식이 약해져도
+# 자기 픽스처는 통과할 수 있다 — 이 스위트는 **실물 훅의 사본을 되돌려** 잡히는지를 본다.
+if [ ! -f scripts/test_multibyte_bracket_lint_lanes.sh ]; then
+  echo "FAIL  multibyte-bracket lint lanes: scripts/test_multibyte_bracket_lint_lanes.sh 가 없다 (부재는 통과가 아니다)"
+  fail=1
+elif ! bash scripts/test_multibyte_bracket_lint_lanes.sh >/dev/null 2>&1; then
+  echo "FAIL  multibyte-bracket lint lanes"
   fail=1
 fi
 
@@ -750,6 +812,8 @@ for _pair in \
   "scripts/png_luma.py|scripts/test_png_luma_lanes.sh" \
   `# ── 플로어 없는 채널(2026-09-14): 원격 자율 노드가 FH 자산을 바꾸면 마커가 tracks/ 와 함께 휘발한다. 실측 2/2(#675·#716). CI 가 gitignored 마커를 구조적으로 못 보므로, 그 채널에만 «마커가 커밋 기록에 실려 왔나» 를 건다 ──` \
   "scripts/remote_marker_gate.sh|scripts/test_remote_marker_gate_lanes.sh" \
+  `# ── 휘발 클론 부트스트랩(2026-09-21): 훅이 안 걸린 클론에서 커밋은 무음으로 성공한다. SUBJECT 는 그 계기의 판정과 **부작용 부재**다 ──` \
+  "scripts/gate_bootstrap_ephemeral.sh|scripts/test_gate_bootstrap_ephemeral_lanes.sh" \
   `# ── 발신 전 3프로브(2026-09-18): 비소유 레포에 PR 을 «열기 직전» 에 건다. 실측 — outbound 9건 중 기술 결함 지적 3건이 전부 같은 형태다: 우리 가드와 우리 테스트가 «대상의 모형» 위에서 돌았고, 메인테이너의 증거는 우리가 한 번도 안 돌린 실행이었다 ──` \
   "scripts/outbound_pr_gate.sh|scripts/test_outbound_pr_gate_lanes.sh" \
   `# ── 발행 «확인» 예산(2026-09-18): npm publish 는 이미 rc=0 으로 끝났고 이 스크립트는 전파만 관측한다. 둘을 한 종료코드로 접으면 성공한 발행이 빨간 잡이 되고, 그 빨강이 정확히 «손 발행» 을 훈련시킨다(v3.2.0·v3.4.0) ──` \
@@ -1393,6 +1457,22 @@ else
     fail=1
   else
     echo "PASS  daily_report --self-test (10 lanes)"
+  fi
+fi
+
+# governor_board — 거버너/워크트리/계열 판. 자기검사 24 레인(known-pair 중심).
+# 🟥 이 계기의 핵심 known-pair 는 «마커 있음 → 계열이 나온다» ↔ «마커 없음 → 미측정» 이다.
+#    그 둘이 같은 글자로 나오면 판은 측정이 아니라 생성이고, 사람이 그걸 읽고 판단한다.
+#    subject 있는데 anchor 없으면 FAIL 이지 skip 이 아니다.
+if [ ! -f scripts/governor_board.sh ]; then
+  _absent_subject_verdict "governor_board --self-test" "scripts/governor_board.sh" || fail=1
+else
+  if ! bash scripts/governor_board.sh --self-test >/dev/null 2>&1; then
+    echo "FAIL  governor_board --self-test"
+    bash scripts/governor_board.sh --self-test 2>&1 | grep '❌' | head -5
+    fail=1
+  else
+    echo "PASS  governor_board --self-test (24 lanes)"
   fi
 fi
 

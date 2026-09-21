@@ -29,7 +29,11 @@ set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOOK="$REPO_ROOT/templates/.git-hooks/pre-commit"
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
-sed -n '/^validate_thirdparty_leg()/,/^}/p' "$HOOK" > "$T/fn.sh"
+# 🟥 레그가 `_charlen` 을 쓴다 — **의존 함수를 같이 뽑지 않으면 «command not found» 로
+#    조용히 다른 판정이 난다**(2026-09-21 실측: 이 스위트 넷이 그렇게 빨개졌다).
+#    레인은 훅의 일부만 소싱하므로, 뽑는 쪽이 의존성을 같이 져야 한다.
+sed -n '/^_charlen()/,/^}/p' "$HOOK" > "$T/fn.sh"
+sed -n '/^validate_thirdparty_leg()/,/^}/p' "$HOOK" >> "$T/fn.sh"
 if ! grep -q 'DEGRADED_NO_ACCESS' "$T/fn.sh"; then
   echo "❌ HARNESS-ERROR — validate_thirdparty_leg did not extract from $HOOK."
   echo "   Fixtures below would measure an empty function. Aborting rather than reporting green."

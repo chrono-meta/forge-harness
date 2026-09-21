@@ -706,6 +706,26 @@ fi
 # ⚠️ **채널 검사다**: 「그 값이 옳은가」가 아니라 「이 기록이 템플릿 자신인가」를 묻는다.
 # 🟥 좁게 잡는다 — 꺾쇠를 정당하게 쓰는 기술 서술을 안 막으려고, **힌트에 실제로 등장하는
 #    문자열**만 본다. 목록이지 정규식 일반화가 아니다. 힌트를 바꾸면 여기도 같이 바꿔라.
+# ── 문자 수 — 로케일에 의존하지 않는다 (2026-09-21) ───────────────────────────
+# 🟥 `${#var}` 도 `wc -m` 도 **로케일이 센다.** `LC_CTYPE` 이 UTF-8 이 아닌 기계
+#    (베어 컨테이너 · 많은 CI 러너 · `LANG` 이 안 걸린 셸)에서는 둘 다 **바이트**를 센다:
+#      `대상이 없다`        → ${#var} 16 · wc -m 16   (실제 문자 6)
+#      `운영자가 승인했다고 한다` → ${#var} 35        (실제 문자 13)
+#    방향이 **fail-OPEN 이다** — 한글 근거가 약 3배로 크레딧돼 `-lt 20` 류 하한을 공짜로
+#    넘는다. 영어로 쓴 같은 길이의 근거는 막히는데 한글 근거는 통과한다. #780 의 `wc -w`
+#    결함과 **같은 클래스, 방향만 반대**(저쪽은 과차단, 이쪽은 fail-open).
+#    🟥 이 레포의 하한 주석들은 전부 «chars» / «자» 라고 적고 있다 — 의도는 처음부터
+#    문자였고, 계기가 그것을 구현하지 않았을 뿐이다. 이 훅 자신도 두 자리에서 이미
+#    그렇게 적어두고( `${#}` is locale-dependent ) 열두 줄 뒤에 어겼다.
+# 셈법: UTF-8 의 이어지는 바이트(0x80–0xBF)를 지우면 문자당 선두 바이트 하나만 남으므로,
+#    남은 바이트 수가 곧 문자 수다. **UTF-8 기계에서는 `${#var}` 와 같은 수**이고(한글
+#    포함, 실측) 따라서 기존 문턱값이 한 칸도 안 움직인다 — 바뀌는 것은 바이트 로케일뿐.
+# ⚠️ 명시된 잔여: 결합 문자(NFD)와 이모지 ZWJ 열은 코드포인트 단위로 세진다. 그것은
+#    `${#var}` 가 UTF-8 기계에서 하던 셈법 그대로이므로 회귀가 아니라 동등이다.
+_charlen() { # $1 = 문자열 → 문자 수 (로케일 무관)
+  printf '%s' "${1-}" | LC_ALL=C tr -d '\200-\277' | LC_ALL=C wc -c | tr -d ' '
+}
+
 _marker_template_residue() { # $1 = 줄 내용  → 0 = 템플릿 잔여
   # 🟥 **세 번째 설계다. 앞의 둘이 왜 틀렸는지 남긴다** (cross-family 3라운드, 자력 적발 0).
   #    v1 손목록  → 규칙 문서가 새 자리표시자를 실을 때마다 어긋났다(구조적 desync).
@@ -814,7 +834,7 @@ validate_defense_leg() { # $1 = marker path — fires ONLY at the floor tiers (s
     v=$(printf '%s' "$v" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')
     case "$(printf '%s' "$v" | tr 'A-Z' 'a-z')" in
       ok|yes|y|n/a|na|none|done|true|-|tbd|todo) bad="$bad $k(vacuous:'$v')" ;;
-      *) [ "${#v}" -ge 12 ] || bad="$bad $k(too short:'$v')" ;;
+      *) [ "$(_charlen "$v")" -ge 12 ] || bad="$bad $k(too short:'$v')" ;;
     esac
   done
   if [ -n "$bad" ]; then
@@ -903,7 +923,14 @@ validate_crossfamily_leg() { # $1 = marker path
   # `panel(codex,` — a well-formed panel rejected as malformed. An over-block on the
   # correct shape is the failure that teaches --no-verify, so it is a defect, not strictness.
   val=$(printf '%s' "$line" | sed -E 's/[[:space:]]*(—|--).*$//' | sed -E 's/[[:space:]]+$//')
-  reason=$(printf '%s' "$line" | sed -E 's/^[^—-]*(—|--)[[:space:]]*//')
+  # 🟥 `[^—-]*` 금지 — 브래킷은 비-UTF-8 로케일에서 바이트 집합이 된다
+  #    (scripts/multibyte_bracket_lint.sh 가 이 자리를 막는다). `val` 이 이미 «구분자 앞» 이므로
+  #    그 접두를 떼면 부정 클래스 없이 구해지고, 구분자가 맨 앞이라 앵커로 벗길 수 있다.
+  #    부수 효과로 로케일과 무관한 실물 버그가 닫힌다: 값에 하이픈이 있고 ASCII 이중대시를 쓰면
+  #    (`panel(a) -- 근거`) 옛 식은 아무것도 못 벗겨 reason 이 통째로 남았고, 바로 아래 비교가
+  #    그것을 **빈 근거**로 렌더해 정상 마커를 과차단했다(2026-09-21 실측).
+  reason=${line#"$val"}
+  reason=$(printf '%s' "$reason" | sed -E 's/^[[:space:]]*(—|--)[[:space:]]*//')
   [ "$reason" = "$line" ] && reason=""
 
   # residency= token — computed once, consumed by whichever branch below needs it (REQUIRED for
@@ -1000,7 +1027,7 @@ validate_crossfamily_leg() { # $1 = marker path
             fi ;;
         esac
       done
-      if [ "${#reason}" -lt 20 ] || [ -z "$_cf_cited" ]; then
+      if [ "$(_charlen "$reason")" -lt 20 ] || [ -z "$_cf_cited" ]; then
         echo "  ❌ FAIL — 'declined' must cite a record that EXISTS on disk."
         echo "     declined = the OPERATOR declined sidecars, a chosen floor. It does NOT mean"
         echo "     'I judged decorrelation unnecessary here' — that is a CHOICE the author made"
@@ -1010,7 +1037,7 @@ validate_crossfamily_leg() { # $1 = marker path
         echo "       crossfamily: declined — chosen floor per CLAUDE.local.md §sidecar"
         echo "     No such record → you are not describing an operator declination:"
         echo "       crossfamily: DEGRADED_PANEL_UNUSED — codex+agy reachable, not recruited (<why>)"
-        [ "${#reason}" -ge 20 ] && echo "     (grounds were substantive but named no resolvable path)"
+        [ "$(_charlen "$reason")" -ge 20 ] && echo "     (grounds were substantive but named no resolvable path)"
         return 1
       fi
       if [ "$_res_active" -eq 1 ] && [ "$_res_ntok" -gt 0 ]; then
@@ -1178,7 +1205,7 @@ validate_crossfamily_leg() { # $1 = marker path
           SHARED|MIXED)
             # 문자 수 기준(공백 제외). 4자 미만이면 «diff» 같은 한 토큰이고, 그건 어느 산출물인지
             # 말하지 않는다. 🟥 낱말 수로 세지 않는다 — CJK 와 하이픈 복합어가 전부 1 낱말이 된다.
-            if [ "$(printf '%s' "$_ev_strip" | wc -m | tr -d ' ')" -lt 6 ]; then
+            if [ "$(_charlen "$_ev_strip")" -lt 6 ]; then
               echo "  ❌ FAIL — evidence=$_ev_kind(...) body too thin to identify the artifact: '$_ev_body'"
               echo "     Name it (\"same staged diff\", \"one findings.jsonl\", \"동일 프롬프트 파일\")."
               echo "     A bare $_ev_kind(diff) records the weak arm as if it were documented."
@@ -1191,7 +1218,7 @@ validate_crossfamily_leg() { # $1 = marker path
       # A degrade is allowed; being silent about WHICH degrade, or about its grounds, is not.
       # Two conditions, because either alone is porous: enough substance to be a statement
       # (length) AND a token naming what was actually looked at.
-      if [ "${#reason}" -lt 20 ] \
+      if [ "$(_charlen "$reason")" -lt 20 ] \
          || ! printf '%s' "$reason" | grep -qiE 'prob(e|ed|ing)|reachab|unreach|not reachable|0 |none reachable|empty|absent|declin|consent|codex|gemini|agy|copilot|gateway|cli|panel|scope|budget|offline'; then
         echo "  ❌ FAIL — $val without substantive grounds on the same line."
         case "$val" in
@@ -1321,7 +1348,11 @@ validate_standpoint_leg() { # $1 = marker path
        'standpoint: tier2' misses it; drop the quotes next time]";; esac
   line=$(printf '%s' "$line" | sed -E 's/^["'"'"']//; s/["'"'"']$//')
   val=$(printf '%s' "$line" | sed -E 's/[[:space:]]*(—|--).*$//' | sed -E 's/[[:space:]]+$//')
-  reason=$(printf '%s' "$line" | sed -E 's/^[^—-]*((—|--)[[:space:]]*)?//')
+  # 🟥 `[^—-]*` 금지 — 위 crossfamily 자리와 같은 이유·같은 처방(lint 가 막는다).
+  #    옛 식은 구분자가 없으면 `[^—-]*` 가 값의 첫 하이픈까지만 먹고 옵셔널 그룹을 건너뛰어
+  #    `not-applicable — 근거` 를 `-applicable — 근거` 로 **깨진 근거**로 만들었다(실측).
+  reason=${line#"$val"}
+  reason=$(printf '%s' "$reason" | sed -E 's/^[[:space:]]*(—|--)[[:space:]]*//')
   # Cross-axis contamination. `crossfamily:` and `standpoint:` each carry a three-way degrade
   # triad and the doctrine says the literals are DISTINCT ON PURPOSE. Borrowing the other axis's
   # token records the wrong axis while looking well-formed.
@@ -1346,7 +1377,7 @@ validate_standpoint_leg() { # $1 = marker path
           #      ⓒ «출력» 의 형태(`30/30`, `rc=`, `./path`)도 실행의 증거로 받는다.
           #    ⚠️ 방향: 이건 **느슨하게** 만드는 변경이다. 막고 싶은 것은 «명령도 출력도 안 적은 줄» 이고,
           #    길이 20 자 하한은 그대로 남는다.
-          if [ "${#reason}" -lt 20 ] || ! printf '%s' "$reason" \
+          if [ "$(_charlen "$reason")" -lt 20 ] || ! printf '%s' "$reason" \
               | grep -qiE '(^|[^[:alpha:]])(ran|run|runs|exec|invoke[ds]?|call|calls|called|exit|output|suite|test|tests|tested|bash|sh|zsh|grep|npm|pnpm|yarn|pytest|python|python3|cargo|make|go|gradle|mvn|dotnet|node|command)([^[:alpha:]]|$)|실행|돌렸|돌린|돌려|호출|출력|스위트|커맨드|rc=|[0-9]+/[0-9]+|\./'; then
             # Grace: markers dated before STANDPOINT_GROUNDS_GRACE_DATE keep the old advisory
             # behaviour (no retro-blocking), same pattern as the residency=/evidence= tokens.
@@ -1382,7 +1413,7 @@ validate_standpoint_leg() { # $1 = marker path
     not-applicable)
       # §7: asserting non-applicability without naming what was checked is indistinguishable from
       # UNKNOWN wearing a permissive label. Measured: 6 bare instances in this corpus.
-      if [ "${#reason}" -lt 20 ]; then
+      if [ "$(_charlen "$reason")" -lt 20 ]; then
         echo "  ❌ FAIL — bare 'not-applicable' with no grounds on the same line."
         echo "     That is UNKNOWN wearing a permissive label. Name what you checked:"
         echo "     no named peer carries this surface AND it changes no consumer-visible behavior."
@@ -1390,7 +1421,7 @@ validate_standpoint_leg() { # $1 = marker path
       fi
       echo "  ✅ standpoint leg: not-applicable$quoted" ;;
     DEGRADED_NO_TARGET_ACCESS*|DEGRADED_NOT_RUN*|UNKNOWN*)
-      if [ "${#reason}" -lt 20 ]; then
+      if [ "$(_charlen "$reason")" -lt 20 ]; then
         echo "  ❌ FAIL — $val without substantive grounds on the same line."
         echo "     could-not / did-not / did-not-look are separate values on purpose; collapsing"
         echo "     them renders an unrun probe as a zero finding. Name what you probed."
@@ -1479,7 +1510,7 @@ validate_thirdparty_leg() { # $1 = marker path
         return 1 ;;
       esac
       reason=$(printf '%s' "$line" | sed -E 's/^[^(]*\(//')
-      if [ "${#reason}" -lt 12 ]; then
+      if [ "$(_charlen "$reason")" -lt 12 ]; then
         echo "  ❌ FAIL — '$val(...)' grounds are vacuous. Name what was searched and what came back."
         return 1
       fi
@@ -1632,7 +1663,7 @@ validate_defeater_leg() { # $1 = marker path
   esac
   # 비공허성 — 한글 코퍼스이므로 **낱말 수**로 센다. `${#}` 는 로케일 의존이고, 긴 한글 한 덩어리가
   # 문자 수 검사를 그냥 통과한 전례가 있다(A6 레인).
-  words=$(printf '%s' "$body" | wc -w | tr -d ' '); words=${words:-0}
+  words=$(printf '%s\n' "$body" | tr -s ' \t\n' '\n' | LC_ALL=C grep -c '.'); words=${words:-0}
   if [ "$words" -lt 6 ]; then
     echo "  ❌ FAIL — defeater 가 공허하다 ($words 낱말). **무엇이 관측될 것인가**를 적어라."
     echo "     '틀렸을 수 있다' 는 반증 조건이 아니다 — 관측 가능한 사건이어야 한다."
@@ -1640,8 +1671,12 @@ validate_defeater_leg() { # $1 = marker path
   fi
   # 🟥 기록의 속성 하나 더: defeater 가 ①영혼 줄의 **복붙**이면 두 필드가 한 필드다.
   # (이것은 «내용이 옳은가»가 아니라 «두 칸이 서로 다른 값을 담는가»다 — 채널 검사.)
-  soul_line=$(grep -m1 -E '^[[:space:]]*#*[[:space:]]*(①영혼|soul)[[:space:]]*[:—-]' "$m" 2>/dev/null \
-              | sed -E 's/^[^:—-]*[:—-][[:space:]]*//; s/[[:space:]]+$//')
+  # 🟥 A multibyte character inside a BRACKET EXPRESSION is a byte set under LC_CTYPE=POSIX, so
+  #    `[:—-]` there matches the lead byte of 「①」 and `[^:—-]*` stops on it. Measured 2026-09-21:
+  #    lane D9-copy-of-soul-blocks went BLOCK → **PASS** with LANG unset — a fail-OPEN, unlike the
+  #    word-count defect above. Alternation is byte-safe in every locale; brackets are not.
+  soul_line=$(grep -m1 -E '^[[:space:]]*#*[[:space:]]*(①영혼|soul)[[:space:]]*(:|—|-)' "$m" 2>/dev/null \
+              | sed -E 's/^[[:space:]]*#*[[:space:]]*(①영혼|soul)[[:space:]]*(:|—|-)[[:space:]]*//; s/[[:space:]]+$//')
   if [ -n "$soul_line" ] && [ "$body" = "$soul_line" ]; then
     echo "  ❌ FAIL — defeater 가 ①영혼 줄과 글자 그대로 같다. 두 칸이 한 칸이 되었다."
     echo "     성공 정의와 그 반증 조건은 다른 문장이다."
@@ -1731,7 +1766,7 @@ validate_affected_leg() { # $1 = marker path
     echo "  ❌ FAIL — affected 가 힌트의 자리표시자 그대로다 (기록이 아직 안 쓰였다)."
     return 1
   fi
-  words=$(printf '%s' "$body" | wc -w | tr -d ' '); words=${words:-0}
+  words=$(printf '%s\n' "$body" | tr -s ' \t\n' '\n' | LC_ALL=C grep -c '.'); words=${words:-0}
   if [ "$words" -lt 3 ]; then
     echo "  ❌ FAIL — affected 가 공허하다 ($words 낱말). 건드리는 것 · 열린 질문을 적어라."
     return 1
@@ -1855,7 +1890,7 @@ validate_oracle_leg() { # $1 = marker path
     echo "  ❌ FAIL — oracle 근거가 힌트의 자리표시자 그대로다 (기록이 아직 안 쓰였다)."
     return 1
   fi
-  words=$(printf '%s' "$rest" | wc -w | tr -d ' '); words=${words:-0}
+  words=$(printf '%s\n' "$rest" | tr -s ' \t\n' '\n' | LC_ALL=C grep -c '.'); words=${words:-0}
   if [ "$words" -lt 2 ]; then
     echo "  ❌ FAIL — oracle 근거가 공허하다 ($words 낱말). 무엇을 무엇과 대조했는지 적어라."
     return 1
@@ -1919,7 +1954,7 @@ validate_soul_present_leg() { # $1 = marker path
   # corpus writes «## ①영혼 — 설계 전에 쓴 …» as a heading, and P7 flipped to BLOCK when the first
   # version of this regex forbade it. The known-pair caught that in one run).
   # Prose inside a field VALUE can no longer vote.
-  _soul_src=$(grep -E '^[[:space:]]*#*[[:space:]]*(①영혼|soul|절대 안 함|성공 ?정의)[[:space:]]*[:—-]' "$m" 2>/dev/null \
+  _soul_src=$(grep -E '^[[:space:]]*#*[[:space:]]*(①영혼|soul|절대 안 함|성공 ?정의)[[:space:]]*(:|—|-)' "$m" 2>/dev/null \
               | grep -vE '^[[:space:]]*soul-check[[:space:]]*:')
   n=$(printf '%s\n' "$_soul_src" | grep -cE '①영혼|^[[:space:]]*soul:|성공 ?정의|절대 안 함'); n=${n:-0}
   if [ "$n" -eq 0 ]; then
@@ -1937,7 +1972,7 @@ validate_soul_present_leg() { # $1 = marker path
               f && /^[[:space:]]*$/{exit}
               f && seen && /^[[:space:]]*[A-Za-z][A-Za-z0-9_-]*:/{exit}
               f{print; seen=1}' <<< "$_soul_src")
-  words=$(printf '%s' "$body" | wc -w | tr -d ' '); words=${words:-0}
+  words=$(printf '%s\n' "$body" | tr -s ' \t\n' '\n' | LC_ALL=C grep -c '.'); words=${words:-0}
   # 🟥 A DECLARED ABSENCE IS A VALUE, not a gap. CLAUDE.md §자기 대조 explicitly permits
   # «없으면 `없음`», and the first version of this leg BLOCKED a bare `soul: 없음` (2 words) while
   # PASSING a 33-word paragraph whose content was «I did not write one». That punishes the honest
@@ -1948,7 +1983,7 @@ validate_soul_present_leg() { # $1 = marker path
   # 🟥 `$body` — this leg's own local. The first version read `$soul_body`, which is the OTHER
   # leg's variable name; unset here, so the case never matched and the fix was inert while the
   # lane suite stayed green ([[feedback_unedited_parts_of_my_own_file]] · half-fix).
-  _sbare=$(printf '%s' "$body" | sed -E 's/^[[:space:]]*#*[[:space:]]*(①영혼|soul|절대 안 함|성공 ?정의)[[:space:]]*[:—-]*//' | tr -d '[:space:].·]')
+  _sbare=$(printf '%s' "$body" | sed -E 's/^[[:space:]]*#*[[:space:]]*(①영혼|soul|절대 안 함|성공 ?정의)[[:space:]]*(:|—|-)*//' | tr -d '[:space:].·]')
   case "$_sbare" in
     없음|없음—|none|None|NONE|n/a|N/A|-|해당없음)
       echo "  ⚠️  ①영혼: 없음 — declared absent. Recorded, not silent."
@@ -2072,7 +2107,7 @@ DEGRADED_SINGLE_FAMILY|DEGRADED_PANEL_UNUSED|DEGRADED_NO_TARGET_ACCESS|DEGRADED_
   # corpus writes «## ①영혼 — 설계 전에 쓴 …» as a heading, and P7 flipped to BLOCK when the first
   # version of this regex forbade it. The known-pair caught that in one run).
   # Prose inside a field VALUE can no longer vote.
-  _soul_src=$(grep -E '^[[:space:]]*#*[[:space:]]*(①영혼|soul|절대 안 함|성공 ?정의)[[:space:]]*[:—-]' "$m" 2>/dev/null \
+  _soul_src=$(grep -E '^[[:space:]]*#*[[:space:]]*(①영혼|soul|절대 안 함|성공 ?정의)[[:space:]]*(:|—|-)' "$m" 2>/dev/null \
               | grep -vE '^[[:space:]]*soul-check[[:space:]]*:')
   soul_n=$(printf '%s\n' "$_soul_src" | grep -cE '①영혼|^[[:space:]]*soul:|성공 ?정의|절대 안 함'); soul_n=${soul_n:-0}
   # Body = the ①영혼 block only: stop at a blank line OR at the next ASCII field key. An earlier
@@ -2080,16 +2115,35 @@ DEGRADED_SINGLE_FAMILY|DEGRADED_PANEL_UNUSED|DEGRADED_NO_TARGET_ACCESS|DEGRADED_
   # scored as having content — the fixture G9 caught it.
   # 🟥 Counted in WORDS, not characters. `${#var}` on Korean text is bytes-or-chars depending on
   # locale, and this corpus is Korean — a char threshold silently changes meaning per machine
-  # ⚠️ Honest caveat, measured: `wc -w` is NOT a human word count on Korean either («①영혼: 완주»
+  # ⚠️ Honest caveat, measured: this is NOT a human word count on Korean either («①영혼: 완주»
   # reports 3, not 2). It is stable per-machine and monotonic, which is all a floor needs — but
   # every threshold here was calibrated by RUNNING it, never by reasoning about word counts.
-  # ([[feedback_instrument_vs_target_and_budget]], 단위 혼동). Word count is locale-independent.
+  # ([[feedback_instrument_vs_target_and_budget]], 단위 혼동).
+  # 🟥 RETRACTED 2026-09-21 — this comment used to end «Word count is locale-independent.» and
+  #    that sentence was FALSE. `wc -w` splits on whitespace as the LOCALE classifies characters:
+  #    with LANG unset (LC_CTYPE=POSIX — the default in a bare container or CI runner) a Korean
+  #    grounds line counts **0** words and a mixed line counts only its ASCII tokens. Known pair,
+  #    measured in a clean clone of a9e9b29: `LC_ALL=POSIX` → 0, `LC_ALL=C.UTF-8` → 8, same bytes.
+  #    The whole point of choosing words over `${#var}` was locale-independence, so the instrument
+  #    was selected on a property it did not have. ⇒ counted by splitting on ASCII whitespace with
+  #    `tr` and counting non-empty lines under a forced `LC_ALL=C` — byte-level, identical in both
+  #    locales, and identical to the old `wc -w` numbers on any UTF-8 machine (so no threshold moves
+  #    where the gate already worked). Anchor: scripts/test_locale_invariance_lanes.sh.
   soul_body=$(awk '/①영혼|^[[:space:]]*soul:|성공 ?정의|절대 안 함/{if (!f) f=1}
                    f && /^[[:space:]]*$/{exit}
                    f && seen && /^[[:space:]]*[A-Za-z][A-Za-z0-9_-]*:/{exit}
                    f{print; seen=1}' "$m" 2>/dev/null \
-              | sed -E '1s/^[[:space:]]*(①영혼|soul)[^[:alnum:]«]*//')
-  soul_words=$(printf '%s' "$soul_body" | wc -w | tr -d ' ')
+              | sed -E '1s/^[[:space:]]*(①영혼|soul)([[:space:]]*(:|—|-))*[[:space:]]*//')
+  # 🟥 2026-09-21 — 위 strip 은 `[^[:alnum:]«]*` 였다. `[:alnum:]` 은 `LC_CTYPE=POSIX` 에서
+  #    **ASCII 전용**이라, 「«」 도 ASCII 영숫자도 없는 **순한글 ①영혼 줄**이 부정 클래스에
+  #    통째로 먹혀 soul_body 가 빈 문자열이 됐다. 방향이 둘이다 — 정상 한글 마커가 차단되고
+  #    (ⓐ), 영혼 줄이 멀쩡히 있는데 `DEGRADED_NO_SOUL` 을 적은 거짓 주장이 통과한다(ⓒ).
+  #    측정된 known pair: 순한글 본문 `LC_ALL=POSIX` → 0 낱말 / `C.UTF-8` → 8, 같은 바이트를
+  #    ASCII 로 쓴 컨트롤은 두 로케일 모두 6. ⇒ 구분자를 **교차**로 적어 바이트 집합 퇴화를
+  #    피한다. UTF-8 기계에서는 실제 마커 형태 전부에서 옛 식과 같은 수를 낸다(문턱값 불변).
+  #    🟥 이 결함은 위 낱말 세기 수리 **뒤에야 관측 가능하다** — 그 전에는 셈법이 먼저
+  #    죽어서 어느 쪽 원인인지 갈리지 않았다. 앵커: test_locale_invariance_lanes.sh L11.
+  soul_words=$(printf '%s\n' "$soul_body" | tr -s ' \t\n' '\n' | LC_ALL=C grep -c '.')
   soul_words=${soul_words:-0}
 
   case "$val" in
@@ -2108,7 +2162,7 @@ DEGRADED_SINGLE_FAMILY|DEGRADED_PANEL_UNUSED|DEGRADED_NO_TARGET_ACCESS|DEGRADED_
       # 🟥 agy (claims axis, 2026-08-21): this leg's own comment above condemns `${#var}` on
       # Korean text and then used `${#reason}` twelve lines later — [[feedback_citing_a_rule_is_not_obeying_it]],
       # verbatim. Inherited from the sibling legs, which does not excuse it here. Word count.
-      _rwords=$(printf '%s' "$reason" | wc -w | tr -d ' '); _rwords=${_rwords:-0}
+      _rwords=$(printf '%s\n' "$reason" | tr -s ' \t\n' '\n' | LC_ALL=C grep -c '.'); _rwords=${_rwords:-0}
       if [ "$_rwords" -lt 3 ]; then
         echo "  ❌ FAIL — '$val(...)' grounds are vacuous. Name what read the ①영혼 line back,"
         echo "     against what, and what came back."
@@ -2258,7 +2312,15 @@ validate_first_use_leg() { # $1 = marker path
     echo "     읽는 사람과 기계가 같은 값을 보지 않는다. 한 줄에 한 번만 적어라."
     return 1
   fi
-  e_val=$(printf '%s' "$line" | sed -n 's/.*[[:space:]]ⓔ=\([^ⓕ]*\).*/\1/p' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+  # 🟥 2026-09-21 — 포착식은 `[^ⓕ]*` 였다. 브래킷 안의 「ⓕ」는 `LC_CTYPE=POSIX` 에서
+  #    **바이트 집합 {E2,93,95}** 이라, ⓔ 값이 E2 로 시작하면(`→…` · `①…` · 한글) 포착이
+  #    빈 문자열이 되고 바로 아래 `''|none|…` 가지에 걸려 **채워진 필드가 «none» 으로 차단**된다.
+  #    하필 fh_4axis_gate.md 가 권하는 포인터 형태와 `shadow(...)` 앞의 화살표가 그 모양이다.
+  #    측정된 known pair: `ⓔ=→shadow(N=3, F=2)` → POSIX `[]` / UTF-8 `[→shadow(N=3, F=2)]`,
+  #    ASCII 컨트롤 `ⓔ=shadow(...)` 는 두 로케일 모두 포착된다. ⇒ 브래킷을 버리고 리터럴
+  #    「ⓕ」로 자른다(리터럴은 바이트열 그대로 맞으므로 로케일 무관). `-n` 의 «맞을 때만
+  #    출력» 의미는 주소 블록으로 보존한다. 앵커: test_locale_invariance_lanes.sh L12.
+  e_val=$(printf '%s' "$line" | sed -E -n '/[[:space:]]ⓔ=/{ s/.*[[:space:]]ⓔ=//; s/ⓕ.*//; p; }' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
   case "$e_val" in
     ''|none|None|NONE|-)
       echo "  ❌ MARKER — 이 커밋은 **새 계기를 추가**하는데 'axes-run' 의 ⓔ(첫 실사용)이 'none' 이다."
@@ -2445,8 +2507,27 @@ validate_marker_floor() {
       # Rubber-stamp guard: the ack must contain a QUOTED operator utterance
       # ("..." or “…”, ≥2 chars). A bare reason is agent-self-writable; a quote
       # ties the ack to a conversational event auditable in the session record.
+      #
+      # 🟥 2026-09-21 — the curly-quote arm was `“[^”]{2,}”` and that bracket is the
+      # same locale defect as the two sites above. `”` is E2 80 9D; under a byte
+      # locale `[^”]` becomes «not E2, not 80, not 9D», and Korean syllables carry
+      # byte 80 as a continuation (`대` = EB 8C 80), so the negated class ends
+      # inside the quoted utterance and the closing `”` is never reached. Measured
+      # known pair on this machine, `below-floor-ack: “그대로 진행해” — 승인했다`
+      # → LC_ALL=POSIX BLOCK / LC_ALL=C.utf8 pass; the ASCII-quote control passes
+      # in both and the no-quote known-negative blocks in both, so the instrument
+      # discriminates and only the Korean arm moves. Same fairness shape as the
+      # word count: an operator utterance quoted in Korean typography reads as
+      # «no quote present» on a machine without a UTF-8 locale, while the English
+      # one passes. `.{2,}` carries no bracket, so both locales agree on every
+      # realistic input (`“”` and `“a”` still block in both).
+      # ⚠️ Named residual: under a byte locale the ≥2 is counted in BYTES, so a
+      # single Korean character (`“가”`, 3 bytes) satisfies it where UTF-8 rejects
+      # it — a one-character margin at a pathological input, and strictly narrower
+      # than today's blanket rejection of every Korean-quoted ack.
+      # Lane: scripts/test_locale_invariance_lanes.sh L13.
       if ! grep -m1 -E '^[[:space:]]*below-floor-ack:' "$m" \
-           | grep -qE '"[^"]{2,}"|“[^”]{2,}”'; then
+           | grep -qE '"[^"]{2,}"|“.{2,}”'; then
         echo "  ❌ BELOW-FLOOR ack without quoted operator utterance (rubber-stamp guard)"
         echo "     The ack line must quote the operator's approval verbatim:"
         echo "       below-floor-ack: \"<what the operator actually said>\" — <reason>"
