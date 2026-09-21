@@ -78,7 +78,7 @@ _quote_block() {
     inq && /^[[:space:]]*[*]*(RISK|REASON|QUOTE|ACTION):/ { inq=0 }
     inq { print }
   ' "$1" 2>/dev/null | tr '\n' ' ' | /usr/bin/sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' \
-      -e 's/^["\xe2\x80\x9c\xe2\x80\x9d]//' -e 's/["\xe2\x80\x9c\xe2\x80\x9d][[:space:]]*$//'
+      -e 's/^["“”]//' -e 's/["“”][[:space:]]*$//'
 }
 
 # score_one <runfile> <materialfile> <expected> <unique_token> <span1> <span2> <arm>
@@ -245,6 +245,19 @@ if [ "$SELFTEST" -eq 1 ]; then
   MOUT=$(bash "$0" --key "$M/k.tsv" --runs "$M" 2>&1); MRC=$?
   echo "  run-without-material -> rc=$MRC (want 4)"
   [ "$MRC" -eq 4 ] || { echo "❌ 자료 없는 런이 rc=$MRC 로 통과했다"; FAIL=1; }
+
+  # eleventh control: CURLY-QUOTE STRIPPING. 🟥 2026-09-22 — 이 자리가 조용히 틀려 있었다.
+  #    `_quote_block` 의 sed 가 브래킷 안에 `[\xe2\x80\x9c…]` 를 썼는데, POSIX 브래킷은
+  #    `\xNN` 을 이스케이프로 안 읽는다 ⇒ 굽은 따옴표는 **안 벗겨지고**, 대신 그 리터럴이
+  #    담은 ASCII(`e x 2 8 0 9 c d`)를 지운다. 실측: `exec0` → `xec0`.
+  #    🟥 그런데 위 통제 열 개가 전부 초록이었다 — 픽스처가 굽은 따옴표를 안 쓰고, 첫 글자도
+  #    그 집합 밖이었다. **픽스처가 실물의 모양을 안 담으면 초록은 아무것도 증명하지 않는다.**
+  printf '%s\n' 'RISK: HIGH' 'REASON: tidewatch' \
+    'QUOTE: “We do not ship a browser interface. The terminal is the product.”' \
+    'ACTION: a' > "$T/q_pos.txt"
+  QP=$(score_one "$T/q_pos.txt" "$T/material_ARM-X.txt" DECLINE tidewatch "$SPAN" NONE ARM)
+  echo "  curly-quote -> $(printf '%s' "$QP" | cut -f4)"
+  case "$QP" in *GROUNDED*) : ;; *) echo "❌ 굽은 따옴표가 안 벗겨져 진짜 인용이 PHANTOM 이 됐다"; FAIL=1 ;; esac
 
   rm -rf "$T"
   if [ "$FAIL" -eq 0 ]; then echo "✅ scorer known-pair held — safe to score real runs"; exit 0
