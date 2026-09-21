@@ -779,6 +779,8 @@ for _pair in \
   "scripts/map_postprocess.py|scripts/test_map_postprocess_lanes.sh" \
   `# ── 플로어 없는 채널(2026-09-14): 원격 자율 노드가 FH 자산을 바꾸면 마커가 tracks/ 와 함께 휘발한다. 실측 2/2(#675·#716). CI 가 gitignored 마커를 구조적으로 못 보므로, 그 채널에만 «마커가 커밋 기록에 실려 왔나» 를 건다 ──` \
   "scripts/remote_marker_gate.sh|scripts/test_remote_marker_gate_lanes.sh" \
+  `# ── pipefail × 조기종료 소비자 × 64 KiB 파이프 버퍼(2026-09-21): 「생산자 | grep -q」 는 **찾았을 때만** 거짓 빨강을 낸다. 실사고 = PR #782 의 validate 가 같은 커밋에서 push 초록·pull_request 빨강으로 갈렸다. known-positive 가 결정적이라 확률 레인이 아니다 ──` \
+  "scripts/sync_to_be_lanes.sh|scripts/test_pipefail_sigpipe_lanes.sh" \
   `# ── 발신 전 3프로브(2026-09-18): 비소유 레포에 PR 을 «열기 직전» 에 건다. 실측 — outbound 9건 중 기술 결함 지적 3건이 전부 같은 형태다: 우리 가드와 우리 테스트가 «대상의 모형» 위에서 돌았고, 메인테이너의 증거는 우리가 한 번도 안 돌린 실행이었다 ──` \
   "scripts/outbound_pr_gate.sh|scripts/test_outbound_pr_gate_lanes.sh" \
   `# ── 발행 «확인» 예산(2026-09-18): npm publish 는 이미 rc=0 으로 끝났고 이 스크립트는 전파만 관측한다. 둘을 한 종료코드로 접으면 성공한 발행이 빨간 잡이 되고, 그 빨강이 정확히 «손 발행» 을 훈련시킨다(v3.2.0·v3.4.0) ──` \

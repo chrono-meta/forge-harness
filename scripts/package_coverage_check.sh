@@ -135,6 +135,10 @@ ACCEPTED_ABSENT=(
   # sibling directly above: it exercises scripts/sync-to-be.sh, itself ACCEPTED_ABSENT — a lane
   # suite for a script that never ships has nothing to verify on a consumer's machine either.
   "scripts/sync_to_be_lanes.sh"
+  # 2026-09-21 — 그 포워드 레인의 «형태» 앵커(pipefail × 조기종료 소비자 × 64 KiB 파이프 버퍼).
+  # 판정 대상이 scripts/sync_to_be_lanes.sh 이고 그 자신이 바로 위에서 ACCEPTED_ABSENT 다.
+  # 안 나가는 레인의 앵커를 소비자 트리에 실어 보내면 잴 것이 없는 검사를 하나 더 주는 셈이다.
+  "scripts/test_pipefail_sigpipe_lanes.sh"
   # NOTE (2026-08-29): `scripts/fh_hub_identity.sh` USED to sit here, with a comment saying it had
   # been removed from files[] on 2026-08-15 as a confidentiality misclassification. Both halves are
   # now stale: #484 deliberately put it BACK in files[] (without it, `fh_session_load.sh`'s hub-

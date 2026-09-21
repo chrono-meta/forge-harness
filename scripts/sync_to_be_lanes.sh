@@ -576,7 +576,15 @@ else
   ok "E: SYNC_EXCLUDES 정의를 읽었다 (계기 살아 있음)"
 
   # A: 현행이 배열을 쓰는가. 손목록으로 되돌아가면 여기서 적색.
-  if _sync_src | grep -q 'tar cf - "\${tex\[@\]}"'; then
+  # 🟥 파이프로 흘리지 않는다 — 여기는 `_sync_src | grep -q` 였고 그 형태가 CI 를 간헐적으로
+  #    거짓 빨강으로 만들었다(2026-09-21). 이 파일은 `set -uo pipefail`(:14) 이고 `grep -q` 는
+  #    첫 매치에서 즉시 종료하는데, 그때 생산자가 아직 쓸 것이 **파이프 버퍼(64 KiB)보다 많이**
+  #    남아 있으면 SIGPIPE 로 죽어 141 을 남긴다. pipefail 이 그 141 을 파이프라인 종료코드로
+  #    올리므로 **grep 은 찾았는데 `if` 는 실패로 읽는다.** 대상은 70,726 B 이고 매치(:710)
+  #    이후로 17,918 B 가 남아서 조건이 성립했다. 실측 4/200(러너가 느릴수록 더 자주 뜬다).
+  #    ⇒ 파이프를 없앤다. `grep` 에 파일을 직접 주면 경합할 상대가 없다.
+  #    레인은 scripts/test_pipefail_sigpipe_lanes.sh (결정적 known-pair 50/50 ↔ 0/50).
+  if grep -q 'tar cf - "\${tex\[@\]}"' "$REPO/scripts/sync-to-be.sh"; then
     ok "A: tar 폴백이 SYNC_EXCLUDES 배열을 쓴다 (손목록 아님)"
   else
     FAIL=$((FAIL+1)); printf '  ❌ %s
