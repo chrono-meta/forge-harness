@@ -199,6 +199,12 @@ done
 #    바꾼다. 훅 안의 그 두 글자는 리터럴이라 그러면 영영 안 맞고, 변이는 조용히 no-op 이 된다.
 #    ENVIRON 은 그 해석을 안 탄다.
 _lit_replace() { # $1=file $2=from(literal) $3=to(literal) → stdout
+  # 🟥 from == to 는 no-op 으로 빠져나간다. 안 넣으면 아래 while 이 **안 끝난다** — 치환해도
+  #    문자열이 그대로라 `index` 가 같은 자리를 영원히 다시 찾는다(known-pair 재현:
+  #    from!=to → rc=0, from==to → timeout). 이 레인은 selfcheck 에 배선돼 있어서, 앞으로
+  #    어떤 수리가 두 식을 **우연히 같게** 만드는 순간 selfcheck 가 FAIL 이 아니라 **행(hang)**
+  #    한다. 실패보다 나쁜 방향이다 — CI 는 타임아웃으로만 죽고 원인이 안 보인다.
+  [ "$2" = "$3" ] && { cat "$1"; return; }
   _LR_F="$2" _LR_R="$3" awk '
     BEGIN { f = ENVIRON["_LR_F"]; r = ENVIRON["_LR_R"] }
     { while ((p = index($0, f)) > 0) $0 = substr($0, 1, p-1) r substr($0, p+length(f)); print }
