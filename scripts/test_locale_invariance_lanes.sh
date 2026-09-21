@@ -455,6 +455,124 @@ else
   else _no "되돌렸는데 POSIX=$g UTF8=$h (BLOCK/pass 여야) — 이 팔은 이빨이 없다"; fi
 fi
 
+
+# ══ L14 — 문자 길이 하한이 로케일에 의존하지 않는다 (2026-09-21) ═══════════════
+# 🟥 방향이 위 레인들과 **반대**다. `wc -w` 는 한글을 0 낱말로 읽어 **과차단**했는데,
+#    `${#var}` 와 `wc -m` 은 한글을 바이트로 읽어 약 3배로 크레딧한다 → **fail-OPEN**:
+#    10 자짜리 한글 근거가 30 바이트로 세어져 `-lt 20` 하한을 공짜로 넘는다.
+#    그래서 이 팔의 기대값은 "두 로케일이 같다" 이되, 되돌림에서 새는 쪽이 POSIX 다.
+_cl_fns() { # $1 = 훅(또는 변이체) → $2 에 _charlen + standpoint 레그를 뽑는다
+  sed -n '/^_charlen()/,/^}/p'                 "$1" >  "$2"
+  sed -n '/^validate_standpoint_leg()/,/^}/p'  "$1" >> "$2"
+}
+_cl_rc() { # $1=함수파일 $2=로케일 $3=standpoint 줄 → 0(통과)/1(차단)
+  printf '%s\n' "$3" > "$T/cl.marker"
+  # 🟥 파이프로 rc 를 잃지 않는다 — L13c 가 잡은 pipefail 함정과 같은 자리다.
+  LC_ALL="$2" bash -c 'set -uo pipefail; . "$1" >/dev/null 2>&1
+                       validate_standpoint_leg "$2" >/dev/null 2>&1; echo $?' \
+    _ "$1" "$T/cl.marker"
+}
+# 한글 10 자 = 30 바이트. 문자로 재면 하한 20 에 걸리고, 바이트로 재면 통과한다.
+_CL_KO_SHORT='standpoint: not-applicable — 해당사항이 전혀 없다'
+# 한글 20 자 초과 — 문자로 재도 통과해야 한다(과차단 방향 컨트롤).
+_CL_KO_LONG='standpoint: not-applicable — 이 표면을 나르는 명명된 피어가 없고 소비자 가시 동작도 안 바뀐다'
+# ASCII 컨트롤 — 원래부터 두 로케일에서 같아야 한다.
+_CL_EN_SHORT='standpoint: not-applicable — too short'
+_CL_EN_LONG='standpoint: not-applicable — no named peer carries this surface at all'
+
+_cl_fns "$HOOK" "$T/fn_cl_now.sh"
+if ! grep -q '^_charlen()' "$T/fn_cl_now.sh"; then
+  _t "L14 계기 — 훅에서 _charlen 을 뽑는다"
+  _no "훅에 _charlen 이 없다 — 이 팔은 측정 불가다(부재는 통과가 아니다)"
+else
+  _t "L14 지금의 훅 — 짧은 한글 근거가 두 로케일에서 같이 막힌다"
+  a=$(_cl_rc "$T/fn_cl_now.sh" POSIX   "$_CL_KO_SHORT")
+  b=$(_cl_rc "$T/fn_cl_now.sh" "$UTF8" "$_CL_KO_SHORT")
+  if [ "$a" = 1 ] && [ "$b" = 1 ]; then _ok
+  else _no "POSIX=$a UTF8=$b (1/1 이어야) — 바이트 세기가 남아 있어 한글이 하한을 공짜로 넘는다"; fi
+
+  _t "L14b 컨트롤 — 충분히 긴 한글 근거는 두 로케일 다 통과 (과차단 아님)"
+  c=$(_cl_rc "$T/fn_cl_now.sh" POSIX   "$_CL_KO_LONG")
+  d=$(_cl_rc "$T/fn_cl_now.sh" "$UTF8" "$_CL_KO_LONG")
+  if [ "$c" = 0 ] && [ "$d" = 0 ]; then _ok
+  else _no "긴 한글이 $c/$d — 고치면서 반대 방향(과차단)을 만들었다"; fi
+
+  _t "L14c 컨트롤 — ASCII 는 짧으면 막고 길면 통과, 두 로케일 동일"
+  e=$(_cl_rc "$T/fn_cl_now.sh" POSIX   "$_CL_EN_SHORT")
+  f=$(_cl_rc "$T/fn_cl_now.sh" "$UTF8" "$_CL_EN_SHORT")
+  g=$(_cl_rc "$T/fn_cl_now.sh" POSIX   "$_CL_EN_LONG")
+  h=$(_cl_rc "$T/fn_cl_now.sh" "$UTF8" "$_CL_EN_LONG")
+  if [ "$e$f" = "11" ] && [ "$g$h" = "00" ]; then _ok
+  else _no "ASCII 팔이 짧음=$e$f 긺=$g$h (11/00 이어야) — 레그나 픽스처가 깨졌다"; fi
+
+  _t 'L14d 되돌림 — `${#reason}` 로 되돌리면 POSIX 에서만 샌다 (fail-open 복귀)'
+  _lit_replace "$HOOK" '[ "$(_charlen "$reason")" -lt 20 ]' '[ "${#reason}" -lt 20 ]' > "$T/mut_cl.sh"
+  if ! grep -q '\[ "\${#reason}" -lt 20 \]' "$T/mut_cl.sh"; then
+    _no "되돌림 변이가 안 먹었다 — 훅의 하한 표현이 바뀌었다"
+  else
+    _cl_fns "$T/mut_cl.sh" "$T/fn_cl_old.sh"
+    i=$(_cl_rc "$T/fn_cl_old.sh" POSIX   "$_CL_KO_SHORT")
+    j=$(_cl_rc "$T/fn_cl_old.sh" "$UTF8" "$_CL_KO_SHORT")
+    if [ "$i" = 0 ] && [ "$j" = 1 ]; then _ok
+    else _no "되돌렸는데 POSIX=$i UTF8=$j (0/1 이어야) — 이 팔은 이빨이 없다"; fi
+  fi
+
+  _t "L14e 문턱값 불변 — UTF-8 에서 _charlen 이 \${#var} 와 같은 수 (코퍼스 6)"
+  _cl_bad=""
+  for _sv in '대상이 없다' '운영자가 승인했다고 한다' 'not-applicable' \
+             '동일한 스테이지드 diff 를 둘 다에게' 'ran bash x.sh, 30/30 PASS' ''; do
+    _n1=$(LC_ALL="$UTF8" bash -c 'printf "%s" "${#1}"' _ "$_sv")
+    _n2=$(LC_ALL="$UTF8" bash -c '. "$1"; _charlen "$2"' _ "$T/fn_cl_now.sh" "$_sv")
+    [ "$_n1" = "$_n2" ] || _cl_bad="$_cl_bad '$_sv'($_n1≠$_n2)"
+  done
+  if [ -z "$_cl_bad" ]; then _ok
+  else _no "UTF-8 기계에서 수가 움직인다 —$_cl_bad. 기존 문턱값이 재교정 없이 못 쓴다"; fi
+fi
+
+# L14f: 이 결함은 **손으로 두 번 세어 두 번 놓쳤다**(8곳이라 적었는데 `wc -m` 한 자리가
+#       더 있었다). 그래서 잠금은 목록이 아니라 «0 곳인가» 다. 배열 길이 `${#arr[@]}` 는
+#       로케일 무관이라 대상이 아니다 — 그 구분을 레인이 직접 판별한다.
+_t "L14f 전수 — 훅에 로케일 의존 문자열 길이가 0 곳 (재발 잠금)"
+_cl_hits=$(grep -nE '\$\{#[A-Za-z_][A-Za-z0-9_]*\}|wc -m' "$HOOK" \
+           | grep -vE '^[0-9]+:[[:space:]]*#' | grep -vE '\$\{#[A-Za-z_][A-Za-z0-9_]*\[@\]\}' || true)
+# 알려진 양성 — 이 grep 이 실제로 그 형태를 잡는지 같은 실행에서 보인다(분리능 확인).
+printf 'x=${#reason}\ny=$(printf %%s "$z" | wc -m)\n' > "$T/cl_pos.sh"
+_cl_cal=$(grep -cE '\$\{#[A-Za-z_][A-Za-z0-9_]*\}|wc -m' "$T/cl_pos.sh" || true)
+if [ "${_cl_cal:-0}" -lt 2 ]; then
+  _no "계기 오류 — 알려진 양성 2 건 중 $_cl_cal 건만 잡았다. 이 레인의 0 건은 무의미하다"
+elif [ -z "$_cl_hits" ]; then _ok
+else _no "로케일 의존 길이가 남아 있다:
+$(printf '%s\n' "$_cl_hits" | sed 's/^/       · /')"; fi
+
+# L14g: 레인이 훅의 **일부만** 소싱하면 의존 함수가 조용히 사라진다 — `_charlen` 이
+#       정의 안 된 채 레그가 돌면 「command not found」 가 stderr 로 가고 **판정만 달라진다.**
+#       실측 2026-09-21: 이 결함으로 마커 스위트 **넷이 두 로케일 모두에서** 빨개졌다(그래서
+#       로케일 레인은 못 잡는다 — 갈리지 않고 양쪽이 똑같이 틀린다). 목록이 아니라 관계를 박는다.
+_t "L14g 배선 — _charlen 쓰는 레그를 뽑는 스위트는 _charlen 도 뽑는다"
+_cl_dep_bad=""; _cl_dep_seen=0
+for _f in "$REPO_ROOT"/scripts/test_*_lanes.sh; do
+  [ -r "$_f" ] || continue
+  # 이 스크립트가 훅에서 뽑는 레그 이름들
+  for _leg in $(grep -oE "sed -n '/\^validate_[a-z_]+\(\)/" "$_f" \
+                | sed -E "s|sed -n '/\^||; s|\(\)/||" | sort -u); do
+    # 🟥 `grep -q` 를 파이프라인에 쓰지 않는다 — `set -o pipefail`(이 파일 34행) 아래에서
+    #    grep 이 첫 히트에 빠지면 sed 가 SIGPIPE 로 죽어 **파이프라인이 141** 을 내고, 여기서는
+    #    `|| continue` 가 걸려 레그가 통째로 건너뛰어진다. 길이에 따라 갈리는 **경합**이라
+    #    일부만 세어지고 레인은 초록으로 남는다 — L13c 가 잡은 함정의 재발이다(2026-09-21).
+    #    `grep -c` 는 입력을 끝까지 읽으므로 SIGPIPE 가 안 난다.
+    _cl_uses=$(sed -n "/^$_leg()/,/^}/p" "$HOOK" | grep -c '_charlen' || true)
+    [ "${_cl_uses:-0}" -gt 0 ] || continue
+    _cl_dep_seen=$((_cl_dep_seen+1))
+    grep -q "sed -n '/\^_charlen()/" "$_f" \
+      || _cl_dep_bad="$_cl_dep_bad $(basename "$_f")($_leg)"
+  done
+done
+if [ "$_cl_dep_seen" -eq 0 ]; then
+  _no "계기 오류 — _charlen 을 쓰는 레그를 뽑는 스위트가 0 건이다. 이 레인은 아무것도 안 본다"
+elif [ -z "$_cl_dep_bad" ]; then _ok
+else _no "의존 함수를 안 뽑는 스위트 —$_cl_dep_bad
+       그 레인은 «command not found» 로 조용히 다른 판정을 낸다(두 로케일 모두)"; fi
+
 if [ "$FAIL" -eq 0 ] && [ "$INSTRUMENT_INCOMPLETE" -eq 1 ]; then
   echo "── 회귀는 없다. 그러나 팔 하나 이상이 UNMEASURED 다 — rc=2 (계기 오류) ──"
   exit 2
