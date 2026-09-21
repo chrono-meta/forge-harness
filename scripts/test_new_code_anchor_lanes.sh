@@ -263,6 +263,26 @@ LANE
 branch_and_commit "$d" || { echo "FATAL: commit p15"; exit 10; }
 run_check "$d"; expect "P15 dead branch, DIRECT dispatch (the unreported twin)" 1 'MENTION_ONLY.*fixture_subject\.sh'
 
+# 🟥 **두 주입 레인은 EXEMPT 배열이 «비어 있다» 에 결박돼 있었다** — marker 가 리터럴로
+# «여는 줄 + 닫는 줄» 이어서, 그 배열의 첫 실제 항목이 생기자 둘이 **동시에** HARNESS-ERROR 로
+# 죽었다(2026-09-22, CI 가 적발). 계기 실패 여섯 얼굴의 ② — **known-pair 가 «대상의 현재
+# 상태» 에 결박되면, 대상이 정상적으로 바뀌는 순간 계기가 먼저 죽는다.**
+# ⇒ 이제 «여는 줄 바로 다음에 끼워 넣는다». 배열이 비어 있든 열 개든 같은 자리를 잡는다.
+# 🟢 덤으로 X3 는 **더 강한 시험**이 됐다 — 유효한 항목들 «사이» 에 맨-basename 하나를 섞어도
+#    거절이 뜨는지를 묻는다(종전엔 그 항목 하나뿐인 배열이었다).
+_exempt_insert() {   # _exempt_insert <checker경로> <끼워넣을 항목 한 줄>
+  python3 - "$1" "$2" <<'PYX'
+import sys
+p, entry = sys.argv[1], sys.argv[2]
+t = open(p, encoding='utf-8').read()
+opener = 'EXEMPT=(' + chr(10)
+n = t.count(opener)
+assert n == 1, "EXEMPT array opener found %d times - expected exactly 1" % n
+t = t.replace(opener, opener + '  ' + entry + chr(10), 1)
+open(p, 'w', encoding='utf-8').write(t)
+PYX
+}
+
 # P16 — 🟥 A CONTROL, NOT AN ANCHOR, AND IT IS LABELLED THAT WAY BECAUSE THE REVERT PROBE SAID SO.
 # It was written as the regression anchor for the EXEMPT basename-leniency hole (codex 2026-08-22)
 # and it is not one: reverting the fix leaves this lane GREEN, because the leniency only fires when
@@ -275,17 +295,9 @@ run_check "$d"; expect "P15 dead branch, DIRECT dispatch (the unreported twin)" 
 d="$(new_repo p16)" || { echo "FATAL: fixture p16"; exit 10; }
 mkdir -p "$d/scripts/nested"
 printf '%s' "$NEWSCRIPT" > "$d/scripts/nested/fixture_subject.sh"
-python3 - "$d/scripts/new_code_anchor_check.sh" <<'PY'
-import sys
-p = sys.argv[1]
-t = open(p, encoding='utf-8').read()
-marker = 'EXEMPT=(\n)'
-assert marker in t, "EXEMPT array shape changed — this lane edits a form that no longer exists"
-open(p, 'w', encoding='utf-8').write(t.replace(
-    marker,
-    'EXEMPT=(\n  "scripts/fixture_subject.sh|fixture-only stub, exercised by the lane harness itself"\n)',
-    1))
-PY
+_exempt_insert "$d/scripts/new_code_anchor_check.sh" \
+  '"scripts/fixture_subject.sh|fixture-only stub, exercised by the lane harness itself"' \
+  || { echo "FATAL: EXEMPT injection p16"; exit 10; }
 branch_and_commit "$d" || { echo "FATAL: commit p16"; exit 10; }
 run_check "$d"; expect "P16 same basename, different directory is NOT exempt" 1 'NO_ANCHOR.*nested/fixture_subject\.sh'
 
@@ -295,15 +307,9 @@ run_check "$d"; expect "P16 same basename, different directory is NOT exempt" 1 
 # quietest face of "unmeasured rendered as fine").
 d="$(new_repo x3)" || { echo "FATAL: fixture x3"; exit 10; }
 printf '%s' "$NEWSCRIPT" > "$d/scripts/fixture_subject.sh"
-python3 - "$d/scripts/new_code_anchor_check.sh" <<'PY'
-import sys
-p = sys.argv[1]
-t = open(p, encoding='utf-8').read()
-marker = 'EXEMPT=(\n)'
-assert marker in t
-open(p, 'w', encoding='utf-8').write(t.replace(
-    marker, 'EXEMPT=(\n  "fixture_subject.sh|fixture-only exemption with a real reason"\n)', 1))
-PY
+_exempt_insert "$d/scripts/new_code_anchor_check.sh" \
+  '"fixture_subject.sh|fixture-only exemption with a real reason"' \
+  || { echo "FATAL: EXEMPT injection x3"; exit 10; }
 branch_and_commit "$d" || { echo "FATAL: commit x3"; exit 10; }
 run_check "$d"; expect "X3 bare-basename EXEMPT entry → refused (10), never a silent pass" 10 'bare basename'
 
@@ -316,15 +322,9 @@ run_check "$d"; expect "X3 bare-basename EXEMPT entry → refused (10), never a 
 # evidence either way.
 d="$(new_repo x1)" || { echo "FATAL: fixture x1"; exit 10; }
 printf '%s' "$NEWSCRIPT" > "$d/scripts/fixture_subject.sh"
-python3 - "$d/scripts/new_code_anchor_check.sh" <<'PY'
-import sys
-p = sys.argv[1]
-t = open(p, encoding='utf-8').read()
-marker = 'EXEMPT=(\n)'
-assert marker in t, "EXEMPT array shape changed — this lane edits a form that no longer exists"
-open(p, 'w', encoding='utf-8').write(
-    t.replace(marker, 'EXEMPT=(\n  "scripts/fixture_subject.sh"\n)', 1))
-PY
+_exempt_insert "$d/scripts/new_code_anchor_check.sh" \
+  '"scripts/fixture_subject.sh"' \
+  || { echo "FATAL: EXEMPT injection"; exit 10; }
 branch_and_commit "$d" || { echo "FATAL: commit x1"; exit 10; }
 run_check "$d"; expect "X1 EXEMPT without a reason → refused (10), never a silent pass" 10 'EXEMPT'
 
@@ -332,15 +332,9 @@ run_check "$d"; expect "X1 EXEMPT without a reason → refused (10), never a sil
 # pipe", and `foo.sh|x` would clear a bar whose whole content is that someone had to write a sentence.
 d="$(new_repo x2)" || { echo "FATAL: fixture x2"; exit 10; }
 printf '%s' "$NEWSCRIPT" > "$d/scripts/fixture_subject.sh"
-python3 - "$d/scripts/new_code_anchor_check.sh" <<'PY'
-import sys
-p = sys.argv[1]
-t = open(p, encoding='utf-8').read()
-marker = 'EXEMPT=(\n)'
-assert marker in t
-open(p, 'w', encoding='utf-8').write(
-    t.replace(marker, 'EXEMPT=(\n  "scripts/fixture_subject.sh|n/a"\n)', 1))
-PY
+_exempt_insert "$d/scripts/new_code_anchor_check.sh" \
+  '"scripts/fixture_subject.sh|n/a"' \
+  || { echo "FATAL: EXEMPT injection"; exit 10; }
 branch_and_commit "$d" || { echo "FATAL: commit x2"; exit 10; }
 run_check "$d"; expect "X2 EXEMPT with a vacuous reason → refused (10)" 10 'EXEMPT'
 
@@ -537,17 +531,9 @@ run_check "$d"; expect "N16 SELFTEST_WIRED — .yml control for N15" 0 'SELFTEST
 # still pass. Refusing everything would be the same defect wearing the other sign.
 d="$(new_repo n17)" || { echo "FATAL: fixture n17"; exit 10; }
 printf '%s' "$NEWSCRIPT" > "$d/scripts/fixture_subject.sh"
-python3 - "$d/scripts/new_code_anchor_check.sh" <<'PY'
-import sys
-p = sys.argv[1]
-t = open(p, encoding='utf-8').read()
-marker = 'EXEMPT=(\n)'
-assert marker in t, "EXEMPT array shape changed — this lane edits a form that no longer exists"
-open(p, 'w', encoding='utf-8').write(t.replace(
-    marker,
-    'EXEMPT=(\n  "scripts/fixture_subject.sh|fixture-only stub, exercised by the lane harness itself"\n)',
-    1))
-PY
+_exempt_insert "$d/scripts/new_code_anchor_check.sh" \
+  '"scripts/fixture_subject.sh|fixture-only stub, exercised by the lane harness itself"' \
+  || { echo "FATAL: EXEMPT injection"; exit 10; }
 branch_and_commit "$d" || { echo "FATAL: commit n17"; exit 10; }
 run_check "$d"; expect "N17 EXEMPT with a substantive reason passes" 0 'EXEMPT.*fixture_subject\.sh'
 
