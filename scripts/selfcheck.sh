@@ -501,7 +501,10 @@ elif [ -f scripts/test_gate_bootstrap_ephemeral_lanes.sh ]; then
   if [ "$_gbe_rc" = "10" ]; then
     echo "FAIL  ephemeral-bootstrap selftest: 계기 오류(wc -w 컨트롤 사망)"; fail=1
   elif [ "$_gbe_rc" != "0" ]; then
-    echo "WARN  ephemeral-bootstrap selftest: 이 기계에 UTF-8 로케일이 없어 분리능 미측정"
+    # rc=1 은 「못 쟀다」가 아니라 **측정된 결함**이다 — 이 기계에서 정직한 한글이 훅의
+    # 비공허성 바닥을 못 넘는다(LC_CTYPE). 수리는 PR #780. 여기서 FAIL 로 안 올리는 이유는
+    # 환경 조건이지 이 레포의 회귀가 아니어서다 — 과차단은 override 를 훈련시킨다.
+    echo "WARN  ephemeral-bootstrap selftest: 정직한 한글이 비공허성 바닥을 못 넘는다(LC_CTYPE) — 한국어 마커가 차단된다"
   fi
   if ! bash scripts/test_gate_bootstrap_ephemeral_lanes.sh >/dev/null; then
     echo "FAIL  ephemeral-bootstrap lanes"; fail=1

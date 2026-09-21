@@ -20,11 +20,12 @@
 #   --check     (기본) 아무것도 안 바꾼다. 층을 재고 판정만 낸다.
 #   --apply     위에 더해 이 레포의 `core.hooksPath` 를 잡는다 (레포-로컬 config 한 줄).
 #               🟥 `--global` 은 절대 안 건드린다 — 사용자 기계 설정은 이 스크립트 밖이다.
-#   --selftest  known-pair. 낱말 바닥의 로케일 분리능을 합성 입력 둘로 **보인다**.
+#   --selftest  known-pair. 비공허성 **바닥**을 합성 입력 셋(ASCII 컨트롤 · 정직한 한글 ·
+#               공허한 한글)으로 때려 분리능을 보인다. 낱말 «수»가 아니라 «바닥을 넘느냐»다.
 #
 # ## 종료코드
 #   0  게이트가 여기서 돌고, 통과도 가능하다
-#   1  막는 층이 비어 있다 (ENFORCE 미배선 · UTF-8 로케일 부재)
+#   1  막는 층이 비어 있다 (ENFORCE 미배선 · 정직한 한글이 비공허성 바닥을 못 넘음)
 #   10 HARNESS-ERROR (레포가 아니다 · 훅 소스가 없다) — 통과도 경고도 아니다
 #
 # 🟥 **rc=0 은 «게이트가 돌 수 있다»이지 «네 커밋이 옳다»가 아니다.** 축을 실제로 통과시키는
@@ -40,25 +41,43 @@ case "${1:-}" in
   *) echo "unknown argument: $1 (try --help)" >&2; exit 2 ;;
 esac
 
-# ── 낱말 바닥의 로케일 분리능 ────────────────────────────────────────────────
+# ── 비공허성 «바닥»을 여기서 넘을 수 있나 ───────────────────────────────────
 # 훅의 비공허성 다리들(`soul:` · `defeater:` · `affected:` · `reflected(...)`)은 낱말 수로
-# 공허를 판정한다. `wc -w` 는 POSIX 로케일에서 **순한글 줄을 1 낱말로 센다** — 이 레포의
-# 기록 언어가 한국어이므로, 정직하게 쓴 마커가 「공허하다」로 차단된다.
-# 여기서 재는 것은 훅이 아니라 **이 기계의 `wc -w`** 다: 픽스처 둘의 분리능만 본다.
-_H_STR='성공 정의 는 이 클론 에서 축 을 실행 으로 가른다'
-_A_STR='success definition is measured in this clone by running the axes'
-# 기대값은 **박지 않고 문자열 자신에서 센다** — 손으로 박은 상수는 문자열을 한 낱말 고치는
-# 순간 조용히 어긋나고, 그러면 컨트롤이 죽었는데 죽은 줄 모른다. 쉘 낱말 분리는 IFS 바이트
-# 기준이라 로케일과 무관하다(= `wc -w` 와 독립된 두 번째 계기).
-_fields() { set -- $1; echo "$#"; }
-_H_N=$(_fields "$_H_STR"); _A_N=$(_fields "$_A_STR")
+# 공허를 판정하고, 판정은 **바닥 비교**다 — `templates/.git-hooks/pre-commit` 의 가장 엄격한
+# 자리가 `defeater` 의 `[ "$words" -lt 6 ]`(`:1647`) 이다.
+#
+# 🟥 **재는 것은 «몇 낱말이냐»가 아니라 «바닥을 넘느냐»다.** 초판은 낱말 수를 기대 토큰 수와
+#    **같은지** 봤고, 그게 틀렸다 — 바닥은 방향이 있는 검사인데 등식은 방향이 없다. 훅 자신이
+#    적어 뒀다: *"stable per-machine and monotonic, which is all a floor needs."* **초과는
+#    결함이 아니고 미달만 결함이다.** 등식으로 재면 토큰 안을 쪼개는 `wc` 를 가진 기계(BSD)가
+#    11 토큰 줄을 12 로 세는 것만으로 `BROKEN` 이 뜨고, `selfcheck.sh` 가 이 레인을 돌리므로
+#    **멀쩡한 기계가 통째로 빨개진다**(2026-09-21 운영자 맥 실측, PR #783 리뷰).
+#
+# 🟥 **계기는 훅이 «지금» 쓰는 셈법을 그대로 쓴다 — `wc -w` 가 아니다.** PR #780(머지됨)이
+#    훅의 여섯 자리를 바이트 수준 공백 분리로 바꿨다: `tr -s ' \t\n' '\n' | LC_ALL=C grep -c '.'`.
+#    복제가 아니라 **추적**이고, 그 결합은 레인 L15 가 기계로 확인한다 — 훅에서 그 파이프라인이
+#    사라지면 L15 가 이 파일을 지목하며 빨개진다. 안 그러면 계기가 훅과 **다른 것을 재면서
+#    조용히 초록**을 낸다. (초판은 `wc -w` 를 썼고, #780 이 머지된 순간 바로 그 상태가 됐다.)
+#    ⚠️ PR #784 는 **문자 길이**(`${#var}`·`wc -m`) 축이라 이 낱말 바닥과 무관하다 — 확인함.
+_FLOOR=6
 
+_H_STR='성공 정의 는 이 클론 에서 축 을 실행 으로 가른다'   # 정직한 한글 (알려진 양성)
+_H_VAC='확인함'                                            # 진짜 공허한 한글 (알려진 음성)
+_A_STR='success definition is measured in this clone by running the axes'  # ASCII 컨트롤
+
+# 훅 `:1646` 과 같은 파이프라인. 바꾸려면 훅과 같이 바꿔라 (L15 가 잡는다).
 _words() {  # $1 = 로케일 (빈 값이면 현재 환경) · $2 = 문자열
+  local n
   if [ -n "$1" ]; then
-    LC_ALL="$1" printf '%s' "$2" 2>/dev/null | LC_ALL="$1" wc -w 2>/dev/null | tr -d ' '
+    n=$(LC_ALL="$1" printf '%s\n' "$2" 2>/dev/null | LC_ALL="$1" tr -s ' \t\n' '\n' | LC_ALL=C grep -c '.')
   else
-    printf '%s' "$2" | wc -w | tr -d ' '
+    n=$(printf '%s\n' "$2" | tr -s ' \t\n' '\n' | LC_ALL=C grep -c '.')
   fi
+  printf '%s' "${n:-0}"
+}
+_clears() {  # $1 = 로케일 · $2 = 문자열 → 바닥을 넘으면 0
+  local n; n=$(_words "$1" "$2"); n=${n:-0}
+  [ "$n" -ge "$_FLOOR" ] 2>/dev/null
 }
 _hangul_words() { _words "$1" "$_H_STR"; }
 _ascii_words()  { _words "$1" "$_A_STR"; }
@@ -68,31 +87,35 @@ _find_utf8_locale() {
   for l in $(locale -a 2>/dev/null); do
     case "$l" in
       *[Uu][Tt][Ff]8|*[Uu][Tt][Ff]-8)
-        [ "$(_hangul_words "$l")" = "$_H_N" ] && { printf '%s' "$l"; return 0; } ;;
+        _clears "$l" "$_H_STR" && { printf '%s' "$l"; return 0; } ;;
     esac
   done
   # `locale -a` 가 소문자 별칭만 내는 기계가 있다(C.utf8). 별칭 후보를 직접 때려본다.
   for l in C.UTF-8 C.utf8; do
-    [ "$(_hangul_words "$l")" = "$_H_N" ] && { printf '%s' "$l"; return 0; }
+    _clears "$l" "$_H_STR" && { printf '%s' "$l"; return 0; }
   done
   return 1
 }
 
 if [ "$MODE" = "selftest" ]; then
-  # known-pair: 같은 입력에 대해 두 로케일이 **다른 답**을 내는가. 분리 못 하면 이 계기는
-  # 이 기계에서 아무것도 못 보는 것이므로, 「이상 없음」이 아니라 계기 오류로 찍는다.
-  a_ctl=$(_ascii_words POSIX); a_arm=$(_ascii_words C.UTF-8)
-  h_neg=$(_hangul_words POSIX); h_pos=$(_hangul_words C.UTF-8)
-  echo "known-pair — ASCII 컨트롤: POSIX=$a_ctl · C.UTF-8=$a_arm (둘 다 $_A_N 여야 한다)"
-  echo "known-pair — 한글 팔    : POSIX=$h_neg · C.UTF-8=$h_pos (갈려야 한다 · UTF-8 은 $_H_N)"
+  # known-pair — **이 기계의 현재 환경**에서 바닥 판정이 갈리는가. 로케일 대조가 아니다:
+  # 로케일이 하나뿐인 기계에서도 「정직한 한글이 바닥을 넘나」는 직접 재진다.
+  a_n=$(_words "" "$_A_STR"); h_n=$(_words "" "$_H_STR"); v_n=$(_words "" "$_H_VAC")
+  echo "floor=$_FLOOR (pre-commit defeater 다리와 같은 값)"
+  echo "known-pair — ASCII 컨트롤 : $a_n 낱말 (넘어야 한다)"
+  echo "known-pair — 정직한 한글  : $h_n 낱말 (넘어야 한다)"
+  echo "known-pair — 공허한 한글  : $v_n 낱말 (못 넘어야 한다)"
   rc=0
-  [ "$a_ctl" = "$_A_N" ] && [ "$a_arm" = "$_A_N" ] || { echo "❌ 컨트롤이 죽었다 — wc -w 가 ASCII 도 못 센다"; rc=10; }
-  if [ "${h_pos:-0}" -gt "${h_neg:-0}" ] 2>/dev/null; then
-    echo "✅ 분리능 있음 — 이 기계에서 로케일이 낱말 바닥을 바꾼다"
+  if ! _clears "" "$_A_STR"; then
+    echo "❌ HARNESS-ERROR — ASCII 컨트롤이 바닥을 못 넘는다. 낱말 셈 자체가 고장났다."; rc=10
+  elif _clears "" "$_H_VAC"; then
+    echo "❌ HARNESS-ERROR — 공허한 한글이 바닥을 넘는다. 이 계기는 공허를 분리하지 못한다."; rc=10
+  elif _clears "" "$_H_STR"; then
+    echo "✅ 분리능 있음 — 정직한 한글은 넘고 공허한 한글은 못 넘는다"
   else
-    echo "⚠️  분리 안 됨 — 이 기계엔 UTF-8 로케일이 없거나 wc 가 로케일을 안 본다."
-    echo "   🟥 «결함이 없다»가 아니다. 이 계기가 여기서 **못 잰다**는 뜻이다."
-    [ "$rc" = 0 ] && rc=1
+    echo "⚠️  정직한 한글이 바닥을 **못 넘는다** — 이 환경에서 한국어 마커는 차단된다."
+    echo "   🟥 계기 고장이 아니라 **측정된 결함**이다(LC_CTYPE). 수리는 PR #780."
+    rc=1
   fi
   exit "$rc"
 fi
@@ -141,17 +164,24 @@ else
 fi
 echo ""
 
-# ── ② LOCALE — 비공허성 바닥이 여기서 제대로 세나 ────────────────────────────
-echo "② LOCALE   비공허성 낱말 바닥 (soul / defeater / affected / reflected)"
-NOW_H=$(_hangul_words ""); NOW_A=$(_ascii_words "")
-if [ "${NOW_A:-0}" != "$_A_N" ] 2>/dev/null; then
-  echo "   ❌ HARNESS-ERROR — ASCII 컨트롤이 $_A_N 이 아니다 ($NOW_A). wc -w 가 고장났다."
+# ── ② LOCALE — 비공허성 바닥이 여기서 넘어지나 ───────────────────────────────
+echo "② LOCALE   비공허성 낱말 바닥 (soul / defeater / affected / reflected) — floor=$_FLOOR"
+NOW_H=$(_words "" "$_H_STR"); NOW_A=$(_words "" "$_A_STR"); NOW_V=$(_words "" "$_H_VAC")
+if ! _clears "" "$_A_STR"; then
+  echo "   ❌ HARNESS-ERROR — ASCII 컨트롤이 바닥을 못 넘는다 ($NOW_A 낱말). 낱말 셈이 고장났다."
   exit 10
 fi
-if [ "${NOW_H:-0}" = "$_H_N" ] 2>/dev/null; then
-  echo "   ✅ OK — 현재 환경에서 한글 $NOW_H 낱말 (LC_CTYPE=$(locale 2>/dev/null | sed -n 's/^LC_CTYPE=//p' | tr -d '\"'))"
+if _clears "" "$_H_VAC"; then
+  echo "   ❌ HARNESS-ERROR — 공허한 한글이 바닥을 넘는다 ($NOW_V 낱말). 계기가 공허를 분리 못 한다."
+  exit 10
+fi
+if _clears "" "$_H_STR"; then
+  echo "   ✅ OK — 정직한 한글이 바닥을 넘는다 ($NOW_H ≥ $_FLOOR · 공허 팔은 $NOW_V 로 막힌다)"
+  echo "      (LC_CTYPE=$(locale 2>/dev/null | sed -n 's/^LC_CTYPE=//p' | tr -d '\"'))"
+  echo "      🟥 낱말 수가 토큰 수와 **달라도 결함이 아니다** — 바닥은 단조롭기만 하면 된다."
+  echo "        미달만 결함이다."
 else
-  echo "   ❌ BROKEN — 현재 환경에서 한글이 $NOW_H 낱말로 센다 (ASCII 컨트롤은 $NOW_A 로 정상)."
+  echo "   ❌ BROKEN — 정직한 한글이 바닥을 **못 넘는다** ($NOW_H < $_FLOOR · ASCII 컨트롤은 $NOW_A 로 정상)."
   echo "      ⇒ 정직하게 한국어로 쓴 마커가 «공허하다»로 **차단된다**. 축이 틀려서가 아니라"
   echo "        이 기계의 LC_CTYPE 때문이다."
   # 🟥 여기서 **막는다.** 이 결함의 방향은 과차단이라 「게이트는 건전하다」가 참이고,
@@ -161,8 +191,8 @@ else
   BLOCK=1
   if UTF8=$(_find_utf8_locale); then
     echo "      절차상 해소: export LC_ALL=$UTF8   (이 셸에서 한 번)"
-    echo "      🟥 우회이지 수리가 아니다. 코드 쪽 수리는 PR #780(로케일 불변 낱말 셈)이고,"
-    echo "         그게 머지되면 이 줄은 환경과 무관해진다."
+    echo "      🟥 우회이지 수리다운 수리가 아니다. 훅의 셈법은 PR #780 이 이미 로케일 불변으로"
+    echo "         바꿨으므로, 여기서 이 줄이 뜬다면 그 셈법 자체가 이 기계에서 깨진 것이다."
   else
     echo "      ❌ 이 기계엔 UTF-8 로케일이 없다 — 절차로도 못 푼다."
     echo "         남는 길은 마커를 ASCII 낱말이 충분한 문장으로 쓰는 것뿐인데, 그건"
