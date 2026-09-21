@@ -467,6 +467,24 @@ else
   fail=1
 fi
 
+# env-layer fingerprint — 두 체크아웃(운영자 맥 ↔ 클라우드 클론)의 **층 대조**를 가능하게 하는
+# 계기. 게이트가 아니라 계기이므로 어떤 훅도 이걸 부르지 않는다 — 그래서 앵커는 여기 하나뿐이고,
+# 레인이 안 돌면 이 스크립트는 그냥 산문이 된다(lane_runner_check.sh 가 세는 클래스).
+if [ ! -f scripts/env_layer_fingerprint.sh ]; then
+  _absent_subject_verdict "env-layer lanes" "scripts/env_layer_fingerprint.sh" || fail=1
+elif [ -f scripts/test_env_layer_fingerprint_lanes.sh ]; then
+  # 주체의 자기 known-pair 를 먼저 직접 부른다(계기 교정), 그다음 레인.
+  if ! bash scripts/env_layer_fingerprint.sh --selftest >/dev/null 2>&1; then
+    echo "FAIL  env-layer selftest: known-pair calibration failed"; fail=1
+  fi
+  if ! bash scripts/test_env_layer_fingerprint_lanes.sh >/dev/null; then
+    echo "FAIL  env-layer lanes"; fail=1
+  fi
+else
+  echo "FAIL  env-layer lanes: env_layer_fingerprint.sh present but its anchor is missing"
+  fail=1
+fi
+
 # package-coverage — a shipped doc must not point at a file the tarball omits. Distinct from the
 # ref-path check below: that one asks "does this path exist at all", this one asks "does the
 # CONSUMER get it". Measured 2026-07-28: 35 paths existed, were named by a shipped doc, and were
