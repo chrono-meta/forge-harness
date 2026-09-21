@@ -156,12 +156,17 @@ PY
     # git 이 아니면 «없음»이 아니라 «못 쟀음» — 픽스처/비-git 디렉터리를 0 으로 접지 않는다.
     untracked_tracks=UNMEASURABLE
   fi
-  add_row evidence.tracks EVIDENCE \
-    "$(case "$untracked_tracks" in
-         UNMEASURABLE) printf 'UNMEASURED' ;;
-         0) printf 'ABSENT' ;;
-         *) printf 'PRESENT' ;;
-       esac)" \
+  # 🟥 `case` 를 명령치환 `$( )` 안에 두지 마라. bash 3.2 (macOS 기본 /bin/bash) 는 그 안을
+  #    런타임에 다시 파싱하면서 깨지고, `bash -n` 은 통과한다. 깨진 결과는 중단이 아니라
+  #    **값 자리에 셸 소스가 들어간 채 rc=0** 이다 — 즉 같은 커밋이 플랫폼마다 다른 지문을 낸다.
+  #    이 계기의 용도가 두 체크아웃의 지문 대조라서, 그 형태는 여기서 결함이다. 레인 L9/L9b.
+  local _tracks_state
+  case "$untracked_tracks" in
+    UNMEASURABLE) _tracks_state=UNMEASURED ;;
+    0)            _tracks_state=ABSENT ;;
+    *)            _tracks_state=PRESENT ;;
+  esac
+  add_row evidence.tracks EVIDENCE "$_tracks_state" \
     "이 체크아웃에만 사는 세션 기록 — 인사 분기와 recall 이 읽는 코퍼스"
 
   # ── PATTERN 층 — gitignored 리터럴. **조용히 커버리지를 깎는다** ───────────────

@@ -25,6 +25,11 @@ context/
 # 내용은 회사 식별 리터럴이라 누가 `git add -A` 하면 공개 레포로 그대로 올라간다.
 # 이력 확인 결과 커밋된 적은 없다(유출 미발생). 자매 줄이 있는데 이 줄이 없던 게 원인.
 .claude/rules/.residency-patterns
+# 세 번째 자매 — 같은 누락이 또 났다(2026-09-21). outbound_pr_gate.sh 가 읽는 «우리 소유 owner»
+# 목록이고, 스크립트 주석은 이 파일이 «소비자 설치엔 구성상 없다»고 적는다. 그 보장은 ignore
+# 줄이 있어야 성립한다 — 없으면 누가 커밋하는 순간 조직명이 공개 레포로 나가고, 모든 소비자가
+# 남의 owner 목록을 받는다. 이번엔 자매 줄 누락을 selfcheck 의 rules-dotfile 검사가 잡는다.
+.claude/rules/.owned-owners
 
 # Paper — PDF regenerated from HTML; canonical version on Zenodo/arXiv
 paper/*.pdf

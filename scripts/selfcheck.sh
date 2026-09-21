@@ -2258,6 +2258,66 @@ else
   echo "SKIP  ref-path (package mode: no .git at package root — source-tree-only check)"
 fi
 
+# ── .claude/rules 아래 dotfile 은 tracked 이거나 ignored 여야 한다 (둘 다 아님 = 유출 상태) ──
+#   그 자리의 dotfile 은 «리터럴은 gitignored 소스에만» 규약을 쓰는 운영자-사설 파일들이다
+#   (.public-surface-patterns · .residency-patterns · .owned-owners). 🟥 **같은 누락이 두 번 났다**:
+#   .residency-patterns 가 2026-08-09 스윕에서 발견됐고(.gitignore:23-26 이 그 경위를 적고 있다),
+#   .owned-owners 가 2026-09-21 에 같은 모양으로 또 빠졌다. untracked 는 ignored 가 아니라서
+#   누가 `git add -A` 하면 공개 레포로 그대로 간다. 이름을 하나씩 세는 대신 **자리**를 검사한다 —
+#   다음 형제는 추가되는 순간 여기서 잡힌다.
+#   🟥 판별식은 «ignored 인가»가 아니라 **«tracked 도 ignored 도 아닌가»** 다. 같은 자리의
+#   `.public-surface-patterns.defaults` · `.residency-patterns.defaults` 는 **일부러 tracked**
+#   이고 package.json files[] 로 출하된다(소비자가 받는 기본 패턴). 초판은 «전부 ignored» 로
+#   썼고 깨끗한 트리에서 그 둘에 FAIL 을 냈다 — 과차단은 override 를 훈련시키므로 결함이다.
+#   남는 한 칸 «tracked 도 ignored 도 아님» 이 정확히 유출 상태다.
+if [ -e .git ]; then
+  # 🟥 «디렉터리가 없다»와 «있는데 비었다»를 한 칸으로 접지 않는다 — find 는 둘 다 빈 출력이다.
+  #    앞은 계기 오류(이 검사가 겨눌 자리가 없다), 뒤는 소비자 설치의 정상 상태다.
+  if [ ! -d .claude/rules ]; then
+    echo "SKIP  rules-dotfile: .claude/rules 디렉터리 자체가 없다 — 측정 불가(깨끗함 아님)"
+    _rules_dot=""
+  else
+    _rules_dot=$(find .claude/rules -maxdepth 1 -type f -name '.*' 2>/dev/null | sed 's#^\./##')
+  fi
+  if [ ! -d .claude/rules ]; then
+    :
+  elif [ -z "$_rules_dot" ]; then
+    echo "SKIP  rules-dotfile: .claude/rules 에 dotfile 이 없다 (소비자 설치의 정상 상태)"
+  else
+    # 알려진 음성 — 이 검사가 «무엇이든 ignored 라고 말하는» 계기가 아님을 보인다.
+    if git check-ignore -q ".claude/rules/__selfcheck_probe_not_ignored" 2>/dev/null; then
+      echo "FAIL  rules-dotfile: INSTRUMENT ERROR — 존재하지 않는 비-dotfile 도 ignored 라고 한다"
+      fail=1
+    else
+      while IFS= read -r p; do
+        [ -z "$p" ] && continue
+        if git check-ignore -q "$p" 2>/dev/null; then
+          echo "PASS  rules-dotfile (ignored): $p"
+        elif git ls-files --error-unmatch "$p" >/dev/null 2>&1; then
+          # 🟥 «tracked 면 통과»로 두면 사고가 자기를 사면한다 — .owned-owners 가 실수로 한 번
+          #    커밋되는 순간 이 레인이 영구히 초록이 된다. 그래서 tracked 가 정당한 경우를
+          #    **이름으로** 좁힌다: 출하되는 기본값은 `.defaults` 로 끝난다(package.json files[]).
+          case "$p" in
+            *.defaults) echo "PASS  rules-dotfile (tracked — shipped defaults): $p" ;;
+            *) echo "FAIL  rules-dotfile: $p — tracked 인데 \`.defaults\` 가 아니다. 운영자-사설"
+               echo "      파일이 커밋된 상태일 수 있다. 의도한 출하면 이름을 .defaults 로, 아니면"
+               echo "      \`git rm --cached\` 후 .gitignore 에 줄을 추가해라"
+               fail=1 ;;
+          esac
+        else
+          echo "FAIL  rules-dotfile: $p — tracked 도 ignored 도 아니다. \`git add -A\` 한 번이면"
+          echo "      공개 레포로 간다. 출하할 기본값이면 커밋하고, 운영자-사설이면 .gitignore 에 줄을 추가해라"
+          fail=1
+        fi
+      done <<RULESDOT
+$_rules_dot
+RULESDOT
+    fi
+  fi
+else
+  echo "SKIP  rules-dotfile (package mode: .git 없음 — 소스 트리 전용 검사)"
+fi
+
 if [ "$fail" -ne 0 ]; then
   echo "SELFCHECK: FAIL"
   exit 1

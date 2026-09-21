@@ -102,5 +102,91 @@ out="$(FH_HUB="$TMP/tracked" bash "$S" --tsv 2>/dev/null)"
 if printf '%s' "$out" | grep -q '^evidence.tracks	EVIDENCE	ABSENT'; then _ok
 else _no "동봉된 tracked 파일을 세션 기록으로 읽는다 — FP"; fi
 
+# ── L9 — 지문은 셸 소스를 담지 않는다. **설치된 모든 bash 에서** ─────────────────────────
+#   실사고 2026-09-21: `$(case … esac)` 가 bash 3.2(macOS 기본 /bin/bash)에서 런타임에 깨져
+#   값 자리로 셸 소스가 새어 들어갔고, **rc=0 으로 끝났다.** 같은 커밋이 맥에서 fa28bfdfb139,
+#   컨테이너(5.3)에서 ab16518d1dc4 — 즉 이 계기가 존재 이유인 지문 대조에서 **없는 드리프트를
+#   만든다.** 종료코드로는 안 잡히므로 **내용**을 본다. bash 판본마다 따로 돈다: 한 판본만
+#   돌리면 그 판본에서만 나는 결함이 구조적으로 안 보인다(그게 이 사고의 형태였다).
+for _b in /bin/bash /opt/homebrew/bin/bash /usr/local/bin/bash; do
+  [ -x "$_b" ] || continue
+  _bv="$("$_b" -c 'echo "${BASH_VERSINFO[0]}.${BASH_VERSINFO[1]}"' 2>/dev/null)"
+  _t "L9 모든 층 상태가 닫힌 집합 안 (bash $_bv)"
+  #   🟥 «셸 소스처럼 보이는 낱말»을 금지어로 세지 않는다 — 금지어 목록은 미래의 정당한 문구에
+  #      오탐하고, 새어 나오는 형태가 바뀌면 조용히 놓친다. 대신 **긍정 단언**을 한다:
+  #      모든 행의 상태 칸은 PRESENT·ABSENT·UNMEASURED 셋 중 하나여야 한다. 셸 소스가 값 자리로
+  #      들어오면 그 집합 밖이라 반드시 걸린다.
+  _tsv="$("$_b" "$S" --tsv 2>/dev/null)"
+  if [ -z "$_tsv" ]; then
+    _no "bash $_bv 에서 --tsv 가 비었다 — 판정 불가(계기 오류)"
+  else
+    # 첫 행은 헤더(`id / layer / verdict`)다 — 상태 칸이 아니므로 제외한다. 안 빼면
+    # 깨끗한 트리가 영원히 빨간, 그냥 과차단이다(초판이 그렇게 틀렸다).
+    _bad="$(printf '%s\n' "$_tsv" | awk -F'\t' 'NR>1 && NF>=3 && $3!="PRESENT" && $3!="ABSENT" && $3!="UNMEASURED" {print $1"="$3}')"
+    _rows="$(printf '%s\n' "$_tsv" | awk -F'\t' 'NR>1 && NF>=3' | grep -c . || true)"
+    if [ "${_rows:-0}" -lt 10 ]; then
+      _no "bash $_bv 에서 행이 $_rows 개뿐 — 층 표가 깨졌다(계기 오류)"
+    elif [ -n "$_bad" ]; then
+      _no "bash $_bv 상태 칸이 닫힌 집합 밖: $(printf '%s' "$_bad" | head -2 | tr '\n' ' ')"
+    else
+      _ok
+    fi
+  fi
+done
+
+# ── L9b — 되돌림 프로브: 깨지는 형태를 되돌리면 L9 이 실제로 빨개지나 ──────────────────
+#   L9 이 «어떤 이유로든 초록»이 되는 것을 막는 팔이다. bash 3.x 가 없는 환경(리눅스 CI)에서는
+#   이 결함을 재현할 수 없으므로 **UNMEASURED 로 말하고 통과시킨다** — 「못 쟀다」를 「깨끗하다」로
+#   접지 않는다(부재≠0). 3.x 가 있으면 반드시 적색이어야 한다.
+#   🟥 **이름으로 남기는 잔여 (cross-family 지적, 2026-09-21)**: 그래서 이 회귀 팔의 강제력은
+#      **bash 3.x 가 있는 호스트에만** 있다. CI 는 리눅스/bash 5 라 L9b 가 거기서 영원히
+#      UNMEASURED 이고, L9 도 그 호스트에서는 애초에 안 깨지는 판본만 잰다. 즉 이 결함 클래스의
+#      실질 게이트는 **운영자 맥의 로컬 실행**이지 CI 가 아니다. 닫으려면 CI 에 macOS 잡이나
+#      bash-3 컨테이너가 필요하고, 그건 이 PR 범위 밖이라 안 했다.
+_t "L9b 되돌림 — \$(case) 복원 시 bash 3.x 에서 적색"
+_B3=""
+for _b in /bin/bash /usr/bin/bash; do
+  [ -x "$_b" ] || continue
+  [ "$("$_b" -c 'echo ${BASH_VERSINFO[0]}' 2>/dev/null)" = "3" ] && { _B3="$_b"; break; }
+done
+if [ -z "$_B3" ]; then
+  echo "UNMEASURED — bash 3.x 없음(이 결함은 여기서 재현 불가). PASS 아님"
+else
+  MUT="$TMP/mutant.sh"
+  python3 - "$S" "$MUT" <<'PY'
+import io,sys,re
+src=io.open(sys.argv[1],encoding='utf-8').read()
+new,_n=re.subn(
+  r'  local _tracks_state\n  case "\$untracked_tracks" in\n.*?\n  esac\n'
+  r'  add_row evidence\.tracks EVIDENCE "\$_tracks_state" \\\n',
+  '  add_row evidence.tracks EVIDENCE \\\\\n'
+  '    "$(case "$untracked_tracks" in\n'
+  "         UNMEASURABLE) printf 'UNMEASURED' ;;\n"
+  "         0) printf 'ABSENT' ;;\n"
+  "         *) printf 'PRESENT' ;;\n"
+  '       esac)" \\\n',
+  src, flags=re.S)
+# 🟥 치환이 «정확히 한 번» 일어났는지 못박는다. 횟수를 안 보면, 형식이 조금 바뀌어 정규식이
+#    빗나가도 원본이 그대로 뮤턴트로 복사되고 레인은 엉뚱한 산출물을 잰다.
+if _n != 1:
+    sys.stderr.write("SUBN=%d\n" % _n); sys.exit(3)
+io.open(sys.argv[2],'w',encoding='utf-8').write(new)
+PY
+  _mutrc=$?
+  if [ "$_mutrc" -ne 0 ]; then
+    _no "계기 오류 — 뮤턴트 치환이 정확히 1회가 아니었다(rc=$_mutrc). 이 팔은 공허했을 것"
+  elif ! grep -q '\$(case' "$MUT" 2>/dev/null; then
+    _no "계기 오류 — 뮤턴트에 \$(case) 가 안 들어갔다. 이 팔은 공허하게 통과했을 것"
+  elif ! "$_B3" -n "$MUT" 2>/dev/null; then
+    _no "계기 오류 — 뮤턴트가 파싱조차 안 된다. 그 침묵은 아무 뜻이 없다"
+  else
+    # L9 과 **같은 판정식**을 쓴다 — 프로브가 다른 잣대로 재면 L9 을 앵커한 게 아니다.
+    _tm="$("$_B3" "$MUT" --tsv 2>/dev/null)"
+    _badm="$(printf '%s\n' "$_tm" | awk -F'\t' 'NR>1 && NF>=3 && $3!="PRESENT" && $3!="ABSENT" && $3!="UNMEASURED" {print $1}')"
+    if [ -n "$_badm" ]; then _ok
+    else _no "뮤턴트가 닫힌 집합 안의 상태만 냈다 — L9 이 이 결함에 결박돼 있지 않다"; fi
+  fi
+fi
+
 echo "── $([ "$fail" -eq 0 ] && echo 'all lanes ok' || echo 'FAILURES above') ──"
 exit "$fail"
