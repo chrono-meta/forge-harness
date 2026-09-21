@@ -15,7 +15,9 @@ pptx 편집 스크립트가 `assert len(paras) == 3` 에서 죽었는데 **뒤�
 
     ① 후보가 실재하고 비어 있지 않은가
     ② 열리는 zip 인가 · `testzip()` 이 통과하는가 (잘린 파일이 여기서 걸린다)
-    ③ pptx 필수 부품이 있는가 (`[Content_Types].xml` · `ppt/presentation.xml` · 그 .rels)
+    ③ pptx 필수 부품이 있는가 (`[Content_Types].xml` · `ppt/presentation.xml` · 그 .rels
+       · **`docProps/app.xml`** — 2026-09-21 추가. 없으면 §F5 정합검사와 `ooxml/gate.py` 가
+       대상을 잃는다. 정본 v1.4 가 이 구멍으로 들어갔다)
     ④ 장 수가 **기존본보다 줄지 않았는가** — 🟥 이것이 그 사고를 잡는 줄이다
     ⑤ `ppt/slides/*.xml` 파일 수 · `sldIdLst` 항목 수 · **rels 로 실제 닿는 서로 다른 슬라이드 수**
        가 **셋 다 같은가** (목록만 잘린 형태 · 같은 장을 두 번 가리키는 형태 · 끊긴 rels 를 잡는다)
@@ -60,7 +62,18 @@ try:
 except Exception:                                    #    실제 파서를 오라클로 세우고, 내 계수는 그것과 «맞아야 하는» 두 번째 제공자로 둔다.
     _Presentation = None
 
-REQUIRED = ('[Content_Types].xml', 'ppt/presentation.xml', 'ppt/_rels/presentation.xml.rels')
+# 🟥 2026-09-21 추가: `docProps/app.xml`.
+#    이 줄이 없어서 **정본 v1.4 가 app.xml 없이 설치됐다.** 파급이 둘이다 —
+#    ① 체크리스트 §F5(«app.xml ↔ 실제 파트 수 정합»)가 검사할 대상 자체를 잃는다.
+#    ② `ooxml/gate.py` 가 그 파트를 읽다 죽어서 **한 줄도 검사 못 한 상태로 rc=1(발견)** 을 냈다.
+#    떨어뜨리는 주체는 대개 python-pptx 재저장이다(부품을 통짜로 다루다 흘린다).
+#    ⇒ 설치 시점에 잡는다. 이 표면은 비가역이라 fail-closed 가 맞다
+#      (CLAUDE.md §Irreversibility Gates).
+#    ⚠️ 부작용을 숨기지 않는다: **python-pptx 로 재저장한 덱은 이 게이트를 못 넘는다.**
+#      그게 의도다 — 넘겼기 때문에 v1.4 가 정본이 됐다. 굽기 파이프라인이 app.xml 을
+#      되살리도록 고치는 것이 처방이고, 이 게이트는 그 처방을 강제하는 자리다.
+REQUIRED = ('[Content_Types].xml', 'ppt/presentation.xml', 'ppt/_rels/presentation.xml.rels',
+            'docProps/app.xml')
 SLIDE_RE = re.compile(r'^ppt/slides/slide\d+\.xml$')
 
 
@@ -74,7 +87,13 @@ def probe_bytes(data):
         names = set(z.namelist())
         missing = [r for r in REQUIRED if r not in names]
         if missing:
-            raise ValueError(f'pptx 필수 부품 없음: {missing}')
+            hint = ''
+            if 'docProps/app.xml' in missing:
+                hint = (' — 🟥 app.xml 은 python-pptx 재저장이 흘리는 단골이다. '
+                        '이게 없으면 §F5 정합검사와 ooxml/gate.py 가 **대상 자체를 잃는다**. '
+                        '굽기 파이프라인에서 되살려라(원본 app.xml 을 그대로 보존하거나, '
+                        '장 수·노트 수·TitlesOfParts 를 맞춰 다시 써 넣는다)')
+            raise ValueError(f'pptx 필수 부품 없음: {missing}{hint}')
         files = sorted(n for n in names if SLIDE_RE.match(n))
         pres = z.read('ppt/presentation.xml').decode('utf-8', 'replace')
         lst = re.search(r'<p:sldIdLst\b[^>]*>(.*?)</p:sldIdLst>', pres, re.S)
