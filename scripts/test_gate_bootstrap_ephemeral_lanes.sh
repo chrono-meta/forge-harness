@@ -124,5 +124,31 @@ if [ "$LOC_OK" = 1 ]; then
   fi
 else echo "  ⏭️  L10 SKIP (L1 컨트롤 미성립)"; fi
 
+# ── L11 — 절대경로로 잡힌 같은 훅은 WIRED 다 (과차단 회귀) ─────────────────────
+#   실측 2026-09-21(운영자 맥): `core.hooksPath` 가 `/…/templates/.git-hooks` 로 잡혀 있으면
+#   문자열 비교가 «다른 값» 으로 읽어 BLOCK=1 을 냈다. 같은 디렉터리인데 표기만 달랐다.
+#   절대경로는 이 레포가 문서로 인정하는(그리고 워크트리 우회가 없는) 설정이라 과차단이다.
+D=$(mkfix abswired); git -C "$D" config --local core.hooksPath "$D/templates/.git-hooks"
+A_OUT=$(cd "$D" && bash "$SUBJ" --check 2>&1)
+n=$((n+1))
+if printf '%s' "$A_OUT" | grep -q "✅ WIRED"; then
+  ok "L11 절대경로로 잡힌 같은 훅 → WIRED (과차단 없음)"
+else
+  bad "L11 절대경로 형태가 WIRED 로 안 읽힌다 — 같은 디렉터리인데 과차단이다"
+fi
+
+# ── L11b — 알려진 음성: **진짜 다른** 훅 디렉터리는 종전대로 건드리지 않는다 ──────
+#   L11 이 «무엇이든 WIRED 라고 말하는» 완화가 아님을 보인다. 이 팔이 없으면 L11 은
+#   가드를 통째로 무력화해도 초록이다.
+D2=$(mkfix absforeign); mkdir -p "$D2/other-hooks"
+git -C "$D2" config --local core.hooksPath "$D2/other-hooks"
+F_OUT=$(cd "$D2" && bash "$SUBJ" --check 2>&1)
+n=$((n+1))
+if printf '%s' "$F_OUT" | grep -q "다른 값이 잡혀 있다"; then
+  ok "L11b 알려진 음성 — 진짜 다른 훅 디렉터리는 여전히 ⚠️ 로 남는다"
+else
+  bad "L11b 다른 훅 디렉터리까지 WIRED 로 읽는다 — 가드가 무력화됐다"
+fi
+
 echo "── $n lanes · $([ "$fail" = 0 ] && echo 'ALL PASS' || echo 'FAIL') ──"
 exit "$fail"

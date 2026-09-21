@@ -113,8 +113,16 @@ echo ""
 
 # ── ① ENFORCE — 훅이 배선돼 있나 ─────────────────────────────────────────────
 CUR="$(git config --local core.hooksPath 2>/dev/null || true)"
+# 🟥 문자열 비교만 하면 **같은 훅을 절대경로로 잡아 둔 체크아웃**이 「남의 값」으로 읽혀
+#    BLOCK=1 을 받는다(2026-09-21 운영자 맥에서 실측 — `/Users/…/templates/.git-hooks` 가
+#    `templates/.git-hooks` 와 같은 디렉터리인데 ⚠️ 분기를 탔다). 절대경로 형태는 이 레포가
+#    문서로 인정하는 설정이고(`CLAUDE.md` — 워크트리 우회가 없는 **더 안전한** 쪽이다),
+#    그것을 「미배선」으로 렌더하면 과차단이라 override 를 훈련시킨다.
+#    ⇒ 표기가 아니라 **가리키는 디렉터리**로 비교한다. 진짜 다른 훅 디렉터리는 종전대로 ⚠️.
+_same_dir() { [ -n "$1" ] && [ -n "$2" ] && [ -d "$1" ] && [ -d "$2" ] \
+              && [ "$(cd "$1" 2>/dev/null && pwd -P)" = "$(cd "$2" 2>/dev/null && pwd -P)" ]; }
 echo "① ENFORCE  core.hooksPath"
-if [ "$CUR" = "$HOOKSRC" ]; then
+if [ "$CUR" = "$HOOKSRC" ] || _same_dir "$CUR" "$HOOKSRC"; then
   echo "   ✅ WIRED — $CUR"
 elif [ -n "$CUR" ]; then
   echo "   ⚠️  다른 값이 잡혀 있다: $CUR"
