@@ -529,6 +529,39 @@ else
   fail=1
 fi
 
+# locale-invariance — 같은 마커를 두 로케일에서 읽었을 때 판정이 같은가. 훅의 비공허성 바닥과
+# 「①영혼 복붙」 검출이 `LC_CTYPE` 에 의존했다(2026-09-21, 갓 클론한 컨테이너에서 실측: 마커
+# 레인 22건이 `LC_ALL` 만으로 뒤집혔고, 방향이 과차단·무음침묵·fail-OPEN 셋이었다).
+# 🟥 UTF-8 로케일이 없는 기계에서는 rc=2 다 — 대조군 없는 초록은 측정이 아니므로 FAIL 로 센다.
+if [ ! -f scripts/test_locale_invariance_lanes.sh ]; then
+  echo "FAIL  locale-invariance lanes: scripts/test_locale_invariance_lanes.sh 가 없다 (부재는 통과가 아니다)"
+  fail=1
+elif ! bash scripts/test_locale_invariance_lanes.sh >/dev/null 2>&1; then
+  echo "FAIL  locale-invariance lanes"
+  fail=1
+fi
+
+# multibyte-bracket lint — 열거로는 안 닫힌다. POSIX 브래킷은 비-UTF-8 로케일에서 바이트
+# 집합이 되고, 방향은 자리마다 다르다(2026-09-21 실측: fail-OPEN 둘 · 과차단 하나).
+# 전수를 세려던 첫 계기가 11 중 1 을 놓쳤기 때문에 사람의 열거도 자동 열거도 믿지 않는다.
+# 린트는 매 호출마다 known-pair 로 자가검정하고 그게 안 갈리면 rc=2 로 죽는다 — 여기서는 둘 다 FAIL 이다.
+if [ ! -f scripts/multibyte_bracket_lint.sh ]; then
+  echo "FAIL  multibyte-bracket lint: scripts/multibyte_bracket_lint.sh 가 없다 (부재는 통과가 아니다)"
+  fail=1
+elif ! bash scripts/multibyte_bracket_lint.sh >/dev/null 2>&1; then
+  echo "FAIL  multibyte-bracket lint (게이트 파일의 브래킷 안에 멀티바이트, 또는 자가검정 실패)"
+  fail=1
+fi
+# 그리고 린트 자신의 앵커. 내장 `_calibrate` 는 린트 파일 안에 살아서 정규식이 약해져도
+# 자기 픽스처는 통과할 수 있다 — 이 스위트는 **실물 훅의 사본을 되돌려** 잡히는지를 본다.
+if [ ! -f scripts/test_multibyte_bracket_lint_lanes.sh ]; then
+  echo "FAIL  multibyte-bracket lint lanes: scripts/test_multibyte_bracket_lint_lanes.sh 가 없다 (부재는 통과가 아니다)"
+  fail=1
+elif ! bash scripts/test_multibyte_bracket_lint_lanes.sh >/dev/null 2>&1; then
+  echo "FAIL  multibyte-bracket lint lanes"
+  fail=1
+fi
+
 # package-coverage — a shipped doc must not point at a file the tarball omits. Distinct from the
 # ref-path check below: that one asks "does this path exist at all", this one asks "does the
 # CONSUMER get it". Measured 2026-07-28: 35 paths existed, were named by a shipped doc, and were
@@ -1417,6 +1450,22 @@ else
     fail=1
   else
     echo "PASS  daily_report --self-test (10 lanes)"
+  fi
+fi
+
+# governor_board — 거버너/워크트리/계열 판. 자기검사 24 레인(known-pair 중심).
+# 🟥 이 계기의 핵심 known-pair 는 «마커 있음 → 계열이 나온다» ↔ «마커 없음 → 미측정» 이다.
+#    그 둘이 같은 글자로 나오면 판은 측정이 아니라 생성이고, 사람이 그걸 읽고 판단한다.
+#    subject 있는데 anchor 없으면 FAIL 이지 skip 이 아니다.
+if [ ! -f scripts/governor_board.sh ]; then
+  _absent_subject_verdict "governor_board --self-test" "scripts/governor_board.sh" || fail=1
+else
+  if ! bash scripts/governor_board.sh --self-test >/dev/null 2>&1; then
+    echo "FAIL  governor_board --self-test"
+    bash scripts/governor_board.sh --self-test 2>&1 | grep '❌' | head -5
+    fail=1
+  else
+    echo "PASS  governor_board --self-test (24 lanes)"
   fi
 fi
 

@@ -128,10 +128,26 @@ self_test() {
   else chk "L1-CTRL 어제 ≠ 오늘 (오프셋이 실제로 먹었다)" same diff; fi
 
   # 픽스처 레포 — 실제 커밋을 만들어 집계가 «잡는지» 본다(빈 레포로는 아무것도 증명 못 한다)
+  # 🟥 신원은 `git config` 로 못 고정한다 — `GIT_AUTHOR_*` **환경변수가 repo config 를 이긴다**,
+  #    그리고 자동화 환경(클라우드 세션·CI 러너)은 그것을 **미리 export 해 둔다**. 실측
+  #    2026-09-21, 갓 클론한 컨테이너: 이 픽스처의 커밋이 `me <me@t>` 가 아니라 그 환경의
+  #    신원으로 찍혀 L2 known-positive 가 miss 를 냈다. 그러면 known-negative(L3)는 **여전히
+  #    초록**이다 — 아무것도 안 잡히면 「다른 author 는 안 잡는다」도 참이기 때문이다. 즉
+  #    known-positive 하나가 없었으면 죽은 계기가 조용히 8/8 을 냈다. 명시적으로 덮어쓴다.
   mkdir -p "$T/projects/demo" && ( cd "$T/projects/demo" && git init -q . \
     && git config user.email me@t && git config user.name me \
-    && echo x > a.txt && git add a.txt && GIT_AUTHOR_DATE="$y 12:00:00" \
+    && echo x > a.txt && git add a.txt \
+    && GIT_AUTHOR_NAME=me GIT_AUTHOR_EMAIL=me@t \
+       GIT_COMMITTER_NAME=me GIT_COMMITTER_EMAIL=me@t \
+       GIT_AUTHOR_DATE="$y 12:00:00" \
        GIT_COMMITTER_DATE="$y 12:00:00" git commit -qm "fixture: 어제 커밋" ) >/dev/null 2>&1
+  # 계기 교정 — 픽스처가 의도한 신원으로 찍혔나. 안 찍혔으면 아래 L2/L4b 는 «회귀»가 아니라
+  #    «계기 오류»다. 둘을 같은 ❌ 로 내면 읽는 쪽이 원인을 틀린 데서 찾는다.
+  if [ "$(git -C "$T/projects/demo" log -1 --format='%ae' 2>/dev/null)" != "me@t" ]; then
+    echo "  ❌ L0 계기 오류 — 픽스처 커밋의 author 를 고정하지 못했다 (GIT_AUTHOR_* 가 덮였다)."
+    echo "     🟥 아래 known-positive 의 miss 는 회귀가 아니라 미측정이다."
+    F=$((F+1))
+  fi
   local got; got="$(repo_commits "$T/projects/demo" "$y" "me@t")"
   case "$got" in *"fixture: 어제 커밋"*) chk "L2 known-positive: 어제 커밋을 잡는다" hit hit ;;
                  *)                      chk "L2 known-positive: 어제 커밋을 잡는다" miss hit ;; esac
