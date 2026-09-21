@@ -526,6 +526,15 @@ elif ! bash scripts/multibyte_bracket_lint.sh >/dev/null 2>&1; then
   echo "FAIL  multibyte-bracket lint (게이트 파일의 브래킷 안에 멀티바이트, 또는 자가검정 실패)"
   fail=1
 fi
+# 그리고 린트 자신의 앵커. 내장 `_calibrate` 는 린트 파일 안에 살아서 정규식이 약해져도
+# 자기 픽스처는 통과할 수 있다 — 이 스위트는 **실물 훅의 사본을 되돌려** 잡히는지를 본다.
+if [ ! -f scripts/test_multibyte_bracket_lint_lanes.sh ]; then
+  echo "FAIL  multibyte-bracket lint lanes: scripts/test_multibyte_bracket_lint_lanes.sh 가 없다 (부재는 통과가 아니다)"
+  fail=1
+elif ! bash scripts/test_multibyte_bracket_lint_lanes.sh >/dev/null 2>&1; then
+  echo "FAIL  multibyte-bracket lint lanes"
+  fail=1
+fi
 
 # package-coverage — a shipped doc must not point at a file the tarball omits. Distinct from the
 # ref-path check below: that one asks "does this path exist at all", this one asks "does the
