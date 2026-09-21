@@ -105,6 +105,33 @@ Because non-Claude runtimes do not auto-load Claude path rules, apply these rule
    Anchors the check accepts: a URL · arXiv/DOI · `WebSearch`/`WebFetch` · `출처` · `원문 확인` ·
    `서베이`. Override is `FH_NOVELTY_OK=1`, and it appends to `tracks/_meta/.novelty_override_log`.
    ⚠️ The check sees only that an anchor **exists**, never that it supports the claim.
+1-b. **Before you trust the gate at all: check that this checkout is WIRED.** 🟥 Every "the hook
+   blocks this" sentence in `CLAUDE.md` and in item 1 above is true **only in a checkout where
+   `core.hooksPath` points at `templates/.git-hooks`.** Git tracks the hook files; it does **not**
+   carry that config value. Measured 2026-09-21, same commit, two checkouts: **15 layers compared,
+   only 4 READ layers matched — all 11 ENFORCE/EVIDENCE/PATTERN layers were opposite.** The same
+   commit passed silently in one and was blocked by Axis 2+3 in the other; what differed was the
+   wiring, not the code.
+   🟥 **The dangerous direction is the quiet one**: a gate that PASSED and a gate that NEVER RAN
+   print the same thing — nothing. A third direction is quieter still: with the pattern layer
+   absent the confidentiality scan still runs and still goes green, while company-name and
+   real-name classes are simply `UNSCANNED`.
+
+   ```
+   bash scripts/env_layer_fingerprint.sh          # PRESENT/ABSENT/UNMEASURED per layer, no values
+   bash scripts/gate_bootstrap_ephemeral.sh --check   # rc=1 while anything is missing
+   bash scripts/gate_bootstrap_ephemeral.sh --apply   # wires hooksPath + UTF-8 locale
+   ```
+
+   Three things are needed and only two are mechanizable: ⓐ the `core.hooksPath` wiring ⓑ a
+   **UTF-8 locale** (under `LC_CTYPE=POSIX` all four non-vacuity legs of an honest Korean marker
+   are rejected as "vacuous" — over-blocking, the opposite failure) ⓒ the two gitignored evidence
+   files, which **a human writes**. 🟥 The bootstrap script deliberately does **not** create
+   markers — auto-generating evidence is closing the gate with a forgery.
+   ⚠️ `scripts/fh_node_check.sh` cannot warn you here: it travels the same gitignored channel as
+   the `settings*.json` it would read, so on an unwired node the detector is absent too.
+   Detail: `knowledge/shared/harness-core/checkout_layer_drift.md` §8.
+
 2. **Company residency:** raw company source, secrets, hostnames, internal names, stack traces, and
    unredacted findings never leave the local machine, including to same-family cloud models. Only a
    sanitized summary may leave; exceptions require explicit operator approval and a gitignored note.
