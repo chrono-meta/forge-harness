@@ -515,6 +515,18 @@ elif ! bash scripts/test_locale_invariance_lanes.sh >/dev/null 2>&1; then
   fail=1
 fi
 
+# multibyte-bracket lint — 열거로는 안 닫힌다. POSIX 브래킷은 비-UTF-8 로케일에서 바이트
+# 집합이 되고, 방향은 자리마다 다르다(2026-09-21 실측: fail-OPEN 둘 · 과차단 하나).
+# 전수를 세려던 첫 계기가 11 중 1 을 놓쳤기 때문에 사람의 열거도 자동 열거도 믿지 않는다.
+# 린트는 매 호출마다 known-pair 로 자가검정하고 그게 안 갈리면 rc=2 로 죽는다 — 여기서는 둘 다 FAIL 이다.
+if [ ! -f scripts/multibyte_bracket_lint.sh ]; then
+  echo "FAIL  multibyte-bracket lint: scripts/multibyte_bracket_lint.sh 가 없다 (부재는 통과가 아니다)"
+  fail=1
+elif ! bash scripts/multibyte_bracket_lint.sh >/dev/null 2>&1; then
+  echo "FAIL  multibyte-bracket lint (게이트 파일의 브래킷 안에 멀티바이트, 또는 자가검정 실패)"
+  fail=1
+fi
+
 # package-coverage — a shipped doc must not point at a file the tarball omits. Distinct from the
 # ref-path check below: that one asks "does this path exist at all", this one asks "does the
 # CONSUMER get it". Measured 2026-07-28: 35 paths existed, were named by a shipped doc, and were

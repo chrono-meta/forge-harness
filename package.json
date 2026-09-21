@@ -265,6 +265,7 @@
     "scripts/test_lane_runner_lanes.sh",
     "scripts/test_leak_scan_control_lanes.sh",
     "scripts/test_listing_watch_lanes.sh",
+    "scripts/multibyte_bracket_lint.sh",
     "scripts/test_locale_invariance_lanes.sh",
     "scripts/test_map_postprocess_lanes.sh",
     "scripts/test_mapped_tracks_lanes.sh",
