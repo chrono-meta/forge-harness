@@ -2102,7 +2102,16 @@ DEGRADED_SINGLE_FAMILY|DEGRADED_PANEL_UNUSED|DEGRADED_NO_TARGET_ACCESS|DEGRADED_
                    f && /^[[:space:]]*$/{exit}
                    f && seen && /^[[:space:]]*[A-Za-z][A-Za-z0-9_-]*:/{exit}
                    f{print; seen=1}' "$m" 2>/dev/null \
-              | sed -E '1s/^[[:space:]]*(①영혼|soul)[^[:alnum:]«]*//')
+              | sed -E '1s/^[[:space:]]*(①영혼|soul)([[:space:]]*(:|—|-))*[[:space:]]*//')
+  # 🟥 2026-09-21 — 위 strip 은 `[^[:alnum:]«]*` 였다. `[:alnum:]` 은 `LC_CTYPE=POSIX` 에서
+  #    **ASCII 전용**이라, 「«」 도 ASCII 영숫자도 없는 **순한글 ①영혼 줄**이 부정 클래스에
+  #    통째로 먹혀 soul_body 가 빈 문자열이 됐다. 방향이 둘이다 — 정상 한글 마커가 차단되고
+  #    (ⓐ), 영혼 줄이 멀쩡히 있는데 `DEGRADED_NO_SOUL` 을 적은 거짓 주장이 통과한다(ⓒ).
+  #    측정된 known pair: 순한글 본문 `LC_ALL=POSIX` → 0 낱말 / `C.UTF-8` → 8, 같은 바이트를
+  #    ASCII 로 쓴 컨트롤은 두 로케일 모두 6. ⇒ 구분자를 **교차**로 적어 바이트 집합 퇴화를
+  #    피한다. UTF-8 기계에서는 실제 마커 형태 전부에서 옛 식과 같은 수를 낸다(문턱값 불변).
+  #    🟥 이 결함은 위 낱말 세기 수리 **뒤에야 관측 가능하다** — 그 전에는 셈법이 먼저
+  #    죽어서 어느 쪽 원인인지 갈리지 않았다. 앵커: test_locale_invariance_lanes.sh L11.
   soul_words=$(printf '%s\n' "$soul_body" | tr -s ' \t\n' '\n' | LC_ALL=C grep -c '.')
   soul_words=${soul_words:-0}
 
@@ -2272,7 +2281,15 @@ validate_first_use_leg() { # $1 = marker path
     echo "     읽는 사람과 기계가 같은 값을 보지 않는다. 한 줄에 한 번만 적어라."
     return 1
   fi
-  e_val=$(printf '%s' "$line" | sed -n 's/.*[[:space:]]ⓔ=\([^ⓕ]*\).*/\1/p' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+  # 🟥 2026-09-21 — 포착식은 `[^ⓕ]*` 였다. 브래킷 안의 「ⓕ」는 `LC_CTYPE=POSIX` 에서
+  #    **바이트 집합 {E2,93,95}** 이라, ⓔ 값이 E2 로 시작하면(`→…` · `①…` · 한글) 포착이
+  #    빈 문자열이 되고 바로 아래 `''|none|…` 가지에 걸려 **채워진 필드가 «none» 으로 차단**된다.
+  #    하필 fh_4axis_gate.md 가 권하는 포인터 형태와 `shadow(...)` 앞의 화살표가 그 모양이다.
+  #    측정된 known pair: `ⓔ=→shadow(N=3, F=2)` → POSIX `[]` / UTF-8 `[→shadow(N=3, F=2)]`,
+  #    ASCII 컨트롤 `ⓔ=shadow(...)` 는 두 로케일 모두 포착된다. ⇒ 브래킷을 버리고 리터럴
+  #    「ⓕ」로 자른다(리터럴은 바이트열 그대로 맞으므로 로케일 무관). `-n` 의 «맞을 때만
+  #    출력» 의미는 주소 블록으로 보존한다. 앵커: test_locale_invariance_lanes.sh L12.
+  e_val=$(printf '%s' "$line" | sed -E -n '/[[:space:]]ⓔ=/{ s/.*[[:space:]]ⓔ=//; s/ⓕ.*//; p; }' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
   case "$e_val" in
     ''|none|None|NONE|-)
       echo "  ❌ MARKER — 이 커밋은 **새 계기를 추가**하는데 'axes-run' 의 ⓔ(첫 실사용)이 'none' 이다."

@@ -188,6 +188,96 @@ else
   else _no "POSIX rc=$o_posix UTF8 rc=$o_utf8 — 고친 훅이 복붙을 두 로케일에서 똑같이 막지 못한다"; fi
 fi
 
+# ── L11 — `soul-check` 의 ①영혼 본문 추출 (`[^[:alnum:]«]*`) ─────────────────────
+#    🟥 이 자리는 **낱말 세기를 고친 뒤에야 관측 가능하다** — 그 전에는 셈법이 먼저 죽어서
+#    어느 쪽이 원인인지 안 갈렸다. `[:alnum:]` 은 POSIX 에서 ASCII 전용이라, 「«」 도 ASCII
+#    영숫자도 없는 **순한글 ①영혼 줄**이 부정 클래스에 통째로 먹힌다. 방향이 둘이다.
+#    ⚠️ 위 L3+ 의 `test_marker_soul_check_lanes` 는 이것을 **구조적으로 못 본다**: 그 스위트의
+#    영혼 픽스처가 `«` 와 `rc=0` 을 달고 있어 부정 클래스가 거기서 멈춘다. 픽스처 자신의
+#    구두점이 결함을 가리는 자리라, 「«」 도 ASCII 도 없는 팔을 여기 따로 세운다.
+_SC_KO='①영혼: 성공 정의는 이것이고 절대 안 하는 것은 저것이다'
+_SC_EN='①영혼: success means this and the thing never done is that'
+_sc_fns() { # $1 = 훅(또는 변이체) 경로 → $2 에 함수 둘을 뽑는다
+  sed -n '/^_marker_template_residue()/,/^}/p' "$1" >  "$2"
+  sed -n '/^validate_soul_check_leg()/,/^}/p'  "$1" >> "$2"
+}
+_sc_rc() { # $1=함수파일 $2=로케일 $3=영혼줄 $4=soul-check 값 → rc
+  printf '%s\nsoul-check: %s\n' "$3" "$4" > "$T/sc.marker"
+  LC_ALL="$2" bash -c 'set -uo pipefail; . "$1"; validate_soul_check_leg "$2"' \
+    _ "$1" "$T/sc.marker" >/dev/null 2>&1; echo $?
+}
+_SC_OK='reflected(되돌아본 결과 어긋남 없다 두 절반 모두 지켰다)'
+_SC_OK_EN='reflected(read it back and nothing drifted both halves held)'
+_SC_LIE='DEGRADED_NO_SOUL(영혼 줄이 없어서 대조를 못 했다)'
+_SC_LIE_EN='DEGRADED_NO_SOUL(no soul line present so nothing to reflect against)'
+
+_sc_fns "$HOOK" "$T/fn_sc_now.sh"
+_t "L11 지금의 훅 — 순한글 ①영혼 이 두 로케일에서 같은 판정"
+a=$(_sc_rc "$T/fn_sc_now.sh" POSIX   "$_SC_KO" "$_SC_OK")
+b=$(_sc_rc "$T/fn_sc_now.sh" "$UTF8" "$_SC_KO" "$_SC_OK")
+c=$(_sc_rc "$T/fn_sc_now.sh" POSIX   "$_SC_KO" "$_SC_LIE")
+d=$(_sc_rc "$T/fn_sc_now.sh" "$UTF8" "$_SC_KO" "$_SC_LIE")
+if [ "$a" = "$b" ] && [ "$c" = "$d" ] && [ "$a" = "0" ] && [ "$c" = "1" ]; then _ok
+else _no "정상=$a/$b (0/0 이어야) · 거짓DEGRADED=$c/$d (1/1 이어야) — 판정이 로케일을 탄다"; fi
+
+_t "L11b 컨트롤 — ASCII 본문은 원래부터 두 로케일에서 같다"
+e=$(_sc_rc "$T/fn_sc_now.sh" POSIX   "$_SC_EN" "$_SC_OK_EN")
+f=$(_sc_rc "$T/fn_sc_now.sh" "$UTF8" "$_SC_EN" "$_SC_OK_EN")
+g=$(_sc_rc "$T/fn_sc_now.sh" POSIX   "$_SC_EN" "$_SC_LIE_EN")
+h=$(_sc_rc "$T/fn_sc_now.sh" "$UTF8" "$_SC_EN" "$_SC_LIE_EN")
+if [ "$e" = "0" ] && [ "$f" = "0" ] && [ "$g" = "1" ] && [ "$h" = "1" ]; then _ok
+else _no "ASCII 팔이 $e/$f/$g/$h — 픽스처나 레그가 원래 나쁘다(L11 의 원인이 로케일이 아니다)"; fi
+
+# L11c 되돌림 — `[^[:alnum:]«]*` 로 되돌리면 **네 칸이 갈려야** 한다(과차단 + fail-open).
+_SC_NEW="(①영혼|soul)([[:space:]]*(:|—|-))*[[:space:]]*//')"
+_SC_OLD="(①영혼|soul)[^[:alnum:]«]*//')"
+_lit_replace "$HOOK" "$_SC_NEW" "$_SC_OLD" > "$T/mut_sc.sh"
+if ! grep -q '\[\^\[:alnum:\]«\]' "$T/mut_sc.sh"; then
+  _t "L11c 되돌림 (alnum 브래킷)"; _no "변이가 안 먹었다 — 훅의 대체 형태가 바뀌었다"
+else
+  _sc_fns "$T/mut_sc.sh" "$T/fn_sc_old.sh"
+  _t "L11c 되돌림 — 옛 형태는 POSIX 에서 과차단하고 거짓 DEGRADED 를 흘린다"
+  ra=$(_sc_rc "$T/fn_sc_old.sh" POSIX   "$_SC_KO" "$_SC_OK")   # 기대 1 (과차단)
+  rb=$(_sc_rc "$T/fn_sc_old.sh" "$UTF8" "$_SC_KO" "$_SC_OK")   # 기대 0
+  rc=$(_sc_rc "$T/fn_sc_old.sh" POSIX   "$_SC_KO" "$_SC_LIE")  # 기대 0 (fail-open)
+  rd=$(_sc_rc "$T/fn_sc_old.sh" "$UTF8" "$_SC_KO" "$_SC_LIE")  # 기대 1
+  if [ "$ra" = "1" ] && [ "$rb" = "0" ] && [ "$rc" = "0" ] && [ "$rd" = "1" ]; then _ok
+  else _no "되돌렸는데 $ra/$rb/$rc/$rd (1/0/0/1 이어야) — 이 팔은 이빨이 없다"; fi
+fi
+
+# ── L12 — `axes-run` 의 ⓔ 값 포착 (`[^ⓕ]*`) ────────────────────────────────────
+#    브래킷 안의 「ⓕ」는 POSIX 에서 바이트 집합이라, ⓔ 값이 E2 로 시작하면(`→…`·한글) 포착이
+#    빈 문자열이 되고 **채워진 필드가 «none» 으로 차단**된다. 방향은 과차단 한쪽뿐이지만,
+#    하필 정본이 권하는 포인터 형태가 그 모양이라 실사용에서 바로 걸린다.
+#    🟥 포착식은 **훅에서 뽑아 쓴다** — 복사본을 두면 훅만 되돌아가도 이 레인이 초록으로 남는다.
+_E_EXPR=$(grep -m1 -o "sed -E -n '/\[\[:space:\]\]ⓔ=/{ s/\.\*\[\[:space:\]\]ⓔ=//; s/ⓕ\.\*//; p; }'" "$HOOK")
+if [ -z "$_E_EXPR" ]; then
+  _t "L12 ⓔ 포착 (훅에서 추출)"
+  echo "❌ HARNESS-ERROR — 훅에서 ⓔ 포착식을 못 찾았다. 훅이 되돌아갔거나 형태가 바뀌었다."
+  echo "   🟥 부재는 통과가 아니다."
+  exit 2
+fi
+_e_get() { # $1=로케일 $2=axes-run 줄
+  LC_ALL="$1" bash -c "printf '%s' \"\$1\" | $_E_EXPR | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*\$//'" _ "$2"
+}
+_E_MB='axes-run: ⓐ=none ⓑ=→standpoint ⓒ=none ⓓ=none ⓔ=→shadow(N=3, F=2) ⓕ=되돌림'
+_E_AS='axes-run: ⓐ=none ⓑ=→standpoint ⓒ=none ⓓ=none ⓔ=shadow(N=3, F=2) ⓕ=되돌림'
+_t "L12 지금의 훅 — 멀티바이트로 시작하는 ⓔ 값이 두 로케일에서 같게 잡힌다"
+m1=$(_e_get POSIX "$_E_MB"); m2=$(_e_get "$UTF8" "$_E_MB")
+if [ -n "$m1" ] && [ "$m1" = "$m2" ]; then _ok
+else _no "POSIX=[$m1] UTF8=[$m2] — 채워진 ⓔ 가 한쪽에서 빈칸으로 읽힌다(=«none» 으로 차단)"; fi
+
+_t "L12b 컨트롤 — ASCII 로 시작하는 ⓔ 값은 원래부터 같다"
+n1=$(_e_get POSIX "$_E_AS"); n2=$(_e_get "$UTF8" "$_E_AS")
+if [ -n "$n1" ] && [ "$n1" = "$n2" ]; then _ok
+else _no "ASCII 팔이 [$n1]/[$n2] — L12 의 원인이 로케일이 아니다(식이나 픽스처의 결함)"; fi
+
+_t 'L12c 되돌림 — `[^ⓕ]*` 로 되돌리면 POSIX 에서 빈칸이 된다'
+o1=$(LC_ALL=POSIX   sed -n 's/.*[[:space:]]ⓔ=\([^ⓕ]*\).*/\1/p' <<< "$_E_MB")
+o2=$(LC_ALL="$UTF8" sed -n 's/.*[[:space:]]ⓔ=\([^ⓕ]*\).*/\1/p' <<< "$_E_MB")
+if [ -z "$o1" ] && [ -n "$o2" ]; then _ok
+else _no "되돌렸는데 POSIX=[$o1] UTF8=[$o2] — 옛 식이 이 픽스처로 안 갈린다(이빨 확인 불가)"; fi
+
 if [ "$FAIL" -eq 0 ] && [ "$INSTRUMENT_INCOMPLETE" -eq 1 ]; then
   echo "── 회귀는 없다. 그러나 팔 하나 이상이 UNMEASURED 다 — rc=2 (계기 오류) ──"
   exit 2
