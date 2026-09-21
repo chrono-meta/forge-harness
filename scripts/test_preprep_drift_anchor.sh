@@ -76,13 +76,30 @@ else
   #    (고친 뒤 배포본에 반영 안 해도 앵커가 초록이었다). 「목록이 조용히 낡는다」의
   #    디렉터리판이고, D1 이 이미 같은 이유로 목록 박기를 버렸다.
   #    ⇒ 소스 트리에서 **재귀로** 뽑는다. 새 하위 디렉터리를 만들어도 자동으로 걸린다.
+  # 🟥 2026-09-22 — 범위가 «*.py» 뿐이라 **정본 41파일 중 15개(37%)를 아예 안 봤다.**
+  #    실측으로 드러났다: 배포본을 합류된 main 에서 다시 뽑으니 실제로 갈려 있던 파일이
+  #      fixtures/fixture_R3_negative.pptx  923b8f23…(25,278B) ↔ 3107ff54…(25,229B)
+  #      fixtures/fixture_R3_positive.pptx  64e8c545…(25,157B) ↔ 21d9d19a…(25,109B)
+  #    🟥 **R3 레인의 known-pair 짝 그 자체**다 — 배포본에서 R3 를 돌렸다면 틀린 짝으로
+  #    교정하고 있었다. 그런데 이 앵커는 여태 초록이었다.
+  #    사각의 구성: SKILL.md · presentation_checklist.md · README.md(스킬의 «행동») ·
+  #    surfaces/canon/jargon 예시 · c1_baseline.txt(판정 기준선) · fixtures/*.md ×6 ·
+  #    fixtures/*.pptx ×2(known-pair 의 짝). **문서·기준선·픽스처가 전부 그 안에 있었다.**
+  #    ⇒ 교리가 «사본이 둘이면 갈린다» 인데 «무엇이 사본인가» 가 확장자로 좁혀져 있었다.
+  #    바로 위 재귀 정정과 **같은 얼굴, 축만 다르다**(그땐 디렉터리, 이번엔 확장자).
+  # 🟥 **PASS 문구의 «출처 토큰을 괄호 맨 앞 + 뒤에 공백» 형태로 유지해라.** 레인 L4 는
+  #    「어느 출처가 이겼나」를 그 모양으로 잡는다. 2026-09-21 에 한 번 깨졌고(`· 하위 디렉터리
+  #    포함` 을 더하면서), 2026-09-22 에 내가 또 깼다 — 출처를 괄호 끝으로 옮겼더니 L4 가 적색.
+  #    문구를 바꿀 거면 L4 와 **같은 호출에서** 바꿔라. 레인을 코드에 맞추는 게 아니다.
+  # ⚠️ **한 방향이다** — 정본에 있는 것이 배포본에 같게 있나만 본다. 배포본 «전용» 파일
+  #    (surfaces.yaml 등 운영 설정)은 이 검사의 대상이 아니고, 초록이 그것들을 승인하지 않는다.
   drift=""; n=0
   while IFS= read -r f; do
     rel="${f#$SRC/}"; n=$((n+1))
     if [ ! -f "$DIST/$rel" ]; then drift="$drift $rel(부재)"
     elif ! cmp -s "$f" "$DIST/$rel"; then drift="$drift $rel(갈림)"; fi
-  done < <(find "$SRC" -name '*.py' -not -path '*/__pycache__/*' -not -path '*/.pytest_cache/*' | sort)
-  [ -z "$drift" ] && ok "D2 standalone python ${n}파일이 단일 소스와 바이트 동일 ($DIST_SRC · 하위 디렉터리 포함)" \
+  done < <(find "$SRC" -type f -not -path '*/__pycache__/*' -not -path '*/.pytest_cache/*' -not -name '*.pyc' | sort)
+  [ -z "$drift" ] && ok "D2 standalone ${n}파일이 단일 소스와 바이트 동일 ($DIST_SRC · 확장자 무관 · 하위 디렉터리 포함). 🟥 정본→배포본 한 방향이라 배포본 전용 파일은 이 초록의 대상이 아니다" \
                   || ng "D2 드리프트($n 중):$drift ⇒ 사본이 둘이 됐다. 단일 소스에서 다시 뽑아라"
 fi
 
