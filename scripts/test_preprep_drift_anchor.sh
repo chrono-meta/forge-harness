@@ -43,8 +43,11 @@ missing=""
 for f in SKILL.md README.md surfaces.example.yaml preprep.py; do
   [ -f "$SRC/$f" ] || missing="$missing $f"
 done
+# 🟥 D2 와 같은 범위여야 한다 — 한쪽만 재귀로 고치면 D1 이 «20파일»이라 말하고
+#    D2 가 «24파일»이라 말해서, 같은 대상에 대해 두 숫자가 나온다(반쪽 수리).
+PY_FILES=$(find "$SRC" -name '*.py' -not -path '*/__pycache__/*' -not -path '*/.pytest_cache/*' | sort)
 PYN=0
-for f in "$SRC"/*.py; do [ -f "$f" ] && PYN=$((PYN+1)); done
+for f in $PY_FILES; do [ -f "$f" ] && PYN=$((PYN+1)); done
 if [ -n "$missing" ]; then ng "D1 단일 소스 결손:$missing"
 elif [ "$PYN" -lt 5 ]; then
   ng "D1 python 파일이 $PYN 개뿐 — 스킬이 헐었거나 SRC 가 틀린 곳을 가리킨다"
@@ -52,9 +55,9 @@ elif ! command -v python3 >/dev/null 2>&1; then
   sk "D1 구문 검사 — python3 부재라 «돌 수 있나»를 못 쟀다(UNMEASURED)"
 else
   synerr=""
-  for f in "$SRC"/*.py; do
+  for f in $PY_FILES; do
     python3 -c "import ast,sys;ast.parse(open(sys.argv[1],encoding='utf-8').read())" "$f" 2>/dev/null \
-      || synerr="$synerr $(basename "$f")"
+      || synerr="$synerr ${f#$SRC/}"
   done
   [ -z "$synerr" ] && ok "D1 필수 문서 3 + preprep.py 실재 · python ${PYN}파일 전부 구문 통과(디렉터리에서 뽑음)" \
                    || ng "D1 구문 실패:$synerr"
@@ -68,13 +71,18 @@ elif [ ! -d "$DIST" ]; then
 else
   # 🟥 같은 정정 — 여기도 목록이 박혀 있었고, 게다가 **네 개를 돌면서 「5파일」이라고 출력**했다.
   #    라벨이 자기 루프에 대해서도 거짓말한 셈이라, 세는 것과 말하는 것을 한 변수로 묶는다.
+  # 🟥 2026-09-21 — 범위가 «$SRC/*.py» 뿐이라 **하위 디렉터리를 통째로 안 봤다.**
+  #    그 사각에 `ooxml/gate.py` 가 있고, 바로 그 파일을 고치는 세션이 이 구멍을 발견했다
+  #    (고친 뒤 배포본에 반영 안 해도 앵커가 초록이었다). 「목록이 조용히 낡는다」의
+  #    디렉터리판이고, D1 이 이미 같은 이유로 목록 박기를 버렸다.
+  #    ⇒ 소스 트리에서 **재귀로** 뽑는다. 새 하위 디렉터리를 만들어도 자동으로 걸린다.
   drift=""; n=0
-  for f in "$SRC"/*.py; do
-    b=$(basename "$f"); n=$((n+1))
-    if [ ! -f "$DIST/$b" ]; then drift="$drift $b(부재)"
-    elif ! cmp -s "$f" "$DIST/$b"; then drift="$drift $b(갈림)"; fi
-  done
-  [ -z "$drift" ] && ok "D2 standalone python ${n}파일이 단일 소스와 바이트 동일 ($DIST_SRC)" \
+  while IFS= read -r f; do
+    rel="${f#$SRC/}"; n=$((n+1))
+    if [ ! -f "$DIST/$rel" ]; then drift="$drift $rel(부재)"
+    elif ! cmp -s "$f" "$DIST/$rel"; then drift="$drift $rel(갈림)"; fi
+  done < <(find "$SRC" -name '*.py' -not -path '*/__pycache__/*' -not -path '*/.pytest_cache/*' | sort)
+  [ -z "$drift" ] && ok "D2 standalone python ${n}파일이 단일 소스와 바이트 동일 ($DIST_SRC · 하위 디렉터리 포함)" \
                   || ng "D2 드리프트($n 중):$drift ⇒ 사본이 둘이 됐다. 단일 소스에서 다시 뽑아라"
 fi
 
