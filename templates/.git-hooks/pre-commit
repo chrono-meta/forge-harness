@@ -2476,8 +2476,27 @@ validate_marker_floor() {
       # Rubber-stamp guard: the ack must contain a QUOTED operator utterance
       # ("..." or “…”, ≥2 chars). A bare reason is agent-self-writable; a quote
       # ties the ack to a conversational event auditable in the session record.
+      #
+      # 🟥 2026-09-21 — the curly-quote arm was `“[^”]{2,}”` and that bracket is the
+      # same locale defect as the two sites above. `”` is E2 80 9D; under a byte
+      # locale `[^”]` becomes «not E2, not 80, not 9D», and Korean syllables carry
+      # byte 80 as a continuation (`대` = EB 8C 80), so the negated class ends
+      # inside the quoted utterance and the closing `”` is never reached. Measured
+      # known pair on this machine, `below-floor-ack: “그대로 진행해” — 승인했다`
+      # → LC_ALL=POSIX BLOCK / LC_ALL=C.utf8 pass; the ASCII-quote control passes
+      # in both and the no-quote known-negative blocks in both, so the instrument
+      # discriminates and only the Korean arm moves. Same fairness shape as the
+      # word count: an operator utterance quoted in Korean typography reads as
+      # «no quote present» on a machine without a UTF-8 locale, while the English
+      # one passes. `.{2,}` carries no bracket, so both locales agree on every
+      # realistic input (`“”` and `“a”` still block in both).
+      # ⚠️ Named residual: under a byte locale the ≥2 is counted in BYTES, so a
+      # single Korean character (`“가”`, 3 bytes) satisfies it where UTF-8 rejects
+      # it — a one-character margin at a pathological input, and strictly narrower
+      # than today's blanket rejection of every Korean-quoted ack.
+      # Lane: scripts/test_locale_invariance_lanes.sh L13.
       if ! grep -m1 -E '^[[:space:]]*below-floor-ack:' "$m" \
-           | grep -qE '"[^"]{2,}"|“[^”]{2,}”'; then
+           | grep -qE '"[^"]{2,}"|“.{2,}”'; then
         echo "  ❌ BELOW-FLOOR ack without quoted operator utterance (rubber-stamp guard)"
         echo "     The ack line must quote the operator's approval verbatim:"
         echo "       below-floor-ack: \"<what the operator actually said>\" — <reason>"

@@ -278,6 +278,62 @@ o2=$(LC_ALL="$UTF8" sed -n 's/.*[[:space:]]ⓔ=\([^ⓕ]*\).*/\1/p' <<< "$_E_MB")
 if [ -z "$o1" ] && [ -n "$o2" ]; then _ok
 else _no "되돌렸는데 POSIX=[$o1] UTF8=[$o2] — 옛 식이 이 픽스처로 안 갈린다(이빨 확인 불가)"; fi
 
+# ── L13 — below-floor-ack 의 고무도장 가드 (`“[^”]{2,}”`) ──────────────────────
+#    같은 브래킷 클래스, 같은 방향(과차단), 그리고 같은 공정성 결함이다: 운영자 발화를
+#    **한글 따옴표로** 인용하면 LANG 없는 기계에서 «인용이 없다» 로 읽혀 막히고, 똑같은
+#    영어 인용은 통과한다. `”` = E2 80 9D 이고 한글 음절은 이어지는 바이트로 80 을 자주
+#    싣는다(`대` = EB 8C 80) — 그래서 부정 클래스가 인용 안에서 끝난다.
+#    🟥 레그는 **훅에서 통째로 뽑는다** — 식만 복사하면 훅이 되돌아가도 초록으로 남는다.
+_mf_fn() { sed -n '/^validate_marker_floor()/,/^}/p' "$1" > "$2"; }
+_mf_fn "$HOOK" "$T/fn_mf_now.sh"
+if ! grep -q 'rubber-stamp guard' "$T/fn_mf_now.sh"; then
+  _t "L13 고무도장 가드 (훅에서 추출)"
+  echo "❌ HARNESS-ERROR — validate_marker_floor 에서 고무도장 가드를 못 찾았다."
+  echo "   🟥 부재는 통과가 아니다."
+  exit 2
+fi
+_mf_v() { # $1=함수파일 $2=로케일 $3=ack 줄(빈 문자열 가능) → pass|BLOCK
+  { printf 'floor-status: below-floor\naxis2-engine: inline\n'
+    [ -n "$3" ] && printf '%s\n' "$3"; } > "$T/mf.marker"
+  # 🟥 파이프로 잃지 않는다 — `set -o pipefail` 이라 레그가 1 을 내면 파이프라인이
+  #    grep 의 성공과 무관하게 1 이 되어 **모든 칸이 pass 로 읽힌다**(실제로 당했다).
+  local _mf_out
+  _mf_out=$(LC_ALL="$2" bash -c 'set -uo pipefail; . "$1"; validate_marker_floor "$2"' \
+              _ "$1" "$T/mf.marker" 2>&1) || true
+  case "$_mf_out" in *'rubber-stamp guard'*) echo BLOCK ;; *) echo pass ;; esac
+}
+_MF_KO='below-floor-ack: “그대로 진행해” — 운영자가 승인했다'
+_MF_EN='below-floor-ack: "go ahead" — operator approved'
+_MF_NO='below-floor-ack: 운영자가 승인했다고 한다'
+
+_t "L13 지금의 훅 — 한글 따옴표 인용이 두 로케일에서 같은 판정"
+a=$(_mf_v "$T/fn_mf_now.sh" POSIX "$_MF_KO"); b=$(_mf_v "$T/fn_mf_now.sh" "$UTF8" "$_MF_KO")
+if [ "$a" = "pass" ] && [ "$b" = "pass" ]; then _ok
+else _no "POSIX=$a UTF8=$b — 한글로 인용한 운영자 발화가 한쪽에서만 막힌다"; fi
+
+_t "L13b 컨트롤 — ASCII 따옴표는 원래부터 두 로케일에서 같다"
+c=$(_mf_v "$T/fn_mf_now.sh" POSIX "$_MF_EN"); d=$(_mf_v "$T/fn_mf_now.sh" "$UTF8" "$_MF_EN")
+if [ "$c" = "pass" ] && [ "$d" = "pass" ]; then _ok
+else _no "ASCII 팔이 $c/$d — L13 의 원인이 로케일이 아니다(레그나 픽스처의 결함)"; fi
+
+_t "L13c 알려진 음성 — 인용이 아예 없으면 두 로케일 다 막는다"
+e=$(_mf_v "$T/fn_mf_now.sh" POSIX "$_MF_NO"); f=$(_mf_v "$T/fn_mf_now.sh" "$UTF8" "$_MF_NO")
+if [ "$e" = "BLOCK" ] && [ "$f" = "BLOCK" ]; then _ok
+else _no "인용 없는 ack 가 $e/$f — 가드가 풀렸다(고무도장이 통과한다)"; fi
+
+_t 'L13d 되돌림 — `“[^”]{2,}”` 로 되돌리면 POSIX 에서만 막힌다'
+_MF_NEW='"[^"]{2,}"|“.{2,}”'
+_MF_OLD='"[^"]{2,}"|“[^”]{2,}”'
+_lit_replace "$HOOK" "$_MF_NEW" "$_MF_OLD" > "$T/mut_mf.sh"
+if ! grep -q '“\[\^”\]{2,}”' "$T/mut_mf.sh"; then
+  _no "되돌림 변이가 안 먹었다 — 훅의 가드 형태가 바뀌었다"
+else
+  _mf_fn "$T/mut_mf.sh" "$T/fn_mf_old.sh"
+  g=$(_mf_v "$T/fn_mf_old.sh" POSIX "$_MF_KO"); h=$(_mf_v "$T/fn_mf_old.sh" "$UTF8" "$_MF_KO")
+  if [ "$g" = "BLOCK" ] && [ "$h" = "pass" ]; then _ok
+  else _no "되돌렸는데 POSIX=$g UTF8=$h (BLOCK/pass 여야) — 이 팔은 이빨이 없다"; fi
+fi
+
 if [ "$FAIL" -eq 0 ] && [ "$INSTRUMENT_INCOMPLETE" -eq 1 ]; then
   echo "── 회귀는 없다. 그러나 팔 하나 이상이 UNMEASURED 다 — rc=2 (계기 오류) ──"
   exit 2
