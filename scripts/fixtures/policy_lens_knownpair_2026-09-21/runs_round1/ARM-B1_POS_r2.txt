@@ -1,0 +1,4 @@
+RISK: HIGH
+REASON: PR가 command 로직 안에 cfg(target_os) 분기를 넣어 CONTRIBUTING의 "One code path" 원칙을 정면으로 어김
+QUOTE: We do not accept conditional compilation branches inside command logic.
+ACTION: cfg 분기를 cmd/verify.rs·cmd/manifest.rs에서 제거하고, 네이티브 배치 열거 기능을 platform 모듈의 인터페이스로 넣어 모든 플랫폼이 동일한 호출부를 거치도록 재작성한다

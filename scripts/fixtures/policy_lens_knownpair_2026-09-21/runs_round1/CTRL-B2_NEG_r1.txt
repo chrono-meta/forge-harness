@@ -1,0 +1,4 @@
+RISK: MEDIUM
+REASON: 640줄짜리 hot-path 리팩터로 4개 플랫폼 백엔드를 동시에 바꾸고 새 의존성(lru)을 기본 경로에 추가해 메인테이너가 분할이나 의존성 최소화를 요구할 수 있음
+QUOTE: I would understand wanting this split per backend. Say so and I will.
+ACTION: lru 캐시를 자체 구현한 소형 bounded cache로 대체해 새 의존성 추가 없이 PR을 제출한다

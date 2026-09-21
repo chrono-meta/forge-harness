@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: 로드맵에 명시적으로 원하던 기능을 범위·품질·테스트 기준에 맞춰 구현했고 단일 파일 동작은 무변경임을 검증함
+QUOTE: merged, interleaved view across several files at once (wanted; nobody has built it yet)
+ACTION: 큰 diff이므로 제안대로 ring 구현과 renderer 변경을 두 개의 PR로 분리해 리뷰 부담을 낮춘다

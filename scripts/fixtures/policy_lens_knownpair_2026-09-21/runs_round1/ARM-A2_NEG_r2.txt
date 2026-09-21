@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: 로드맵에 명시된 기능을 요청대로 구현했고 단일 파일 동작을 무손실로 유지했다
+QUOTE: merged, interleaved view across several files at once (wanted; nobody has built it yet)
+ACTION: 새 의존성(slice-ring crate) 추가를 미리 이슈로 알리거나 hand-rolled 대안 검토 근거를 PR에 덧붙인다

@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: opt-in, off-by-default feature with benchmarks, tests, docs, and an offered fallback to a compile-time gate
+QUOTE: This is off by default. Without --web, not one byte of this code is reached
+ACTION: Preemptively move the feature behind a Cargo compile-time flag as offered, rather than waiting for maintainer pushback

@@ -1,0 +1,4 @@
+RISK: HIGH
+REASON: 이 PR은 "we do not run as a background daemon and we do not listen on a socket"이라는 확정 정책을 어기는 리스닝 HTTP 서버를 추가한다.
+QUOTE: We do not run as a background daemon and we do not listen on a socket.
+ACTION: --web 플래그와 HTTP 서버 코드를 제거하고, docs/recipes.md의 파이프라인 기반 대안으로 이슈 #188/#201/#219를 해결하도록 PR을 다시 작성한다.

@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: 플랫폼별 fast path로 격리되어 있고 성능·정확성 측정, 테스트, CI가 갖춰져 있으며 유지보수 의지도 명시됨
+QUOTE: Linux and macOS are untouched and unchanged (re-ran the full bench on Linux to confirm: within noise, 0.3%).
+ACTION: windows-sys 의존성의 버전 고정 범위와 MSRV 영향을 PR 설명에 명시한다

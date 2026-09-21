@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: 옵트인·기본값 꺼짐·바인딩 로컬호스트로 한정된 새 기능이고 기존 코드 경로 변경이 없으며 벤치마크·테스트·문서까지 갖춘 잘 준비된 PR이다
+QUOTE: This is off by default. Without --web, not one byte of this code is reached
+ACTION: 없음 (요청 시 컴파일타임 feature gate로 옮기겠다는 제안까지 이미 포함되어 있음)

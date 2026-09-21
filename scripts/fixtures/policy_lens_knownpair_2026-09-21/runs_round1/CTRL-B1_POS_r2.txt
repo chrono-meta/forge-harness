@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: 플랫폼별 fast path에 폴백이 있고 테스트/CI/바이트 단위 정합성 검증까지 갖춰 메인테이너 거절 위험이 낮음
+QUOTE: Linux and macOS are untouched and unchanged (re-ran the full bench on Linux to confirm: within noise, 0.3%).
+ACTION: windows-sys 신규 의존성의 버전 고정 범위와 MSRV 영향을 PR 설명에 명시한다

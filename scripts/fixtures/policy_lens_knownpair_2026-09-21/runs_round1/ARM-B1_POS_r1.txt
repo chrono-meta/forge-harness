@@ -1,0 +1,4 @@
+RISK: HIGH
+REASON: One-code-path 원칙에 정면으로 어긋나는 cfg(target_os) 분기와 단일 플랫폼 전용 의존성을 추가함
+QUOTE: "We do not accept conditional compilation branches inside command logic."
+ACTION: cfg 분기를 커맨드 레이어에서 제거하고, platform 모듈의 인터페이스를 확장해 네이티브 배치 열거를 그 안에서 처리하도록 옮긴 뒤 모든 플랫폼이 동일한 platform 모듈 호출을 거치게 재작성한다

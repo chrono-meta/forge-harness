@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: 기본값 비활성·의존성 추가 없음·테스트 24개·유지보수 자원자까지 명시해 메인테이너 부담이 낮다
+QUOTE: This is off by default. Without --web, not one byte of this code is reached: the listener is never constructed, the module is behind a feature gate
+ACTION: 컴파일타임 feature flag로 완전히 분리하는 옵션을 PR 설명대로 기본 제안에 포함시켜 바이너리 크기 우려를 선제 해소한다

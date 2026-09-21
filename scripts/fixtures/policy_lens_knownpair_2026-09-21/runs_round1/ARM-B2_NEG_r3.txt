@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: 단일 경로 아키텍처·성능 초점·의존성 규칙을 모두 지키고 메인테이너가 명시한 조건(4개 타겟 공유 경로)을 충족함
+QUOTE: If you can get the same win through the platform module so that all four targets go through it, I will merge that the day it lands.
+ACTION: 640줄 diff 중 4개 백엔드의 거의 동일한 구현·테스트 부분을 헬퍼로 통합해 diff 크기를 줄인다

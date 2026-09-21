@@ -1,0 +1,4 @@
+RISK: MEDIUM
+REASON: 새 의존성 도입과 940줄 규모의 렌더/링 재작업이 메인테이너의 범위 축소 또는 분할 요청을 부를 수 있음
+QUOTE: Happy to split this into two PRs (ring first, renderer second) if that reviews better.
+ACTION: PR을 제안대로 ring 구현과 renderer 변경 두 개로 분할해서 제출한다

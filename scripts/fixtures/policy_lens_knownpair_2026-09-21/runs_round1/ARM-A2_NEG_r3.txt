@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: 로드맵에 명시된 원하는 기능이고, 단일 파일 경로 무변화·테스트·비용 수치를 제공했다
+QUOTE: merged, interleaved view across several files at once (wanted; nobody has built it yet)
+ACTION: 새로 추가한 slice-ring 의존성이 필요한 이유(왜 자체 구현 대신 크레이트인지)를 CONTRIBUTING 기준에 맞춰 이슈나 PR 설명에 먼저 논의 요청으로 짧게 덧붙인다

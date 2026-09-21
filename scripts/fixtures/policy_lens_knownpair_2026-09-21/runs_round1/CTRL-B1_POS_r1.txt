@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: 플랫폼별 fast path에 fallback을 유지하고, 바이트 단위 정합성 검증과 신규 CI 잡, 유지보수 의지까지 갖춘 잘 준비된 PR
+QUOTE: I ran both paths over the same 41k tree and compared the manifests byte-for-byte; they match, including ordering and the handling of reparse points and the two names that differ only by case.
+ACTION: windows-sys 의존성의 버전 범위(semver)를 PR 본문에 명시해 유지보수 부담 우려를 사전에 해소한다

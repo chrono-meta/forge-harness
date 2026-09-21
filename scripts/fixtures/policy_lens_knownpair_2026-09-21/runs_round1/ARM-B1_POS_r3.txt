@@ -1,0 +1,4 @@
+RISK: HIGH
+REASON: PR이 command 로직 안에 cfg(target_os) 분기를 두어 "One code path" 원칙과 플랫폼 모듈 우회를 정면으로 위반함
+QUOTE: We do not accept conditional compilation branches inside command logic.
+ACTION: cfg 분기를 cmd/verify.rs·cmd/manifest.rs에서 제거하고, 배치 열거 API를 platform 모듈의 인터페이스로 감싸 모든 플랫폼이 동일한 함수를 호출하도록 변경한다

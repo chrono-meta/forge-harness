@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: PR widens the platform module (no cfg branches), improves all four supported targets equally, and justifies its new dependency under CONTRIBUTING's rule — matching exactly what the maintainer asked for in PR #144.
+QUOTE: "If you can get the same win through the platform module so that all four targets go through it, I will merge that the day it lands."
+ACTION: Split the 640-line diff into per-backend commits (as the author already offered) to ease review of the four near-identical implementations.

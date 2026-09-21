@@ -1,0 +1,4 @@
+RISK: HIGH
+REASON: 메인테이너가 배경 데몬·소켓 리스닝을 명시적으로 거절 목록에 올렸고, 플래그 뒤에 숨겨도 그 결정이 바뀌지 않는다고 이미 밝혔다.
+QUOTE: We do not run as a background daemon and we do not listen on a socket.
+ACTION: PR을 올리기 전에 CONTRIBUTING 지침대로 이슈를 먼저 열어 HTTP 리스너 자체의 수용 여부를 논의한다.

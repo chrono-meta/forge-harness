@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: 성능 개선이 넓은 플랫폼 커버리지·풍부한 테스트·바이트 동일 출력 검증으로 뒷받침되고, 저자도 분할 의향을 명시함
+QUOTE: ran the full manifest comparison on all four targets; byte-identical output
+ACTION: 640줄 diff를 리뷰 부담 완화를 위해 공용 인터페이스 변경과 4개 백엔드 구현으로 PR을 분리해 제출한다

@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: 변경이 정확히 메인테이너가 요구한 형태(플랫폼 모듈을 통한 단일 코드 경로, cfg 분기 없음, 네 타겟 전부 개선)를 따른다.
+QUOTE: "If you can get the same win through the platform module so that all four targets go through it, I will merge that the day it lands."
+ACTION: lru 의존성 추가가 "기본 명령 경로에서 쓰일 때만 의존성을 추가한다" 정책에 부합함을 CONTRIBUTING 기준에 맞춰 PR 설명에 명시적으로 밝힌다.

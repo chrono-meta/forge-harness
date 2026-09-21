@@ -1,0 +1,6 @@
+# KEY.tsv — 정답키. 🟥 팔에 들어가지 않는다 (scripts/fixtures 는 ARM_BLIND_PATHS 로 클론에서 제거된다).
+# id	repo	axis	expected	unique_token	key_span_1	key_span_2
+A1_POS	tidewatch	domain-mismatch	DECLINE	tidewatch	We do not ship a browser interface. The terminal is the product, not a fallback for it.	An optional surface is still a surface I maintain forever
+A2_NEG	tidewatch	domain-mismatch	ACCEPT	tidewatch	NONE	NONE
+B1_POS	ferrule	maintenance-ownership	DECLINE	ferrule	We do not accept conditional compilation branches inside command logic.	We add a runtime dependency only when the default command set uses it.
+B2_NEG	ferrule	maintenance-ownership	ACCEPT	ferrule	NONE	NONE

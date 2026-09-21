@@ -1,0 +1,4 @@
+RISK: HIGH
+REASON: README은 "백그라운드 데몬으로 안 돌고 소켓 리스닝 안 한다"를 확정된 정책으로 못박았는데, 이 PR은 바로 그 HTTP 리스너를 추가한다.
+QUOTE: We do not run as a background daemon and we do not listen on a socket.
+ACTION: PR 제출 전 이슈를 열어 유지보수 비용(영구적 서피스) 문제를 먼저 논의하거나, 웹 서버 기능을 별도 외부 파이프라인/도구로 분리해 tidewatch 본체에서 제거한다
