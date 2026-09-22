@@ -203,3 +203,7 @@
   artifact: BUDGET.md
   sha256: 030f780ae39668c13810214dff6d89901a3633f7625cc149aa2a1fa53fe98daf
   recorded: 2026-09-22T04:54:02Z
+- run: syscall-risk-classifier
+  artifact: SIM_NOTES.md
+  sha256: 77aeffdc40611275e825f99a2545f8218ecca42a818abe118406874c7dce0392
+  recorded: 2026-09-22T05:02:52Z
