@@ -195,3 +195,11 @@
   artifact: EMISSION_VERDICT.md
   sha256: 74ed0d3be0dfd9ab4af95c9e3c9cf32c9b44b41525e4bc12506c0b6d3aa8580a
   recorded: 2026-09-06T13:43:11Z
+- run: syscall-risk-classifier
+  artifact: INTENT.md
+  sha256: 6d0b0155dbd70270662c4c35cf27d5ed79c6b86741fbb1e02d2118544a2eb985
+  recorded: 2026-09-22T04:53:24Z
+- run: syscall-risk-classifier
+  artifact: BUDGET.md
+  sha256: 030f780ae39668c13810214dff6d89901a3633f7625cc149aa2a1fa53fe98daf
+  recorded: 2026-09-22T04:54:02Z
