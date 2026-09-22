@@ -207,3 +207,7 @@
   artifact: SIM_NOTES.md
   sha256: 77aeffdc40611275e825f99a2545f8218ecca42a818abe118406874c7dce0392
   recorded: 2026-09-22T05:02:52Z
+- run: syscall-risk-classifier
+  artifact: EMISSION_VERDICT.md
+  sha256: 1b919098dcce8bdbadfa6da2078a47eef80541cd600068ed4e79b5fbd4853c6b
+  recorded: 2026-09-22T05:08:15Z
