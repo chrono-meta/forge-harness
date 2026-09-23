@@ -66,6 +66,12 @@ case "\$mode" in
      if [ "\$is_verdict" -eq 1 ]; then echo "PASS"; else echo "I am \$pin, by StubCorp."; fi ;;
   silent-fallback)
      if [ "\$is_verdict" -eq 1 ]; then echo "PASS"; else echo "I am stub-flash-3.6, by StubCorp."; fi ;;
+  quota-exhausted)
+     # 한도 소진 — 채널이 막힌 것이지 «다른 모델이 답한» 것이 아니다.
+     echo "Error: 429 RESOURCE_EXHAUSTED: quota exceeded for this model" >&2; exit 1 ;;
+  silent-timeout)
+     # 아무것도 안 뱉고 죽는다 — 타임아웃/행 을 흉내낸다. 답이 없으므로 «측정 실패» 다.
+     exit 124 ;;
   alias-name)
      if [ "\$is_verdict" -eq 1 ]; then echo "PASS"; else echo "StubGPT-3.1 Coder"; fi ;;
   listed-substitute)
@@ -111,6 +117,42 @@ out="$(run_cal --only agy)"
 case "$out" in
   *UNTRUSTED-PIN*) ok "lane2 silent fallback caught (pinned model did not answer)" ;;
   *) bad "lane2 silent fallback passed as a healthy sidecar" "$out" ;;
+esac
+
+# LANE 2b (2026-09-23) — 🟥 «못 쟀다» 는 «못 믿는다» 가 아니다. 종전에는 둘 다 UNTRUSTED-PIN
+# 이라, agy 가 2m50s 타임아웃으로 못 잰 09-14 기록과 핀이 실제로 맞았던 09-17 기록이 서로
+# 모순처럼 보였고 어느 쪽이 참인지 판별할 수 없었다(sidecar_panel_2026-09-18.txt 가 미해결로
+# 남긴 바로 그 갈림). 답이 아예 안 오면 PIN-UNMEASURED 여야 한다.
+mkstub agy silent-timeout
+out="$(run_cal --only agy)"
+case "$out" in
+  *PIN-UNMEASURED*) ok "lane2b 무응답은 «측정 실패» 로 읽힌다(«바꿔치기» 가 아니다)" ;;
+  *) bad "lane2b 무응답이 PIN-UNMEASURED 로 안 읽혔다" "$out" ;;
+esac
+# 🟥 그리고 **UNTRUSTED 로 읽히면 안 된다** — 위 단언만으로는 두 문자열이 동시에 떠도 통과한다.
+case "$out" in
+  *UNTRUSTED-PIN*) bad "lane2b 무응답이 «바꿔치기» 로도 찍혔다 — 두 사건이 여전히 섞인다" "$out" ;;
+  *) ok "lane2b 무응답에 UNTRUSTED-PIN 이 안 붙는다" ;;
+esac
+
+# LANE 2c — 쿼터 소진도 마찬가지다. 채널이 막힌 것이지 모델이 바뀐 것이 아니다.
+# 실측 근거: agy 가 Gemini 그룹만 0 % 였는데 런타임 전체를 못 쓰는 것으로 렌더됐다.
+mkstub agy quota-exhausted
+out="$(run_cal --only agy)"
+case "$out" in
+  *PIN-BLOCKED*) ok "lane2c 쿼터 소진은 «채널이 막힘» 으로 읽힌다" ;;
+  *) bad "lane2c 쿼터 소진이 PIN-BLOCKED 로 안 읽혔다" "$out" ;;
+esac
+case "$out" in
+  *UNTRUSTED-PIN*) bad "lane2c 쿼터 소진이 «바꿔치기» 로도 찍혔다" "$out" ;;
+  *) ok "lane2c 쿼터 소진에 UNTRUSTED-PIN 이 안 붙는다" ;;
+esac
+
+# LANE 2d — 🟥 **패널 편입은 여전히 PIN-OK 만이다.** 값을 넷으로 가른 것이 «미측정도 끼워 준다»
+# 로 새면 그게 fail-open 이고, 이 분리의 의미가 반대로 뒤집힌다.
+case "$out" in
+  *"PANEL: "*agy*) bad "lane2d 측정 못 한 런타임이 패널에 들었다 — fail-open" "$out" ;;
+  *) ok "lane2d 측정 못 한 런타임은 패널에서 빠진다(편입 규칙 불변)" ;;
 esac
 
 # LANE 3 — an honest runtime that echoes its pin is PIN-OK.

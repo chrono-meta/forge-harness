@@ -118,9 +118,13 @@ probe_runtime() {
     return 0
   fi
 
-  local id_out pin_state ctl_out ctl_state v_out v_state
+  local id_out id_raw id_rc pin_state ctl_out ctl_state v_out v_state
   build_cmd "$rt" "$model" "$IDENTITY_PROMPT"
-  id_out="$(_run 200 "${CMD[@]}" 2>&1 | _answer)"
+  # 🟥 파이프로 넘기지 않고 먼저 **원문과 종료코드**를 잡는다. `_run … | _answer` 는 런타임의
+  #    rc 를 버리므로 «타임아웃» 과 «답했는데 다른 모델» 이 같은 빈 문자열로 접힌다.
+  #    (`${PIPESTATUS[0]}` 는 bash 전용이고, 정본은 «파이프를 쓰지 않는 것» 이다.)
+  id_raw="$(_run 200 "${CMD[@]}" 2>&1)"; id_rc=$?
+  id_out="$(printf '%s\n' "$id_raw" | _answer)"
 
   # Discriminating check — the answer must be the MODEL's self-report naming the model that was
   # pinned. What counts as "naming it" is the VERSION token, not every token of the pin slug:
@@ -141,7 +145,32 @@ probe_runtime() {
       printf '%s' "$id_out" | tr 'A-Z' 'a-z' | grep -qF "$name_words" && hit=1
     fi
   fi
-  if [ "$hit" -eq 1 ]; then pin_state="PIN-OK"; else pin_state="UNTRUSTED-PIN"; fi
+  # ── 🟥 네 값으로 가른다 — «못 쟀다» 와 «못 믿는다» 는 다른 사건이다 ────────────────
+  #
+  #    종전에는 둘 다 UNTRUSTED-PIN 이었다. 그래서 agy 가 **2m50s 타임아웃**으로 못 잰
+  #    2026-09-14 기록과, 실제로 답을 받아 핀이 맞았던 2026-09-17 기록이 서로 모순처럼
+  #    보였고 «어느 쪽이 참인지» 를 판별할 수 없었다(sidecar_panel_2026-09-18.txt 가
+  #    그 갈림을 미해결로 남겼다). 같은 축의 다른 얼굴: 쿼터 소진이 «핀 불신» 으로 렌더돼
+  #    런타임 전체를 못 쓰는 것처럼 보였다(Gemini 그룹만 0 % 였는데).
+  #
+  #    PIN-OK          신원이 핀과 맞다
+  #    UNTRUSTED-PIN   **답은 왔는데** 신원이 핀과 다르다 — 바꿔치기. 이게 이 도구의 표적이다
+  #    PIN-BLOCKED     런타임이 한도/쿼터/인증을 말했다 — **채널이 막힌 것**이지 모델 문제가 아니다
+  #    PIN-UNMEASURED  답이 아예 안 왔다(타임아웃·빈 응답) — 측정 실패. 0 이 아니다
+  #
+  #    🟥 패널 편입 규칙은 **안 바꾼다**: PIN-OK 만 든다. 미측정이 패널에 끼면 그게 fail-open 이다.
+  #       바뀌는 것은 «왜 빠졌나» 를 읽을 수 있게 되는 것뿐이다.
+  local blocked=0
+  printf '%s' "$id_raw" | grep -qiE 'quota|rate.?limit|too many requests|429|exceeded|insufficient|unauthor|forbidden|401|403' && blocked=1
+  if [ "$hit" -eq 1 ]; then
+    pin_state="PIN-OK"
+  elif [ "$blocked" -eq 1 ]; then
+    pin_state="PIN-BLOCKED"
+  elif [ -z "$id_out" ] || [ "$id_rc" -ne 0 ]; then
+    pin_state="PIN-UNMEASURED"
+  else
+    pin_state="UNTRUSTED-PIN"
+  fi
 
   build_cmd "$rt" "$BOGUS_MODEL" "$IDENTITY_PROMPT"
   ctl_out="$(_run 120 "${CMD[@]}" 2>&1)"
@@ -172,6 +201,14 @@ probe_runtime() {
   elif [ "$pin_state" = "UNTRUSTED-PIN" ]; then
     printf '       ⚠️  it rejects UNKNOWN names, which says nothing about serving KNOWN ones faithfully.\n'
     printf '           The identity probe disagreed with the pin — treat this runtime as substituting.\n'
+  elif [ "$pin_state" = "PIN-BLOCKED" ]; then
+    printf '       ⚠️  the runtime reported a QUOTA / AUTH problem (rc=%s). This is the CHANNEL being\n' "$id_rc"
+    printf '           shut, NOT evidence that a different model answered. Do not read it as substitution;\n'
+    printf '           re-run when the window reopens. It stays out of the panel because nothing was measured.\n'
+  elif [ "$pin_state" = "PIN-UNMEASURED" ]; then
+    printf '       ⚠️  NO ANSWER came back (rc=%s, answer empty) — the pin was **not measured**.\n' "$id_rc"
+    printf '           «unmeasured» is not «untrusted» and it is not zero. Re-run before concluding anything;\n'
+    printf '           a single timeout is the cheapest way to manufacture a false substitution report.\n'
   fi
   # Only a runtime whose pin is trustworthy counts toward the panel. A reachable runtime answering as
   # some other model contributes no family diversity, which is the entire point of the panel.
