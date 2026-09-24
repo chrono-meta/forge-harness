@@ -173,5 +173,11 @@ git -C "$T/md" merge --squash -q feat >/dev/null 2>&1; chmod -x "$T/md/a"; git -
 run "$T/md" "$TIP_MD" --rerun 'grep -q a2 a && echo ok'
 { [ "$RC" -eq 1 ] && printf '%s' "$OUT" | grep -q 'DIFFERS'; } && ok "X10 dropped mode change → DIFFERS · rc=1" || { bad "X10 mode-only drop rc=$RC"; printf '%s\n' "$OUT" | tail -4; }
 
+# X11 --precheck validates --rerun with no git state: trivial → 3 · real → 0 · missing → 2 (no --tip needed)
+_p1=$(bash "$SC" --precheck --rerun 'true' >/dev/null 2>&1; echo $?)
+_p2=$(bash "$SC" --precheck --rerun 'grep -q x y; echo z' >/dev/null 2>&1; echo $?)
+_p3=$(bash "$SC" --precheck >/dev/null 2>&1; echo $?)
+[ "$_p1$_p2$_p3" = "302" ] && ok "X11 --precheck: trivial=3 · real=0 · missing=2" || bad "X11 --precheck got $_p1/$_p2/$_p3 (want 3/0/2)"
+
 printf 'PASS %d · FAIL %d\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

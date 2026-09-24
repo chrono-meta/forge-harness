@@ -37,7 +37,7 @@
 
 set -uo pipefail
 
-TIP=""; MERGE=""; RERUN=""; RERUN_SET=0; REPO="."; KEEP=0
+TIP=""; MERGE=""; RERUN=""; RERUN_SET=0; REPO="."; KEEP=0; PRECHECK=0
 # 🟥 cross-family R3: `shift 2` with one arg left fails WITHOUT shifting, so a trailing `--tip` looped
 #   forever. Every operand-taking option checks $# first.
 _need() { [ $# -ge 2 ] || { echo "🟥 $1 needs a value" >&2; exit 2; }; }
@@ -48,6 +48,7 @@ while [ $# -gt 0 ]; do
     --rerun) _need "$@"; RERUN="${2-}"; RERUN_SET=1; shift 2 ;;
     --repo) _need "$@";  REPO="${2:-}"; shift 2 ;;
     --keep)  KEEP=1; shift ;;
+    --precheck) PRECHECK=1; shift ;;   # validate --rerun only (rc 0/2/3), touch no git state — for callers that must refuse BEFORE merging
     -h|--help) sed -n '2,40p' "$0"; exit 0 ;;
     *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
@@ -58,7 +59,7 @@ if [ "$RERUN_SET" -eq 0 ]; then
   echo "   once combined with the rest of main. Name the command that exercises this change." >&2
   exit 2
 fi
-[ -n "$TIP" ] || { echo "🟥 --tip is required (the branch tip before merge)" >&2; exit 2; }
+[ "$PRECHECK" -eq 1 ] || [ -n "$TIP" ] || { echo "🟥 --tip is required (the branch tip before merge)" >&2; exit 2; }
 
 # ── trivial-command refusal ── normalise whitespace and a trailing ';' then compare
 _r=$(printf '%s' "$RERUN" | tr -s '[:space:]' ' ' | sed -e 's/^ *//' -e 's/ *;* *$//')
@@ -82,6 +83,8 @@ if [ "$_noop" -eq 1 ]; then
   echo "🟥 --rerun '$RERUN' only echoes / no-ops — refused. Printing is not exercising the change." >&2
   exit 3
 fi
+
+[ "$PRECHECK" -eq 0 ] || { echo "✅ --rerun accepted (precheck)"; exit 0; }
 
 G() { git -C "$REPO" "$@"; }
 G rev-parse --git-dir >/dev/null 2>&1 || { echo "🟥 HARNESS-ERROR: not a git repo: $REPO" >&2; exit 4; }
@@ -125,8 +128,11 @@ _names_into MAIN "$MB" "$PARENT"
 
 # 🟥 cross-family R4: compare the TREE ENTRY (mode + type + oid), not the blob — a squash that drops a
 #   `chmod +x` keeps the same blob and rendered SAME. Exec-bit loss is how hooks get silently disarmed.
-_blob() { local _e; _e=$(G ls-tree -z "$1" -- "$2" | tr '\0' '\n' | head -1 | cut -f1)
-          [ -n "$_e" ] && printf '%s' "$_e" || echo "ABSENT"; }
+# 🟥 no pipeline here (repo pipefail class-lock, 2026-09-24): the first version piped ls-tree into
+#   `head -1`, and an early-closing reader can kill the producer → empty entry on BOTH sides →
+#   ABSENT == ABSENT → SAME. A path-exact ls-tree prints at most one line; strip at the tab in bash.
+_blob() { local _e; _e=$(G ls-tree "$1" -- "$2" 2>/dev/null) || _e=""
+          _e="${_e%%$'\t'*}"; [ -n "$_e" ] && printf '%s' "$_e" || echo "ABSENT"; }
 BAD=0; N=0
 for p in "${BR[@]}"; do
   N=$((N+1))

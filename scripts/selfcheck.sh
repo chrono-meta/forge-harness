@@ -1430,6 +1430,19 @@ else
   echo "FAIL  test_sidecar_calibrate_lanes.sh: sidecar_calibrate.sh present but its anchor is missing"
   fail=1
 fi
+# Squash-merge verification + its merge-path wiring (2026-09-24). Same subject/anchor pairing as above:
+# both scripts return verdict exit codes, and pr_merge_verified's whole job is to REFUSE before merging —
+# a refusal nobody re-runs is one the next edit quietly removes. Lanes are hermetic (temp repos, fake gh).
+for _pair in "post_squash_verify.sh:test_post_squash_verify_lanes.sh" "pr_merge_verified.sh:test_pr_merge_verified_lanes.sh"; do
+  _subj="${_pair%%:*}"; _lane="${_pair##*:}"
+  if [ ! -f "scripts/$_subj" ]; then
+    _absent_subject_verdict "$_lane" "scripts/$_subj" || fail=1
+  elif [ -f "scripts/$_lane" ]; then
+    bash "scripts/$_lane" || fail=1
+  else
+    echo "FAIL  $_lane: $_subj present but its anchor is missing"; fail=1
+  fi
+done
 
 # The isolated sim runner gets the same treatment, and it earned it in one session. Its lanes are
 # hermetic (the `claude` CLI is stubbed), so running them is free — and L8a is the lane that caught

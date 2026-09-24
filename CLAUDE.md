@@ -424,6 +424,12 @@ git commit …
 directly. Normal path: `git switch -c <branch>` → push the branch → `gh pr create` → after review
 `gh pr merge --squash --delete-branch --admin` (self-approval is impossible when you authored the PR,
 so `--admin` after a completed review is the normal route, not a shortcut).
+🟥 **Run that merge as `bash scripts/pr_merge_verified.sh <PR#> --rerun '<the lane that exercises the
+change>'`** — it records the PR head *before* the merge deletes it, merges with exactly the flags
+above, then re-runs your lane on the merged `main` and compares every file the branch touched. A
+green `gh pr merge` only says the merge happened, not that the squash carried the branch
+(2026-09-21: four merges, none checked). `--rerun` is required and refused before merging if it is
+missing or does nothing (`true`, `echo …`).
 
 **Mechanically enforced** by `templates/.git-hooks/pre-push`, which blocks a direct push to
 `main`/`master` unless the explicit `MAIN_PUSH_OK=1` acknowledgment is set (same channel shape as
