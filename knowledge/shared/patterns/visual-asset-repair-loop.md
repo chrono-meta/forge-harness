@@ -1,102 +1,91 @@
 ---
 name: visual-asset-repair-loop
-description: Techniques for repairing raster animation assets (sprite/APNG frames) with an operator in the loop — measure before tuning, reconstruct past transforms as controls, prefer direction-separable warps over cut-and-paste, and make "does it shake / is it clean" a gate instead of an eye test. Distilled from one night of desktop-pet art repair (2026-09-24) where the operator caught every visual defect first.
+description: 래스터 애니메이션 자산(스프라이트·APNG 프레임)을 운영자와 함께 고치는 기법 — 튜닝 전에 재고, 과거 변환을 재현해 컨트롤로 삼고, 오려 붙이기 대신 방향별 워프를 쓰고, «흔들리나·깨끗한가» 를 눈 검사가 아니라 게이트로 만든다. 운영자가 모든 시각 결함을 먼저 잡은 하룻밤의 데스크톱 펫 아트 수리(2026-09-24)에서 뽑았다.
 type: reference
 tags: [pattern, visual-assets, animation, instrument-calibration, operator-in-the-loop, field-harness]
 ---
 
-# Visual asset repair loop
+# 시각 자산 수리 루프
 
-**Provenance.** One night, one field harness (a desktop-pet app whose states are APNG loops), ~12 merged
-art fixes. The operator reviewed every change in a browser preview and **caught every defect before the
-governor did** — outline chips, head/body proportion, a trapezoid face, torn shoulders, frame-to-frame
-shake (twice). Self-catch count: 0. This file is what that night teaches, stated so another harness can
-reuse it without the character, the app, or the company.
+**출처.** 하룻밤 · 필드 하네스 하나(상태마다 APNG 루프를 쓰는 데스크톱 펫 앱) · 머지된 아트 수리 약 12건.
+운영자가 모든 변경을 브라우저 미리보기로 검수했고, **모든 결함을 거버너보다 먼저 잡았다** — 윤곽선 깨짐,
+머리·몸 비율, 사다리꼴 얼굴, 찢어진 어깨, 칸 사이 흔들림(두 번). 자력 적발 0.
+이 문서는 그 밤이 가르친 것을, 캐릭터·앱·회사 없이 다른 하네스가 가져다 쓸 수 있게 적은 것이다.
 
-## 1. The review surface is part of the instrument
+## 1. 검수 화면도 계기의 일부다
 
-- **Serve the bytes the app will read, and prove it.** A preview page that shows an old file is worse than
-  no preview. After starting it, fetch each changed asset back through the page's own URL rule and
-  byte-compare with the repo copy — and request a nonexistent file to confirm the comparison can fail
-  (a 404 control). Twice that night the first comparison was wrong for instrument reasons: a port already
-  held by an older preview server (answering 200 for a different directory), and an extraction that pulled
-  empty URLs and "compared" nothing.
-- **Look at the operator's scale and background.** Zoomed crops find pixel faults the operator cannot see
-  and hide shape faults they can. Render both, and judge at the size the operator reported from.
-- **A crop claim must contain what it claims.** Derive every crop box from the target's own bounding box
-  and label it. The governor once reported "joints are clean" from a crop framed on the cheek. Say what the
-  crop shows, not what it was meant to show.
-- **An animated image drawn to a canvas is one frame.** Capturing "several loop phases" that way silently
-  yields the same frame N times.
+- **앱이 실제로 읽을 바이트를 보여주고, 그걸 증명하라.** 옛 파일을 보여주는 미리보기는 미리보기가 없는 것보다
+  나쁘다. 띄운 뒤에는 바뀐 자산을 페이지 자신의 URL 규칙으로 다시 받아 레포 사본과 바이트 대조하고, **없는
+  파일을 요청해 대조가 실패할 수 있음을 확인한다**(404 컨트롤). 그 밤 첫 대조가 두 번 계기 때문에 틀렸다 —
+  다른 디렉터리를 서빙하는 옛 미리보기 서버가 포트를 쥐고 200 을 돌려줬고, 또 한 번은 URL 추출이 빈 값을
+  뽑아 아무것도 비교하지 않았다.
+- **운영자가 보는 크기와 배경으로 보라.** 확대 크롭은 운영자가 못 보는 화소 결함을 찾고, 운영자가 보는 형태
+  결함은 숨긴다. 둘 다 렌더하고, 운영자가 보고한 크기에서 판정한다.
+- **크롭 주장은 크롭이 담은 것만 말한다.** 크롭 박스는 대상 자신의 바운딩 박스에서 유도하고 라벨을 붙인다.
+  거버너가 볼을 잡은 크롭을 보고 «이음새 깨끗» 이라 보고한 적이 있다. 의도한 영역이 아니라 실제로 담긴
+  영역을 말하라.
+- **움직이는 이미지를 캔버스에 그리면 한 칸이다.** 그렇게 «루프 여러 위상» 을 뜨면 같은 칸이 N 번 나온다.
 
-## 2. Measure before you tune — and calibrate each measure on a known pair
+## 2. 튜닝 전에 재라 — 그리고 각 계기를 known-pair 로 보정하라
 
-| Question | Instrument that answered it | Controls that proved it alive |
+| 질문 | 답한 계기 | 살아 있음을 증명한 컨트롤 |
 |---|---|---|
-| Is the new outline the same thickness as the old? | distance-transform ridge width of the dark mask (2 × EDT at local maxima), split by distance from the head | synthetic bars of 6 px and 10 px read back 6.0 and 10.0 |
-| Is the head still an oval? | IoU between the head mask and the ellipse with the same second moments; plus upper-vs-lower width ratio for trapezoid drift | true ellipse 0.999 · trapezoid 0.758 |
-| Does the whole body slide between frames? | per-row left/right contour x, median shift vs frame 0, averaged; range over frames | arm-only motion reads 0 · 2 px body shift reads 2 · real file-read path reads 2 |
+| 새 윤곽선이 옛 것과 같은 굵기인가 | 어두운 마스크의 거리변환 능선 폭(국소 최대에서 2 × EDT), 머리까지 거리로 나눠 봄 | 6px·10px 합성 막대가 6.0·10.0 으로 읽힘 |
+| 머리가 여전히 타원인가 | 머리 마스크와 «같은 2차 모멘트를 가진 타원» 의 IoU + 사다리꼴 쏠림용 위/아래 폭 비 | 진짜 타원 0.999 · 사다리꼴 0.758 |
+| 몸 전체가 칸 사이에서 미끄러지나 | 행별 좌·우 윤곽 x 의 칸 0 대비 이동 중앙값을 좌우 평균, 칸 전체의 범위 | 팔만 움직임 = 0 · 몸 2px 이동 = 2 · 실제 파일 읽기 경로 = 2 |
 
-Two failure shapes to avoid, both hit that night:
-- **Extreme points confuse motion with drift.** Left/right-most pixel amplitude moved "3 → 1 → 3" across
-  versions and answered nothing — a waving arm and a sliding body look identical to it. Row-median contour
-  shift separates them.
-- **A self-check that feeds data directly skips the path the bug lives on.** The first body-sway tool read
-  frames with `list(ImageSequence.Iterator(im))`, which returns the same object repeatedly (every frame
-  became the last one → all motions read 0.0). Its self-check passed because it built frame lists in memory.
-  The fix added a leg that writes a synthetic APNG and reads it back through the real path.
-- **Carry-over numbers are not measurements.** A stroke width measured on a different motion with a loose
-  threshold (8 px) was reused; the true value was 6 px, and the redrawn outline came out visibly heavy.
+그 밤에 실제로 걸린, 피해야 할 실패 모양:
+- **끝점은 움직임과 쏠림을 구분 못 한다.** 좌·우 최외곽 화소 진폭이 판본마다 «3 → 1 → 3» 으로 움직였는데
+  아무것도 답하지 못했다 — 흔드는 팔과 미끄러지는 몸이 끝점에는 똑같이 보인다. 행별 윤곽 중앙 이동은 둘을 가른다.
+- **데이터를 직접 넣는 self-check 는 결함이 사는 경로를 건너뛴다.** 첫 몸 흔들림 도구는 칸을
+  `list(ImageSequence.Iterator(im))` 로 읽었는데, 이건 같은 객체를 되풀이해 돌려준다(모든 칸이 마지막 칸이 되어
+  전 모션이 0.0). self-check 는 메모리에서 칸 목록을 만들어 넣었기 때문에 통과했다. 수리는 합성 APNG 를 파일로
+  쓰고 실제 경로로 다시 읽는 다리를 더한 것이다.
+- **옮겨 온 숫자는 측정이 아니다.** 다른 모션(주먹)에서 느슨한 문턱으로 잰 선 폭(8px)을 가져다 썼는데 실제는
+  6px 였고, 새로 그은 윤곽선이 눈에 띄게 두꺼웠다.
 
-## 3. When every repair round creates a new artifact, change the question
+## 3. 매 수리 라운드가 새 결함을 만들면, 질문을 바꿔라
 
-Head-only shrinking (to fix a head that read too large) was attempted seven ways: cut-and-paste with seam
-patching, redrawing the outline, rule-based gap filling, and three partial warps. Every one tore the
-shoulders somewhere, because **"shrink the head, keep the shoulders fixed" forces a discontinuity at the
-joint** — any fill is invented content, any partial pull bends lines.
+(너무 커 보이던) 머리만 줄이기를 일곱 가지로 시도했다 — 오려 붙이고 이음새 땜질, 윤곽선 새로 긋기, 규칙으로
+틈 메우기, 부분 워프 셋. 전부 어딘가에서 어깨를 찢었다. **«머리는 줄이고 어깨는 고정» 이라는 설정 자체가
+이음새에 불연속을 강제하기 때문이다** — 메우면 지어낸 그림이고, 부분적으로 당기면 선이 휜다.
 
-What worked was a **direction-separable warp**: uniform scale on one axis for the whole figure (so no
-relative distortion anywhere), and on the other axis scale only above the neck with a short smooth ramp.
-A smooth monotone mapping in one variable cannot kink a line, so the joints stayed the original art. The
-cost (body 7 % narrower) was stated with numbers and accepted by the operator.
+통한 것은 **방향별 워프**다: 한 축은 전체 그림을 균일하게 줄이고(그래서 어디에도 상대 왜곡이 없다), 다른 축은
+목 위에서만 줄이되 짧은 구간에서 매끄럽게 전환한다. 한 변수의 매끄러운 단조 사상은 선을 꺾을 수 없으므로
+이음새는 원화 그대로 남았다. 대가(몸이 7 % 좁아짐)는 숫자로 밝혔고 운영자가 받아들였다.
 
-Heuristic: if two consecutive rounds each introduce a *new* defect class at the same place, stop patching
-that place and ask what constraint makes the place impossible. (Same shape as this repo's convergence rule:
-if it does not converge, loosen or reframe — do not tighten.)
+경험칙: 연속 두 라운드가 같은 자리에 *서로 다른* 결함 종류를 내면, 그 자리를 땜질하지 말고 «무엇이 그 자리를
+불가능하게 만드는가» 를 물어라. (이 레포의 수렴 규칙과 같은 모양이다 — 수렴하지 않으면 조이지 말고 풀거나
+설정을 바꿔라.)
 
-## 4. Reconstruction as a control — exact fixes without re-rendering
+## 4. 재현을 컨트롤로 — 다시 굽지 않고 정확히 고치기
 
-A batch resize had applied the same scale to every frame but a **different integer offset per frame**
-(it re-centered each frame on its own bounding box), which made still poses shake. To fix only position:
-re-run the old transform from the pre-change originals and require the result to equal the current file
-**pixel for pixel**. Where it matches (9 of 10 motions), the per-frame offsets it computes are exact, and the
-fix is integer shifts — no resampling, pixels untouched. Where it does not match (1 motion), do not touch it:
-the transform is not the whole story there.
+일괄 리사이즈가 모든 칸에 같은 배율을 줬지만 **칸마다 다른 정수 이동**을 줬다(칸마다 자기 바운딩 박스로 다시
+가운데 맞춤) — 그래서 가만히 있는 자세가 흔들렸다. 위치만 고치려면: 옛 변환을 변경 이전 원본에서 다시 돌려
+그 결과가 현재 파일과 **화소 단위로 같은지** 확인한다. 같은 곳(10모션 중 9)에서는 그 계산이 내는 칸별 이동값이
+정확하므로, 수리는 정수 이동뿐이다 — 리샘플 없음, 화소 무변경. 안 맞는 곳(1모션)은 건드리지 않는다 — 그 변환만으로는
+설명이 안 되는 무언가가 거기 있다.
 
-Corollaries:
-- **Batch normalization must use one offset per motion** (union bounding box), never per frame. Its self-check
-  fixture must *contain* inter-frame motion; a fixture whose frames are already aligned passes the bug.
-- **Thresholds depend on the motion type.** A 4 px cut-off correctly found shaking in lively motions and
-  missed a lying-still pose where 1 px is visible.
-- **"Restore the original" is not always the goal.** One motion's original itself drifted 3 px; restoring
-  made it worse. The operator's intent was "hold it still", so the fix cancelled the measured drift instead.
-  Judge each motion against the intent, not against provenance.
+따름 정리:
+- **일괄 정규화는 모션당 이동 하나**(합집합 바운딩 박스)를 써야 하고, 칸마다 따로 쓰면 안 된다. 그 self-check
+  픽스처에는 칸 사이 움직임이 *들어 있어야* 한다 — 이미 정렬된 칸들로 만든 픽스처는 결함을 그대로 통과시킨다.
+- **문턱은 모션 종류에 따라 다르다.** 4px 문턱은 활발한 모션의 흔들림은 잘 찾았지만, 1px 도 보이는 누운 자세를 놓쳤다.
+- **«원본으로 되돌리기» 가 늘 목표는 아니다.** 한 모션은 원본 자체가 3px 쏠렸고, 되돌리니 더 나빠졌다. 운영자의
+  의도는 «가만히 있게» 였으므로, 수리는 잰 쏠림을 상쇄했다. 각 모션을 출처가 아니라 의도에 대고 판정하라.
 
-## 5. Smaller techniques worth keeping
+## 5. 남겨 둘 작은 기법들
 
-- **Transplant, don't synthesize.** Chipped outline pixels in a few frames were repaired by copying the
-  damaged band from the best-aligned clean frame of the same loop (alignment by alpha residual; refuse when
-  no donor fits). A morphology repair scored better on its own metric and looked worse — the metric looked
-  along the same axis as the repair.
-- **Bisect a defect's origin before blaming the latest change.** The chipped outline existed in the version
-  before the two most recent edits; reverting them would have fixed nothing.
-- **A hole connected to the outside is not a hole.** `fill_holes` treats a transparent sliver that leaks to
-  the canvas edge through a 1-px gap as "outside". Close the silhouette first, then find the interior.
-- **Test the resampler hypothesis by swapping the resampler.** A white fringe blamed on Lanczos ringing
-  survived a switch to box filtering — refuted; the real cause was the leaking hole above.
-- **Land agreements where the next editor reads them.** A "keep the base disc fixed while the character
-  turns" decision was never written down; a later batch tool broke it silently and a full search of every
-  record channel found nothing. The fix restored it and wrote it into the field harness's asset map.
-- **Make the eye test a gate.** After the operator caught frame shake twice, a ratchet lane (per-motion
-  body-sway baseline, block on +0.5 px, block on unmeasured new motions) went into the field gate, and a
-  deliberate 1 px shift of one frame was confirmed to be blocked.
+- **지어내지 말고 옮겨 오라.** 몇 칸의 깨진 윤곽선은 같은 루프에서 가장 잘 맞는 깨끗한 칸의 해당 띠를 복사해
+  고쳤다(알파 잔차로 정렬 · 맞는 공여자가 없으면 거부). 형태학 수리는 자기 계기에서는 점수가 더 좋았지만 눈으로는
+  더 나빴다 — 그 계기가 수리와 같은 축을 보고 있었다.
+- **최근 변경을 탓하기 전에 결함의 기원을 이분 탐색하라.** 깨진 윤곽선은 가장 최근 두 수정 이전 판본에도 있었다 —
+  그 둘을 되돌렸으면 아무것도 안 고쳐졌을 것이다.
+- **바깥과 이어진 구멍은 구멍이 아니다.** `fill_holes` 는 1px 틈으로 캔버스 가장자리까지 새는 투명한 틈을
+  «바깥» 으로 본다. 실루엣을 먼저 닫고(closing) 그 다음에 내부를 찾아라.
+- **리샘플러 가설은 리샘플러를 바꿔서 시험하라.** 란초시 링잉 탓으로 본 흰 테두리가 박스 필터로 바꿔도 그대로였다 —
+  반증. 진짜 원인은 위의 새는 구멍이었다.
+- **합의는 다음 편집자가 읽는 자리에 착지시켜라.** «캐릭터가 돌 때 받침 원반은 고정» 이라는 결정이 어디에도
+  적혀 있지 않았고, 나중 일괄 도구가 그걸 조용히 깼다. 모든 기록 채널을 전수 검색해도 없었다. 수리가 되살리고
+  필드 하네스의 자산 지도에 적었다.
+- **눈 검사를 게이트로 만들어라.** 운영자가 칸 흔들림을 두 번 잡은 뒤, 래칫 레인(모션별 몸 흔들림 기준선,
+  +0.5px 초과 차단, 안 잰 새 모션 차단)을 필드 게이트에 넣었고, 한 칸을 일부러 1px 옮겨 막히는 것까지 확인했다.
