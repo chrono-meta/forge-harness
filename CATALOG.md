@@ -737,6 +737,10 @@ Sister-asset cross-audit treating FH's companion store, gbrain, and Obsidian as 
 **File:** `knowledge/shared/harness-core/live_surface_automation_pattern.md`
 Live-surface automation pattern — the capability pattern FH routes to when a mapping project needs an agent to drive a live UI surface: the cross-platform observe-act-verify contract, the Appium-less principle, and the hybrid-WebView vision-synthesis rule. FH routes drivers (no-reinvention).
 
+### 2026-09-24 | pattern | visual-assets, animation, apng, instrument-calibration, operator-in-the-loop, warp
+**File:** `knowledge/shared/patterns/visual-asset-repair-loop.md`
+Repairing raster animation assets with an operator in the loop — serve-and-verify preview, calibrated measures (EDT stroke width · second-moment ellipse IoU · contour row-median body sway), reconstruction-as-control for exact integer-offset fixes, direction-separable warp instead of cut-and-paste, and turning the eye test into a gate.
+
 ### 2026-07-17 | pattern | ensemble-union, detection-task, voting-vs-union (backfill)
 **File:** `knowledge/patterns/ensemble_union_detection_task_pattern.md`
 Ensemble union pattern for detection tasks — detection ensembles combine by UNION (recall gain), generation ensembles by VOTING; field-measured on a fixed open-weight 3-model panel.
