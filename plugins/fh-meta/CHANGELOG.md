@@ -1,5 +1,25 @@
 # forge-harness (fh-meta) Changelog
 
+### [3.20.0] — 2026-09-24 — 스쿼시 머지가 브랜치를 «다 실었나» 를 명령으로 확인한다
+
+**minor — 새 출하 스크립트 둘 + 머지 절차 교리 변경.** 소비자의 게이트 수용은 안 깬다(새 스크립트는
+직접 부를 때만 돈다 — 훅에 배선되지 않았다).
+
+- **`scripts/post_squash_verify.sh`** (신규 출하) — 스쿼시 머지 뒤 ① 브랜치가 건드린 경로마다 **트리 엔트리
+  (mode·type·oid)** 를 머지 커밋과 대조(SAME / COMBINED / DIFFERS / EXTRA) ② `--rerun` 을 머지된 트리의 임시
+  워크트리에서 실행. **`--rerun` 없으면 rc=2** — «① 만 초록» 이 불가능하다. no-op(`:`·`true`·echo 만) rc=3 ·
+  출력 없는 rc=0 은 rc=4. cross-family 5라운드 수렴(개행/`\001` 경로 · tip==merge · 2부모 머지 · 누락 피연산자
+  무한루프 · git diff 실패 삼킴 · `chmod +x` 누락을 SAME 으로 보던 자리), 레인 21/0.
+- **`scripts/pr_merge_verified.sh`** (신규 출하) — 머지 경로 배선. PR head 를 **머지 전에** 기록하고
+  `--match-head-commit` 으로 고정 → `gh pr merge --squash --delete-branch --admin` → state==MERGED 확인 →
+  위 검증 자동 실행. 모든 거절(인자·no-op rerun·읽을 수 없는 head)은 **머지 전에**. 큐잉·지연 머지는 rc=6
+  «검증 안 됨». 레인 10/0(가짜 `gh` · 로컬 bare origin).
+- **CLAUDE.md §Integration branch** — 머지를 `pr_merge_verified.sh <PR#> --rerun '<그 변경을 도는 레인>'` 으로.
+  플로어(sonnet) 블라인드 sim: 이 줄이 있는 팔 3/3 이 스크립트 사용 · 없는 팔 0/3.
+- **`knowledge/shared/patterns/visual-asset-repair-loop.md`** (신규) — 래스터 애니메이션 자산을 운영자와 함께
+  고치는 기법(서빙 바이트 대조 미리보기 · 보정된 계기 셋 · 재현을 컨트롤로 · 방향별 워프 · 눈 검사를 게이트로).
+  한 필드 하네스·하룻밤 n=1 이라는 범위를 문서가 명시한다.
+
 ### [3.19.0] — 2026-09-24 — 「못 쟀다」와 「못 믿는다」를 다른 값으로 가른다
 
 **minor — 판정 어휘가 넷으로 늘어난 행동 변경.** 소비자의 게이트 수용은 안 깬다
