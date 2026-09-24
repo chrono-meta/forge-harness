@@ -739,7 +739,7 @@ Live-surface automation pattern — the capability pattern FH routes to when a m
 
 ### 2026-09-24 | pattern | visual-assets, animation, apng, instrument-calibration, operator-in-the-loop, warp
 **File:** `knowledge/shared/patterns/visual-asset-repair-loop.md`
-래스터 애니메이션 자산을 운영자와 함께 고치는 기법 — 서빙 바이트를 대조한 미리보기, 보정된 계기(EDT 선 폭 · 2차 모멘트 타원 IoU · 윤곽 행별 중앙 몸 흔들림), 재현을 컨트롤로 삼은 정수 이동 수리, 오려 붙이기 대신 방향별 워프, 눈 검사를 게이트로.
+Repairing raster animation assets with an operator in the loop — serve-and-verify preview, calibrated measures (EDT stroke width · second-moment ellipse IoU · contour row-median body sway), reconstruction-as-control for exact integer-offset fixes, direction-separable warp instead of cut-and-paste, and turning the eye test into a gate.
 
 ### 2026-07-17 | pattern | ensemble-union, detection-task, voting-vs-union (backfill)
 **File:** `knowledge/patterns/ensemble_union_detection_task_pattern.md`
