@@ -1,0 +1,4 @@
+RISK: HIGH
+REASON: PR은 옵트인 HTTP 서버를 추가하지만, 메인테이너는 이전 PR에서 "background daemon"·소켓 리스닝을 플래그로 가려도 여전히 영구히 유지해야 할 표면이라는 이유로 명시적으로 거절했다.
+QUOTE: We do not run as a background daemon and we do not listen on a socket.
+ACTION: HTTP 서버 기능 전체를 별도 유지되는 외부 도구/스크립트(예: docs/recipes.md 파이프라인 확장)로 제안하는 이슈나 문서 PR로 바꾸고, tidewatch 바이너리 자체에 리스닝 코드를 추가하지 않는다.

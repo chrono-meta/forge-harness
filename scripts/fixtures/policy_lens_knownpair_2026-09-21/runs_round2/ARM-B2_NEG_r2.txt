@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: PR adds a new lru dependency to the default command path and grows 640 lines across all four backends, but it follows the exact "widen the platform module's interface" shape the maintainer explicitly requested, with no cfg branches and verified byte-identical output.
+QUOTE: "If you can get the same win through the platform module so that all four targets go through it, I will merge that the day it lands."
+ACTION: Note in the PR description that the lru dependency is small/pure-Rust and justify why it's warranted under the CONTRIBUTING dependency rule (used by the default verify command path, not gated behind a flag).

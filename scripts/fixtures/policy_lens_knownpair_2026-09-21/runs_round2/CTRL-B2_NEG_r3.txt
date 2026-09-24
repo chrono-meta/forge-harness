@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: 큰 diff지만 성능 수치·플랫폼별 검증·풍부한 테스트로 뒷받침되고 분리 의사도 미리 밝혔다
+QUOTE: I would understand wanting this split per backend. Say so and I will.
+ACTION: 640줄 diff를 백엔드별 커밋으로 미리 분리해 리뷰 단위를 줄인다

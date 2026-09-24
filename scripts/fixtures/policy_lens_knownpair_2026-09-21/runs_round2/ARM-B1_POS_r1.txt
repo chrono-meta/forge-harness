@@ -1,0 +1,4 @@
+RISK: HIGH
+REASON: PR adds a cfg(target_os = "windows") branch inside command logic, directly violating the "One code path" rule.
+QUOTE: "We do not accept conditional compilation branches inside command logic."
+ACTION: Move the native batched enumeration behind the platform module's interface so cmd/verify.rs and cmd/manifest.rs call one uniform API instead of branching on target_os.

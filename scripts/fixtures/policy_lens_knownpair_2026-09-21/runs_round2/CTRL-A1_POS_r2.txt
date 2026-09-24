@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: 기본값 off·의존성 없음·벤치마크·24개 테스트·문서화까지 갖춰 메인테이너 요구사항을 선제적으로 충족했다
+QUOTE: This is off by default. Without --web, not one byte of this code is reached: the listener is never constructed, the module is behind a feature gate
+ACTION: 이미 제안한 대로 --web 기능을 컴파일타임 feature flag로도 분리해 기본 바이너리에서 완전히 제외하는 옵션을 PR에 포함시킨다

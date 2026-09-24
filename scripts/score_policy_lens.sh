@@ -81,7 +81,12 @@ _quote_block() {
       -e 's/^["“”]//' -e 's/["“”][[:space:]]*$//'
 }
 
-# score_one <runfile> <materialfile> <expected> <unique_token> <span1> <span2> <arm>
+# score_one <runfile> <materialfile> <expected> <unique_token> <span1> <span2...> <arm>
+#   <span2...> may carry MORE THAN ONE span, tab-joined — `read` hands the rest of a KEY line to
+#   its last variable, so a round-2 key that lists every governing sentence arrives here intact.
+#   A 2-span key (round 1) behaves exactly as before; lane P2 pins that byte for byte.
+#   <unique_token> = NONE disables the read-evidence gate (round-2 seal drops it: the 4-line
+#   contract has no slot for a repo name — RESULT_round1_VOID.md defect ②).
 # emits: risk<TAB>flagged_strict<TAB>flagged_relaxed<TAB>grounding<TAB>ontarget<TAB>verdict
 score_one() {
   local rf="$1" mf="$2" expected="$3" tok="$4" s1="$5" s2="$6" arm="$7"
@@ -108,7 +113,11 @@ score_one() {
   [ -z "$risk" ] && { printf 'INVALID\tNA\tNA\tNA\tNA\tINVALID-NO-RISK\n'; return; }
 
   # instrument survival: did the arm actually read the material it was handed?
-  hits=$(grep -cF "$tok" "$rf" 2>/dev/null); hits="${hits:-0}"
+  # 🟥 cross-family R1: an EMPTY token column must not disable the gate — `grep -cF ""` matches every
+  #   line. Only the written word NONE turns it off; a blank is a malformed key → INVALID-NO-TOKEN.
+  if [ -z "$tok" ]; then hits=0
+  elif [ "$tok" = "NONE" ]; then hits=1
+  else hits=$(grep -cF "$tok" "$rf" 2>/dev/null); hits="${hits:-0}"; fi
   if [ "$hits" -eq 0 ]; then
     printf '%s\tNA\tNA\tNA\tNA\tINVALID-NO-TOKEN\n' "$risk"; return
   fi
@@ -128,7 +137,10 @@ score_one() {
     else
       ontarget="OFFTARGET"
       nq=$(_norm "$quote")
-      for ns in "$(_norm "$s1")" "$(_norm "$s2")"; do
+      local _spans=() _sp
+      IFS=$'\t' read -r -a _spans <<< "$s1"$'\t'"$s2"
+      for _sp in "${_spans[@]}"; do
+        ns=$(_norm "$_sp")
         [ "$ns" = "none" ] && continue
         [ -z "$ns" ] && continue
         case "$nq" in *"$ns"*) ontarget="ONTARGET"; break ;; esac
@@ -274,7 +286,14 @@ ROWS=0
 MISSING_MATERIAL=""
 
 printf 'run\tfixture\tarm\trep\trisk\tflag_strict\tflag_relaxed\tgrounding\tontarget\texpected\n'
-while IFS=$'\t' read -r id repo axis expected tok s1 s2; do
+# 🟥 tab is IFS WHITESPACE: `IFS=$'\t' read` collapses consecutive tabs, so an EMPTY column vanishes
+#   and every later column slides left (an empty token column made span_1 the token). Split on a
+#   non-whitespace separator instead, then restore tabs inside the span remainder.
+#   Named residual (cross-family R2, B): a span that itself contains byte \037 is split in two. The KEY
+#   is authored by us from policy prose; a control byte there is a malformed key, not an input to defend.
+while IFS= read -r _line; do
+  IFS=$'\037' read -r id repo axis expected tok s1 s2 <<< "${_line//$'\t'/$'\037'}"
+  s2="${s2//$'\037'/$'\t'}"
   case "$id" in \#*|"") continue ;; esac
   for arm in ARM CTRL; do
     mf="$RUNS/material_${arm}-${id}.txt"

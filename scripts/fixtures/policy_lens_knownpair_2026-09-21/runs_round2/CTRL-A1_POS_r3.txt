@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: opt-in, default-off, no new deps, tested, and offers to gate further behind a compile-time feature
+QUOTE: This is off by default. Without --web, not one byte of this code is reached: the listener is never constructed, the module is behind a feature gate
+ACTION: move the --web surface behind a compile-time feature flag as already offered, so it is excluded from the default binary entirely

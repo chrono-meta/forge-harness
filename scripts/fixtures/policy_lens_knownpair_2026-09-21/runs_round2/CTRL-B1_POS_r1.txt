@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: 플랫폼별 fast path, 벤치마크·정확성 검증·테스트·CI 추가까지 갖춘 명확한 성능 개선 PR로 거절 사유가 적음
+QUOTE: Linux and macOS are untouched and unchanged (re-ran the full bench on Linux to confirm: within noise, 0.3%).
+ACTION: windows-sys 의존성 버전을 고정(semver pin)하고 MSRV 영향 여부를 PR 설명에 명시한다

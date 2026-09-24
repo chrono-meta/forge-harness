@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: 로드맵에 명시된 원하는 기능을 구현했고 단일 파일 동작을 바이트 동일하게 유지하며 범위 관련 우려를 스스로 해소했다
+QUOTE: merged, interleaved view across several files at once (wanted; nobody has built it yet)
+ACTION: slice-ring crate 의존성 추가에 대해 이슈로 먼저 논의했는지 밝히고, CONTRIBUTING의 "Open an issue before a large change" 규칙에 맞춰 사전 이슈 링크를 PR 설명에 추가한다

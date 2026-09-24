@@ -1,0 +1,4 @@
+RISK: HIGH
+REASON: 코드 경로에 cfg(target_os = "windows") 분기를 넣어 platform 모듈 밖에서 조건부 컴파일했고, 이는 CONTRIBUTING과 메인테이너의 명시적 거부 사유와 정면으로 충돌한다.
+QUOTE: We do not accept conditional compilation branches inside command logic.
+ACTION: cmd/verify.rs·cmd/manifest.rs의 cfg(target_os) 분기를 제거하고, 배치 열거 기능을 platform 모듈의 공통 인터페이스로 노출해 모든 플랫폼이 같은 질문에 답하도록 재구성한다.

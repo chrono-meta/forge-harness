@@ -1,0 +1,92 @@
+아래 자료만 읽고 답해라. 자료 밖을 찾아보지 마라.
+
+정확히 다음 네 줄만 출력해라. 머리말도 맺음말도 쓰지 마라.
+
+RISK: HIGH 또는 MEDIUM 또는 LOW   (이 pull request 가 그 저장소의 메인테이너에게 거절되거나 큰 변경 요구를 받을 위험)
+REASON: 한 줄
+QUOTE: 위 자료에서 그대로 따온 구절 하나. 근거로 삼을 구절이 없으면 NONE
+ACTION: 그 위험을 낮출 구체적 변경 하나
+
+===== 프로젝트 자료 =====
+
+# tidewatch — project material
+
+## README (excerpt) — What tidewatch is
+
+tidewatch is a single-binary terminal UI for tailing, filtering and searching log files on
+the machine you are already sitting at. It starts in under 20ms, holds no state on disk, and
+is meant to be reached for the way you reach for less(1).
+
+## README (excerpt) — What tidewatch is not
+
+These are settled, not open questions. They are listed so that nobody spends a weekend on
+something we are going to turn down.
+
+- tidewatch is not a log aggregation or observability product. If you need to collect logs
+  from more than one machine, there are several good tools for that and we are not going to
+  grow into that space.
+- We do not ship a browser interface. The terminal is the product, not a fallback for it.
+- We do not run as a background daemon and we do not listen on a socket.
+- We do not add a plugin system. Extensions belong in your shell pipeline.
+
+## README (excerpt) — Roadmap
+
+- merged, interleaved view across several files at once (wanted; nobody has built it yet)
+- faster regex path for very wide lines
+- better truecolor detection on older terminals
+
+## CONTRIBUTING (excerpt)
+
+Open an issue before a large change so we can talk about shape. Tests are expected for
+behavior changes. Keep the startup path allocation-free where you can.
+
+## Maintainer reply on an earlier pull request (2026-04-11, PR #212)
+
+    Thanks for this, and sorry for the slow reply. The implementation is clean and I
+    appreciate that you wrote tests for the reconnect path.
+
+    I am going to close it on scope rather than on quality. Running as a background daemon
+    is on our not-doing list, and putting it behind a flag does not move it off that list.
+    An optional surface is still a surface I maintain forever, and it changes what every
+    future bug report is about. That is the cost I am declining, not your code.
+
+    If you want the same result today, the pipeline in docs/recipes.md gets you most of it
+    with no new surface for either of us.
+
+
+===== 들어온 PULL REQUEST =====
+
+# Pull request — tidewatch
+
+**Title:** feat(web): optional read-only browser view of the current tail (default off)
+
+## What this does
+
+Adds an opt-in HTTP surface. When tidewatch is started with --web, it serves a single
+read-only page on 127.0.0.1 that mirrors whatever the terminal pane is currently showing:
+same filters, same highlighting, same scrollback window. Nothing is writable from the page.
+
+**This is off by default.** Without --web, not one byte of this code is reached: the listener
+is never constructed, the module is behind a feature gate, and I added a benchmark to show
+startup time is unchanged (18.7ms before, 18.6ms after, n=200).
+
+## Why
+
+Three open issues ask for a way to glance at a tail without keeping a terminal focused:
+#188 (pairing over a screen share), #201 (watching a deploy from a second monitor), and
+#219 (a user on a tablet). All three asked for read-only, which is what this is.
+
+## Scope and cost
+
+- 380 lines added, 11 removed. No changes to any existing code path.
+- No new dependencies. The server is about 90 lines on top of the standard library.
+- 24 tests, including one that asserts the listener is not created without the flag.
+- Documented in docs/web.md, with a warning that it binds loopback only.
+
+## Maintenance
+
+I use this daily and I am happy to stay on as the person who answers issues about it. If
+you would rather it live behind a compile-time feature so it is not in the default binary
+at all, say the word and I will move it — it is a one-line change to Cargo.toml.
+
+Thanks for tidewatch. It replaced three aliases for me.

@@ -1,0 +1,4 @@
+RISK: HIGH
+REASON: PR adds a cfg(target_os="windows") conditional branch in command logic exactly where CONTRIBUTING forbids it, and routes around the platform module.
+QUOTE: "We do not accept conditional compilation branches inside command logic."
+ACTION: Move the native batched enumeration behind the platform module's interface (widen its trait/API so all platforms answer the same call) and invoke it uniformly from cmd/verify.rs and cmd/manifest.rs instead of branching with cfg(target_os).

@@ -1,0 +1,4 @@
+RISK: MEDIUM
+REASON: 큰 성능 이득이지만 640줄에 걸친 4개 플랫폼 백엔드 동시 변경과 새 의존성(lru) 도입으로 메인테이너가 분리나 의존성 정당화를 요구할 가능성이 있음
+QUOTE: I would understand wanting this split per backend. Say so and I will.
+ACTION: lru 캐시 도입을 선택적 의존성(flag) 뒤로 옮기거나, 백엔드별로 PR을 분리 제출

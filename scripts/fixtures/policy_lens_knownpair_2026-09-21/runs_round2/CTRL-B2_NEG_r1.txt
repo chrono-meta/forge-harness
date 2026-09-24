@@ -1,0 +1,4 @@
+RISK: MEDIUM
+REASON: 큰 성능 이득이지만 640줄짜리 핫패스 변경에 새 의존성(lru)과 4개 백엔드 중복 구현이 얽혀 있어 메인테이너가 분할이나 의존성 재고를 요구할 가능성이 있다
+QUOTE: I would understand wanting this split per backend. Say so and I will.
+ACTION: PR을 백엔드별 또는 "인터페이스 변경"과 "구현 4종"으로 나눠 작은 커밋/PR로 분리해 리뷰 부담을 줄인다

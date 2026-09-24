@@ -1,0 +1,4 @@
+RISK: MEDIUM
+REASON: 새 의존성 도입(slice-ring crate)과 940줄 규모의 렌더/링 재작업은 메인테이너에게 분리 또는 추가 검토를 요구받을 가능성이 있다
+QUOTE: I pulled in the slice-ring crate (one file, no transitive dependencies) rather than hand-rolling a fourth one
+ACTION: slice-ring crate 의존성을 제거하고 자체 구현으로 대체하거나, 최소한 별도 PR로 분리해 의존성 추가 여부만 독립적으로 논의되게 한다

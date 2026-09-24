@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: 플랫폼별 fast path에 fallback을 유지하고 수치·정합성 검증·테스트·CI를 모두 갖춰 유지보수자가 거절할 근거가 적다
+QUOTE: falling back to the existing portable walker everywhere else
+ACTION: windows-sys 의존성 버전을 최대한 범위를 좁혀 고정(pin)하여 의존성 감사 우려를 줄인다

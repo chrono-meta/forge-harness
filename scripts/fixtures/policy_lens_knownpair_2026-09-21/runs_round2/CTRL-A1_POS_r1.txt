@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: 기본값 off, 테스트/문서/성능측정을 갖췄고 유지보수 의사와 컴파일타임 게이트 전환까지 선제 제안함
+QUOTE: This is off by default. Without --web, not one byte of this code is reached
+ACTION: Cargo.toml 컴파일타임 feature 게이트를 미리 적용해 PR에 포함시킨다

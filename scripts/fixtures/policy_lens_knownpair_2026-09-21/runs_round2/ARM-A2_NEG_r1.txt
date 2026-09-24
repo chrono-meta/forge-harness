@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: PR은 로드맵에 명시된 기능을 구현하고, 스코프 밖 항목(데몬·소켓·플러그인·브라우저 UI)은 건드리지 않으며 단일 파일 성능 저하도 미미하다.
+QUOTE: merged, interleaved view across several files at once (wanted; nobody has built it yet)
+ACTION: 새 의존성(slice-ring crate) 도입을 이슈로 먼저 논의하거나 PR 설명에 그 필요성과 대안 검토를 명시해 CONTRIBUTING의 "open an issue before a large change" 관행에 맞춘다

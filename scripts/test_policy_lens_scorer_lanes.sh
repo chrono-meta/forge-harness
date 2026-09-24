@@ -71,5 +71,41 @@ _o=$(bash "$SC" --key "$F/KEY.tsv" --runs "$F/runs_round1" >/dev/null 2>&1); _r=
 [ "$_r" -eq 0 ] && ok "P5 정상 런은 rc=0 — 영행 가드가 전부를 막지 않는다" \
                 || bad "P5 정상 런을 rc=$_r 로 막았다"
 
+# P6 — 2차 봉인용: 키에 지배 문장이 «셋 이상»일 때 세 번째 문장도 과녁으로 센다.
+#      known pair: 셋째 문장만 인용한 런 → ONTARGET · 어느 문장도 아닌 실재 인용 → OFFTARGET.
+#      🟥 둘 다 같은 회차에 — 한쪽만 있으면 「전부 ONTARGET」 매처가 통과한다.
+K="$T/k3"; mkdir -p "$K"
+printf '%s\n' 'Alpha rule one.' 'Beta rule two.' 'Gamma rule three.' 'Delta unrelated line.' > "$K/material_ARM-K.txt"
+printf '%s\n' 'RISK: HIGH' 'REASON: r' 'QUOTE: Gamma rule three.' 'ACTION: a' > "$K/ARM-K_r1.txt"
+printf '%s\n' 'RISK: HIGH' 'REASON: r' 'QUOTE: Delta unrelated line.' 'ACTION: a' > "$K/ARM-K_r2.txt"
+printf '#\nK\trepo\tax\tDECLINE\tNONE\tAlpha rule one.\tBeta rule two.\tGamma rule three.\n' > "$K/k.tsv"
+_o=$(bash "$SC" --key "$K/k.tsv" --runs "$K" 2>&1)
+_on=$(printf '%s\n' "$_o" | awk -F'\t' '$1=="ARM-K_r1.txt"{print $9}')
+_off=$(printf '%s\n' "$_o" | awk -F'\t' '$1=="ARM-K_r2.txt"{print $9}')
+[ "$_on" = "ONTARGET" ] && [ "$_off" = "OFFTARGET" ] \
+  && ok "P6 셋째 지배 문장 → ONTARGET · 무관한 실재 인용 → OFFTARGET" \
+  || bad "P6 다문장 키: 셋째=$_on (want ONTARGET) · 무관=$_off (want OFFTARGET)"
+
+# P7 — 토큰 게이트 끔(unique_token=NONE). 2차 봉인은 «레포명이 응답에 나온다» 를 버린다
+#      (4줄 계약에 그 자리가 없다 — VOID ②). known pair: 같은 런이 토큰=NONE 이면 유효 행,
+#      토큰=실명이면 여전히 INVALID-NO-TOKEN. 🟥 후자가 없으면 「게이트를 통째로 지웠다」와 구분 안 된다.
+G="$T/tok"; mkdir -p "$G"
+printf 'Alpha rule one.\n' > "$G/material_ARM-G.txt"
+printf '%s\n' 'RISK: HIGH' 'REASON: r' 'QUOTE: Alpha rule one.' 'ACTION: a' > "$G/ARM-G_r1.txt"
+printf '#\nG\trepo\tax\tDECLINE\tNONE\tAlpha rule one.\tNONE\n' > "$G/off.tsv"
+printf '#\nG\trepo\tax\tDECLINE\tzzqrepo\tAlpha rule one.\tNONE\n' > "$G/on.tsv"
+_off=$(bash "$SC" --key "$G/off.tsv" --runs "$G" 2>&1 | awk -F'\t' '$1=="ARM-G_r1.txt"{print $5"/"$10}')
+_on=$(bash "$SC" --key "$G/on.tsv" --runs "$G" 2>&1 | awk -F'\t' '$1=="ARM-G_r1.txt"{print $10}')
+[ "$_off" = "HIGH/DECLINE" ] && [ "$_on" = "INVALID-NO-TOKEN" ] \
+  && ok "P7 토큰=NONE → 유효 채점 · 토큰=실명 → 여전히 INVALID-NO-TOKEN" \
+  || bad "P7 토큰 게이트: NONE=$_off (want HIGH/DECLINE) · 실명=$_on (want INVALID-NO-TOKEN)"
+
+# P8 — cross-family R1: 빈 unique_token 칸이 게이트를 조용히 끈다(`grep -cF ""` 는 모든 줄에 맞는다).
+#      known pair: 빈 칸 → INVALID-NO-TOKEN · NONE(명시적 끔) → 유효. 🟥 끔은 «적은 것» 이어야 한다.
+printf '#\nG\trepo\tax\tDECLINE\t\tAlpha rule one.\tNONE\n' > "$G/blank.tsv"
+_bl=$(bash "$SC" --key "$G/blank.tsv" --runs "$G" 2>&1 | awk -F'\t' '$1=="ARM-G_r1.txt"{print $10}')
+[ "$_bl" = "INVALID-NO-TOKEN" ] && ok "P8 빈 토큰 칸 → INVALID-NO-TOKEN (NONE 만 게이트를 끈다)" \
+  || bad "P8 빈 토큰 칸이 게이트를 껐다: $_bl (want INVALID-NO-TOKEN)"
+
 printf 'PASS %d · FAIL %d\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

@@ -1,0 +1,4 @@
+RISK: HIGH
+REASON: PR 는 서버를 도는 HTTP 서핏이라 프로젝트가 이미 선을 그은 "no daemon, no socket" 원칙에 직접 부딪힌다.
+QUOTE: We do not run as a background daemon and we do not listen on a socket.
+ACTION: --web 플래그와 HTTP 서버 코드를 통째로 빼고, 대신 현재 tail 상태를 파일/파이프로 스냅샷 출력하는 명령을 추가해 docs/recipes.md 파이프라인 방식으로 요구를 해결한다.

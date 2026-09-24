@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: 플랫폼별 fast path에 명확한 성능 수치, 정확성 검증, 테스트, CI가 모두 갖춰져 있고 다른 플랫폼에 영향이 없다.
+QUOTE: Output is identical, not just equivalent. I ran both paths over the same 41k tree and compared the manifests byte-for-byte; they match, including ordering and the handling of reparse points and the two names that differ only by case.
+ACTION: windows-sys 의존성의 버전 범위와 MSRV 영향을 PR 설명에 명시한다.

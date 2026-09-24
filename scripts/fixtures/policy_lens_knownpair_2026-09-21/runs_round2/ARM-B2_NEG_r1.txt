@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: PR routes the change through the platform module exactly as the maintainer requested in the prior rejection, with no cfg branches and cross-target parity proven.
+QUOTE: If you can get the same win through the platform module so that all four targets go through it, I will merge that the day it lands.
+ACTION: Add a one-line CONTRIBUTING-compliance note in the PR description justifying the new lru dependency against the "only when the default command set uses it" rule to preempt any dependency pushback.

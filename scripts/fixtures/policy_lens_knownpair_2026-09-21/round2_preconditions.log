@@ -1,0 +1,9 @@
+2026년  9월 24일 목요일 19시 19분 06초 KST
+## ablation_calibrate
+✅ all controls held — runner is calibrated for this variant.
+   Reminder: the runner is NONDETERMINISTIC (a full arm A returned NOT IN MY CONTEXT in 1 of 3
+   reps on 2026-08-03). Run ablations at reps>=3; a single rep is not a measurement.
+rc=0
+## selftest
+✅ scorer known-pair held — safe to score real runs
+rc=0

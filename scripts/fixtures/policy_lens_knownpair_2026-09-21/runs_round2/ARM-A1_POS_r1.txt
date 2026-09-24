@@ -1,0 +1,4 @@
+RISK: HIGH
+REASON: 이 PR은 "백그라운드 데몬으로 실행하지 않고 소켓 리슨도 하지 않는다"는 확정된 not-doing 항목을 정면으로 위반하는 HTTP 리슨 서버를 추가한다.
+QUOTE: We do not run as a background daemon and we do not listen on a socket.
+ACTION: --web 옵션과 HTTP 서버 코드를 제거하고 PR을 올리기 전에 먼저 이슈를 열어 범위(scope)에 대해 메인테이너와 논의한다.

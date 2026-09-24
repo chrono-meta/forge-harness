@@ -1,0 +1,4 @@
+RISK: LOW
+REASON: 로드맵에 명시된 원하는 기능을 구현하고, 단일 파일 동작을 무변화로 유지하며 테스트를 충분히 갖췄다.
+QUOTE: merged, interleaved view across several files at once (wanted; nobody has built it yet)
+ACTION: 새로 추가한 slice-ring 의존성 선택 이유(라이선스·유지보수 상태 등)를 PR 본문에 한 줄 근거로 추가한다.

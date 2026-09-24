@@ -1,0 +1,4 @@
+RISK: MEDIUM
+REASON: 새 의존성 도입과 대규모 렌더/링버퍼 리팩터가 단일 PR로 묶여 있어 메인테이너가 분리나 의존성 정당화를 요구할 가능성이 크다
+QUOTE: I pulled in the slice-ring crate (one file, no transitive dependencies) rather than hand-rolling a fourth one
+ACTION: 로드맵 언급대로 ring 구현과 renderer 변경을 두 개의 PR로 분리해서 제출한다
