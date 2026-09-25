@@ -73,6 +73,12 @@ dur=$(cat "$f.dur" 2>/dev/null || echo 99)
 f="$T/open2"; ( printf '%s' "$P_INTERNAL"; sleep 5 ) | FH_TALLY_FILE="$f" bash "$SUBJ"
 [ "$(grep -c "^$TODAY$" "$f" 2>/dev/null || echo 0)" = 0 ] ; chk $? "payload delivered but pipe left open → still classified (internal skipped)"
 
+f="$T/nul"; printf '%s\0 ' "$P_INTERNAL" | FH_TALLY_FILE="$f" bash "$SUBJ"
+[ "$(grep -c "^$TODAY$" "$f" 2>/dev/null || echo 0)" = 1 ] ; chk $? "raw NUL after an internal payload → counted (OUTCOME lane: json rejects NUL — the bash reader that turned it into whitespace is gone; codex 2026-09-25)"
+f="$T/big"; s=$(date +%s); { printf '{"agent_type":"","pad":"'; head -c 9000000 /dev/zero | tr '\0' x; printf '"}'; } | FH_TALLY_FILE="$f" bash "$SUBJ"; e=$(( $(date +%s) - s ))
+[ "$(grep -c "^$TODAY$" "$f" 2>/dev/null || echo 0)" = 1 ] ; chk $? "payload over the 8 MiB cap → truncated → DOUBT → counted"
+[ "$e" -le 8 ] ; chk $? "and the cap bounds the read time (${e}s)"
+
 echo "── wiring: EXECUTE the shipped template command (a grep for the path matched the _readme text)"
 TPL="$SCRIPT_DIR/../templates/subagent-tally-hook.json"
 CMD=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["hooks"]["SubagentStop"][0]["hooks"][0]["command"])' "$TPL" 2>/dev/null)

@@ -28,19 +28,46 @@ T="${FH_TALLY_FILE:-$HUB/tracks/_meta/.subagent_dispatch_tally}"
 # 🟥 Read with a TIME LIMIT, never a bare `cat`. A caller that never closes stdin would park `cat` on
 #    EOF until the hook's own `timeout` kills it — BEFORE the append below — and a real dispatch would
 #    vanish silently (Axis-2 blind review, 2026-09-25, reproduced with `sleep 8 | …`; the old inline
-#    hook never read stdin, so this was new). `read -t` is bash-builtin (macOS ships no `timeout`).
-#    Whatever arrived before the limit is classified; nothing arriving → empty → COUNT.
-IN=""; _l=""
-while IFS= read -r -t 2 _l; do IN="$IN$_l"$'\n'; _l=""; done
-IN="$IN$_l"
-
+#    hook never read stdin, so this was new).
+# 🟥 The bounded read lives in python, not in a bash `read` loop (2026-09-25, local macOS run):
+#    · line-wise `read -t` — /bin/bash 3.2 DISCARDS a partial line on timeout (bash ≥4 keeps it), so a
+#      payload without a trailing newline on an open pipe read as EMPTY on macOS only
+#      (measured: 3.2 rc=1 got=[] · 5.3 rc=142 got=[abc]);
+#    · char-wise `read -n 1` — fixes that but is superlinear: 50 KB took 19 s, and SubagentStop
+#      carries the agent's last message.
+#    Rules, all landing on COUNT when in doubt: stop at EOF, or after 2 s with no new bytes (open pipe
+#    → classify what arrived), or at 5 s total · over 8 MiB → count · a raw NUL → json rejects it →
+#    count (codex review 2026-09-25 showed a bash char-reader turning NUL into whitespace → silent
+#    «internal»; json does the rejecting here, so there is deliberately no separate NUL guard — a
+#    revert probe showed one would be decorative).
+#    No python3 → stdin is not read at all → count (the old inline hook never read it either).
 CLS="count"
 AT=""; SID=""
-if command -v python3 >/dev/null 2>&1 && [ -n "$IN" ]; then
-  _r=$(printf '%s' "$IN" | python3 -c '
-import json, sys
+if command -v python3 >/dev/null 2>&1; then
+  _r=$(python3 -c '
+import json, os, select, sys, time
+fd = 0; buf = b""; cap = 8 << 20; doubt = False
+t_end = time.monotonic() + 5.0
 try:
-    d = json.load(sys.stdin)
+    while True:
+        left = t_end - time.monotonic()
+        if left <= 0:
+            break
+        r, _, _ = select.select([fd], [], [], min(2.0, left))
+        if not r:
+            break                      # idle 2 s — pipe left open; classify what arrived
+        chunk = os.read(fd, 65536)
+        if not chunk:
+            break                      # EOF
+        buf += chunk
+        if len(buf) > cap:
+            doubt = True; break
+except Exception:
+    doubt = True
+if doubt or not buf.strip():
+    print("count\t\t"); sys.exit(0)
+try:
+    d = json.loads(buf.decode("utf-8"))
 except Exception:
     print("count\t\t"); sys.exit(0)
 if not isinstance(d, dict):
