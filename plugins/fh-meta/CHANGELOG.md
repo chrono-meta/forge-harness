@@ -1,5 +1,16 @@
 # forge-harness (fh-meta) Changelog
 
+### [3.20.1] — 2026-09-26 — 마감 게이트 ④-e 가 Claude Code 내부 에이전트를 디스패치로 세지 않는다
+
+**patch — 오탐 수리.** 소비자의 게이트 수용은 안 깬다(과다 계수 → 정확 계수 방향).
+
+- **`scripts/subagent_tally_hook.sh`** (신규 출하) — SubagentStop 이 압축 같은 CC 내부 에이전트(`agent_type: ""`)에도
+  울려 디스패치 0 인 세션이 ④-e 에 막히던 오탐 수리. «필드가 있고 정확히 빈 문자열» 일 때만 빼고 의심은 전부 센다.
+  표준입력은 python 이 유휴 2s · 총 3s · 8 MiB 로 읽는다 — 맥 `/bin/bash` 3.2 는 `read -t` 타임아웃 때 부분 줄을
+  버려 bash 판이 맥에서만 틀렸다(bash 5 에선 안 보임). 총 제한은 훅 timeout(5s)보다 짧게. 레인 24/0(bash 3.2·5.3).
+- **`templates/subagent-tally-hook.json`** — 본문이 위 스크립트를 부른다(스크립트 없는 옛 클론은 옛 동작으로 폴백).
+  🟥 **기존 install 은 `.claude/settings.json` 의 SubagentStop 블록을 재병합해야** 새 동작을 받는다.
+
 ### [3.20.0] — 2026-09-24 — 스쿼시 머지가 브랜치를 «다 실었나» 를 명령으로 확인한다
 
 **minor — 새 출하 스크립트 둘 + 머지 절차 교리 변경.** 소비자의 게이트 수용은 안 깬다(새 스크립트는
