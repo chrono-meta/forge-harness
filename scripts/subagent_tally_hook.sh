@@ -36,7 +36,7 @@ T="${FH_TALLY_FILE:-$HUB/tracks/_meta/.subagent_dispatch_tally}"
 #    · char-wise `read -n 1` — fixes that but is superlinear: 50 KB took 19 s, and SubagentStop
 #      carries the agent's last message.
 #    Rules, all landing on COUNT when in doubt: stop at EOF, or after 2 s with no new bytes (open pipe
-#    → classify what arrived), or at 5 s total · over 8 MiB → count · a raw NUL → json rejects it →
+#    → classify what arrived), or at 3 s total (under the 5 s hook timeout) · over 8 MiB → count · a raw NUL → json rejects it →
 #    count (codex review 2026-09-25 showed a bash char-reader turning NUL into whitespace → silent
 #    «internal»; json does the rejecting here, so there is deliberately no separate NUL guard — a
 #    revert probe showed one would be decorative).
@@ -47,7 +47,7 @@ if command -v python3 >/dev/null 2>&1; then
   _r=$(python3 -c '
 import json, os, select, sys, time
 fd = 0; buf = b""; cap = 8 << 20; doubt = False
-t_end = time.monotonic() + 5.0
+t_end = time.monotonic() + 3.0  # < settings.json hook timeout 5 s — the kill would land BEFORE the append
 try:
     while True:
         left = t_end - time.monotonic()

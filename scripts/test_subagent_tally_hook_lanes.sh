@@ -79,6 +79,10 @@ f="$T/big"; s=$(date +%s); { printf '{"agent_type":"","pad":"'; head -c 9000000 
 [ "$(grep -c "^$TODAY$" "$f" 2>/dev/null || echo 0)" = 1 ] ; chk $? "payload over the 8 MiB cap → truncated → DOUBT → counted"
 [ "$e" -le 8 ] ; chk $? "and the cap bounds the read time (${e}s)"
 
+f="$T/trickle"; s=$(date +%s); ( for i in 1 2 3 4 5 6 7 8; do printf ' '; sleep 1; done; printf '%s' "$P_INTERNAL" ) | FH_TALLY_FILE="$f" bash "$SUBJ"; e=$(( $(date +%s) - s ))
+[ "$(grep -c "^$TODAY$" "$f" 2>/dev/null || echo 0)" = 1 ] ; chk $? "slow trickle (1 byte/s, never idle 2 s) → deadline cuts it → counted"
+[ "$e" -le 4 ] ; chk $? "and the deadline lands inside the settings.json hook timeout (5 s) with margin (${e}s — a 5 s deadline raced the kill, which lands BEFORE the append)"
+
 echo "── wiring: EXECUTE the shipped template command (a grep for the path matched the _readme text)"
 TPL="$SCRIPT_DIR/../templates/subagent-tally-hook.json"
 CMD=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["hooks"]["SubagentStop"][0]["hooks"][0]["command"])' "$TPL" 2>/dev/null)
