@@ -2225,6 +2225,17 @@ if [ -f scripts/test_dispatch_log_lanes.sh ]; then
     fail=1
   fi
 fi
+# The tally hook's BODY (2026-09-25): SubagentStop also fires for Claude Code's internal agents
+# (compaction → agent_type ""), and the date-only inline hook counted them as dispatches.
+if [ -f scripts/test_subagent_tally_hook_lanes.sh ]; then
+  if _out=$(bash scripts/test_subagent_tally_hook_lanes.sh 2>&1); then
+    echo "PASS  test_subagent_tally_hook_lanes.sh (internal-agent skip + count-on-doubt lanes)"
+  else
+    echo "FAIL  test_subagent_tally_hook_lanes.sh: the dispatch tally would mis-count"
+    _show_failure "$_out"
+    fail=1
+  fi
+fi
 
 # selfcheck's own subject-presence discriminators. Every other guard under scripts/ has a lane suite;
 # this decision had none, and it shipped two mis-routings in one session — a two-arm form that fell
