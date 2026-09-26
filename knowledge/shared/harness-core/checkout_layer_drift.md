@@ -316,3 +316,14 @@ advisory 다(세션이 스스로 설정을 바꾸는 건 정당하다). 스냅�
    `bash scripts/hook_drift_check.sh` 로 CURRENT 인지 확인한다. 🟥 복구를 핑계로 원래 없던 훅을
    넣지 마라 — 스니펫에 없는 로컬 항목은 세션 전사본에서 원래 값을 찾아 대조한다.
 4. **홈 설정**(`~/.claude/...`)은 이 레포 소유가 아니다 — 무엇이 바뀌었는지만 보고하고 사람이 판단한다.
+
+---
+
+## §CM-Resident-Paragraph — CLAUDE.md 상주 문단 원문 (2026-09-26 이관)
+
+> Relocated **verbatim** from `CLAUDE.md` (§FH Improvement 4-Axis Auto-Gate) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+🟥 **그리고 그 채널 밖에도 같은 사각이 있다 — «훅이 막는다»는 이 파일의 모든 문장은 훅이 **배선된** 체크아웃에서만 참이다.** `templates/.git-hooks/pre-commit` 은 tracked 라 어느 클론에나 오지만 `core.hooksPath` 는 git 이 나르는 값이 아니다. 실측 2026-09-21, 같은 커밋 `a9e9b29`, 두 체크아웃(운영자 맥 ↔ 클라우드 클론): **15개 층 중 READ 4개만 같고 ENFORCE·EVIDENCE·PATTERN 11개가 전부 반대**였다. 같은 커밋이 한쪽에서는 무음 통과하고, `git config core.hooksPath templates/.git-hooks` **한 줄**을 잡자 Axis 2+3·Axis 4 로 차단됐다 — 바뀐 것은 코드가 아니라 배선이다. 🟥 **위험한 방향은 «여기 초록·저기 빨강» 쪽이다**: 게이트가 *통과한 것*과 *안 돈 것*은 터미널 출력이 **둘 다 무음**이라 구분되지 않는다. 그리고 세 번째 방향이 제일 조용하다 — PATTERN 층이 비면 기밀성 스캔은 돌지만 `defaults` 만 싣고 회사명·실명 클래스가 UNSCANNED 인 채 **초록이 난다**(🟧 배너는 뜨고 차단은 안 한다 — 오버라이드가 gitignored 라 하드 차단하면 모든 새 클론의 첫 커밋이 막혀 `PUBLIC_SURFACE_OK` 를 반사행동으로 훈련시킨다). ⇒ 층 대조는 **`bash scripts/env_layer_fingerprint.sh`** — PRESENT/ABSENT/UNMEASURED 만 내고 값은 안 싣는다(`--digest` 는 양쪽에서 찍어 붙이는 한 줄). 🟥 **계기지 게이트가 아니다** — 어떤 훅도 안 부른다. 기계화한 것은 «층이 있나» 라는 **채널**이지 «그래서 커밋해도 되나» 라는 **결론**이 아니다(§Mechanization Boundary). ⚠️ 같은 이유로 `fh_node_check.sh` 는 **이 환경에서 뜨지도 않는다** — 바닥이 없다고 알려 줄 탐지기 자신이 `settings*.json`(전부 gitignored)과 같은 수송로를 탄다.
+🟢 **그 다음 칸이 2026-09-21 에 측정됐다 — 「층이 없다」는 「게이트가 못 돈다」가 아니다.** 같은 클라우드 클론에서 `core.hooksPath` 한 줄만 잡으니 **네 축 전부 통과**했다(훅 무수정). 필요한 것은 셋뿐이다 — ① 그 배선 ② **UTF-8 로케일**(`LC_CTYPE=POSIX` 에서는 정직한 한글 마커의 비공허성 다리 넷이 전부 「공허」로 차단된다 — 코드 쪽 수리는 PR #780) ③ gitignored 증거 둘을 **사람이** 쓰는 것. ⇒ **`bash scripts/gate_bootstrap_ephemeral.sh --check|--apply`** — ENFORCE 미배선(무음 통과)과 LOCALE 파손(과차단)을 반대 방향의 고장 둘로 찍고 하나라도 남으면 rc=1. 🟥 **증거는 안 만든다**(마커 자동 생성 = 가짜로 닫기, 4축 정본이 금지). 축별 표·구조적 잔여 셋·한계는 `checkout_layer_drift.md` §8.
+🟥 **그리고 이 문단 자체는 측정에서 분리되지 않았다 — 실패로 라벨한다(2026-09-21, 플로어 티어 블라인드, act 모드, reps=3/팔, 사전등록 봉인).** ARM(이 문단 있음) **3/3** 이 «훅이 배선 안 됨»을 첫 항목으로 지목했는데, CONTROL(`main`, 이 문단 없음)도 **3/3** 이다. 사전등록한 반증 조건 — «CONTROL ≥ ARM 이면 기여 0» — 이 **그대로 충족됐다.** ⚠️ 동시에 계기가 오염됐다: CONTROL 팔이 자기 근거로 *«메모리에 적어둔 …»* 을 적었다 — `sim_isolated_run.sh` 는 레포 트리와 settings 는 격리하지만 **사용자/팀 메모리는 격리하지 않고**, 거기에 같은 사실이 이미 적혀 있었다. 🟥 **오염을 이유로 판정을 되돌리지 않는다** — 오염은 왜 분리가 불가능했는지를 설명할 뿐 이 문단을 구제하지 않는다. 남는 라벨은 둘 다다: ① 기여 측정 0 · ② 재측정 필요(메모리만 비우고 프로젝트 CLAUDE.md 는 살리는 팔이 러너에 없다 — 명시된 잔여). 이 문단을 남기는 이유는 옳고 싸기 때문이지 뜨는 것이 확인됐기 때문이 아니다 — §Onboarding 의 door-language 주석과 **같은 형태**다.
+

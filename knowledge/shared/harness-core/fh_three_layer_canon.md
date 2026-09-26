@@ -642,3 +642,52 @@ standpoint:            ⓑ 는 **자기 필드**가 정본이고, `axes-run` 은
 - **등급 판정을 하지 않는다** — `ship_readiness_gate.md` 가 정본이다.
 - **4축을 매번 다 돌리라고 하지 않는다** — 축은 실패 모드에 맞춰 고른다.
 - **3층이 깔끔한 계층이라고 주장하지 않는다** — §0 의 자기참조 절을 반드시 같이 읽어라.
+
+---
+
+## §CM-External-Commit-Gate-Number — 외부 수치 — arXiv:2609.10969 (CLAUDE.md 에서 이관)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Identity) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+🟢 **외부 수치가 생겼다(2026-09-12)**: `arXiv:2609.10969`(*Engineering Reliable Commit Gates for Agentic AI*, 2026-09-10)이 고정예산 2×2 로 **48 템플릿 · 2,880 시나리오**에서 두 축을 분리해 쟀다 — «**같은 증거를 읽는 교차-모델 투표**»는 위험 제안의 **62.9 %** 를 승인하고, «**독립 출처**»는 **22.9 %** 다. 출처 효과 **40.9 %p** vs 모델 다양성 효과 **11.3 %p** — **3.6 배**.
+
+이 줄은 n=4+4 내부 관찰로 서 있었고 이제 외부 n=2,880 이 같은 방향을 가리킨다(숫자는 초록 직독으로 재확인, 2026-09-12).
+
+
+---
+
+## §CM-Axes-Run-Notation-Evidence — `axes-run` 표기법은 판별자가 아니다 — 코퍼스 실측 (CLAUDE.md 에서 이관)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Identity) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+⚠️ **표기법은 판별자가 아니다** — 초판이 «기호 키를 보면 6축인 줄 안다» 고 적었는데 **코퍼스 실측이 반증했다**: axes-run 보유 53건 중 기호 키가 4건인데 그중 **2건이 2026-08-10 자이면서 옛 4축 의미로 기호를 쓴다**(`ⓑ 첫실사용` · `ⓓ 되돌림` — 현 배열에선 각각 ⓔ·ⓕ), 혼용도 1건 있다. 훅은 그 셋을 안 읽으므로 커밋은 안 막지만 **감사자의 grep 은 거기서 틀린 답을 낸다**.
+
+
+---
+
+## §CM-Standpoint-Validator-Retraction — `standpoint:` 값 검증 — «0줄» 철회와 advisory→차단 (CLAUDE.md 에서 이관)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Identity) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+🟥 **초판은 여기에 «값을 검증하는 코드가 아직 0줄»이라고 적었는데 그건 거짓이었다 — 2026-08-23 정정(RETRACTED).** 실측: `templates/.git-hooks/pre-commit` 의 `validate_standpoint_leg()` 는 **86줄**이고 `:1953` 에서 호출되어 `FAILED=1` 로 **커밋을 차단한다**(레인 = `scripts/test_marker_standpoint_lanes.sh`, 실재). 정확한 잔여는 「0줄」보다 훨씬 좁고, **그 구분을 접으면 안 된다**: ⓐ **enum 은 닫혀 있고 차단한다** — 함수 안 `return 1` **6개**(`standpoint:` 줄 부재 · 중복 `standpoint:` 줄 · enum 비-멤버 값 · `crossfamily:` 토큰 오염 · 근거 없는 `not-applicable` · 근거 없는 `DEGRADED_*`/`UNKNOWN`). ⓑ **`tier2`+ 의 «실행을 명명했는가» grounds 검사도 2026-09-12 부로 차단한다** — 그 전까지는 `⚠️` 만 찍고 `return 1` 을 안 했다(훅 스스로 *"Advisory by design"* 이라 적었다). 🟢 **바꾼 근거는 외부 실측이다**: `arXiv:2609.10969` 이 출처 축을 **40.9 %p**, 모델 축을 **11.3 %p** 로 재서(n=2,880 · 고정 호출예산) «강한 축의 grounds 를 advisory 로 두고 약한 축을 하드 차단» 이 균형이 아니게 됐다. grace date 로 소급하지 않으며(`< 2026-09-12` 마커는 종전 경고), 레인 = `test_marker_standpoint_lanes.sh` N8/N8b/N8c/N8d. 🟥 막는 것은 **기록의 형태**(명령과 출력을 명명했는가)이지 그 실행의 진위가 아니다. **왜 그렇게 적혔나**: 2026-08-20 정정이 «enum 은 닫혔고 grounds 는 advisory» 로 이미 들어왔는데(§Standpoint-Execution-Evidence 포인터 줄이 그대로 적고 있다) **이 줄만 옛 서술로 남았다** — 같은 파일이 자기 자신과 어긋난 반쪽-픽스 전파경계다(`[[feedback_half_fix_propagation_boundary]]`). 🟥 **이 문단의 논지는 바뀌지 않는다** — 닫힌 것은 여전히 **«형식»이지 «진위»가 아니고**, 자평·게임 가능성은 그대로 열려 있다. 오히려 좁아진 만큼 정확해졌다.
+
+
+---
+
+## §CM-Self-Grading-Open — 자평·게임 가능성은 안 닫혔다 — 형식 vs 진위 (CLAUDE.md 에서 이관)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Identity) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+> 🟥 **자평이다 · 게임 가능하다 — 둘은 안 닫혔다. 「훅이 없다」는 2026-08-17 부로 거짓이 됐고,
+> 그 정정이 경계를 더 선명하게 만든다.** 그날 `standpoint:`(PR #429)와 `thirdparty:`(PR #434)에
+> 값 검증 레인이 붙어, `crossfamily:` 와 함께 **세 필드가 훅에서 닫힌 enum + 비공허 근거로
+> 검증된다**(`validate_{crossfamily,standpoint,thirdparty}_leg`). 🟥 **그러나 닫힌 것은 «형식»
+> 이지 «진위»가 아니다** — 훅은 값이 목록 안에 있고 근거가 비어 있지 않은지를 보지, 그 값이
+> **참인지**는 보지 않는다. 도그푸드 증거: 그 기계화를 촉발한 거짓값(어느 릴리스 마커의
+> `not-applicable`)이 **새 레인을 그대로 통과한다.** 형식이 옳기 때문이다.
+> 그래서 **자평·게임 가능성은 그대로 열려 있다.** 그건 결함이 아니라 §Mechanization Boundary 가
+> 의도적으로 사람에게 남긴 자리다(판단을 코드로 굳히면 오늘의 판단이 내일의 천장이 된다).
+> 닫는 방향은 여전히 **cross-family 가 그 마커를 읽는 것**이지 자기 채점을 더 성실히 하는 게
+> 아니다 — 2026-08-17 실측이 그 근거를 강화했다(병렬 두 세션, 상호 정정 7건, **판단 축 자력
+> 적발 0**, 둘 다 사전등록·컨트롤·되돌림을 다 돌리고도 각자 자기 쪽으로 접었다).
+

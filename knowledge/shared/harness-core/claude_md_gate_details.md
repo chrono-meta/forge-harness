@@ -490,3 +490,346 @@ as-is rather than rewritten).
 > against a **moving** main after it last ran — so a check that passed can still land behind
 > concurrent merges it never saw.
 
+---
+
+## §CM-Reinvention-External-Number — Reinvention reflex — external family-level number (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Envelope-Boundary Discipline) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+**External, family-level number (2026-09-04, digest `HN:49557206`, armature.tech, 5,292 valid sessions)**: Claude Code built in-house instead of adopting an existing tool in **19 %** of sessions vs **10 %** for Codex and Cursor — ≈2× its peers. The reflex this section counterweights is a measured family bias, not a local habit; the one-session 3× above is the internal instance of it.
+
+(Measured 2026-07-14, one session, 3×: two identities each collapsed
+onto their single hardest sub-mechanism, and a failure from a **non-harness** run mapped onto a harness
+metric — each read a live-but-incomplete thing as zero, each caught by the operator, not self-caught.
+Detail: `[[feedback_reinvention_reflex_normalization_counterweight]]`.)
+
+
+---
+
+## §CM-Declined-Grounds-Honesty — The `declined`-grounds lane is a channel with a small frozen judgment (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Mechanization Boundary) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+⚠️ **Applied honestly to this file's own machinery, same day**: the `declined`-grounds lane added to
+`templates/.git-hooks/pre-commit` is a **channel** check (a claim must name attributable grounds) —
+it does not judge whether decorrelation was warranted. But its grounds test is a *vocabulary grep*,
+and a vocabulary list is a small frozen judgment: a legitimately-phrased `declined` in unforeseen
+wording over-blocks. Accepted because the failure is **loud and cheap** (author rephrases) rather
+than silent, and because it mirrors the existing degrade-branch form — named here rather than
+claimed pure.
+
+
+---
+
+## §CM-Local-Execution-Evidence — Why «to completion» is operative — the pmh-dev case (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Local Execution First) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+**Why "to completion" is the operative phrase** (measured 2026-08-16, pmh-dev): that repo's
+`validate.yml` was wired the same day, so CI's first run was the suite's first real execution ever —
+there was no "previously known-good" for it to confirm. A partial local run would have missed it too:
+the suite printed `SELFCHECK: FAIL` while **neither `FAIL` nor `❌` appeared anywhere in its output**
+(the failing lane used its own vocabulary, `INSTRUMENT ERROR`), so locating it needed `bash -x` to
+the actual failing line. Reading the tail, grepping for the expected token, or trusting an exit code
+you did not trace are all forms of not-running-it.
+
+**Operator, 2026-08-16**: *"이 실패가 CI 확인 단계에서야 발견되는 건 매우 늦다 … 로컬에서 그
+[대상 레포]를 통해서 실제로 구동시켜 봤다면 안 발생했을까"* and *"CI 확인도 중요하지만 사실 이는
+**깃헙의 기능에 기대는 것**이라고 봐야 하려나."*
+
+Both halves are load-bearing. **Late**: a red CI check is discovery at the slowest, most expensive
+point in the loop, after push, after the PR, in front of an audience. **Borrowed**: CI is a
+*platform* feature, so a harness that only finds its own defects there has not built a gate — it has
+outsourced one, and it silently inherits that platform's coverage boundaries as its own.
+
+
+---
+
+## §CM-Skeleton-Retraction — The retracted `tier1b` sim numbers (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Skeleton, Not Muscle) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+🟥 **RETRACTED (2026-08-17) — the numbers this paragraph used to cite are withdrawn, in BOTH
+directions.** It read: *"Two independent blind Sonnet sims then graded a pure cold-read as `tier2`,
+**0/2** … A static read of my own fix would have scored it PASS. Only running it found the hole."*
+That sim set was **8 runs at `tool_uses: 0`** — the agents never opened a file, so the instrument
+was dead and the grades measure nothing (`tracks/_meta/fh_completed_2026-08-16.md:690`, retracted
+the same day the doctrine was written and **before** this paragraph's own commit). The re-run with a
+live instrument then landed the **opposite** result — the rung was graded correctly — at **reps=1**,
+below this repo's own `reps>=3` bar. **So neither «it failed» nor «it worked» is established.** Do
+not restore either number, and do not read the retraction as proof of the inverse.
+
+**Why «reads correctly» is not evidence.** A `tier1b` rung was added to the `standpoint:` enum
+precisely so a static review would stop being recorded as `tier2`. The text was correct; a reader
+would agree — and a reader agreeing is not a measurement, which is this paragraph's whole point.
+
+**The claim that survives is narrower and does not need those numbers**: a static read cannot
+establish that a rule *fires*, because the thing being tested is whether a reader who is not the
+author lands on the right rung — and the author reading their own text is the one reader guaranteed
+to. That is an argument about what a read can measure, not a measurement. The general principle
+(`field_verdict_crossfamily_gate.md §7`'s execution-over-static asymmetry) rests on its own separate
+field evidence; **this paragraph is no longer one of its data points.**
+
+
+---
+
+## §CM-Clawd-Existence-Proof — Existence proof — clawd-on-desk PR #888 (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Skeleton, Not Muscle) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+**Existence proof, ours, this session**: *"우리가 최근에 클로드온데스크에 기여한 것처럼."*
+`rullerzhou-afk/clawd-on-desk` PR #888 was merged **exactly as submitted, with no changes
+requested** — the owner's words: *"focused, technically sound, and well-tested … we merged it
+exactly as submitted, with no changes needed."* That is the shape: the mechanical case was closed
+before submission (a fixture whose potency was reasoned about in-comment, a lane that re-executes
+the real consumer path rather than asserting a flag), so nothing was left to negotiate but whether
+they wanted it. **This is the bar to hold ourselves to on every outbound PR**, and it is why the
+survivor-lane technique from that same PR is worth absorbing rather than admiring
+(`tracks/_meta/fh_signal_2026-08-16_clawd-survivor-lane-air.md`).
+
+
+---
+
+## §CM-Calibration-Why-Resident — Why Instrument Calibration is resident — 2026-07-20 (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Instrument Calibration) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+**Why resident**: the trigger is *intent* ("I am about to trust / publish this output"), not a file, and
+**no hook can catch it** — there is no mechanical backstop by nature, so salience is the only layer.
+(Measured 2026-07-20, one session, 3×: an always-loaded footprint scan that omitted 61% of the surface ·
+an index/file **size ratio** used as a proxy for content coverage · an **ASCII-token scanner run over a
+Korean corpus** → ~96% false positives, whose "77 items / 70%" was published into three records before a
+single hand-check collapsed it to **3**. Each was caught by looking at one real case.)
+
+(Closed 2026-07-20 by a
+   known-pair sim that found this loophole; the session that wrote the rule had itself leaked its bad
+   "70%" into conversation before any file.)
+
+
+---
+
+## §CM-4Axis-Server-Side-Residual — 4축 게이트의 서버측 잔여 — 필수 체크 · Axis 1 · 원격 노드 (CLAUDE.md 에서 이관)
+
+> Relocated **verbatim** from `CLAUDE.md` (§FH Improvement 4-Axis Auto-Gate) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+**그리고 서버측 검증엔 남은 잔여가 있다(2026-08-12 재확인 — `contexts=[]` 서술은 stale, 정정됨)**: `main` 은 `enforce_admins: true` 로 **푸시 경로**(PR 경유)를 강제하고, legacy `required_status_checks.contexts` 는 **`["validate", "new-code-anchor"]`** 다(2026-09-17 두 층 직독 — rulesets 층은 `non_fast_forward` 하나뿐) — `validate` 잡(`.github/workflows/validate.yml`, 메타데이터·`selfcheck.sh` 배선 레인)과 `new-code-anchor` 가 실제 **필수 체크**다. ⚠️ **`validate` 는 Axis 1 이 아니다** — Axis 1(`regression-guard.yml` → `templates/regression_guard.sh`)은 **여전히 필수 체크가 아니다**(빨개도 머지를 못 막는다). 🟥 **다만 «돌지도 않는다» 는 2026-09-17 부로 거짓이다 — 정정.** 이 줄은 «그 워크플로의 `paths:` 가 `SKILL.md`·`.claude/rules/*.md`·`CLAUDE.md`·`templates/*.md` 만 보므로 `knowledge/`·`docs/`·`AGENTS.md`·`scripts/**`·에이전트 정의만 바뀐 PR 에는 Axis 1 자체가 돌지도 않는다» 고 적고 있었는데, **`paths:` 는 2026-08-29(`d5fceac`, #552)에 4축 대상 클래스 전부를 덮도록 넓어졌고**(추가분 = `knowledge/**/*.md` · `docs/*.md` · `AGENTS.md` · `scripts/**` · `templates/.git-hooks/*` · `plugins/*/agents/*.md` · `.claude/agents/**/*.md` · `README*.md` · `CHEATSHEET.md` · `CATALOG.md` · `.github/workflows/*.yml` · `.claude/registry/*.md` · `package.json` — 기존 `SKILL.md`·`.claude/rules/*.md`·`CLAUDE.md`·`templates/*.md`·`templates/regression_guard.sh` 위에) 이 문장만 19일간 안 따라갔다. 실측: `scripts/`·`package.json`·`bin/` 만 바뀐 PR #745 에서 Axis 1 이 **실제로 돌아 통과**했다(run 35227853301, `REGRESSION_GUARD_RESULT=pass`). 🟥 **그리고 그 낡은 문장이 같은 날 기록 셋(커밋 메시지·마커·매니페스트)으로 그대로 전파됐다** — 상주층의 낡은 주장은 읽는 세션이 «확인» 대신 «인용» 하는 순간 번진다([[feedback_half_fix_propagation_boundary]] · 정정면 = PR #745 코멘트). 남는 갭은 이제 «안 돈다» 가 아니라 **«돌지만 필수가 아니다»** 하나다. `validate` 쪽 남은 갭은 `strict: false`: 그 체크는 PR 브랜치에 푸시할 때마다 재실행되지만(오픈 시점 한정이 아니다), 그 뒤 main 이 움직여도 재검증을 강제하지 않으므로 **초록으로 남아 있는 체크가 실제로 병합되는 최신 트리를 본 적이 없을 수 있다.** 즉 서버가 강제하는 건 *체크가 초록인가*지 *그 체크가 지금의 main 을 봤는가*가 아니다. Axes 2–3(마커)·Axis 4(매니페스트)는 그 파일들이 `tracks/**` 로 gitignored 라 CI 가 **구조적으로 볼 수조차 없다**. 🟥 **그 사각이 실제로 뚫렸다(2026-09-14 실측, 2/2)** — 원격 자율 노드(`claude/*` 브랜치, 클라우드 세션)는 체크아웃이 휘발해서 마커가 **아무 데도 안 남는다**. 머지된 `claude/` 접두사 PR 전수 **#675·#716 둘 다** FH 자산을 바꾸고 마커 없이 **초록으로** 들어왔다. ⇒ `scripts/remote_marker_gate.sh` 가 **그 채널에 한해** «마커 3필드(`axes-run`·`crossfamily`·`standpoint`)가 커밋 기록에 실려 왔나» 를 `validate` 에서 막는다(레인 14 · 되돌림 프로브 포함). 보통 브랜치는 pre-commit 이 이미 관할하므로 **SKIP** 이다 — 만족 불가능한 이중 요구는 override 를 훈련시킨다. 🟥 **닫은 것은 «조용한 부재» 하나다**: 검사는 형식만 보고(값의 진위도 enum 멤버십도 안 본다 — enum 정본은 저작 노드의 훅이다), 옮긴 마커와 지어낸 마커는 여전히 바이트가 같다. 정직한 표현은 "하드 차단"이 아니라 "**가용한 가장 강한 층**"이다. **미해결 잔여**: `strict` 를 켜는 것도, Axis 1 을 필수 체크로 거는 것도 운영자 결정이다(막 flaky 레인을 하나 기록한 참이라, 과차단이 override 를 습관화시키는 쪽으로 기울 수 있다). 🟢 «그 `paths:` 를 넓히는 것» 은 2026-08-29 에 이미 닫혔다 — 위 정정 참조.
+
+
+---
+
+## §CM-4Axis-Split-Measurement — 4축 절 분리 실측 — 2026-07-20 (CLAUDE.md 에서 이관)
+
+> Relocated **verbatim** from `CLAUDE.md` (§FH Improvement 4-Axis Auto-Gate) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+> (2026-07-20 분리. **파일 char 실측**: 이 절 자체가 76,706자 중 **10,331자(13.5%)**로 단일 최대였다. 그 분리 + 같은 세션의 중복 3건 제거 + New-Skill 게이트 편입까지 **합산**해 파일은 **76,706 → 67,611 (순감 9,095자, 11.9%)** — 합산치이지 이 절 하나의 성과가 아니다 — 이건 파일 크기지 `/context` 상주 실측이 아니다(계기≠대상, [[feedback_resident_memory_measured_fresh_toplevel]]: 상주는 톱레벨 새 세션 `/context` 로만 잰다 — 미측정). 트리거가 *파일*이고 *기계 백스톱*이 있어 1순위 후보였다. 같은 이유로 **비가역 게이트 3종은 이동 불가** — 의도 트리거라 경로 스코핑하면 fail-open 이 된다.)
+
+
+---
+
+## §CM-Chamber-Honesty-Boundary — Chamber honesty boundary — the old-vocabulary ledger (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Onboarding / Acceleration Autopilot) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+Honesty boundary that must not soften in summary — **under the old vocabulary**, hand-counted
+2026-08-08 from the run ledger: 9 full runs, **8 KILL, 1 EMIT** (13 runs · 11 KILL · 1 EMIT as of
+2026-08-17). It has birthed **once** (run #9 `forge-wiki`, shipped publicly), so
+"it has not birthed" — the earlier wording here — is no longer true. But do not upgrade the claim
+either: that run's workspace carries only a verdict file, with no intent/budget/blind-persona
+artifacts, so the **formal flow** is not what produced it. The first end-to-end formal run is #10 and
+it KILLed. Either way simulate-first stays a one-line HITL recommendation, never a push-button
+autonomous emit.
+⚠️ **Do not cite that ratio as "the chamber screens well" or "over-screens" going forward** — the
+counts were produced by a rule set that no longer runs, and whether it over-screened is **exactly
+what the frozen known-pair exists to measure and has not measured yet.**
+
+
+---
+
+## §CM-Expedition-Evidence — 원정 1차 답습 — 채점 · 원인 · 주기 보류 근거 (CLAUDE.md 에서 이관)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Expedition (원정)) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+**근거 — 이 규칙은 실측에서 나왔다.** 원정 1차(2026-08-17)의 ⓐ 채점은 **0 건**이다(2026-08-18 답습,
+사전등록 봉인 후 cross-family 독립 수렴). 원인은 노력이 아니라 겨냥이었다: 세 갈래(기여·클러스터·약점)가
+**전부 이미 🟢 인 정체성**(Ⓑ·①·③) 위에 떨어졌고, **비-🟢 인 ②·④ 를 건드린 산출이 하나도 없었다.**
+즉 ⓐ=0 은 **개시 시점에 구조적으로 예정돼 있었다.** 정본: `tracks/_meta/expedition_2026-08-18_absorption1.md`.
+🟥 ⓐ 를 «알아냈다»로 읽지 마라 — 완주선은 «알아냈나»가 맞지만 **ⓐ 는 «등급을 옮기는 조각»을 요구한다.**
+두 정의를 섞으면 과계상이 된다(cross-family 지목, 자력 적발 0).
+
+위 3단계를 다 밟았는데도 숫자가 안 나온다: ⓐ 비용 입력이 **부분 계상**이고(거버너 토큰·벽시계 미측정 —
+1차 기록 §5 가 스스로 적었다) ⓑ 1차는 갈래가 셋이라 **대표성이 없으며** ⓒ 결정적으로 **겨냥이 틀린
+원정 1회**라, 그 비용/수확비로 주기를 세우면 틀린 표본으로 스케줄을 만든다.
+
+**Operator, agreed and recorded 2026-08-17** (it had been agreed verbally before and was **not in any
+file** — grepped, zero hits; that gap is why this paragraph exists): *"원정이 가치 있고 성공적이었다면
+**주기적으로 제안하는 것**으로 가기로 했었지."*
+
+That gate
+measures how often a proposal class is *accepted*, which is the wrong quantity here: an expedition
+could be accepted every time and still not warrant a schedule, or be proposed once and clearly warrant
+one. The evidence that sets the interval is the **completed run itself**, not an acceptance rate.
+
+
+---
+
+## §CM-Hygiene-Unmechanized — Why close step ④ has no mechanical check (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Session Wrap-up) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+**Deliberately unmechanized, and stated so rather than left ambiguous**: hygiene is a judged
+       step (is this entry still true?), and the only cheap proxy — "did any memory file change?" —
+       would pass on a touched file. A check that can be satisfied without doing the work is a
+       decoration that reports coverage it does not have. `session_close_check.sh` therefore carries
+       NO ④ check; its similarly-numbered block is `④-log` (the real-time completion log) and is
+       labelled as such. Revisit if skipped-hygiene is ever *measured* to recur — build on evidence,
+       not on the discomfort of an unchecked step.
+
+
+---
+
+## §CM-Close-Atomic-Origin — Why close step ⑤ became atomic (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Session Wrap-up) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+**Why ⑤ became atomic (N=3, 2026-07-28 — three closes in one day)**: the miss was always the same
+shape — a finding surfaced *during* the close and the reflex appended it to `fh_completed`, which is
+correct under ④ and fatal after ⑤. The three prose repairs ("next time write it into the card first")
+all failed, including one session that stated the vow and then broke it in the same close. So the
+sequence is restructured rather than re-promised: `fh_completed` is not a step that runs alongside ⑤,
+it is the **first half of** ⑤. A close-time finding has exactly one landing order — log, then card —
+and there is no remaining moment where appending is the natural move. *Honest scope*: this removes
+the ordering ambiguity, not the reflex; the pre-push gate stays the floor, and on a violation it now
+**names the offending files and prints their last lines** so re-running ⑤ is a delta, not a re-read.
+The check also carries a **⑤-b card-drift probe** (advisory, never blocks): it cross-checks the
+card's *absence claims* against on-disk reality (`session_close_check.sh` ⑤-b block) — surfaced
+here because an implemented-and-lane-tested step that no spec document names is exactly the
+orphan-implementation class the 2026-08-01 reverse-verification pilot flagged (P2-08).
+
+*Why not block always*: ⑤ card-last is a close-time invariant, while ④ mandates writing `fh_completed_*` **during** the session — an unconditional block would pit the two rules against each other and train `--no-verify`, disarming the Destructive-Op gate in the same hook.
+
+
+---
+
+## §CM-Card-Loss-Evidence — 카드 재작성의 역방향 유실 — 실사고와 외부 근거 (CLAUDE.md 에서 이관)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Session Wrap-up) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+이 방향은 오래 **한쪽만** 적혀 있었다(완료가 남는 것만 버그로) — 그래서 2026-08-24 에 미완 4건이 통째로 사라졌고, 그 세션은 «BEFORE 172 → AFTER 101» 이라는 diff 를 출력하고도 «줄었다」만 말했다.
+
+외부 근거: 파일시스템 기억 연구(arXiv 2607.26637)가 «구조만 바꿔라」라고 지시한 재구성 에이전트는 응축하며 기록을 버렸고 한 벤치마크 정확도가 **77.6% → 41.2%** 로 반토막 났으며, *"keep every fact"* 한 줄을 더하자 내용이 대체로 고정됐다.
+
+
+---
+
+## §CM-Predelete-Mention-Evidence — `predelete_check.sh` is mentioned, never executed — measurement (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Destructive-Op Gate) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+Measured 2026-08-20,
+re-measured 2026-08-23 (control: the same scan finds `session_close_check` wired in that hook at
+`:540`, as `_SC_OUT=$(bash "$REPO_ROOT/scripts/session_close_check.sh" …)`; known-negative: a nonsense
+token returns rc=1, no hits): every in-repo reference to `predelete_check.sh` is a **mention, not an
+execution** — `pre-push:423` lists the path inside a *grep pattern* (it was `:408` when this was first
+measured; line numbers drift, the function names do not), `destructive_pre_gate.sh:191` *prints the
+command* as advisory text, and `selfcheck.sh:192` runs `bash -n` on it.
+
+
+---
+
+## §CM-Governance-Axis-Numbers — Governance Engineering — the replaced arm numbers (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Identity) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+Measured content, not a slogan — 🟥 **and the numbers were replaced 2026-09-17** (the earlier «five arms, 2.7 %–13.6 %» came from a scorer since found defective — it counted our own mandated defeater paragraphs as defect claims and dropped ~half of all claims out of the denominator — and it is **not re-scorable**, structurally): **four** arms ran **0.0 %–1.1 %** claim-error on the same eight cases, 95 % upper bound ≈2.1 %, and **no contrast separates** after cluster correction, so it is a spectrum and not a ranking. Every one usable on a review surface, **not one** usable on publish/delete/rewrite — and that holds *now that the point estimate is inside 0.x%*, which is the first time the second verb is testable rather than vacuous. That distance is why this axis exists.
+
+Measured across **four** review arms on the same eight cases — 🟥 **the
+earlier «five arms, 2.7 % – 13.6 %» from this date is RETRACTED (2026-09-17): the scorer was found
+defective and replaced, and the old run is structurally not re-scorable. Canon:
+`governance_engineering_definition.md` §첫 실증** — claim error rates ran **0.0 % – 1.1 %** (95 %
+upper bound ≈2.1 %; **no contrast separates** after cluster correction, so it is a spectrum and not
+a ranking), and every one of them is usable *on a review surface*, because a
+wrong finding costs a reader a minute.
+
+
+---
+
+## §CM-Register-Residency — Why the register rule is resident — and has no floor (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Voice / Tone) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+This rule
+  lives in always-loaded CLAUDE.md, not only in memory, so it fires every turn without depending on
+  recall — the 2026-07-12 miss was a session that drifted register because the rule lived only in memory.
+  Tone has **no** mechanical hook gate by nature: always-loaded salience is the strongest available lever,
+  **not a floor** (no mechanical floor exists for tone — an accepted limitation, not a guarantee).
+
+
+---
+
+## §CM-Capability-Exception-Scope — Why the capability-composition exception is scoped narrowly (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§New Project Onboarding) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+The exception is scoped to that surface on purpose. An earlier draft of this line qualified the
+   whole sentence with "non-safety properties only", and an adversarial round showed that inverts it:
+   an ordinary project rule ("run the linter first", "docs in Korean") matches none of the contract's
+   eight capability axes, falls through its "unclassified → constraint" default, and therefore
+   *outranks the hub* — the opposite of this line's intent. Worse, a project declaring a stricter
+   `tier_floor` or `approval` would delete an FH floor (Sonnet-floor, autonomy floor) by being
+   stricter.
+
+
+---
+
+## §CM-Salience-Residual-Surfaces — Which irreversible surfaces are hookable — the salience residual (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Irreversibility Gates) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+**Salience residual** (corrected 2026-06-27 — the surfaces split, they are not uniformly un-hookable):
+the **pre-commit** hook cannot catch either irreversible surface *at commit time*. But "pre-commit can't"
+≠ "no hook can": the **Destructive-Op git surface** (remote branch delete · force/non-ff push) fires at
+*push* time and **is** caught — `templates/.git-hooks/pre-push` now mechanically enforces the enumerate
+(see §Destructive-Op Gate). **`npm publish`** is likewise caught — `scripts/public_surface_scan_files.sh`
+wired into `prepublishOnly` scans the published file set at the registry boundary (see §Pre-Publish Hook
+coverage (c)). What stays **genuinely un-hookable** is only the **separate-repo go-public surface**
+(`gh repo create --public` / visibility flip / first push to a new public remote — not an npm or git op
+against this repo, so no hook here sees it): for *that* surface the fail-closed direction is still **prose,
+not hook-enforced** — a real weak-model fail-open risk, not a silent one. Backstop for the prose half: the
+portable `templates/PRE-PUBLISH-CHECKLIST.md` carries the tooling-down item as a human-readable gate, and
+the direction is target-tier-sim'd (Sonnet) before it is relied on.
+
+
+---
+
+## §CM-Destructive-Retraction-Why — Destructive-Op retraction — how it was written and why it stays resident (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Destructive-Op) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+**Why it was written that way**: the next paragraph's 2026-08-20 correction landed *beside* this
+sentence instead of *replacing* it, leaving two consecutive paragraphs contradicting each other in the
+resident layer ([[feedback_half_fix_propagation_boundary]]).
+
+
+---
+
+## §CM-Initiative-Row-Misses — Initiative-table rows — the misses that created them (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Autonomous Initiative) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+🟥 Missed 2026-08-16 on exactly this shape: an external red-team framework was installed, run against a field harness, found a real bypass — and was filed as a `type: reference` **tool pointer** with no sister audit at all
+
+Missed once in-session while building `scripts/frontier_digest_autopilot.sh` 2026-08-15 — mis-routed to `fh-meta:harness-pr-reviewer` (same-repo self-consistency, a different lens) before the operator caught it; this row exists so the next session connects the trigger without two rounds of correction.
+
+
+---
+
+## §CM-Shared-Checkout-Incidents — 공유 체크아웃 실측 — claim 스냅샷과 2026-08-21 창 (CLAUDE.md 에서 이관)
+
+> Relocated **verbatim** from `CLAUDE.md` (§AI Contribution) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+(실측:
+claim 이 `main` 인 동안 실제 HEAD 는 peer 브랜치였다 — 두 세션이 독립 재현)
+
+(같은 날 두 세션이 시점을 각각 `switch` 직전/직후로
+달리 골랐는데 **둘 다 뚫렸다**)
+

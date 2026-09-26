@@ -465,6 +465,19 @@ else
   fail=1
 fi
 
+# CLAUDE.md size guard — Claude Code warns «CLAUDE.md is over the 150.0k-char limit» on every session
+# start of a clone (measured 2026-09-26: 154,149 chars since ~v3.16.0). Guard at 145k (headroom ~1k/week).
+if [ ! -f CLAUDE.md ]; then
+  _absent_subject_verdict "claude-md size lanes" "CLAUDE.md" || fail=1
+elif [ -f scripts/test_claude_md_size_lanes.sh ]; then
+  if ! bash scripts/test_claude_md_size_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  claude-md size lanes: CLAUDE.md present but its anchor is missing"
+  fail=1
+fi
+
 # typed-finding pipeline — fleet (multi-family, parallel) + reject stage (cross-family verdict, code
 # drops false positives). Subject = scripts/finding_fleet.sh + scripts/finding_verify.py.
 if [ ! -f scripts/finding_verify.py ]; then

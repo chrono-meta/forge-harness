@@ -175,6 +175,7 @@
     "scripts/gate_anchor_check.sh",
     "scripts/gate_pathspec_check.sh",
     "scripts/prless_delta_scan.sh",
+    "scripts/test_claude_md_size_lanes.sh",
     "scripts/test_prless_delta_scan_lanes.sh",
     "scripts/gate_bootstrap_ephemeral.sh",
     "scripts/gate_shape_scan.sh",
