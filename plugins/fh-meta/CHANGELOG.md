@@ -1,5 +1,24 @@
 # forge-harness (fh-meta) Changelog
 
+### [3.21.0] — 2026-09-26 — 마감 게이트가 옛 훅과 세션 중 설정 덮어쓰기를 이름으로 말한다
+
+**minor — 새 출하 스크립트 둘 + 마감 체인 동작 변경.** 소비자의 게이트 수용은 안 깬다
+(④-e 는 옛 훅에서 «측정됨» → «NOT MEASURED + 재병합 경고» 로 바뀌어 막는 쪽이 아니라 알리는 쪽이다 · ④-f 는 advisory).
+
+- **`scripts/hook_drift_check.sh`** (신규 출하) — 출하 템플릿 훅과 설치된 `.claude/settings.json` 을 이벤트별로 대조:
+  CURRENT / STALE / ABSENT / UNKNOWN. 같은 훅이 여럿 설치됐으면(현+옛 공존) STALE, 형식 불량 항목은 UNKNOWN —
+  CURRENT 로 접지 않는다. 마감 ④-e 는 이 판정이 CURRENT 일 때만 집계를 «측정됨» 으로 본다
+  (종전엔 «SubagentStop» 낱말만 있으면 옛 인라인 훅도 통과했다). 레인 27/0(bash 3.2·5).
+- **`scripts/session_config_fingerprint.sh`** (신규 출하) — 세션 시작에 설정 6종(레포 settings·settings.local·
+  CLAUDE.local.md·CLAUDE.md · 사용자 settings·CLAUDE.md) 해시를 스냅하고 마감 ④-f 에서 바뀐 파일을 이름으로.
+  스냅 부재 = NOT MEASURED. 🟥 스냅은 지금 `fh_session_load.sh`(로컬 SessionStart)에서만 뜬다 —
+  그 훅이 없는 install 은 ④-f 가 NOT MEASURED 로 남는다. 레인 25/0.
+- **문서 정정** — «ask 는 fail-closed» 는 사람이 답할 때만 참: 자동승인 훅 아래 PreToolUse ask 는 실행됐고(5/5),
+  deny 는 멈췄다(대화형 실측). `CLAUDE.md` Irreversibility · `mcp_tool_gating.md` · goal-quench. `permissions.ask` 규칙은 미측정.
+- **`knowledge/shared/harness-core/hook_channel_visibility.md`** (신규) — 훅 채널 × 표면 × 시점 실측 표
+  (질문 창엔 고르기 전 훅 출력 0 · 훅이 질문에 답 가능 · OSC 777 도달 · CLI 자체 OSC 777).
+- 측정 체크리스트 n+13·n+14 · flaky 분류 단락 · 집계 훅 레인 타이밍 ms 화.
+
 ### [3.20.1] — 2026-09-26 — 마감 게이트 ④-e 가 Claude Code 내부 에이전트를 디스패치로 세지 않는다
 
 **patch — 오탐 수리.** 소비자의 게이트 수용은 안 깬다(과다 계수 → 정확 계수 방향).
