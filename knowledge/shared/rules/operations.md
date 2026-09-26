@@ -63,6 +63,13 @@ gh run view <id> --log-failed | grep -E '❌|FAIL|not ok' | head -20           #
 Record the lane name in the session log even if the re-run goes green — **a flake that cannot be named
 cannot be fixed**, and the second occurrence is the one that gets fixed only if the first was named.
 
+**Before calling it flaky, check the classifier's state axis.** An intermittent failure can be a
+classification defect that only *looks* random: the verdict depends on state keyed per PID or per
+session (a process that started a moment earlier, a session id reused across runs), and the timing
+of the sample decides which state it sees. Measured 2026-09-26 on a field harness: an «intermittent»
+misclassification reproduced **30/30** once sampled at a 0.01 s interval — it was deterministic in
+the state axis, not flaky. Name the key the classifier reads its state by before re-running.
+
 This is prose on purpose. N=1: one flake, one lost diagnosis. The mechanization threshold in this repo
 is N≥3 or the same class recurring on another surface; a scheduled log-capture job built on a single
 occurrence would be the speculative build the evidence-threshold rule forbids.

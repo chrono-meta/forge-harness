@@ -299,3 +299,20 @@ ASCII 범위로만 묻는다. 계기를 짜는 쪽도 같은 함정을 밟는다
 🟥 **두 결함이 서로 반대 팔에서만 보였다.** 절대경로 과차단은 `core.hooksPath` 가 이미 잡힌
 기계에서만, 셈법 어긋남은 훅이 먼저 바뀐 쪽에서만 난다. **어느 한쪽만 돌렸으면 둘 다
 놓쳤다** — 8-a 가 세운 명제가 자기 자신에게 두 번 적용된 자리다.
+
+## 9. Config-Overwrite-Recovery — 설정 파일이 세션 중에 바뀌었을 때 (2026-09-26)
+
+계기: `scripts/session_config_fingerprint.sh` — 세션 시작(`fh_session_load.sh`)에 여섯 파일의
+sha256+mtime 을 떠 두고, 마감(`session_close_check.sh` ④-f)이 바뀐 파일을 **이름으로** 댄다.
+advisory 다(세션이 스스로 설정을 바꾸는 건 정당하다). 스냅이 없으면 «안 바뀜» 이 아니라
+«측정 안 됨» 이다. 계기의 층 대조 짝은 `scripts/hook_drift_check.sh`(설치된 훅이 템플릿과 같은가
+— 있다/없다가 아니라 **현행인가**).
+
+**의도하지 않은 변경이면 이 순서로** — gitignored 설정은 `git checkout` 되돌림이 없다:
+1. **지금 사본을 먼저 떠라** (`cp <파일> <파일>.overwritten.$(date +%s)`) — 덮어쓴 쪽 내용도 증거다.
+2. **추적 파일**(`CLAUDE.md`)은 `git diff CLAUDE.md` 로 보고 `git show HEAD:CLAUDE.md` 로 대조해 되돌린다.
+3. **gitignored 설정**(`.claude/settings*.json`)은 기억으로 다시 쓰지 말고 **출하 스니펫에서 다시
+   짓는다**(`templates/settings.*.snippet.json` · `templates/subagent-tally-hook.json`), 그 뒤
+   `bash scripts/hook_drift_check.sh` 로 CURRENT 인지 확인한다. 🟥 복구를 핑계로 원래 없던 훅을
+   넣지 마라 — 스니펫에 없는 로컬 항목은 세션 전사본에서 원래 값을 찾아 대조한다.
+4. **홈 설정**(`~/.claude/...`)은 이 레포 소유가 아니다 — 무엇이 바뀌었는지만 보고하고 사람이 판단한다.

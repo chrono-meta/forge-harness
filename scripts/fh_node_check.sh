@@ -138,9 +138,12 @@ fi
 # Reported ONCE per pull (it is an event). Distinguishes "no change" from "could not measure".
 INFRA=""; INFRA_NOTE=""
 if [ -n "$PREV_HEAD" ] && [ "$PREV_HEAD" != "$HEAD_NOW" ]; then
+  # templates/*hook*.json + templates/*settings*.json added 2026-09-26: subagent-tally-hook.json
+  # changed its body (RE-MERGE required) and this delta never announced it — `templates/settings\.`
+  # only covers the snippets. (A comment INSIDE the `\`-continued pipe below would break it.)
   if INFRA_RAW="$(git -C "$FH" diff --name-only "${PREV_HEAD}..HEAD" 2>/dev/null)"; then
     INFRA="$(printf '%s\n' "$INFRA_RAW" \
-      | grep -E '^(templates/\.git-hooks/|templates/settings\.|scripts/fh_|plugins/[^/]+/skills/install-(wizard|doctor)/)' \
+      | grep -E '^(templates/\.git-hooks/|templates/settings\.|templates/[^/]*(hook|settings)[^/]*\.json$|scripts/fh_|plugins/[^/]+/skills/install-(wizard|doctor)/)' \
       | head -6)"
   else
     INFRA_NOTE="UNMEASURED — cannot reach the previously seen commit ($PREV_HEAD), so the infra delta was not computed (rebase, shallow clone, or GC). Not the same as 'nothing changed'."

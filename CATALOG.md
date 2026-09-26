@@ -35,6 +35,11 @@ is, for any session that does not already know its filename, indistinguishable f
   ENFORCE·EVIDENCE·PATTERN 층은 안 온다. 두 체크아웃 실측 15행, 세 갈림 방향, 그리고 이 측정이
   **주장하지 않는 것**. 계기 = `scripts/env_layer_fingerprint.sh`. **드리프트나 «게이트 통과»를
   근거로 쓰기 전에 읽어라.**
+- `knowledge/shared/harness-core/hook_channel_visibility.md` — #hooks, #auto-approve, #visibility.
+  훅 출력 채널(systemMessage · additionalContext · permissionDecisionReason · updatedInput ·
+  OSC 777 · exit 2) × 표면(질문 · 계획 승인 · 권한 · 대화) × 시점(고르기 전/후) 실측표. 🟥 자동승인
+  아래에서 PreToolUse **ask 는 삼켜진다**(5/5) — 멈추는 것은 deny / exit 2. **ask 를 fail-closed 로
+  인용하기 전에 읽어라.**
 - `knowledge/shared/harness-core/harness_terminal_correlation_and_recommendations.md` —
   #correlation, #terminal, #recommendations.
 - `knowledge/shared/rules/knowledge_layer_seam.md` — #seam, #org-knowledge, #unwired. Names FH's own

@@ -112,6 +112,17 @@ Unlisted tool name → **ask** (fail-closed), then add it to the table. Listed-b
 is the same case: a name in the table earns its allow tier from confirmed behavior (§1),
 not from sounding harmless.
 
+> ⚠️ **"ask" stops a call only if nothing answers the prompt for you** (measured 2026-09-25,
+> Claude Code 2.1.282, interactive): a `PreToolUse` hook returning **ask** was *swallowed* when a
+> `PermissionRequest` hook answered **allow** — the call ran **5/5** (auto mode 3 · acceptEdits 2).
+> A hook returning **deny** stopped it **0/2** landed. Headless runs went the other way (the
+> `PermissionRequest` hook was not called after ask), so the result is surface-specific. So under
+> any auto-approver (a `PermissionRequest` allow hook, a desktop approval app, a wrapper that
+> clicks "yes"), an ask-tier call is **not** fail-closed — only **deny / exit 2** stops it. Not
+> measured: auto mode *without* such a hook (one run, did not land — below bar), and whether a
+> `permissions.ask` **rule** (step 4 below) is swallowed the same way. Detail:
+> `knowledge/shared/harness-core/hook_channel_visibility.md`.
+
 ## 3. Per-server table ([CUSTOMIZE] — fill at mount time)
 
 | Server | Tool name | Tier | Note |
@@ -127,7 +138,10 @@ not from sounding harmless.
 3. Anything that writes outside the repo, or grants/answers an approval → ask.
 4. Where supported, mirror the ask-tier into the platform's permission config
    (e.g. Claude Code `permissions.ask` entries for `mcp__{server}__{tool}`) so the
-   gate is mechanical, not prose-only. This rule file is the fallback for hosts
+   gate is mechanical, not prose-only. ⚠️ Mechanical against a human at the prompt — whether an
+   auto-approver answers a `permissions.ask` rule the way it answered a hook's ask (§2 note)
+   is **unmeasured**; where one is installed, use a `permissions.deny` entry for calls that
+   must never run unattended. This rule file is the fallback for hosts
    without per-tool permission config.
 5. For `http`/`sse`-transport servers, record the resolved endpoint address at mount
    (host + path) in the §3 table's Note column. This checklist gates tool *behavior*
@@ -151,6 +165,8 @@ Done When (per mounted server):
 - §3 table filled, every enumerated tool name present (check class: mandatory-pass — file inspection)
 - ask-tier tools wired to a per-call approval surface: host per-tool permission entry exists,
   or this rule file is installed and loaded in the session (check class: mandatory-pass)
+  — and if the session runs under an auto-approver, the surface is a **deny** entry, not ask
+  (§2 note; check class: mandatory-pass — grep the settings for a `PermissionRequest` hook)
 - non-ask tiers assigned only with a behavior-confirmation note in the §3 Note column
   (check class: judged — pair with an adversarial pass asking "could this name mislead?")
 - for `http`/`sse`-transport servers, the mounted endpoint address is recorded in §3

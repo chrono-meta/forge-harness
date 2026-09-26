@@ -837,7 +837,10 @@ deletions (`scripts/finding_verify.py` refuses to complete a run whose drops wer
 A gate guarding an irreversible boundary that silently proceeds when its tooling is down is **fail-open**
 — by this floor's definition, not a gate. (The same reflex already ships piecewise — `mcp_tool_gating
 §unlisted → ask (fail-closed)`, corpus-grounding's fail-closed-no-generator — this section names the
-floor they share.)
+floor they share.) 🟥 **ask is fail-closed only while a human answers it**: under an auto-approver (a
+`PermissionRequest` allow hook) a hook's ask ran **5/5**, deny stopped it (interactive, 2026-09-25) — so
+on an irreversible surface the closed direction is **deny / exit 2**; `permissions.ask` rules unmeasured
+(`hook_channel_visibility.md`).
 
 **Salience residual** (corrected 2026-06-27 — the surfaces split, they are not uniformly un-hookable):
 the **pre-commit** hook cannot catch either irreversible surface *at commit time*. But "pre-commit can't"

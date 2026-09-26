@@ -2225,6 +2225,36 @@ if [ -f scripts/test_dispatch_log_lanes.sh ]; then
     fail=1
   fi
 fi
+# ④-e's «hook installed» verdict + the checker behind it (2026-09-26): a PRESENT-but-STALE tally
+# hook (the pre-2026-09-25 inline form) used to pass as measured. Revert probe inside the lane.
+if [ ! -f scripts/hook_drift_check.sh ]; then
+  _absent_subject_verdict "hook-drift lanes" "scripts/hook_drift_check.sh" || fail=1
+elif [ -f scripts/test_hook_drift_lanes.sh ]; then
+  if _out=$(bash scripts/test_hook_drift_lanes.sh 2>&1); then
+    echo "PASS  test_hook_drift_lanes.sh (CURRENT/STALE/ABSENT/UNKNOWN + ④-e consumer + revert probe)"
+  else
+    echo "FAIL  test_hook_drift_lanes.sh: installed-hook drift would be misjudged"
+    _show_failure "$_out"
+    fail=1
+  fi
+else
+  echo "FAIL  hook-drift lanes: hook_drift_check.sh present but its anchor is missing"; fail=1
+fi
+# ④-f session config fingerprint (2026-09-26): a mid-session overwrite of settings/CLAUDE.md went
+# unnoticed on 2026-09-25. Advisory at close; the lane pins «no snapshot = NOT MEASURED».
+if [ ! -f scripts/session_config_fingerprint.sh ]; then
+  _absent_subject_verdict "config-fingerprint lanes" "scripts/session_config_fingerprint.sh" || fail=1
+elif [ -f scripts/test_session_config_fingerprint_lanes.sh ]; then
+  if _out=$(bash scripts/test_session_config_fingerprint_lanes.sh 2>&1); then
+    echo "PASS  test_session_config_fingerprint_lanes.sh (snap/compare + ④-f consumer + revert probe)"
+  else
+    echo "FAIL  test_session_config_fingerprint_lanes.sh: a config overwrite would go unnamed"
+    _show_failure "$_out"
+    fail=1
+  fi
+else
+  echo "FAIL  config-fingerprint lanes: session_config_fingerprint.sh present but its anchor is missing"; fail=1
+fi
 # The tally hook's BODY (2026-09-25): SubagentStop also fires for Claude Code's internal agents
 # (compaction → agent_type ""), and the date-only inline hook counted them as dispatches.
 if [ -f scripts/test_subagent_tally_hook_lanes.sh ]; then

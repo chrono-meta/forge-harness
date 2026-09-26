@@ -63,27 +63,31 @@ old() { printf '%s\n' "$(date +%Y-%m-%d)" >> "$1"; }
 f="$T/old"; printf '%s' "$P_INTERNAL" | old "$f"
 [ "$(grep -c "^$TODAY$" "$f")" = 1 ] ; chk $? "control alive: date-only append DOES count compaction — the defect this lane exists for"
 
+# 🟥 millisecond timer — whole-second `date +%s` rounds a 3.2 s run up to 4 or 5 across a second boundary,
+#    and under full-selfcheck load that alone turned the deadline lane red (2026-09-26, 607/608). perl is on
+#    every macOS/Linux runner this repo supports; missing perl → 99999 (loud red, never a silent pass).
+now_ms() { perl -MTime::HiRes=time -e 'printf "%d", time*1000' 2>/dev/null || echo 0; }
 echo "── stdin never closed (the caller keeps the pipe open) → still counts, within the limit"
 f="$T/open"
 # 🟥 time the HOOK only — timing the whole pipeline also waits for the producer's `sleep`.
-( sleep 5 ) | { s0=$(date +%s); FH_TALLY_FILE="$f" bash "$SUBJ"; echo $(( $(date +%s) - s0 )) > "$f.dur"; }
-dur=$(cat "$f.dur" 2>/dev/null || echo 99)
+( sleep 5 ) | { s0=$(now_ms); FH_TALLY_FILE="$f" bash "$SUBJ"; s1=$(now_ms); [ "$s0" -gt 0 ] && [ "$s1" -gt 0 ] && echo $(( s1 - s0 )) > "$f.dur" || echo 99999 > "$f.dur"; }
+dur=$(cat "$f.dur" 2>/dev/null || echo 99999)
 [ "$(grep -c "^$TODAY$" "$f" 2>/dev/null || echo 0)" = 1 ] ; chk $? "open, silent stdin → counted (a bare \`cat\` blocked here until the hook was killed)"
-[ "$dur" -le 4 ] ; chk $? "and the hook returned by its read limit, not at the caller's EOF (${dur}s)"
+[ "$dur" -le 4000 ] ; chk $? "and the hook returned by its read limit, not at the caller's EOF (${dur} ms)"
 f="$T/open2"; ( printf '%s' "$P_INTERNAL"; sleep 5 ) | FH_TALLY_FILE="$f" bash "$SUBJ"
 [ "$(grep -c "^$TODAY$" "$f" 2>/dev/null || echo 0)" = 0 ] ; chk $? "payload delivered but pipe left open → still classified (internal skipped)"
 
 f="$T/nul"; printf '%s\0 ' "$P_INTERNAL" | FH_TALLY_FILE="$f" bash "$SUBJ"
 [ "$(grep -c "^$TODAY$" "$f" 2>/dev/null || echo 0)" = 1 ] ; chk $? "raw NUL after an internal payload → counted (OUTCOME lane: json rejects NUL — the bash reader that turned it into whitespace is gone; codex 2026-09-25)"
-f="$T/big"; { printf '{"agent_type":"","pad":"'; head -c 9000000 /dev/zero | tr '\0' x; printf '"}'; } | { s0=$(date +%s); FH_TALLY_FILE="$f" bash "$SUBJ"; echo $(( $(date +%s) - s0 )) > "$f.dur"; }; e=$(cat "$f.dur" 2>/dev/null || echo 99)
+f="$T/big"; { printf '{"agent_type":"","pad":"'; head -c 9000000 /dev/zero | tr '\0' x; printf '"}'; } | { s0=$(now_ms); FH_TALLY_FILE="$f" bash "$SUBJ"; s1=$(now_ms); [ "$s0" -gt 0 ] && [ "$s1" -gt 0 ] && echo $(( s1 - s0 )) > "$f.dur" || echo 99999 > "$f.dur"; }; e=$(cat "$f.dur" 2>/dev/null || echo 99999)
 [ "$(grep -c "^$TODAY$" "$f" 2>/dev/null || echo 0)" = 1 ] ; chk $? "payload over the 8 MiB cap → truncated → DOUBT → counted"
-[ "$e" -le 8 ] ; chk $? "and the cap bounds the read time (${e}s)"
+[ "$e" -le 8000 ] ; chk $? "and the cap bounds the read time (${e} ms)"
 
 # 🟥 time the HOOK only (see the «stdin never closed» lane above) — CI runners ignore SIGPIPE, so the
 #    producer keeps sleeping after the hook exits and a whole-pipeline timer read 8 s there (4 s on macOS).
-f="$T/trickle"; ( for i in 1 2 3 4 5 6 7 8; do printf ' '; sleep 1; done; printf '%s' "$P_INTERNAL" ) | { s0=$(date +%s); FH_TALLY_FILE="$f" bash "$SUBJ"; echo $(( $(date +%s) - s0 )) > "$f.dur"; }; e=$(cat "$f.dur" 2>/dev/null || echo 99)
+f="$T/trickle"; ( for i in 1 2 3 4 5 6 7 8; do printf ' '; sleep 1; done; printf '%s' "$P_INTERNAL" ) | { s0=$(now_ms); FH_TALLY_FILE="$f" bash "$SUBJ"; s1=$(now_ms); [ "$s0" -gt 0 ] && [ "$s1" -gt 0 ] && echo $(( s1 - s0 )) > "$f.dur" || echo 99999 > "$f.dur"; }; e=$(cat "$f.dur" 2>/dev/null || echo 99999)
 [ "$(grep -c "^$TODAY$" "$f" 2>/dev/null || echo 0)" = 1 ] ; chk $? "slow trickle (1 byte/s, never idle 2 s) → deadline cuts it → counted"
-[ "$e" -le 4 ] ; chk $? "and the deadline lands inside the settings.json hook timeout (5 s) with margin (${e}s — a 5 s deadline raced the kill, which lands BEFORE the append)"
+[ "$e" -le 4500 ] ; chk $? "and the deadline lands inside the settings.json hook timeout (5 s) with margin (${e} ms — a 5 s deadline raced the kill, which lands BEFORE the append)"
 
 echo "── wiring: EXECUTE the shipped template command (a grep for the path matched the _readme text)"
 TPL="$SCRIPT_DIR/../templates/subagent-tally-hook.json"
