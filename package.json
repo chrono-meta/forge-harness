@@ -332,6 +332,7 @@
     "scripts/test_session_checklist_lanes.sh",
     "scripts/test_session_close_chain_lanes.sh",
     "scripts/test_session_close_lanes.sh",
+    "scripts/test_session_load_mirror_fp_lanes.sh",
     "scripts/test_sidecar_calibrate_lanes.sh",
     "scripts/test_sidecar_wait_stdin.sh",
     "scripts/test_sim_isolated_run_lanes.sh",

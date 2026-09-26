@@ -451,6 +451,20 @@ else
   fail=1
 fi
 
+# session-load mirror FP — fh_session_load.sh listed sync-restamped mirror copies (byte-identical to
+# the hub canonical) as «NEWER THAN SESSION CARD». Lane = FP stays quiet + every not-provably-same
+# case (genuine · differs · no hub copy · lookalike banner · outside $TM) still listed.
+if [ ! -f scripts/fh_session_load.sh ]; then
+  _absent_subject_verdict "session-load mirror FP lanes" "scripts/fh_session_load.sh" || fail=1
+elif [ -f scripts/test_session_load_mirror_fp_lanes.sh ]; then
+  if ! bash scripts/test_session_load_mirror_fp_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  session-load mirror FP lanes: fh_session_load.sh present but its anchor is missing"
+  fail=1
+fi
+
 # typed-finding pipeline — fleet (multi-family, parallel) + reject stage (cross-family verdict, code
 # drops false positives). Subject = scripts/finding_fleet.sh + scripts/finding_verify.py.
 if [ ! -f scripts/finding_verify.py ]; then
