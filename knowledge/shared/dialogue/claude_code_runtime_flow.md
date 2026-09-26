@@ -168,3 +168,4 @@ Throughout the session, when conversation signals match the table in CLAUDE.md:
 - `harness_6axis_framework.md` — Full 6-axis decision tree
 - `hub_compounding_loop.md` — Session close → harvest-loop → weekly cycle
 - `knowledge/shared/rules/operations.md` — Sub-agent invocation log format + weekly scanner
+- `knowledge/shared/harness-core/hook_channel_visibility.md` — Which hook output reaches the human before they choose, and why a hook's `ask` does not stop a call under an auto-approver (only deny / exit 2 does)

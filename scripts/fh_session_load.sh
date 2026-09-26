@@ -317,6 +317,15 @@ fi
   ( cd "$FH" && bash scripts/branch_claim.sh reap                     >/dev/null 2>&1 ) || true
 }
 
+# ── 세션 설정 지문 스냅 (2026-09-26) ─────────────────────────────────────────────
+# WHY: 2026-09-26 서브에이전트의 측정 실행(빈 작업경로)이 이 체크아웃의 .claude/settings.json 과 CLAUDE.md 를 덮어썼고
+# FH 는 못 잡았다(settings 는 gitignored 라 git 이 안 보고, undo 도 없다). 시작 시 해시+mtime 을
+# 떠 두면 마감(session_close_check.sh ④-f)이 «무엇이 바뀌었나» 를 이름으로 댈 수 있다.
+# WHY HERE (early exit 위): Mode D 전용 사고가 아니다. /clear·compact 는 같은 세션의 연속이라
+# 기존 스냅을 유지한다(다시 뜨면 그 사이 변경 증거가 지워진다). 실패해도 세션을 막지 않는다.
+[ -f "$FH/scripts/session_config_fingerprint.sh" ] && \
+  bash "$FH/scripts/session_config_fingerprint.sh" snap --fh "$FH" --source "$_FH_HOOK_SRC" >/dev/null 2>&1 || true
+
 # ── 매핑된 프로젝트의 capability 표면화 (2026-08-18) ───────────────────────────
 # WHY HERE (branch-claim 과 같은 자리, early exit **위**): 이건 Mode D 전용이 아니다.
 # companion store 가 없는 설치에서도 프로젝트는 매핑되고, 그때도 형제 하네스의 스킬은

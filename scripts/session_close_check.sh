@@ -470,15 +470,34 @@ fi
 # from. Installable snippet: templates/subagent-tally-hook.json.
 TALLY="$FH/tracks/_meta/.subagent_dispatch_tally"
 LOG="$FH/knowledge/shared/learnings/subagent_invocations_log.yaml"
+# 🟥 2026-09-26 — «installed» means CURRENT, not PRESENT. The old test was
+# `grep -q '"SubagentStop"'`, which also passed an install still carrying the pre-2026-09-25
+# INLINE hook (date-only append, counts Claude Code's internal agents as dispatches). The template
+# itself says «RE-MERGE», and nothing compared the gitignored installed copy against it. So the
+# verdict now comes from hook_drift_check.sh: CURRENT → measured · STALE → old hook, re-merge ·
+# ABSENT → none · UNKNOWN (read failure / checker missing) → NOT MEASURED, never folded into OK.
+# Lane: scripts/test_hook_drift_lanes.sh (incl. a revert probe back to the presence grep).
 HOOK_OK=0
-if [ -f "$FH/.claude/settings.json" ]; then
-  grep -q '"SubagentStop"' "$FH/.claude/settings.json" 2>/dev/null && HOOK_OK=1
+HOOK_STATE=UNKNOWN
+if [ -f "$FH/scripts/hook_drift_check.sh" ]; then
+  HOOK_STATE=$(bash "$FH/scripts/hook_drift_check.sh" --settings "$FH/.claude/settings.json" \
+                 --templates "$FH/templates" --only subagent_tally_hook.sh --verdict 2>/dev/null)
+  case "$HOOK_STATE" in (CURRENT|STALE|ABSENT|UNKNOWN) ;; (*) HOOK_STATE=UNKNOWN ;; esac
 fi
-if [ "$HOOK_OK" -eq 0 ]; then
-  echo "⚠️  ④-e dispatch log NOT MEASURED — no SubagentStop tally hook in .claude/settings.json"
-  echo "     (that file is gitignored, so a fresh clone has none). An unmeasured dispatch count is"
-  echo "     NOT a count of zero. Install: templates/subagent-tally-hook.json → .claude/settings.json"
-fi
+[ "$HOOK_STATE" = CURRENT ] && HOOK_OK=1
+case "$HOOK_STATE" in
+  (STALE)
+    echo "⚠️  ④-e dispatch log NOT MEASURED — 옛 훅: the SubagentStop tally hook in .claude/settings.json"
+    echo "     differs from templates/subagent-tally-hook.json (re-merge needed — an old inline hook"
+    echo "     counts internal agents as dispatches). Re-merge that block, then re-run." ;;
+  (ABSENT)
+    echo "⚠️  ④-e dispatch log NOT MEASURED — no SubagentStop tally hook in .claude/settings.json"
+    echo "     (that file is gitignored, so a fresh clone has none). An unmeasured dispatch count is"
+    echo "     NOT a count of zero. Install: templates/subagent-tally-hook.json → .claude/settings.json" ;;
+  (UNKNOWN)
+    echo "⚠️  ④-e dispatch log NOT MEASURED — could not determine whether the tally hook is current"
+    echo "     (settings unreadable, or scripts/hook_drift_check.sh missing). Not a pass." ;;
+esac
 # `grep -c` PRINTS 0 and EXITS 1 when the count is zero. Under `set -o pipefail` (line 16) that
 # makes the pipeline fail, `|| echo 0` appends a SECOND line, and the value becomes "0\n0" — which
 # `[ -eq ]` rejects as a bash error, so the branch it guards is skipped. The guard was therefore
@@ -547,6 +566,24 @@ elif [ "${DISPATCHED:-0}" -gt 0 ]; then
   echo "✅ ④-e dispatch log: $DISPATCHED dispatch(es) today, $LOGGED log entr(ies) recorded"
 elif [ "$HOOK_OK" -eq 1 ]; then
   echo "✅ ④-e dispatch log: no sub-agent dispatches tallied today"
+fi
+
+# ④-f CONFIG FINGERPRINT (advisory, never blocks) — 2026-09-26.
+# A sub-agent's measurement run overwrote this checkout's .claude/settings.json and CLAUDE.md on 2026-09-26 and
+# nothing noticed: settings is gitignored (no status line, no undo). fh_session_load.sh snaps
+# sha256+mtime of six config files at SessionStart; this compares and NAMES what changed.
+# Advisory because a session may change its own settings on purpose. No snapshot → NOT MEASURED
+# (never «unchanged»). Lane: scripts/test_session_config_fingerprint_lanes.sh.
+if [ -f "$FH/scripts/session_config_fingerprint.sh" ]; then
+  # Capture FIRST, then decorate — piping into sed hid the checker's rc (2026-09-26, cross-family).
+  _FP_OUT=$(bash "$FH/scripts/session_config_fingerprint.sh" compare --fh "$FH" 2>&1); _FP_RC=$?
+  printf '%s\n' "$_FP_OUT" | sed 's/^/④-f /'
+  case "$_FP_RC" in
+    (0|1|3) ;;   # unchanged · changed (advisory) · NOT MEASURED — all already printed above
+    (*) echo "⚠️  ④-f config fingerprint NOT MEASURED — checker exited $_FP_RC (instrument error, not «unchanged»)" ;;
+  esac
+else
+  echo "⚠️  ④-f config fingerprint NOT MEASURED — scripts/session_config_fingerprint.sh missing"
 fi
 
 # ⑤ CARD-LAST invariant — the card must be the NEWEST close artifact. A card older than
