@@ -268,19 +268,138 @@ OLLAMA_HOST_URL="${FH_OLLAMA_HOST:-http://127.0.0.1:11434}"
 # carry a verdict". At 512 the same model answered `PASS`. Budget starvation and incapacity are
 # different findings and must not be reported as one.
 OLLAMA_NUM_PREDICT="${FH_OLLAMA_NUM_PREDICT:-512}"
+# Per-model generate deadline (seconds). Overridable so the lanes can drive a mid-body stall without
+# waiting four minutes; the default is unchanged.
+OLLAMA_GEN_TIMEOUT="${FH_OLLAMA_GEN_TIMEOUT:-240}"
+
+# _http <max-secs> <url> [json-body] — one request, and it KEEPS THE STATUS CODE.
+# Sets HTTP_CODE (000 when no HTTP answer came back at all), HTTP_BODY, HTTP_RC (curl's own rc).
+#
+# 🟥 WHY NOT `curl -sf` (2026-09-24, Glimmer G1): `-f` throws the body away on ANY 4xx/5xx and prints
+#    nothing, so «the node answered "invalid model name"» and «no node answered» both reached the
+#    caller as the same empty string — and the empty string was rendered UNREACHABLE-THIS-RUN with
+#    «(measured, not inferred)» after it. What had been measured was the empty string, not reachability.
+#    Those two point the operator in opposite directions (network vs. name/inventory), so they must
+#    never share a label. Body and code travel together through one capture; the code is split off
+#    the LAST line — no pipe, so no rc is dropped on the way (pipefail class lock).
+_http() {
+  local secs="$1" url="$2" data="${3:-}" raw
+  if [ -n "$data" ]; then
+    raw="$(curl -s --max-time "$secs" -w '\n%{http_code}' "$url" -d "$data" 2>/dev/null)"; HTTP_RC=$?
+  else
+    raw="$(curl -s --max-time "$secs" -w '\n%{http_code}' "$url" 2>/dev/null)"; HTTP_RC=$?
+  fi
+  HTTP_CODE="${raw##*$'\n'}"
+  case "$raw" in *$'\n'*) HTTP_BODY="${raw%$'\n'*}" ;; *) HTTP_BODY="" ;; esac
+  case "$HTTP_CODE" in [0-9][0-9][0-9]) : ;; *) HTTP_CODE="000" ;; esac
+}
+
+# _http_why — human reason for HTTP_CODE=000, from curl's rc. Only the common three are named; any
+# other rc is printed as a number rather than guessed at.
+_http_why() {
+  case "$HTTP_RC" in
+    7)  echo "connection refused" ;;
+    28) echo "timed out" ;;
+    52) echo "empty reply — connection closed without an HTTP answer" ;;
+    6)  echo "host not resolved" ;;
+    *)  echo "curl rc=$HTTP_RC" ;;
+  esac
+}
+
+# _err_summary — the server's own words for a non-200: the JSON `error` field when there is one,
+# else the first 80 chars of the raw body. One line, no parentheses (they close the label).
+_err_summary() {
+  local s
+  s="$(printf '%s' "$HTTP_BODY" | python3 -c 'import json,sys
+try: d=json.load(sys.stdin); e=d.get("error","") if isinstance(d,dict) else ""
+except Exception: e=""
+print(e if isinstance(e,str) else json.dumps(e))' 2>/dev/null)"
+  [ -n "$s" ] || s="$HTTP_BODY"
+  s="$(printf '%s' "$s" | tr '\r\n()' '  []' | cut -c1-80)"
+  [ -n "$s" ] || s="empty body"
+  printf '%s' "$s"
+}
 
 probe_ollama() {
   command -v curl >/dev/null 2>&1 || { echo "ollama ABSENT — curl missing (absence measured)"; return 0; }
-  curl -sf --max-time 10 "$OLLAMA_HOST_URL/api/version" >/dev/null 2>&1 || {
-    printf 'ollama ABSENT — no server at the configured host (absence measured, not assumed)\n'
+  _http 10 "$OLLAMA_HOST_URL/api/version"
+  if [ "$HTTP_CODE" = "000" ]; then
+    printf 'ollama ABSENT — no server at the configured host (%s; absence measured, not assumed)\n' "$(_http_why)"
     printf '       set FH_OLLAMA_HOST to probe a remote node; default is loopback\n'
     return 0
-  }
+  fi
+  if [ "$HTTP_RC" -ne 0 ]; then
+    # An answer started (http code present) but did not finish — nothing about the host was measured.
+    printf 'ollama UNMEASURED — /api/version answered http %s but the transfer did not complete (%s)\n' "$HTTP_CODE" "$(_http_why)"
+    return 0
+  fi
+  if [ "$HTTP_CODE" != "200" ]; then
+    # Something IS listening — it just is not answering as an Ollama server. Not ABSENT.
+    printf 'ollama HOST-ERROR — something answered at the configured host, but /api/version returned http %s: %s\n' \
+      "$HTTP_CODE" "$(_err_summary)"
+    printf '       a server was reached, so this is not absence; check that FH_OLLAMA_HOST points at Ollama\n'
+    return 0
+  fi
+  # 🟥 «Any 200» is not «an Ollama server» (cross-family review, 2026-09-26). A host that answers
+  #    200 to everything and echoes the pinned name back in a generate envelope would otherwise reach
+  #    PIN-OK(envelope) and JOIN THE PANEL — the envelope anchor is only a server-side fact if the
+  #    server is the one we think it is. Require the Ollama shape: a JSON object with a string
+  #    `version`. Anything else is HOST-ERROR and the leg stops.
+  if ! printf '%s' "$HTTP_BODY" | python3 -c 'import json,sys
+d=json.load(sys.stdin)
+raise SystemExit(0 if isinstance(d,dict) and isinstance(d.get("version"),str) and d["version"] else 1)' >/dev/null 2>&1; then
+    printf 'ollama HOST-ERROR — /api/version returned http 200 but not the Ollama shape {"version": "..."}: %s\n' "$(_err_summary)"
+    printf '       something answered, but it is not recognisably Ollama — nothing from this host enters the panel\n'
+    return 0
+  fi
 
+  # ── FH_OLLAMA_MODELS: comma-separated. Whitespace around an item is trimmed; whitespace INSIDE an
+  #    item is REJECTED, not normalised. Chosen deliberately (2026-09-24 G1):
+  #    · Ollama model names cannot contain whitespace, so an inner space means the caller used a
+  #      different separator contract. Normalising would mean the calibrator GUESSING the input it
+  #      was given — and a marker quotes this run's output, so "a b" and "a,b" would become
+  #      indistinguishable in the record, hiding the contract drift that caused the incident.
+  #    · Trimming "a, b" is not a guess — the commas are there, only padding is removed.
+  #    · The cost of rejecting is one loud, cheap rephrase (the message prints the corrected value);
+  #      the cost of guessing is silent. Exit stays 0 — detector, not gate.
   local models="${FH_OLLAMA_MODELS:-}"
-  if [ -z "$models" ]; then
-    models=$(curl -sf --max-time 15 "$OLLAMA_HOST_URL/api/tags" 2>/dev/null \
-      | python3 -c 'import json,sys
+  if [ -n "$models" ]; then
+    local cleaned="" item bad="" IFS=,
+    for item in $models; do
+      item="$(printf '%s' "$item" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+      [ -n "$item" ] || continue
+      case "$item" in *[[:space:]]*) bad="$item" ;; esac
+      cleaned="${cleaned:+$cleaned,}$item"
+    done
+    if [ -z "$cleaned" ]; then
+      # Explicitly set, but nothing survives trimming. Falling through to /api/tags would probe
+      # models the caller never named; staying silent would read as "no models".
+      printf 'ollama INPUT-ERROR — FH_OLLAMA_MODELS is set but has no model names after trimming: "%s"\n' "$models"
+      printf '       unset it to probe the listed models, or give a comma-separated list. Nothing was probed.\n'
+      return 0
+    fi
+    if [ -n "$bad" ]; then
+      printf 'ollama INPUT-ERROR — FH_OLLAMA_MODELS item contains whitespace: "%s"\n' "$bad"
+      printf '       the separator is a COMMA; model names cannot contain spaces. Nothing was probed.\n'
+      printf '       did you mean: FH_OLLAMA_MODELS="%s"\n' "$(printf '%s' "$cleaned" | tr -s '[:space:]' ',')"
+      return 0
+    fi
+    models="$cleaned"
+  else
+    _http 15 "$OLLAMA_HOST_URL/api/tags"
+    if [ "$HTTP_CODE" != "200" ] || [ "$HTTP_RC" -ne 0 ]; then
+      # A failed listing is not an empty listing. And a tags call that got no HTTP answer did not
+      # measure reachability either — say only what was measured.
+      if [ "$HTTP_CODE" = "000" ]; then
+        printf 'ollama model list UNMEASURED (tags call got no HTTP answer: %s) — not empty\n' "$(_http_why)"
+      elif [ "$HTTP_RC" -ne 0 ]; then
+        printf 'ollama model list UNMEASURED (tags call answered http %s but did not complete: %s) — not empty\n' "$HTTP_CODE" "$(_http_why)"
+      else
+        printf 'ollama REACHABLE but /api/tags returned http %s: %s — model list UNMEASURED, not empty\n' "$HTTP_CODE" "$(_err_summary)"
+      fi
+      return 0
+    fi
+    models=$(printf '%s' "$HTTP_BODY" | python3 -c 'import json,sys
 try: d=json.load(sys.stdin)
 except Exception: raise SystemExit
 print(",".join(m["name"] for m in d.get("models",[])[:6]))' 2>/dev/null)
@@ -289,10 +408,21 @@ print(",".join(m["name"] for m in d.get("models",[])[:6]))' 2>/dev/null)
 
   # Control runs ONCE per host, not per model: it is a property of the server, and repeating it per
   # model would just multiply the cost of a fact that cannot differ.
-  local ctl ctl_state
-  ctl=$(curl -s --max-time 20 "$OLLAMA_HOST_URL/api/generate" \
-        -d '{"model":"fh-calib-nonexistent:99b","prompt":"hi","stream":false}' 2>&1)
-  if printf '%s' "$ctl" | grep -qiE '"error"|not found'; then ctl_state="rejects-bogus"; else ctl_state="accepts-bogus"; fi
+  # 🟥 A control that got NO answer is unmeasured — it was previously read as "accepts-bogus"
+  #    because an empty body contains no "error". Silence is not acceptance.
+  local ctl_state
+  _http 20 "$OLLAMA_HOST_URL/api/generate" '{"model":"fh-calib-nonexistent:99b","prompt":"hi","stream":false}'
+  # 🟥 Only a 4xx is evidence of rejection. A 5xx is the server FAILING, which says nothing about
+  #    whether it would have validated the name; 000 and an incomplete transfer measured nothing.
+  #    All three are `unmeasured` (cross-family review, 2026-09-26: 5xx was read as rejects-bogus).
+  case "$HTTP_CODE" in
+    4[0-9][0-9]) ctl_state="rejects-bogus" ;;
+    200)
+      if printf '%s' "$HTTP_BODY" | grep -qiE '"error"|not found'; then ctl_state="rejects-bogus"
+      else ctl_state="accepts-bogus"; fi ;;
+    *) ctl_state="unmeasured" ;;
+  esac
+  [ "$HTTP_RC" -ne 0 ] && ctl_state="unmeasured"
 
   local IFS=,
   for m in $models; do
@@ -305,10 +435,35 @@ print(",".join(m["name"] for m in d.get("models",[])[:6]))' 2>/dev/null)
     local body out env_model resp compact pin v
     body=$(python3 -c 'import json,sys; print(json.dumps({"model":sys.argv[1],"prompt":sys.argv[2],"stream":False,"options":{"num_predict":int(sys.argv[3]),"temperature":0}}))' \
            "$m" "$VERDICT_PROMPT" "$OLLAMA_NUM_PREDICT")
-    out=$(curl -sf --max-time 240 "$OLLAMA_HOST_URL/api/generate" -d "$body" 2>/dev/null)
-    if [ -z "$out" ]; then
-      printf 'ollama %-22s UNREACHABLE-THIS-RUN (measured, not inferred)\n' "$m"; continue
+    _http "$OLLAMA_GEN_TIMEOUT" "$OLLAMA_HOST_URL/api/generate" "$body"
+    # 🟥 A status line is not a completed answer. If curl failed AFTER the headers (timeout mid-body,
+    #    connection reset), HTTP_CODE can read 200 while HTTP_BODY is whatever arrived — possibly a
+    #    complete-looking JSON that would parse to PIN-OK and join the panel. rc≠0 wins over the code.
+    if [ "$HTTP_RC" -ne 0 ] && [ "$HTTP_CODE" != "000" ]; then
+      printf 'ollama %-22s UNMEASURED-THIS-RUN (http %s but the transfer did not complete: %s) — not in the panel\n' "$m" "$HTTP_CODE" "$(_http_why)"
+      continue
     fi
+    # Three different events, three different labels — never collapse them again:
+    #   000  → no HTTP answer at all          → UNREACHABLE-THIS-RUN (this one IS about the network)
+    #   4xx  → the server answered and refused → MODEL-ERROR(<its words>) — name / inventory problem
+    #   5xx  → the server answered and failed  → SERVER-ERROR(<its words>) — load / OOM / runtime
+    # None of them joins the panel, and none of them is PIN-OK or UNTRUSTED-PIN: nothing was served.
+    case "$HTTP_CODE" in
+      000)
+        printf 'ollama %-22s UNREACHABLE-THIS-RUN (%s — no HTTP answer to the generate call)\n' "$m" "$(_http_why)"
+        continue ;;
+      4[0-9][0-9])
+        printf 'ollama %-22s MODEL-ERROR(%s) · control: %s\n' "$m" "$(_err_summary)" "$ctl_state"
+        printf '       the server WAS reached and answered http %s — check the model name and this node'"'"'s\n' "$HTTP_CODE"
+        printf '       inventory, not the network. Not in the panel: no model was served.\n'
+        continue ;;
+      200) : ;;
+      *)
+        printf 'ollama %-22s SERVER-ERROR(http %s: %s) · control: %s\n' "$m" "$HTTP_CODE" "$(_err_summary)" "$ctl_state"
+        printf '       the server WAS reached but failed to serve (load / memory / runtime). Not in the panel.\n'
+        continue ;;
+    esac
+    out="$HTTP_BODY"
     env_model=$(printf '%s' "$out" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("model",""))' 2>/dev/null)
     resp=$(printf '%s' "$out" | python3 -c 'import json,sys; print((json.load(sys.stdin).get("response") or "").strip())' 2>/dev/null)
     compact=$(printf '%s' "$resp" | tr -s '[:space:]' ' ' | sed 's/^ *//; s/ *$//')
