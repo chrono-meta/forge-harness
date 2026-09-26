@@ -178,3 +178,92 @@ hook itself prints `mkdir -p …/tracks/_meta` on that failure, i.e. the actor's
 teaches the marker-creation path — so "just don't fabricate it" is prose sitting under a machine
 instruction pointing the other way.
 
+---
+
+## §CM-Posture-Not-Guarantee — «Default-active» is a posture — the 2026-08-08 case (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Agent Dispatch Operation) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+So "default-active" is a **posture, not a guarantee**. Measured 2026-08-08: a session running under
+exactly that system-prompt instruction worked alone for a full session and dispatched only at the two
+points where the operator named it — while this file said dispatch was available. A session that
+*cannot* dispatch must **say so** rather than quietly doing everything inline; the silent version is
+what made that case invisible until the operator asked. Writing "default is active" into a remote
+canon without this paragraph produces the next session that reads it and still cannot comply.
+
+This is why the answer
+belongs at setup — that is the one moment where the
+choice is cheap to make, and a durable record is the whole point: a *yes* left in a transcript expires
+with the transcript, while the conditional line above is re-evaluated by every cold session.
+
+
+---
+
+## §CM-Lease-Unwired — The lease check is built but unwired (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Agent Dispatch Operation) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+The lease is the
+only part that decays on its own — **and nothing reads it**. Correcting a wrong reason given earlier
+in this branch: that gap is *not* "below the mechanization threshold, so don't build it."
+`scripts/consent_registry_check.sh` already enforces leases (requires `expires`, rejects past dates,
+caps at 365 days) and is lane-tested. It is **unwired here**, which is a different defect with a
+different fix, and "don't build" was covering for it. Wiring it is a real decision, not a chore:
+the registry's own floor forbids `promotion_eligible: true` for a class whose effects feed
+irreversible sinks, and a dispatched subagent does — so registering this grant would either be
+rejected by that floor or require declaring it something the registry does not govern. That is the
+operator's call, and until it is made the lease is **honoured by reading, not by machinery**.
+
+
+---
+
+## §CM-Worktree-Retraction — Worktree evidence is reachable — the 2026-08-22 retraction (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Agent Dispatch Operation) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+🟥 **RETRACTED 2026-08-22.** This said the marker and manifest are *structurally absent* in a
+worktree. They are not: `templates/.git-hooks/pre-commit` resolves evidence through
+`git rev-parse --git-common-dir`, which returns the **main tree's** `.git` from inside a worktree.
+Measured in a clean worktree with the known-negative established first (its own `tracks/` = skeleton
+only; `$REPO_ROOT/tracks/_meta/edit_manifest.yaml` NOT FOUND, `$EVIDENCE_ROOT/...` FOUND — the two
+roots disagree, so the probe discriminates).
+**The operating rule is UNCHANGED: do not commit FH assets from a worktree.** Its remaining **open risk areas** — not
+established grounds — are marker provenance, concurrent manifest append, and a copy of `tracks/` that
+appears in a worktree from an unattributed source. They are **deliberately not enumerated as reasons
+here**; an earlier draft enumerated
+them and adversarial review found a defect in nearly every added claim. ⚠️ **Reachable is not automatic**: the hook *reads* `$EVIDENCE_ROOT`, but a
+worktree session writing by relative path lands in the worktree's own `tracks/`, not the main tree's.
+The gate is satisfiable — its failure message prints the absolute `MARKER_DIR` to write to — but the
+routing is the author's job, not the tool's.
+
+(measured 2026-08-05: marker-less FH-asset commit
+succeeded)
+
+
+---
+
+## §CM-Worktree-Detection — Worktree location is detectable — why it is not yet mechanized (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Agent Dispatch Operation) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+**Do not let that unenforceability launder the enforceable part** (caught by an adversarial round on
+the paragraph above, which had used it to do exactly that): *being in a worktree* is trivially
+detectable — `git rev-parse --git-common-dir` differs from `--git-dir` there and matches in the main
+tree — and `templates/.git-hooks/pre-commit` currently has **zero** lines of worktree detection. A
+true statement about one thing (provenance) was standing in for an untested claim about another
+(location). It is left un-mechanized for a *scope* reason, not an impossibility one: measured
+recurrence is 1, below this repo's own N≥3 mechanization threshold. If it recurs, the check is a
+two-line hook addition, not a research problem.
+
+
+---
+
+## §CM-Invocation-Log-Origin — Why the invocation log needed a floor (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Agent Dispatch Operation) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+**Why it needed a floor**: this line was prose-only and a single
+session dispatched 20+ subagents and logged none of them, in the same session that recovered this very
+log file from a branch queued for deletion. The hook only tallies; it never writes an entry, because a
+fabricated `outcome`/`evidence` would poison the promotion gate worse than a missing one.
+

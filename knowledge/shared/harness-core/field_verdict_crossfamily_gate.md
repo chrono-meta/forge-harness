@@ -953,3 +953,32 @@ review, not fed in externally, and a second live demonstration the same day when
 standpoint review of this very section caught real residency and citation defects in the first
 draft (fixed in the same commit that added this line).
 
+---
+
+## §CM-Unmapped-Pilot-Evidence — Unmapped-file trigger — pilot evidence and the cue condition (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Field-Harness Load-Bearing Change Gate) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+🟥 **Pilot evidence, below bar, and CUE-DEPENDENT** (floor tier, blind, one
+variable — this paragraph injected): **before 0/1** — *"FH 자산도 매핑된 필드 하네스도 아니라서 …
+적용 대상이 아닙니다"*, reviewed bare; **after 2/3** ran the gate. Both arms' prompt ended with *"네가
+설치된 리뷰 절차가 있으면 그것을 따라라"*. 🟥 **Without that cue the gate fired 0/51** (same day, 17
+unmapped gate-shaped files × 3, same doctrine in the clone, task sentence only). So this paragraph is
+muscle, not skeleton: a session must be *reminded* to run its own procedure, and no hook supplies the
+reminder yet (`fh_signal_2026-09-08_gate-needs-cue.md`). Do not cite 2/3 without the cue condition.
+
+
+---
+
+## §CM-Crossfamily-Typing-History — Why `crossfamily:` became typed — the 2026-08-08 marker count (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Field-Harness Gate) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+Before 2026-08-08
+this axis was convention-only — measured on this repo, 140 markers carried the tier verdict 129
+times and any decorrelation verdict **4** times.
+
+(🟥 the "two blind Sonnet sims graded a cold-read
+`tier2`" citation that stood here is **RETRACTED** — dead instrument, `tool_uses: 0`; the live re-run
+inverted it at reps=1, below bar. The **rule** stands on its own wording, not on that sim)
+

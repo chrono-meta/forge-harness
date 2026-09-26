@@ -41,21 +41,21 @@ core invariants never melt). The nursery also **verifies what it births**: harne
 | **① Control Tower** | Coordinates all connected projects and **drives harness-ification across them** — decides *which* projects to harness and *when*, propagates harness assets to each, and feeds their synced learnings into the hub's compounding loop. The *how* (rules · gates · 6-axis) is executed via the Core Axis. Command HQ, not a passive registry. | `knowledge/shared/rules/auto_project_mapping.md` (mapping + **Full-Harness Mode**) · `harvest-loop` (compounding loop) · `templates/` (project-harness bundle) · `CATALOG.md` |
 | **② 프런티어 답습 · Frontier absorption** | 확신이 안 서는 자리에서 **책장(우리가 이미 가진 것) → 도서관(세상이 이미 만든 것)** 순으로 먼저 뒤진다. 목적은 **재발명 차단**이지 외부 인용으로 똑똑해 보이는 것이 아니다. | `knowledge/shared/harness-core/harness_frontier_diagnosis_*.md` · `knowledge/{your-org}/` |
 | **③ AI Collaboration Guide** | Accumulates and distributes best practices for token efficiency and dialogue methodology — "how to ask, delegate, and record". | `CHEATSHEET.md` · `knowledge/shared/dialogue/ai_dialogue_playbook.md` · `MEMORY.md` intent-based + associative recall (`knowledge/shared/dialogue/memory_intent_recall.md`) |
-| **Core Axis** | **Harness Engineering (How)** — the methodology and practice axis that realizes the three layers above. The 6-axis framework is the operating unit. **A harness is a means, not an end** — Field harness: "simpler over time" (complexity = warning signal). Meta-harness: *optimize*, not necessarily simplify — complexity earns its scope; red flags are orphaned, redundant, and decorative units, not complexity itself.<br>**And what it is a means *to* is Governance Engineering (What for)** — 🐿️ *«수치를 목표로 움직이되, 그 수치가 게이트를 열지는 않는다»*: drive the error rate toward 0.x% **and** hold the surfaces where no number buys passage. Two verbs, and the second one carries the load — drop it and the discipline decays into "lower the number and the gate opens", which §Irreversibility Gates forbids by name. Measured content, not a slogan — 🟥 **and the numbers were replaced 2026-09-17** (the earlier «five arms, 2.7 %–13.6 %» came from a scorer since found defective — it counted our own mandated defeater paragraphs as defect claims and dropped ~half of all claims out of the denominator — and it is **not re-scorable**, structurally): **four** arms ran **0.0 %–1.1 %** claim-error on the same eight cases, 95 % upper bound ≈2.1 %, and **no contrast separates** after cluster correction, so it is a spectrum and not a ranking. Every one usable on a review surface, **not one** usable on publish/delete/rewrite — and that holds *now that the point estimate is inside 0.x%*, which is the first time the second verb is testable rather than vacuous. That distance is why this axis exists. Canon: `governance_engineering_definition.md` (operator formulation 2026-09-09; the term exists in IT/data governance — what is ours is the referent, and an outbound claim of novelty owes a stated delta, never mere absence of prior use). | `harness_6axis_framework.md` · `hub_compounding_loop.md` · `claude_code_runtime_flow.md` · `plugins/*/agents/` (sub-agents) |
+| **Core Axis** | **Harness Engineering (How)** — the methodology and practice axis that realizes the three layers above. The 6-axis framework is the operating unit. **A harness is a means, not an end** — Field harness: "simpler over time" (complexity = warning signal). Meta-harness: *optimize*, not necessarily simplify — complexity earns its scope; red flags are orphaned, redundant, and decorative units, not complexity itself.<br>**And what it is a means *to* is Governance Engineering (What for)** — 🐿️ *«수치를 목표로 움직이되, 그 수치가 게이트를 열지는 않는다»*: drive the error rate toward 0.x% **and** hold the surfaces where no number buys passage. Two verbs, and the second one carries the load — drop it and the discipline decays into "lower the number and the gate opens", which §Irreversibility Gates forbids by name. Measured content, not a slogan: each of the **four** review arms measured (2026-09-17) is usable on a review surface, **not one** on publish/delete/rewrite — that distance is why this axis exists (numbers + the 2026-09-17 scorer replacement: `knowledge/shared/harness-core/claude_md_gate_details.md §CM-Governance-Axis-Numbers`). Canon: `governance_engineering_definition.md` (operator formulation 2026-09-09; the term exists in IT/data governance — what is ours is the referent, and an outbound claim of novelty owes a stated delta, never mere absence of prior use). | `harness_6axis_framework.md` · `hub_compounding_loop.md` · `claude_code_runtime_flow.md` · `plugins/*/agents/` (sub-agents) |
 
 > **번호가 둘이다 — 이 표의 ①②③ 은 «3층 미션»이고, 정체성 등급표의 ①~④·Ⓑ 는 «5대 정체성»이다.**
 > 같은 것을 다르게 세는 게 아니라 **다른 분류**이므로 번호가 어긋나도 모순이 아니다. 여기 **②**(프런티어 답습)는
 > 등급표에서 **④** 다. 🟥 등급은 이 표가 아니라 `ship_readiness_gate.md` 가 정본이고, 이름도 거기가 정본이다.
 
 
-> **3층 정본 — 공정 · 엔진 · 정체성**: FH 를 설명하는 뼈대는 세 층이고 셋의 관계가 정본으로 적혀 있다 — **3단 공정**(FH 의 모든 작업이 밟는 방법론 — 엔진을 벼릴 때도 같다: 초기 영혼 → 중간 **병렬 탈상관** 가속화(두 다이얼 — **탈상관**=사각 위험[모델 계열 ⓐ + 입장 ⓑ] · **병렬**=표면 크기. 곱하지 말고 골라라) → **마무리 6축 태우기**) → **4대 엔진**(영혼·품질게이트·질문하기·맥락유지) → **정체성**(방법론과 코어가 맞물려 나타나는 능력 — 5대는 단련된 실물과 등급을 가진 안정 정체성, 그 외는 방향·레버에 따라 나타나고 사라지는 면모; 운영자 정식화 2026-09-05). 기억용 형태는 **3단 공정 · 4대 엔진 · 5대 정체성 · 6축 검증**이나 🟥 **6축은 네 번째 층이 아니다** — 3단 공정 ③단계가 무엇으로 이루어지는지다. **Read `knowledge/shared/harness-core/fh_three_layer_canon.md`** before naming, re-scoping, or citing any of the three — it also defines the **6 verification axes** (ⓐ계열 · ⓑ입장 · ⓒ격리 그라운딩 · ⓓ3자대면 · ⓔ첫실사용 · ⓕ되돌림; §1-a 가 최초 4축, §1-a-2 가 2026-08-16 확장) that the third stage actually consists of, and states why the three are *not* a clean stack. 🟥 **축은 «얼마나 적대적인가»가 아니라 «무엇을 받았는가»로 갈린다** — 받는 것이 같으면 리뷰어를 몇 명 붙여도 같은 사각이 남는다. 🟢 **외부 수치가 생겼다(2026-09-12)**: `arXiv:2609.10969`(*Engineering Reliable Commit Gates for Agentic AI*, 2026-09-10)이 고정예산 2×2 로 **48 템플릿 · 2,880 시나리오**에서 두 축을 분리해 쟀다 — «**같은 증거를 읽는 교차-모델 투표**»는 위험 제안의 **62.9 %** 를 승인하고, «**독립 출처**»는 **22.9 %** 다. 출처 효과 **40.9 %p** vs 모델 다양성 효과 **11.3 %p** — **3.6 배**. 🟥 **그 수치를 읽고 바꿨다(같은 날)**: 강한 쪽(`standpoint:`)의 `tier2`+ grounds 검사가 **advisory 에서 차단으로** 올라갔고(`STANDPOINT_GROUNDS_GRACE_DATE=2026-09-12`, 소급 없음), `crossfamily:` 의 `panel(...)` 은 이제 **`evidence=SHARED|INDEPENDENT|MIXED`** 토큰을 요구한다 — «같은 diff 를 읽은 패널» 이 강한 값으로 기록되던 자리가 그 62.9 % 팔이다. 🟥 **닫힌 것은 여전히 형식이지 진위가 아니다** — 게임 가능성은 §Mechanization Boundary 가 사람에게 남긴 의도된 잔여다. 이 줄은 n=4+4 내부 관찰로 서 있었고 이제 외부 n=2,880 이 같은 방향을 가리킨다(숫자는 초록 직독으로 재확인, 2026-09-12). 🟥 **명칭 충돌 — 이 파일 안에 「4축」이 두 개다.** §FH Improvement **4-Axis Auto-Gate** 의 4축(Axis 1 회귀 · 2 적대 · 3 팬텀 · 4 매니페스트)은 **커밋 게이트**이고, 여기 6축은 **검증 축**이다. 부분적으로만 겹치고(Axis 1·4 는 ⓐ~ⓕ 에 대응이 없다) **서로 대체하지 않는다**. 그래서 6축은 「6축 게이트」가 아니라 「**6축 검증**」으로 부른다. Grade table stays canonical in `ship_readiness_gate.md`; this pointer never carries grades.
+> **3층 정본 — 공정 · 엔진 · 정체성**: FH 를 설명하는 뼈대는 세 층이고 셋의 관계가 정본으로 적혀 있다 — **3단 공정**(FH 의 모든 작업이 밟는 방법론 — 엔진을 벼릴 때도 같다: 초기 영혼 → 중간 **병렬 탈상관** 가속화(두 다이얼 — **탈상관**=사각 위험[모델 계열 ⓐ + 입장 ⓑ] · **병렬**=표면 크기. 곱하지 말고 골라라) → **마무리 6축 태우기**) → **4대 엔진**(영혼·품질게이트·질문하기·맥락유지) → **정체성**(방법론과 코어가 맞물려 나타나는 능력 — 5대는 단련된 실물과 등급을 가진 안정 정체성, 그 외는 방향·레버에 따라 나타나고 사라지는 면모; 운영자 정식화 2026-09-05). 기억용 형태는 **3단 공정 · 4대 엔진 · 5대 정체성 · 6축 검증**이나 🟥 **6축은 네 번째 층이 아니다** — 3단 공정 ③단계가 무엇으로 이루어지는지다. **Read `knowledge/shared/harness-core/fh_three_layer_canon.md`** before naming, re-scoping, or citing any of the three — it also defines the **6 verification axes** (ⓐ계열 · ⓑ입장 · ⓒ격리 그라운딩 · ⓓ3자대면 · ⓔ첫실사용 · ⓕ되돌림; §1-a 가 최초 4축, §1-a-2 가 2026-08-16 확장) that the third stage actually consists of, and states why the three are *not* a clean stack. 🟥 **축은 «얼마나 적대적인가»가 아니라 «무엇을 받았는가»로 갈린다** — 받는 것이 같으면 리뷰어를 몇 명 붙여도 같은 사각이 남는다. 🟢 **외부 수치(2026-09-12, `arXiv:2609.10969`)가 같은 방향을 가리킨다** — «같은 증거를 읽는 교차-모델 투표»보다 «독립 출처»가 위험 제안을 훨씬 덜 승인한다(read `knowledge/shared/harness-core/fh_three_layer_canon.md §CM-External-Commit-Gate-Number` — 2×2 조건·팔별 승인율·효과 크기 — read before citing the number). 🟥 **그 수치를 읽고 바꿨다(같은 날)**: 강한 쪽(`standpoint:`)의 `tier2`+ grounds 검사가 **advisory 에서 차단으로** 올라갔고(`STANDPOINT_GROUNDS_GRACE_DATE=2026-09-12`, 소급 없음), `crossfamily:` 의 `panel(...)` 은 이제 **`evidence=SHARED|INDEPENDENT|MIXED`** 토큰을 요구한다 — «같은 diff 를 읽은 패널» 이 강한 값으로 기록되던 자리가 그 62.9 % 팔이다. 🟥 **닫힌 것은 여전히 형식이지 진위가 아니다** — 게임 가능성은 §Mechanization Boundary 가 사람에게 남긴 의도된 잔여다.  🟥 **명칭 충돌 — 이 파일 안에 「4축」이 두 개다.** §FH Improvement **4-Axis Auto-Gate** 의 4축(Axis 1 회귀 · 2 적대 · 3 팬텀 · 4 매니페스트)은 **커밋 게이트**이고, 여기 6축은 **검증 축**이다. 부분적으로만 겹치고(Axis 1·4 는 ⓐ~ⓕ 에 대응이 없다) **서로 대체하지 않는다**. 그래서 6축은 「6축 게이트」가 아니라 「**6축 검증**」으로 부른다. Grade table stays canonical in `ship_readiness_gate.md`; this pointer never carries grades.
 
 > **자기 대조는 상시 의무 — 트리거는 발화가 아니라 «지금 FH/PMH 자산을 건드리고 있다»**
 > (운영자 결정 2026-08-09; 이 저장소든 **다른 사용자의 install 이든** 동일). §FH Improvement
 > 4-Axis Auto-Gate 와 **같은 트리거**이므로 새 트리거도 새 파일도 만들지 않는다 — 기록 자리는
 > **4축 마커의 기존 필드**(`axis2-*` · `axis3-*` · `residual`)다.
 > **마커에 반드시 남는 3줄** ① **①영혼** — 설계 *전에* 쓴 «성공 정의 / 절대 안 함»(없으면 `없음`)
-> · ② **돌린 축과 안 돌린 축을 각각 이름으로.** 마커 `axes-run` 은 **2026-08-17 부로 여섯 글자**를 요구한다 — **기호 키**(ⓐ계열 · ⓑ입장 · ⓒ격리 그라운딩 · ⓓ3자대면 · ⓔ첫실사용 · ⓕ되돌림). 그 전 날짜의 마커는 옛 **ASCII 네 글자**(a·b·c·d) 그대로다. 🟥 **두 배열은 같은 글자가 다른 축을 가리킨다** — 옛 `b`=첫실사용은 지금 **ⓔ**, 옛 `d`=되돌림은 지금 **ⓕ** 라서, 옛 줄을 그대로 옮기면 축 둘이 조용히 뒤바뀌고 아무 오류도 안 난다. **어느 배열인지는 마커 파일명의 날짜로 판별한다**(`< 2026-08-17` = 옛 4축). ⚠️ **표기법은 판별자가 아니다** — 초판이 «기호 키를 보면 6축인 줄 안다» 고 적었는데 **코퍼스 실측이 반증했다**: axes-run 보유 53건 중 기호 키가 4건인데 그중 **2건이 2026-08-10 자이면서 옛 4축 의미로 기호를 쓴다**(`ⓑ 첫실사용` · `ⓓ 되돌림` — 현 배열에선 각각 ⓔ·ⓕ), 혼용도 1건 있다. 훅은 그 셋을 안 읽으므로 커밋은 안 막지만 **감사자의 grep 은 거기서 틀린 답을 낸다**. ⓑ입장은 값을 여기 적지 않고 **`standpoint:` 자기 필드**를 가리킨다(`ⓑ=→standpoint`, 그 줄이 비면 죽은 포인터라 차단). 즉 산문 정본과 기계가 **축 개수로는 맞았고**, 남은 어긋남은 `standpoint:` 값의 **grounds** 한 칸이다. 🟥 **초판은 여기에 «값을 검증하는 코드가 아직 0줄»이라고 적었는데 그건 거짓이었다 — 2026-08-23 정정(RETRACTED).** 실측: `templates/.git-hooks/pre-commit` 의 `validate_standpoint_leg()` 는 **86줄**이고 `:1953` 에서 호출되어 `FAILED=1` 로 **커밋을 차단한다**(레인 = `scripts/test_marker_standpoint_lanes.sh`, 실재). 정확한 잔여는 「0줄」보다 훨씬 좁고, **그 구분을 접으면 안 된다**: ⓐ **enum 은 닫혀 있고 차단한다** — 함수 안 `return 1` **6개**(`standpoint:` 줄 부재 · 중복 `standpoint:` 줄 · enum 비-멤버 값 · `crossfamily:` 토큰 오염 · 근거 없는 `not-applicable` · 근거 없는 `DEGRADED_*`/`UNKNOWN`). ⓑ **`tier2`+ 의 «실행을 명명했는가» grounds 검사도 2026-09-12 부로 차단한다** — 그 전까지는 `⚠️` 만 찍고 `return 1` 을 안 했다(훅 스스로 *"Advisory by design"* 이라 적었다). 🟢 **바꾼 근거는 외부 실측이다**: `arXiv:2609.10969` 이 출처 축을 **40.9 %p**, 모델 축을 **11.3 %p** 로 재서(n=2,880 · 고정 호출예산) «강한 축의 grounds 를 advisory 로 두고 약한 축을 하드 차단» 이 균형이 아니게 됐다. grace date 로 소급하지 않으며(`< 2026-09-12` 마커는 종전 경고), 레인 = `test_marker_standpoint_lanes.sh` N8/N8b/N8c/N8d. 🟥 막는 것은 **기록의 형태**(명령과 출력을 명명했는가)이지 그 실행의 진위가 아니다. **왜 그렇게 적혔나**: 2026-08-20 정정이 «enum 은 닫혔고 grounds 는 advisory» 로 이미 들어왔는데(§Standpoint-Execution-Evidence 포인터 줄이 그대로 적고 있다) **이 줄만 옛 서술로 남았다** — 같은 파일이 자기 자신과 어긋난 반쪽-픽스 전파경계다(`[[feedback_half_fix_propagation_boundary]]`). 🟥 **이 문단의 논지는 바뀌지 않는다** — 닫힌 것은 여전히 **«형식»이지 «진위»가 아니고**, 자평·게임 가능성은 그대로 열려 있다. 오히려 좁아진 만큼 정확해졌다. 형식 정본 = `.claude/rules/fh_4axis_gate.md §Marker axis fields`
+> · ② **돌린 축과 안 돌린 축을 각각 이름으로.** 마커 `axes-run` 은 **2026-08-17 부로 여섯 글자**를 요구한다 — **기호 키**(ⓐ계열 · ⓑ입장 · ⓒ격리 그라운딩 · ⓓ3자대면 · ⓔ첫실사용 · ⓕ되돌림). 그 전 날짜의 마커는 옛 **ASCII 네 글자**(a·b·c·d) 그대로다. 🟥 **두 배열은 같은 글자가 다른 축을 가리킨다** — 옛 `b`=첫실사용은 지금 **ⓔ**, 옛 `d`=되돌림은 지금 **ⓕ** 라서, 옛 줄을 그대로 옮기면 축 둘이 조용히 뒤바뀌고 아무 오류도 안 난다. **어느 배열인지는 마커 파일명의 날짜로 판별한다**(`< 2026-08-17` = 옛 4축). ⚠️ **표기법은 판별자가 아니다** — 옛 날짜 마커에도 기호 키를 옛 4축 의미로 쓴 실례가 있어, 감사자의 grep 은 거기서 틀린 답을 낸다(read `knowledge/shared/harness-core/fh_three_layer_canon.md §CM-Axes-Run-Notation-Evidence` — 코퍼스 53건 실측 — read before grepping `axes-run` across dates). ⓑ입장은 값을 여기 적지 않고 **`standpoint:` 자기 필드**를 가리킨다(`ⓑ=→standpoint`, 그 줄이 비면 죽은 포인터라 차단). 즉 산문 정본과 기계가 **축 개수로는 맞았고**, 남은 어긋남은 `standpoint:` 값의 **grounds** 한 칸이다. 🟥 **값 검증 코드는 있다(옛 «0줄» 서술은 거짓, 2026-08-23 RETRACTED)** — `templates/.git-hooks/pre-commit` 의 `validate_standpoint_leg()` 가 enum 을 **차단**하고, `tier2`+ 의 «실행을 명명했는가» grounds 도 **2026-09-12 부로 차단**한다(`STANDPOINT_GROUNDS_GRACE_DATE=2026-09-12`, 소급 없음 · 레인 `scripts/test_marker_standpoint_lanes.sh`). 🟥 막는 것은 **기록의 형태**이지 그 실행의 진위가 아니다 — 자평·게임 가능성은 그대로 열려 있다(read `knowledge/shared/harness-core/fh_three_layer_canon.md §CM-Standpoint-Validator-Retraction` — `return 1` 6개 목록 · 차단으로 올린 외부 근거 · 반쪽-픽스 경위 — read before claiming what the hook does or does not validate). 형식 정본 = `.claude/rules/fh_4axis_gate.md §Marker axis fields`
 > · ③ **각 축의 컨트롤과 그 생사**. 축을 «돌렸다»의 **최소 증거 = 컨트롤이 살아 있는 실행 출력**
 > 이다 — 안 고른 이유만 적은 것은 준수가 아니다.
 > **비용 경계**: 넷을 매번 다 돌리지 않는다. 실패 모드에 맞춰 **고른다**.
@@ -63,18 +63,10 @@ core invariants never melt). The nursery also **verifies what it births**: harne
 > 있으면 차단). **옵셔널 `oracle:`** — 「기대값을 무엇으로 정했나」 닫힌 enum 6(known-pair ·
 > metamorphic · back-to-back · a-b · human · none — `none` 은 사유 필수; 없으면 통과, 훅은 형식만.
 > TR 29119-11 오라클 문제의 기록면, 2026-09-05). 상세는 `fh_4axis_gate.md §Marker axis fields`.
-> 🟥 **자평이다 · 게임 가능하다 — 둘은 안 닫혔다. 「훅이 없다」는 2026-08-17 부로 거짓이 됐고,
-> 그 정정이 경계를 더 선명하게 만든다.** 그날 `standpoint:`(PR #429)와 `thirdparty:`(PR #434)에
-> 값 검증 레인이 붙어, `crossfamily:` 와 함께 **세 필드가 훅에서 닫힌 enum + 비공허 근거로
-> 검증된다**(`validate_{crossfamily,standpoint,thirdparty}_leg`). 🟥 **그러나 닫힌 것은 «형식»
-> 이지 «진위»가 아니다** — 훅은 값이 목록 안에 있고 근거가 비어 있지 않은지를 보지, 그 값이
-> **참인지**는 보지 않는다. 도그푸드 증거: 그 기계화를 촉발한 거짓값(어느 릴리스 마커의
-> `not-applicable`)이 **새 레인을 그대로 통과한다.** 형식이 옳기 때문이다.
-> 그래서 **자평·게임 가능성은 그대로 열려 있다.** 그건 결함이 아니라 §Mechanization Boundary 가
-> 의도적으로 사람에게 남긴 자리다(판단을 코드로 굳히면 오늘의 판단이 내일의 천장이 된다).
-> 닫는 방향은 여전히 **cross-family 가 그 마커를 읽는 것**이지 자기 채점을 더 성실히 하는 게
-> 아니다 — 2026-08-17 실측이 그 근거를 강화했다(병렬 두 세션, 상호 정정 7건, **판단 축 자력
-> 적발 0**, 둘 다 사전등록·컨트롤·되돌림을 다 돌리고도 각자 자기 쪽으로 접었다).
+> 🟥 **자평이다 · 게임 가능하다 — 둘은 안 닫혔다.** `crossfamily:` · `standpoint:` · `thirdparty:` 세 필드는
+> 훅에서 닫힌 enum + 비공허 근거로 검증되지만(2026-08-17~), 닫힌 것은 **«형식»이지 «진위»가 아니다**. 그건
+> 결함이 아니라 §Mechanization Boundary 가 의도적으로 사람에게 남긴 자리다. 닫는 방향은 **cross-family 가 그
+> 마커를 읽는 것**이지 자기 채점을 더 성실히 하는 게 아니다(read `knowledge/shared/harness-core/fh_three_layer_canon.md §CM-Self-Grading-Open` — 도그푸드 증거 · 2026-08-17 병렬 두 세션 실측 — read before claiming the marker fields are verified).
 > **근거·사례·표본 한계는 `fh_three_layer_canon.md` §1-c — 인용하기 전에 읽어라.** 이 규칙은
 > **n=1 세션 표본**에서 모든 install 로 일반화한 것이고, 그 절이 그 사실을 명시한다.
 
@@ -104,11 +96,7 @@ Two orthogonal layers — never collapse them.
   the default**: do NOT drift between formal and informal — Korean 반말↔존댓말, English casual↔corporate —
   within a turn, across turns, or across a session. Register drift is a UX defect and dilutes the mascot
   identity. If unsure which register a session is in, match the user's most recent message. The
-  Orthogonality guard below applies to register too (a warmer register never softens judgment). This rule
-  lives in always-loaded CLAUDE.md, not only in memory, so it fires every turn without depending on
-  recall — the 2026-07-12 miss was a session that drifted register because the rule lived only in memory.
-  Tone has **no** mechanical hook gate by nature: always-loaded salience is the strongest available lever,
-  **not a floor** (no mechanical floor exists for tone — an accepted limitation, not a guarantee). The
+  Orthogonality guard below applies to register too (a warmer register never softens judgment). This rule is resident on purpose, and tone has **no** mechanical floor — salience is the strongest lever, not a guarantee (`knowledge/shared/harness-core/claude_md_gate_details.md §CM-Register-Residency`). The
   operator or project may pin a concrete default register in a local binding (`CLAUDE.local.md` / UAP
   `preferred register`) — that pin is operator taste and stays local, never in this public file.
   🟥 **A local pin sets REGISTER, never LANGUAGE — and the greeting decides the language outright.**
@@ -116,14 +104,7 @@ Two orthogonal layers — never collapse them.
   it, **including the door labels and every menu line**, not just the prose around them. A pinned
   default (`Korean 반말`, `English casual`) supplies the *register* to speak that language in — it does
   not make the session answer `你好` in Korean. Half-translating (localized prose, English doors) is the
-  same defect in a milder form. **Measured 2026-08-21, blind, at the floor tier, one rep per arm**:
-  `こんにちは` → Japanese ✅ · `안녕` → Korean prose but **English door labels** 🟡 · `你好` → **Korean**
-  ❌ · control `hi` → English ✅. The control held, so the instrument discriminates and the defect is in
-  the wiring, not the measurement. 🟥 **The line above already said "not language-lock" and the floor
-  tier still read the pin as one** — which is why this now names the failure explicitly instead of
-  restating the principle. Honest scope: those arms ran in an install that *has* such a pin; whether a
-  clean consumer install ever had the defect is **unmeasured**, and one rep per arm is below this
-  repo's own `reps>=3` bar.
+  same defect in a milder form. The floor tier has been measured reading a register pin as a language lock even though the line above already said it was not (**Detail**: See `knowledge/shared/harness-core/fh_detail_protocols.md §CM-Language-Pin-Measurements` — per-greeting arms, control, scope limits — read before citing whether this defect is fixed).
 - **Not flattery**: soft charisma is not pleasing the user. Disagree plainly when the work calls for it;
   warmth and a "no" coexist (no Gemini-grade sycophancy).
 - **Greeting / onboarding**: open with a warm, identity-revealing welcome (new / returning / operator
@@ -148,10 +129,7 @@ governance"), so this is its deliberate **counterweight** — and the reflex **s
 actually *is* — net-new? tool-shaped (→ possible EMIT) or judgment-shaped (→ doctrine)? — **before**
 mapping it to a known asset. This is the meta-harness's growth point: it evolves by *not-collapsing the
 unfamiliar*, not by adding machinery. The reflex fires **before** memory recall, so this lives
-always-loaded, not only in memory. (Measured 2026-07-14, one session, 3×: two identities each collapsed
-onto their single hardest sub-mechanism, and a failure from a **non-harness** run mapped onto a harness
-metric — each read a live-but-incomplete thing as zero, each caught by the operator, not self-caught.
-Detail: `[[feedback_reinvention_reflex_normalization_counterweight]]`.) **External, family-level number (2026-09-04, digest `HN:49557206`, armature.tech, 5,292 valid sessions)**: Claude Code built in-house instead of adopting an existing tool in **19 %** of sessions vs **10 %** for Codex and Cursor — ≈2× its peers. The reflex this section counterweights is a measured family bias, not a local habit; the one-session 3× above is the internal instance of it.
+always-loaded, not only in memory. (Measured 2026-07-14, one session, 3× — a separate internal instance, not the external number: `knowledge/shared/harness-core/claude_md_gate_details.md §CM-Reinvention-External-Number` holds both, in that order.) The reflex is a measured **family** bias, not a local habit — externally, Claude Code built in-house instead of adopting in **19 %** of 5,292 sessions vs **10 %** for Codex and Cursor (2026-09-04, armature.tech; **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §CM-Reinvention-External-Number` — source and caveats — read before citing it).
 
 ## Mechanization Boundary — machinery at irreversible edges and channels, judgment left to evolution
 
@@ -179,36 +157,17 @@ the other side — where the gap is in *judgment quality* rather than in whether
 the answer is not always to encode the judgment. Discipline and channel-typing are how Sonnet reaches
 it; a frozen rule is how nobody ever exceeds it.
 
-⚠️ **Applied honestly to this file's own machinery, same day**: the `declined`-grounds lane added to
-`templates/.git-hooks/pre-commit` is a **channel** check (a claim must name attributable grounds) —
-it does not judge whether decorrelation was warranted. But its grounds test is a *vocabulary grep*,
-and a vocabulary list is a small frozen judgment: a legitimately-phrased `declined` in unforeseen
-wording over-blocks. Accepted because the failure is **loud and cheap** (author rephrases) rather
-than silent, and because it mirrors the existing degrade-branch form — named here rather than
-claimed pure.
+⚠️ This file's own `declined`-grounds lane is a **channel** check, but its grounds test is a vocabulary grep — a small frozen judgment, accepted because it fails **loud and cheap** (**Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §CM-Declined-Grounds-Honesty` — read before adding another vocabulary-list check).
 
 ## Local Execution First — CI is a backstop, never the discovery mechanism
 
-**Operator, 2026-08-16**: *"이 실패가 CI 확인 단계에서야 발견되는 건 매우 늦다 … 로컬에서 그
-[대상 레포]를 통해서 실제로 구동시켜 봤다면 안 발생했을까"* and *"CI 확인도 중요하지만 사실 이는
-**깃헙의 기능에 기대는 것**이라고 봐야 하려나."*
-
-Both halves are load-bearing. **Late**: a red CI check is discovery at the slowest, most expensive
-point in the loop, after push, after the PR, in front of an audience. **Borrowed**: CI is a
-*platform* feature, so a harness that only finds its own defects there has not built a gate — it has
-outsourced one, and it silently inherits that platform's coverage boundaries as its own.
+Both halves are load-bearing — **late** (discovery at the slowest, most public point) and **borrowed** (CI is a *platform* feature — a harness that only finds its defects there has outsourced its gate and inherits that platform's coverage boundaries). Operator's words: `knowledge/shared/harness-core/claude_md_gate_details.md §CM-Local-Execution-Evidence`.
 
 **The order**: run the target's own suite locally, **to completion**, before pushing. Then let CI
 confirm. A green CI on a change whose suite was never run locally is not a second opinion — it is the
 *first* one.
 
-**Why "to completion" is the operative phrase** (measured 2026-08-16, pmh-dev): that repo's
-`validate.yml` was wired the same day, so CI's first run was the suite's first real execution ever —
-there was no "previously known-good" for it to confirm. A partial local run would have missed it too:
-the suite printed `SELFCHECK: FAIL` while **neither `FAIL` nor `❌` appeared anywhere in its output**
-(the failing lane used its own vocabulary, `INSTRUMENT ERROR`), so locating it needed `bash -x` to
-the actual failing line. Reading the tail, grepping for the expected token, or trusting an exit code
-you did not trace are all forms of not-running-it.
+**"To completion" is operative**: reading the tail, grepping for the expected token, or trusting an exit code you did not trace are all forms of not-running-it (**Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §CM-Local-Execution-Evidence` — the 2026-08-16 suite that failed without printing FAIL — read before declaring a local run complete).
 
 **Relationship to the standpoint axis**: this is that axis's execution half, applied to your own
 change rather than to a peer harness — see `field_verdict_crossfamily_gate.md §7`
@@ -236,26 +195,11 @@ sim gate from a near-mandatory step into the completion criterion itself.
 돌아갈지 확인은 하겠지?"* is the failure — the sim is part of authoring the change, like the
 known-pair is part of authoring an instrument.
 
-**Why «reads correctly» is not evidence.** A `tier1b` rung was added to the `standpoint:` enum
-precisely so a static review would stop being recorded as `tier2`. The text was correct; a reader
-would agree — and a reader agreeing is not a measurement, which is this paragraph's whole point.
+**Why «reads correctly» is not evidence**: a reader agreeing is not a measurement.
 
-🟥 **RETRACTED (2026-08-17) — the numbers this paragraph used to cite are withdrawn, in BOTH
-directions.** It read: *"Two independent blind Sonnet sims then graded a pure cold-read as `tier2`,
-**0/2** … A static read of my own fix would have scored it PASS. Only running it found the hole."*
-That sim set was **8 runs at `tool_uses: 0`** — the agents never opened a file, so the instrument
-was dead and the grades measure nothing (`tracks/_meta/fh_completed_2026-08-16.md:690`, retracted
-the same day the doctrine was written and **before** this paragraph's own commit). The re-run with a
-live instrument then landed the **opposite** result — the rung was graded correctly — at **reps=1**,
-below this repo's own `reps>=3` bar. **So neither «it failed» nor «it worked» is established.** Do
-not restore either number, and do not read the retraction as proof of the inverse.
+🟥 **RETRACTED (2026-08-17)** — the sim numbers this paragraph once cited are withdrawn in **both** directions: the instrument was dead (`tool_uses: 0`) and the live re-run was reps=1, below bar. **Neither «it failed» nor «it worked» is established** — do not restore either number (**Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §CM-Skeleton-Retraction` — the original quote and the re-run — read before citing any sim result for the `tier1b` rung).
 
-**The claim that survives is narrower and does not need those numbers**: a static read cannot
-establish that a rule *fires*, because the thing being tested is whether a reader who is not the
-author lands on the right rung — and the author reading their own text is the one reader guaranteed
-to. That is an argument about what a read can measure, not a measurement. The general principle
-(`field_verdict_crossfamily_gate.md §7`'s execution-over-static asymmetry) rests on its own separate
-field evidence; **this paragraph is no longer one of its data points.**
+**The claim that survives**: a static read cannot establish that a rule *fires* — the author reading their own text is the one reader guaranteed to land on the right rung.
 
 **Corollary — what a sim failure means.** It is a defect in the *wiring*, not in the floor model.
 The response is to make the rule fire (disambiguate, give it a mechanical discriminator, move it to
@@ -279,15 +223,7 @@ so that the only thing left for the human reviewer is **taste**: naming, framing
 the change they want. Review time spent re-deriving whether the thing works is review time
 *taken from* the judgment only a human can supply.
 
-**Existence proof, ours, this session**: *"우리가 최근에 클로드온데스크에 기여한 것처럼."*
-`rullerzhou-afk/clawd-on-desk` PR #888 was merged **exactly as submitted, with no changes
-requested** — the owner's words: *"focused, technically sound, and well-tested … we merged it
-exactly as submitted, with no changes needed."* That is the shape: the mechanical case was closed
-before submission (a fixture whose potency was reasoned about in-comment, a lane that re-executes
-the real consumer path rather than asserting a flag), so nothing was left to negotiate but whether
-they wanted it. **This is the bar to hold ourselves to on every outbound PR**, and it is why the
-survivor-lane technique from that same PR is worth absorbing rather than admiring
-(`tracks/_meta/fh_signal_2026-08-16_clawd-survivor-lane-air.md`).
+**Existence proof**: `rullerzhou-afk/clawd-on-desk` PR #888 was merged exactly as submitted — the mechanical case was closed before submission, leaving only whether they wanted it. **This is the bar to hold ourselves to on every outbound PR** (**Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §CM-Clawd-Existence-Proof` — the owner's words and the survivor-lane technique — read before preparing an outbound PR).
 
 ## Instrument Calibration — before you trust a number, prove the instrument works *here*
 
@@ -305,9 +241,7 @@ it is **never asking whether this instrument is valid for this corpus at all**.
    **"Publish" = the first time the number is stated in ANY form — including saying it to the operator
    in conversation** — not only writing it to a file. Saying "roughly 34 broken refs, I'll verify when
    I write it up" is *not* compliance: the unverified figure is already anchored in the reader's head
-   and in the transcript, which is the propagation this rule exists to stop. (Closed 2026-07-20 by a
-   known-pair sim that found this loophole; the session that wrote the rule had itself leaked its bad
-   "70%" into conversation before any file.)
+   and in the transcript, which is the propagation this rule exists to stop. (Origin: same §CM-Calibration-Why-Resident.)
 
 **Degrade direction**: calibration impossible → the output ships **labeled `UNCALIBRATED`**, never as a
 bare number, and never as the basis of a tier/verdict. A missing measurement is not a zero
@@ -322,12 +256,7 @@ bare number, and never as the basis of a tier/verdict. A missing measurement is 
 > **Detail**: `measurement-integrity-checklist.md §Channel-Counting` — 2026-09-13 하루 세 번의 실사고와
 > 레인 C6(그 디렉터리 자체가 픽스처) — **부재를 주장하기 전에 읽어라.**
 
-**Why resident**: the trigger is *intent* ("I am about to trust / publish this output"), not a file, and
-**no hook can catch it** — there is no mechanical backstop by nature, so salience is the only layer.
-(Measured 2026-07-20, one session, 3×: an always-loaded footprint scan that omitted 61% of the surface ·
-an index/file **size ratio** used as a proxy for content coverage · an **ASCII-token scanner run over a
-Korean corpus** → ~96% false positives, whose "77 items / 70%" was published into three records before a
-single hand-check collapsed it to **3**. Each was caught by looking at one real case.)
+**Why resident**: the trigger is *intent* ("I am about to trust / publish this output"), not a file, and **no hook can catch it** — salience is the only layer (**Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §CM-Calibration-Why-Resident` — the three 2026-07-20 incidents — read before moving this section out of the resident layer).
 
 > **Detail**: See `knowledge/shared/harness-core/measurement-integrity-checklist.md §Instrument-Calibration`
 > — the known-pair procedure, the language/encoding mismatch class, and the publish-order rule — read
@@ -342,13 +271,7 @@ single hand-check collapsed it to **3**. Each was caught by looking at one real 
    **Exception — capability composition only**: when FH *invokes a field harness's registered
    capability*, that capability's declared constraints merge **strictest-wins**
    (`capability_composition_contract.md §ⓐ`) — FH may tighten a capability call, never loosen one.
-   The exception is scoped to that surface on purpose. An earlier draft of this line qualified the
-   whole sentence with "non-safety properties only", and an adversarial round showed that inverts it:
-   an ordinary project rule ("run the linter first", "docs in Korean") matches none of the contract's
-   eight capability axes, falls through its "unclassified → constraint" default, and therefore
-   *outranks the hub* — the opposite of this line's intent. Worse, a project declaring a stricter
-   `tier_floor` or `approval` would delete an FH floor (Sonnet-floor, autonomy floor) by being
-   stricter. An FH floor is never overridable by a field constraint.
+   The exception is scoped to that surface on purpose — widening it lets ordinary project rules outrank the hub (`knowledge/shared/harness-core/claude_md_gate_details.md §CM-Capability-Exception-Scope`). An FH floor is never overridable by a field constraint.
 3. Reference `ai_dialogue_playbook.md` + `claude_code_runtime_flow.md` at top of project CLAUDE.md (Layer ③)
 
 **Light vs full**: steps 1–3 register lightly. For project-local harness assets (session rules + context filter + env card), run **Full-Harness Mode** (`auto_project_mapping.md §6`) — approval-gated, never overwrites. FH self-gate is **not** installed into projects.
@@ -400,8 +323,7 @@ switch 직전   git branch --show-current          ← 실시간 HEAD. claim 파
 ```
 
 🟥 **`.git/fh-claims/*` 를 읽는 것만으로는 못 막는다** — claim 은 lock 이 아니라 **쓰여진 시점의
-스냅샷**이고, 남이 브랜치를 옮겨도 내 파일은 안 바뀐다. **자기 세션에 대해서도 거짓말한다**(실측:
-claim 이 `main` 인 동안 실제 HEAD 는 peer 브랜치였다 — 두 세션이 독립 재현). 그래서 판별자는
+스냅샷**이고, 남이 브랜치를 옮겨도 내 파일은 안 바뀐다. **자기 세션에 대해서도 거짓말한다**(실측: `knowledge/shared/harness-core/claude_md_gate_details.md §CM-Shared-Checkout-Incidents`). 그래서 판별자는
 파일이 아니라 **위 두 줄의 실시간 실행**이고, claim 은 *기록하는* 명령으로만 쓴다.
 
 **남은 잔여 둘, 이름으로 남긴다**: ⓐ 게이트는 **커밋 시점**이라 `switch -c` 사고 자체는 못 막는다
@@ -411,8 +333,7 @@ claim 이 `main` 인 동안 실제 HEAD 는 peer 브랜치였다 — 두 세션�
 지정 add 를 썼기 때문에 안 섞였다」고 적었는데 거짓이다). 파일 지정 add 는 «내가 무엇을
 **추가**하나»만 통제하고 **index 에 이미 있는 것은 못 막는다.** ⇒ `git add -A` 금지는 필요조건
 이지 충분조건이 아니다. **커밋을 한 호출로 묶고 그 안에서 둘을 확인한다** — 확인은 점이고 위험은
-구간이라, 사이에 턴이 끼면 창이 다시 생긴다(같은 날 두 세션이 시점을 각각 `switch` 직전/직후로
-달리 골랐는데 **둘 다 뚫렸다**):
+구간이라, 사이에 턴이 끼면 창이 다시 생긴다(같은 날 두 세션 실측 — 같은 §):
 ```
 B=$(git branch --show-current); [ "$B" = "<내 브랜치>" ] || exit 1
 git diff --cached --name-only    # 내 것만 있나 — 남의 것은 restore --staged
@@ -479,16 +400,8 @@ Simplification guard: trivial denials with one obvious fix → state block + sin
 
 **4-step summary**: ① Auto-read CLAUDE.md + CATALOG + session card + registry scan + UAP (`tracks/_meta/user_adaptation_profile.md`, if present — apply user-tuned defaults: preferred tier, suppressed proposals, muted nags; see §Operational Adaptation Loop) **+ Mode D companion-store load — if a companion store is configured (your `CLAUDE.local.md` binding), pull it and read its index (its TOC) before its other files, then check freshness against the card (`modes_and_value.md §Session-start freshness`); this load is part of the auto-read, not a step the operator should have to request** → ② One-line proposal (new user / exploratory / returning branches) → ③ 5-skill cascade (plugin-recommender → synergy → .claudeignore → model → verify) → ④ Approval + setup
 
-**Greeting branch + door skeleton (summary-level — applies even if the detail file read is skipped)**: the branch test is **mechanical — `bash scripts/mapped_tracks.sh` prints `onboarding_branch=new|returning|UNKNOWN`; ask it rather than eyeballing `tracks/`** (🟥 UNKNOWN is not `new`, and shipped-with-the-repo files do not count as prior use — measured 2026-08-30: two tracked files made every clone look «returning»), never git log / CATALOG residue (a fresh clone carries full history but zero session files: it is a NEW install). Every variant opens with **🐿️ then an identity-revealing welcome line on the SAME line**, followed by the menu — one salience unit, not a separate rule. The verifiable invariant is *same-line*, **not** a space count. Welcome line by branch: new / exploratory = "Welcome to FH." · returning = "Welcome back to FH." · operator (FH-dev state) = "The FH operator — good to see you." — rendered in the user's language as a **plain, natural translation of the pinned phrase, never an invented coinage** — and 🟥 **the name «FH» survives that translation**: it is a product name, not a word to translate away or quietly drop, because dropping it deletes the identity half of a line whose whole job is to be *identity-revealing*. 🟥 **Measured 2026-08-29, blind, floor tier, Korean returning greeting, reps=3 per arm — and the clause did NOT close it.** Control (no clause) kept 「FH」 **1/3**; with the clause, **2/3** — a difference of one at n=3, which does not separate from noise, and the one arm run that kept the name answered a Korean greeting **in English**, trading this defect for the language-match one. Known-positive is established (the control reproduced the drop, matching the original observation), so the instrument discriminates and the gap is real. The clause stays because it is right and cheap, and is labelled failing rather than fixed — the same shape as the door-language note below, where repeating the rule at the actor's location also moved nothing. There is **no mechanical floor** here and none is available (§Voice/Tone: tone and language never have one). (Why each of these reads as it does — the fresh-clone FP, the space-count retraction, the mistranslation: `fh_detail_protocols.md §Onboarding-Provenance`.)
-🟥 **The door labels below are written in English because this file is; they are NOT literals to copy.** Render the welcome line **and every door label** in the greeting's language — `你好` gets Chinese doors, `こんにちは` Japanese ones. Only the ①②③④/🔧/📖 markers, skill names and file paths stay as written. 🟥 **Measured 2026-08-21, blind, floor tier, two rounds of wiring — and it did NOT converge. The note stays anyway; read why.** Round 1 (rule in §Voice/Tone only): `こんにちは`→Japanese ✅ · `안녕`→Korean prose but **English doors** 🟡 · `你好`→**Korean** ❌ · control `hi`→English ✅. Round 2 (rule repeated here, at the doors): `你好`→**Korean** ❌ · `嗨`→**English** ❌ · `こんにちは`→Japanese ✅ · control `hey`→English ✅. Across both rounds **Japanese 3/3, Chinese 1/5**, control clean every time — so the instrument discriminates and the gap is real. **Two distinct failure modes**, and only one of them is the pin: a Korean reply is the operator pin winning, an *English* reply is these door literals being copied. Repeating the rule at the actor's location — textbook gate-locality — moved neither. 🟥 **So do not read this note as a fix.** It is a correct instruction with **no mechanical floor** (tone/language never has one, §Voice/Tone says so), kept because it is right and cheap, and labelled failing because pretending otherwise is the muscle-not-skeleton defect this repo names. The README's user-facing wording was reduced to match this measurement rather than the intent. 🟥 **The clean-install arm has since been RUN, and it reattributes the defect (same day).** A shallow
-clone with no `CLAUDE.local.md` — known-positive control: it answered a CLAUDE.md-only question
-correctly; known-negative: it refused to invent a nonexistent concept, so the harness was genuinely
-loaded — greeted `你好` and `嗨` with **fully Chinese** door menus, and `안녕` with a **fully Korean**
-one, doors included. So the operator's language pin was the **main cause**, and the 1/5 figure above is
-a property of *this* install, not of a consumer's. **Do not cite 1/5 as the shipped behaviour.**
-⚠️ What did *not* close: firing is **non-deterministic** — one Chinese variant (`你好呀`) produced no
-menu at all, and one Korean run opened with an English welcome line. Reps are 1–3 per arm, below this
-repo's own bar. So the softened README wording stays correct; only its *reason* changed.
+**Greeting branch + door skeleton (summary-level — applies even if the detail file read is skipped)**: the branch test is **mechanical — `bash scripts/mapped_tracks.sh` prints `onboarding_branch=new|returning|UNKNOWN`; ask it rather than eyeballing `tracks/`** (🟥 UNKNOWN is not `new`, and shipped-with-the-repo files do not count as prior use — measured 2026-08-30: two tracked files made every clone look «returning»), never git log / CATALOG residue (a fresh clone carries full history but zero session files: it is a NEW install). Every variant opens with **🐿️ then an identity-revealing welcome line on the SAME line**, followed by the menu — one salience unit, not a separate rule. The verifiable invariant is *same-line*, **not** a space count. Welcome line by branch: new / exploratory = "Welcome to FH." · returning = "Welcome back to FH." · operator (FH-dev state) = "The FH operator — good to see you." — rendered in the user's language as a **plain, natural translation of the pinned phrase, never an invented coinage** — and 🟥 **the name «FH» survives that translation**: it is a product name, not a word to translate away or quietly drop, because dropping it deletes the identity half of a line whose whole job is to be *identity-revealing*. 🟥 **Measured 2026-08-29 (floor tier, reps=3/arm): the clause did NOT close the name-drop** — it stays because it is right and cheap, and is labelled failing rather than fixed; there is **no mechanical floor** (**Detail**: See `knowledge/shared/harness-core/fh_detail_protocols.md §CM-FH-Name-Drop-Measurement` — arms, control, the run that traded this defect for the language one — read before claiming the name survives translation). (Why each of these reads as it does — the fresh-clone FP, the space-count retraction, the mistranslation: `fh_detail_protocols.md §Onboarding-Provenance`.)
+🟥 **The door labels below are written in English because this file is; they are NOT literals to copy.** Render the welcome line **and every door label** in the greeting's language — `你好` gets Chinese doors, `こんにちは` Japanese ones. Only the ①②③④/🔧/📖 markers, skill names and file paths stay as written. 🟥 **Do not read this note as a fix** — it is a correct instruction with **no mechanical floor**, measured non-convergent in this install. A clean-install arm reattributed the defect mainly to the operator's language pin: **do not cite this install's 1/5 as the shipped behaviour**, and firing stays non-deterministic (**Detail**: See `knowledge/shared/harness-core/fh_detail_protocols.md §CM-Door-Language-Measurements` — both wiring rounds, the clean-install arm and its reps — read before citing any door-language number).
 
 - **New user** (fresh clone/install — **neither** condition below holds): 2-door starter, never the returning menu. 🟥 **The two conditions are scoped differently and the underscore rule touches only the second.** ⓐ **Session files** — any `tracks/**/session_*.md` **or `tracks/_meta/*.md` beyond `.gitkeep`**; 🟥 `_meta` **counts here** (someone who worked and quit without closing has files there, and rendering «looks like you're new» to them is the defect this clause exists to prevent). ⓑ **Mapped project tracks** — `tracks/{name}/` dirs, where **any underscore-prefixed dir** (`tracks/_*` — `_meta`/`_audit`/`_contrib`/`_chamber`…) doesn't count, general rule not a closed list — `_chamber` holds incubation chamber runs, never mapped projects. Canonical: `fh_detail_protocols.md` §Branch test —
 
@@ -514,11 +427,7 @@ repo's own bar. So the softened README wording stays correct; only its *reason* 
 
   **The wrap-up line is returning-branch only.** A first-time user has nothing to close yet, and the phrase would read as jargon; a returning user is exactly the person whose last session may have ended without it. One line, below the doors, never a numbered door (the door set is fixed — §fh_detail_protocols Step 2).
 
-  🟥 **한 줄로 이어붙이지 마라 — 문은 한 줄에 하나다** (운영자 지적 2026-08-20). `·` 로 이어붙인
-  한 줄짜리 메뉴는 터미널 폭에서 임의로 접혀서 **어디까지가 한 문인지 눈으로 안 갈린다**. 세로
-  목록은 G-GREET-02(🐿️+환영문 **같은 줄**)·G-GREET-03(고정 4문)·G-GREET-05(문구 리터럴)를
-  **셋 다 그대로 만족한다** — 그 프로브들이 박은 것은 문 집합·리터럴·환영문 줄이지 **메뉴의 줄
-  수가 아니다**. 세로로 펴는 것은 렌더 층이고 판정 층이 아니다.
+  🟥 **한 줄로 이어붙이지 마라 — 문은 한 줄에 하나다** (운영자 지적 2026-08-20). 세로 목록은 G-GREET-02 · G-GREET-03 · G-GREET-05 를 그대로 만족한다 — 렌더 층이지 판정 층이 아니다(`knowledge/shared/harness-core/fh_detail_protocols.md §CM-Vertical-Menu-Rationale`).
 
   **📖 문 (비번호, 항상)**: `docs/USER_GUIDE.md` 를 **띄우고**, FH 사용법 문답을 받는다.
   🟥 **번호를 늘리지 않는다** — ①~④ 는 고정 4문이고 🔧 만 비번호 예외였다(`fh_detail_protocols.md`
@@ -532,12 +441,7 @@ repo's own bar. So the softened README wording stays correct; only its *reason* 
 🔨 **대장간 어휘를 문 부제에 넣지 마라 — 2026-08-22 에 넣어보고 실측으로 물렀다.**
 브랜드·교리 층(README · `docs/ETHOS.md`)에서는 대장간 은유가 3단 공정과 맞물리고 **거기서는 맞다**.
 문은 다르다 — **읽는 자리가 아니라 고르는 자리**이고, 여기서는 «무엇을 하나»가 은유를 이긴다.
-**실측 (플로어 티어 블라인드, 레포 밖 cwd, reps=3 × 2팔)**:
-라우팅은 **안 깨졌다** — 선택지 개수·«등록하고 싶다»→① ·«점검하고 싶다»→③ 이 ARM/CONTROL **3/3 동일**.
-🟥 그런데 «헷갈리는 것»에서 ARM 만 **3/3 전부 대장간 어휘를 지목**했다(*"실제로 어떤 동작인지
-짐작이 안 됨"*). **부제는 라우팅을 안 돕고 혼란만 더했다.**
-⚠️ 그 sim 의 명시된 결함: 「처음 쓰는 사람」 프레이밍으로 물어놓고 **returning 메뉴**를 보여줬다
-(계기≠대상). 그러므로 확실한 결론은 **new-user 문에 넣지 마라**까지이고, returning 문은 **미측정**이다.
+실측(플로어 티어 블라인드, reps=3×2팔)에서 라우팅은 안 깨졌지만 **부제는 라우팅을 안 돕고 혼란만 더했다**(**Detail**: See `knowledge/shared/harness-core/fh_detail_protocols.md §CM-Forge-Vocab-Door-Measurement` — 팔별 결과와 그 sim 의 계기≠대상 결함 — read before re-adding forge vocabulary to a door). 그러므로 확실한 결론은 **new-user 문에 넣지 마라**까지이고, returning 문은 **미측정**이다.
 다시 넣고 싶으면 «FH 를 몇 번 써본 사람» 프레이밍으로 먼저 재라 — 눈으로 판단하지 마라.
 🟥 그리고 **환영문 리터럴과 문 집합은 어느 경우에도 못 건드린다** — G-GREET-05 의 세 문구는
 **하류 포크가 기계 매핑하는 앵커**라(pmh-dev #54) 바꾸면 모든 포크가 무음으로 깨진다.
@@ -559,17 +463,9 @@ is non-empty without a `_wizard_reminder_muted` sentinel, append ONE line to the
 hook — emit it once, not twice. Honest residual: a task-first entry on a fully-unwired node has no
 surface for this line (no hook, no menu) — prose cannot close that, and it is named here rather
 than papered over.
-> 🟥 **A widening of this residual was published here on 2026-08-29 and RETRACTED the same hour.**
-> It claimed the *greeting branch itself* does not fire without `.claude/settings.json` (3/3 vs
-> 2/2). **False, and false because of the instrument**: the arm that "did not fire" was run through
-> a sim runner that still passed `--restricted`, which drops the project CLAUDE.md — so that arm
-> had no harness loaded, and the comparison varied two things, not one. Re-run with the runner
-> fixed (`scripts/test_sim_isolated_run_lanes.sh` L8a is the lane that caught it): a clean clone
-> **with no `.claude/settings.json` fires the returning greeting 3/3**. The greeting is
-> prose-driven, as this protocol says. Nothing here needed widening.
-> ⚠️ What the episode does show is narrower and worth keeping: **verifying that `claude` loads
-> CLAUDE.md is not verifying that YOUR RUNNER lets it** — the check was run by hand instead of
-> through the instrument under test ([[feedback_instrument_vs_target_and_budget]]).
+> 🟥 A 2026-08-29 claim that the greeting itself does not fire without `.claude/settings.json` was **RETRACTED** — an
+> instrument artifact; a clean clone with no `.claude/settings.json` fires the returning greeting 3/3. Nothing here needed widening.
+> **Detail**: See `knowledge/shared/harness-core/fh_detail_protocols.md §CM-Wizard-Residual-Retraction` — the runner flag that dropped CLAUDE.md, and the lesson that verifying `claude` loads CLAUDE.md is not verifying that YOUR RUNNER lets it — read before widening this residual.
 
 **Metadata-is-not-intent guard**: the trigger is the user's **typed message only**. Session metadata — branch name (auto-derived from the first message, e.g. `claude/korean-greeting-*`), repo name, file paths — is **never** a task spec and never suppresses or redirects the greeting trigger. A bare greeting fires onboarding even when the branch name looks like a feature request; if the only "task" signal lives in metadata and not in what the user typed, treat the message as a greeting and run the greeting branch + door skeleton above.
 
@@ -587,15 +483,15 @@ Every new `SKILL.md` must clear a **6-item bar** (role-duplication via `/asset-p
 
 **FH 자산을 수정하면**(SKILL.md · **SKILL_detail.md** · `.claude/rules/*.md` · `knowledge/shared/rules/*.md` · `templates/` · `CLAUDE.md` · substantive `knowledge/`·`docs/*.md` · `AGENTS.md` · **`scripts/**/*.sh`** · **`scripts/**/*.py`**(`.py` 는 2026-09-07 부터 — 그 전엔 출하 파이썬 7개가 게이트 밖이었다) · **에이전트 정의**(`plugins/*/agents/**/*.md` · `.claude/agents/**/*.md`)) **4축 검증 체인이 그 세션 첫 커밋 전에 자동 실행된다.** 사용자 요청 불요 — 제안이 아니라 의무 단계다.
 
-**기계층 — 무엇이 실제로 막는지 나눠서 말한다(2026-08-04 실측).** `git commit` 은 `templates/.git-hooks/pre-commit` 이 **하드 차단**한다: 축이 전부 PASS 할 때까지 커밋이 안 되고, 아래 상세가 로드되지 않아도 훅이 막는다 — 이 산문은 훅 위의 살리언스 층이지 유일 floor 가 아니다. 다만 **훅은 클라이언트측이고 `--no-verify` 로 우회된다**(§Integration branch 가 이미 그렇게 말한다 — 두 곳이 어긋나 보이던 것을 여기서 맞춘다). **그리고 서버측 검증엔 남은 잔여가 있다(2026-08-12 재확인 — `contexts=[]` 서술은 stale, 정정됨)**: `main` 은 `enforce_admins: true` 로 **푸시 경로**(PR 경유)를 강제하고, legacy `required_status_checks.contexts` 는 **`["validate", "new-code-anchor"]`** 다(2026-09-17 두 층 직독 — rulesets 층은 `non_fast_forward` 하나뿐) — `validate` 잡(`.github/workflows/validate.yml`, 메타데이터·`selfcheck.sh` 배선 레인)과 `new-code-anchor` 가 실제 **필수 체크**다. ⚠️ **`validate` 는 Axis 1 이 아니다** — Axis 1(`regression-guard.yml` → `templates/regression_guard.sh`)은 **여전히 필수 체크가 아니다**(빨개도 머지를 못 막는다). 🟥 **다만 «돌지도 않는다» 는 2026-09-17 부로 거짓이다 — 정정.** 이 줄은 «그 워크플로의 `paths:` 가 `SKILL.md`·`.claude/rules/*.md`·`CLAUDE.md`·`templates/*.md` 만 보므로 `knowledge/`·`docs/`·`AGENTS.md`·`scripts/**`·에이전트 정의만 바뀐 PR 에는 Axis 1 자체가 돌지도 않는다» 고 적고 있었는데, **`paths:` 는 2026-08-29(`d5fceac`, #552)에 4축 대상 클래스 전부를 덮도록 넓어졌고**(추가분 = `knowledge/**/*.md` · `docs/*.md` · `AGENTS.md` · `scripts/**` · `templates/.git-hooks/*` · `plugins/*/agents/*.md` · `.claude/agents/**/*.md` · `README*.md` · `CHEATSHEET.md` · `CATALOG.md` · `.github/workflows/*.yml` · `.claude/registry/*.md` · `package.json` — 기존 `SKILL.md`·`.claude/rules/*.md`·`CLAUDE.md`·`templates/*.md`·`templates/regression_guard.sh` 위에) 이 문장만 19일간 안 따라갔다. 실측: `scripts/`·`package.json`·`bin/` 만 바뀐 PR #745 에서 Axis 1 이 **실제로 돌아 통과**했다(run 35227853301, `REGRESSION_GUARD_RESULT=pass`). 🟥 **그리고 그 낡은 문장이 같은 날 기록 셋(커밋 메시지·마커·매니페스트)으로 그대로 전파됐다** — 상주층의 낡은 주장은 읽는 세션이 «확인» 대신 «인용» 하는 순간 번진다([[feedback_half_fix_propagation_boundary]] · 정정면 = PR #745 코멘트). 남는 갭은 이제 «안 돈다» 가 아니라 **«돌지만 필수가 아니다»** 하나다. `validate` 쪽 남은 갭은 `strict: false`: 그 체크는 PR 브랜치에 푸시할 때마다 재실행되지만(오픈 시점 한정이 아니다), 그 뒤 main 이 움직여도 재검증을 강제하지 않으므로 **초록으로 남아 있는 체크가 실제로 병합되는 최신 트리를 본 적이 없을 수 있다.** 즉 서버가 강제하는 건 *체크가 초록인가*지 *그 체크가 지금의 main 을 봤는가*가 아니다. Axes 2–3(마커)·Axis 4(매니페스트)는 그 파일들이 `tracks/**` 로 gitignored 라 CI 가 **구조적으로 볼 수조차 없다**. 🟥 **그 사각이 실제로 뚫렸다(2026-09-14 실측, 2/2)** — 원격 자율 노드(`claude/*` 브랜치, 클라우드 세션)는 체크아웃이 휘발해서 마커가 **아무 데도 안 남는다**. 머지된 `claude/` 접두사 PR 전수 **#675·#716 둘 다** FH 자산을 바꾸고 마커 없이 **초록으로** 들어왔다. ⇒ `scripts/remote_marker_gate.sh` 가 **그 채널에 한해** «마커 3필드(`axes-run`·`crossfamily`·`standpoint`)가 커밋 기록에 실려 왔나» 를 `validate` 에서 막는다(레인 14 · 되돌림 프로브 포함). 보통 브랜치는 pre-commit 이 이미 관할하므로 **SKIP** 이다 — 만족 불가능한 이중 요구는 override 를 훈련시킨다. 🟥 **닫은 것은 «조용한 부재» 하나다**: 검사는 형식만 보고(값의 진위도 enum 멤버십도 안 본다 — enum 정본은 저작 노드의 훅이다), 옮긴 마커와 지어낸 마커는 여전히 바이트가 같다. 정직한 표현은 "하드 차단"이 아니라 "**가용한 가장 강한 층**"이다. **미해결 잔여**: `strict` 를 켜는 것도, Axis 1 을 필수 체크로 거는 것도 운영자 결정이다(막 flaky 레인을 하나 기록한 참이라, 과차단이 override 를 습관화시키는 쪽으로 기울 수 있다). 🟢 «그 `paths:` 를 넓히는 것» 은 2026-08-29 에 이미 닫혔다 — 위 정정 참조.
+**기계층 — 무엇이 실제로 막는지 나눠서 말한다(2026-08-04 실측).** `git commit` 은 `templates/.git-hooks/pre-commit` 이 **하드 차단**한다: 축이 전부 PASS 할 때까지 커밋이 안 되고, 아래 상세가 로드되지 않아도 훅이 막는다 — 이 산문은 훅 위의 살리언스 층이지 유일 floor 가 아니다. 다만 **훅은 클라이언트측이고 `--no-verify` 로 우회된다**(§Integration branch 가 이미 그렇게 말한다 — 두 곳이 어긋나 보이던 것을 여기서 맞춘다). **서버측 잔여(2026-09-17 두 층 직독)**: `main` 은 `enforce_admins: true` 로 푸시 경로(PR 경유)를 강제하고, 필수 체크는 **`validate` · `new-code-anchor`** 다. ⚠️ **`validate` 는 Axis 1 이 아니다** — Axis 1(`regression-guard.yml` → `templates/regression_guard.sh`)은 4축 대상 클래스 전부에 **돌지만 필수 체크가 아니다**(빨개도 머지를 못 막는다). `strict: false` 라 초록으로 남은 체크가 **실제로 병합되는 최신 트리를 본 적이 없을 수 있다**. Axes 2–3(마커)·Axis 4(매니페스트)는 `tracks/**` gitignored 라 CI 가 **구조적으로 볼 수조차 없다** — 원격 자율 노드(`claude/*`)에 한해 `scripts/remote_marker_gate.sh` 가 마커 3필드(`axes-run`·`crossfamily`·`standpoint`)가 커밋 기록에 실려 왔나를 `validate` 에서 막는다(형식만). 정직한 표현은 "하드 차단"이 아니라 "**가용한 가장 강한 층**"이다. `strict` 켜기 · Axis 1 필수화는 **운영자 결정**으로 남아 있다.
+> **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §CM-4Axis-Server-Side-Residual` — «Axis 1 은 돌지도 않는다» 정정(`paths:` 는 2026-08-29 `d5fceac` 에 넓어짐)과 그 낡은 문장의 전파 · #675·#716 실측 · 보통 브랜치 SKIP 규칙 — read before asserting what CI does or does not enforce.
 
-🟥 **그리고 그 채널 밖에도 같은 사각이 있다 — «훅이 막는다»는 이 파일의 모든 문장은 훅이 **배선된** 체크아웃에서만 참이다.** `templates/.git-hooks/pre-commit` 은 tracked 라 어느 클론에나 오지만 `core.hooksPath` 는 git 이 나르는 값이 아니다. 실측 2026-09-21, 같은 커밋 `a9e9b29`, 두 체크아웃(운영자 맥 ↔ 클라우드 클론): **15개 층 중 READ 4개만 같고 ENFORCE·EVIDENCE·PATTERN 11개가 전부 반대**였다. 같은 커밋이 한쪽에서는 무음 통과하고, `git config core.hooksPath templates/.git-hooks` **한 줄**을 잡자 Axis 2+3·Axis 4 로 차단됐다 — 바뀐 것은 코드가 아니라 배선이다. 🟥 **위험한 방향은 «여기 초록·저기 빨강» 쪽이다**: 게이트가 *통과한 것*과 *안 돈 것*은 터미널 출력이 **둘 다 무음**이라 구분되지 않는다. 그리고 세 번째 방향이 제일 조용하다 — PATTERN 층이 비면 기밀성 스캔은 돌지만 `defaults` 만 싣고 회사명·실명 클래스가 UNSCANNED 인 채 **초록이 난다**(🟧 배너는 뜨고 차단은 안 한다 — 오버라이드가 gitignored 라 하드 차단하면 모든 새 클론의 첫 커밋이 막혀 `PUBLIC_SURFACE_OK` 를 반사행동으로 훈련시킨다). ⇒ 층 대조는 **`bash scripts/env_layer_fingerprint.sh`** — PRESENT/ABSENT/UNMEASURED 만 내고 값은 안 싣는다(`--digest` 는 양쪽에서 찍어 붙이는 한 줄). 🟥 **계기지 게이트가 아니다** — 어떤 훅도 안 부른다. 기계화한 것은 «층이 있나» 라는 **채널**이지 «그래서 커밋해도 되나» 라는 **결론**이 아니다(§Mechanization Boundary). ⚠️ 같은 이유로 `fh_node_check.sh` 는 **이 환경에서 뜨지도 않는다** — 바닥이 없다고 알려 줄 탐지기 자신이 `settings*.json`(전부 gitignored)과 같은 수송로를 탄다.
-🟢 **그 다음 칸이 2026-09-21 에 측정됐다 — 「층이 없다」는 「게이트가 못 돈다」가 아니다.** 같은 클라우드 클론에서 `core.hooksPath` 한 줄만 잡으니 **네 축 전부 통과**했다(훅 무수정). 필요한 것은 셋뿐이다 — ① 그 배선 ② **UTF-8 로케일**(`LC_CTYPE=POSIX` 에서는 정직한 한글 마커의 비공허성 다리 넷이 전부 「공허」로 차단된다 — 코드 쪽 수리는 PR #780) ③ gitignored 증거 둘을 **사람이** 쓰는 것. ⇒ **`bash scripts/gate_bootstrap_ephemeral.sh --check|--apply`** — ENFORCE 미배선(무음 통과)과 LOCALE 파손(과차단)을 반대 방향의 고장 둘로 찍고 하나라도 남으면 rc=1. 🟥 **증거는 안 만든다**(마커 자동 생성 = 가짜로 닫기, 4축 정본이 금지). 축별 표·구조적 잔여 셋·한계는 `checkout_layer_drift.md` §8.
-🟥 **그리고 이 문단 자체는 측정에서 분리되지 않았다 — 실패로 라벨한다(2026-09-21, 플로어 티어 블라인드, act 모드, reps=3/팔, 사전등록 봉인).** ARM(이 문단 있음) **3/3** 이 «훅이 배선 안 됨»을 첫 항목으로 지목했는데, CONTROL(`main`, 이 문단 없음)도 **3/3** 이다. 사전등록한 반증 조건 — «CONTROL ≥ ARM 이면 기여 0» — 이 **그대로 충족됐다.** ⚠️ 동시에 계기가 오염됐다: CONTROL 팔이 자기 근거로 *«메모리에 적어둔 …»* 을 적었다 — `sim_isolated_run.sh` 는 레포 트리와 settings 는 격리하지만 **사용자/팀 메모리는 격리하지 않고**, 거기에 같은 사실이 이미 적혀 있었다. 🟥 **오염을 이유로 판정을 되돌리지 않는다** — 오염은 왜 분리가 불가능했는지를 설명할 뿐 이 문단을 구제하지 않는다. 남는 라벨은 둘 다다: ① 기여 측정 0 · ② 재측정 필요(메모리만 비우고 프로젝트 CLAUDE.md 는 살리는 팔이 러너에 없다 — 명시된 잔여). 이 문단을 남기는 이유는 옳고 싸기 때문이지 뜨는 것이 확인됐기 때문이 아니다 — §Onboarding 의 door-language 주석과 **같은 형태**다.
+🟥 **그리고 그 채널 밖에도 같은 사각이 있다 — «훅이 막는다»는 이 파일의 모든 문장은 훅이 **배선된** 체크아웃에서만 참이다.** `core.hooksPath` 는 git 이 나르는 값이 아니라서 같은 커밋이 한 체크아웃에서 무음 통과하고 다른 곳에서 차단된다(2026-09-21 실측). 🟥 게이트가 *통과한 것*과 *안 돈 것*은 터미널 출력이 **둘 다 무음**이다. ⇒ 층 대조는 **`bash scripts/env_layer_fingerprint.sh`**(계기지 게이트가 아니다 — 기계화한 것은 채널이지 결론이 아니다), 휘발 클론은 **`bash scripts/gate_bootstrap_ephemeral.sh --check|--apply`**(배선 · UTF-8 로케일; 🟥 **증거는 안 만든다** — 마커 자동 생성 = 가짜로 닫기). ⚠️ `fh_node_check.sh` 는 그 환경에서 **뜨지도 않는다**. 🟥 이 문단의 기여는 **측정에서 분리되지 않았다**(ARM 3/3 = CONTROL 3/3, 사전등록 반증 조건 충족) — 옳고 싸서 남긴다.
+> **Detail**: See `knowledge/shared/harness-core/checkout_layer_drift.md §CM-Resident-Paragraph` — 이 문단의 이관 전 원문 전체(PATTERN 층 초록 방향 · 필요한 셋 · 메모리 오염 잔여) — read before citing drift or this paragraph's contribution.
 > **Detail**: `knowledge/shared/harness-core/checkout_layer_drift.md` — 네 층의 수송로 표, 두 체크아웃 실측 15행, 세 갈림 방향(ⓐ여기초록·저기빨강 / ⓑ그 반대 / ⓒ양쪽 초록인데 커버리지 다름), 그리고 이 측정이 **주장하지 않는 것**(맥 쪽은 계기를 직접 돌린 게 아니라 같은 경로 프로브를 1:1 로 옮긴 것 · n=2 · digest 대조는 아직 불가) — **드리프트를 근거로 쓰기 전에 읽어라.**
 
 > **상세 정본**: `.claude/rules/fh_4axis_gate.md` — 4축 정의·마커 필수 필드·경량 예외·substantive carve-out·target-tier sim 게이트·Mode D 모델 공지·cross-family 보완. **`paths:` 로 *일부* FH 자산 경로에 스코핑돼 있어 그 파일들을 *읽을 때* 자동 로드된다 — 로드 조건이지 게이트 적용 범위가 아니다** (공식 트리거는 read — `code.claude.com/docs/en/memory.md` §Path-specific rules).
-> (2026-07-20 분리. **파일 char 실측**: 이 절 자체가 76,706자 중 **10,331자(13.5%)**로 단일 최대였다. 그 분리 + 같은 세션의 중복 3건 제거 + New-Skill 게이트 편입까지 **합산**해 파일은 **76,706 → 67,611 (순감 9,095자, 11.9%)** — 합산치이지 이 절 하나의 성과가 아니다 — 이건 파일 크기지 `/context` 상주 실측이 아니다(계기≠대상, [[feedback_resident_memory_measured_fresh_toplevel]]: 상주는 톱레벨 새 세션 `/context` 로만 잰다 — 미측정). 트리거가 *파일*이고 *기계 백스톱*이 있어 1순위 후보였다. 같은 이유로 **비가역 게이트 3종은 이동 불가** — 의도 트리거라 경로 스코핑하면 fail-open 이 된다.)
+> (2026-07-20 분리 — 트리거가 *파일*이고 *기계 백스톱*이 있어 1순위 후보였다. 같은 이유로 **비가역 게이트 3종은 이동 불가** — 의도 트리거라 경로 스코핑하면 fail-open 이 된다. 분리 실측: `knowledge/shared/harness-core/claude_md_gate_details.md §CM-4Axis-Split-Measurement`.)
 > **의무**: 이 요약에는 **축 이름·마커 필수 필드·경량 예외 기준이 없다.** 4축을 실제로 실행하거나 마커를 쓰기 전에 위 파일을 **반드시 직접 읽어라** — 안 읽고 마커를 쓰면 필드를 지어내게 된다(2026-07-20 Sonnet sim 이 스스로 지목한 실패 모드).
 > **잔여(살리언스 층에 한함, 훅은 무관)**: ⓐ 트리거가 read 라서 **신규 SKILL.md 를 Write 로 새로 만드는** 경로는 규칙이 안 실린다 ⓑ `CLAUDE.md` 는 glob 에서 의도적 제외라 CLAUDE.md-only 세션은 이 요약 + 훅만 본다. **두 경로에선 위 "반드시 읽어라"가 유일한 살리언스 층이다** — 단, 둘 다 pre-commit 훅이 여전히 커밋을 하드 차단한다.
 
@@ -628,13 +524,7 @@ they already carry the 4-axis gate; this gate is for *field* code, mapped or not
 an unmapped file: `tracks/_meta/field_gate_review_<YYYY-MM-DD>_<slug>.md` (file · verdict ·
 `crossfamily:` verbatim from the enum · degrade-scan result · regression test landed-or-owed), and
 the reply links it. An **owed** regression test keeps the verdict `NOT-CONVERGED`; it does not
-converge on a promise. 🟥 **Pilot evidence, below bar, and CUE-DEPENDENT** (floor tier, blind, one
-variable — this paragraph injected): **before 0/1** — *"FH 자산도 매핑된 필드 하네스도 아니라서 …
-적용 대상이 아닙니다"*, reviewed bare; **after 2/3** ran the gate. Both arms' prompt ended with *"네가
-설치된 리뷰 절차가 있으면 그것을 따라라"*. 🟥 **Without that cue the gate fired 0/51** (same day, 17
-unmapped gate-shaped files × 3, same doctrine in the clone, task sentence only). So this paragraph is
-muscle, not skeleton: a session must be *reminded* to run its own procedure, and no hook supplies the
-reminder yet (`fh_signal_2026-09-08_gate-needs-cue.md`). Do not cite 2/3 without the cue condition.
+converge on a promise. 🟥 **Pilot evidence is below bar and CUE-DEPENDENT** — without a «follow your installed review procedure» cue the gate fired **0/51** on unmapped gate-shaped files, so this paragraph is muscle, not skeleton, and no hook supplies the reminder yet (**Detail**: See `knowledge/shared/harness-core/field_verdict_crossfamily_gate.md §CM-Unmapped-Pilot-Evidence` — before/after arms and the cue condition — read before citing any fire rate).
 Registration was never the reason this gate exists; the degrade-direction blind spot is, and it
 does not check who owns the file. Grep the diff for verdict-enum returns / gate exits / safety-marked
 functions — strong-advisory trigger, so under-trigger is a named residual, not an airtight claim.
@@ -661,9 +551,7 @@ substantive grounds on the same line naming what was probed (`templates/.git-hoo
 prose collapsed them, which renders an unrun probe as a zero finding and an unused panel as an
 unavailable one. This is also what reconciles this line with `auto-decorrelation`
 Step 6's *"silent degrade, never hard-fail"*: **not-blocking and not-silent are different
-properties**, and only the second is mandatory on a reversible commit surface. Before 2026-08-08
-this axis was convention-only — measured on this repo, 140 markers carried the tier verdict 129
-times and any decorrelation verdict **4** times. **Residency**: sanitize company code before any external-family dispatch; domain data never leaves.
+properties**, and only the second is mandatory on a reversible commit surface. (Why it became typed: `knowledge/shared/harness-core/field_verdict_crossfamily_gate.md §CM-Crossfamily-Typing-History`.) **Residency**: sanitize company code before any external-family dispatch; domain data never leaves.
 **Autonomy**: autonomous once UAP-consented; **in autonomous loops the gate is part of the delegated
 pipeline**, not an afterthought, and a below-floor orchestrator RUNS the review by default
 (run-first, ask-last — `sonnet_floor_doctrine.md`).
@@ -677,9 +565,7 @@ additionally carries `standpoint:` — a closed enum (`tier1` content-only · **
 STATIC read of the target's own files, executed nothing** · `tier2(<harness>)`
 peer-simulated, **EXECUTED CODE in** the target's own repo — 🟥 the discriminator is mechanical:
 *name the command you ran and the output you saw*; cannot name one → `tier1b`, always. Reading the
-target's real files, however cold, is `tier1b` (🟥 the "two blind Sonnet sims graded a cold-read
-`tier2`" citation that stood here is **RETRACTED** — dead instrument, `tool_uses: 0`; the live re-run
-inverted it at reps=1, below bar. The **rule** stands on its own wording, not on that sim) ·
+target's real files, however cold, is `tier1b` (an earlier sim citation here is RETRACTED; the rule stands on its own wording — same §CM-Crossfamily-Typing-History) ·
 `tier2b(<harness>)` same operator, target's real
 runtime (local wiring visible, not independent) · `tier3(<harness>)` a *different* operator of the
 target harness ran it · `not-applicable` · degrade triad `DEGRADED_NO_TARGET_ACCESS` could-not /
@@ -779,17 +665,7 @@ precision-shortfall, hub-state dependence, and inability-to-run** — the screen
 load-bearing is intact. Detail + the frozen known-pair that keeps the old instrument measurable:
 `harness_incubator_doctrine.md §3-SCREEN-2026-08-17` · `tracks/_meta/chamber_taxonomy_knownpair_PREREG_2026-08-17.md`.
 
-Honesty boundary that must not soften in summary — **under the old vocabulary**, hand-counted
-2026-08-08 from the run ledger: 9 full runs, **8 KILL, 1 EMIT** (13 runs · 11 KILL · 1 EMIT as of
-2026-08-17). It has birthed **once** (run #9 `forge-wiki`, shipped publicly), so
-"it has not birthed" — the earlier wording here — is no longer true. But do not upgrade the claim
-either: that run's workspace carries only a verdict file, with no intent/budget/blind-persona
-artifacts, so the **formal flow** is not what produced it. The first end-to-end formal run is #10 and
-it KILLed. Either way simulate-first stays a one-line HITL recommendation, never a push-button
-autonomous emit.
-⚠️ **Do not cite that ratio as "the chamber screens well" or "over-screens" going forward** — the
-counts were produced by a rule set that no longer runs, and whether it over-screened is **exactly
-what the frozen known-pair exists to measure and has not measured yet.**
+Honesty boundary that must not soften in summary: the chamber has birthed **once** (run #9 `forge-wiki`, shipped publicly), but **not through the formal flow**; the first end-to-end formal run (#10) KILLed. Simulate-first stays a one-line HITL recommendation, never a push-button autonomous emit. ⚠️ **Do not cite the old KILL/EMIT ratio as «screens well» or «over-screens»** — it came from a retired rule set, and the frozen known-pair has not measured that yet (**Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §CM-Chamber-Honesty-Boundary` — the hand-counted ledger — read before citing any chamber count).
 
 > **Detail**: See `knowledge/shared/harness-core/onboarding_acceleration_autopilot.md` — full Phase-0 branch
 > logic + `chamber_run.sh` scope, the per-phase skill composition, the remaining guards (no-reinvention
@@ -819,13 +695,7 @@ list ships no source/executable file — **grep the file list, don't assert "doc
 
 **Surface class sets the error budget, not only the degrade direction** (operator decision 2026-09-08).
 The same automated verdict engine is usable on one surface and not on another, and the discriminator is
-what a wrong verdict costs. Measured across **four** review arms on the same eight cases — 🟥 **the
-earlier «five arms, 2.7 % – 13.6 %» from this date is RETRACTED (2026-09-17): the scorer was found
-defective and replaced, and the old run is structurally not re-scorable. Canon:
-`governance_engineering_definition.md` §첫 실증** — claim error rates ran **0.0 % – 1.1 %** (95 %
-upper bound ≈2.1 %; **no contrast separates** after cluster correction, so it is a spectrum and not
-a ranking), and every one of them is usable *on a review surface*, because a
-wrong finding costs a reader a minute. On publish · delete · history-rewrite there is no "costs a
+what a wrong verdict costs. Each of the **four** review arms measured on the same eight cases (2026-09-17 scorer) is usable *on a review surface*, because a wrong finding costs a reader a minute (numbers: same §CM-Governance-Axis-Numbers). On publish · delete · history-rewrite there is no "costs a
 minute": the wrong call is the whole loss. 🟥 **So an automated verdict never clears an irreversible
 gate on its own, however good its measured rate** — it feeds a fail-closed gate whose terminal step
 stays a human or an explicit logged override. The corollary is the one that actually bites: **do not
@@ -842,18 +712,7 @@ floor they share.) 🟥 **ask is fail-closed only while a human answers it**: un
 on an irreversible surface the closed direction is **deny / exit 2**; `permissions.ask` rules unmeasured
 (`hook_channel_visibility.md`).
 
-**Salience residual** (corrected 2026-06-27 — the surfaces split, they are not uniformly un-hookable):
-the **pre-commit** hook cannot catch either irreversible surface *at commit time*. But "pre-commit can't"
-≠ "no hook can": the **Destructive-Op git surface** (remote branch delete · force/non-ff push) fires at
-*push* time and **is** caught — `templates/.git-hooks/pre-push` now mechanically enforces the enumerate
-(see §Destructive-Op Gate). **`npm publish`** is likewise caught — `scripts/public_surface_scan_files.sh`
-wired into `prepublishOnly` scans the published file set at the registry boundary (see §Pre-Publish Hook
-coverage (c)). What stays **genuinely un-hookable** is only the **separate-repo go-public surface**
-(`gh repo create --public` / visibility flip / first push to a new public remote — not an npm or git op
-against this repo, so no hook here sees it): for *that* surface the fail-closed direction is still **prose,
-not hook-enforced** — a real weak-model fail-open risk, not a silent one. Backstop for the prose half: the
-portable `templates/PRE-PUBLISH-CHECKLIST.md` carries the tooling-down item as a human-readable gate, and
-the direction is target-tier-sim'd (Sonnet) before it is relied on.
+**Salience residual**: the pre-commit hook cannot catch either irreversible surface at commit time, but push-time git surfaces (pre-push) and `npm publish` (`prepublishOnly`) **are** hooked. Only the **separate-repo go-public surface** is genuinely un-hookable — there the fail-closed direction is **prose, not hook-enforced**, backstopped by `templates/PRE-PUBLISH-CHECKLIST.md` (**Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §CM-Salience-Residual-Surfaces` — read before claiming a surface is hooked).
 
 ---
 
@@ -954,9 +813,7 @@ degrades into "just delete it."
 hook blocks"*. That causal claim is **false**: the hook has **never called that script**, so the
 script's absence or failure changes the hook's behavior by exactly nothing. 🟥 **The fail-closed
 principle itself is untouched** — what is withdrawn is only the false attribution of who enforces it.
-**Why it was written that way**: the next paragraph's 2026-08-20 correction landed *beside* this
-sentence instead of *replacing* it, leaving two consecutive paragraphs contradicting each other in the
-resident layer ([[feedback_half_fix_propagation_boundary]]).
+(How it came to be written, and why this retraction stays resident: `knowledge/shared/harness-core/claude_md_gate_details.md §CM-Destructive-Retraction-Why`.)
 >
 > **Why this retraction is resident rather than in a detail file** (residency-admission answer): a
 > retraction only works where the false claim was read. This one lived in the always-loaded layer, so a
@@ -966,13 +823,7 @@ resident layer ([[feedback_half_fix_propagation_boundary]]).
 > resident cost is four sentences; the alternative is a resident falsehood about an irreversible surface.
 
 🟥 **Read that precisely — the floor is the HOOK, not this script.** `templates/.git-hooks/pre-push`
-implements the per-ref verdict **inline**; it does not call `predelete_check.sh`. Measured 2026-08-20,
-re-measured 2026-08-23 (control: the same scan finds `session_close_check` wired in that hook at
-`:540`, as `_SC_OUT=$(bash "$REPO_ROOT/scripts/session_close_check.sh" …)`; known-negative: a nonsense
-token returns rc=1, no hits): every in-repo reference to `predelete_check.sh` is a **mention, not an
-execution** — `pre-push:423` lists the path inside a *grep pattern* (it was `:408` when this was first
-measured; line numbers drift, the function names do not), `destructive_pre_gate.sh:191` *prints the
-command* as advisory text, and `selfcheck.sh:192` runs `bash -n` on it. So the script is the **operator's enumerate tool**, and step 1 above is a human
+implements the per-ref verdict **inline**; it does not call `predelete_check.sh`. Every in-repo reference to `predelete_check.sh` is a **mention, not an execution** (measured 2026-08-20, re-measured 2026-08-23 with a control — **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §CM-Predelete-Mention-Evidence` — read before claiming any caller executes it). So the script is the **operator's enumerate tool**, and step 1 above is a human
 step that the machinery reminds you of rather than performs. Stating it the other way round is the
 "prose-invoked floor" the 4-axis marker spec calls M-tier when a rule claims a floor its script has
 no caller for — this section does not make that claim, and this note keeps it from drifting into one.
@@ -997,7 +848,7 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | **"이 절 잘라도 되나", "상주에서 빼자", "cut this section", "is this section load-bearing", "ablate this"** — a proposal to REMOVE resident text (the decision `/context-doctor` and `/salience-splitter` reach, not the routing to them) | **Ablation procedure — do not decide by eye.** Canon = `scripts/probe_scope_check.sh` header (arms · isolation · `reps>=3` · pre-registration · the two leak channels); runner precondition = `bash scripts/ablation_calibrate.sh` exits 0; verdicts land in `.claude/regression/ablation_verdicts.md`. **A section is CUT only on a pre-registered question set an isolated arm B answers correctly** — "I read it and it looks redundant" is not a measurement, and arm B answering *confidently wrong* is a KEEP, not a pass |
 | "wrap up this week", "review", "audit", "weekly", "retrospective" | `/harvest-loop` |
 | "pull this into FH", "reverse-harvest", "worth keeping", "harvest pattern", "field pattern" | `/field-harvest` |
-| **you installed or invoked an EXTERNAL asset (a tool, framework, or repo not ours) and ran it against something this hub owns** — `pip install`/`npm i` of an outside framework, cloning a peer repo to run it, adopting an upstream utility. Fires on the ACT, not on a keyword: the trigger is *"I reached outside because ours did not cover this"* | **Sister Asset Protocol** (`knowledge/shared/rules/sister_asset_protocol.md` §Active adoption) — record the resolution difference, list **items to import** AND **items the hub can propagate** (bidirectionality is a prohibition, not a nicety), and where there is no write access write a `tracks/_audit/proposal_*.md` so the operator can decide whether to contribute it upstream. 🟥 Missed 2026-08-16 on exactly this shape: an external red-team framework was installed, run against a field harness, found a real bypass — and was filed as a `type: reference` **tool pointer** with no sister audit at all |
+| **you installed or invoked an EXTERNAL asset (a tool, framework, or repo not ours) and ran it against something this hub owns** — `pip install`/`npm i` of an outside framework, cloning a peer repo to run it, adopting an upstream utility. Fires on the ACT, not on a keyword: the trigger is *"I reached outside because ours did not cover this"* | **Sister Asset Protocol** (`knowledge/shared/rules/sister_asset_protocol.md` §Active adoption) — record the resolution difference, list **items to import** AND **items the hub can propagate** (bidirectionality is a prohibition, not a nicety), and where there is no write access write a `tracks/_audit/proposal_*.md` so the operator can decide whether to contribute it upstream. (origin: `knowledge/shared/harness-core/claude_md_gate_details.md §CM-Initiative-Row-Misses`) |
 | "용광로모드", "crucible mode", "absorb this whole corpus", "throw everything in", "re-forge FH identity", "melt this down" (total-immersion absorption, not cherry-pick — esp. a whole corpus on a core FH axis, or a frontier showcase risking FOMO) | `knowledge/shared/harness-core/crucible_mode.md` (read it, run the chain: total-ingest → steel-quench/phantom-quench melt → governor identity-bonding → sim/persona reforge → field-harvest rebirth; the core invariants stay unmeltable) |
 | "review this PR", "check diff", "code review" | code diff → built-in `/code-review`·`/review` · FH-asset coherence → `/harness-pr-reviewer` (role split) |
 | "keep watching X", "poll this", "check every N minutes", recurring WATCH item | built-in `/loop` (interval runner) — pair with the WATCH list, don't hand-poll |
@@ -1027,7 +878,7 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | **사람이 읽을 산출물이 나가기 직전** — README·가이드·리포트·장표·PR 본문 등 «독자가 여는» 것 (proactive; 코드가 옳아도 걸린다 — 이 행이 잡는 건 정확성이 아니라 **가독성**이다) | **독자로서 한 번 읽어라** — 첫 8줄에 결론이 있나 · 본문이 고정 템플릿에 덮이지 않나 · 마지막 인상이 무엇인가. 렌즈는 이미 있다: `/sim-conductor` A-1(`beginner` cold-read) 또는 직접 렌더해서 읽기. 🟥 **정적 검사는 「없는 것」을 잡고 「안 읽히는 것」은 못 잡는다** — 실측 2건이 독립 수렴했다(qasp 축: 지적 12건 중 스캐너 적발 0 · gstack 3자대면: 배포된 리포트 본문 3줄 vs 고정 템플릿 21줄). pre-commit 이 같은 상기를 advisory 로 낸다(차단 아님) |
 | "ready to PR", "about to push", "merge this", "PR 올려줘", FH asset changed in session | 4-axis auto-gate (see above — runs automatically, no proposal needed) |
 | **field verdict/gate/safety/irreversible code changed** in a mapped project **— or a merge/landing verdict asked on any gate-shaped file, mapped or not** (function returning a verdict enum / gate exit code / safety-invariant · access-control / approval / auth / exposure boundary · publish/delete/history path; «gate-shaped» = the mechanical identifier test in §Field-Harness Load-Bearing Change Gate, not a feel) — **proactive, before merge** | **Field-Harness Load-Bearing Change Gate** (see above → degrade-lint → cross-family review → converge; same rigor as FH assets, applied to field code) |
-| **a diff (yours or an unattended pipeline's) alters another harness's actual behavior, gate outcome, or interaction contract** — building automation that opens PRs autonomously, touching a synced/shared-body surface, or any change whose effect crosses a harness boundary (not merely a file-class match — most self-improvement is `not-applicable` here, which is the expected common case) — **proactive, before push, never as a post-PR comment** | **Standpoint axis** (`knowledge/shared/harness-core/field_verdict_crossfamily_gate.md §7` — orthogonal to `crossfamily:`; run the diff from the TARGET harness's own repo/standpoint via `tier2`/`tier2b`/`tier3`, or record `not-applicable`/`DEGRADED_*` on the closed enum. Missed once in-session while building `scripts/frontier_digest_autopilot.sh` 2026-08-15 — mis-routed to `fh-meta:harness-pr-reviewer` (same-repo self-consistency, a different lens) before the operator caught it; this row exists so the next session connects the trigger without two rounds of correction.) |
+| **a diff (yours or an unattended pipeline's) alters another harness's actual behavior, gate outcome, or interaction contract** — building automation that opens PRs autonomously, touching a synced/shared-body surface, or any change whose effect crosses a harness boundary (not merely a file-class match — most self-improvement is `not-applicable` here, which is the expected common case) — **proactive, before push, never as a post-PR comment** | **Standpoint axis** (`knowledge/shared/harness-core/field_verdict_crossfamily_gate.md §7` — orthogonal to `crossfamily:`; run the diff from the TARGET harness's own repo/standpoint via `tier2`/`tier2b`/`tier3`, or record `not-applicable`/`DEGRADED_*` on the closed enum. Origin: same §CM-Initiative-Row-Misses.) |
 | **"진단해줘", "개선해줘", "diagnose this", "improve this harness", "check this project", "audit this project"** — said while working **in a mapped project** (not a single-file ask) | **Field-Harness Diagnostic** (see §Field-Harness Diagnostic above → compose existing checks into one ranked M/S/R list → HITL approval per item, nothing auto-fixed) |
 | **"새 프로젝트", "하네스 작성해줘", "이 프로젝트 가속화", "harness-ify this", "accelerate this project"** — an onboarding/acceleration door (returning-menu ①②③) | **Onboarding / Acceleration Autopilot** (see §Onboarding / Acceleration Autopilot above → Phase 0 auto-discover + branch → innovator-centered recommend → ranked install plan → HITL per item, non-overwriting; "끝까지 자율로" → full-autonomy under /goal-quench gate) |
 
@@ -1048,9 +899,7 @@ At session start, determine the last run time from history files and auto-propos
 
 #### Expedition (원정) — measured first, cadence only if it earns one
 
-**Operator, agreed and recorded 2026-08-17** (it had been agreed verbally before and was **not in any
-file** — grepped, zero hits; that gap is why this paragraph exists): *"원정이 가치 있고 성공적이었다면
-**주기적으로 제안하는 것**으로 가기로 했었지."*
+**Operator, 2026-08-17**: a valuable, successful expedition becomes a **periodic proposal** (quote: same §CM-Expedition-Evidence).
 
 An **expedition** is a deliberate, extended run that uses the harness cluster at full stretch against
 targets outside this hub — contributing to an external repo, declaring a peer's assets as cluster
@@ -1085,17 +934,10 @@ Sequence, in order, and do not skip to the end:
 **둘째 형태도 정당한 값이다** — 금지되는 것은 «안 적는 것»뿐이다. 이유: **선언 없는 선택은 사후에
 누락과 구분되지 않고, 저자는 언제나 「고른 것」이라고 회상한다.**
 
-**근거 — 이 규칙은 실측에서 나왔다.** 원정 1차(2026-08-17)의 ⓐ 채점은 **0 건**이다(2026-08-18 답습,
-사전등록 봉인 후 cross-family 독립 수렴). 원인은 노력이 아니라 겨냥이었다: 세 갈래(기여·클러스터·약점)가
-**전부 이미 🟢 인 정체성**(Ⓑ·①·③) 위에 떨어졌고, **비-🟢 인 ②·④ 를 건드린 산출이 하나도 없었다.**
-즉 ⓐ=0 은 **개시 시점에 구조적으로 예정돼 있었다.** 정본: `tracks/_meta/expedition_2026-08-18_absorption1.md`.
-🟥 ⓐ 를 «알아냈다»로 읽지 마라 — 완주선은 «알아냈나»가 맞지만 **ⓐ 는 «등급을 옮기는 조각»을 요구한다.**
-두 정의를 섞으면 과계상이 된다(cross-family 지목, 자력 적발 0).
+**근거**: 원정 1차의 ⓐ=0 은 산출이 전부 이미 🟢 인 정체성에 떨어져 **개시 시점에 구조적으로 예정돼 있었다**. 🟥 ⓐ 를 «알아냈다»로 읽지 마라 — ⓐ 는 **«등급을 옮기는 조각»**을 요구한다(**Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §CM-Expedition-Evidence` — 1차 채점과 원인, 주기 보류의 세 이유 — read before scoring or scheduling an expedition).
 
 **주기 — 1차 답습 후에도 아직 안 정한다, 그리고 그 이유가 기록이다 (2026-08-18, 운영자 승인).**
-위 3단계를 다 밟았는데도 숫자가 안 나온다: ⓐ 비용 입력이 **부분 계상**이고(거버너 토큰·벽시계 미측정 —
-1차 기록 §5 가 스스로 적었다) ⓑ 1차는 갈래가 셋이라 **대표성이 없으며** ⓒ 결정적으로 **겨냥이 틀린
-원정 1회**라, 그 비용/수확비로 주기를 세우면 틀린 표본으로 스케줄을 만든다.
+1차는 비용 부분 계상 · 갈래 셋 · 겨냥 오류라 그 표본으로 주기를 세우면 틀린 스케줄이 된다(같은 §CM-Expedition-Evidence).
 ⇒ 주기는 **2차 이후**로 미룬다. 대신 **2차 개시에 계측 3항이 의무**다 — 방법까지 여기 적는다
 (초안은 셋을 요구만 하고 ②③의 *방법*을 안 적었고, 플로어 티어 블라인드 sim 이 그 구멍을 지목했다):
 - ① **과녁 정체성 선언** — 위 형식 그대로, 개시 카드에.
@@ -1106,10 +948,7 @@ Sequence, in order, and do not skip to the end:
   🟥 **합계를 쓰지 마라** — 미측정 칸을 0 으로 접는 것이다([[feedback_not_found_is_not_zero_family]]).
 셋이 없으면 3차에서도 «못 정한다»가 나온다.
 
-⚠️ **This deliberately does NOT use the `operations.md` `accepted ≥ 60%` promotion gate.** That gate
-measures how often a proposal class is *accepted*, which is the wrong quantity here: an expedition
-could be accepted every time and still not warrant a schedule, or be proposed once and clearly warrant
-one. The evidence that sets the interval is the **completed run itself**, not an acceptance rate.
+⚠️ **This deliberately does NOT use the `operations.md` `accepted ≥ 60%` promotion gate.** Acceptance rate is the wrong quantity; the **completed run itself** sets the interval (why: same §CM-Expedition-Evidence).
 **No new gate, no new cadence table, no new registry** either — when the interval is set, it graduates
 into the existing §Cadence-Rules table like any other row.
 
@@ -1200,16 +1039,7 @@ the record is self-attested.** Every part of it is writable by the beneficiary, 
 catches silence, not forgery — and this one is **unmitigated on a default install**: the binding is
 gitignored, so there is no write-time history to check the cited dates against. (An operator who
 mirrors it into a private version-controlled store gets that check; that is *their* setup, not a
-property of the rule, and an earlier draft of this sentence claimed it generally.) The lease is the
-only part that decays on its own — **and nothing reads it**. Correcting a wrong reason given earlier
-in this branch: that gap is *not* "below the mechanization threshold, so don't build it."
-`scripts/consent_registry_check.sh` already enforces leases (requires `expires`, rejects past dates,
-caps at 365 days) and is lane-tested. It is **unwired here**, which is a different defect with a
-different fix, and "don't build" was covering for it. Wiring it is a real decision, not a chore:
-the registry's own floor forbids `promotion_eligible: true` for a class whose effects feed
-irreversible sinks, and a dispatched subagent does — so registering this grant would either be
-rejected by that floor or require declaring it something the registry does not govern. That is the
-operator's call, and until it is made the lease is **honoured by reading, not by machinery**.
+property of the rule, and an earlier draft of this sentence claimed it generally.) The lease is the only part that decays on its own — **and nothing reads it**: `scripts/consent_registry_check.sh` already enforces leases but is **unwired here** (a different defect from «below threshold»), and wiring it is the operator's call because the registry's floor forbids promoting a class that feeds irreversible sinks. Until then the lease is **honoured by reading, not by machinery** (**Detail**: See `knowledge/shared/harness-core/dispatch_conditional_prohibition.md §CM-Lease-Unwired` — read before wiring the lease check).
 
 **Scope of the consent carve-out — it exits ONE clause, not the section.** §Operational Adaptation
 Loop has two separable parts: (i) the *derivation* rule (standing consent inferred from 3× accepted),
@@ -1233,12 +1063,7 @@ instruction-shaped. A self-test the session administers to itself is the thing �
 > what each teaches (*"not yet measured"* is the honest label, never *"blocked"*) — read before adding a
 > mechanism claim to this section.
 
-So "default-active" is a **posture, not a guarantee**. Measured 2026-08-08: a session running under
-exactly that system-prompt instruction worked alone for a full session and dispatched only at the two
-points where the operator named it — while this file said dispatch was available. A session that
-*cannot* dispatch must **say so** rather than quietly doing everything inline; the silent version is
-what made that case invisible until the operator asked. Writing "default is active" into a remote
-canon without this paragraph produces the next session that reads it and still cannot comply.
+So "default-active" is a **posture, not a guarantee**. A session that *cannot* dispatch must **say so** rather than quietly doing everything inline — the silent version is invisible until the operator asks (**Detail**: See `knowledge/shared/harness-core/dispatch_conditional_prohibition.md §CM-Posture-Not-Guarantee` — the measured 2026-08-08 session — read before writing «default is active» into another canon).
 
 **Onboarding**: at first setup, ask whether this environment wants dispatch and **write the answer into
 the local binding** (`CLAUDE.local.md`) **in the three-part form above — quoted words, a lease the user
@@ -1249,10 +1074,7 @@ trainer** — so the ask is **wired, not left to prose**: `install-wizard` **Ste
 three at setup and writes them down, and carries any mechanical settings change under the same
 approval (operator decision, 2026-08-09: *users of FH/PMH run parallel by default; where a mechanical
 config change is needed, take consent through the install-wizard contract and change it then*).
-A recorded **decline** is also a record — it stops later sessions re-asking. This is why the answer
-belongs at setup — that is the one moment where the
-choice is cheap to make, and a durable record is the whole point: a *yes* left in a transcript expires
-with the transcript, while the conditional line above is re-evaluated by every cold session. A recorded
+A recorded **decline** is also a record — it stops later sessions re-asking. Setup is the one moment the choice is cheap (why: same §CM-Posture-Not-Guarantee). A recorded
 standing request is therefore not bookkeeping — it is the thing that satisfies the condition. Wiring the
 *blocking* direction to a mechanism still waits on the **UNVERIFIED (deny-mechanism) line** above — not
 the UNVERIFIED (call-sites) line, which is a different open question; the honest install note says so.
@@ -1269,22 +1091,8 @@ Three execution paths:
 
 **Fourth reason — gate-integrity in a worktree, and it is CONDITIONAL on how `core.hooksPath` was set.**
 With the **relative** form every FH doc installs, the worktree runs **its own copy** of the hook — editing
-that copy there disables the gate for that worktree (measured 2026-08-05: marker-less FH-asset commit
-succeeded). With a hand-set **absolute** path it runs the main tree's copy and the bypass does not exist.
-🟥 **RETRACTED 2026-08-22.** This said the marker and manifest are *structurally absent* in a
-worktree. They are not: `templates/.git-hooks/pre-commit` resolves evidence through
-`git rev-parse --git-common-dir`, which returns the **main tree's** `.git` from inside a worktree.
-Measured in a clean worktree with the known-negative established first (its own `tracks/` = skeleton
-only; `$REPO_ROOT/tracks/_meta/edit_manifest.yaml` NOT FOUND, `$EVIDENCE_ROOT/...` FOUND — the two
-roots disagree, so the probe discriminates).
-**The operating rule is UNCHANGED: do not commit FH assets from a worktree.** Its remaining **open risk areas** — not
-established grounds — are marker provenance, concurrent manifest append, and a copy of `tracks/` that
-appears in a worktree from an unattributed source. They are **deliberately not enumerated as reasons
-here**; an earlier draft enumerated
-them and adversarial review found a defect in nearly every added claim. ⚠️ **Reachable is not automatic**: the hook *reads* `$EVIDENCE_ROOT`, but a
-worktree session writing by relative path lands in the worktree's own `tracks/`, not the main tree's.
-The gate is satisfiable — its failure message prints the absolute `MARKER_DIR` to write to — but the
-routing is the author's job, not the tool's.
+that copy there disables the gate for that worktree (measured 2026-08-05). With a hand-set **absolute** path it runs the main tree's copy and the bypass does not exist.
+🟥 **RETRACTED 2026-08-22** — marker and manifest are **not** structurally absent in a worktree: the hook resolves evidence through `git rev-parse --git-common-dir` (the main tree's `.git`). **The operating rule is UNCHANGED: do not commit FH assets from a worktree.** ⚠️ **Reachable is not automatic** — a relative-path write lands in the worktree's own `tracks/`; the failure message prints the absolute `MARKER_DIR`, but the routing is the author's job (**Detail**: See `knowledge/shared/harness-core/dispatch_conditional_prohibition.md §CM-Worktree-Retraction` — the known-negative probe and the open risk areas — read before re-listing reasons for the rule).
 
 > **Detail**: See `knowledge/shared/harness-core/dispatch_conditional_prohibition.md §Worktree-Gate-Integrity` — the two-arm table with
 > exit codes, and why an earlier draft declared the bypass *refuted* from n=1 on a non-shipped setting —
@@ -1296,14 +1104,7 @@ routing is the author's job, not the tool's.
 carried marker and a fabricated one are byte-identical, so *marker provenance* is unenforceable by
 construction. Land FH-asset changes from the standard session.
 
-**Do not let that unenforceability launder the enforceable part** (caught by an adversarial round on
-the paragraph above, which had used it to do exactly that): *being in a worktree* is trivially
-detectable — `git rev-parse --git-common-dir` differs from `--git-dir` there and matches in the main
-tree — and `templates/.git-hooks/pre-commit` currently has **zero** lines of worktree detection. A
-true statement about one thing (provenance) was standing in for an untested claim about another
-(location). It is left un-mechanized for a *scope* reason, not an impossibility one: measured
-recurrence is 1, below this repo's own N≥3 mechanization threshold. If it recurs, the check is a
-two-line hook addition, not a research problem.
+**Do not let that unenforceability launder the enforceable part**: *being in a worktree* is trivially detectable (`--git-common-dir` ≠ `--git-dir`), yet `templates/.git-hooks/pre-commit` has **zero** lines of worktree detection — left un-mechanized for a *scope* reason (recurrence 1, below N≥3), not an impossibility one; if it recurs, the check is a two-line hook addition (**Detail**: See `knowledge/shared/harness-core/dispatch_conditional_prohibition.md §CM-Worktree-Detection` — read before adding it).
 
 **Forbidden responses**: *"I can't do that — I'm not in that project's cwd"* — self-check Agent dispatch
 first. And **silently working alone while dispatch is unavailable**: if this environment blocks
@@ -1320,10 +1121,7 @@ also recorded). This feeds the 60/40 promotion gate + UAP loop; detail:
 **Floor (2026-08-02)**: a `SubagentStop` hook tallies every dispatch and `session_close_check.sh` ④-e
 blocks a close push when dispatches happened and the day's entries are ZERO. Consolidating a class of
 dispatches into one entry with measured counts is fine and is not penalised — the check catches the
-total miss, not imperfect bookkeeping. **Why it needed a floor**: this line was prose-only and a single
-session dispatched 20+ subagents and logged none of them, in the same session that recovered this very
-log file from a branch queued for deletion. The hook only tallies; it never writes an entry, because a
-fabricated `outcome`/`evidence` would poison the promotion gate worse than a missing one.
+total miss, not imperfect bookkeeping. The hook only tallies and never writes an entry — a fabricated `outcome`/`evidence` would poison the promotion gate worse than a missing one (origin: `knowledge/shared/harness-core/dispatch_conditional_prohibition.md §CM-Invocation-Log-Origin`).
 
 ### Context Card — Required Format for Dispatch
 ```
@@ -1417,13 +1215,8 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc. —
        (후자는 Step 0-d 세션 회고 — 자산 미변경 세션에도 회고는 의미가 있다)
   → ③ Sync local/gitignored session state to your durable companion store, if you keep one
   → ④ Memory hygiene — update stale entries + record new session findings.
-       **Deliberately unmechanized, and stated so rather than left ambiguous**: hygiene is a judged
-       step (is this entry still true?), and the only cheap proxy — "did any memory file change?" —
-       would pass on a touched file. A check that can be satisfied without doing the work is a
-       decoration that reports coverage it does not have. `session_close_check.sh` therefore carries
-       NO ④ check; its similarly-numbered block is `④-log` (the real-time completion log) and is
-       labelled as such. Revisit if skipped-hygiene is ever *measured* to recur — build on evidence,
-       not on the discomfort of an unchecked step.
+       **Deliberately unmechanized** — a judged step; `session_close_check.sh` carries NO ④ check
+       (its `④-log` block is the completion log). Why: `knowledge/shared/harness-core/claude_md_gate_details.md §CM-Hygiene-Unmechanized`.
   → ④-b npm freshness — if any npm-shipped asset changed (`package.json` `files[]`: skills · agents ·
        knowledge/ · docs/ · README · AGENTS.md · CLAUDE.md · CHEATSHEET · CATALOG.md): **first an entry-point
        drift check — BIDIRECTIONAL** — the script (`session_close_check.sh`) auto-*fires a candidate reminder*
@@ -1490,23 +1283,11 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc. —
 > **읽어라 — 이 요약에는 판별 규칙도 쓰기 규율도 없다.**
 
 **Card-last guard**: ①–④-c (incl. ①-b open-PR sweep, ④-c handoff lifecycle) must ALL complete before
-⑤ runs. **Mechanical floor**: `scripts/session_close_check.sh` is **wired into `templates/.git-hooks/pre-push`** (2026-07-20) — it runs on *every* push, so it is no longer prose-invoked. Enforcement is surface-matched: an ordinary push **surfaces** ❌ violations (advisory — a branch push is reversible), and the **close push blocks** on them: run step ⑥ as **`FH_SESSION_CLOSE=1 git push`** → exit 1 (card-last violated / required close artifact missing) stops the push until fixed. *Why not block always*: ⑤ card-last is a close-time invariant, while ④ mandates writing `fh_completed_*` **during** the session — an unconditional block would pit the two rules against each other and train `--no-verify`, disarming the Destructive-Op gate in the same hook. Any new information produced during ①–④ (new commits from a merged self-PR, model changes,
+⑤ runs. **Mechanical floor**: `scripts/session_close_check.sh` is **wired into `templates/.git-hooks/pre-push`** (2026-07-20) — it runs on *every* push, so it is no longer prose-invoked. Enforcement is surface-matched: an ordinary push **surfaces** ❌ violations (advisory — a branch push is reversible), and the **close push blocks** on them: run step ⑥ as **`FH_SESSION_CLOSE=1 git push`** → exit 1 (card-last violated / required close artifact missing) stops the push until fixed. *Why not block always*: same §CM-Close-Atomic-Origin. Any new information produced during ①–④ (new commits from a merged self-PR, model changes,
 new findings, a carry item flipped to DONE) feeds INTO ⑤ — card is never written mid-sequence and
 then left open for more work to accumulate after it.
 
-**Why ⑤ became atomic (N=3, 2026-07-28 — three closes in one day)**: the miss was always the same
-shape — a finding surfaced *during* the close and the reflex appended it to `fh_completed`, which is
-correct under ④ and fatal after ⑤. The three prose repairs ("next time write it into the card first")
-all failed, including one session that stated the vow and then broke it in the same close. So the
-sequence is restructured rather than re-promised: `fh_completed` is not a step that runs alongside ⑤,
-it is the **first half of** ⑤. A close-time finding has exactly one landing order — log, then card —
-and there is no remaining moment where appending is the natural move. *Honest scope*: this removes
-the ordering ambiguity, not the reflex; the pre-push gate stays the floor, and on a violation it now
-**names the offending files and prints their last lines** so re-running ⑤ is a delta, not a re-read.
-The check also carries a **⑤-b card-drift probe** (advisory, never blocks): it cross-checks the
-card's *absence claims* against on-disk reality (`session_close_check.sh` ⑤-b block) — surfaced
-here because an implemented-and-lane-tested step that no spec document names is exactly the
-orphan-implementation class the 2026-08-01 reverse-verification pilot flagged (P2-08).
+**⑤ is atomic because prose repairs failed (N=3, 2026-07-28)**: `fh_completed` is the **first half of** ⑤, so a close-time finding has exactly one landing order — log, then card. On a violation the pre-push gate **names the offending files and prints their last lines**; `session_close_check.sh` also carries a **⑤-b card-drift probe** (advisory, never blocks) that cross-checks the card's *absence claims* against disk (**Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §CM-Close-Atomic-Origin` — read before restructuring ⑤).
 
 **Mid-session card writes are drafts**: If a task (e.g., a calibration run) internally updates
 the card, that is a draft. The close chain always re-runs ⑤ to capture post-draft activities.
@@ -1519,7 +1300,7 @@ Card update is NOT a sub-step of harvest-loop — even if harvest-loop is skippe
 **Card update obligation** (independent obligation — regardless of harvest-loop completion): Update `reference_next_session_starter.md`.  
 ① **Agent View pre-read** (see above) → ② Step 0-b cross-check generates removal list → ③ Remove completed items → ④ Add new priorities → ⑤ Fix stale paths/versions → ⑥ Overwrite → ⑦ Output "BEFORE N items → AFTER M items" diff.  
 "Delta update" not "snapshot" — completed items remaining in next session card is a bug.
-🟥 **그리고 그 역방향도 버그다 — «안 닫힌 것이 사라지는 것».** 재작성은 줄이는 일이 아니라 «완료를 덜어내는」 일이다: 카드에서 빠진 항목은 ⓐ `fh_completed_{date}.md` 에 완료로 적혔거나 ⓑ 카드에 «왜 뺐는지」가 적혀 있어야 하고, 둘 다 아니면 유실이다. 이 방향은 오래 **한쪽만** 적혀 있었다(완료가 남는 것만 버그로) — 그래서 2026-08-24 에 미완 4건이 통째로 사라졌고, 그 세션은 «BEFORE 172 → AFTER 101» 이라는 diff 를 출력하고도 «줄었다」만 말했다. 기계 앵커는 `session_close_check.sh` ⑤-C(이전 카드의 **미래 날짜**가 카드나 오늘 완료 로그에 살아 있나) — 🟥 **날짜 토큰만 보므로 날짜 없는 미완은 구조적으로 못 잡는다**(앵커지 floor 아님). 외부 근거: 파일시스템 기억 연구(arXiv 2607.26637)가 «구조만 바꿔라」라고 지시한 재구성 에이전트는 응축하며 기록을 버렸고 한 벤치마크 정확도가 **77.6% → 41.2%** 로 반토막 났으며, *"keep every fact"* 한 줄을 더하자 내용이 대체로 고정됐다. 같은 규율을 카드·메모리·상주 문서를 **줄이는 모든 패스**(마감 ⑤ · `/memory-hygiene` · `/salience-splitter`)에 적용한다 — «줄여라」만 있는 지시는 조용히 사실을 지운다. ⚠️ 그 연구는 반대 방향도 함께 보고한다(작은 코퍼스에서는 응축이 56.2% → 68.8% 로 **도움**) — 그래서 이 규칙은 «줄이지 마라」가 아니라 «빠진 것은 완료이거나 명시된 것이어야 한다」다.
+🟥 **그리고 그 역방향도 버그다 — «안 닫힌 것이 사라지는 것».** 재작성은 줄이는 일이 아니라 «완료를 덜어내는」 일이다: 카드에서 빠진 항목은 ⓐ `fh_completed_{date}.md` 에 완료로 적혔거나 ⓑ 카드에 «왜 뺐는지」가 적혀 있어야 하고, 둘 다 아니면 유실이다. (2026-08-24 실사고: `knowledge/shared/harness-core/claude_md_gate_details.md §CM-Card-Loss-Evidence`) 기계 앵커는 `session_close_check.sh` ⑤-C(이전 카드의 **미래 날짜**가 카드나 오늘 완료 로그에 살아 있나) — 🟥 **날짜 토큰만 보므로 날짜 없는 미완은 구조적으로 못 잡는다**(앵커지 floor 아님). 외부 근거: arXiv 2607.26637(같은 절). 같은 규율을 카드·메모리·상주 문서를 **줄이는 모든 패스**(마감 ⑤ · `/memory-hygiene` · `/salience-splitter`)에 적용한다 — «줄여라」만 있는 지시는 조용히 사실을 지운다. ⚠️ 그 연구는 반대 방향도 함께 보고한다(작은 코퍼스에서는 응축이 56.2% → 68.8% 로 **도움**) — 그래서 이 규칙은 «줄이지 마라」가 아니라 «빠진 것은 완료이거나 명시된 것이어야 한다」다.
 
 **Thread-continuation block (operator, 2026-08-16)**: *"특정 주제에 집중해서 진행한 세션이라면
 앞으로도 마감할 때 그 갈래로 이어갈 수 있게 알아서 정리해줘."* When a session ran predominantly on

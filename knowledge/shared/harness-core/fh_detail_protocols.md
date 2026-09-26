@@ -448,3 +448,91 @@ its original description). What the table deliberately KEEPS: proactive safety g
 MCP-mount) · non-skill protocol routes (gates, doctrine sections, the deep-research ladder) · disambiguators
 and weak-description rows. **Operative rule (resident):** before adding a row back, probe whether the
 skill's description alone already catches it.
+
+---
+
+## §CM-Language-Pin-Measurements — Language pin read as a language lock — 2026-08-21 measurement (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Voice / Tone) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+**Measured 2026-08-21, blind, at the floor tier, one rep per arm**:
+  `こんにちは` → Japanese ✅ · `안녕` → Korean prose but **English door labels** 🟡 · `你好` → **Korean**
+  ❌ · control `hi` → English ✅. The control held, so the instrument discriminates and the defect is in
+  the wiring, not the measurement. 🟥 **The line above already said "not language-lock" and the floor
+  tier still read the pin as one** — which is why this now names the failure explicitly instead of
+  restating the principle. Honest scope: those arms ran in an install that *has* such a pin; whether a
+  clean consumer install ever had the defect is **unmeasured**, and one rep per arm is below this
+  repo's own `reps>=3` bar.
+
+
+---
+
+## §CM-FH-Name-Drop-Measurement — «FH» dropped in translation — 2026-08-29 measurement (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Active Onboarding) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+🟥 **Measured 2026-08-29, blind, floor tier, Korean returning greeting, reps=3 per arm — and the clause did NOT close it.** Control (no clause) kept 「FH」 **1/3**; with the clause, **2/3** — a difference of one at n=3, which does not separate from noise, and the one arm run that kept the name answered a Korean greeting **in English**, trading this defect for the language-match one. Known-positive is established (the control reproduced the drop, matching the original observation), so the instrument discriminates and the gap is real. The clause stays because it is right and cheap, and is labelled failing rather than fixed — the same shape as the door-language note below, where repeating the rule at the actor's location also moved nothing. There is **no mechanical floor** here and none is available (§Voice/Tone: tone and language never have one).
+
+
+---
+
+## §CM-Door-Language-Measurements — Door-language wiring — two rounds and the clean-install arm (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Active Onboarding) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+🟥 **Measured 2026-08-21, blind, floor tier, two rounds of wiring — and it did NOT converge. The note stays anyway; read why.** Round 1 (rule in §Voice/Tone only): `こんにちは`→Japanese ✅ · `안녕`→Korean prose but **English doors** 🟡 · `你好`→**Korean** ❌ · control `hi`→English ✅. Round 2 (rule repeated here, at the doors): `你好`→**Korean** ❌ · `嗨`→**English** ❌ · `こんにちは`→Japanese ✅ · control `hey`→English ✅. Across both rounds **Japanese 3/3, Chinese 1/5**, control clean every time — so the instrument discriminates and the gap is real. **Two distinct failure modes**, and only one of them is the pin: a Korean reply is the operator pin winning, an *English* reply is these door literals being copied. Repeating the rule at the actor's location — textbook gate-locality — moved neither. 🟥 **So do not read this note as a fix.** It is a correct instruction with **no mechanical floor** (tone/language never has one, §Voice/Tone says so), kept because it is right and cheap, and labelled failing because pretending otherwise is the muscle-not-skeleton defect this repo names. The README's user-facing wording was reduced to match this measurement rather than the intent. 🟥 **The clean-install arm has since been RUN, and it reattributes the defect (same day).** A shallow
+clone with no `CLAUDE.local.md` — known-positive control: it answered a CLAUDE.md-only question
+correctly; known-negative: it refused to invent a nonexistent concept, so the harness was genuinely
+loaded — greeted `你好` and `嗨` with **fully Chinese** door menus, and `안녕` with a **fully Korean**
+one, doors included. So the operator's language pin was the **main cause**, and the 1/5 figure above is
+a property of *this* install, not of a consumer's. **Do not cite 1/5 as the shipped behaviour.**
+⚠️ What did *not* close: firing is **non-deterministic** — one Chinese variant (`你好呀`) produced no
+menu at all, and one Korean run opened with an English welcome line. Reps are 1–3 per arm, below this
+repo's own bar. So the softened README wording stays correct; only its *reason* changed.
+
+
+---
+
+## §CM-Forge-Vocab-Door-Measurement — 문 부제의 대장간 어휘 — 2026-08-22 실측 (CLAUDE.md 에서 이관)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Active Onboarding) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+**실측 (플로어 티어 블라인드, 레포 밖 cwd, reps=3 × 2팔)**:
+라우팅은 **안 깨졌다** — 선택지 개수·«등록하고 싶다»→① ·«점검하고 싶다»→③ 이 ARM/CONTROL **3/3 동일**.
+🟥 그런데 «헷갈리는 것»에서 ARM 만 **3/3 전부 대장간 어휘를 지목**했다(*"실제로 어떤 동작인지
+짐작이 안 됨"*). **부제는 라우팅을 안 돕고 혼란만 더했다.**
+⚠️ 그 sim 의 명시된 결함: 「처음 쓰는 사람」 프레이밍으로 물어놓고 **returning 메뉴**를 보여줬다
+(계기≠대상).
+
+
+---
+
+## §CM-Wizard-Residual-Retraction — Wizard-state residual — the retracted widening (moved from CLAUDE.md)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Active Onboarding) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+> 🟥 **A widening of this residual was published here on 2026-08-29 and RETRACTED the same hour.**
+> It claimed the *greeting branch itself* does not fire without `.claude/settings.json` (3/3 vs
+> 2/2). **False, and false because of the instrument**: the arm that "did not fire" was run through
+> a sim runner that still passed `--restricted`, which drops the project CLAUDE.md — so that arm
+> had no harness loaded, and the comparison varied two things, not one. Re-run with the runner
+> fixed (`scripts/test_sim_isolated_run_lanes.sh` L8a is the lane that caught it): a clean clone
+> **with no `.claude/settings.json` fires the returning greeting 3/3**. The greeting is
+> prose-driven, as this protocol says. Nothing here needed widening.
+> ⚠️ What the episode does show is narrower and worth keeping: **verifying that `claude` loads
+> CLAUDE.md is not verifying that YOUR RUNNER lets it** — the check was run by hand instead of
+> through the instrument under test ([[feedback_instrument_vs_target_and_budget]]).
+
+
+---
+
+## §CM-Vertical-Menu-Rationale — 문은 한 줄에 하나 — 근거 (CLAUDE.md 에서 이관)
+
+> Relocated **verbatim** from `CLAUDE.md` (§Active Onboarding) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
+
+`·` 로 이어붙인
+  한 줄짜리 메뉴는 터미널 폭에서 임의로 접혀서 **어디까지가 한 문인지 눈으로 안 갈린다**. 세로
+  목록은 G-GREET-02(🐿️+환영문 **같은 줄**)·G-GREET-03(고정 4문)·G-GREET-05(문구 리터럴)를
+  **셋 다 그대로 만족한다** — 그 프로브들이 박은 것은 문 집합·리터럴·환영문 줄이지 **메뉴의 줄
+  수가 아니다**. 세로로 펴는 것은 렌더 층이고 판정 층이 아니다.
+
