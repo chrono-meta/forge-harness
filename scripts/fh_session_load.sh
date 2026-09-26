@@ -468,7 +468,42 @@ CARD_EPOCH=0
 # ★ "$TM" (not the literal "tracks-meta") — paper-signals/handoff/digests are FH-exclusive areas
 # sync-to-be.sh never namespaces (it does not write them for any hub), only tracks-meta needs the
 # suffix here (pmh-dev#68 PR #368 review).
+#
+# 🟥 Mirror-copy false positive (fixed 2026-09-26): `sync-to-be.sh` REWRITES every tracks/_meta
+# mirror it touches, so a mirror's mtime is «when the sync last ran», not «when its content was
+# new». Measured: two result files the card had already absorbed were listed as NEWER because a
+# 22:28 sync restamped them — git had last committed them the day BEFORE the card, and the hub
+# copies carried the same 22:28 stamp, so no mtime anywhere could tell. A `$TM` mirror is DEMOTED
+# (to a one-line note that names it — never silently dropped) only when ALL of these hold:
+#   ① line 1 is EXACTLY the sync banner (not a substring — a file merely mentioning it stays listed)
+#   ② the rest is byte-identical to the hub's canonical `tracks/_meta/<same path>` (cmp rc 0 only;
+#      differ = 1 and error = 2 both stay listed)
+#   ③ the companion git records that content as committed AT OR BEFORE the card, and the file is
+#      clean in the companion tree. Identity alone is not enough (cross-family [high], codex
+#      2026-09-26): a result written to the hub TODAY and synced is identical too, yet the card has
+#      never seen it — its first commit lands after the card, so ③ keeps it listed.
+# git unavailable / no commit found / dirty → NOT demoted, and the git-unavailable case says so.
+# Named residual: content another machine committed before this card was written, pulled later and
+# copied into the hub by sync-from-be, satisfies ①②③ while still unseen here. Narrow (needs the
+# reverse sync to have run) and the note still names the file.
+_MIRROR_BANNER="<!-- MIRROR COPY — synced from the ${HUB_NAME:-forge-harness} hub. Do NOT edit here; the next sync overwrites it. Edit the canonical file under the hub instead. -->"
+MIRROR_GIT_UNAVAIL=""
+command -v git >/dev/null 2>&1 || MIRROR_GIT_UNAVAIL=1
+_is_absorbed_mirror() {   # $1 = companion file, $2 = hub canonical path → 0 only when ①②③ all hold
+  case "$1" in *.md) ;; *) return 1 ;; esac
+  [ -f "$2" ] || return 1
+  [ "$(head -1 "$1" 2>/dev/null)" = "$_MIRROR_BANNER" ] || return 1
+  tail -n +2 "$1" 2>/dev/null | cmp -s - "$2" || return 1
+  [ -z "$MIRROR_GIT_UNAVAIL" ] || return 1
+  local rel="${1#$BE/}" ct st
+  ct="$(git -C "$BE" log -1 --format=%ct -- "$rel" 2>/dev/null)" || return 1
+  case "$ct" in ''|*[!0-9]*) return 1 ;; esac
+  [ "$ct" -le "${CARD_EPOCH:-0}" ] || return 1
+  st="$(git -C "$BE" status --porcelain -- "$rel" 2>/dev/null)" || return 1
+  [ -z "$st" ]
+}
 NEWER=""
+MIRROR_REFRESH=""; MIRROR_REFRESH_N=0
 for sub in paper-signals handoff "$TM" digests; do
   d="$BE/$sub"
   [ -d "$d" ] || continue
@@ -476,6 +511,10 @@ for sub in paper-signals handoff "$TM" digests; do
     [ -n "$f" ] || continue
     fe="$(_mtime "$f")"
     if [ "${fe:-0}" -gt "${CARD_EPOCH:-0}" ]; then
+      if [ "$sub" = "$TM" ] && _is_absorbed_mirror "$f" "$FH/tracks/_meta/${f#$d/}"; then
+        MIRROR_REFRESH="${MIRROR_REFRESH} ${f#$d/}"; MIRROR_REFRESH_N=$((MIRROR_REFRESH_N + 1))
+        continue
+      fi
       NEWER="${NEWER}  - ${f#$BE/}\n"
     fi
   done <<EOF
@@ -565,6 +604,13 @@ fi
     else
       echo "   (no companion files newer than the session card)"
     fi
+  fi
+  if [ "$MIRROR_REFRESH_N" -gt 0 ]; then
+    echo "   ⓘ ${MIRROR_REFRESH_N} mirror cop(y/ies) newer than the card by mtime only — byte-identical to the hub's"
+    echo "     tracks/_meta copy and committed before the card (sync restamped them):${MIRROR_REFRESH}"
+  fi
+  if [ -n "$MIRROR_GIT_UNAVAIL" ]; then
+    echo "   ⚠️ git unavailable — mirror-copy demotion is OFF; sync-restamped mirrors are listed above by mtime."
   fi
   if [ -n "$STATUS_MAP" ]; then
     echo "── handoff/signal STATUS map (mtime-independent — closed items) ──"
