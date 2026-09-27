@@ -211,3 +211,31 @@
   artifact: EMISSION_VERDICT.md
   sha256: 1b919098dcce8bdbadfa6da2078a47eef80541cd600068ed4e79b5fbd4853c6b
   recorded: 2026-09-22T05:08:15Z
+- run: forge-gate
+  artifact: INTENT.md
+  sha256: d82f8ff5cf70597c194a27080107c715e177f8a4fb743c49aaad04e393a7d45c
+  recorded: 2026-09-27T08:10:24Z
+- run: forge-gate
+  artifact: BUDGET.md
+  sha256: 90b83bfc73e160cf32a36eb2d9837e800093de6c9b433fea5f68a0d1a8135806
+  recorded: 2026-09-27T08:10:35Z
+- run: forge-gate
+  artifact: SIM_NOTES.md
+  sha256: b6e47605992a2a0dff0af8a70977089f5c0af9680d17a4626baa0e45c1f73089
+  recorded: 2026-09-27T08:16:49Z
+- run: forge-gate
+  artifact: EMISSION_VERDICT.md
+  sha256: 9e380a381b76a82817d1a24c1b2c1a68857bdca08ea4f7a8f8ef94201620aa5a
+  recorded: 2026-09-27T08:26:00Z
+- run: forge-gate-v2
+  artifact: INTENT.md
+  sha256: 1e7f5f7deb536942c36998e379771c9d0d0116701c2171921c4d6e77080f1f89
+  recorded: 2026-09-27T08:27:30Z
+- run: forge-gate-v2
+  artifact: BUDGET.md
+  sha256: 44d26fc1eafd37b1543b4d2e17c2325d1223a9252fce7da915f808faf108369d
+  recorded: 2026-09-27T08:27:38Z
+- run: forge-gate-v2
+  artifact: SIM_NOTES.md
+  sha256: d49e8187929541a1983461c7434cc14173b3f4f7458058ab5e1b692fd3dabf95
+  recorded: 2026-09-27T08:34:59Z
