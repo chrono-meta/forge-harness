@@ -239,3 +239,7 @@
   artifact: SIM_NOTES.md
   sha256: d49e8187929541a1983461c7434cc14173b3f4f7458058ab5e1b692fd3dabf95
   recorded: 2026-09-27T08:34:59Z
+- run: forge-gate-v2
+  artifact: EMISSION_VERDICT.md
+  sha256: 002a262af5de9d639c3c70a1b84705b40002e3fbe664b51ab9abac19a28397c5
+  recorded: 2026-09-27T08:39:39Z
