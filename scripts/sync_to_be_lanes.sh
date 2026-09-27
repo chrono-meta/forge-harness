@@ -101,6 +101,33 @@ MID=lanea run >/dev/null 2>&1
 [ -f "$BEX/tracks-meta/manifests/lanea.yaml" ]; chk $? "CONTROL: own manifest still RE-HOMED to manifests/\$MID.yaml (the exclude did not kill the re-home)"
 [ ! -f "$BEX/tracks-meta/manifests/peerx.yaml" ]; chk $? "a peer manifest copy under the hub's manifests/ never landed in the store (forward exclude)"
 
+echo "── L4c 챔버의 vendor/ (서드파티 클론)는 동반 저장소로 안 간다 (2026-09-28) ──"
+new_env l4c
+mkdir -p "$HUB/tracks/_chamber/runx/slice/vendor/somepkg"
+printf 'third-party\n' > "$HUB/tracks/_chamber/runx/slice/vendor/somepkg/index.js"
+printf 'intent\n' > "$HUB/tracks/_chamber/runx/INTENT.md"
+printf 'ordinary\n' > "$HUB/tracks/_meta/normal4c.md"
+MID=lanea run >/dev/null 2>&1
+[ -f "$BEX/tracks-meta/normal4c.md" ]; chk $? "CONTROL: an ordinary file synced (run actually executed)"
+[ -f "$BEX/tracks-chamber/runx/INTENT.md" ]; chk $? "CONTROL: the chamber run's own record still synced (the exclude did not kill the chamber)"
+[ ! -e "$BEX/tracks-chamber/runx/slice/vendor/somepkg/index.js" ]; chk $? "a vendor/ clone under the chamber never landed in the store"
+
+echo "── L4d vendor/ 제외는 tar 폴백(rsync 없음)에서도 성립하고, 제외를 알린다 (cross-family 2026-09-28) ──"
+new_env l4d
+mkdir -p "$HUB/tracks/_chamber/runy/deep/er/vendor/pkg"
+printf 'third-party\n' > "$HUB/tracks/_chamber/runy/deep/er/vendor/pkg/lib.js"
+printf 'intent\n' > "$HUB/tracks/_chamber/runy/INTENT.md"
+SHIM="$ENV_DIR/shim"; mkdir -p "$SHIM"
+for d in $(printf '%s' "$PATH" | tr ':' ' '); do
+  [ -d "$d" ] || continue
+  for b in "$d"/*; do [ -e "$b" ] || continue; n="$(basename "$b")"; case "$n" in rsync) continue;; esac; [ -e "$SHIM/$n" ] || ln -s "$b" "$SHIM/$n" 2>/dev/null; done  # portability-noqa: the [ -e "$b" ] || continue guard is on this same line
+done
+PATH="$SHIM" command -v rsync >/dev/null 2>&1; [ $? -ne 0 ]; chk $? "CONTROL: rsync really is absent on the shimmed PATH (tar fallback will run)"
+out="$(PATH="$SHIM" MID=lanea run 2>&1)"
+[ -f "$BEX/tracks-chamber/runy/INTENT.md" ]; chk $? "CONTROL: tar fallback synced the chamber record"
+[ ! -e "$BEX/tracks-chamber/runy/deep/er/vendor/pkg/lib.js" ]; chk $? "tar fallback: a nested vendor/ clone never landed"
+printf '%s' "$out" | grep -q '제외(vendor/'; chk $? "the vendor/ exclusion is announced, not silent"
+
 echo "── L5 destination-newer abort CITES the return path and drops the false single-cause claim (2026-08-20) ──"
 # The old message asserted one cause ("it was edited in the MIRROR") and offered only
 # SYNC_OVERWRITE_OK=1 — measured 0/4 correct on the air node, where all four hits were a PEER NODE's

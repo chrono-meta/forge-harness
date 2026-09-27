@@ -406,7 +406,12 @@ DIRTY=0   # cp-fallback mode can't count cheaply → mark work done, let git-dif
 # happens to be named '.git'. Accepted — that shape has never occurred here, and the alternative
 # is the false abort that has now recurred four times. A '.git' that is a FILE (submodule/worktree
 # link) is NOT matched by '*/.git/*' and stays guarded, which is the conservative direction.
-SYNC_EXCLUDES=('.gitkeep' '*.marker' 'logs/' '.fh_node_state' '.close_stamps_*' 'manifests/' '_index/' '.git/')
+# 'vendor/' (2026-09-28, 운영자 결정): 챔버 측정용으로 받은 **서드파티 클론**(tracks/_chamber/<run>/.../vendor/)이
+# 2026-09-27 동기화로 동반 저장소에 726 파일 실렸다 — 라이선스 없는 저장소 포함. 동반 저장소는 우리 기록의
+# 비공개 반쪽이지 남의 코드 보관소가 아니다. 이 스크립트는 삭제를 전파하지 않으므로(append-only) 한 번 실리면
+# 로컬을 지워도 남는다 — 들어가는 문에서 막는다. 명명된 잔여: 우리 것인데 이름이 'vendor' 인 디렉터리도 빠진다
+# (2026-09-28 현재 tracks/ 전체에 vendor 디렉터리는 그 챔버 하나뿐이었다 — find 실측).
+SYNC_EXCLUDES=('.gitkeep' '*.marker' 'logs/' '.fh_node_state' '.close_stamps_*' 'manifests/' '_index/' '.git/' 'vendor/')
 
 NEWER_HITS=""
 
@@ -670,6 +675,13 @@ strip_banner() {   # $1 = dst dir
 sync_dir() {
   local src="$1" dst="$2"
   [ -d "$src" ] || { log "skip (no source): $src"; return 0; }
+  # 'vendor/' 제외는 조용하면 안 된다(cross-family 2026-09-28): 우리 것인데 이름이 vendor 인 디렉터리가
+  # 생기면 그것도 빠진다 — 빠지는 경로를 매번 한 줄씩 알린다(제외는 유지, 침묵만 없앤다).
+  local _vd
+  while IFS= read -r _vd; do
+    # --quiet 에서도 낸다(stderr) — 조용한 제외가 바로 없애려는 형태다
+    [ -n "$_vd" ] && echo "[sync-to-be] 제외(vendor/ — 서드파티 클론으로 간주): ${_vd#"$src"/}" >&2
+  done < <(find "$src" -type d -name vendor -prune 2>/dev/null)
   mkdir -p "$dst"
   # Guard runs BEFORE this directory's rsync, so a directory holding a newer mirror file is never
   # written. Directories already synced above it had no newer-destination files by definition, so
