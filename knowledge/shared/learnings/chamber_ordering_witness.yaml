@@ -235,3 +235,7 @@
   artifact: BUDGET.md
   sha256: 44d26fc1eafd37b1543b4d2e17c2325d1223a9252fce7da915f808faf108369d
   recorded: 2026-09-27T08:27:38Z
+- run: forge-gate-v2
+  artifact: SIM_NOTES.md
+  sha256: d49e8187929541a1983461c7434cc14173b3f4f7458058ab5e1b692fd3dabf95
+  recorded: 2026-09-27T08:34:59Z
