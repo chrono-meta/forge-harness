@@ -211,3 +211,11 @@
   artifact: EMISSION_VERDICT.md
   sha256: 1b919098dcce8bdbadfa6da2078a47eef80541cd600068ed4e79b5fbd4853c6b
   recorded: 2026-09-22T05:08:15Z
+- run: forge-gate
+  artifact: INTENT.md
+  sha256: d82f8ff5cf70597c194a27080107c715e177f8a4fb743c49aaad04e393a7d45c
+  recorded: 2026-09-27T08:10:24Z
+- run: forge-gate
+  artifact: BUDGET.md
+  sha256: 90b83bfc73e160cf32a36eb2d9837e800093de6c9b433fea5f68a0d1a8135806
+  recorded: 2026-09-27T08:10:35Z
