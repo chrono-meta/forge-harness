@@ -239,3 +239,19 @@
   artifact: SIM_NOTES.md
   sha256: d49e8187929541a1983461c7434cc14173b3f4f7458058ab5e1b692fd3dabf95
   recorded: 2026-09-27T08:34:59Z
+- run: forge-gate-v2
+  artifact: EMISSION_VERDICT.md
+  sha256: 002a262af5de9d639c3c70a1b84705b40002e3fbe664b51ab9abac19a28397c5
+  recorded: 2026-09-27T08:39:39Z
+- run: forge-gate-v3
+  artifact: INTENT.md
+  sha256: cd9eef8f6de044ef22dc94cf507927b9ffe3cdce00f47f7f7ccb0551768b565e
+  recorded: 2026-09-27T08:45:04Z
+- run: forge-gate-v3
+  artifact: BUDGET.md
+  sha256: 95e0ba409bea9cc109c8865aed7c2d5d0e1793f3cfdda44648b0bf354f12c1cf
+  recorded: 2026-09-27T08:45:04Z
+- run: forge-gate-v3
+  artifact: SIM_NOTES.md
+  sha256: b530fc53bec219075e3b92ca0dbba85f845621df1152f4db6ee08a57d2ad6350
+  recorded: 2026-09-27T08:45:04Z
