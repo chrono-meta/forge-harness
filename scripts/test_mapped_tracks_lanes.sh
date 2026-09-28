@@ -214,6 +214,79 @@ printf '%s' "$_ngout" | grep -q '^onboarding_branch=' \
   && ok "B-5 the branch key is emitted even on the UNMEASURED path" \
   || ng "B-5 UNMEASURED path emits no branch key — silence is not an answer"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# L-pipe — 🟥 `_is_shipped` 가 **큰 tracked 목록에서 매치를 무매치로 읽으면** 안 된다.
+#
+#   `set -o pipefail` 아래에서 `printf '%s\n' "$_TRACKED" | grep -qxF "$1"` 는, 매치가 목록 앞쪽에
+#   있으면 grep 이 입력을 끝까지 안 읽고 끝나서 printf 가 SIGPIPE 로 죽고, pipefail 이 그 **141** 을
+#   파이프라인 코드로 올린다 ⇒ 함수가 «동봉된 파일이 아니다» 로 답한다. `$_TRACKED` 는
+#   `git ls-files` 출력이라 허브가 커지면 같이 커진다 — 구조적 상한이 없다.
+#   (온셋 실측 ~16 KB: `scripts/pipefail_earlyexit_scan.sh` 헤더. 여기 픽스처는 결정적으로
+#    뒤집히도록 그보다 크게 잡는다.)
+#
+#   🟥 방향이 이 함수의 존재 이유와 정반대다: **동봉된 파일이 사용자 기록으로 세어져, 갓 클론한
+#   허브가 `returning` 을 답한다** — CLAUDE.md 가 이름으로 적어 둔 온보딩 FP 바로 그것.
+BIG="$(fh_fixture_root "$(mktemp -d)")"
+mkdir -p "$BIG/scripts" "$BIG/tracks/_meta" "$BIG/tracks/_pad"
+cp "$SUT" "$BIG/scripts/mapped_tracks.sh"
+git -C "$BIG" init -q 2>/dev/null
+# 매치 대상: ls-files 정렬에서 **맨 앞**에 오도록 `_meta` 아래에 둔다('_' < 소문자).
+printf '# shipped session record\n' > "$BIG/tracks/_meta/a.md"
+# 그 뒤를 긴 경로로 채워 목록을 16 KB 훨씬 위로 올린다. 이름이 `session_*` 가 아니라서
+# 세는 루프의 글로브에는 안 걸린다 — 오직 «목록 크기» 만 담당한다. 🟥 그리고 밑줄 접두
+# 디렉터리(`_pad`)여야 한다: 일반 이름이면 «매핑된 프로젝트» 로 세어져 `COUNT>0` 이 되고,
+# 그러면 `session_files=0` 이어도 분기가 `returning` 이라 이 레인이 엉뚱한 것을 잰다(초판 실측).
+_i=0
+while [ "$_i" -lt 2000 ]; do
+  printf 'x\n' > "$BIG/tracks/_pad/pad_${_i}_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.md"
+  _i=$((_i + 1))
+done
+git -C "$BIG" add -A >/dev/null 2>&1
+_LSBYTES=$(git -C "$BIG" ls-files -- tracks | wc -c | tr -d ' ')
+if [ "${_LSBYTES:-0}" -lt 65536 ]; then
+  echo "ⓘ L-pipe UNMEASURED — tracked 목록이 ${_LSBYTES}B 로 작아 경합을 세울 수 없다 (통과 아님)"
+else
+  _mt_run() { ( cd "$1" && bash scripts/mapped_tracks.sh 2>/dev/null ); }
+  _o="$(_mt_run "$BIG")"
+  _sess=$(printf '%s\n' "$_o" | sed -n 's/^session_files=//p')
+  _br=$(printf '%s\n' "$_o" | sed -n 's/^onboarding_branch=//p')
+  [ "$_sess" = "0" ] && [ "$_br" = "new" ] \
+    && ok "L-pipe ${_LSBYTES}B tracked 목록에서도 동봉 파일은 제외된다 (session_files=0 · new)" \
+    || ng "L-pipe 동봉 파일이 사용자 기록으로 세어졌다 — session_files=$_sess branch=$_br (갓 클론이 returning)"
+
+  # 판별력 컨트롤 — 같은 픽스처에서 **정말 untracked** 인 기록 하나는 여전히 세어져야 한다.
+  # 이게 없으면 위 팔은 «아무것도 안 세는 코드» 로도 초록이다.
+  printf '# user record\n' > "$BIG/tracks/_meta/zz_user.md"
+  _o2="$(_mt_run "$BIG")"
+  _sess2=$(printf '%s\n' "$_o2" | sed -n 's/^session_files=//p')
+  [ "${_sess2:-0}" -ge 1 ] \
+    && ok "L-pipe control — untracked 기록은 같은 목록 크기에서도 세어진다 (session_files=$_sess2)" \
+    || ng "L-pipe control — untracked 기록이 안 세어졌다: 위 팔은 공허하게 통과했다"
+  rm -f "$BIG/tracks/_meta/zz_user.md"
+
+  # 되돌림 프로브 — 파이프 형태로 복원한 복사본은 **반드시** 위 팔을 깨야 한다.
+  MUTP="$BIG/scripts/mapped_tracks_mut.sh"
+  python3 - "$SUT" "$MUTP" <<'PY'
+import io, sys
+src = io.open(sys.argv[1], encoding='utf-8').read()
+old = '  grep -qxF "$1" <<<"$_TRACKED"'
+new = '  printf \'%s\\n\' "$_TRACKED" | grep -qxF "$1"'
+if src.count(old) != 1:
+    sys.stderr.write("SUBN=%d\n" % src.count(old)); sys.exit(3)
+io.open(sys.argv[2], 'w', encoding='utf-8').write(src.replace(old, new, 1))
+PY
+  if [ $? -ne 0 ]; then
+    ng "L-pipe revert — 뮤턴트 치환이 1회가 아니었다. 이 프로브는 공허했을 것"
+  else
+    _om="$( cd "$BIG" && bash scripts/mapped_tracks_mut.sh 2>/dev/null )"
+    _sessm=$(printf '%s\n' "$_om" | sed -n 's/^session_files=//p')
+    [ "${_sessm:-0}" -ge 1 ] \
+      && ok "L-pipe revert — 파이프 형태를 복원하면 동봉 파일이 다시 오집된다 (session_files=$_sessm)" \
+      || ng "L-pipe revert — 뮤턴트도 0 을 냈다. 이 레인은 그 결함에 결박돼 있지 않다"
+  fi
+fi
+rm -rf "$BIG"
+
 if [ "$FAIL" -eq 0 ]; then
   echo "MAPPED-TRACKS LANES: PASS ($PASS/$PASS)"
   echo "  NOT covered: whether the synergy skill (or any other consumer) actually CALLS this."

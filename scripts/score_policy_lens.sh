@@ -59,13 +59,24 @@ _contains_norm() {
   return 1
 }
 
+# 🟥 굽은 따옴표는 **밌리킷 안에 넣으면 안 된다** — 로으케잌 의존이다(2026-09-28 실제).
+#    `["“”]` 는 UTF-8 로케잌에서만 «세 문자 중 하나»다. `LC_CTYPE=POSIX` 에서 sed 는
+#    `“` 를 세 바이트 각각의 멤버로 읽어 **첫 바이트만** 벗기고, 남은 두 바이트가 인용문을
+#    자료와 다르게 만들어 ⇒ 진짜 인용이 `PHANTOM` 으로 채점된다. 같은 커밋이 로케잌에 따라
+#    다른 점수를 낸다는 뜻이고, 채점기에서 그건 결함이다.
+#    ⇒ 밌리킷 대습 **리터럴 다중바이트 문자열을 각각 따로** 벗긴다. 리터럴은 바이트열 매치라
+#    어느 로케잌에서나 같게 돌다(GNU `\xNN` 도 BSD sed 확장도 안 쓴다 — macOS bash 3.2 도 대상).
+#    ⚠️ 변통을 각각 한 번슩 벗기므로 «“" 둘 다 붙은» 법리적 입력에서는 둘 다 벗기진다.
+#    실제 자료(`QUOTE: “…”`)에서는 종전과 동일하고, 그 대슴을 감추지 않고 적어 둔다.
+#    레인: `test_policy_lens_scorer_lanes.sh` (로케잌 편향 팜) · 같은 결함 계열의
+#    앞선 두 수리 = PR #780(`wc -w`) · #784(`${#var}`).
 # _field <file> <KEY:> — first matching line's value, empty if absent
 _field() {
   local f="$1" k="$2" line
   line=$(grep -m1 "^[[:space:]]*\*\{0,2\}${k}" "$f" 2>/dev/null)
   [ -z "$line" ] && { printf ''; return 1; }
   printf '%s' "$line" | sed -e "s/^[[:space:]]*\*\{0,2\}${k}\*\{0,2\}[[:space:]]*//" \
-                            -e 's/^["“”]//' -e 's/["“”][[:space:]]*$//' \
+                            -e 's/^"//' -e 's/^“//' -e 's/^”//' -e 's/"[[:space:]]*$//' -e 's/“[[:space:]]*$//' -e 's/”[[:space:]]*$//' \
                             -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
 }
 
@@ -78,7 +89,7 @@ _quote_block() {
     inq && /^[[:space:]]*[*]*(RISK|REASON|QUOTE|ACTION):/ { inq=0 }
     inq { print }
   ' "$1" 2>/dev/null | tr '\n' ' ' | /usr/bin/sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' \
-      -e 's/^["“”]//' -e 's/["“”][[:space:]]*$//'
+      -e 's/^"//' -e 's/^“//' -e 's/^”//' -e 's/"[[:space:]]*$//' -e 's/“[[:space:]]*$//' -e 's/”[[:space:]]*$//'
 }
 
 # score_one <runfile> <materialfile> <expected> <unique_token> <span1> <span2...> <arm>

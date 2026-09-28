@@ -107,5 +107,61 @@ _bl=$(bash "$SC" --key "$G/blank.tsv" --runs "$G" 2>&1 | awk -F'\t' '$1=="ARM-G_
 [ "$_bl" = "INVALID-NO-TOKEN" ] && ok "P8 빈 토큰 칸 → INVALID-NO-TOKEN (NONE 만 게이트를 끈다)" \
   || bad "P8 빈 토큰 칸이 게이트를 껐다: $_bl (want INVALID-NO-TOKEN)"
 
+# P9 — 🟥 채점기가 **로케일에 따라 다른 점수를 내면 안 된다**(2026-09-28 클린룸 감사 실측).
+#      굽은 따옴표를 POSIX 브래킷 `["“”]` 안에 넣으면 UTF-8 로케일에서만 한 문자로 읽힌다.
+#      `LC_CTYPE=POSIX`(컨테이너·CI·최소 이미지의 기본값이다) 에서 sed 는 그 세 바이트를 각각
+#      멤버로 보고 **첫 바이트만** 벗겨, 진짜 인용이 자료와 안 맞아 `PHANTOM` 으로 채점된다.
+#      실측: 같은 커밋(600e774)이 `LC_ALL=C.UTF-8` 에서는 known-pair 성립, `POSIX`/`C` 에서는
+#      «scorer is DEAD». ⇒ **known-pair 를 로케일마다 돌린다.** 한 로케일만 재는 레인은
+#      이 결함 계열(PR #780 `wc -w` · #784 `${#var}` 에 이어 세 번째)을 구조적으로 못 본다.
+# 🟥 UTF-8 팔은 **찾아서** 쓴다(codex 교차 검토 2026-09-29). `C.UTF-8` 을 박으면 그 로케일이 없는 머신에서
+#    대조 팔이 결함이 아니라 «로케일 부재」를 잰다. 없으면 이름 붙은 미측정 — PASS 로 접지 않는다.
+UTF8_LOC=$(locale -a 2>/dev/null | grep -iE '^(C|en_US)\.utf-?8$' | head -1)
+[ -n "$UTF8_LOC" ] || echo "  ⏭️  UNMEASURED (PASS 아님) — 이 머신에 UTF-8 로케일(C.UTF-8 · en_US.UTF-8)이 없다: P9 UTF-8 팔 · P9-rev control 미측정"
+for _loc in POSIX C ${UTF8_LOC:+"$UTF8_LOC"}; do
+  _so="$(LC_ALL="$_loc" bash "$SC" --selftest 2>&1)"
+  case "$_so" in
+    *"scorer known-pair held"*)
+      ok "P9 known-pair 가 LC_ALL=$_loc 에서 성립" ;;
+    *)
+      bad "P9 LC_ALL=$_loc 에서 채점기가 죽었다 — $(printf '%s\n' "$_so" | grep -E '^(❌|🟥)' | head -2 | tr '\n' ' ')" ;;
+  esac
+done
+
+# P9-rev — 되돌림 프로브. 브래킷 형태로 복원한 복사본은 **POSIX 팔에서 반드시 죽어야** 한다.
+#          안 죽으면 P9 는 아무 결함에도 안 묶인 장식이다.
+MUTS="$G/score_mut.sh"
+python3 - "$SC" "$MUTS" <<'PY'
+import io, sys
+src = io.open(sys.argv[1], encoding='utf-8').read()
+new = '''-e 's/^"//' -e 's/^“//' -e 's/^”//' -e 's/"[[:space:]]*$//' -e 's/“[[:space:]]*$//' -e 's/”[[:space:]]*$//\''''
+old = '''-e 's/^["“”]//' -e 's/["“”][[:space:]]*$//\''''
+if src.count(new) != 2:
+    sys.stderr.write("SUBN=%d\n" % src.count(new)); sys.exit(3)
+io.open(sys.argv[2], 'w', encoding='utf-8').write(src.replace(new, old, 2))
+PY
+if [ $? -ne 0 ]; then
+  bad "P9-rev 계기 오류 — 뮤턴트 치환이 2회가 아니었다. 이 프로브는 공허했을 것"
+else
+  _mo="$(LC_ALL=POSIX bash "$MUTS" --selftest 2>&1)"
+  case "$_mo" in
+    *"scorer is DEAD"*) ok "P9-rev 브래킷 형태를 복원하면 POSIX 에서 다시 죽는다" ;;
+    *) bad "P9-rev 뮤턴트도 POSIX 에서 성립했다 — P9 는 이 결함에 결박돼 있지 않다" ;;
+  esac
+  # 판별력 컨트롤: 같은 뮤턴트가 UTF-8 에서는 여전히 성립해야 한다. 안 그러면 뮤턴트가
+  # 로케일과 무관하게 부서진 것이고, P9-rev 의 적색은 이 결함의 증거가 아니다.
+  if [ -n "$UTF8_LOC" ]; then
+    _mu="$(LC_ALL="$UTF8_LOC" bash "$MUTS" --selftest 2>&1)"
+    case "$_mu" in
+      *"scorer known-pair held"*) ok "P9-rev control — 같은 뮤턴트가 UTF-8($UTF8_LOC) 에서는 성립(로케일이 변수다)" ;;
+      *) bad "P9-rev control — 뮤턴트가 UTF-8($UTF8_LOC) 에서도 죽는다: 변수가 로케일이 아니게 됐다" ;;
+    esac
+  fi
+  rm -f "$MUTS"
+fi
+
 printf 'PASS %d · FAIL %d\n' "$PASS" "$FAIL"
-[ "$FAIL" -eq 0 ]
+[ "$FAIL" -eq 0 ] || exit 1
+# 0 통과 · 1 실패 · 2 팔 미측정(UTF-8 로케일 부재) — 미측정을 초록 종료코드로 접지 않는다(codex R2)
+[ -n "$UTF8_LOC" ] || { echo "rc=2 — UTF-8 팔 미측정"; exit 2; }
+exit 0

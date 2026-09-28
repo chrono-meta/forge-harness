@@ -188,5 +188,104 @@ PY
   fi
 fi
 
+# ─────────────────────────────────────────────────────────────────────────────
+# L8b — 🟥 관측자 효과: **계기를 돌린 것 자체가 행을 뒤집으면 안 된다.**
+#   게이트·스캔은 `tracks/_meta/governance_log_<날짜>.yaml` 과
+#   `tracks/_meta/.outbound_query_override_log` 를 실제로 쓴다(실측 2026-09-28, 이 저장소).
+#   그 둘이 `evidence.tracks` 를 PRESENT 로 만들면, **같은 커밋의 두 체크아웃이 지문이 갈린다** —
+#   그리고 이 계기의 유일한 용도가 그 대조라서, 그때 계기는 자기 목적을 잃는다.
+#   그래서 이 레인은 판정만 보지 않고 **지문 문자열 전체가 바이트 동일한지**를 본다.
+_t "L8b 기계 산출물은 판정도 지문도 안 바꾼다"
+mk_hub "$TMP/obs"
+git -C "$TMP/obs" add -A >/dev/null 2>&1
+_d_before="$(FH_HUB="$TMP/obs" bash "$S" --digest 2>/dev/null)"
+printf 'runs: []\n' > "$TMP/obs/tracks/_meta/governance_log_2026-01-01.yaml"
+: > "$TMP/obs/tracks/_meta/.outbound_query_override_log"
+_d_after="$(FH_HUB="$TMP/obs" bash "$S" --digest 2>/dev/null)"
+_row_after="$(FH_HUB="$TMP/obs" bash "$S" --tsv 2>/dev/null | grep '^evidence.tracks	')"
+if [ -z "$_d_before" ] || [ -z "$_d_after" ]; then
+  _no "계기 오류 — --digest 가 빈 문자열을 냈다. 이 팔은 공허했을 것"
+elif [ "$_d_before" != "$_d_after" ]; then
+  _no "기계 산출물이 지문을 바꿨다 — 두 체크아웃 대조가 무의미해진다"
+elif ! printf '%s' "$_row_after" | grep -q '	ABSENT	'; then
+  _no "기계 산출물을 «이 체크아웃에만 사는 세션 기록» 으로 읽는다 — 설명문과 세는 것이 어긋남"
+else _ok; fi
+
+# L8b-pos — 같은 픽스처의 판별력 컨트롤. 위 팔이 «아무것도 안 세는 코드» 로도 통과하면 공허하므로,
+#   **진짜 기록 하나**를 같은 자리에 심어 행이 여전히 뒤집히는지 본다(안 뒤집히면 계기가 죽은 것).
+_t "L8b-pos 진짜 세션 기록은 같은 자리에서 행을 뒤집는다"
+printf '# session\n' > "$TMP/obs/tracks/_meta/session_probe.md"
+# 🟥 CAPTURE FIRST, THEN GREP. 이 계기는 로컬 층이 비면 **rc=1 로 끝나는 것이 정상**이고(L2 가
+#    그걸 앵커한다), `set -o pipefail` 아래에서 `계기 | grep -q` 는 grep 이 매치해도 계기의 1 을
+#    파이프라인 코드로 올린다 — 즉 초록인 팔이 빨강으로 보인다. 이 레인의 초판이 그대로 밟았다.
+_pos_out="$(FH_HUB="$TMP/obs" bash "$S" --tsv 2>/dev/null)" || true
+if printf '%s\n' "$_pos_out" | grep -qc '^evidence.tracks	EVIDENCE	PRESENT' >/dev/null \
+   && [ "$(printf '%s\n' "$_pos_out" | grep -c '^evidence.tracks	EVIDENCE	PRESENT')" -eq 1 ]; then _ok
+else _no "기록을 심었는데도 PRESENT 가 아니다 — 술어가 아무것도 안 센다(L8b 가 공허하게 통과했을 것)"; fi
+
+# L8c — 🟥 두 계기가 **같은 코퍼스**를 센다는 관계를 박는다.
+#   `evidence.tracks` 의 설명문이 약속하는 것은 «인사 분기와 recall 이 읽는 코퍼스» 이고,
+#   그 인사 분기를 실제로 내는 것은 `mapped_tracks.sh` 의 `session_files` 다. 두 술어가 갈리면
+#   지문은 «기록 있음» 을 말하면서 인사는 `new` 를 내거나 그 반대가 된다 — 어느 쪽도 오류가 안 뜬다.
+#   한쪽 로직을 베끼는 대신 **관계**를 박는다(#784 L14g 와 같은 형태).
+_t "L8c evidence.tracks ⟺ mapped_tracks session_files>0"
+_agree() {  # $1 = fixture dir → "TRACKS=<state> SESS=<n>"
+  local d="$1" _st _ss
+  _st="$(FH_HUB="$d" bash "$S" --tsv 2>/dev/null | awk -F'\t' '$1=="evidence.tracks"{print $3}')"
+  _ss="$( cd "$d" && bash "$SUT_MT" 2>/dev/null | sed -n 's/^session_files=//p' )"
+  printf 'TRACKS=%s SESS=%s' "${_st:-MISSING}" "${_ss:-MISSING}"
+}
+SUT_MT="$(pwd -P)/scripts/mapped_tracks.sh"
+if [ ! -f "$SUT_MT" ]; then
+  echo "UNMEASURED — mapped_tracks.sh 부재, 관계를 잴 대상이 없다 (통과 아님)"
+else
+  mk_hub "$TMP/agree_no"; git -C "$TMP/agree_no" add -A >/dev/null 2>&1
+  printf 'runs: []\n' > "$TMP/agree_no/tracks/_meta/governance_log_2026-01-01.yaml"
+  mk_hub "$TMP/agree_yes" full; git -C "$TMP/agree_yes" add -A >/dev/null 2>&1
+  # 🟥 full 픽스처는 tracked 로 add 된다 — 그러면 둘 다 «동봉된 것» 이라 세지 말아야 한다.
+  #    관계 레인이 재려는 것은 «untracked 기록» 이므로, 기록 하나를 add 이후에 만든다.
+  printf '# session\n' > "$TMP/agree_yes/tracks/_meta/session_after_add.md"
+  # 🟥 박는 것은 **개수가 아니라 존재의 일치**다. `mapped_tracks.sh` 의 두 글로브는
+  #    `tracks/_meta/session_*.md` 를 양쪽에서 잡아 같은 파일을 두 번 센다(선행 동작, 이 PR 이
+  #    건드리지 않는다). 개수를 박으면 이 레인은 그 무해한 중복에 결박되고, 정작 재려던
+  #    «둘이 같은 코퍼스를 보나» 는 안 재게 된다.
+  _a_no="$(_agree "$TMP/agree_no")"; _a_yes="$(_agree "$TMP/agree_yes")"
+  _no_st="${_a_no%% *}"; _no_ss="${_a_no##* }"
+  _yes_st="${_a_yes%% *}"; _yes_ss="${_a_yes##* }"
+  if [ "$_no_st" = "TRACKS=ABSENT" ] && [ "$_no_ss" = "SESS=0" ] \
+     && [ "$_yes_st" = "TRACKS=PRESENT" ] && [ "$_yes_ss" != "SESS=0" ] \
+     && [ "$_yes_ss" != "SESS=MISSING" ]; then _ok
+  else _no "두 계기가 어긋난다 — 기록없음팔:[$_a_no] 기록있음팔:[$_a_yes]"; fi
+fi
+
+# L8b-rev — 🟥 되돌림 프로브. 위 두 팔이 **이 수리에 결박돼 있나**를 본다: 술어를 옛 형태
+#   («untracked 면 전부 센다»)로 되돌린 복사본에서 L8b 가 **반드시 빨강**이어야 한다.
+#   빨강이 안 되면 L8b 는 아무 결함에도 안 묶인 장식이다.
+_t "L8b-rev 되돌림 — 넓은 술어로 복원하면 L8b 가 적색"
+MUTB="$TMP/mut_broad.sh"
+python3 - "$S" "$MUTB" <<'PY'
+import io, re, sys
+src = io.open(sys.argv[1], encoding='utf-8').read()
+old = '    for _f in "$H"/tracks/*/session_*.md "$H"/tracks/_meta/*.md; do'
+new = '    for _f in $(find "$H/tracks" -type f ! -name .gitkeep 2>/dev/null); do'  # portability-noqa: 파이썬 문자열이다 — 셸 루프가 아니고, 뮤턴트 쪽 실제 루프는 바로 다음 줄에서 `[ -f "$_f" ] || continue` 를 그대로 물려받는다
+if src.count(old) != 1:
+    sys.stderr.write("SUBN=%d\n" % src.count(old)); sys.exit(3)
+io.open(sys.argv[2], 'w', encoding='utf-8').write(src.replace(old, new, 1))
+PY
+_revrc=$?
+if [ "$_revrc" -ne 0 ]; then
+  _no "계기 오류 — 뮤턴트 치환이 1회가 아니었다(rc=$_revrc). 이 팔은 공허했을 것"
+else
+  mk_hub "$TMP/rev"; git -C "$TMP/rev" add -A >/dev/null 2>&1
+  _rb="$(FH_HUB="$TMP/rev" bash "$MUTB" --digest 2>/dev/null)"
+  printf 'runs: []\n' > "$TMP/rev/tracks/_meta/governance_log_2026-01-01.yaml"
+  _ra="$(FH_HUB="$TMP/rev" bash "$MUTB" --digest 2>/dev/null)"
+  if [ -z "$_rb" ] || [ -z "$_ra" ]; then
+    _no "계기 오류 — 뮤턴트가 지문을 안 냈다. 침묵은 아무 뜻이 없다"
+  elif [ "$_rb" = "$_ra" ]; then
+    _no "뮤턴트도 지문이 안 변한다 — L8b 는 이 결함에 결박돼 있지 않다"
+  else _ok; fi
+fi
+
 echo "── $([ "$fail" -eq 0 ] && echo 'all lanes ok' || echo 'FAILURES above') ──"
 exit "$fail"
