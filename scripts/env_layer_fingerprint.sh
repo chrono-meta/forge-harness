@@ -141,17 +141,33 @@ PY
     "Axis 2+3 입력 — 마커는 브랜치·날짜별이라 한쪽에만 산다"
   add_row evidence.card EVIDENCE "$(_exists "$H/tracks/_meta/reference_next_session_starter.md")" \
     "세션 카드 — 없으면 마감 ⑤ 와 온보딩 «returning» 판정의 입력이 없다"
-  # 🟥 «tracks 에 파일이 있나» 로 세면 안 된다 — tracks/_contrib/** 와 일부 _meta 파일은
-  #    **tracked** 라 새 클론에도 딸려 온다. 그걸 세면 갓 클론한 허브가 「기록이 있다」로 읽히고,
-  #    그것이 CLAUDE.md 가 이름으로 적어 둔 온보딩 분기 FP 와 같은 오류다(2026-08-30 실측).
-  #    그래서 **git 이 추적하지 않는 파일만** 센다 = 이 체크아웃에서만 사는 기록.
-  local untracked_tracks=0
+  # 🟥 «tracks 에 파일이 있나» 로 세면 안 된다 — **두 방향으로** 틀린다.
+  #  ⓐ tracks/_contrib/** 와 일부 _meta 파일은 **tracked** 라 새 클론에도 딸려 온다. 그걸 세면
+  #     갓 클론한 허브가 「기록이 있다」로 읽히고, 그것이 CLAUDE.md 가 이름으로 적어 둔 온보딩
+  #     분기 FP 와 같은 오류다(2026-08-30 실측).
+  #  ⓑ 🟥 그런데 «untracked 면 전부» 로 세도 틀린다(2026-09-28 실측, 이 계기의 두 번째 결함).
+  #     게이트와 스캔이 돌면서 `tracks/_meta/governance_log_<날짜>.yaml` ·
+  #     `tracks/_meta/.outbound_query_override_log` 같은 **기계 산출물**을 그 밑에 쓴다. 그걸 세면
+  #     **계기를 한 번 돌린 것 자체가 이 행을 뒤집는다**: 같은 커밋(600e774)의 두 체크아웃이
+  #     갓 클론한 쪽 `ABSENT`/`4f43f6f744e8` · 스위트를 돌린 쪽 `PRESENT`/`3f33bfcd0255` 로
+  #     갈렸다. 이 계기의 용도가 바로 그 두 지문의 대조라서, 관측자 효과는 여기서 결함이다.
+  #  ⇒ 세는 것은 **기록 부류**다 — `mapped_tracks.sh` 가 온보딩 분기를 정할 때 읽는 것과
+  #     **같은 글로브**(`tracks/*/session_*.md` · `tracks/_meta/*.md`)에서 tracked 를 뺀 것.
+  #     행의 설명문이 약속하는 코퍼스(«인사 분기와 recall 이 읽는 코퍼스»)와 실제로 세는 것이
+  #     같아야 한다는 뜻이고, 두 계기의 일치는 레인 L8c 가 기계로 박는다.
+  local untracked_tracks=0 _trk _f _rel
   if git -C "$H" rev-parse --git-dir >/dev/null 2>&1; then
-    # 전체 파일 수 − tracked 파일 수. `ls-files --others` 의 ignored/non-ignored 플래그 조합에
-    # 기대지 않는다: 두 부류 모두 «이 체크아웃에만 사는 것»이라 합쳐서 세야 맞다.
-    _all="$(find "$H/tracks" -type f ! -name '.gitkeep' 2>/dev/null | grep -c . || true)"
-    _trk="$(git -C "$H" ls-files -- tracks 2>/dev/null | grep -vc '\.gitkeep$' || true)"
-    untracked_tracks=$(( _all - _trk )); [ "$untracked_tracks" -lt 0 ] && untracked_tracks=0
+    _trk="$(git -C "$H" ls-files -- tracks 2>/dev/null)"
+    for _f in "$H"/tracks/*/session_*.md "$H"/tracks/_meta/*.md; do
+      [ -f "$_f" ] || continue
+      _rel="tracks/${_f#"$H"/tracks/}"
+      # 🟥 파이프를 쓰지 마라 — `printf "$_trk" | grep -qxF` 는 `set -o pipefail` 아래에서
+      #    매치했을 때 생산자가 SIGPIPE 로 죽어 rc=141 을 올린다(= 매치를 «무매치» 로 읽는다).
+      #    `_trk` 는 허브가 커지면 같이 커지는 명령 출력이라 상한이 없다. here-string 은 파이프가
+      #    아니라 그 경합이 아예 없다. 같은 자리의 실사고는 `mapped_tracks.sh` 쪽 — 레인 L8d.
+      if grep -qxF "$_rel" <<<"$_trk"; then continue; fi
+      untracked_tracks=$(( untracked_tracks + 1 ))
+    done
   else
     # git 이 아니면 «없음»이 아니라 «못 쟀음» — 픽스처/비-git 디렉터리를 0 으로 접지 않는다.
     untracked_tracks=UNMEASURABLE
