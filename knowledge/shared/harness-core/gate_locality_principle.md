@@ -17,12 +17,34 @@ This is a sibling of the **judge-robustness / mechanical-anchor** spine: judge-r
 let a foolable judge hold the terminal verdict*; gate-locality says *don't put the gate somewhere the
 enforcer can't see it*. Both fail the same way — a control that looks present but cannot actually fire.
 
-## The failure mode (two observed shapes)
+## The failure mode (three observed shapes)
 
 | Shape | Where the gate was | Who needed it | Why it didn't fire |
 |---|---|---|---|
 | **Code-locality** | absent from the write path entirely | the function that writes to JIRA | the writeback gate checked confidence but not provenance, so a self-inferred finding auto-posted as if verified |
 | **File-locality** | only in a Claude-only `CLAUDE.md` | a Gemini/Codex orchestrator that auto-loads root `AGENTS.md`, not `CLAUDE.md` | the runtime assumed the commander *role* without inheriting the *gates* |
+| **Trigger-locality** (added 2026-09-28) | in the right hook, running the right checks | the commit that changes a path the hook's **trigger pattern** does not match | the gate code is correct and never runs — and "no path matched" renders exactly like "all checks passed" |
+
+**The third shape is the quietest, because nothing is misplaced.** The gate lives where the enforcer
+reads it; only its *trigger* — a path pattern deciding whether the gate runs at all — leaves a class
+of changes outside. FH hit it four times on its own gate (`scripts/` · `AGENTS.md` inheritance ·
+agent definitions · `SKILL_detail.md` — the history sits in `scripts/gate_pathspec_check.sh`'s header,
+which is also the mechanical anchor for FH's instance). The **first field-harness instance** was
+measured 2026-09-28 on friends-on-desk: its pre-commit runs the quality gate only when a staged path
+matches an **allowlist** of directories, and the app-code directory was not on it — of 171
+September `main` commits, 24 touched a path under `standalone/` and nothing on the list (18 if the
+predicate is narrowed to `standalone/overlay/src/`; either way a lower bound, since `main` is
+squash-merged and branch commits are not counted). The gate was caught up at merge time, by hand;
+the commit-time green said nothing about app code.
+**Fix pattern specific to this shape**: prefer a **skip-list** ("run unless every staged path is
+known-safe") over an allowlist ("run only if a path is listed"). An allowlist puts every *new*
+directory outside the gate by default. A skip-list moves the *default* to the over-block side — but it
+is **not** fail-closed on its own: it fails silently too if a skip entry is broad (a parent directory
+that later grows code), or if the "every staged path is skippable" predicate is malformed and matches
+everything. So the choice buys a better default, not safety; the safety comes from the lane — a
+known-pair that **extracts the live pattern from the hook** (a copy drifts from the thing it
+verifies) and asserts both directions: code paths, including a *not-yet-existing* directory, run the
+gate; the handful of genuinely safe paths do not; a mixed commit runs it.
 
 Both were found 2026-06-20 across **two field harnesses** (Harness-A: a provenance gate missing from a
 write path; Harness-B + Harness-A: orchestration gates that lived only in a Claude-only file). The
@@ -74,7 +96,8 @@ locality — review alone cannot show it (review reads all files; the runtime do
   enforcing actor never loads.
 
 These are external anchors for the **prose-vs-mechanical premise**; the locality claim itself
-(N=2, one operator) still awaits direct cross-operator confirmation as named above.
+(N=2, one operator) still awaits direct cross-operator confirmation as named above. The
+trigger-locality shape (2026-09-28) adds a second harness, not a second operator — same caveat.
 
 ## Relationship to other FH assets
 
