@@ -1,5 +1,19 @@
 # forge-harness (fh-meta) Changelog
 
+### [Unreleased] — 로컬 main 에 FH 자산을 직접 커밋하지 못한다
+
+**minor — 게이트를 조인다.** 다음 릴리스의 버전 범프에서 minor 로 올린다.
+
+> 🟥 **BREAKING (gate): FH 자산이 staged 된 커밋이 `main`/`master` 위에서는 pre-commit 에 막힌다** — 브랜치로 옮겨라
+> (`git switch -c <branch>`, staged 변경은 따라온다). 의도한 것이면 `MAIN_COMMIT_OK=1 git commit …`
+> (`tracks/_meta/.main_commit_override_log` 에 기록). «FH 자산」 = 4축 분류기가 잡는 파일이다 — 그 밖의 파일만
+> staged 된 커밋(예: `package.json` 단독)과 detached HEAD(리베이스 진행 중 · bisect)는 대상이 아니다.
+> main 위의 merge · cherry-pick · revert · `--amend` 커밋은 **막힌다**(모두 main 에 새 커밋을 쓴다).
+
+- **`scripts/main_commit_guard.sh`** + pre-commit 배선 — 통합 브랜치는 PR 전용인데 로컬 main 커밋이 N≥5 났다
+  (09-11 · 09-18 ×2 · 09-20). 푸시 게이트보다 먼저, 커밋하는 자리에서 막는다. 레인 `scripts/test_main_commit_guard_lanes.sh`
+  (단위 5 · 실제 훅 4 · 되돌림 1).
+
 ### [3.22.2] — 2026-09-28 — 설치된 패키지의 자기검사가 없는 파일을 실패로 부르지 않고, 훅 계약 문서가 공식 문서와 실측을 가른다
 
 **patch — 수정 + 문서.** 소비자의 게이트 수용은 안 깬다(막는 쪽으로 바뀐 것 없음).
