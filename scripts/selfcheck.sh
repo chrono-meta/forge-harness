@@ -53,6 +53,11 @@ sys.exit(0 if any(p == f or p.startswith(f.rstrip('/') + '/') for f in files) el
 SHIPPY
 }
 
+# Package mode = an installed tarball, not a checkout. The discriminator is a `.git` entry at this
+# tree's root (selfcheck cd's there first) — NOT `git rev-parse`, which would find a consumer's own
+# repo above node_modules and call their install a checkout. A worktree's `.git` is a file; -e covers it.
+_package_mode() { [ ! -e .git ]; }
+
 # ── The single verdict for "my subject is not here" ───────────────────────────────────────────
 # Measured 2026-08-12 (card §🔱⑮ A2): **18 blocks in this file** rendered a green SKIP when their
 # subject was absent, and **all 18 subjects are declared in package.json files[] and present in the
@@ -200,7 +205,18 @@ for f in scripts/*.sh bin/fh-gate bin/fh-run bin/fh-goal \
   if [ ! -f "$f" ]; then
     case "$f" in
       *'*'*) continue ;;   # unmatched glob (nullglob off) — not a real path, legitimate skip
-      *) echo "FAIL  bash -n coverage: gate-chain infra file missing: $f"; fail=1; continue ;;
+      *) # 🟥 Package mode (2026-09-28): the three extensionless bin wrappers are NOT in files[]
+         #    (only their .js twins ship), so in an installed tarball they are absent by design and
+         #    this line failed every consumer's `npm test`. Absent is legitimate ONLY when the path is
+         #    undeclared AND this tree is not a git checkout — in a checkout (CI, the author) the
+         #    2026-09-03 deletion hole stays closed. Declared-but-absent and unreadable manifest stay FAIL.
+         _ships_per_files "$f"; _sp=$?
+         if [ "$_sp" -eq 1 ] && _package_mode; then
+           echo "SKIP  bash -n coverage: $f (not in package.json files[] and this is an installed package, not a checkout)"
+         else
+           echo "FAIL  bash -n coverage: gate-chain infra file missing: $f"; fail=1
+         fi
+         continue ;;
     esac
   fi
   check "bash -n $f" bash -n "$f"
@@ -641,9 +657,41 @@ fi
 if [ ! -f scripts/test_locale_invariance_lanes.sh ]; then
   echo "FAIL  locale-invariance lanes: scripts/test_locale_invariance_lanes.sh 가 없다 (부재는 통과가 아니다)"
   fail=1
-elif ! bash scripts/test_locale_invariance_lanes.sh >/dev/null 2>&1; then
-  echo "FAIL  locale-invariance lanes"
-  fail=1
+else
+  # 🟥 The suite's contract is 0 pass · 1 regression · 2 an arm UNMEASURED. The first version read
+  #    any non-zero as FAIL, so an installed package — which deliberately does not ship
+  #    test_marker_soul_tenet_lanes.sh (its fixture registry .claude/soul_tenets.txt is not shipped) —
+  #    failed `npm test` on a coverage gap the suite itself labels "not a regression" (2026-09-28).
+  #    rc=2 stays FAIL in a checkout: there every suite exists, so UNMEASURED means a missing UTF-8
+  #    locale, and a green without its control is not a measurement (the rule above).
+  _li_out="$(bash scripts/test_locale_invariance_lanes.sh 2>&1)"; _li_rc=$?
+  case "$_li_rc" in
+    0) : ;;
+    2) # Non-blocking ONLY for the one expected reason: a suite that is absent because it is not
+       #    shipped. rc=2 also means real instrument breakage against shipped subjects (hook count
+       #    extraction, dead mutation controls) — that must stay FAIL even in a package (codex, 2026-09-28).
+       _li_other=0
+       while IFS= read -r _l; do
+         case "$_l" in
+           *'이 트리에 스위트가 없다'*)
+             _s=$(printf '%s\n' "$_l" | grep -oE 'test_[A-Za-z0-9_]+' | head -1)
+             if [ -z "$_s" ]; then _li_other=1
+             else _ships_per_files "scripts/$_s.sh"; [ "$?" -eq 1 ] || _li_other=1; fi ;;
+           *) _li_other=1 ;;
+         esac
+       done < <(printf '%s\n' "$_li_out" | grep -F 'UNMEASURED' | grep -vF '팔 하나 이상이 UNMEASURED')
+       if _package_mode && [ "$_li_other" -eq 0 ]; then
+         echo "⚠️  locale-invariance lanes: an arm is UNMEASURED in this installed package (unshipped suite — not a pass, not blocking):"
+         printf '%s\n' "$_li_out" | grep -F 'UNMEASURED' | sed 's/^/      /'
+       else
+         echo "FAIL  locale-invariance lanes (rc=2 — arm UNMEASURED in a checkout)"
+         printf '%s\n' "$_li_out" | grep -F 'UNMEASURED' | sed 's/^/      /'
+         fail=1
+       fi ;;
+    *) echo "FAIL  locale-invariance lanes (rc=$_li_rc)"
+       printf '%s\n' "$_li_out" | grep -vE 'ok$' | tail -20 | sed 's/^/      /'
+       fail=1 ;;
+  esac
 fi
 
 # multibyte-bracket lint — 열거로는 안 닫힌다. POSIX 브래킷은 비-UTF-8 로케일에서 바이트
