@@ -142,7 +142,17 @@ _SESS=0
 _SESS_NAMES=""
 _is_shipped() {  # $1 = path relative to HUB_ROOT
   [ "$_TRACKED_OK" = "1" ] || return 1
-  printf '%s\n' "$_TRACKED" | grep -qxF "$1"
+  # 🟥 here-string, NOT a pipe. Under `set -o pipefail` a matching `grep -qxF` exits before
+  #    reading its input, the producer dies of SIGPIPE, and pipefail raises that 141 as the
+  #    pipeline's status — so **a match is read as a non-match**. `$_TRACKED` is `git ls-files`
+  #    output, which grows with the hub, so there is no structural bound to hide behind: the
+  #    scanner's own measurements put the onset near ~16 KB (`pipefail_earlyexit_scan.sh` header),
+  #    ≈300 tracked paths under tracks/. Reproduced deterministically at 6,000 paths
+  #    (2026-09-28): pipe form → rc=141 “NO-MATCH”, here-string → MATCH.
+  # 🟥 And the direction is the one this function exists to prevent: a shipped file read as
+  #    user-made makes a **fresh clone** answer `returning`, the onboarding FP CLAUDE.md names.
+  #    Lane: test_mapped_tracks_lanes.sh §L-pipe.
+  grep -qxF "$1" <<<"$_TRACKED"
 }
 for _f in "$HUB_ROOT"/tracks/*/session_*.md "$HUB_ROOT"/tracks/_meta/*.md; do
   [ -f "$_f" ] || continue
