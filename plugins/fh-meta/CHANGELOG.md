@@ -1,5 +1,20 @@
 # forge-harness (fh-meta) Changelog
 
+### [3.22.2] — 2026-09-28 — 설치된 패키지의 자기검사가 없는 파일을 실패로 부르지 않고, 훅 계약 문서가 공식 문서와 실측을 가른다
+
+**patch — 수정 + 문서.** 소비자의 게이트 수용은 안 깬다(막는 쪽으로 바뀐 것 없음).
+
+- **`scripts/selfcheck.sh` 부분 수리** — 설치된 패키지에서 출하 안 된 bin 래퍼 3개를 FAIL 이 아니라 SKIP 으로
+  부른다(체크아웃에서 지운 것은 여전히 FAIL). 로케일 rc=2 는 «미출하 스위트 부재」 사유일 때만 경고.
+  post_squash · pr_merge 레인을 `files[]` 에 더했다(타르볼 21/0). ⚠️ 배포본 `npm test` 는 체크아웃을 전제하는
+  스위트 때문에 아직 rc=1 이다 — 부분 수리임을 명시한다.
+- **`knowledge/shared/harness-core/hook_channel_visibility.md` §1-c** — 공식 hooks 문서의 계약(시간 초과 시 진행 ·
+  command 훅 기본 600초 · exit 1 비차단 · PermissionRequest 의 exit 2 무시)을 «문서 계약 · 실측 미재현」 칸으로
+  실측과 분리. CLI 2.1.283 = npm latest, 282→283 사이 훅 계약 변경 없음.
+- **`gate_locality_principle.md` 셋째 모양 «트리거 경로 사각」** · **`checkout_layer_drift.md` 다섯째 층 TOOLCHAIN**
+  (같은 판정이 도구 버전에 따라 갈리는 층 — Pillow 12.2 → 0/156 · 11.3 → 7/156).
+- `scripts/utterance_skill_probe.sh` route 그림자(`FH_ROUTE_SHADOW` 일 때만, 기본 끔 · 출하 목록 밖) · 디스패치 원장.
+
 ### [3.22.1] — 2026-09-28 — 동반 저장소 미러가 서드파티 클론을 안 싣고, 훅 제한 시간 관측을 싣는다
 
 **patch — 수정 하나 + 문서.** 소비자의 게이트 수용은 안 깬다(막는 쪽으로 바뀐 것 없음).
