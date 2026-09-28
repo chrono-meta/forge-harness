@@ -38,8 +38,8 @@ gitignored)이고, 이 문서는 그 판정만 옮긴다. 모델은 전부 sonne
 ## 1-b. 관측 — 제한 시간을 넘긴 PreToolUse 훅 뒤에 도구가 **실행됐다** (표면 미확인 · 한 조건)
 
 > **적용 범위를 먼저 읽어라**: CLI 2.1.283 · sonnet · Bash 도구 한 명령(원장에 명령 원문·권한 모드·표면이
-> 안 적혔다) · 팔당 reps=3. **대화형 pty 인지 헤드리스 `-p` 인지 모른다.** 공식 문서의 제한 시간 계약과
-> 대조하지 않았다. PermissionRequest 훅 · 자동승인 훅이 있는 조합은 **이 표로 말할 수 없다**.
+> 안 적혔다) · 팔당 reps=3. **대화형 pty 인지 헤드리스 `-p` 인지 모른다.** PermissionRequest 훅 · 자동승인
+> 훅이 있는 조합은 **이 표로 말할 수 없다**. 공식 문서와의 대조는 §1-c(2026-09-28) — 이 표는 실측만 싣는다.
 
 | 팔 (위 조건 그대로) | reps | 착지 |
 |---|---|---|
@@ -57,7 +57,24 @@ gitignored)이고, 이 문서는 그 판정만 옮긴다. 모델은 전부 sonne
 - §1 과 같은 방향의 관측이다: 이 조건에서 멈춘 것은 **제한 안에 도착한** deny 뿐이었다.
 - **미측정**: ⓐ 표면(대화형 / 헤드리스) ⓑ 제한 시간 경계 ⓒ PermissionRequest 훅의 시간 초과 ⓓ 자동승인
   훅이 있을 때 ⓔ 다른 도구(Edit · MCP) ⓕ 다른 CLI 버전. 출처: 필드 하네스(데스크톱 펫 게이트) 세션 원장
-  2026-09-27(로컬, gitignored).
+  2026-09-27(로컬, gitignored). 이 중 ⓑ·ⓒ·ⓔ·ⓕ 는 공식 문서가 답한다 — **«문서 계약 · 실측 미재현»** 으로 §1-c 에
+  따로 적었다. 이 목록에서 지우지 않는다: 우리가 잰 것은 여전히 아니다.
+
+## 1-c. 공식 문서 계약 — 실측과 **다른 칸**이다 (수집 2026-09-28)
+
+> 출처: Claude Code Hooks reference `https://code.claude.com/docs/en/hooks` (수집일 2026-09-28, 인용 행 번호는
+> 그날 받은 사본 기준) · CLI `2.1.283` = npm `@anthropic-ai/claude-code` latest(같은 날 `npm view` · `claude --version`).
+> 🟥 **이 표는 «문서가 그렇게 말한다」이지 «우리가 쟀다」가 아니다.** §1·§1-b 의 실측 칸과 섞어 인용하지 마라.
+
+| 계약 | 문서 원문(요지) | 우리 실측과의 관계 |
+|---|---|---|
+| PreToolUse 의 `command`·`http`·`mcp_tool` 훅이 **시간 초과되면 도구는 진행**한다 | «A timed-out … hook doesn't block the tool call … don't count on a stalled hook to act as a gate» (§Timeouts, 855행) | §1-b 실측(3/3 실행됨)과 **같은 방향 — 문서가 확인** · 반대로 Agent SDK 콜백 훅은 시간 초과면 막는다(같은 절) — 우리는 안 쟀다 |
+| 훅 기본 제한 시간 | `command`·`http`·`mcp_tool` **600초** · `prompt` 30 · `agent` 60 · 일부 이벤트는 30/10 으로 낮춤 (428행) | 문서 계약 · 실측 미재현(§1-b ⓑ 경계) |
+| 시간 초과 훅은 출력이 버려져 **판정이 없다** | «cancels … discarding the hook's output, so on most events a timed-out hook renders no decision» (851행) | 문서 계약 · 실측 미재현(§1-b ⓒ PermissionRequest 시간 초과 — 판정 없음 = 정상 권한 흐름이라는 것은 **이 일반 규칙에서 읽은 것**이지 이벤트별 문장이 아니다. 단 문서는 프롬프트를 못 띄우는 세션에서는 훅 판정이 없으면 도구 호출이 **거부**된다고 따로 적는다(1875행) — 표면에 따라 방향이 갈린다) |
+| **exit 1 은 막지 않는 오류** — 진행한다 (**대부분의 이벤트** — 같은 절이 worktree 이벤트 등 예외를 따로 적는다) | «For most hook events … treats exit code 1 as a non-blocking error and proceeds with the action» (846행) | 문서 계약 · 실측 미재현. 함의: PreToolUse 게이트 훅의 인터프리터가 죽어 트레이스백과 함께 exit 1 이 나면 **fail-open** 이다 |
+| **PermissionRequest 의 exit 2 는 무시**된다 | «Exit code 2 isn't honored for this event … Deny through the `decision` object» (865행) | 문서 계약 · 실측 미재현(§2 `exit 2` 행은 여전히 미측정). §4-1 의 «exit 2 는 멈춘다」는 **PreToolUse 에 한한다** |
+| 적용 도구 (PreToolUse 에 한해) | PreToolUse 시간 초과 문장이 «the tool call» 로 도구 종류를 가리지 않는다 — 다른 이벤트의 시간 초과 규칙이 아니다 | 문서 계약 · 실측 미재현(§1-b ⓔ Edit · MCP) |
+| 2.1.282 → 2.1.283 | CHANGELOG 2.1.283 절에 훅 **계약** 변경 없음 — 훅 언급 2줄은 `/hooks` 목록 UI 개선과 self-hosted runner 의 git 훅 처리 | §1(2.1.282)·§1-b(2.1.283) 실측을 두 버전에 걸쳐 같이 읽어도 계약 쪽 변화는 없다 — **동작 불변을 잰 것은 아니다** |
 
 ## 2. 채널 × 표면 × 시점
 
@@ -88,6 +105,9 @@ gitignored)이고, 이 문서는 그 판정만 옮긴다. 모델은 전부 sonne
 ## 4. 설계 함의
 
 1. **비가역을 멈추는 채널은 deny / exit 2 뿐이다.** ask 는 «사람이 프롬프트 앞에 있을 때» 의 채널이다.
+   도구 호출 권한 흐름에서 exit 2 가 막는 자리는 PreToolUse 다 — PermissionRequest 에서는 문서상 무시되고
+   `decision` deny 만 먹는다(§1-c).
+   그리고 판정은 **제한 시간 안에** 도착해야 한다 — 늦은 deny 는 진행이다(§1-b 실측 · §1-c 문서).
 2. **질문 창에서 사람을 돕는 부스트는 지금 없다.** systemMessage 는 고른 뒤에 그려지고, 나머지는
    안 그려진다. 후보: OSC 777(질문 쪽 미측정) · `updatedInput` 으로 선택지 설명에 싣기(질문을
    «바꾸는» 것이라 경계를 넘는다 — 운영자 결정) · 바깥 표면(펫 말풍선·상태표시줄).
