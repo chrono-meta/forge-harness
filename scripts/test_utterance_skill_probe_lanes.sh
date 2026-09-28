@@ -23,7 +23,7 @@ no(){ printf '  ❌ %s\n' "$1"; FAIL=$((FAIL+1)); }
 
 [ -f "$P" ] || { echo "FAIL  subject 부재: $P — ④ 계측 채널이 사라졌다"; exit 1; }
 
-T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
+T=$(mktemp -d); trap '_k=$(cat "$T/decider_calls.pid" 2>/dev/null); [ -n "$_k" ] && kill "$_k" 2>/dev/null; rm -rf "$T"' EXIT
 mkdir -p "$T/tracks/_meta"
 LOG="$T/tracks/_meta/utterance_skill_probe.log"
 run(){ CLAUDE_PROJECT_DIR="$T" TMPDIR="$T" bash "$P" "$@"; }
@@ -77,6 +77,98 @@ call sA s_bash Bash >/dev/null
 out=$(CLAUDE_PROJECT_DIR="$T/nosuchroot" TMPDIR="$T" bash "$P" --check <<<'{"tool_name":"Skill","tool_input":{}}'); rc=$?
 { [ -z "$out" ] && [ "$rc" = "0" ]; } && ok "CTRL-2 unwritable/absent log root → silent no-op, exit 0" \
                                       || no "CTRL-2 broke on an absent log root (stdout=[$out] rc=$rc)"
+
+# ── ROUTE SHADOW (2026-09-28) — off by default · detached · never on stdout · pinned to the Mac node ──
+#   R-OFF    FH_ROUTE_SHADOW unset → the decider is called ZERO times, even when it is present.
+#   R-ON     set → exactly one call; hook stdout stays empty; exit 0; argv pins qwen3:8b on `mac`
+#            (never the GPU node); the utterance arrives on the decider's stdin.
+#   R-FAIL   decider exits non-zero · decider absent → hook still exit 0 and silent.
+#   R-JOIN   the induced --check row carries mark=<t> equal to the <t> in the decider's --id.
+#   R-REVERT a mutant that lets the decider write to the hook's stdout (the injection path) must turn
+#            R-ON's stdout check red — else that check is decoration.
+DEC_DIR="$T/tracks/_meta/local_decider_2026-09-26"; mkdir -p "$DEC_DIR"
+CALLS="$T/decider_calls"
+cat > "$DEC_DIR/local_decide.py" <<'STUB'
+import os, sys
+body = sys.stdin.read()
+with open(os.environ["STUB_CALLS"], "a") as f:
+    f.write(" ".join(sys.argv[1:]) + " |nodes=" + os.environ.get("LOCAL_DECIDER_NODES", "") + " |stdin=" + body + "\n")
+print('{"choice":"STUB_ON_STDOUT"}')
+sys.exit(int(os.environ.get("STUB_RC", "0")))
+STUB
+umark(){ printf '{"session_id":"%s","prompt":"%s"}' "$1" "$2" | CLAUDE_PROJECT_DIR="$T" TMPDIR="$T" STUB_CALLS="$CALLS" bash "${3:-$P}" --mark; }
+ncalls(){ local n; n=$(grep -c . "$CALLS" 2>/dev/null); n=${n:-0}; case "$n" in *[!0-9]*) n=0 ;; esac; printf '%s' "$n"; }
+waitcalls(){ local i=0; while [ "$i" -lt 50 ] && [ "$(ncalls)" -lt "$1" ]; do sleep 0.1; i=$((i+1)); done; }
+
+rm -f "$CALLS"
+out=$(env -u FH_ROUTE_SHADOW bash -c 'printf "{\"session_id\":\"rOff\",\"prompt\":\"hi\"}" | CLAUDE_PROJECT_DIR="$1" TMPDIR="$1" STUB_CALLS="$2" bash "$3" --mark' _ "$T" "$CALLS" "$P"); rc=$?
+sleep 1
+{ [ "$(ncalls)" -eq 0 ] && [ -z "$out" ] && [ "$rc" = 0 ]; } && ok "R-OFF unset → decider called 0 times" \
+  || no "R-OFF decider ran without FH_ROUTE_SHADOW (calls=$(ncalls) stdout=[$out] rc=$rc)"
+
+rm -f "$CALLS"
+out=$(FH_ROUTE_SHADOW=1 LOCAL_DECIDER_NODES="mac=http://gpu-host:11434,gpu=http://gpu-host:11434" umark rOn "그래프 루프 돌릴까"); rc=$?
+waitcalls 1
+{ [ -z "$out" ] && [ "$rc" = 0 ]; } && ok "R-ON stdout empty · exit 0 (nothing reaches the session)" \
+  || no "R-ON hook leaked to stdout or failed: [$out] rc=$rc"
+[ "$(ncalls)" -eq 1 ] && ok "R-ON exactly one background call" || no "R-ON calls=$(ncalls) (want 1)"
+grep -q -- '--model qwen3:8b --node mac' "$CALLS" 2>/dev/null && ! grep -q -- 'gpu' "$CALLS" 2>/dev/null \
+  && grep -q -- '|nodes=mac=http://127.0.0.1:11434 |' "$CALLS" 2>/dev/null \
+  && ok "R-ON pinned to qwen3:8b on mac=localhost — an inherited LOCAL_DECIDER_NODES cannot redirect it" \
+  || no "R-ON node/model pin broken: $(cat "$CALLS" 2>/dev/null)"
+grep -q -- '--task route' "$CALLS" 2>/dev/null && grep -q '|stdin=그래프 루프 돌릴까' "$CALLS" 2>/dev/null \
+  && ok "R-ON route task · utterance on stdin" || no "R-ON task/stdin wrong: $(cat "$CALLS" 2>/dev/null)"
+
+call rOn s_joined >/dev/null
+_id=$(grep -o -- '--id rOn:[0-9T:.-]*' "$CALLS" 2>/dev/null | head -1); _id=${_id#--id rOn:}
+_mk=$(grep 'skill=s_joined ' "$LOG" 2>/dev/null | grep -o 'mark=[0-9T:.-]*' | head -1); _mk=${_mk#mark=}
+{ [ -n "$_id" ] && [ "$_id" = "$_mk" ]; } && ok "R-JOIN check row mark= equals the decider id time ($_mk)" \
+  || no "R-JOIN join key broken: id=[$_id] mark=[$_mk]"
+
+rm -f "$CALLS"
+out=$(FH_ROUTE_SHADOW=1 STUB_RC=1 umark rFail "x"); rc=$?; waitcalls 1
+{ [ -z "$out" ] && [ "$rc" = 0 ]; } && ok "R-FAIL decider exits 1 → hook exit 0, silent" || no "R-FAIL [$out] rc=$rc"
+mv "$DEC_DIR/local_decide.py" "$DEC_DIR/away.py"
+out=$(FH_ROUTE_SHADOW=1 umark rAbsent "x"); rc=$?
+{ [ -z "$out" ] && [ "$rc" = 0 ]; } && ok "R-FAIL decider absent → hook exit 0, silent" || no "R-FAIL(absent) [$out] rc=$rc"
+mv "$DEC_DIR/away.py" "$DEC_DIR/local_decide.py"
+
+# R-BLOCK — a decider that never reads stdin + a prompt far above any pipe buffer must not stall the hook
+cat > "$DEC_DIR/local_decide.py" <<'STUB2'
+import os, sys, time
+open(os.environ["STUB_CALLS"], "a").write("slow\n")
+open(os.environ["STUB_CALLS"] + ".pid", "w").write(str(os.getpid()))
+time.sleep(30)
+STUB2
+BIG=$(head -c 300000 /dev/zero | tr '\0' 'a')
+rm -f "$CALLS"; _t0=$(date +%s)
+out=$(printf '{"session_id":"rBig","prompt":"%s"}' "$BIG" | FH_ROUTE_SHADOW=1 CLAUDE_PROJECT_DIR="$T" TMPDIR="$T" STUB_CALLS="$CALLS" bash "$P" --mark 2>/dev/null >/dev/null & _p=$!; i=0; while kill -0 "$_p" 2>/dev/null && [ "$i" -lt 100 ]; do sleep 0.1; i=$((i+1)); done; kill -0 "$_p" 2>/dev/null && { kill "$_p"; echo HUNG; } || echo DONE)
+waitcalls 1
+{ [ "$out" = "DONE" ] && [ "$(ncalls)" -ge 1 ]; } && ok "R-BLOCK 300KB prompt + non-reading decider → hook returns within 10s" \
+  || no "R-BLOCK hook stalled on the decider ([$out], calls=$(ncalls))"
+_sp=$(cat "$CALLS.pid" 2>/dev/null); [ -n "$_sp" ] && kill "$_sp" 2>/dev/null
+mv "$DEC_DIR/local_decide.py" "$DEC_DIR/slow.py"
+cat > "$DEC_DIR/local_decide.py" <<'STUB3'
+import os, sys
+body = sys.stdin.read()
+with open(os.environ["STUB_CALLS"], "a") as f:
+    f.write(" ".join(sys.argv[1:]) + " |nodes=" + os.environ.get("LOCAL_DECIDER_NODES", "") + " |stdin=" + body + "\n")
+print('{"choice":"STUB_ON_STDOUT"}')
+STUB3
+
+# R-REVERT — 4 steps: build mutant · confirm it applied · run · expect the R-ON check to go red
+M="$T/probe_mutant.sh"
+sed 's/stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL/stdout=None, stderr=None/' "$P" > "$M"
+if cmp -s "$P" "$M"; then
+  no "R-REVERT mutant did not apply (sed matched nothing) — HARNESS-ERROR, not a pass"
+else
+  rm -f "$CALLS"
+  out=$(FH_ROUTE_SHADOW=1 umark rMut "x" "$M"); waitcalls 1
+  case "$out" in
+    *STUB_ON_STDOUT*) ok "R-REVERT injecting mutant is caught — R-ON's stdout check is live" ;;
+    *) no "R-REVERT mutant leaked nothing to stdout — the stdout check cannot see injection ([$out])" ;;
+  esac
+fi
 
 echo "utterance-skill probe: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ] || exit 1

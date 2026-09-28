@@ -35,6 +35,30 @@
 # Token is keyed by session_id when the hook contract supplies one; when it does not, the row is
 # logged as `sid=NONE` so the gap is visible in the data instead of silently corrupting it.
 #
+# ── ROUTE SHADOW (2026-09-28, operator decision «맥 전용으로 가자») — OFF unless FH_ROUTE_SHADOW ──
+# `--mark` may hand the utterance to a local decider in the background, to measure how often a small
+# local model picks the same skill the session actually invoked. Contract, unchanged from above:
+#   · stdout 0 · exit 0 · every failure swallowed. The decider runs DETACHED; its stdout/stderr go to
+#     /dev/null and nothing it returns is ever read by this script, so NOTHING reaches the session's
+#     context. Injecting it would contaminate the very routing being measured.
+#   · Node/model are PINNED: `--model qwen3:8b --node mac`, and the child gets
+#     LOCAL_DECIDER_NODES="mac=http://127.0.0.1:11434" — so «mac» cannot be pointed at the GPU host by
+#     an inherited env. The GPU node is reserved for the permission judge (a model swap there costs
+#     minutes of reload).
+#   · The prompt reaches the child as an UNLINKED temp file on stdin, not a pipe — a pipe write larger
+#     than the buffer would block this hook until the child reads.
+#   · The decider is `tracks/_meta/local_decider_2026-09-26/local_decide.py`, a gitignored local
+#     instrument. If it is absent (every install but the author's) the branch does nothing.
+#   · Ledger `tracks/_meta/route_shadow.jsonl`, row id `<sid>:<mark stamp>` (second + nanoseconds).
+#     The decider as of 2026-09-28 stores `input_sha256`, never the utterance text — that is a
+#     property of that untracked file, not something this hook can guarantee. Residual: `sid` is
+#     truncated to 16 chars (inherited from the log format).
+#   · The JOIN key is the `mark=` field `--check` now writes on induced rows. What it joins to — the
+#     first skill the session actually invoked — is a PROXY, not ground truth: a session can invoke
+#     the wrong skill, or only propose one and invoke none. Agreement measured here is «decider ==
+#     session behaviour»; disagreements need a human label.
+# Turn on (operator's shell or settings env — never by the session):  export FH_ROUTE_SHADOW=1
+#
 # test:  printf '{"tool_name":"Skill","tool_input":{}}' | bash scripts/utterance_skill_probe.sh --check
 set -u
 MODE="${1:---check}"
@@ -45,7 +69,7 @@ ROOT="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}
 LOG="$ROOT/tracks/_meta/utterance_skill_probe.log"
 [ -d "$ROOT/tracks/_meta" ] || exit 0
 
-printf '%s' "$RAW" | MODE="$MODE" LOG="$LOG" python3 -c '
+printf '%s' "$RAW" | MODE="$MODE" LOG="$LOG" ROOT="$ROOT" python3 -c '
 import json, os, sys, time
 try:
     d = json.load(sys.stdin)
@@ -64,10 +88,41 @@ def note(line):
         pass
 
 if mode == "--mark":
+    # mark = second + nanoseconds: two utterances in the same second must not share a join key
+    mk = now + ".%09d" % (time.time_ns() % 1000000000)
     try:
-        open(tok, "w").write(now)
+        open(tok, "w").write(mk)
     except Exception:
         pass
+    root = os.environ.get("ROOT", "")
+    dec = os.path.join(root, "tracks/_meta/local_decider_2026-09-26/local_decide.py")
+    prompt = d.get("prompt")
+    if os.environ.get("FH_ROUTE_SHADOW") and root and os.path.isfile(dec) \
+            and isinstance(prompt, str) and prompt.strip():
+        try:
+            import subprocess, tempfile
+            # stdin is an UNLINKED temp file, never a pipe: writing a large prompt into a pipe the
+            # child has not read yet would block this hook (codex 2026-09-28 S-1).
+            fd, tmp = tempfile.mkstemp(prefix="fh_route_")
+            try:                     # unlink on EVERY path — the file holds the raw utterance
+                buf = prompt.encode("utf-8")
+                while buf:
+                    buf = buf[os.write(fd, buf):]
+                os.lseek(fd, 0, 0)
+                env = dict(os.environ)
+                env["LOCAL_DECIDER_NODES"] = "mac=http://127.0.0.1:11434"   # «mac» = this machine, pinned here
+                subprocess.Popen(
+                    [sys.executable, dec, "--task", "route", "--input", "-",
+                     "--model", "qwen3:8b", "--node", "mac", "--k", "1",
+                     "--id", "%s:%s" % (sid, mk),
+                     "--ledger", os.path.join(root, "tracks/_meta/route_shadow.jsonl")],
+                    stdin=fd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    env=env, start_new_session=True)
+            finally:
+                try: os.unlink(tmp)      # unlink first: a close() error must not strand the raw text
+                finally: os.close(fd)
+        except Exception:
+            pass
     sys.exit(0)
 
 if d.get("tool_name") != "Skill":
@@ -85,11 +140,15 @@ for k in ("skill", "skill_name", "name", "command"):
         name = v[:60]; break
 
 induced = os.path.exists(tok)
+marked = ""
 if induced:
+    try: marked = open(tok).read().strip()[:40]   # the mark stamp = the route-shadow join key
+    except Exception: pass
     try: os.remove(tok)          # consume: only the FIRST skill of an utterance counts
     except Exception: pass
 
-note("%s sid=%s induced=%s skill=%s keys=[%s]"
-     % (now, sid, "YES" if induced else "no", name or "?", keys))
+note("%s sid=%s induced=%s skill=%s keys=[%s]%s"
+     % (now, sid, "YES" if induced else "no", name or "?", keys,
+        (" mark=" + marked) if marked else ""))
 ' 2>/dev/null || true
 exit 0
