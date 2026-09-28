@@ -1718,6 +1718,16 @@ else
   fail=1
 fi
 
+# main-commit guard (2026-09-29) — FH assets never land on main/master by a local commit. Same
+# subject/anchor shape as branch_claim above; both ship, so an absent subject is a deletion, not a skip.
+if [ ! -f scripts/main_commit_guard.sh ]; then
+  _absent_subject_verdict "test_main_commit_guard_lanes.sh" "scripts/main_commit_guard.sh" || fail=1
+elif [ -f scripts/test_main_commit_guard_lanes.sh ]; then
+  bash scripts/test_main_commit_guard_lanes.sh || fail=1
+else
+  echo "FAIL  test_main_commit_guard_lanes.sh: main_commit_guard.sh present but its anchor is missing"; fail=1
+fi
+
 # prless_delta_scan lanes — «커밋은 됐는데 착륙 경로에 안 올라간» 델타를 세는 advisory 계기.
 # 🟥 레인의 하중선은 **음성 컨트롤**이다: 이 레포는 squash 머지를 쓰므로 순진한 per-commit 비교는
 #    이미 착륙한 브랜치를 «미착륙» 으로 읽는다(2026-09-19 실측: naive 33/40 · git cherry 17/40 ·

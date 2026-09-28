@@ -561,6 +561,18 @@ else
   GATE_MODE="lightweight"
 fi
 
+# ── Main-commit guard (2026-09-29) — FH assets never land on main/master by a local commit ──
+# Placed HERE, after the «no FH asset → exit 0» return, on purpose: the scope is FH assets only;
+# a companion-store or non-FH commit must not reach it. Detail + override: scripts/main_commit_guard.sh
+MCG="$REPO_ROOT/scripts/main_commit_guard.sh"
+if [ -f "$MCG" ]; then
+  if ! EVIDENCE_ROOT="$EVIDENCE_ROOT" MAIN_GUARD_BRANCH="$BRANCH" bash "$MCG"; then
+    FAILED=1
+  fi
+else
+  echo "  ⚠️  main-commit guard NOT INSTALLED (scripts/main_commit_guard.sh) — skipped, not passed"
+fi
+
 # TOCTOU 완화: 앞선 branch-claim check 이후 게이트들이 도는 동안 peer 가 브랜치를 옮길 수
 # 있다. 최종 판정 직전에 한 번 더 돌려 창을 좁힌다. (원자적 close 는 reference-transaction
 # 훅의 몫 — 이건 완화이지 해결이 아니다.)
