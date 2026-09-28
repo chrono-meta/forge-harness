@@ -114,7 +114,11 @@ _bl=$(bash "$SC" --key "$G/blank.tsv" --runs "$G" 2>&1 | awk -F'\t' '$1=="ARM-G_
 #      실측: 같은 커밋(600e774)이 `LC_ALL=C.UTF-8` 에서는 known-pair 성립, `POSIX`/`C` 에서는
 #      «scorer is DEAD». ⇒ **known-pair 를 로케일마다 돌린다.** 한 로케일만 재는 레인은
 #      이 결함 계열(PR #780 `wc -w` · #784 `${#var}` 에 이어 세 번째)을 구조적으로 못 본다.
-for _loc in POSIX C C.UTF-8; do
+# 🟥 UTF-8 팔은 **찾아서** 쓴다(codex 교차 검토 2026-09-29). `C.UTF-8` 을 박으면 그 로케일이 없는 머신에서
+#    대조 팔이 결함이 아니라 «로케일 부재」를 잰다. 없으면 이름 붙은 미측정 — PASS 로 접지 않는다.
+UTF8_LOC=$(locale -a 2>/dev/null | grep -iE '^(C|en_US)\.utf-?8$' | head -1)
+[ -n "$UTF8_LOC" ] || echo "  ⏭️  UNMEASURED (PASS 아님) — 이 머신에 UTF-8 로케일(C.UTF-8 · en_US.UTF-8)이 없다: P9 UTF-8 팔 · P9-rev control 미측정"
+for _loc in POSIX C ${UTF8_LOC:+"$UTF8_LOC"}; do
   _so="$(LC_ALL="$_loc" bash "$SC" --selftest 2>&1)"
   case "$_so" in
     *"scorer known-pair held"*)
@@ -146,13 +150,18 @@ else
   esac
   # 판별력 컨트롤: 같은 뮤턴트가 UTF-8 에서는 여전히 성립해야 한다. 안 그러면 뮤턴트가
   # 로케일과 무관하게 부서진 것이고, P9-rev 의 적색은 이 결함의 증거가 아니다.
-  _mu="$(LC_ALL=C.UTF-8 bash "$MUTS" --selftest 2>&1)"
-  case "$_mu" in
-    *"scorer known-pair held"*) ok "P9-rev control — 같은 뮤턴트가 UTF-8 에서는 성립(로케일이 변수다)" ;;
-    *) bad "P9-rev control — 뮤턴트가 UTF-8 에서도 죽는다: 변수가 로케일이 아니게 됐다" ;;
-  esac
+  if [ -n "$UTF8_LOC" ]; then
+    _mu="$(LC_ALL="$UTF8_LOC" bash "$MUTS" --selftest 2>&1)"
+    case "$_mu" in
+      *"scorer known-pair held"*) ok "P9-rev control — 같은 뮤턴트가 UTF-8($UTF8_LOC) 에서는 성립(로케일이 변수다)" ;;
+      *) bad "P9-rev control — 뮤턴트가 UTF-8($UTF8_LOC) 에서도 죽는다: 변수가 로케일이 아니게 됐다" ;;
+    esac
+  fi
   rm -f "$MUTS"
 fi
 
 printf 'PASS %d · FAIL %d\n' "$PASS" "$FAIL"
-[ "$FAIL" -eq 0 ]
+[ "$FAIL" -eq 0 ] || exit 1
+# 0 통과 · 1 실패 · 2 팔 미측정(UTF-8 로케일 부재) — 미측정을 초록 종료코드로 접지 않는다(codex R2)
+[ -n "$UTF8_LOC" ] || { echo "rc=2 — UTF-8 팔 미측정"; exit 2; }
+exit 0
