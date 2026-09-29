@@ -4574,3 +4574,22 @@
     15행 분류, 1순위(배포본 npm test 파손)를 타르볼 실측으로 확인 → #832
   learning: >-
     에이전트가 말한 원인(bin 3개)보다 실제가 넓었다(❌148) — 분류 결과는 실측 전 착수 근거일 뿐
+
+- date: 2026-09-29
+  session: 9d093859 (주간 — FoD v0.1.2~v0.1.6 · 칸 3 그림자 · Windows 이식 · FH 대화창)
+  agent: general-purpose ×13
+  task: >-
+    에이전트 로고 복원 · 게이트 창 호버 설명 · 게이트 14차(브랜치 정리 사람 패턴 · M3 · 회수 영수증) · S1 틀 r2 + 근거 PREREG ·
+    질문 판정기 R1~R3 · 지도 후속 · 클린룸 v2 재교정 · 게이트 수리(리다이렉트 파서 · 회수 링크) · Windows 이식(게이트 + 대화창) ·
+    FH 대화창 + 게이트 최신판 동조 · 머지 상태 증거 조각 · 외부 자료(Jev·Kev·Qwev) 읽기
+  count: 13
+  outcome: partial
+  evidence: >-
+    FoD #163 · #164(v0.1.5) · #166(v0.1.6) 머지·설치·릴리스, 전부 main 게이트 ×2 FAIL 0 · 대화창 레인 135/0 · Windows 레인 63/30/50 +
+    macOS 불변 차이 0 · 클린룸 v2 봉인 유지 · 머지 상태 증거 레인 29/0(되돌림 5) — 머지 보류(Axis 1 사실상 필수화 = 운영자 결정) ·
+    partial 사유: Windows 에이전트가 «라이브 금지» 지시에도 live.sh 에 --fingerprint 로 «물어봐서» 4레인이 실제로 돌고 기본 조립
+    트리를 오염(14:16 — build.sh 의 rm -rf 로 해소, 산출물 오염 0 확인) · 대화창 에이전트가 업무용 런처 이름을 소스에 박아 기밀 스캔 FAIL(거버너 수리)
+  learning: >-
+    «금지»는 지시문으로 안 닫힌다 — 모르는 플래그는 dry-run 이 아니라 실행이다. 임무문에 «live.sh 는 어떤 인자로도 부르지 마라 +
+    전용 FOD_WORK» 를 박는다(메모리 feedback_live_script_flag_probe_runs_the_lane). 채점기는 머지 스크립트 출력 안의 증거를 안 읽고
+    별도 `gh pr view … statusCheckRollup` 호출만 읽는다 — 절차로 먼저 닫고 코드는 운영자 결정 뒤.
