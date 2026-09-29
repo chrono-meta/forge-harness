@@ -253,6 +253,11 @@ If 🚨 items exist, insert before the standard Y/E/N in Step 3:
 
 `no` → remove that operation or cancel entirely. Safe remaining operations can continue.
 
+**Named residual — the plan is gated per step, never as a chain.** A composition whose steps each pass can
+still be harmful as a whole (skills that each soften one signal until it disappears). No check here reads
+the chain as one unit. The 🚨 table above flags a step only by its own type, so a harmless-looking step
+that shapes what a later irreversible step acts on is not flagged. Detail: `knowledge/shared/harness-core/capability_composition_contract.md §3`.
+
 ---
 
 ## Step 3. Approval → Execution
