@@ -47,7 +47,18 @@ command -v python3 >/dev/null 2>&1 || { echo "❌ HARNESS-ERROR — python3 miss
 # this file's own header reserves for exactly this ("harness error (setup failed, not a verdict)").
 # 🟥 This does NOT decide whether probes.md should ship. That is an operator call and is untouched;
 # what changes is only that the non-answer stops rendering as a verdict.
-[ -f "$PROBES_MD" ] || { echo "❌ HARNESS-ERROR — $PROBES_MD missing (not shipped in the npm package; the select/dry-run lanes need the hub repo)"; exit 10; }
+# 🟢 2026-09-29: in an INSTALLED package (no .git at the root) the missing probes.md no longer kills the
+#    whole suite — the scorer-only lanes (score-pair · reason-pair · majority · blackout · control-b ·
+#    advisory) need neither probes.md nor a checkout, so they run; the lanes that read the real probe
+#    files (select-guard · dead-pointer · dry-run · fail-fast · evidence) are skipped BY NAME and
+#    counted. In a checkout the same absence is still exit 10 — there it means a broken tree.
+NOPROBES=0
+if [ ! -f "$PROBES_MD" ]; then
+  if [ ! -e "$REPO_ROOT/.git" ]; then NOPROBES=1
+  else echo "❌ HARNESS-ERROR — $PROBES_MD missing (not shipped in the npm package; the select/dry-run lanes need the hub repo)"; exit 10; fi
+fi
+SKIPPED_BLOCKS=""
+_skipblock() { printf '  ⏭️  SKIP (PASS 아님 · 설치된 패키지 — probes.md 미출하) — %s\n' "$1"; SKIPPED_BLOCKS="$SKIPPED_BLOCKS [$1]"; }
 [ -f "$PROBES_LIVE" ] || { echo "❌ HARNESS-ERROR — $PROBES_LIVE missing"; exit 10; }
 
 T="$(mktemp -d)" || { echo "❌ HARNESS-ERROR — mktemp failed"; exit 10; }
@@ -186,6 +197,7 @@ out="$(_reason_row "$RROOT4" X4)"
 _lane RF4 reason-pair "control — a PASS row carries no reason (field is FAILED-TO-RUN-only)" \
   "PASS	" "$out"
 
+if [ "$NOPROBES" -eq 1 ]; then _skipblock "select-guard · dead-pointer · dry-run · fail-fast (read the real probes.md)"; else
 # ── select-guard: mechanical rule reproduces the real 12/21 split ──────────────────────────────
 echo ""
 echo "── select-guard ──────────────────────────────────────────────────"
@@ -452,6 +464,7 @@ else
 fi
 
 
+fi
 echo "── majority over reps (2026-09-06) ───────────────────────────────"
 # WHY THESE LANES EXIST. Until 2026-09-06 the scorer read only `*_r1.txt`, so a probe's verdict was
 # one sample. Re-scoring three real run artifacts then found 5 of 12 probes FLAKY — two runs 15
@@ -629,6 +642,7 @@ _lane AD1 advisory "advisory_re is recorded in reason and does not change the ve
   "PASS|advisory[deep-clarify] 3/3" "$r"
 
 echo ""
+if [ "$NOPROBES" -eq 1 ]; then _skipblock "evidence preservation EV1-EV8 (runner --ids needs probes.md)"; else
 echo "── evidence preservation (2026-09-14) ────────────────────────────"
 # WHY. Every run's response bodies went into a mktemp and died with it, so 2026-09-12 (pass_rate
 # 0.18) and 2026-09-13 (every probe 0/3) are PERMANENTLY unattributable — model blip, rate limit,
@@ -708,9 +722,11 @@ LIVE_EV="$REPO_ROOT/tracks/_meta/live_eval_runs"
 _lane EV8 evidence "control — the LIVE evidence dir was not written by these lanes" \
   "$LIVE_EV_BEFORE" "$([ -d "$LIVE_EV" ] && find "$LIVE_EV" -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ' || echo ABSENT)"
 
+fi
 echo ""
 echo "── summary ──────────────────────────────────────────────────────"
 echo "lanes: $N   failed: $([ "$FAIL" -eq 0 ] && echo 0 || echo '>=1')"
+[ -n "$SKIPPED_BLOCKS" ] && echo "skipped (installed package, not a pass):$SKIPPED_BLOCKS"
 if [ "$FAIL" -ne 0 ]; then
   echo "RESULT: REGRESSION"
   exit 1

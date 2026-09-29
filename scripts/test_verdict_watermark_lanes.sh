@@ -16,6 +16,11 @@ T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 pass=0; fail=0
 ok(){ printf '  ✅ %s\n' "$1"; pass=$((pass+1)); }
 no(){ printf '  ❌ %s\n' "$1"; fail=$((fail+1)); }
+# 패키지 모드(.git 없음 = 설치된 npm 트리)에서만: 의도적으로 미출하한 round/ 계기나 git 트리를 전제하는
+# 레인을 **이름 붙여** 건너뛴다 — PASS 로 세지 않는다. 체크아웃에서는 같은 부재가 여전히 ❌ 다.
+_pkg(){ [ ! -e "$ROOT/.git" ]; }
+skipped=0
+sk(){ printf '  ⏭️  SKIP (PASS 아님 · 패키지 모드) — %s\n' "$1"; skipped=$((skipped+1)); }
 [ -f "$S" ] || { echo "❌ HARNESS-ERROR — 채점기 없음: $S"; exit 10; }
 
 # 🟥 미끼 토큰은 조립한다 — 리터럴로 적으면 그 순간 tracked 코퍼스에 들어가고,
@@ -354,6 +359,7 @@ if [ -x "$_NLK" ] && [ -f "$_GK" ] && [ -f "$_QK" ] && [ -f "$_SK" ]; then
   bash "$_GK" "$_QK" "$_SK" post '' '' 'w12345678' 'w87654321' >/dev/null 2>&1
   [ "$?" = 5 ] && ok "L25d 검사기 부재 → 실패(스킵 아님)" || no "L25d 부재를 스킵으로 접는다"
   mv "$_mv" "$_NLK"; chmod +x "$_NLK"
+elif _pkg && [ ! -f "$_GK" ]; then sk "L25a~d — 게이트 scripts/round/gatecheck_qset.sh 는 의도적 미출하(ACCEPTED_ABSENT)"
 else no "L25 픽스처 없음 — 검사 못 함(스킵 아님)"; fi
 
 # ── L25e 🟥 nameleak_check 를 «직접» 부른다 — L25a~d 는 게이트를 통한 간접 호출뿐이라
@@ -393,6 +399,7 @@ if [ -x "$ROOT/scripts/round/fallback_reach_probe.sh" ]; then
   bash "$ROOT/scripts/round/fallback_reach_probe.sh" >/dev/null 2>&1 \
     && ok "L27 폴백이 실제로 탄다 (깨진 토큰 3종)" \
     || no "L27 폴백 미도달 — 폴백은 장식이고 48 바는 «인쇄»다"
+elif _pkg; then sk "L27 — scripts/round/fallback_reach_probe.sh 는 의도적 미출하(ACCEPTED_ABSENT)"
 else no "L27 프로브 없음 — 검사 못 함(스킵 아님)"; fi
 
 # ── L28 🟥 «처치 둘을 곱했을 때» — deliver 분기가 누적된 $q 를 버리면 안 된다 ───
@@ -449,5 +456,5 @@ printf 'q1\tpositive\t질문P\tcontext_continuity\t\t\n' > "$T/q6c.tsv"
 O=$(run29 "$T/q6c.tsv" "$T/o"); rc=$?
 [ "$rc" = 5 ] && ok "L29d 6열 qset 의 tracked 토큰 → 오염 차단(5)" || no "L29d 6열 qset 에서 오염 게이트가 눈을 감는다 [rc=$rc]"
 
-echo "verdict watermark lanes: $pass passed, $fail failed"
+echo "verdict watermark lanes: $pass passed, $fail failed$( [ "$skipped" -gt 0 ] && printf ', %s skipped (package mode — not a pass)' "$skipped")"
 [ "$fail" -eq 0 ] || exit 1

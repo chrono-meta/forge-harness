@@ -13,6 +13,20 @@
 - **`scripts/main_commit_guard.sh`** + pre-commit 배선 — 통합 브랜치는 PR 전용인데 로컬 main 커밋이 N≥5 났다
   (09-11 · 09-18 ×2 · 09-20). 푸시 게이트보다 먼저, 커밋하는 자리에서 막는다. 레인 `scripts/test_main_commit_guard_lanes.sh`
   (단위 5 · 실제 훅 4 · 되돌림 1).
+- **`npm test` = 소비자 프로필** — 설치된 패키지 안에서 `FH_SELFCHECK_PROFILE=consumer` 로 selfcheck 를 돌린다.
+  git 체크아웃이 있어야 잴 수 있는 스위트 8개(클론 · `.git/fh-claims` · docs/map · .github/workflows · .gitignore ·
+  `git ls-files` 가 필요한 것)는 **이름을 찍고** 건너뛰고, 끝에 목록을 한 번 더 낸다 — PASS 로 세지 않는다.
+  체크아웃·CI 에서는 이 프로필이 무시된다(경고). 전체는 `npm run test:full`. CI 는 전과 같이 전체를 돈다.
+  대부분 소비자에게도 의미 있는 스위트는 통째로 빼지 않는다 — `test_verdict_watermark_lanes.sh` 는 git 트리나
+  미출하 `round/` 계기가 필요한 레인 2묶음(L25a~d · L27)만 패키지 모드에서 이름을 찍고 건너뛴다(체크아웃에서는 여전히 실패).
+  `test_probe_live_eval_lanes.sh` 도 같다 — 채점기 레인 30개는 돌고, 미출하 `probes.md` 를 읽는 블록 둘만 이름을 찍고 건너뛴다.
+- **`context_continuity_score.sh` 오염 게이트의 비-git 대체 측정이 `tracks/` 를 뺀다** — 팔의 클론에 안 오는 경로를 훑어
+  입력(qset·봉인) 자신을 «오염」으로 잡고 있었다. 설치본에서 `--rescore` 가 rc=5 로 막히던 것이 풀린다(L21~L23 이
+  패키지에서 실제로 돈다).
+- **`scripts/round/nameleak_check.sh` 출하** — 출하되는 `context_continuity_score.sh` 의 `--rescore` 경로가 부르는데
+  안 실려서, 설치본에서 채점기가 rc=7 로 죽고 있었다(진짜 배포 누락). ⚠️ 채점기의 **회차 실행** 경로는 여전히
+  미출하 `round/gatecheck_qset.sh` 를 요구한다(rc=8) — 소비자는 회차를 안 돌린다는 기존 결정(ACCEPTED_ABSENT)대로다.
+- live-eval 문턱 0.8 — 근거를 실측으로 남겼다(아래 스크립트 주석). 값은 안 바꿨다.
 
 ### [3.22.2] — 2026-09-28 — 설치된 패키지의 자기검사가 없는 파일을 실패로 부르지 않고, 훅 계약 문서가 공식 문서와 실측을 가른다
 

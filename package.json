@@ -31,7 +31,8 @@
     "prepack": "find plugins -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null; true",
     "prepare": "chmod +x bin/fh-gate.js bin/fh-run.js bin/fh-goal.js bin/fh-codex-doctor.js scripts/fh-gate.sh scripts/fh-run.sh scripts/fh-goal.sh",
     "postinstall": "node scripts/postinstall_notice.js",
-    "test": "bash scripts/selfcheck.sh",
+    "test": "FH_SELFCHECK_PROFILE=consumer bash scripts/selfcheck.sh",
+    "test:full": "bash scripts/selfcheck.sh",
     "prepublishOnly": "bash scripts/prepublish_scope_note.sh && bash scripts/publish_freshness_check.sh && bash scripts/version_lockstep_check.sh && bash scripts/package_coverage_check.sh --vs-tarball && bash scripts/files_manifest_shipping_check.sh --vs-tarball && bash scripts/public_surface_scan_files.sh",
     "release": "bash scripts/public_surface_scan_files.sh && npm publish"
   },
@@ -148,6 +149,7 @@
     "scripts/compaction_probe.sh",
     "scripts/consent_registry_check.sh",
     "scripts/context_continuity_score.sh",
+    "scripts/round/nameleak_check.sh",
     "scripts/count_check.sh",
     "scripts/daily_report.sh",
     "scripts/degrade_direction_scan.sh",
