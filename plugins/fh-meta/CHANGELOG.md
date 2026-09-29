@@ -1,8 +1,8 @@
 # forge-harness (fh-meta) Changelog
 
-### [Unreleased] — 로컬 main 에 FH 자산을 직접 커밋하지 못한다
+### [3.23.0] — 2026-09-29 — 로컬 main 에 FH 자산을 직접 커밋하지 못하고, 설치본 npm test 가 소비자 프로필로 돈다
 
-**minor — 게이트를 조인다.** 다음 릴리스의 버전 범프에서 minor 로 올린다.
+**minor — 게이트를 조인다.**
 
 > 🟥 **BREAKING (gate): FH 자산이 staged 된 커밋이 `main`/`master` 위에서는 pre-commit 에 막힌다** — 브랜치로 옮겨라
 > (`git switch -c <branch>`, staged 변경은 따라온다). 의도한 것이면 `MAIN_COMMIT_OK=1 git commit …`
