@@ -1,5 +1,12 @@
 # forge-harness (fh-meta) Changelog
 
+### [3.23.1] — 2026-09-30 — 문서 · 기록 (3.23.0 을 함께 싣는 첫 발행)
+
+**patch.** 3.23.0 은 태그만 달리고 npm 에 발행되지 않았다 — 3.22.2 에서 올라오면 아래 3.23.0 의 BREAKING (gate) 도 이 발행에 들어 있다.
+
+- `capability_composition_contract.md §3` · `agent-composer` Step 2.7: 명명된 잔여 둘 — 스킬 조합 단위 검토 없음(arXiv:2609.30383) · 게이트는 행동을 판정하고 결과를 대조하지 않는다(arXiv:2609.31301)
+- 디스패치 원장 기록(`subagent_invocations_log.yaml`)
+
 ### [3.23.0] — 2026-09-29 — 로컬 main 에 FH 자산을 직접 커밋하지 못하고, 설치본 npm test 가 소비자 프로필로 돈다
 
 **minor — 게이트를 조인다.**
