@@ -494,6 +494,27 @@ Split honestly by moment; only one of the three is closable today.
   the table would merge confidently in the wrong direction — A3 is the known instance of that hazard,
   and the mitigation (strictness read off outcomes, `on_exceed` mandatory) covers only numeric axes.
 
+- **No composition-unit review.** The skill gates this note knows of (the 6-item bar ·
+  `asset-placement-gate` · the 4-axis gate) judge **one skill at a time**. A chain can be harmful while
+  each link passes. `arXiv:2609.30383` (Skill Cascading Attacks) splits one harmful goal across several
+  individually harmless skill edits; in the paper's example one skill weakens a warning, the next
+  down-ranks it, the last drops it from a summary, and no per-skill review sees it. That example was
+  **not reproduced here**. The Cross-Project Skill Bus and `agent-composer` are two places where FH
+  strings skills together, so the gap applies to FH. **What holds today** is narrower than a chain
+  check: a field capability's constraints merge strictest-wins (§ⓐ); standing consent never promotes a
+  class that *feeds* an irreversible sink (CLAUDE.md §Operational Adaptation Loop, taint rule); and the
+  irreversible step itself still meets its own gate (CLAUDE.md §Irreversibility Gates). None of the
+  three reads what the earlier links did to the data. No check reads the composed chain as one unit.
+  Named, not built.
+- **Gates judge the action, not its outcome.** FH's gates (and the FoD permission gate) decide on the
+  command before it runs. An approved action can still leave an unapproved persistent effect, and the
+  mismatch only shows when the approved execution is compared with the state it left behind — the case
+  `arXiv:2609.31301` (EffectMatch) handles at an execution boundary. The one outcome check this note
+  knows of on a merge path is `scripts/pr_merge_verified.sh`, which compares what `main` received
+  against the branch after a squash merge. It covers one surface and is not a general mechanism. This
+  note has not identified a general outcome record elsewhere (a wider search was not run). Named, not
+  built.
+
 ## References
 
 - `fh_integration_contract.md` — the inbound twin (how external callers invoke FH gates); verdict and
