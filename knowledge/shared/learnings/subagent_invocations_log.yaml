@@ -4593,3 +4593,31 @@
     «금지»는 지시문으로 안 닫힌다 — 모르는 플래그는 dry-run 이 아니라 실행이다. 임무문에 «live.sh 는 어떤 인자로도 부르지 마라 +
     전용 FOD_WORK» 를 박는다(메모리 feedback_live_script_flag_probe_runs_the_lane). 채점기는 머지 스크립트 출력 안의 증거를 안 읽고
     별도 `gh pr view … statusCheckRollup` 호출만 읽는다 — 절차로 먼저 닫고 코드는 운영자 결정 뒤.
+
+- date: 2026-09-29
+  session: 9d093859 (야간 전반 — 압축 전)
+  agent: general-purpose ×5
+  task: >-
+    게이트 마찰 수리(«이번만 허용» v0.1.7) · 세션 바로가기 설계(design_2026-09-29_fod-session-jump) · Jev 후속 · 링크 읽기(Kev/Qwev 논문) · 머지 상태 증거 조각
+  count: 5
+  outcome: partial
+  evidence: >-
+    v0.1.7 머지·설치·릴리스 · 설계 문서 착지 · 머지 증거 조각 레인 29/0 이나 머지 보류(운영자 결정) — 건수는 압축 전 인계 목록 기준(세부 산출은 fh_completed_2026-09-29)
+  learning: >-
+    설계 에이전트가 상류 focus.js 를 읽었으므로 v0.1.9 구현자는 새 에이전트로 갈랐다(클린룸) — 설계 문서 대신 공식 문서 근거만 발췌한 명세를 줬다
+
+- date: 2026-09-30
+  session: 9d093859 (야간 후반 — FoD v0.1.8 · v0.1.9 · 게이트 수리 · 디자인 루프)
+  agent: general-purpose ×9 · fh-commons:designer-lens ×9 · fh-commons:ux-writer-lens ×3 · fh-commons:a11y-lens ×3 · fh-meta:beginner ×6 · fh-meta:main-player ×3
+  task: >-
+    디자인 언어 조사 · 채점기 기권 경보 · 공용 토큰 · v0.1.9 클릭 창(클린룸) · 게이트 활동 창 리디자인 · 설정창 여섯 탭 · 원장 facets/게이트 fail-open 수리 ·
+    릴리스 통합 · 통합 라이브 빨강 셋 수리 · 페르소나 리뷰 세 창 × 3~5라운드
+  count: 33
+  outcome: accepted
+  evidence: >-
+    FoD #169(v0.1.8) · #170 · #171 · #172(v0.1.9) 머지 · v0.1.8 · v0.1.9 설치·릴리스(dmg 다이제스트 대조) · main 게이트 405/0 ×2 ·
+    세 창 페르소나 리뷰 신규 S=0 수렴 · 게이트 fail-open 셋(래퍼 뒤 heredoc 셸 · 명령 자리 치환 · 동적 하위명령) 닫음, codex R1–R4 주장은 전수 재현으로 판정(거짓 다수)
+  learning: >-
+    라이브 캡처 → 페르소나 리뷰가 오프라인 레인 수백 개가 못 본 것을 반복해 잡았다(보내기 회귀 · 목록 행 잘림 · 정보 히어로 찌그러짐). 반대로 리뷰어는
+    캡처 시점 차이를 «숫자 모순» 으로 두 번 오독했다 — 리뷰어 지적도 원자료로 재현한 뒤 수리 대상으로 넣는다. 헤드리스 창은 focusin 이 안 와서
+    포커스 단언은 CDP 포커스 흉내로만 잴 수 있다(메모리 feedback_headless_window_no_focus_events)
