@@ -89,6 +89,17 @@ LIB="$REPO_ROOT/scripts/probe_live_eval_lib.py"
 SIM_RUNNER="${FH_SIM_RUNNER_BIN:-$REPO_ROOT/scripts/sim_isolated_run.sh}"
 
 # ── file-header constant — the "문턱" the design brief calls for. Change here, not per-invocation. ──
+# 🟢 MEASURED BASIS (2026-09-29) — the value is unchanged; what changed is that it now has one.
+#    Nightly pass_rate since the roster was fixed at 12 probes (09-19 … 09-29, 11 nights):
+#    0.83 · 0.92 · 1.00 · 0.92 · 1.00 · 1.00 · 0.92 · 0.92 · 1.00 · 1.00 · 1.00  → min 10/12.
+#    With 12 probes one probe = 0.083, so 0.8 sits exactly one step below the observed normal
+#    minimum: 9/12 (0.75) fails, 10/12 passes. Raising it to 0.85 would have flagged 09-19 (10/12)
+#    — 1 false alarm in 11 normal nights. The two known-bad nights before the roster change
+#    (09-12 = 0.18, 09-13 = UNCALIBRATED) sit far below either value, so 0.8 loses none of them.
+#    Per-stratum thresholds (STABLE/FLAKY/HARD) stay deferred until n≥30 per probe — the 2026-09-21
+#    stratification found the gain collapses to 0.003 MAE once those two nights are excluded.
+#    Source: tracks/_meta/live_eval_*.md (gitignored) · live_eval_stratify_RESULT_2026-09-21.md.
+#    🟥 Re-derive when the roster size changes: the step width (1/N) is what this number rests on.
 THRESHOLD="0.8"
 
 # ── EVIDENCE PRESERVATION (2026-09-14) ────────────────────────────────────────────────────────

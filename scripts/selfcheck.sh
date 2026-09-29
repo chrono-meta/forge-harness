@@ -58,6 +58,30 @@ SHIPPY
 # repo above node_modules and call their install a checkout. A worktree's `.git` is a file; -e covers it.
 _package_mode() { [ ! -e .git ]; }
 
+# ── Consumer profile (2026-09-29) — what `npm test` runs inside an installed package ──────────────
+# `npm test` = `FH_SELFCHECK_PROFILE=consumer bash scripts/selfcheck.sh`; `npm run test:full` and CI
+# run the full suite. Eight suites below measure things only a git CHECKOUT has (a clone to make,
+# `.git/fh-claims`, docs/map, .github/workflows, .gitignore, `git ls-files`) — inside a tarball they
+# are not failing, they are unmeasurable. A suite that is MOSTLY consumer-relevant stays in and skips
+# only its checkout-bound lanes itself, by name (test_verdict_watermark_lanes.sh · test_probe_live_eval_lanes.sh do this). The consumer profile names each one it skips and prints
+# the list again at the end; it never counts them as PASS.
+# 🟥 The profile is honoured ONLY in package mode. Set in a checkout (CI, the author) it is ignored
+#    with a warning — otherwise one env var would silently shrink the required check.
+_CONSUMER=0
+if [ "${FH_SELFCHECK_PROFILE:-full}" = consumer ]; then
+  if _package_mode; then _CONSUMER=1
+  else echo "⚠️  FH_SELFCHECK_PROFILE=consumer IGNORED — this tree is a git checkout; running the full suite"; fi
+fi
+CHECKOUT_ONLY_SUITES="test_package_coverage_lanes.sh test_files_manifest_shipping_lanes.sh test_map_postprocess_lanes.sh test_remote_marker_gate_lanes.sh test_worktree_reclaim_lanes.sh test_sim_isolated_run_lanes.sh test_utterance_intake_lanes.sh test_precommit_pointer_index_lanes.sh"
+CONSUMER_SKIPPED=""
+_consumer_skip() { # $1 = suite basename · rc 0 = skip it (and it has been named)
+  [ "$_CONSUMER" -eq 1 ] || return 1
+  case " $CHECKOUT_ONLY_SUITES " in *" $1 "*) ;; *) return 1 ;; esac
+  case " $CONSUMER_SKIPPED " in *" $1 "*) ;; *) CONSUMER_SKIPPED="$CONSUMER_SKIPPED $1" ;; esac
+  echo "SKIP  $1 (consumer profile — needs a git checkout; run \`npm run test:full\` in a clone)"
+  return 0
+}
+
 # ── The single verdict for "my subject is not here" ───────────────────────────────────────────
 # Measured 2026-08-12 (card §🔱⑮ A2): **18 blocks in this file** rendered a green SKIP when their
 # subject was absent, and **all 18 subjects are declared in package.json files[] and present in the
@@ -761,7 +785,8 @@ fi
 if [ ! -f scripts/package_coverage_check.sh ]; then
   _absent_subject_verdict "test_package_coverage_lanes.sh" "scripts/package_coverage_check.sh" || fail=1
 elif [ -f scripts/test_package_coverage_lanes.sh ]; then
-if ! bash scripts/test_package_coverage_lanes.sh; then
+if _consumer_skip test_package_coverage_lanes.sh; then :
+elif ! bash scripts/test_package_coverage_lanes.sh; then
     fail=1
   fi
   # The CHECKER's semantics are deliberately fail-closed and must not be softened: given a git
@@ -801,7 +826,8 @@ fi
 if [ ! -f scripts/files_manifest_shipping_check.sh ]; then
   _absent_subject_verdict "test_files_manifest_shipping_lanes.sh" "scripts/files_manifest_shipping_check.sh" || fail=1
 elif [ -f scripts/test_files_manifest_shipping_lanes.sh ]; then
-  if ! bash scripts/test_files_manifest_shipping_lanes.sh; then
+  if _consumer_skip test_files_manifest_shipping_lanes.sh; then :
+elif ! bash scripts/test_files_manifest_shipping_lanes.sh; then
     fail=1
   fi
   # Same applicability guard as package-coverage directly above, same reason: a repo with no npm
@@ -1013,6 +1039,8 @@ do
   _subj="${_pair%%|*}"; _anc="${_pair##*|}"; _lbl="${_anc##*/}"
   if [ ! -f "$_subj" ]; then
     _absent_subject_verdict "$_lbl" "$_subj" || fail=1
+  elif [ -f "$_anc" ] && _consumer_skip "$_lbl"; then
+    :
   elif [ -f "$_anc" ]; then
     # `< /dev/null` and the timeout are not decoration: test_frontier_digest_retry.sh deliberately
     # plants a `sleep 300` stub and asserts a 3s watchdog kills it. If that watchdog ever regresses
@@ -1542,7 +1570,8 @@ done
 if [ ! -f scripts/sim_isolated_run.sh ]; then
   _absent_subject_verdict "test_sim_isolated_run_lanes.sh" "scripts/sim_isolated_run.sh" || fail=1
 elif [ -f scripts/test_sim_isolated_run_lanes.sh ]; then
-  if ! bash scripts/test_sim_isolated_run_lanes.sh; then
+  if _consumer_skip test_sim_isolated_run_lanes.sh; then :
+elif ! bash scripts/test_sim_isolated_run_lanes.sh; then
     fail=1
   fi
 else
@@ -2638,8 +2667,12 @@ else
   echo "SKIP  rules-dotfile (package mode: .git 없음 — 소스 트리 전용 검사)"
 fi
 
+if [ "$_CONSUMER" -eq 1 ]; then
+  _n=$(printf '%s\n' $CONSUMER_SKIPPED | grep -c .)
+  echo "CONSUMER PROFILE — $_n checkout-only suite(s) NOT measured here (not a pass):$CONSUMER_SKIPPED"
+fi
 if [ "$fail" -ne 0 ]; then
   echo "SELFCHECK: FAIL"
   exit 1
 fi
-echo "SELFCHECK: PASS"
+if [ "$_CONSUMER" -eq 1 ]; then echo "SELFCHECK: PASS (consumer profile)"; else echo "SELFCHECK: PASS"; fi

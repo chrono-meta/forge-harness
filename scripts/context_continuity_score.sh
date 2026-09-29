@@ -517,7 +517,9 @@ while IFS='|' read -r _q _k _t tok _general _probe; do
     [ "$tok_rc" -le 1 ] || tok_rc=2          # git grep: 0=found 1=none, 그 외는 오류
   else
     echo "⚠️ git 저장소가 아니다 — 워킹트리로 대체 측정한다(팔이 보는 것과 다를 수 있다)" >&2
-    tok_out=$(grep -RlF --exclude-dir=.git -- "$tok" "$HERE" 2>&1); tok_rc=$?
+    # `tracks/` 는 빼고 잰다 — 위 근거 그대로: 팔의 클론에는 gitignored 인 tracks/ 가 안 온다.
+    #  안 빼면 봉인 원장·qset 입력 자신이 «오염»으로 잡혀 설치본의 --rescore 가 rc=5 로 막힌다(2026-09-29 실측).
+    tok_out=$(grep -RlF --exclude-dir=.git --exclude-dir=tracks -- "$tok" "$HERE" 2>&1); tok_rc=$?
   fi
   if [ "$tok_rc" -ge 2 ]; then
     echo "🟥 qset 오염 검사 자체가 실패했다 (rc=$tok_rc) — «오염 없음»이 아니다" >&2
