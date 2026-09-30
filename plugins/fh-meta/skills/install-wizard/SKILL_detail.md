@@ -135,9 +135,14 @@ for g in hooks.get("SessionStart", []):
     survivors = [h for h in g.get("hooks", [])
                  if not any(n in h.get("command", "") for n in FH_HOOKS)]
     if survivors:
-        g = dict(g); g["hooks"] = survivors; existing.append(g)
+        g = dict(g); g["hooks"] = survivors
+        if g.get("matcher") == "":   # same meaning as omitted; Copilot CLI rejects "" (see below)
+            del g["matcher"]
+        existing.append(g)
+# No "matcher" key: omitted = match-all in Claude Code, and GitHub Copilot CLI rejects `"matcher": ""`
+# (it then ignores the WHOLE settings file). Lane: scripts/test_hook_templates_copilot_compat_lanes.sh.
 hooks["SessionStart"] = existing + [
-    {"matcher": "", "hooks": [cmd("fh_session_load.sh"), cmd("fh_env_delta_scan.sh")]}]
+    {"hooks": [cmd("fh_session_load.sh"), cmd("fh_env_delta_scan.sh")]}]
 with open(p, "w") as fh:
     json.dump(d, fh, indent=2, ensure_ascii=False); fh.write("\n")
 print("SessionStart hooks registered ->", p, "(backup: .prewizard)")
@@ -663,7 +668,16 @@ for snip in snippets:
             survivors = [h for h in g.get("hooks", [])
                          if not any(k in h.get("command", "") for k in keys)]
             if survivors:
-                g = dict(g); g["hooks"] = survivors; kept.append(g)
+                g = dict(g); g["hooks"] = survivors
+                # `"matcher": ""` and an omitted matcher are the same thing in Claude Code (hooks doc,
+                # «Matcher patterns»: `"*"`, `""`, or omitted → Match all). GitHub Copilot CLI refuses
+                # the empty string and then drops the WHOLE settings file, so a re-run of the wizard
+                # normalizes it away in every event it touches — same meaning, loadable by both.
+                # FileChanged is excluded: there the matcher also seeds the file-watch list, and the
+                # doc only spells out omitted vs "*" for it — not "" (cross-family review 2026-10-01).
+                if event != "FileChanged" and g.get("matcher") == "":
+                    del g["matcher"]
+                kept.append(g)
         hooks[event] = kept + entry
         registered.append(f"{event}({','.join(sorted(keys)) or '?'})")
 

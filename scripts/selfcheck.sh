@@ -2382,6 +2382,20 @@ elif [ -f scripts/test_hook_drift_lanes.sh ]; then
 else
   echo "FAIL  hook-drift lanes: hook_drift_check.sh present but its anchor is missing"; fail=1
 fi
+# Hook templates must load in GitHub Copilot CLI too (2026-10-01): `"matcher": ""` makes Copilot
+# reject the WHOLE settings file («matcher cannot be empty»); omitted means the same in Claude Code.
+# Subjects = shipped templates/snippets/docs + the wizard merge blocks + hook_drift_check's "" ≡ omitted.
+if [ -f scripts/test_hook_templates_copilot_compat_lanes.sh ]; then
+  if _out=$(bash scripts/test_hook_templates_copilot_compat_lanes.sh 2>&1); then
+    echo "PASS  test_hook_templates_copilot_compat_lanes.sh (no empty matcher shipped · wizard normalizes · drift \"\"≡omitted · revert probe)"
+  else
+    echo "FAIL  test_hook_templates_copilot_compat_lanes.sh: a shipped hook template would break Copilot CLI settings loading"
+    _show_failure "$_out"
+    fail=1
+  fi
+else
+  echo "FAIL  copilot-compat lanes: anchor scripts/test_hook_templates_copilot_compat_lanes.sh is missing"; fail=1
+fi
 # ④-f session config fingerprint (2026-09-26): a mid-session overwrite of settings/CLAUDE.md went
 # unnoticed on 2026-09-25. Advisory at close; the lane pins «no snapshot = NOT MEASURED».
 if [ ! -f scripts/session_config_fingerprint.sh ]; then

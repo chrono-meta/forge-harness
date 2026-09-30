@@ -210,7 +210,6 @@ Add to project's `.claude/settings.json`:
 {
   "hooks": {
     "Stop": [{
-      "matcher": "",
       "hooks": [{
         "type": "command",
         "command": "FH_BACKEND=auto FH_TARGET_FILES=\"$(git diff main..HEAD --name-only)\" bash ~/projects/forge-harness/scripts/fh-gate.sh \"\" quick stop-hook >> /tmp/fh-governance-queue.txt"
