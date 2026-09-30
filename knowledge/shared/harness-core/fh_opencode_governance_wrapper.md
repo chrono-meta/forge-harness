@@ -138,7 +138,6 @@ For teams that want to run governance automatically after every OpenCode session
   "hooks": {
     "Stop": [
       {
-        "matcher": "",
         "hooks": [
           {
             "type": "command",

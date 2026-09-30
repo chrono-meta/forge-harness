@@ -7,7 +7,6 @@ Add the following to your project's `.claude/settings.json` to enable the goal-q
   "hooks": {
     "Stop": [
       {
-        "matcher": "",
         "hooks": [
           {
             "type": "command",
@@ -19,6 +18,9 @@ Add the following to your project's `.claude/settings.json` to enable the goal-q
   }
 }
 ```
+
+> There is no `matcher` key on purpose. Claude Code treats an omitted matcher as «match all», and
+> GitHub Copilot CLI rejects `"matcher": ""` — it then ignores your whole `.claude/settings.json`.
 
 Add to your project's `.gitignore`:
 
@@ -44,13 +46,11 @@ If you already have a `settings.json`, merge the `hooks.Stop` array:
   "hooks": {
     "Stop": [
       {
-        "matcher": "",
         "hooks": [
           { "type": "command", "command": "... your existing stop hook command if any ..." }
         ]
       },
       {
-        "matcher": "",
         "hooks": [
           {
             "type": "command",

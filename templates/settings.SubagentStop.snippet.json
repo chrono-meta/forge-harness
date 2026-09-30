@@ -30,7 +30,6 @@
     "hooks": {
       "SubagentStop": [
         {
-          "matcher": "",
           "hooks": [
             {
               "type": "command",
