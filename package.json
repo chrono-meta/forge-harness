@@ -180,6 +180,8 @@
     "scripts/gate_pathspec_check.sh",
     "scripts/prless_delta_scan.sh",
     "scripts/test_claude_md_size_lanes.sh",
+    "scripts/resident_cost.py",
+    "scripts/test_resident_cost_lanes.sh",
     "scripts/test_fh_audit_check_lanes.sh",
     "scripts/test_prless_delta_scan_lanes.sh",
     "scripts/gate_bootstrap_ephemeral.sh",
