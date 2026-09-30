@@ -335,7 +335,7 @@ Verdict: PASS (Step 4.5 diff gate confirmed, baseline updated) | CONDITIONAL_PAS
 > strikethroughs below are safe to leave as history.
 
 - ~~Rule body: `memory feedback_bidirectional_self_validation.md`~~ — **absent (verified 2026-08-12)**. The rule body is **this file**; the cumulative count lives in §Validation Ledger.
-- ~~Operating model text: `memory feedback_hub_cc_operating_model.md §2.5·§2.6`~~ — **absent (verified 2026-08-12)**. The live equivalent is `CLAUDE.md §Identity — 3-Layer Mission + Core Axis`; cite that, not this filename.
+- ~~Operating model text: `memory feedback_hub_cc_operating_model.md §2.5·§2.6`~~ — **absent (verified 2026-08-12)**. The live equivalent is `CLAUDE.md §Identity`; cite that, not this filename.
 - ~~Consistency rules: `feedback_external_ai_github_recommendation_verification` · `feedback_reference_own_hub_assets_first` · `feedback_simplification_evidence` · `feedback_markdown_edit_discipline` · `feedback_impact_first_then_tune`~~ — **absent (verified 2026-08-12)**. The two that this skill actually depends on are restated in §Constraints above.
 - Live, verified references (these resolve): `tracks/_meta/reference_next_session_starter.md` (session card, Step 4) · `CATALOG.md` · the `fact-checker` agent (Step 3).
 
