@@ -518,6 +518,20 @@ else
   fail=1
 fi
 
+# resident-cost meter — read-only instrument for session-start resident cost (chars vs bytes · MEMORY
+# loaded share · YAML-parsed skill listing). Built 2026-10-01 after two same-day mis-measurements
+# (`wc -c` bytes reported as chars · one-line frontmatter parse missing folded `>-` descriptions).
+if [ ! -f scripts/resident_cost.py ]; then
+  _absent_subject_verdict "resident-cost lanes" "scripts/resident_cost.py" || fail=1
+elif [ -f scripts/test_resident_cost_lanes.sh ]; then
+  if ! bash scripts/test_resident_cost_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  resident-cost lanes: scripts/resident_cost.py present but its anchor is missing"
+  fail=1
+fi
+
 # terminal audit banner — templates/fh_audit_check.zsh (sourced from every user's ~/.zshrc by install-wizard)
 # fired 2 false lines forever (harvest glob nothing writes · state-marker sentinels aged as audits) and
 # aborted whole on zsh NOMATCH for a fresh install. Lane = false lines gone · real overdue audits still warn.
