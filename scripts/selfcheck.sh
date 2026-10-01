@@ -442,6 +442,19 @@ else
   fail=1
 fi
 
+# The README header sum must cover every plugin on disk. It summed two of four until 2026-10-01
+# and passed a README that was five skills stale — pinned here so a hand-picked sum cannot return.
+if [ ! -f scripts/count_check.sh ]; then
+  _absent_subject_verdict "count_check all-plugins lanes" "scripts/count_check.sh" || fail=1
+elif [ -f scripts/test_count_check_all_plugins_lanes.sh ]; then
+  if ! bash scripts/test_count_check_all_plugins_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  count_check all-plugins lanes: count_check.sh present but its anchor is missing"
+  fail=1
+fi
+
 # count_check's COUNT DECLARATION parser — the sweep reads "N skills"/"N agents" out of a plugin
 # description and compares it to disk. #768 shipped that sweep and wrote its own residual down:
 # «순회는 description 의 첫 N skills 패턴만 읽는다 — 과탐/미탐 방향 미측정». Both were measured
