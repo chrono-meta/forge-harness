@@ -753,6 +753,40 @@ wrong finding costs a reader a minute.
 
 ---
 
+## §CM-Halt-Attribution-External — «멈춤을 예방으로 셈» 의 외부 known-negative (신설 2026-10-01 — 이관 아님)
+
+> CLAUDE.md 에서 옮겨 온 절이 아니다. 위 §CM-Governance-Axis-Numbers 의 둘째 동사(«수치가 게이트를 열지 않는다」)에
+> 바깥에서 붙은 반례라서 그 옆에 둔다.
+
+**외부 사례 (1차 출처 직독, 2026-10-01)**: **Elina**, *Maat: Independent Deterministic Contract-Based Governance for
+Multi-Agent LLM Workflows*, arXiv:2609.34017, 2026-09-27. LLM 이 채점 경로에 없는 결정적 핸드오프 검증층인데, 초록이 자기
+이전 판을 이렇게 정정한다 — *"Version 1 reported gains in all six workflows (2.9-26.5%). A post-publication audit found that
+three benchmark scorers credited any early halt as a prevented defect."* 그리고 *"A hand review of all 94 governed-arm halts
+found 35 false alarms (37%), caused by validator defects rather than model behaviour; counting those halts as failed work,
+the governed arm scores below the ungoverned arm in four of six workflows."*
+
+**왜 여기 있나**: 이 실패는 «게이트가 많이 멈출수록 점수가 오른다」 이고, 우리 쪽에도 같은 모양이 실측돼 있다 —
+forge-gate-v3 자연층에서 «비가역」 양성 560 중 437(78%)이 매일 의도해서 하는 `gh pr merge --delete-branch` 였고,
+봉인 판정표는 그걸 «새면 누수」 로 셌다(`tracks/_chamber/forge-gate-v3/EMISSION_VERDICT.md` 이월 교훈 1).
+두 사례가 같은 결론으로 수렴한다: **멈춤 횟수는 안전의 측정값이 아니다. 멈춘 «이유」를 따로 적어야 숫자가 읽힌다.**
+
+**규칙으로 옮기면**: 게이트·검증기를 평가하는 채점기는 멈춤마다 **귀속(attribution)** 칸을 둔다 —
+`real-defect`(멈출 이유가 있었다) · `validator-defect`(검증기 결함으로 멈췄다 = 오경보) · `unattributed`(아직 안 봤다, 기본값).
+🟥 `unattributed` 는 **예방에도 오경보에도 세지 않는다**(미측정 ≠ 0). 🟥 귀속은 사람 손검토(또는 그 기록)만 채운다 —
+«뒤에 같은 명령이 통행 토큰으로 성공했다」 같은 기계 신호는 **후보 힌트**이지 귀속이 아니다(사람 승인을 거친 재실행과
+우회를 못 가른다).
+
+**인용할 때 지켜라**:
+- 🟥 Maat 의 결론은 «결정적 검증층이 쓸모없다」 가 아니다. 귀속 가능한 멈춤만 짝지으면 *"the rubric score changes by +7.7%
+  to +29.1% in five workflows and is flat in software development"* 이다. 이 절이 인용하는 것은 **채점 방법의 결함**이지
+  그 층의 효과가 아니다.
+- ⚠️ arXiv 이력은 [v1] 하나뿐이다 — 초록이 말하는 «Version 1」 이 어디 실렸는지는 **미확인**. «v1 → v2 철회」 로 쓰지 말고
+  «초록이 자기 이전 판을 사후 감사로 정정했다」 로 써라.
+- ⚠️ 6개 워크플로 · 522 시행 · 주입 결함이라는 **통제 환경** 수치다. 우리 운영자 분포로 옮기지 마라 — 옮길 수 있는 것은
+  «멈춤 귀속을 안 보면 방향이 뒤집힐 수 있다」 는 **방향**뿐이다.
+
+---
+
 ## §CM-Register-Residency — Why the register rule is resident — and has no floor (moved from CLAUDE.md)
 
 > Relocated **verbatim** from `CLAUDE.md` (§Voice / Tone) on 2026-09-26 — resident-size diet. The resident text kept the rule and a pointer here; this section keeps the why / evidence layer. Nothing was reworded.
