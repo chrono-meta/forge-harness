@@ -169,7 +169,8 @@ print("%s %s" % (one("skills"), one("agents")))
 sweep_plugin() { # sweep_plugin <dir-name>
   local pn="$1" pj="plugins/$1/.claude-plugin/plugin.json" d_sk d_ag dec
   d_sk=$(count_active "$pn"); d_ag=$(count_agents "$pn")
-  [ -f "$pj" ] && dec=$(read_tree "$pj" | python3 -c "$_DECL_PY" json) || dec="READ-ERROR"
+  # 존재 확인도 «검사하는 그 나무» 에서 — 디스크 -f 로 보면 인덱스에만 있는 매니페스트가 READ-ERROR 가 된다(codex R2 A).
+  has_manifest "$pn" && dec=$(read_tree "$pj" | python3 -c "$_DECL_PY" json) || dec="READ-ERROR"
   case "$dec" in
     PARSE-ERROR|READ-ERROR|"")
       echo "FAIL  sweep: $pn — plugin.json 을 못 읽었다 ($dec) — 계기 오류지 통과가 아니다"; fail=1; return;;
@@ -212,20 +213,44 @@ sweep_plugin() { # sweep_plugin <dir-name>
 }
 
 sweep_n=0
-for _d in plugins/*/; do
-  # 🟥 글롭이 하나도 안 맞으면 **리터럴 `plugins/*/` 자체**가 루프에 들어온다.
-  #    아래 plugin.json 검사가 결국 걸러내고 sweep_n 하한 가드가 FAIL 을 내지만, 그건
-  #    **간접 방어**다 — 실패 원인이 「글롭이 죽었다」가 아니라 「플러그인이 없다」로 읽힌다.
-  [ -d "$_d" ] || continue
-  _n=$(basename "$_d")
-  [ -f "plugins/$_n/.claude-plugin/plugin.json" ] || continue
+# README 헤더가 말하는 «스킬 N · 에이전트 M» 은 **디스크의 플러그인 전부**의 합이다.
+# 🟥 2026-10-01 실측: 합이 fh-meta + fh-commons 둘로 고정돼 있어서, 뒤에 생긴 fh-qp(4) ·
+#    fh-preprep(1) 이 빠진 «41» 이 PASS 였다(디스크 46). 플러그인이 늘 때마다 손으로 더하는
+#    자리가 다시 생기지 않게 열거 루프에서 같이 센다.
+#    열거도 «검사하는 그 나무» 에서 한다: --staged 면 인덱스, 아니면 디스크. 디스크에서만 열거하면
+#    인덱스에만 있는 새 플러그인이 합에서 빠진다(codex R1 S, 2026-10-01).
+list_plugins() {
+  if [ "$MODE" = staged ]; then
+    git ls-files --cached -- plugins 2>/dev/null | sed -n 's#^plugins/\([^/]*\)/.*#\1#p' | sort -u
+  else
+    # 🟥 글롭이 하나도 안 맞으면 **리터럴 `plugins/*/` 자체**가 들어온다 — -d 로 거른다.
+    #    sweep_n 하한 가드가 FAIL 을 내지만 그건 간접 방어다(원인이 「플러그인 없음」으로 읽힌다).
+    local d; for d in plugins/*/; do [ -d "$d" ] && basename "$d"; done
+  fi
+}
+has_manifest() { # has_manifest <plugin>
+  if [ "$MODE" = staged ]; then git cat-file -e ":plugins/$1/.claude-plugin/plugin.json" 2>/dev/null
+  else [ -f "plugins/$1/.claude-plugin/plugin.json" ]; fi
+}
+all_sk=0; all_ag=0
+while IFS= read -r _n; do
+  [ -n "$_n" ] || continue
+  if ! has_manifest "$_n"; then
+    # 매니페스트 없는 폴더에 스킬이 있으면 «플러그인이 아니다» 로 조용히 빼지 않는다 —
+    # 그 스킬이 README 합에서 사라지는 자리다(codex R1 A). 스킬도 없으면 플러그인이 아니다.
+    if [ -n "$(list_skills "$_n")" ]; then
+      echo "FAIL  sweep: plugins/$_n 에 스킬이 있는데 .claude-plugin/plugin.json 이 없다 — 플러그인인지 판정 불가(빼고 세지 않는다)"; fail=1
+    fi
+    continue
+  fi
   sweep_plugin "$_n"; sweep_n=$((sweep_n + 1))
-done
+  all_sk=$((all_sk + $(count_active "$_n"))); all_ag=$((all_ag + $(count_agents "$_n")))
+done < <(list_plugins)
 # 🟥 **죽은 컨트롤 방어** — 열거가 0 이면 「전부 통과」와 「아무것도 안 봤다」가 같은 침묵이다
 if [ "$sweep_n" -lt 2 ]; then
   echo "FAIL  sweep: 플러그인을 ${sweep_n}개만 열거했다 — 글롭이 죽었다(계기 오류, 0 아님)"; fail=1
 else
-  echo "PASS  sweep: 플러그인 ${sweep_n}개를 디스크에서 열거했다 (이름 손적기 0)"
+  echo "PASS  sweep: 플러그인 ${sweep_n}개를 열거했다 (mode=${MODE} · 이름 손적기 0)"
 fi
 
 mp_check "marketplace.json fh-commons agents" fh-commons "${com_ag} agent"
@@ -242,6 +267,8 @@ mp_check "marketplace.json fh-commons agents" fh-commons "${com_ag} agent"
 #       등재 안 하면 이 override 자체가 덮이므로, 그 등재가 이 규약의 전제다.
 # 부재 → 영문 기본값. 즉 FH 자신과 지역화 안 한 설치는 종전과 동일하다(fail-closed 아님:
 #       README 렌더링은 가역 표면이고, 없는 파일을 요구하면 새 설치가 전부 막힌다).
+# 아래 README 렌더링은 total_sk/total_ag 를 읽는다 — 여기서 전 플러그인 합으로 바꿔 넘긴다.
+total_sk=$all_sk; total_ag=$all_ag
 README_FMT_FILE="${COUNT_README_FORMAT_FILE:-.claude/rules/count_readme_format}"
 if [ -r "$README_FMT_FILE" ]; then
   README_FMT=$(head -1 "$README_FMT_FILE")

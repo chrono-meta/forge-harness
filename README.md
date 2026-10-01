@@ -101,7 +101,7 @@ cd ~/projects/forge-harness && claude        # then type a greeting: hi · 안�
 - You stop having to pick the check. The harness reads what you are about to do — publish, delete,
   rewrite history, open a PR — and names the gate for that moment. ① is one command you remember; ②
   is the layer that remembers for you.
-- **41 skills · 14 agents** you can call in plain language: diagnose a project, accelerate one, wire a
+- **46 skills · 14 agents** you can call in plain language: diagnose a project, accelerate one, wire a
   new one up.
 - `tracks/` keeps what each session learned, so **session 2 starts where session 1 stopped**. This is
   the part that compounds — and the part you cannot judge on day one.
@@ -382,12 +382,14 @@ sidecar posture: [`docs/MODEL_SETUP.md`](docs/MODEL_SETUP.md).
 
 ---
 
-## 41 skills · 14 agents
+## 46 skills · 14 agents
 
-Count = non-deprecated skills. Clustered as verification · orchestration · diagnosis · harvesting ·
-gates · discovery · simulation · setup, plus 8 agents (`challenger` · `quench-challenger` · `beginner`
-· `main-player` · `expert` · `fact-checker` · `hub-persona-auditor` · `persona-innovator`) dispatched
-by those skills or by name. **Full phrasebook** — every skill and agent with its one-line definition
+Count = non-deprecated skills across all four plugins (`fh-meta` · `fh-commons` · `fh-qp` ·
+`fh-preprep`). Clustered as verification · orchestration · diagnosis · harvesting · gates · discovery ·
+simulation · setup. The 14 agents are 8 evaluators (`challenger` · `quench-challenger` · `beginner` ·
+`main-player` · `expert` · `fact-checker` · `hub-persona-auditor` · `persona-innovator`) and 6 review
+lenses (`designer` · `fe-dev` · `be-dev` · `qa` · `ux-writer` · `a11y`), dispatched by those skills or
+by name. **Full phrasebook** — every skill and agent with its one-line definition
 and the phrase that triggers it:
 [`CHEATSHEET.md` §12](CHEATSHEET.md#12-skills--agents--what-each-does-and-what-to-say).
 
