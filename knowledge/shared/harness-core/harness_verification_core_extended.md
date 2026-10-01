@@ -117,6 +117,29 @@ and the audit channel must be one the audited session cannot rewrite after the f
 machine-written transcript, not a self-attested action list — the pilot's Run #3 exists because its
 Run #2 violated exactly this and was sealed the same day).
 
+**External precedent — executable-contract probing (unbuilt here; labeled, not registered).**
+Bellibatlu, Wang & Zhang, *Do Agent Benchmarks Do What They Say? An Executable-Contract Audit of
+Tool-Using Agent Environments*, arXiv:2609.37315 (2026-09-29; abstract read directly) describe a
+related audit shape that is not registered here as an FH instrument: a tool's **advertised surface treated as an
+executable contract**, checked against the implementation, with each score traced to the state a
+defective tool should have written. Their target is the verdict that grades **what a tool reports
+having done** instead of what changed — the abstract's clearest case is a clinical benchmark whose
+tool tells the agent each write executed under an undisclosed no-write design, and *"its grader
+takes that message as evidence"*. That is the same defect class this repo files as
+«trusting the claim / exit code over the effect» (the not-found-is-not-zero family). Their numbers,
+quoted only as reported: 34 audited mutating tools in four benchmarks → seven tool defects and one
+evaluator property; on injected defects the checker *"raised no false positive in 25 flags, flagged
+2 of 5 negative controls"*, and *"in 29 of 33 scored misses a clause covered the defect but no
+probe revealed it"* (the abstract does not define its negative controls, so this doc does not read
+the two figures as a false-positive rate); its static half alone flags 14 of 17 confirmed sites, so on those findings
+*"the dynamic half confirms and traces rather than discovers"*. Two things carry over as method,
+not as numbers: the instrument **reports its own misses on injected defects** (it *"missed most"*) (our
+known-pair discipline, applied to the auditor), and its static/dynamic split mirrors our
+static-triad / runtime boundary. **Classification is deferred to §1's test**: no FH asset and no
+cluster member runs this today. If FH ships a runnable recipe or carrier, it is core; if a cluster
+member's engine discharges it, it is extended. Until then it is a named candidate class, not an
+instrument (§1 sets the instrument test; §5 carries the unbuilt residual).
+
 ## 4. Evidence base (why this graduated to doctrine)
 
 Four runs, one day (2026-08-01), two subjects; runs 1, 3 and 4 instrument-calibrated FH-side
@@ -157,6 +180,9 @@ Operator-local records (gitignored, referenced for the operator's own audit trai
   audit of FH itself should re-find.
 - **Floor tier unmeasured**: the pilot runs executed at frontier tier. Whether the §2 recipe holds
   at the Sonnet floor is unmeasured — per the sibling invariant, the first floor question to close.
+- **Executable-contract probing is unbuilt.** §3 names it from external precedent (arXiv:2609.37315)
+  only; no FH carrier or cluster engine runs it, and the source's «2 of 5 negative controls» figure
+  is quoted without interpretation (abstract only — what its negative controls are was not read).
 
 ## Done When (doctrine doc — reference asset)
 
