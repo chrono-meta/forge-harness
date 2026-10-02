@@ -1356,6 +1356,20 @@ else
   _show_failure "$_out"
   fail=1
 fi
+# 밀폐 레인(2026-10-02, pmh-dev #84) — 호출자 env 에 클러스터 변수가 살아 있어도 self-test 판정이 같아야 한다.
+# known-pair: 위 블록(env 없음)과 이 블록(env 있음)이 같은 «0 FAIL» 을 내고, 이 블록은 비운 사실을 이름으로 말한다.
+if [ -f scripts/cluster_capability_scan.sh ]; then
+  if _out=$(FH_CLUSTER_ROOTS=/nonexistent-fh-a:/nonexistent-fh-b FH_TRACKS_ROOT=/nonexistent-fh-tracks FH_PROJECTS_HOME=/nonexistent-fh-home \
+            bash scripts/cluster_capability_scan.sh --self-test < /dev/null 2>&1) \
+     && printf '%s\n' "$_out" | grep -qE '캘리브레이션 통과: [1-9][0-9]* PASS / 0 FAIL' \
+     && printf '%s\n' "$_out" | grep -q '픽스처 밀폐): FH_CLUSTER_ROOTS FH_TRACKS_ROOT FH_PROJECTS_HOME'; then
+    echo "PASS  cluster_capability_scan.sh --self-test hermetic under caller env ($(printf '%s\n' "$_out" | grep -oE '[0-9]+ PASS / [0-9]+ FAIL' | tail -1))"
+  else
+    echo "FAIL  cluster_capability_scan.sh: --self-test leaks caller env (FH_CLUSTER_ROOTS/FH_TRACKS_ROOT/FH_PROJECTS_HOME) into fixture lanes"
+    _show_failure "$_out"
+    fail=1
+  fi
+fi
 
 # capability_effect_probe — wired 2026-08-16. `lane_runner_check.sh` had been flagging it as an
 # embedded --self-test subject with ZERO dispatchers, and that warning was load-bearing: the same

@@ -422,6 +422,23 @@ self_test() {
 
   echo "cluster_capability_scan --self-test"
 
+  # 🟥 밀폐(2026-10-02, pmh-dev #84): 레인은 픽스처 세계를 **레인마다 명시해서** 넘긴다
+  #   (`FH_CLUSTER_ROOTS=… bash "$SELF" discover`). 그런데 호출자 env 에 같은 변수가 살아 있으면
+  #   명시하지 않은 레인(별칭 · AMBIGUOUS · id 충돌 · 재귀 · 실물 허브)이 그 값을 상속받아
+  #   `_enumerate_harnesses()` 첫 분기로 새고, 계기가 «FH 가 깨졌다» 는 거짓 FAIL 7건을 낸다
+  #   (실측: PMH 세션 settings.local.json env → 14 PASS / 7 FAIL, 걷으면 21 / 0). 계기는 자기 env 를
+  #   고정해야 한다 — 시작할 때 비우고, 비운 사실을 이름으로 말한다(조용히 바꾸지 않는다).
+  local _v _cleared=""
+  for _v in FH_CLUSTER_ROOTS FH_TRACKS_ROOT FH_PROJECTS_HOME; do
+    if [ -n "${!_v+x}" ]; then unset "$_v"; [ -n "${!_v+x}" ] || _cleared="${_cleared:+$_cleared }$_v"; fi
+  done
+  [ -z "$_cleared" ] || echo "  ⓘ 호출자 env 를 비우고 돈다(픽스처 밀폐): $_cleared"
+  # L0 — 밀폐를 «말했다» 가 아니라 «자식이 실제로 못 본다» 로 잰다. 레인 대부분이 이 변수들을
+  #   레인마다 덮어써서, 비우기가 빠져도 다른 레인이 초록일 수 있다(교차 리뷰 지목: FH_PROJECTS_HOME).
+  out="$(env | grep -E '^(FH_CLUSTER_ROOTS|FH_TRACKS_ROOT|FH_PROJECTS_HOME)=' | cut -d= -f1 | tr '\n' ' ')"
+  if [ -z "$out" ]; then _lane "L0 자식 프로세스가 호출자 클러스터 env 를 못 본다" 0 0
+  else _lane "L0 자식 프로세스가 호출자 클러스터 env 를 못 본다 — 샘: $out" 0 1; fi
+
   # 픽스처: 하네스 4종 — OK / NONE(디렉토리 없음) / MALFORMED / UNREACHABLE
   mkdir -p "$T/alpha/$CAP_SUBDIR" "$T/beta" "$T/gamma/$CAP_SUBDIR"
   cat > "$T/alpha/$CAP_SUBDIR/leak.cap" <<'EOF'
