@@ -240,6 +240,28 @@ n=4+4/4+8 observations; the direction is unchanged and the magnitude is now exte
 cite the **asymmetry**, not the absolute percentages, as a property of FH's own gate.
 (Numbers re-read off the abstract on 2026-09-12 rather than recalled — §Instrument Calibration.)
 
+🟢 **A second external source, 2026-10-03 — on why `tier2`+ is the execution rung and `tier1b` the weak one.**
+`arXiv:2610.01023` (*Groundability, Not Scale Alone: When Weak Reviewers Can Audit Strong Coding Agents*, 2026-10-01, cs.SE;
+PDF read p3–p7) separates three kinds of evidence a reviewer can be handed: the producer's own testimony, **structured but
+unchecked** evidence (organized hunks, requirement coverage, LLM-proposed "what is missing"), and **grounded** evidence — a
+check the review pipeline actually ran (p3). With the reviewer held fixed, grounded execution evidence moved five of six
+reviewers to higher catch *and* lower over-rejection on 122 held-out traces (p5 Table 2); structured-unchecked evidence moved
+catch and over-rejection **up together** (GPT-4.1: 0.91 / 0.86 on the design set, p5). This *resembles* the `tier2`/`tier1b`
+split — with a condition the analogy must keep: in the paper, «grounded» means a check **the review pipeline ran
+independently**; the producer's own execution log counts as testimony, not as grounding (p3). So naming the command and the
+output is necessary for `tier2`, not sufficient — what makes it grounded is that the review pipeline ran the check independently (the reviewer reads its result), and an independently
+run static analysis could be grounded too. A static read of the target's files, however well organized, sits closer to the
+structured-unchecked arm.
+🟥 **The opposite-direction warning is part of the citation, not a footnote.** ① Their grounded arm uses the benchmark's
+*official* hidden tests — an upper bound. The deployable substitute (generated tests that first fail on the unpatched repo)
+still over-rejected **0.66 / 0.67** (p7 Table 3), and a *passing* generated test had accept precision **0.30** — one green run
+does not establish correctness (p7). So `tier2` asserts *that something ran*, not that what ran was decisive. ② Unchecked
+evidence did not merely fail to help — it **raised false rejections**. Any FH surface that hands a reader organized-but-unrun
+claims (a verdict reason, a repair hint, a review capsule) can push that reader toward over-rejection; mark which parts were
+checked. ③ Their reviewers audit code patches on Python issue-resolution tasks; FH's standpoint axis audits cross-harness
+behavior. Cite the **direction** (checked evidence beats organized evidence, and size did not substitute for it), not the
+rates, as a property of FH's own gate.
+
 **Relationship to the isolation axis — standpoint is isolation whose scope moved up to the
 harness (operator, 2026-08-18).** Operator wording: *"요는 이것도 '격리' 프레이밍이 하네스 단위로
 확장되는 거지 … 그 하네스 자체의 입장을 돌리는 거니까 (하네스라는 껍질에 모델이라는 알맹이를

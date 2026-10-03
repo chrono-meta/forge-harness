@@ -127,6 +127,25 @@ a known-pair on that runtime, not a claim about it.
   the ceiling-guard clause above** — the paper measures benefit from *self-evolved harness updates*,
   not from structure-enforcing checks, so mid > strong is an adjacent finding this doctrine has not
   reconciled, and is recorded as open rather than read in the author-favorable direction.
+- **External grounding, second source (arXiv:2610.01023, "Groundability, Not Scale Alone," 2026-10-01 — surfaced via
+  frontier digest 2026-10-03; PDF read p3–p7)**: six nominally weaker reviewers (Llama-3.1-8B … GPT-4.1) audit a stronger
+  coding agent's patches — 411 execution-labeled traces from three agents in total, 154 of them GPT-5.4's core set, and 122
+  held out for the official-evidence comparison (p4 Table 1). Holding the reviewer fixed and changing only the
+  *evidence*, five of six improve defect catch **and** over-rejection together once a decisive execution check is in the
+  evidence, and two decide all 122 held-out traces correctly (p5 Table 2); of the three interventions tried — different
+  reviewer, more votes, different evidence — only the evidence one helped consistently (p5), and parameter count did not
+  predict review quality within their heterogeneous ladder (Qwen3-235B's unchecked catch 0.28 vs Llama-8B's 0.70, p5).
+  This points the same direction as the second bullet above (every Sonnet-tier miss closed by mechanization, never by a
+  stronger model) — but only as far as the paper goes: *in this experiment* official execution evidence improved five of six
+  reviewers' trade-off, and the authors state they did not estimate a causal effect of scale (p5 §5.3). It is a direction,
+  not a proof that a bigger model never closes the gap. It also bears on `CLAUDE.md` §Mechanization Boundary: the residual errors under decisive
+  evidence were small models misreading a clear result («execution failed» while the cited evidence said passed), and the
+  authors' prescription is a mechanical gate, not another model read (p6 §5.4) — a property of the record, typed.
+  ⚠️ **Three limits, kept beside the claim**: ① the strong result uses *official* tests a deployment does not have — an
+  upper-bound diagnostic, not a deployable reviewer (p5); the deployable cascade still over-rejects **0.66 / 0.67** (p7
+  Table 3) ② the reviewers are not Claude and «weak» is a nominal tier, not a measured ordering (p3) — nothing here
+  measures Sonnet ③ evidence that was **structured but unchecked** raised catch and over-rejection *together*
+  (GPT-4.1 0.91 catch / 0.86 over-rejection on the design set, p5) — organizing evidence is not grounding it.
 
 ## The defect class: tier-gated capability
 
