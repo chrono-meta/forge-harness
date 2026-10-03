@@ -131,17 +131,23 @@ do_seal() {
 # ─────────────────────────────────────────────────────────────────────────────
 do_digest() {
   local outdir="$1" DIGEST_SESSION="${2:-unknown}"
-  # 내 세션 마커를 먼저 본다. 없으면 (세션 미상 등) 주인 없는 것만 관용으로 집는다 —
-  # 남의 세션 마커를 **소비하지 않는다**. 소비하면 그 세션이 자기 원장을 영영 못 받는다.
+  # **내 세션 마커만 본다. 폴백은 없다** (2026-10-03 수리 — fh_signal_2026-09-30_compaction-digest-stale).
+  # 남의 세션 마커를 **소비하지 않는다** — 소비하면 그 세션이 자기 원장을 영영 못 받는다.
+  # 세션이 미상이면 «내 마커» 는 `.pending_unknown` 이다: 같은 이유로 세션을 못 정한 seal 이 쓰는
+  # 마커이고, 이것만이 실제로 «주인 없는» 마커다.
+  #
+  # 🟥 옛 폴백 둘을 지운 이유 — 둘 다 이 주석의 교리를 그 아래 코드가 어기고 있었다:
+  #   ① 세션을 알 때 구형식 `.pending`(경로 한 줄) 관용. 그 형식은 2026-08-08 세션별 마커 이전
+  #      모양이라 **아무도 더 이상 쓰지 않는다** — 거기 남은 것은 정의상 낡았다. 게다가 컴패니언
+  #      저장소에 git 추적 파일로 들어가 sync 로 되살아났다. 실측: 08-08 의 남의 봉인
+  #      `seal_REPRO_20260808-160026.md` 가 09-30 두 세션 · 10-03 한 세션(두 번)에 주입됐다.
+  #   ② 세션 미상일 때 `ls -t .pending_*` 최신 하나. 그건 «주인 없는 것」이 아니라 **가장 최근에
+  #      압축된 남의 세션 마커**다 — 주입은 오배달이고, 소비는 그 주인에게서 원장을 빼앗는다.
+  # 경고를 붙여 주입하는 설계(아래 _stale/_xsess)는 «미측정을 정상으로 렌더하지 않기» 위한 것이었고
+  # 그 라벨은 남겨 둔다. 하지만 라벨은 오배달을 *말해줄* 뿐 막지 않았다(아래 #4 주석과 같은 교훈) —
+  # 받은 쪽은 따르지 않았어도 토큰·주의를 냈고, 한 곁 세션은 그걸 운영자에게 답으로 말했다.
   local pending="$outdir/.pending_${DIGEST_SESSION}"
-  if [ ! -f "$pending" ]; then
-    if [ "$DIGEST_SESSION" = "unknown" ]; then
-      pending="$(ls -t "$outdir"/.pending_* 2>/dev/null | head -1)"
-    else
-      pending="$outdir/.pending"        # 구형식(단일 마커) 관용
-    fi
-  fi
-  [ -n "${pending:-}" ] && [ -f "$pending" ] || return 0
+  [ -f "$pending" ] || return 0
   local sealfile sealsess sealts
   IFS=$'\t' read -r sealfile sealsess sealts < "$pending" 2>/dev/null
   [ -z "${sealfile:-}" ] && sealfile="$(head -1 "$pending" 2>/dev/null)"   # 구형식 관용
@@ -166,8 +172,11 @@ do_digest() {
   _now=$(date +%s)
   # ⓑ 를 **먼저** 계산한다 — 나이 문구가 세션 일치 여부에 의존하기 때문이다(아래 ⓐ-3).
   # 세션 대조는 **양쪽을 다 알 때만** 성립한다. 한쪽이라도 unknown 이면 결과는 「일치」가 아니라
-  # **「대조 불가」**다. 초판은 그 경우 경고를 껐는데, 소비자가 unknown 인 경로가 바로
-  # 주인 없는 남의 마커를 집는 경로(line 165)여서 **가장 필요한 자리에서 꺼져 있었다**.
+  # **「대조 불가」**다. 초판은 그 경우 경고를 껐는데, 소비자가 unknown 인 경로가 그때는
+  # 남의 마커를 집는 경로여서 **가장 필요한 자리에서 꺼져 있었다**. (2026-10-03 부로 그 경로는
+  # `.pending_unknown` 만 읽는다 — 봉인 쪽도 unknown 이라 이 라벨이 그대로 정답이다.)
+  # 「다른 세션의 봉인이다」 가지는 이제 마커 파일명과 그 안의 세션이 어긋날 때(손댄 마커)만
+  # 도달한다 — 옛 도달 경로였던 구형식 `.pending` 관용이 사라졌기 때문이다(#13 이 그 형태로 잰다).
   if [ -n "${sealsess:-}" ] && [ "${sealsess}" != "unknown" ] \
      && [ -n "$DIGEST_SESSION" ] && [ "$DIGEST_SESSION" != "unknown" ]; then
     if [ "${sealsess}" = "$DIGEST_SESSION" ]; then
@@ -193,7 +202,7 @@ do_digest() {
          _stale=" ⚠️ 봉인 시각이 미래($(( - _age ))초 뒤) — 시계 어긋남 또는 손댄 마커, 신선도 판정 불가"
        elif [ "$_age" -gt 43200 ]; then
          # ⓐ-3 **세션이 일치하면 이 경고는 반증 가능하게 틀렸다.** 마커는 봉인마다 세션별로
-         #    덮어써지므로(line 150), 일치하는 마커가 가리키는 것은 정의상 그 세션의 **가장
+         #    덮어써지므로(do_seal 의 printf … .pending_${session}), 일치하는 마커가 가리키는 것은 정의상 그 세션의 **가장
          #    최근** 봉인이다. 그때 나이는 주장을 낮출 근거가 아니라 부가 정보다 — 주장 정확도를
          #    위해 만든 가드가 스스로 틀린 말을 하던 자리(Axis 2 M-4 지목).
          if [ "$_sessmatch" = yes ]; then
@@ -310,8 +319,8 @@ self_test() {
 
   # digest: 1회만 나오고 두 번째는 무출력 — 매 프롬프트 재주입은 소음이다
   local d1 d2
-  d1="$(do_digest "$T/out" 2>/dev/null | wc -c | tr -d ' ')"
-  d2="$(do_digest "$T/out" 2>/dev/null | wc -c | tr -d ' ')"
+  d1="$(do_digest "$T/out" "sess1" 2>/dev/null | wc -c | tr -d ' ')"
+  d2="$(do_digest "$T/out" "sess1" 2>/dev/null | wc -c | tr -d ' ')"
   [ "$d1" -gt 100 ] && r=YES || r=NO
   t "digest 1회차 주입됨" YES "$r"
   t "digest 2회차 무출력 (소비됨)" 0 "$d2"
@@ -323,8 +332,8 @@ self_test() {
   # ── 회귀 레인: SIGPIPE 소비 누락 (2026-08-08 실측 재현) ──
   # 소비자가 파이프를 먼저 닫아도 마커는 소비돼야 한다. 인쇄 뒤에 rm 을 두면 여기서 되돌아온다.
   do_seal "$T/tr.jsonl" "$T/out3" "sess3" >/dev/null 2>&1
-  do_digest "$T/out3" 2>/dev/null | head -1 >/dev/null 2>&1
-  d2="$(do_digest "$T/out3" 2>/dev/null | wc -c | tr -d ' ')"
+  do_digest "$T/out3" "sess3" 2>/dev/null | head -1 >/dev/null 2>&1
+  d2="$(do_digest "$T/out3" "sess3" 2>/dev/null | wc -c | tr -d ' ')"
   t "파이프 조기 종료 후에도 소비됨 (무한 재주입 방지)" 0 "$d2"
 
   # 전사본이 없어도 훅은 절대 죽지 않는다
@@ -358,7 +367,7 @@ self_test() {
   # #3 digest 는 발화 덤프가 아니라 **포인터**를 주입해야 한다
   # (앞 레인들이 .pending 을 소비했으므로 새로 봉인하고 잰다)
   do_seal "$T/tr.jsonl" "$T/out3b" "sess3b" >/dev/null 2>&1
-  local dg; dg="$(do_digest "$T/out3b" 2>/dev/null)"
+  local dg; dg="$(do_digest "$T/out3b" "sess3b" 2>/dev/null)"
   case "$dg" in *"열어야 할 정본"*) r=YES ;; *) r=NO ;; esac
   t "#3 digest 가 정본 포인터를 주입한다" YES "$r"
   # ⚠️ 이 레인은 한때 "브랜치:" 등장을 무조건 YES 로 기대했다. **REPO_ROOT 가 git 저장소인지는
@@ -456,10 +465,16 @@ self_test() {
   t "#11e 선행 0 에도 포인터가 실제로 인쇄된다 (무음 아님)" YES "$rc"
 
   # #13 「다른 세션의 봉인이다」 분기는 **살아있는데 앵커가 0개**였다 — #4 는 라우팅(0바이트)만
-  # 재서 이 문자열에 도달할 수 없다. 프로덕션 도달 경로 = 구형식 단일 `.pending` 관용(line 167).
+  # 재서 이 문자열에 도달할 수 없다. 옛 도달 경로(구형식 단일 `.pending` 관용)는 2026-10-03 에
+  # 지웠으므로, 지금 남은 도달 경로 = **파일명은 내 것인데 안의 세션이 남의 것**(손댄 마커).
+  # 🔍 판정(2026-10-03 2라운드, agy C 지목): **운영상 도달 불가다.** do_seal 은 파일명과 내용에
+  #    같은 $session 을 쓰고, digest 는 그 파일명으로만 찾는다 — 둘이 어긋나는 정상 경로가 없다.
+  #    그래도 가지를 지우지 않는 이유: 손댄·깨진·다른 버전이 쓴 마커가 오면 「직전 압축」 주장을
+  #    막는 마지막 층이고, 지우면 그 경우가 조용히 「일치」로 렌더된다. 이 레인은 회귀 앵커가 아니라
+  #    **방어 가지가 살아 있다는 증명**이다 — 도달 경로가 있는 척하지 않으려고 여기 적는다.
   do_seal "$T/tr.jsonl" "$T/out13" "SESSX" >/dev/null 2>&1
   local sf13; sf13="$(ls -t "$T/out13"/seal_*.md 2>/dev/null | head -1)"
-  printf '%s\t%s\t%s\n' "$sf13" "SESSX" "$(( $(date +%s) - 432000 ))" > "$T/out13/.pending"
+  printf '%s\t%s\t%s\n' "$sf13" "SESSX" "$(( $(date +%s) - 432000 ))" > "$T/out13/.pending_SESSA"
   local d13; d13="$(do_digest "$T/out13" "SESSA" 2>/dev/null)"
   case "$d13" in *"다른 세션(SESSX)"*) rc=YES ;; *) rc=NO ;; esac
   t "#13 ★ 교차세션 경고가 실제로 인쇄된다 (분기 무앵커 폐쇄)" YES "$rc"
@@ -469,8 +484,10 @@ self_test() {
   t "#13 세션 불일치 + 묵음이면 나이 경고가 붙는다" YES "$rc"
 
   # #12 소비자 세션이 미상이면 결과는 「일치」가 아니라 **「대조 불가」**다.
-  # 그 경로(line 165)가 바로 주인 없는 남의 마커를 집는 경로여서, 초판은 가장 필요한 자리에서 꺼졌다.
-  do_seal "$T/tr.jsonl" "$T/out12" "SESSA" >/dev/null 2>&1
+  # 그 경로가 한때 남의 마커를 집는 경로여서, 초판은 가장 필요한 자리에서 꺼졌다. 2026-10-03 부로
+  # 미상 소비자는 `.pending_unknown`(세션을 못 정한 seal 이 쓰는 주인 없는 마커)만 읽는다 —
+  # 그 봉인도 unknown 이므로 라벨은 여전히 「대조 불가」가 정답이다.
+  do_seal "$T/tr.jsonl" "$T/out12" "unknown" >/dev/null 2>&1
   local d12; d12="$(do_digest "$T/out12" "unknown" 2>/dev/null)"
   case "$d12" in *"세션 대조 불가"*) rc=YES ;; *) rc=NO ;; esac
   t "#12 소비자 미상이면 대조 불가로 라벨된다" YES "$rc"
@@ -478,6 +495,57 @@ self_test() {
   t "#12 대조 불가면 '직전 압축' 주장 안 한다" NO "$rc"
   case "$d11b" in *"세션 대조 불가"*) rc=YES ;; *) rc=NO ;; esac
   t "#12 known-negative: 양쪽 아는 경로엔 대조불가 라벨 없음" NO "$rc"
+
+  # #14 (2026-10-03, fh_signal_2026-09-30_compaction-digest-stale) **세션을 알면 구형식 `.pending`
+  # 을 읽지 않는다.** 실측: 컴패니언 저장소에 git 추적으로 남은 구형식 마커가 sync 로 되살아나 08-08
+  # 남의 봉인을 09-30 두 세션 · 10-03 한 세션에 주입했다. 구형식은 아무도 더 이상 쓰지 않으므로
+  # 거기 남은 것은 정의상 낡다. 컨트롤: 같은 디렉터리에 내 마커를 넣으면 주입된다(계기 살아 있음).
+  do_seal "$T/tr.jsonl" "$T/out14" "SESSOLD" >/dev/null 2>&1
+  local sf14; sf14="$(ls -t "$T/out14"/seal_*.md 2>/dev/null | head -1)"
+  rm -f "$T/out14"/.pending_* 2>/dev/null
+  printf '%s\n' "$sf14" > "$T/out14/.pending"          # 08-08 이전 모양 — 경로 한 줄
+  local d14; d14="$(do_digest "$T/out14" "SESSNEW" 2>/dev/null | wc -c | tr -d ' ')"
+  t "#14 ★ 세션 알려짐 + 구형식 .pending 만 존재 → 무출력" 0 "$d14"
+  [ -f "$T/out14/.pending" ] && rc=YES || rc=NO
+  t "#14 구형식 마커를 건드리지도 않는다 (정리는 사람 몫)" YES "$rc"
+  do_seal "$T/tr.jsonl" "$T/out14" "SESSNEW" >/dev/null 2>&1
+  local d14c; d14c="$(do_digest "$T/out14" "SESSNEW" 2>/dev/null)"
+  case "$d14c" in *"직전 압축 전에"*) rc=YES ;; *) rc=NO ;; esac
+  t "#14 control: 같은 디렉터리에 내 마커가 있으면 주입된다 (무출력이 죽은 계기가 아니다)" YES "$rc"
+
+  # #15 **세션 미상 소비자는 남의 `.pending_*` 를 집지 않는다 — 주입도 소비도 안 한다.**
+  # 옛 동작(`ls -t .pending_*` 최신)은 «주인 없는 것」이 아니라 가장 최근에 압축된 남의 세션 마커를
+  # 집었고, 소비해서 그 주인이 자기 원장을 못 받게 했다(이 파일의 교리 위반).
+  do_seal "$T/tr.jsonl" "$T/out15" "SESSOWNER" >/dev/null 2>&1
+  local d15; d15="$(do_digest "$T/out15" "unknown" 2>/dev/null | wc -c | tr -d ' ')"
+  t "#15 ★ 세션 미상 + 남의 .pending_* → 무출력" 0 "$d15"
+  local d15o; d15o="$(do_digest "$T/out15" "SESSOWNER" 2>/dev/null | wc -c | tr -d ' ')"
+  [ "$d15o" -gt 100 ] && rc=YES || rc=NO
+  t "#15 ★ 그 마커의 주인은 여전히 자기 원장을 받는다 (미상 소비자가 빼앗지 않았다)" YES "$rc"
+
+  # #16 (2026-10-03 2라운드) **CLI 진입점**으로 잰다 — #15 는 do_digest 를 직접 불러서, 디스패처가
+  # 세션 미상을 «최신 전사본의 세션」으로 바꿔치기하는 경로를 못 봤다(codex·agy 수렴 지목).
+  # 픽스처: 가짜 HOME 아래 이 레포 슬러그의 전사본 디렉터리에 PEER 의 전사본을 «최신」으로 둔다.
+  local H16="$T/home16" slug16
+  slug16="$(printf '%s' "$REPO_ROOT" | sed 's|/|-|g')"
+  mkdir -p "$H16/.claude/projects/$slug16"
+  cp "$T/tr.jsonl" "$H16/.claude/projects/$slug16/PEERSESS0001-aaaa-bbbb.jsonl"
+  do_seal "$T/tr.jsonl" "$T/out16" "PEERSESS0001" >/dev/null 2>&1
+  [ -f "$T/out16/.pending_PEERSESS0001" ] && rc=YES || rc=NO
+  t "#16 control: PEER 마커가 실제로 있다 (아래 무출력이 픽스처 부재 탓이 아니다)" YES "$rc"
+  local d16; d16="$(printf '%s' '{}' | HOME="$H16" bash "$0" digest --dir "$T/out16" 2>/dev/null | wc -c | tr -d ' ')"
+  t "#16 ★ CLI · session_id 없음 + 남의 .pending_PEER + PEER 전사본 최신 → 무출력" 0 "$d16"
+  [ -f "$T/out16/.pending_PEERSESS0001" ] && rc=YES || rc=NO
+  t "#16 ★ PEER 마커가 보존된다 (미상 소비자가 소비하지 않았다)" YES "$rc"
+  local d16o; d16o="$(printf '%s' '{"session_id":"PEERSESS0001-aaaa-bbbb"}' | HOME="$H16" bash "$0" digest --dir "$T/out16" 2>/dev/null)"
+  case "$d16o" in *"직전 압축 전에"*) rc=YES ;; *) rc=NO ;; esac
+  t "#16 control: 같은 CLI 에 주인 session_id 를 주면 주입된다 (CLI 경로가 살아 있다)" YES "$rc"
+  # ⓑ 주인 없는 `.pending_unknown` 은 같은 조건(남의 전사본이 최신)에서도 정상 주입된다.
+  #    옛 디스패처는 여기서 세션을 PEER 로 바꿔 `.pending_PEER…` 를 찾다가 **정당한 미상 원장을 놓쳤다**.
+  do_seal "$T/tr.jsonl" "$T/out16b" "unknown" >/dev/null 2>&1
+  local d16b; d16b="$(printf '%s' '{}' | HOME="$H16" bash "$0" digest --dir "$T/out16b" 2>/dev/null)"
+  case "$d16b" in *"세션 대조 불가"*) rc=YES ;; *) rc=NO ;; esac
+  t "#16 ★ CLI · session_id 없음 + .pending_unknown → 주입된다 (대조 불가 라벨)" YES "$rc"
 
   # #8 포인터 절은 **절대 안 잘린다** — 더티파일 목록이 길어도
   do_seal "$T/tr.jsonl" "$T/out8" "SESS8" >/dev/null 2>&1
@@ -552,7 +620,18 @@ fi
 
 # 페이로드에서 전사본을 못 얻었으면 **cwd 로 스스로 찾는다.** 빈 봉인은 봉인이 아니다 —
 # 훅 페이로드 모양은 런타임 버전에 딸린 외부 의존이고, 거기에 기능 전체를 걸면 안 된다.
-if [ -z "$TRANSCRIPT" ] || [ ! -f "$TRANSCRIPT" ]; then
+#
+# 🟥 **digest 모드에서는 이 블록 전체를 건너뛴다** (2026-10-03 2라운드, codex·agy 수렴 지목 A/S).
+#    digest 는 전사본이 필요 없다 — 이 블록이 digest 에 주는 것은 오직 아래 «세션 미상이면 최신
+#    전사본의 세션으로 바꿔치기» 한 줄뿐이고, 그게 1라운드 수리를 통째로 무력화했다: 미상 소비자가
+#    **가장 최근에 전사본을 쓴 남의 세션 id** 를 얻어 그 세션의 `.pending_<id>` 를 주입·삭제했다.
+#    do_digest 를 직접 부르는 self-test #15 는 이 진입점을 안 거쳐서 못 봤다(→ #16 은 CLI 로 잰다).
+#    digest 의 세션 신원은 **훅 입력의 session_id(또는 --session)만** 믿는다. 없으면 unknown 이고,
+#    그러면 `.pending_unknown` 만 읽는다.
+#    명명된 잔여(같은 부류, 이번에 손대지 않음 — 거버너 결정): seal 모드의 «세션 미상 → mtime 최신
+#    전사본」 추정은 남아 있다. 그 결과는 `payload: fallback-mtime-UNVERIFIED` 로 타입이 남지만,
+#    봉인 파일·마커 이름이 남의 세션 id 로 찍힐 수 있다(그 세션이 나중에 그걸 자기 것으로 받는다).
+if [ "$MODE" != "digest" ] && { [ -z "$TRANSCRIPT" ] || [ ! -f "$TRANSCRIPT" ]; }; then
   _slug="$(printf '%s' "$REPO_ROOT" | sed 's|/|-|g')"
   _dir="$HOME/.claude/projects/$_slug"
   _cand=""

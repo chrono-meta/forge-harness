@@ -71,10 +71,23 @@ echo
 # that a brand-new entry is actually honored (the genericity claim) lives in
 # scripts/sync_to_be_lanes.sh's find-predicate-parity lane, which extracts and EXECUTES this same
 # conversion loop rather than re-implementing it — do not duplicate that proof here too.
-excludes=$(sed -n 's/^SYNC_EXCLUDES=(\(.*\))$/\1/p' "$SYNC" | tr -d "'" )
-if [ -z "$excludes" ]; then
-  bad "cannot read SYNC_EXCLUDES from $SYNC — instrument error, NOT a pass"
+# 🟥 2026-10-03: the list moved OUT of sync-to-be.sh into scripts/sync_excludes.txt (read by both
+# directions through scripts/sync_excludes_lib.sh — cross-family review showed a return path that
+# parsed or eval'd this script's declaration could be spoofed). So (a) now asks: is the data file
+# present with ≥1 entry, does sync-to-be.sh LOAD it (non-comment call), and is there no literal
+# non-empty `SYNC_EXCLUDES=(…)` re-declaration left behind (a second list is the drift this closes).
+SXF="$(dirname "$SYNC")/sync_excludes.txt"
+_sx_n=$(awk '{ sub(/^[ \t\r]+/, ""); sub(/[ \t\r]+$/, "") } $0 != "" && substr($0,1,1) != "#"' "$SXF" 2>/dev/null | grep -c .)
+_sx_code=$(grep -v '^[[:space:]]*#' "$SYNC")
+if [ ! -f "$SXF" ] || [ "${_sx_n:-0}" -eq 0 ]; then
+  bad "cannot read entries from $SXF — instrument error, NOT a pass"
+elif ! grep -q 'fh_load_sync_excludes "\$SYNC_EXCLUDES_FILE"' <<< "$_sx_code"; then
+  bad "sync-to-be.sh no longer loads sync_excludes.txt through fh_load_sync_excludes — the list may have forked"
+# Indented too (round 4, agy C): a re-declaration inside an `if`/function body is still a second list.
+elif grep -qE "^[[:space:]]*SYNC_EXCLUDES=\([^)]" <<< "$_sx_code"; then   # here-string: no producer to SIGPIPE (pipefail)
+  bad "sync-to-be.sh re-declares a literal SYNC_EXCLUDES=(…) — a second list next to sync_excludes.txt"
 else
+  pass "exclusion list — sync-to-be.sh loads scripts/sync_excludes.txt (${_sx_n} entries) and declares no second list"
   cdn_body=$(awk '/^check_dest_newer\(\) \{/,/^}/' "$SYNC")
   if [ -z "$cdn_body" ]; then
     bad "cannot read check_dest_newer() from $SYNC — instrument error, NOT a pass"
@@ -87,6 +100,25 @@ else
   else
     bad "check_dest_newer() no longer iterates SYNC_EXCLUDES — the hand-spelled duplicate may be back (see scripts/sync_to_be_lanes.sh's find-predicate-parity lane for the behavioral proof)"
   fi
+fi
+
+# ── 1b. §1's own known-pair (2026-10-03 round 4) ─────────────────────────────────
+# §1 is a text check, so it gets fixtures: copies of sync-to-be.sh + the data file in a scratch hub,
+# once untouched (must PASS) and once with an INDENTED re-declaration appended (must FAIL — agy C:
+# the first version only looked at column 0). The inner run sets FH_SGC_INNER so it skips this block.
+if [ -z "${FH_SGC_INNER:-}" ]; then
+  _k="$(mktemp -d 2>/dev/null || echo "/tmp/sgc_k.$$")"
+  mkdir -p "$_k/ok/scripts" "$_k/bad/scripts"
+  cp "$SYNC" "$(dirname "$SYNC")/sync_excludes.txt" "$_k/ok/scripts/" 2>/dev/null
+  cp "$SYNC" "$(dirname "$SYNC")/sync_excludes.txt" "$_k/bad/scripts/" 2>/dev/null
+  printf "if true; then\n    SYNC_EXCLUDES=('x')\nfi\n" >> "$_k/bad/scripts/sync-to-be.sh"
+  _ok_out="$(FH_SGC_INNER=1 HUB_DIR="$_k/ok" bash "$0" 2>&1)"
+  _bad_out="$(FH_SGC_INNER=1 HUB_DIR="$_k/bad" bash "$0" 2>&1)"
+  case "$_ok_out" in *"declares no second list"*) pass "§1 known-NEGATIVE — an untouched copy passes §1" ;;
+    *) bad "§1 known-NEGATIVE — an untouched copy does not pass §1 (instrument error)" ;; esac
+  case "$_bad_out" in *"re-declares a literal SYNC_EXCLUDES"*) pass "§1 known-POSITIVE — an INDENTED re-declaration is caught" ;;
+    *) bad "§1 known-POSITIVE — an indented re-declaration is NOT caught (column-0-only check is back)" ;; esac
+  rm -rf "$_k"
 fi
 
 # ── 2. Both directions, on a scratch pair ─────────────────────────────────────

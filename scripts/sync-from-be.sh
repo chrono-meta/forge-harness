@@ -95,6 +95,58 @@ if ! fh_resolve_hub_identity; then
 fi
 [ -d "$BE" ] || { log "no companion store at $BE — nothing to pull (no-op)"; exit 0; }
 
+# ── Exclusion list: the SAME data file the forward script reads (2026-10-03) ───────────────────
+# The pair must exclude the SAME names, or a file the forward script refuses to mirror outward is
+# pulled back inward. This list used to be hand-copied into the find below and had already drifted
+# (`.close_stamps_*` and `vendor/` were in the forward list but not here, while the prose block
+# further down claimed they were). History of the fix, because each step failed in an instructive way:
+#   round 1 — sed-parse sync-to-be.sh's `SYNC_EXCLUDES=(…)` line: accepted a broken declaration
+#             (`('unterminated)` became one entry) and pulled `.pending` (codex A).
+#   round 2 — eval the declaration in a child bash: `SYNC_EXCLUDES=('.pending'); printf 'junk\n'; exit 0 # )`
+#             ran, and the child's stdout REPLACED the list (codex A · agy B).
+#   now     — neither script parses the other. The list is data in scripts/sync_excludes.txt, read by
+#             one loader (scripts/sync_excludes_lib.sh: `while IFS= read -r`, no eval, explicit
+#             character set) that both scripts source. Any invalid line, an empty list, or a missing
+#             file → this WRITE path refuses (exit 10 = harness error here, never a silent pass).
+# The find predicates are built with the same '/' -> -path, else -> -name split sync-to-be.sh uses.
+#
+# 🔍 Exit code 10 vs sync-to-be.sh's "10 = quiet success" (2026-10-03 round 4, agy B — checked, kept).
+#    That doctrine belongs to sync-to-be.sh's OWN Stop hook. This script's callers, read directly:
+#      · SessionStart hook (.claude/settings.local.json): runs `sync-from-be.sh --quiet --include-new=tracks`
+#        then `exit 0` — it reads NO exit code at all, so no code (10, 13, …) would be heard there.
+#        What it does carry is STDOUT (a SessionStart hook's stdout reaches the session); stderr does not.
+#      · sync-to-be.sh's recoverable-grade probe (`--dry-run --no-git`): any rc ≠ 0 keeps the red wall
+#        (`[ "$_dr_rc" -eq 0 ] && …`) — 10 is read as "not recoverable", the fail-closed direction.
+#    So renumbering would change nothing; the silent leg was the CHANNEL. The refusal is therefore
+#    printed with `say` (stdout, never silenced by --quiet) as well as `warn` — a broken list now
+#    reaches the session that just started (lane L13b checks stdout alone).
+_FH_SXLIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sync_excludes_lib.sh"
+SYNC_EXCLUDES_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sync_excludes.txt"
+SYNC_EXCLUDES=()
+if [ -f "$_FH_SXLIB" ]; then
+  # shellcheck source=scripts/sync_excludes_lib.sh
+  . "$_FH_SXLIB"
+fi
+_sx_refuse() {   # $1 = reason → stdout (say: reaches a SessionStart session) AND stderr (warn), exit 10
+  say "⚠️  return sync REFUSED — $1 — refusing to pull with an unknown exclusion set (harness error, not a pass)"
+  warn "REFUSED — $1"
+  exit 10
+}
+if ! type fh_load_sync_excludes >/dev/null 2>&1; then
+  _sx_refuse "exclusion-list loader missing ($_FH_SXLIB)"
+fi
+if ! fh_load_sync_excludes "$SYNC_EXCLUDES_FILE"; then
+  _sx_refuse "$FH_SYNC_EXCLUDES_ERR"
+fi
+FWD_EXCLUDES=("${SYNC_EXCLUDES[@]}")
+FWD_FIND_EXCLUDES=()
+for _e in "${FWD_EXCLUDES[@]}"; do
+  case "$_e" in
+    */) FWD_FIND_EXCLUDES+=(! -path "*/${_e%/}/*") ;;
+    *)  FWD_FIND_EXCLUDES+=(! -name "$_e") ;;
+  esac
+done
+
 # Companion-state gate (fail-CLOSED). The forward script can leave the store mid-rebase when a
 # concurrent push conflicts. A rebase re-checks-out the tree, stamping every touched file with
 # `now` — so on the next session start EVERY file here looks newer, content differs (conflict
@@ -390,11 +442,12 @@ pull_dir() {   # $1 = companion (source) dir, $2 = hub (destination) dir, $3 = l
   listing="$(mktemp)" || { warn "mktemp failed — cannot enumerate $label"; ERRORS=$((ERRORS+1)); return 0; }
   # 🟥 `! -path '*/.git/*'` — 복귀 경로도 중첩 레포의 .git 을 끌어오고 있었다. 나가는 쪽만
   #    막으면 돌아오는 쪽으로 들어온다. ④와 같은 뿌리(목록을 손으로 다시 적는다).
-  if ! find "$src" -type f ! -name '.gitkeep' ! -name '*.marker' \
-         ! -path '*/.git/*' \
-         ! -path '*/logs/*' ! -path '*/manifests/*' ! -path '*/_index/*' \
+  #    → 2026-10-03 부로 그 뿌리를 뽑았다: 나가는 쪽 목록(.gitkeep · *.marker · .git/ · logs/ ·
+  #    manifests/ · _index/ · .fh_node_state · …)은 위 FWD_FIND_EXCLUDES 가 SYNC_EXCLUDES 에서
+  #    만든다. 아래에 손으로 남은 것은 **복귀 경로에만 있는** 제외다(재홈 대상 · 이 스크립트 자기 파일).
+  if ! find "$src" -type f "${FWD_FIND_EXCLUDES[@]}" \
          ! -path '*/substrate/*' \
-         ! -name '.fh_node_state' ! -name 'MEMORY.md' ! -name 'edit_manifest.yaml' \
+         ! -name 'MEMORY.md' ! -name 'edit_manifest.yaml' \
          ! -name '.substrate_versions' \
          ! -name '.sync_from_be_held.marker' ! -name '.sync_overwrite_override_log' \
          -print0 > "$listing" 2>/dev/null; then
@@ -488,7 +541,13 @@ pull_dir() {   # $1 = companion (source) dir, $2 = hub (destination) dir, $3 = l
 
 # ── Exclusions (the list above, stated once in prose) ─────────────────────────
 # These must MATCH THE FORWARD SCRIPT's, or a file it refuses to mirror outward gets pulled inward
-# and the pair is lenient in exactly one direction.
+# and the pair is lenient in exactly one direction. Since 2026-10-03 the forward half is not
+# re-spelled — both scripts read scripts/sync_excludes.txt (FWD_FIND_EXCLUDES, near the top).
+# The rows below explain WHY particular names are excluded; they are not a second list to maintain.
+#   .pending · .pending_* · .last_payload — compaction_probe.sh's session-ephemeral markers
+#                          (2026-10-03). A legacy `.pending` that is tracked in the store came back
+#                          on every pull and fed an 08-08 seal to three later sessions. Seals
+#                          themselves (seal_*.md) are records and still travel.
 #   .fh_node_state       — MEASURED failure. sync-to-be.sh already excludes it (SYNC_EXCLUDES), but a
 #                          copy pushed BEFORE that exclusion existed still sits in the store (rsync
 #                          runs without --delete, so a retired file is never reaped). Omitting it
@@ -504,8 +563,10 @@ pull_dir() {   # $1 = companion (source) dir, $2 = hub (destination) dir, $3 = l
 #   .close_stamps_<date> — machine-scoped in nature (a local close counter) but has no
 #                          companion-store consumer at all, so it is excluded ENTIRELY by the
 #                          forward script (SYNC_EXCLUDES) rather than re-homed — nothing to pull
-#                          back on this side either; listed here for the same reason `.fh_node_state`
+#                          back on this side either; excluded here for the same reason `.fh_node_state`
 #                          is: a belt-and-suspenders name exclusion in case a stale copy ever lands.
+#                          (Until 2026-10-03 this row said so but the find did NOT carry it — the
+#                          hand copy had drifted. It is now derived from SYNC_EXCLUDES like the rest.)
 #
 # ── WHY these are excluded BY NAME and not gated on content (2026-08-20, air node) ──
 # The rule the whole list rests on, written down because nothing above states it:
@@ -523,20 +584,17 @@ pull_dir() {   # $1 = companion (source) dir, $2 = hub (destination) dir, $3 = l
 # answer that. So a future reader tempted to relax one into "pull it when the store's copy is a
 # superset" is proposing a check that is structurally blind to the failure mode.
 #
-# ⚠️ COVERAGE — corrected 2026-08-20; the previous note here was FALSE and this is why it mattered.
-# It read: "scripts/sync_guard_check.sh asserts the forward script's two copies of this list stay
-# equivalent. This is the THIRD copy; it is covered there too — do not edit one without the others."
-# The first sentence is true. The second is not, and it is the half that tells an editor a machine
-# will catch their drift. Measured, known pair:
-#   · sync_guard_check.sh §1 reads ONLY sync-to-be.sh (SYNC_EXCLUDES vs that file's own find
-#     predicates). Injecting a bogus name into SYNC_EXCLUDES -> rc=1, RED. Injecting one into THIS
-#     prose block -> rc=0, GREEN. The named instrument does not read this file at all.
-#   · A real 3-way parity lane does exist, but in a DIFFERENT script: sync_from_be_lanes.sh L13.
-#     It covers THREE hardcoded names (.gitkeep, *.marker, .fh_node_state), one direction
-#     (forward -> return presence), by whole-file grep. Removing .fh_node_state here -> L13 RED;
-#     removing MEMORY.md here -> L13 GREEN (other lanes caught that one, the parity lane did not).
-# So: the names below MEMORY.md's row are held by prose, not by a check. Edit all three copies by
-# hand, and do not read this block as machine-verified.
+# ⚠️ COVERAGE — rewritten 2026-10-03 (the 2026-08-20 version said the names below MEMORY.md's row
+# were "held by prose, not by a check" — true then, and it had drifted: `.close_stamps_*` and
+# `vendor/` were missing from the find while this block said otherwise).
+#   · Shared names: both directions read scripts/sync_excludes.txt through one loader, so there is
+#     no copy to drift. The proof is behavioral — sync_from_be_lanes.sh L13 plants one file per
+#     entry of that file and asserts none is pulled, then adds a brand-new name to a COPY of the data
+#     file and asserts the unedited return path honors it (genericity arm, with a control).
+#   · Return-only names (substrate/, MEMORY.md, edit_manifest.yaml, .substrate_versions, this
+#     script's own held/override files) are still hand-spelled in the find, because they have no
+#     forward counterpart to derive from. Those are covered by their own lanes, not by L13.
+#   · sync_guard_check.sh §1 reads only sync-to-be.sh (still true) — it is not this file's check.
 
 # ── Machine-scoped return leg (same machine ONLY) ────────────────────────────
 # The forward script re-homes three files out of the shared namespace into a per-machine name:

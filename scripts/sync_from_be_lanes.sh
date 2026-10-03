@@ -165,18 +165,170 @@ run >/dev/null 2>&1; rc=$?
 [ "$rc" = "10" ]; chk $? "exit 10 on an in-progress companion rebase"
 [ "$(cat "$HUB/tracks/_meta/g.md")" = "orig" ]; chk $? "nothing written while the store was mid-rebase"
 
-echo "── L13 exclusion parity with the forward script (3-way) ──"
-FWD="$(dirname "$SCRIPT")/sync-to-be.sh"
-if [ -f "$FWD" ]; then
-  miss=""
-  for n in .gitkeep '*.marker' .fh_node_state; do
-    grep -q -- "$n" "$FWD" || continue
-    grep -q -- "$n" "$SCRIPT" || miss="$miss $n"
-  done
-  [ -z "$miss" ]; chk $? "every forward exclusion also appears in the return path (${miss:-none missing})"
-else
-  no "forward script not found — parity unverifiable"
+echo "── L13 exclusion parity — BEHAVIORAL, every entry of scripts/sync_excludes.txt (2026-10-03) ──"
+# Was: a whole-file grep for THREE hardcoded names; it passed while `.close_stamps_*` and `vendor/`
+# were missing from the return find. Both directions now read scripts/sync_excludes.txt, so this lane
+# plants a file named like every entry and asserts none is pulled on a real --include-new run.
+# The entries are read here by a DIFFERENT reader (awk, trimming + comment skip) than the production
+# loader (sync_excludes_lib.sh), so the lane does not grade the loader with the loader.
+SXF="$(dirname "$SCRIPT")/sync_excludes.txt"
+L13_EX=()
+if [ -f "$SXF" ]; then
+  while IFS= read -r _e; do [ -n "$_e" ] && L13_EX+=("$_e"); done <<EOF_L13
+$(awk '{ sub(/^[ \t\r]+/, ""); sub(/[ \t\r]+$/, "") } $0 != "" && substr($0,1,1) != "#" { print }' "$SXF")
+EOF_L13
 fi
+if [ "${#L13_EX[@]}" -eq 0 ]; then
+  no "INSTRUMENT-ERROR: cannot read entries from $SXF — parity verdict void"
+else
+  ok "CONTROL: read ${#L13_EX[@]} entries from sync_excludes.txt (instrument alive)"
+  _l13_plant(){   # $1 = companion area dir, $2 = entry → prints the planted relative path
+    case "$2" in
+      */) mkdir -p "$1/l13dir/${2%/}"; printf 'x\n' > "$1/l13dir/${2%/}/inside.md"; printf '%s' "l13dir/${2%/}/inside.md" ;;
+      *)  _n="$(printf '%s' "$2" | sed 's/\*/probe/g')"; mkdir -p "$1/l13n"; printf 'x\n' > "$1/l13n/$_n"; printf '%s' "l13n/$_n" ;;
+    esac
+  }
+  new_env l13
+  printf 'ordinary\n' > "$BEX/tracks-meta/l13_control.md"
+  L13_REL=()
+  for _e in "${L13_EX[@]}"; do L13_REL+=("$(_l13_plant "$BEX/tracks-meta" "$_e")"); done
+  run --include-new >/dev/null 2>&1
+  [ -f "$HUB/tracks/_meta/l13_control.md" ]; chk $? "CONTROL: an ordinary companion file WAS created (the pull really ran)"
+  leaked=""
+  for _r in "${L13_REL[@]}"; do [ -e "$HUB/tracks/_meta/$_r" ] && leaked="$leaked $_r"; done
+  [ -z "$leaked" ]; chk $? "no file named like a sync_excludes.txt entry was pulled (${leaked:-none leaked}; ${#L13_REL[@]} planted)"
+fi
+
+# Copies of the production scripts in a scratch dir — the return script is never edited; only the
+# DATA file next to it changes. Shared by L13-genericity, L13b and L13d.
+_l13_copy(){   # $1 = dir → copies sync-from-be.sh + its two sourced libs (no data file)
+  mkdir -p "$1"
+  cp "$SCRIPT" "$1/sync-from-be.sh"
+  cp "$(dirname "$SCRIPT")/fh_hub_identity.sh" "$(dirname "$SCRIPT")/sync_excludes_lib.sh" "$1/"
+}
+run_copy(){ local d="$1"; shift; HOME="$FAKEHOME" HUB_DIR="$HUB" BE_DIR="$BEX" bash "$d/sync-from-be.sh" --no-git "$@"; }
+
+echo "── L13g genericity — a name added ONLY to the data file is honored by the UNEDITED return script ──"
+SCR="$ROOT/l13scr"; _l13_copy "$SCR"; cp "$SXF" "$SCR/sync_excludes.txt"
+new_env l13g
+printf 'probe\n' > "$BEX/tracks-meta/zzz_l13_newname"
+run_copy "$SCR" --include-new >/dev/null 2>&1
+[ -f "$HUB/tracks/_meta/zzz_l13_newname" ]; chk $? "CONTROL: with the ORIGINAL data file, the probe name IS pulled"
+printf 'zzz_l13_newname\n' >> "$SCR/sync_excludes.txt"
+new_env l13h
+printf 'probe\n' > "$BEX/tracks-meta/zzz_l13_newname"
+printf 'ordinary\n' > "$BEX/tracks-meta/l13h_control.md"
+run_copy "$SCR" --include-new >/dev/null 2>&1
+[ -f "$HUB/tracks/_meta/l13h_control.md" ]; chk $? "CONTROL: the copied return script ran"
+[ ! -e "$HUB/tracks/_meta/zzz_l13_newname" ]; chk $? "a name appended ONLY to sync_excludes.txt is excluded (no second list)"
+
+echo "── L13b fail-closed: data file or loader absent → refuse (exit 10), pull nothing ──"
+SCR2="$ROOT/l13scr2"; _l13_copy "$SCR2"
+new_env l13b
+printf 'newer\n' > "$BEX/tracks-meta/l13b.md"
+_l13b_out="$(run_copy "$SCR2" --include-new 2>/dev/null)"; rc=$?
+[ "$rc" = "10" ]; chk $? "data file absent → exit 10 (harness error, not a silent pass) — got rc=$rc"
+# The SessionStart hook that runs this script ignores its exit code and drops stderr — only STDOUT
+# reaches the session (round 4, agy B: the silent leg was the channel, not the number).
+case "$_l13b_out" in *"return sync REFUSED"*) ok "the refusal is on STDOUT (stderr discarded here) — a SessionStart session sees it" ;;
+  *) no "the refusal never reached stdout — with stderr dropped, a broken list is silent" ;; esac
+[ ! -e "$HUB/tracks/_meta/l13b.md" ]; chk $? "nothing was pulled with an unknown exclusion set"
+cp "$SXF" "$SCR2/sync_excludes.txt"; rm -f "$SCR2/sync_excludes_lib.sh"
+run_copy "$SCR2" --include-new >/dev/null 2>&1; rc=$?
+[ "$rc" = "10" ] && [ ! -e "$HUB/tracks/_meta/l13b.md" ]; chk $? "loader absent → exit 10 and nothing pulled — got rc=$rc"
+cp "$(dirname "$SCRIPT")/sync_excludes_lib.sh" "$SCR2/"
+run_copy "$SCR2" --include-new >/dev/null 2>&1
+[ -f "$HUB/tracks/_meta/l13b.md" ]; chk $? "CONTROL: the same copy WITH both files pulls normally"
+
+echo "── L13d data-file grammar — independent hand-written fixtures (2026-10-03 round 3) ──"
+# Verdict is read from BEHAVIOR (exit code + which files landed), never from the loader's own output.
+# B-cases include the two round-2 attacks verbatim as data lines: they must be refused as text, never run.
+_l13d(){   # $1 = case id, $2 = data-file body (printf %s — write \n yourself) → sets L13D_RC
+  local sd="$ROOT/l13d/$1"; _l13_copy "$sd"
+  printf '%s' "$2" > "$sd/sync_excludes.txt"
+  new_env "l13d_$1"
+  printf 'ordinary\n' > "$BEX/tracks-meta/ctl.md"
+  printf 'marker\n'   > "$BEX/tracks-meta/.pending"
+  run_copy "$sd" --include-new >/dev/null 2>&1
+  L13D_RC=$?
+}
+_l13d_ok(){
+  [ "$L13D_RC" = "0" ] && [ -f "$HUB/tracks/_meta/ctl.md" ]; chk $? "$1: accepted (rc=$L13D_RC, control pulled)"
+  [ ! -e "$HUB/tracks/_meta/.pending" ]; chk $? "$1: and the listed exclusion is honored (.pending not pulled)"
+}
+_l13d_refuse(){
+  [ "$L13D_RC" = "10" ]; chk $? "$1: refused with exit 10 (got rc=$L13D_RC)"
+  [ ! -e "$HUB/tracks/_meta/ctl.md" ] && [ ! -e "$HUB/tracks/_meta/.pending" ]; chk $? "$1: nothing pulled"
+}
+_l13d A1 $'.pending\nlogs/\n'
+_l13d_ok "A1 plain entries (CONTROL — the fixture harness itself works)"
+_l13d A2 $'# header comment\n\n   .pending   \n\n# another\nlogs/\n'
+_l13d_ok "A2 comments, blank lines, surrounding spaces mixed in"
+_l13d A3 $'.pending\r\nlogs/\r\n'
+_l13d_ok "A3 CRLF line endings (CR is trimmed as whitespace)"
+_l13d A4 $'logs/\n.pending'
+_l13d_ok "A4 no trailing newline on the last line"
+_l13d B1 $'.pending\nsub/secret.key\n'
+_l13d_refuse "B1 an entry with an inner slash (would be a silent no-op as find -name)"
+_l13d B2 $'.pending   # inline comment\n'
+_l13d_refuse "B2 an inline comment after an entry"
+INJ="$ROOT/l13d_INJECTED"
+_l13d B3 ".pending
+\$(touch $INJ)
+"
+_l13d_refuse "B3 a command-substitution line"
+[ ! -e "$INJ" ]; chk $? "B3: and it was never executed (no file created)"
+_l13d B4 $'SYNC_EXCLUDES=(\'.pending\'); printf \'junk\\n\'; exit 0 # )\n'
+_l13d_refuse "B4 the round-2 list-spoofing declaration, as a data line"
+_l13d B5 $'# only comments\n\n   \n'
+_l13d_refuse "B5 empty list (comments and blanks only)"
+_l13d B6 ''
+_l13d_refuse "B6 zero-byte file"
+_l13d B7 $'.pending\n덱\n'
+_l13d_refuse "B7 a non-ASCII entry (refused in every locale — explicit character set)"
+_l13d B8 $'.pending\nlogs//\n'
+_l13d_refuse "B8 two trailing slashes"
+
+# Round 4 fixtures — written with printf FORMAT so a NUL byte can be embedded (a bash string cannot hold one).
+_l13dfmt(){   # $1 = case id, $2 = printf format for the data file → sets L13D_RC
+  local sd="$ROOT/l13d/$1"; _l13_copy "$sd"
+  printf "$2" > "$sd/sync_excludes.txt"
+  new_env "l13d_$1"
+  printf 'ordinary\n' > "$BEX/tracks-meta/ctl.md"
+  printf 'marker\n'   > "$BEX/tracks-meta/.pending"
+  run_copy "$sd" --include-new >/dev/null 2>&1
+  L13D_RC=$?
+}
+_l13dfmt B9 '.pend\000ing\nlogs/\n'
+_l13d_refuse "B9 NUL in the middle of an entry (bash 3.2 read keeps only «.pend» — codex B: .pending leaked)"
+# NUL at the START of a line: bash read yields "", the line is skipped as blank, and the entry after
+# the NUL silently vanishes. A NUL-only first line would ALSO be caught by the empty-list check, so
+# the fixture keeps a valid entry first — then only the NUL check can refuse it (revert-measured).
+_l13dfmt B10 '.pending\n\000logs/\n'
+_l13d_refuse "B10 NUL at the start of a line (the entry after it would silently disappear)"
+for _dc in '.' '..' './' '../' '*' '*/'; do
+  _l13dfmt "B11_$(printf '%s' "$_dc" | tr './*' 'DSX')" ".pending\n${_dc}\n"
+  _l13d_refuse "B11 entry «${_dc}» (current/parent dir or match-everything — tar fallback archives nothing)"
+done
+
+echo "── L13c compaction session markers never come back; seals do (fh_signal_2026-09-30, 2026-10-03) ──"
+# The incident: a legacy `.pending` tracked in the store came back on every pull and fed an 08-08
+# seal to three later sessions. Both arms — creation (--include-new) and overwrite (hub copy older).
+new_env l13c
+mkdir -p "$BEX/tracks-meta/compaction" "$HUB/tracks/_meta/compaction"
+printf 'hub-old\n' > "$HUB/tracks/_meta/compaction/.pending_live"
+sleep 1
+printf '/x/seal_REPRO.md\n' > "$BEX/tracks-meta/compaction/.pending"
+printf '/x/seal_peer.md\tpeer\t1\n' > "$BEX/tracks-meta/compaction/.pending_peer"
+printf 'store-newer\n' > "$BEX/tracks-meta/compaction/.pending_live"
+printf '{}\n' > "$BEX/tracks-meta/compaction/.last_payload"
+printf '# seal\n' > "$BEX/tracks-meta/compaction/seal_peer_20261003.md"
+run --include-new >/dev/null 2>&1
+[ -f "$HUB/tracks/_meta/compaction/seal_peer_20261003.md" ]; chk $? "CONTROL: the seal body (a record) IS pulled"
+[ ! -e "$HUB/tracks/_meta/compaction/.pending" ]; chk $? "legacy .pending is not re-created in the hub"
+[ ! -e "$HUB/tracks/_meta/compaction/.pending_peer" ]; chk $? "a peer session's .pending_<id> is not re-created"
+[ ! -e "$HUB/tracks/_meta/compaction/.last_payload" ]; chk $? ".last_payload is not re-created"
+[ "$(cat "$HUB/tracks/_meta/compaction/.pending_live")" = "hub-old" ]; chk $? "an existing hub marker is not overwritten by a newer store copy"
 
 echo "── L14 atomic-write temp file never survives, and is excluded even if it did ──"
 new_env l14
@@ -186,7 +338,7 @@ run >/dev/null 2>&1
 [ -z "$(find "$HUB" -name '*.sfb.*' 2>/dev/null)" ]; chk $? "no temp file left behind after a successful write"
 # even a leaked temp must be invisible to the forward mirror: its suffix is an excluded name
 printf 'leaked\n' > "$HUB/tracks/_meta/t.md.sfb.999.marker"
-grep -q "'\*.marker'" "$(dirname "$SCRIPT")/sync-to-be.sh"; chk $? "forward sync excludes the temp suffix (*.marker)"
+grep -qx '\*\.marker' "$(dirname "$SCRIPT")/sync_excludes.txt"; chk $? "the shared exclusion list carries the temp suffix (*.marker)"
 
 echo "── L15 symlinked PARENT dir must not let a write escape the hub ──"
 new_env l15
@@ -342,6 +494,27 @@ printf 'secret\n' > "$BEX/tracks-meta/secret.md"; chmod 600 "$BEX/tracks-meta/se
 run --include-new >/dev/null 2>&1
 [ -f "$HUB/tracks/_meta/secret.md" ]; chk $? "CONTROL: it was actually created"
 [ "$(stat -c '%a' "$HUB/tracks/_meta/secret.md" 2>/dev/null || stat -f '%Lp' "$HUB/tracks/_meta/secret.md")" = "600" ]; chk $? "created file kept 0600 (not widened to umask 0644)"
+
+echo "── L26 the shared loader, sourced and called directly (not only through the two sync scripts) ──"
+# new-code-anchor counts `source <lib>` as execution; the lanes above only COPY the lib next to a
+# scratch sync script, so the loader itself had no direct caller. This calls it on the shipped list
+# and on two hand-written fixtures, and checks the refusal reason is filled.
+L26="$(mktemp -d)"
+(
+  L26_LIB="$(dirname "$SCRIPT")/sync_excludes_lib.sh"
+  # shellcheck source=scripts/sync_excludes_lib.sh
+  source "$L26_LIB" || exit 9
+  fh_load_sync_excludes "$(dirname "$SCRIPT")/sync_excludes.txt" || exit 2
+  printf '%s\n' "${SYNC_EXCLUDES[@]}" | grep -qx '\.pending' || exit 3
+  printf '.gitkeep\nlogs/\n' > "$L26/ok.txt"
+  fh_load_sync_excludes "$L26/ok.txt" && [ "${#SYNC_EXCLUDES[@]}" -eq 2 ] || exit 4
+  printf 'logs/\na/b\n' > "$L26/bad.txt"
+  fh_load_sync_excludes "$L26/bad.txt" && exit 5
+  [ -n "$FH_SYNC_EXCLUDES_ERR" ] || exit 6
+  exit 0
+); l26=$?
+rm -rf "$L26"
+[ "$l26" -eq 0 ]; chk $? "loader: shipped list has .pending · 2-entry fixture loads · inner-slash fixture refused with a reason (rc=$l26)"
 
 echo ""
 echo "════ lanes: $PASS passed · $FAIL failed ════"
