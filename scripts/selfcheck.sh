@@ -1046,6 +1046,8 @@ for _pair in \
   "plugins/fh-preprep/skills/preprep/lane_promise.py|scripts/test_preprep_promise_lanes.sh" \
   "plugins/fh-preprep/skills/preprep/lane_slide_refs.py|scripts/test_preprep_slide_refs_lanes.sh" \
   "plugins/fh-preprep/skills/preprep/lane_font.py|scripts/test_preprep_font_lanes.sh" \
+  `# 발표 코칭(2026-10-03) — 녹화를 듣는 레인. 의존성이 «없는» 상태가 가장 흔해서, 이 앵커가 고정하는 것은 «못 들었을 때 0 을 안 낸다» 다` \
+  "plugins/fh-preprep/skills/preprep/lane_speech_coach.py|scripts/test_preprep_speech_coach_lanes.sh" \
   "plugins/fh-preprep/skills/preprep/SKILL.md|scripts/test_preprep_drift_anchor.sh" \
   "scripts/test_preprep_drift_anchor.sh|scripts/test_preprep_drift_anchor_lanes.sh" \
   "scripts/field_canon_preload.sh|scripts/test_skill_canon_preload_lanes.sh" \
