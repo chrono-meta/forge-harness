@@ -128,6 +128,53 @@ out="$(PATH="$SHIM" MID=lanea run 2>&1)"
 [ ! -e "$BEX/tracks-chamber/runy/deep/er/vendor/pkg/lib.js" ]; chk $? "tar fallback: a nested vendor/ clone never landed"
 printf '%s' "$out" | grep -q '제외(vendor/'; chk $? "the vendor/ exclusion is announced, not silent"
 
+echo "── L4e compaction session markers (.pending · .pending_* · .last_payload) never leave the hub; seals do (2026-10-03) ──"
+# fh_signal_2026-09-30_compaction-digest-stale: a legacy `.pending` mirrored into the store became a
+# tracked file, survived the digest's own consume-and-delete, and was restored by the return path —
+# an 08-08 seal of another session was injected into three later sessions.
+new_env l4e
+mkdir -p "$HUB/tracks/_meta/compaction"
+printf '/x/seal_old.md\n' > "$HUB/tracks/_meta/compaction/.pending"
+printf '/x/seal_s.md\ts\t1\n' > "$HUB/tracks/_meta/compaction/.pending_abc-123"
+printf '{}\n' > "$HUB/tracks/_meta/compaction/.last_payload"
+printf '# seal\n' > "$HUB/tracks/_meta/compaction/seal_abc_20261003-000000.md"
+MID=lanea run >/dev/null 2>&1
+[ -f "$BEX/tracks-meta/compaction/seal_abc_20261003-000000.md" ]; chk $? "CONTROL: the seal body (a record) synced (run actually executed)"
+[ ! -e "$BEX/tracks-meta/compaction/.pending" ]; chk $? "legacy .pending never landed in the companion store"
+[ ! -e "$BEX/tracks-meta/compaction/.pending_abc-123" ]; chk $? "per-session .pending_<id> never landed"
+[ ! -e "$BEX/tracks-meta/compaction/.last_payload" ]; chk $? ".last_payload never landed"
+
+echo "── L4f a broken exclusion list refuses BEFORE anything is written — rc=13, not 10 (2026-10-03) ──"
+# 13, not 10: the Stop hook stamps rc 10 ("not my hub") as a quiet success, so a broken list on 10
+# would never alarm. Run on COPIES of the scripts with a hand-written data file (the production
+# loader is never asked to grade itself). --init arm: refusal must precede store creation.
+_l4f(){   # $1 = case id, $2 = data-file body ('' = no data file) → sets L4F_RC
+  L4F_SD="$ROOT/l4fscr_$1"; mkdir -p "$L4F_SD"
+  cp "$SCRIPT" "$L4F_SD/sync-to-be.sh"
+  cp "$(dirname "$SCRIPT")/fh_hub_identity.sh" "$(dirname "$SCRIPT")/sync_excludes_lib.sh" "$L4F_SD/"
+  [ -n "$2" ] && printf '%s' "$2" > "$L4F_SD/sync_excludes.txt"
+  new_env "l4f_$1"
+  printf 'ordinary\n' > "$HUB/tracks/_meta/l4f.md"
+  HOME="$ENV_DIR/home" HUB_DIR="$HUB" BE_DIR="$BEX" FH_MACHINE_ID=lanea bash "$L4F_SD/sync-to-be.sh" --quiet >/dev/null 2>&1
+  L4F_RC=$?
+}
+_l4f A $'.pending\nlogs/\n'
+[ "$L4F_RC" = "0" ] && [ -f "$BEX/tracks-meta/l4f.md" ]; chk $? "CONTROL: a valid copied data file mirrors normally (rc=$L4F_RC)"
+_l4f B $'.pending\nsub/secret.key\n'
+[ "$L4F_RC" = "13" ]; chk $? "invalid line → rc=13 (got rc=$L4F_RC)"
+[ ! -e "$BEX/tracks-meta/l4f.md" ]; chk $? "invalid line → nothing mirrored"
+_l4f C ''
+[ "$L4F_RC" = "13" ] && [ ! -e "$BEX/tracks-meta/l4f.md" ]; chk $? "data file absent → rc=13 and nothing mirrored (got rc=$L4F_RC)"
+_l4f D $'# comments only\n\n'
+[ "$L4F_RC" = "13" ] && [ ! -e "$BEX/tracks-meta/l4f.md" ]; chk $? "empty list → rc=13 and nothing mirrored (got rc=$L4F_RC)"
+# --init: the store does not exist yet; a broken list must not create it.
+L4F_SD="$ROOT/l4fscr_E"; mkdir -p "$L4F_SD"
+cp "$SCRIPT" "$L4F_SD/sync-to-be.sh"; cp "$(dirname "$SCRIPT")/fh_hub_identity.sh" "$(dirname "$SCRIPT")/sync_excludes_lib.sh" "$L4F_SD/"
+printf 'bad entry\n' > "$L4F_SD/sync_excludes.txt"
+new_env l4f_E; rm -rf "$BEX"
+HOME="$ENV_DIR/home" HUB_DIR="$HUB" BE_DIR="$BEX" FH_MACHINE_ID=lanea bash "$L4F_SD/sync-to-be.sh" --quiet --init >/dev/null 2>&1; rc=$?
+[ "$rc" = "13" ] && [ ! -e "$BEX" ]; chk $? "--init with a broken list → rc=13 and the store is NOT created (got rc=$rc)"
+
 echo "── L5 destination-newer abort CITES the return path and drops the false single-cause claim (2026-08-20) ──"
 # The old message asserted one cause ("it was edited in the MIRROR") and offered only
 # SYNC_OVERWRITE_OK=1 — measured 0/4 correct on the air node, where all four hits were a PEER NODE's
@@ -595,12 +642,14 @@ _sync_src() { sed -n '1,$p' "$REPO/scripts/sync-to-be.sh" 2>/dev/null; }
 REPO="${REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 
 # E: 계기가 대상을 못 읽으면 INSTRUMENT-ERROR 다 — «제외가 잘 된다» 로 접지 않는다.
-_ex_line="$(_sync_src | grep -n '^SYNC_EXCLUDES=' | head -1)"
-if [ -z "$_ex_line" ]; then
+# 2026-10-03: 목록은 sync-to-be.sh 안의 선언이 아니라 scripts/sync_excludes.txt 다(양방향이 같은 로더로 읽는다).
+#   옛 E 는 `^SYNC_EXCLUDES=` 줄을 찾았는데, 그 줄이 `SYNC_EXCLUDES=()` 로 바뀌어도 «읽었다」로 통과한다.
+_ex_line="$(grep -cvE '^[[:space:]]*(#|$)' "$REPO/scripts/sync_excludes.txt" 2>/dev/null)"
+if [ "${_ex_line:-0}" -eq 0 ]; then
   FAIL=$((FAIL+1)); printf '  ❌ %s
-' "E: INSTRUMENT-ERROR — SYNC_EXCLUDES 정의를 못 읽었다 (이 아래 판정은 무효)"
+' "E: INSTRUMENT-ERROR — scripts/sync_excludes.txt 를 못 읽었다 (이 아래 판정은 무효)"
 else
-  ok "E: SYNC_EXCLUDES 정의를 읽었다 (계기 살아 있음)"
+  ok "E: scripts/sync_excludes.txt 를 읽었다 — 항목 ${_ex_line}줄 (계기 살아 있음)"
 
   # A: 현행이 배열을 쓰는가. 손목록으로 되돌아가면 여기서 적색.
   # 🟥 파이프로 흘리지 않는다 — 여기는 `_sync_src | grep -q` 였고 그 형태가 CI 를 간헐적으로
@@ -646,8 +695,16 @@ else
   fi
 
   # 복귀 경로도 같은 뿌리다 — 나가는 쪽만 막으면 돌아오는 쪽으로 들어온다.
-  if grep -q "! -path '\*/\.git/\*'" "$REPO/scripts/sync-from-be.sh" 2>/dev/null; then
-    ok "R: 복귀 경로(sync-from-be) 도 .git 을 제외한다"
+  # 🟥 2026-10-03: 옛 판정 `grep "! -path '*/.git/*'" sync-from-be.sh` 는 **주석에 그 문자열이 남아서**
+  #    통과하고 있었다(장식 앵커 — 실제 find 는 1라운드부터 목록에서 술어를 만든다). 이제 묻는 것:
+  #    공유 목록에 `.git/` 이 있고, 복귀 경로가 (주석 아닌 줄에서) 그 목록을 로드하는가. 행동 증명은
+  #    sync_from_be_lanes.sh L13(목록 항목마다 심어서 안 당겨지는지)이 한다.
+  #    🟥 `grep -v … | grep -q` 로 쓰지 마라 — 대상이 64 KiB 를 넘고 매치가 앞에 있어 SIGPIPE(141)로
+  #    거짓 빨강이 난다(이 레인을 쓰다 실측 — 위 A 절과 같은 부류). 변수로 받고 here-string 으로 본다.
+  _rfb_code="$(grep -v '^[[:space:]]*#' "$REPO/scripts/sync-from-be.sh" 2>/dev/null)"
+  if grep -qx '\.git/' "$REPO/scripts/sync_excludes.txt" 2>/dev/null \
+     && grep -q 'fh_load_sync_excludes "\$SYNC_EXCLUDES_FILE"' <<< "$_rfb_code"; then
+    ok "R: 복귀 경로(sync-from-be) 도 .git 을 제외한다 (공유 목록에 있고, 복귀 경로가 그 목록을 로드한다)"
   else
     FAIL=$((FAIL+1)); printf '  ❌ %s
 ' "R: 복귀 경로에 .git 제외가 없다 — 돌아오는 쪽으로 들어온다"

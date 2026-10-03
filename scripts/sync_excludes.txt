@@ -1,0 +1,33 @@
+# sync_excludes.txt — the ONE list of names the companion-store mirror never carries, in either direction.
+#
+# Read by scripts/sync-to-be.sh (hub → store) and scripts/sync-from-be.sh (store → hub) through
+# scripts/sync_excludes_lib.sh. Neither script parses the other; both read this file. (2026-10-03:
+# round 1 had the return path sed-parse the forward script, round 2 had it eval the declaration —
+# cross-family review then showed `SYNC_EXCLUDES=('.pending'); printf 'junk\n'; exit 0 # )` ran and
+# replaced the list. Data, not code, is the fix.)
+#
+# Format (anything else → both scripts refuse to run):
+#   · one entry per line; leading/trailing spaces are trimmed
+#   · blank lines and lines starting with `#` are ignored (no comments AFTER an entry)
+#   · an entry is [A-Za-z0-9._*-]+ with at most one trailing `/`
+#       trailing `/`  → a directory name, excluded wherever it appears (find -path '*/NAME/*')
+#       otherwise     → a file name or glob, matched against the basename (find -name)
+#     A slash inside an entry is refused: `-name` never matches a slash, so `sub/secret.key` would
+#     be a silent no-op exclusion.
+# Why each entry is here: the long comment block above the loader in scripts/sync-to-be.sh.
+
+.gitkeep
+*.marker
+logs/
+.fh_node_state
+.close_stamps_*
+manifests/
+_index/
+.git/
+vendor/
+
+# compaction_probe.sh session-ephemeral markers (2026-10-03, fh_signal_2026-09-30_compaction-digest-stale).
+# Seal bodies (seal_*.md) are records and still travel.
+.pending
+.pending_*
+.last_payload

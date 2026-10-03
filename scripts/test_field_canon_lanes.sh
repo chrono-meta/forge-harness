@@ -162,5 +162,38 @@ w2=$(printf '%s' '{"session_id":"RX2","prompt":"q.sp 를 보자"}' \
 [ -n "$w2" ] && ok "⑭-b ★컨트롤: 정확히 'q.sp' 는 잡힌다(⑭ 의 침묵이 공허하지 않다)" \
               || no "⑭-b 컨트롤" "정확한 이름도 못 잡는다 — ⑭ 는 무엇도 증명하지 않는다"
 
+# ⑮ (2026-10-03 2라운드) 긴 여러 줄 프롬프트 — 매핑 루프의 `printf "$PROMPT" | grep -qiF "$name"` 은
+#    grep -q 가 첫 줄 일치에 파이프를 닫으면 printf 가 SIGPIPE 로 죽어(pipefail → 141) «안 맞음」으로
+#    읽혔다. 수리 전 실측: «qasp 보자\n」 + x 1,000,000 → 3/3 MISS. 픽스처는 파일 리다이렉트(레인 쪽 파이프 없음).
+python3 -c 'import json,sys; sys.stdout.write(json.dumps({"prompt":"qasp 보자\n"+"x"*1000000}))' > "$TMP/big15.json" 2>/dev/null
+if [ -s "$TMP/big15.json" ]; then
+  out=$(env CLAUDE_PROJECT_DIR="$FHUB" FIELD_CANON_PROJECT_ROOT="$FPROJ" FIELD_CANON_SENTINEL_DIR="$TMP/15" bash "$H" < "$TMP/big15.json" 2>&1)
+  case "$out" in *qasp*README.md*) ok "⑮ 긴 여러 줄 프롬프트의 첫 줄 «qasp」 → 정본 경로 제시 (SIGPIPE 로 놓치지 않는다)" ;;
+    *) no "⑮ 긴 여러 줄 프롬프트" "첫 줄의 매핑 이름을 놓쳤다" ;; esac
+  out=$(run '{"prompt":"QASP 보자"}' "$TMP/15b")
+  case "$out" in *qasp*README.md*) ok "⑮-b 대소문자 무시는 유지된다 («QASP」 → 잡힌다, grep -i 와 같은 의미)" ;;
+    *) no "⑮-b 대소문자" "«QASP」를 못 잡는다 — case 전환이 -i 의미를 잃었다" ;; esac
+else
+  no "⑮ CONTROL" "1MB 픽스처 생성 실패 — 레인 무효"
+fi
+
+# ⑯ (2026-10-03 3라운드) 빈 프로젝트 이름 — `*""*` 는 모든 프롬프트에 맞는다. 단어 분할로는 빈 이름이
+#    안 생기므로 운영상 도달하지 않는다(방어 가드). 훅 사본의 루프에 빈 이름을 끼워 잰다.
+mkdir -p "$TMP/h16"; cp "$HERE/fh_track_resolve.sh" "$TMP/h16/"   # 훅이 형제 라이브러리를 소스한다
+HC16="$TMP/h16/field_canon_preload.sh"
+# 🔍 빈 이름은 **두 겹으로** 운영상 도달 불가다: ① 단어 분할이 빈 이름을 안 만든다 ② 센티넬 검사
+#    `[ -e "$SENT_DIR/$name" ]` 가 빈 이름이면 디렉터리 `$SENT_DIR/` 자체라 참 → continue(되돌림 실측:
+#    가드를 지워도 이 레인이 초록이었다). 그래서 사본에서 ②도 걷어 **가드만** 남긴 상태를 잰다.
+sed -e 's/^for name in \$mapped; do$/for name in "" $mapped; do/' \
+    -e 's/^  \[ -n "\$SENT_DIR" \] && \[ -e "\$SENT_DIR\/\$name" \] && continue.*$/  :/' "$H" > "$HC16"
+if grep -q '^for name in "" \$mapped; do$' "$HC16" && ! grep -q 'SENT_DIR/\$name" \] && continue' "$HC16"; then
+  out=$(printf '%s' '{"prompt":"오늘 날씨 어때"}' | env CLAUDE_PROJECT_DIR="$FHUB" FIELD_CANON_PROJECT_ROOT="$FPROJ" FIELD_CANON_SENTINEL_DIR="$TMP/16" bash "$HC16" 2>&1)
+  [ -z "$out" ] && ok "⑯ 빈 프로젝트 이름이 무관한 프롬프트에 걸리지 않는다" || no "⑯ 빈 이름" "무관한 프롬프트에 출력: $out"
+  out=$(printf '%s' '{"prompt":"qasp 보자"}' | env CLAUDE_PROJECT_DIR="$FHUB" FIELD_CANON_PROJECT_ROOT="$FPROJ" FIELD_CANON_SENTINEL_DIR="$TMP/16b" bash "$HC16" 2>&1)
+  case "$out" in *qasp*README.md*) ok "⑯-b CONTROL: 같은 사본에서 진짜 이름은 잡힌다" ;; *) no "⑯-b CONTROL" "사본이 안 돈다" ;; esac
+else
+  no "⑯ CONTROL" "훅 사본 수정 실패 — 레인 무효"
+fi
+
 echo "── PASS $PASS · FAIL $FAIL"
 [ "$FAIL" -eq 0 ] || exit 1

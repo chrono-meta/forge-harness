@@ -25,6 +25,9 @@
 #            Nothing is recovered automatically — only the tone of the message changes.
 #        4 = companion store resolves to the hub itself (refuse to commit private content into the hub)
 #       10 = $FH is not a recognized hub ("not applicable here" — the Stop hook stamps on 0 or 10)
+#       13 = the exclusion list (scripts/sync_excludes.txt) is missing, unreadable, empty, or has an
+#            invalid line — nothing was written. Deliberately NOT 10: the Stop hook stamps 10 as a quiet
+#            success, so a broken list on 10 would read as "not applicable" and never alarm (2026-10-03).
 #       12 = destination guard: $BE is not the ROOT of an existing git work tree (missing · not a dir ·
 #            subdirectory of another repo · bare · submodule · a git too old to rule out a submodule —
 #            compared by physical path) and --init was not given, or --init could not create it
@@ -141,6 +144,27 @@ if ! fh_resolve_hub_identity; then
   # failure as a quiet success (Wave-2 review, [B]).
   echo "[sync-to-be] refuse: \$FH ($FH) is not a recognized hub — abort" >&2
   exit 10
+fi
+
+# ── Exclusion list: DATA, loaded once, BEFORE anything can write (2026-10-03) ──────────────
+# scripts/sync_excludes.txt is the single list both directions read (sync-from-be.sh reads the same
+# file through the same loader). It is loaded here, not where it used to be declared further down,
+# because --init can create and `git init` the store before that point — a refusal must come first.
+# The rationale for each entry stays in the comment block where the literal array used to be.
+_FH_SXLIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sync_excludes_lib.sh"
+SYNC_EXCLUDES_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sync_excludes.txt"
+SYNC_EXCLUDES=()
+if [ -f "$_FH_SXLIB" ]; then
+  # shellcheck source=scripts/sync_excludes_lib.sh
+  . "$_FH_SXLIB"
+fi
+if ! type fh_load_sync_excludes >/dev/null 2>&1; then
+  echo "[sync-to-be] refuse: exclusion-list loader missing ($_FH_SXLIB) — nothing written (rc=13)" >&2
+  exit 13
+fi
+if ! fh_load_sync_excludes "$SYNC_EXCLUDES_FILE"; then
+  echo "[sync-to-be] refuse: $FH_SYNC_EXCLUDES_ERR — nothing written (rc=13)" >&2
+  exit 13
 fi
 # The operator-private area's directory name lives HERE, not in fh_hub_identity.sh — that file
 # ships in the public npm package and this name is an operator-private token there (the pre-publish
@@ -411,7 +435,17 @@ DIRTY=0   # cp-fallback mode can't count cheaply → mark work done, let git-dif
 # 비공개 반쪽이지 남의 코드 보관소가 아니다. 이 스크립트는 삭제를 전파하지 않으므로(append-only) 한 번 실리면
 # 로컬을 지워도 남는다 — 들어가는 문에서 막는다. 명명된 잔여: 우리 것인데 이름이 'vendor' 인 디렉터리도 빠진다
 # (2026-09-28 현재 tracks/ 전체에 vendor 디렉터리는 그 챔버 하나뿐이었다 — find 실측).
-SYNC_EXCLUDES=('.gitkeep' '*.marker' 'logs/' '.fh_node_state' '.close_stamps_*' 'manifests/' '_index/' '.git/' 'vendor/')
+# '.pending' · '.pending_*' · '.last_payload' (2026-10-03, fh_signal_2026-09-30_compaction-digest-stale):
+# scripts/compaction_probe.sh 의 **세션 일회성 표지**다(압축 복구 digest 가 1회 소비하고 지우는 마커 ·
+# 마지막 PreCompact 페이로드). 동반 저장소로 흘려보내면 git 추적 파일이 되고, 소비해서 지운 뒤에도
+# 복귀 경로가 되살린다 — 실측: 08-08 구형식 `.pending` 이 그렇게 살아남아 09-30·10-03 세 세션에 남의
+# 봉인을 주입했다. 봉인 본문(seal_*.md)은 기록이라 계속 간다. 이 목록 하나가 복귀 경로(sync-from-be.sh)의
+# 제외 목록이기도 하다 — 두 스크립트가 같은 데이터 파일(scripts/sync_excludes.txt)을 같은 로더로 읽는다.
+# 명명된 잔여: tracks/ 어디든 이 이름이면 빠진다(2026-10-03 find 실측: compaction/ 밖에는 0개).
+# 🟥 2026-10-03: the list itself now lives in scripts/sync_excludes.txt and is loaded near the top
+# (SYNC_EXCLUDES is already populated by the time this line is reached). The paragraphs above remain
+# the WHY for each entry; the file is the WHAT. Do not re-declare the array here — a second
+# declaration is exactly the drift this move closes.
 
 NEWER_HITS=""
 
