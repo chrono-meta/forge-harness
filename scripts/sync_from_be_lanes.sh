@@ -495,6 +495,27 @@ run --include-new >/dev/null 2>&1
 [ -f "$HUB/tracks/_meta/secret.md" ]; chk $? "CONTROL: it was actually created"
 [ "$(stat -c '%a' "$HUB/tracks/_meta/secret.md" 2>/dev/null || stat -f '%Lp' "$HUB/tracks/_meta/secret.md")" = "600" ]; chk $? "created file kept 0600 (not widened to umask 0644)"
 
+echo "── L26 the shared loader, sourced and called directly (not only through the two sync scripts) ──"
+# new-code-anchor counts `source <lib>` as execution; the lanes above only COPY the lib next to a
+# scratch sync script, so the loader itself had no direct caller. This calls it on the shipped list
+# and on two hand-written fixtures, and checks the refusal reason is filled.
+L26="$(mktemp -d)"
+(
+  L26_LIB="$(dirname "$SCRIPT")/sync_excludes_lib.sh"
+  # shellcheck source=scripts/sync_excludes_lib.sh
+  source "$L26_LIB" || exit 9
+  fh_load_sync_excludes "$(dirname "$SCRIPT")/sync_excludes.txt" || exit 2
+  printf '%s\n' "${SYNC_EXCLUDES[@]}" | grep -qx '\.pending' || exit 3
+  printf '.gitkeep\nlogs/\n' > "$L26/ok.txt"
+  fh_load_sync_excludes "$L26/ok.txt" && [ "${#SYNC_EXCLUDES[@]}" -eq 2 ] || exit 4
+  printf 'logs/\na/b\n' > "$L26/bad.txt"
+  fh_load_sync_excludes "$L26/bad.txt" && exit 5
+  [ -n "$FH_SYNC_EXCLUDES_ERR" ] || exit 6
+  exit 0
+); l26=$?
+rm -rf "$L26"
+[ "$l26" -eq 0 ]; chk $? "loader: shipped list has .pending · 2-entry fixture loads · inner-slash fixture refused with a reason (rc=$l26)"
+
 echo ""
 echo "════ lanes: $PASS passed · $FAIL failed ════"
 [ "$FAIL" -eq 0 ] || exit 1
