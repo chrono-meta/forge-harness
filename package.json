@@ -395,6 +395,8 @@
     "templates/starter_profile.md",
     "templates/subagent-tally-hook.json",
     "templates/temper_check.sh",
-    "tests/seam_absence_probes.md"
+    "tests/seam_absence_probes.md",
+    "scripts/marker_diff_sha.sh",
+    "scripts/test_marker_diff_sha_lanes.sh"
   ]
 }
