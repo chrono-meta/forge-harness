@@ -163,7 +163,7 @@ no runnable path exists (run-first, ask-last — sonnet_floor_doctrine.md §Auto
 
 Record sim results in the Axes 2–3 marker + sub-agent invocation log.
 
-### Marker axis fields — `axes-run:` · `controls:` · `standpoint:` · `soul:` · `soul-check:` · `defeater:` · `tenets:` · `affected:` · `oracle:`
+### Marker axis fields — `axes-run:` · `controls:` · `standpoint:` · `soul:` · `soul-check:` · `defeater:` · `tenets:` · `affected:` · `oracle:` · `diff-sha:`
 
 🟥 **기호 규칙 (2026-09-04, six_axis_review 판정안 8) — ⓐ~ⓕ 는 축 전용 기호다, 열거로 재사용하지
 마라.** 산문에서 목록을 셀 때는 `①②③` 또는 `(a)(b)(c)` 를 쓴다. 오늘(2026-09-04) 같은 이틀치
@@ -244,6 +244,19 @@ R1 — o21~o31 은 cross-family codex 가 연 구멍) · 배선 `scripts/test_ho
 oracle: known-pair — 레인 o1~o36 PASS/BLOCK 픽스처 양쪽 + W6 되돌림(호출부 제거 → 판정 문구 소멸)
 oracle: none — 문서만 변경, 측정 없음
 ```
+
+**`diff-sha:` — 선택. 「이 마커가 어떤 staged 바이트에 대해 쓰였나」 (2026-10-03,
+`fh_signal_2026-10-03_marker-branch-date-key`).** 형식 `diff-sha: <소문자 16진수 64자리>`, 값은
+`bash scripts/marker_diff_sha.sh` 출력(HEAD 대비 index diff 의 정규화 sha256 — 훅의 `_staged_diff_sha()` 를
+그대로 추출해 부른다). 마커 주소가 «브랜치 + 날짜» 뿐이라 같은 날 같은 브랜치에서 축을 돈 뒤 바뀐 diff 가
+옛 마커로 통과하던 구멍(실례 2db9a42 → 1fdd7cc)을 닫는 칸이다. 규칙: 줄이 없으면 통과(유예 —
+`DIFF_SHA_REQUIRED_DATE` 가 비어 있는 동안; 🟥 그 날짜는 운영자 결정이라 비워 둔다) · 줄이 있으면 형식 검사 ·
+여러 줄 허용(축을 돈 diff 사슬) — **하나라도** 현재 staged 지문과 같으면 통과, 전부 다르면 차단 · 근사키
+(`diff_sha:` `Diff-sha:` `diff-sha :` `diffsha:` `diff-fp:`)는 정확한 줄이 있어도 차단 · 지문 계산 실패는
+HARNESS-ERROR(«일치» 아님). 🟥 막는 것은 «잊음»이지 «위조»가 아니다 — 값도 자기신고로 쓸 수 있다. 과차단 잔여:
+값을 적은 마커는 작은 후속 수정(오탈자 한 줄)에도 새 값 한 줄을 요구한다 — 그래서 유예 동안은 적은 사람만
+묶이고, 필수화 전에 불일치 빈도를 재는 것이 순서다. 레인 `scripts/test_marker_diff_sha_lanes.sh`(d1~d12 +
+되돌림 r1·r2) · 배선 `scripts/test_hook_leg_wiring_lanes.sh` W7.
 
 
 These are enforced (the first two) or expected (the third) on the Axes 2–3 marker. Until 2026-08-17
