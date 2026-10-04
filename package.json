@@ -395,6 +395,7 @@
     "templates/starter_profile.md",
     "templates/subagent-tally-hook.json",
     "templates/temper_check.sh",
-    "tests/seam_absence_probes.md"
+    "tests/seam_absence_probes.md",
+    "scripts/test_preprep_speech_coach_lanes.sh"
   ]
 }
