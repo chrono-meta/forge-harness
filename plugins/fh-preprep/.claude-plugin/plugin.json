@@ -4,7 +4,7 @@
   "engines": {
     "claudeCode": ">=1.0.0"
   },
-  "description": "preprep — a presentation-preparation harness. 1 skill. One CLI over 17 lanes (7 built-in + 10 module) that reads a declared surface manifest and checks a talk's assets against each other: canonical-term ledger, jargon glosses, retired vocabulary, inter-slide dependencies, pacing, get/put round-trips, adjacent duplication, slide relations, geometry, attribute consistency, fonts, diagrams, slide refs, and screen-parity between manuscript and deck. Verdict contract: exit 0 pass / 1 findings / 2 cannot-judge — a surface that could not be read is UNMEASURED, never 0. Every lane ships a known-pair fixture.",
+  "description": "preprep — a presentation-preparation harness. 1 skill. One CLI over 17 lanes (7 built-in + 10 module) that reads a declared surface manifest and checks a talk's assets against each other: canonical-term ledger, jargon glosses, retired vocabulary, inter-slide dependencies, pacing, get/put round-trips, adjacent duplication, slide relations, geometry, attribute consistency, fonts, diagrams, slide refs, and screen-parity between manuscript and deck. Verdict contract: exit 0 pass / 1 findings / 2 cannot-judge — a surface that could not be read is UNMEASURED, never 0. Every lane ships a known-pair fixture. A separate advisory lane (lane_speech_coach.py) listens to a rehearsal recording and returns a six-item coaching table — pauses, conjunction drag, sentence-final pitch, opening/closing loudness, pronunciation candidates; ffmpeg required, whisper-cli optional, everything stays local.",
   "author": {
     "name": "chrono-meta",
     "email": "chrono-meta@users.noreply.github.com"
