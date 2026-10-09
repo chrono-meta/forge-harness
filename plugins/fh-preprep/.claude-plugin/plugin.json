@@ -1,6 +1,6 @@
 {
   "name": "fh-preprep",
-  "version": "3.25.0",
+  "version": "3.25.1",
   "engines": {
     "claudeCode": ">=1.0.0"
   },
