@@ -249,6 +249,28 @@ HEAVY=$(echo "$STAGED" \
 CARVEOUT=$(echo "$STAGED" \
   | grep -E "(^knowledge/.*\.md$|^docs/.*\.md$|(^|/)AGENTS\.md$|^README(\.[A-Za-z]{2,3}([-_][A-Za-z]{2,4})?)?\.md$)" | grep -v "^knowledge/shared/rules/" || true)
 
+# ── Axis 2+3 SKIP 사유 — 상수가 아니라 $LIGHT 의 실제 출처에서 읽는다 ──────────────
+# $LIGHT 는 두 경로로 채워진다: ⓐ 경로-light(CATALOG.md · tracks/) · ⓑ carve-out 강등
+# (knowledge/**.md · docs/*.md · AGENTS.md · README*.md 가 substantive 가 아니어서 `(prose-only)`).
+# 초판은 사유를 «CATALOG.md / tracks/ only» 라는 리터럴로 찍어서, ⓑ로 SKIP 한 커밋이 ⓐ라고
+# 보고됐다 — 판정은 맞고 사유가 거짓이라, 출력을 읽는 감사자가 «왜 Axes 2+3 이 안 돌았나»에
+# 틀린 답을 받는다(2026-10-05 known-pair 실측: CATALOG-only 와 prose-only 가 같은 문장을 냈다).
+# SCOPE — 기록의 채널이지 판정이 아니다(§Mechanization Boundary): 이 함수는 종료코드를 안 바꾸고
+# 경량/전체 라우팅도 안 건드린다. 바꾸는 것은 그 라우팅이 스스로를 설명하는 문장뿐이다.
+_axis23_skip_reason() { # $1 = $LIGHT (줄당 한 항목, carve-out 강등 항목은 `(prose-only)` 꼬리표)
+  local light="${1:-}" prose path why=""
+  prose=$(grep -F '(prose-only)' <<<"$light" || true)
+  path=$(grep -vF '(prose-only)' <<<"$light" | grep -E '[^[:space:]]' || true)
+  [ -n "$path" ] && why="CATALOG.md / tracks/"
+  if [ -n "$prose" ]; then
+    [ -n "$why" ] && why="$why + "
+    why="${why}prose-only carve-out"
+  fi
+  # 🟥 빈 값은 «둘 다 아님» 이지 ⓐ가 아니다 — 미측정을 ⓐ로 접지 않는다.
+  [ -z "$why" ] && why="no heavy-class file staged"
+  printf '%s' "$why"
+}
+
 # Always-light by path.
 LIGHT=$(echo "$STAGED" \
   | grep -E "(CATALOG\.md|^tracks/)" || true)
@@ -1819,6 +1841,10 @@ _staged_diff_sha() {
 
 validate_diff_sha_leg() { # $1 = marker path
   local m="$1" nm n cur v ok=0 bad=""
+  if [ ! -f "$m" ]; then
+    echo "  ❌ HARNESS-ERROR — 마커 파일이 존재하지 않는다 ($m)."
+    return 1
+  fi
   nm=$(grep -niE '^[[:space:]]*(diff[-_ ]?sha[[:space:]]*:|diff-fp:|diffsha:)' "$m" 2>/dev/null | grep -vE '^[0-9]+:[[:space:]]*diff-sha:')
   if [ -n "$nm" ]; then
     echo "  ❌ FAIL — diff-sha 키처럼 보이지만 정확히 'diff-sha:' 가 아닌 줄이 있다."
@@ -2795,7 +2821,7 @@ if [ "$GATE_MODE" = "full" ]; then
     FAILED=1
   fi
 else
-  echo "[Axis 2+3] SKIP (lightweight mode — CATALOG.md / tracks/ only)"
+  echo "[Axis 2+3] SKIP (lightweight mode — $(_axis23_skip_reason "$LIGHT"))"
 fi
 
 # ── Axis 4 — Edit Manifest entry (always required) ────────────────────────────
@@ -2954,11 +2980,11 @@ if [ -n "$PPGUARD_IMPL" ]; then
     echo "  ❌ FAIL — scripts/prepush_guard_check.sh missing while the publish guard is being changed."
     echo "     Fail-closed: the anchor is the only mechanical guard on that guard's behavior."
     FAILED=1
-  elif bash "$PPCHECK" >/dev/null 2>&1; then
+  elif env -u GIT_INDEX_FILE -u GIT_DIR -u GIT_WORK_TREE bash "$PPCHECK" >/dev/null 2>&1; then
     echo "  ✅ PASS (all known pairs hold)"
   else
     echo "  ❌ FAIL — a pre-push known pair broke:"
-    bash "$PPCHECK" 2>&1 | grep -E '^\s+❌' | sed 's/^/    /'
+    env -u GIT_INDEX_FILE -u GIT_DIR -u GIT_WORK_TREE bash "$PPCHECK" 2>&1 | grep -E '^\s+❌' | sed 's/^/    /'
     echo "     (run: bash scripts/prepush_guard_check.sh)"
     FAILED=1
   fi
@@ -2971,11 +2997,11 @@ if [ -n "$UGUARD_IMPL" ]; then
     echo "     being changed. The anchor is the only mechanical guard on that guard's SCOPE; its"
     echo "     absence during such an edit is fail-closed, not a skip."
     FAILED=1
-  elif bash "$UGCHECK" >/dev/null 2>&1; then
+  elif env -u GIT_INDEX_FILE -u GIT_DIR -u GIT_WORK_TREE bash "$UGCHECK" >/dev/null 2>&1; then
     echo "  ✅ PASS (all known pairs hold)"
   else
     echo "  ❌ FAIL — a universal-guard known pair broke:"
-    bash "$UGCHECK" 2>&1 | grep -E '^\s+❌' | sed 's/^/    /'
+    env -u GIT_INDEX_FILE -u GIT_DIR -u GIT_WORK_TREE bash "$UGCHECK" 2>&1 | grep -E '^\s+❌' | sed 's/^/    /'
     echo "     (run: bash scripts/universal_guard_check.sh)"
     FAILED=1
   fi

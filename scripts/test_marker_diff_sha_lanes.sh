@@ -50,6 +50,13 @@ lane() { # $1 id  $2 expect  $3 marker body  [$4 needle]  [$5 fn file]
 }
 
 echo "== diff-sha: lanes =="
+# d0 — absent marker file must fail-closed as HARNESS-ERROR (found by codex wave 2).
+out=$( cd "$R" && bash -c 'set -uo pipefail; . "$1"; validate_diff_sha_leg "$2"' _ "$T/fn.sh" "$T/nonexistent.marker" 2>&1 ); rc=$?
+if [ $rc -ne 0 ] && printf '%s' "$out" | grep -qF "존재하지 않는다"; then
+  printf '  ✅ %-36s %s\n' d0-missing-marker-blocks BLOCK
+else
+  printf '  ❌ %-36s expected BLOCK on missing marker file\n     %s\n' d0-missing-marker-blocks "$out"; FAIL=1
+fi
 lane d1-match-passes          PASS  "axes-run: ⓐ=codex
 diff-sha: $SHA_B"
 lane d2-mismatch-blocks       BLOCK "diff-sha: $OTHER" "staged diff 와 다르다"
@@ -93,7 +100,7 @@ lane d13-diff-render-config   PASS  "diff-sha: $SHA_B"
 # d14 — a staged gitlink (submodule commit) change must move the fingerprint even under ignoreSubmodules=all.
 ( cd "$R" && git config diff.ignoreSubmodules all \
     && git update-index --add --cacheinfo 160000,1111111111111111111111111111111111111111,vendor/sub )
-lane d14-gitlink-change-moves  BLOCK "diff-sha: $SHA_B"
+lane d14-gitlink-change-moves  BLOCK "diff-sha: $SHA_B" "staged diff 와 다르다"
 ( cd "$R" && git update-index --force-remove vendor/sub; git config --unset diff.ignoreSubmodules )
 lane d14b-gitlink-removed-back PASS  "diff-sha: $SHA_B"
 
@@ -103,7 +110,8 @@ sed 's/\[ "\$v" = "\$cur" \] && ok=1/ok=1/' "$T/fn.sh" > "$T/fn_mut.sh"
 if cmp -s "$T/fn.sh" "$T/fn_mut.sh"; then
   echo "  ❌ HARNESS-ERROR — mutant identical to original (sed did not apply). Revert probe is void."; FAIL=1
 else
-  out=$( cd "$R" && bash -c '. "$1"; validate_diff_sha_leg "$2"' _ "$T/fn_mut.sh" <(printf 'diff-sha: %s\n' "$OTHER") 2>&1 ); rc=$?
+  printf 'diff-sha: %s\n' "$OTHER" > "$T/m_mismatch.marker"
+  out=$( cd "$R" && bash -c '. "$1"; validate_diff_sha_leg "$2"' _ "$T/fn_mut.sh" "$T/m_mismatch.marker" 2>&1 ); rc=$?
   if [ $rc -eq 0 ]; then printf '  ✅ %-36s mutant passes mismatch (lane d2 would turn red)\n' r1-revert-comparison
   else printf '  ❌ %-36s mutant still blocks — d2 is not anchored on the comparison\n' r1-revert-comparison; FAIL=1; fi
 fi
@@ -112,7 +120,8 @@ sed 's/\[ -n "\$DIFF_SHA_REQUIRED_DATE" \] \&\&/false \&\&/' "$T/fn_req.sh" > "$
 if cmp -s "$T/fn_req.sh" "$T/fn_mut2.sh"; then
   echo "  ❌ HARNESS-ERROR — date mutant identical (sed did not apply)."; FAIL=1
 else
-  out=$( cd "$R" && bash -c '. "$1"; validate_diff_sha_leg "$2"' _ "$T/fn_mut2.sh" <(printf 'axes-run: x\n') 2>&1 ); rc=$?
+  printf 'axes-run: x\n' > "$T/m_date.marker"
+  out=$( cd "$R" && bash -c '. "$1"; validate_diff_sha_leg "$2"' _ "$T/fn_mut2.sh" "$T/m_date.marker" 2>&1 ); rc=$?
   if [ $rc -eq 0 ]; then printf '  ✅ %-36s mutant passes absence (lane d10 would turn red)\n' r2-revert-date
   else printf '  ❌ %-36s mutant still blocks\n' r2-revert-date; FAIL=1; fi
 fi

@@ -981,6 +981,9 @@ for _pair in \
   "templates/.git-hooks/pre-commit|scripts/test_marker_soul_tenet_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_affected_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_oracle_lanes.sh" \
+  `# ── 경량 SKIP 의 «사유» 가 참인가 (2026-10-05, 클린룸 감사): 판정은 맞고 사유가 거짓이면 아무 레인도 안 빨개진다 ──` \
+  "templates/.git-hooks/pre-commit|scripts/test_axis23_skip_reason_lanes.sh" \
+  "templates/.git-hooks/pre-commit|scripts/test_marker_diff_sha_lanes.sh" \
   `# ── 판정을 둘로 (2026-09-06, SWE-Gate 답습): 합성 «PASS» 가 acceptance-evidence 를 가리지 않는가 ──` \
   "templates/.git-hooks/pre-commit|scripts/test_gate_two_verdicts_lanes.sh" \
   `# ── fh-qp (QP) — chamber run #18 EMIT 2026-09-05: qp_tools.sh known-pair + residency lanes ──` \
@@ -1046,6 +1049,8 @@ for _pair in \
   "plugins/fh-preprep/skills/preprep/lane_promise.py|scripts/test_preprep_promise_lanes.sh" \
   "plugins/fh-preprep/skills/preprep/lane_slide_refs.py|scripts/test_preprep_slide_refs_lanes.sh" \
   "plugins/fh-preprep/skills/preprep/lane_font.py|scripts/test_preprep_font_lanes.sh" \
+  `# 발표 코칭(2026-10-03) — 녹화를 듣는 레인. 의존성이 «없는» 상태가 가장 흔해서, 이 앵커가 고정하는 것은 «못 들었을 때 0 을 안 낸다» 다` \
+  "plugins/fh-preprep/skills/preprep/lane_speech_coach.py|scripts/test_preprep_speech_coach_lanes.sh" \
   "plugins/fh-preprep/skills/preprep/SKILL.md|scripts/test_preprep_drift_anchor.sh" \
   "scripts/test_preprep_drift_anchor.sh|scripts/test_preprep_drift_anchor_lanes.sh" \
   "scripts/field_canon_preload.sh|scripts/test_skill_canon_preload_lanes.sh" \

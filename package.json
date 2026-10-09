@@ -282,6 +282,7 @@
     "scripts/test_gate_two_verdicts_lanes.sh",
     "scripts/test_halffix_lanes.sh",
     "scripts/test_heavy_classifier_lanes.sh",
+    "scripts/test_axis23_skip_reason_lanes.sh",
     "scripts/test_hook_source_gate_lanes.sh",
     "scripts/test_knowledge_seam_lanes.sh",
     "scripts/test_ko_tech_writer_lanes.sh",
@@ -397,6 +398,7 @@
     "templates/temper_check.sh",
     "tests/seam_absence_probes.md",
     "scripts/marker_diff_sha.sh",
-    "scripts/test_marker_diff_sha_lanes.sh"
+    "scripts/test_marker_diff_sha_lanes.sh",
+    "scripts/test_preprep_speech_coach_lanes.sh"
   ]
 }

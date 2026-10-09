@@ -7,6 +7,17 @@
 python3 skills/preprep/preprep.py <설정.yaml>
 ```
 
+리허설 녹화를 들어 코칭 6항 표(쉼·접속사·문장 끝 억양·끝인사·발음 후보)를 내는 레인은 입력이
+녹화라서 따로 부른다. `ffmpeg`(+ 함께 깔리는 `ffprobe` — 잘린 디코드를 가리는 데 쓴다)가 필수이고, `whisper-cli` 와 모델(`PREPREP_WHISPER_MODEL`)은 있으면
+쓴다 — 없으면 받아쓰기가 필요한 두 항목만 측정불가로 남는다. 녹화는 기계 밖으로 나가지 않는다.
+
+```
+python3 skills/preprep/lane_speech_coach.py <녹화.mp4> [--script <덱.pptx|원고.txt>] [--audio-only]
+```
+
+이 레인은 advisory 라 `1` 을 내지 않는다. 문턱이 아직 보정 전(`UNCALIBRATED`)이라 숫자를 «발견」으로
+종료코드에 태우지 않는다. `0` 은 «다 들었다」, `2` 는 «하나라도 못 들었다」다. `2` 여도 표는 그대로 나온다 — 못 들은 위치가 같이 찍히니 그 자리만 귀로 확인하면 된다.
+
 ## 종료코드 계약
 
 | 값 | 뜻 |
