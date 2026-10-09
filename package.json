@@ -340,6 +340,8 @@
     "scripts/test_residency_admission_lanes.sh",
     "scripts/test_residency_closure_lanes.sh",
     "scripts/test_revert_probe_lanes.sh",
+    "scripts/mutation_probe.py",
+    "scripts/test_mutation_probe_lanes.sh",
     "scripts/test_reviewer_capability_conformance.sh",
     "scripts/test_selfcheck_state_lanes.sh",
     "scripts/test_session_checklist_lanes.sh",

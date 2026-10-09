@@ -8,10 +8,9 @@
 # lines changed color) is a mechanization trigger, not a one-off. This is that mechanization.
 #
 # 🟥 FRONTIER WARNING — read before citing this tool's PASS as "the suite has detection power".
-#   A single revert of a single file is ONE mutant. Mutation-testing research (arXiv 2607.22880,
-#   and the companion Meta engineering write-up cited alongside it in
-#   frontier_verification_map_2026-09-04.md §ⓕ) found that coverage/mutation SCORE loses its
-#   correlation with real fault-detection effectiveness once suite size is controlled for — a
+#   A single revert of a single file is ONE mutant. The LLM-test replication study (https://arxiv.org/abs/2607.22880)
+#   finds coverage/mutation metrics are context-dependent, not universally uncorrelated after
+#   controlling suite size. Neither a score nor this one-file probe certifies a whole suite — a
 #   single kill is evidence the ANCHOR under test is load-bearing for THIS ONE reverted file,
 #   never a general claim that the suite "has good mutation coverage" or "catches regressions".
 #   Run this against every file you actually care about; do not average or extrapolate from one.
@@ -106,8 +105,8 @@ echo "baseline: $BASELINE"
 echo ""
 echo "🟥 FRONTIER WARNING (arXiv 2607.22880): this run reverts EXACTLY ONE file — ONE mutant."
 echo "   A ✅ verdict here means the anchor caught THIS mutant, not that the suite has general"
-echo "   mutation-detection power. Coverage/mutation score decorrelates from real effectiveness"
-echo "   once suite size is controlled for — do not average or extrapolate from a single run."
+echo "   mutation-detection power. Coverage/mutation metrics are context-dependent — do not average"
+echo "   or extrapolate from a single run."
 echo "되돌린 파일(뮤턴트) 수: 1 — $REL_PATH"
 echo ""
 
