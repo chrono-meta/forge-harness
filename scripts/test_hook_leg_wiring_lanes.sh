@@ -114,6 +114,13 @@ wiring_lane W6-oracle validate_oracle_leg \
 oracle: known-pair — TBD" \
   'oracle 근거가 자리표시자뿐이다'
 
+# W7 — 2026-10-03 신설 다리 (diff-sha:, 마커가 «어떤 staged 바이트»에 대해 쓰였나). 형식 위반(64자리
+# 아님)으로 차단 문구를 내게 해 실제 훅이 그 다리에 닿는지 되돌림 known-pair 로 확인한다.
+wiring_lane W7-diff-sha validate_diff_sha_leg \
+  "$SOUL_OK
+diff-sha: not-a-hash" \
+  '소문자 16진수 64자리여야 한다'
+
 echo
 if [ $FAIL -eq 0 ]; then echo "HOOK LEG WIRING LANES: PASS"; else echo "HOOK LEG WIRING LANES: FAIL"; fi
 exit $FAIL

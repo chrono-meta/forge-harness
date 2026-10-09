@@ -1810,6 +1810,87 @@ validate_affected_leg() { # $1 = marker path
 }
 
 
+# ── ⑦ diff-sha: — 「이 마커가 어떤 바이트에 대해 쓰였나」 (2026-10-03, fh_signal_2026-10-03_marker-branch-date-key) ──
+#
+# WHY. 마커 주소는 «브랜치 + 날짜» 뿐이라, 같은 날 같은 브랜치에서 축을 돈 뒤 바뀐 diff 가 그 마커로
+# 그대로 통과한다(실례: 2db9a42 → 1fdd7cc, 교차 리뷰 미경유 레인 커밋이 같은 마커로 열림).
+# `diff-sha: <64hex>` 는 축을 돌린 시점의 staged diff 지문이다. 계산 = `bash scripts/marker_diff_sha.sh`
+# (아래 _staged_diff_sha 와 같은 명령 — 레인 d9 가 두 출력의 일치를 단언한다).
+#
+# 규칙(채널이지 판단이 아니다): ⓐ 줄이 없으면 통과(유예) — 단 DIFF_SHA_REQUIRED_DATE 가 비어 있지 않고
+# 오늘이 그 날짜 이상이면 차단. 🟥 그 날짜는 운영자 결정이라 비워 둔다 · ⓑ 줄이 있으면 값은 64자리 16진수
+# ⓒ 여러 줄 허용(축을 돈 diff 사슬) — **하나라도** 현재 staged 지문과 같으면 통과, 전부 다르면 차단
+# ⓓ 근사키(`diff_sha:` `Diff-sha:` `diff-sha :` `diffsha:` `diff-fp:`)는 정확한 줄이 있어도 차단.
+# 막는 것은 «잊음»이지 «위조»가 아니다 — 지문 칸도 자기신고로 쓸 수 있다(§Mechanization Boundary).
+# 정규화(2026-10-04 codex R1 반영): diff «렌더링» 이 아니라 트리 신원을 잰다 — sha256("<HEAD 트리> <index 트리>").
+# index 트리 = `git write-tree`. diff.context · diff.algorithm · diff.ignoreSubmodules · prefix 설정과 무관하고
+# gitlink(서브모듈 커밋) 변경도 index 트리에 들어간다. HEAD 가 없으면(첫 커밋) 빈 트리.
+DIFF_SHA_REQUIRED_DATE=""   # 운영자 결정 — 비어 있으면 필드는 계속 옵셔널
+
+_staged_diff_sha() {
+  local base idx
+  if git rev-parse -q --verify HEAD >/dev/null 2>&1; then base=$(git rev-parse -q --verify 'HEAD^{tree}' 2>/dev/null) || return 1
+  else base=$(git hash-object -t tree /dev/null 2>/dev/null) || return 1; fi
+  # 실패 시 stdout 이 비어야 한다 — «빈 입력의 해시»를 내면 안 된다(병합 충돌 중 index 는 write-tree 실패 → 1).
+  idx=$(git write-tree 2>/dev/null) || return 1
+  [ -n "$base" ] && [ -n "$idx" ] || return 1
+  if command -v shasum >/dev/null 2>&1; then printf '%s %s\n' "$base" "$idx" | shasum -a 256 | cut -c1-64
+  elif command -v sha256sum >/dev/null 2>&1; then printf '%s %s\n' "$base" "$idx" | sha256sum | cut -c1-64
+  else return 1; fi
+}
+
+validate_diff_sha_leg() { # $1 = marker path
+  local m="$1" nm n cur v ok=0 bad=""
+  if [ ! -f "$m" ]; then
+    echo "  ❌ HARNESS-ERROR — 마커 파일이 존재하지 않는다 ($m)."
+    return 1
+  fi
+  nm=$(grep -niE '^[[:space:]]*(diff[-_ ]?sha[[:space:]]*:|diff-fp:|diffsha:)' "$m" 2>/dev/null | grep -vE '^[0-9]+:[[:space:]]*diff-sha:')
+  if [ -n "$nm" ]; then
+    echo "  ❌ FAIL — diff-sha 키처럼 보이지만 정확히 'diff-sha:' 가 아닌 줄이 있다."
+    printf '%s\n' "$nm" | sed 's/^/       /'
+    echo "     읽는 쪽은 정확히 'diff-sha:'(소문자, 콜론 바로 뒤) 만 읽는다."
+    return 1
+  fi
+  n=$(grep -cE '^[[:space:]]*diff-sha:' "$m" 2>/dev/null); n=${n:-0}
+  if [ "$n" -eq 0 ]; then
+    if [ -n "$DIFF_SHA_REQUIRED_DATE" ] && [ ! "$(date +%Y-%m-%d)" \< "$DIFF_SHA_REQUIRED_DATE" ]; then
+      echo "  ❌ FAIL — diff-sha: 가 없다 ($DIFF_SHA_REQUIRED_DATE 부터 필수)."
+      echo "     계산: bash scripts/marker_diff_sha.sh   → 마커에  diff-sha: <값>  한 줄"
+      return 1
+    fi
+    return 0
+  fi
+  # 🟥 «나쁜 값»을 $(...) 로 모아 비었나 보면 빈 값 줄이 개행째 사라져 통과한다(레인 d6 이 잡았다).
+  #    좋은 값의 개수를 줄 수와 대조한다.
+  local good
+  good=$(grep -E '^[[:space:]]*diff-sha:' "$m" | sed -E 's/^[[:space:]]*diff-sha:[[:space:]]*//; s/[[:space:]]+$//' | grep -cE '^[0-9a-f]{64}$'); good=${good:-0}
+  if [ "$good" -ne "$n" ]; then
+    bad=$(grep -E '^[[:space:]]*diff-sha:' "$m" | sed -E 's/^[[:space:]]*diff-sha:[[:space:]]*//; s/[[:space:]]+$//' | grep -vE '^[0-9a-f]{64}$' | head -1)
+    echo "  ❌ FAIL — diff-sha: 값은 소문자 16진수 64자리여야 한다 (지금: '$bad')."
+    return 1
+  fi
+  if ! cur=$(_staged_diff_sha) || [ -z "$cur" ]; then
+    echo "  ❌ HARNESS-ERROR — 현재 staged diff 지문을 계산하지 못했다(git diff 또는 sha256 도구 실패)."
+    echo "     계산 실패는 «일치»가 아니다."
+    return 1
+  fi
+  while IFS= read -r v; do
+    [ "$v" = "$cur" ] && ok=1
+  done <<SHAS
+$(grep -E '^[[:space:]]*diff-sha:' "$m" | sed -E 's/^[[:space:]]*diff-sha:[[:space:]]*//; s/[[:space:]]+$//')
+SHAS
+  if [ "$ok" -ne 1 ]; then
+    echo "  ❌ FAIL — 마커의 diff-sha: 가 지금 커밋하려는 staged diff 와 다르다."
+    echo "     현재: $cur"
+    echo "     축을 돈 뒤 diff 가 바뀌었다 — 바뀐 부분에 축을 다시 돌리고 새 값을 한 줄 더 적어라"
+    echo "     (diff-sha: 는 여러 줄 허용 — 축을 돈 diff 사슬)."
+    echo "     Append to: $m"
+    return 1
+  fi
+  return 0
+}
+
 # ── ⑥ oracle: — 「기대값을 무엇으로 정했나」 오라클 유형 (2026-09-05, ISO/IEC TR 29119-11 정렬 · crosswalk §4 M1) ──
 # tenet: FH-T02 (기록의 속성) · FH-T07 (행위자가 읽는 자리)
 #
@@ -2679,6 +2760,7 @@ if [ "$GATE_MODE" = "full" ]; then
     validate_defeater_leg "$MARKER" || _SOUL_OK=0
     validate_affected_leg "$MARKER" || _SOUL_OK=0
     validate_oracle_leg "$MARKER" || _SOUL_OK=0
+    validate_diff_sha_leg "$MARKER" || _SOUL_OK=0
     if [ "$_DEFENSE_OK" -eq 1 ] && [ "$_SOUL_OK" -eq 1 ] && validate_marker_floor "$MARKER" && validate_marker_axes_run "$MARKER" && validate_first_use_leg "$MARKER"; then
       echo "  ✅ PASS (marker confirmed + floor/axes fields valid:"
       echo "     .axes_23_passed_${BRANCH_SLUG}_${TODAY}.marker)"
@@ -2898,11 +2980,11 @@ if [ -n "$PPGUARD_IMPL" ]; then
     echo "  ❌ FAIL — scripts/prepush_guard_check.sh missing while the publish guard is being changed."
     echo "     Fail-closed: the anchor is the only mechanical guard on that guard's behavior."
     FAILED=1
-  elif bash "$PPCHECK" >/dev/null 2>&1; then
+  elif env -u GIT_INDEX_FILE -u GIT_DIR -u GIT_WORK_TREE bash "$PPCHECK" >/dev/null 2>&1; then
     echo "  ✅ PASS (all known pairs hold)"
   else
     echo "  ❌ FAIL — a pre-push known pair broke:"
-    bash "$PPCHECK" 2>&1 | grep -E '^\s+❌' | sed 's/^/    /'
+    env -u GIT_INDEX_FILE -u GIT_DIR -u GIT_WORK_TREE bash "$PPCHECK" 2>&1 | grep -E '^\s+❌' | sed 's/^/    /'
     echo "     (run: bash scripts/prepush_guard_check.sh)"
     FAILED=1
   fi
@@ -2915,11 +2997,11 @@ if [ -n "$UGUARD_IMPL" ]; then
     echo "     being changed. The anchor is the only mechanical guard on that guard's SCOPE; its"
     echo "     absence during such an edit is fail-closed, not a skip."
     FAILED=1
-  elif bash "$UGCHECK" >/dev/null 2>&1; then
+  elif env -u GIT_INDEX_FILE -u GIT_DIR -u GIT_WORK_TREE bash "$UGCHECK" >/dev/null 2>&1; then
     echo "  ✅ PASS (all known pairs hold)"
   else
     echo "  ❌ FAIL — a universal-guard known pair broke:"
-    bash "$UGCHECK" 2>&1 | grep -E '^\s+❌' | sed 's/^/    /'
+    env -u GIT_INDEX_FILE -u GIT_DIR -u GIT_WORK_TREE bash "$UGCHECK" 2>&1 | grep -E '^\s+❌' | sed 's/^/    /'
     echo "     (run: bash scripts/universal_guard_check.sh)"
     FAILED=1
   fi

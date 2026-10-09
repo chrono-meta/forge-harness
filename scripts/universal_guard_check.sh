@@ -23,6 +23,8 @@
 # Usage: bash scripts/universal_guard_check.sh    → exit 0 all pairs hold, 1 otherwise.
 set -uo pipefail
 
+unset GIT_INDEX_FILE GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR 2>/dev/null || true
+
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 HOOK="$REPO_ROOT/templates/.git-hooks/pre-commit"
 DEFAULTS="$REPO_ROOT/.claude/rules/.public-surface-patterns.defaults"
