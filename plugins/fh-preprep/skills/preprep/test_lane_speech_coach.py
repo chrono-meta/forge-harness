@@ -104,6 +104,8 @@ FAKE_FFMPEG = r'''
 import sys, wave
 a = sys.argv
 src = a[a.index('-i') + 1]
+if src.startswith('file:'):
+    src = src[5:]
 try:
     w = wave.open(src, 'rb')
 except Exception:
@@ -121,7 +123,10 @@ sys.stdout.buffer.write(w.readframes(int(n * keep)))
 
 FAKE_FFPROBE = r'''
 import sys, wave
-src = [x for x in sys.argv[1:] if not x.startswith('-') and '=' not in x and x not in ('a:0', 'error')][-1]
+src = (sys.argv[sys.argv.index('-i') + 1] if '-i' in sys.argv else
+       [x for x in sys.argv[1:] if not x.startswith('-') and '=' not in x and x not in ('a:0', 'error')][-1])
+if src.startswith('file:'):
+    src = src[5:]
 w = wave.open(src, 'rb')
 d = w.getnframes() / w.getframerate()
 print('duration=%.6f' % d)
@@ -670,6 +675,47 @@ def run(tmp):
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         chk('D7-c CLI --skip %r → rc 2 (크래시 아님)' % bad,
             p.returncode == 2 and b'Traceback' not in p.stderr, 'rc=%d' % p.returncode)
+
+    # Output failures are instrument errors, while valid JSON preserves the measured result.
+    cli = [sys.executable, os.path.join(HERE, 'lane_speech_coach.py'), wav, '--audio-only', '--json']
+    cli_env = dict(os.environ, PATH=ffbin + os.pathsep + os.path.dirname(sys.executable))
+    good_json = os.path.join(tmp, 'cli-result.json')
+    p = subprocess.run(cli + [good_json], env=cli_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    with open(good_json, encoding='utf-8') as fh:
+        result = json.load(fh)
+    chk('D7-json valid output preserves rc 0 and the JSON result',
+        p.returncode == 0 and result['rc'] == 0 and b'Traceback' not in p.stderr)
+    for label, output in [('directory', tmp), ('missing parent', os.path.join(tmp, 'missing', 'result.json'))]:
+        p = subprocess.run(cli + [output], env=cli_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        chk('D7-json %s output failure is rc 2, no traceback' % label,
+            p.returncode == 2 and b'Traceback' not in p.stderr and b'JSON output' in p.stderr,
+            'rc=%d' % p.returncode)
+
+    # Real tools must read the literal local filename, not a leading option or a file: URL.
+    real_probe = shutil.which('ffprobe')
+    if real_ff and real_probe:
+        named = os.path.join(tmp, 'literal-names')
+        os.mkdir(named)
+        L.write_wav(os.path.join(named, 'clip.wav'), array.array('h', [0] * 1600))
+        for name in ('-clip.wav', 'file:clip.wav'):
+            L.write_wav(os.path.join(named, name), array.array('h', [0] * 3200))
+        cwd = os.getcwd()
+        try:
+            os.chdir(named)
+            for name in ('clip.wav', '-clip.wav', 'file:clip.wav'):
+                expected = 1600 if name == 'clip.wav' else 3200
+                try:
+                    samples, errs = L.decode(name, real_ff)
+                    duration = L.probe_duration(name, real_probe)
+                    chk('D7-local literal %s uses the correct file in ffmpeg and ffprobe' % name,
+                        len(samples) == expected and not errs and abs(duration - expected / SR) < 0.00001)
+                except Exception as e:
+                    chk('D7-local literal %s uses the correct file in ffmpeg and ffprobe' % name,
+                        False, type(e).__name__)
+        finally:
+            os.chdir(cwd)
+    else:
+        skip('D7-local literal filenames', 'real ffmpeg or ffprobe unavailable')
 
     if real_ff:
         r = L.coach(wav, None, {1, 2}, env={'PATH': os.path.dirname(real_ff)})

@@ -344,6 +344,11 @@ def run_whisper(cmd, env):
     subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
 
 
+def local_recording_input(path):
+    """Treat recording names as local files, never as options or protocol URLs."""
+    return 'file:' + os.path.abspath(os.fspath(path))
+
+
 def decode(path, ffmpeg, env=None):
     """반환 (샘플, stderr 오류 줄들).
 
@@ -351,7 +356,7 @@ def decode(path, ffmpeg, env=None):
        `-v error` 로 «Invalid data found…」를 찍고 그 구간을 버린 채 rc 0 으로 끝난다. 그래서 stderr 를
        버리지 않고 돌려준다 — 호출자가 «부분 디코드」로 강등한다.
     """
-    p = subprocess.run([ffmpeg, '-nostdin', '-v', 'error', '-i', path, '-vn', '-ac', '1',
+    p = subprocess.run([ffmpeg, '-nostdin', '-v', 'error', '-i', local_recording_input(path), '-vn', '-ac', '1',
                         '-ar', str(SR), '-f', 's16le', '-'],
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     if p.returncode != 0:
@@ -368,7 +373,8 @@ def decode(path, ffmpeg, env=None):
 def probe_duration(path, ffprobe, env=None):
     """[경계 E3b] 녹화의 오디오 길이(초) — 오디오 스트림 길이, 없으면 컨테이너 길이."""
     p = subprocess.run([ffprobe, '-v', 'error', '-select_streams', 'a:0', '-show_entries',
-                        'stream=duration:format=duration', '-of', 'default=nw=1', path],
+                        'stream=duration:format=duration', '-of', 'default=nw=1',
+                        '-i', local_recording_input(path)],
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     if p.returncode != 0:
         raise RuntimeError('ffprobe rc=%d' % p.returncode)
@@ -1067,8 +1073,12 @@ def main(argv=None):
     rep = coach(a.recording, a.script, skip)
     print(render(rep))
     if a.json_out:
-        with open(a.json_out, 'w', encoding='utf-8') as fh:
-            json.dump(rep, fh, ensure_ascii=False, indent=1)
+        try:
+            with open(a.json_out, 'w', encoding='utf-8') as fh:
+                json.dump(rep, fh, ensure_ascii=False, indent=1)
+        except OSError as e:
+            print('JSON output could not be written: %s' % e, file=sys.stderr)
+            return 2
     return rep['rc']
 
 

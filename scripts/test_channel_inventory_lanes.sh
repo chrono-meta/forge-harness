@@ -3,7 +3,7 @@
 #
 # 이 도구가 존재하는 이유는 **하루에 세 번 같은 실수를 했기 때문**이다 — 산출 디렉터리에서
 # 「기록이 없다」를 판정하면서 **내가 연 채널에만 없는 것**을 무기록으로 단정했다. 그래서
-# 이 레인의 핵심 픽스처는 합성이 아니라 **그날 실제로 틀린 그 디렉터리**다(C5).
+# 이 레인의 핵심 픽스처는 합성이 아니라 **그날 실제로 틀린 그 디렉터리**다(C6).
 #
 # 실행: bash scripts/test_channel_inventory_lanes.sh
 set -uo pipefail
@@ -17,6 +17,12 @@ T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 CI="$HERE/scripts/channel_inventory.sh"
 
 echo "== 합성 known-pair =="
+out=$(bash "$CI" 2>&1); rc=$?
+if [ "$rc" = "2" ] && printf '%s' "$out" | /usr/bin/grep -q 'usage: channel_inventory.sh'; then
+  ok "C-usage 인자 없음 → rc=2 · 사용법 (성공으로 접히지 않는다)"
+else
+  ng "C-usage 인자 없는데 rc=$rc 또는 사용법 없음"
+fi
 mkdir -p "$T/box"
 printf 'x\n' > "$T/box/alpha.jsonl"
 : > "$T/box/beta.jsonl"                      # 🟥 있는데 비었다

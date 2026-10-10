@@ -52,7 +52,7 @@ Proposal format: `"If it's related to [X], should I simulate with /sim-conductor
 /sim-conductor E --target <file>      # artifact quality review (post-pipeline)
 ```
 
-**Frequency limits**: Area A after asset changes or manual trigger · Area B max once/week · Area C/D/E no limit.
+**Frequency limits**: Area A after asset changes or manual trigger · Area B **min 7-day interval** (executor-applied guard: stop a re-run inside 7 days) · target cadence once/month (30-day reminder, when the optional `fh_audit_check.zsh` is enabled and the report is under `$FH_DIR/tracks/_meta`) · Area C/D/E no limit. The 7-day rule is the execution procedure; the 30-day check is only a conditional reminder. They use the same clock only when they inspect the same report directory.
 
 ---
 
@@ -62,7 +62,7 @@ Auto-detect harness root, sync sim clone if present, set `$REPORT_DIR`.
 
 > **Detail**: See `SKILL_detail.md §Step0-Bash` — harness root detection, sim clone sync, report dir creation — read when executing Step 0.
 
-**Area B frequency check**: Previous Area B report within 7 days → stop + report date. No file found → treat as first run.
+**Area B frequency check** (the 7-day *minimum* interval, not the monthly target): Before running Area B, inspect the latest Area B report in `$REPORT_DIR`; if it is less than 7 days old, stop and report its date. This is an executor-applied procedure, not an automatic shell gate. No report in the selected `$REPORT_DIR` → treat as first run for this check. Separately, the optional `fh_audit_check.zsh` reminder only looks in `$FH_DIR/tracks/_meta`; it may not see a report stored in a different `$REPORT_DIR`.
 
 ---
 
@@ -146,7 +146,7 @@ Proactively surface 1 concern, then confirm whether to proceed. Skip if no conce
 
 | Check | Concern trigger condition |
 |---|---|
-| Area B frequency guard | Previous run within 7 days + S-tier unresolved |
+| Area B unresolved S-tier | An unresolved S-tier finding from the previous run |
 | Unresolved M-tier | New simulation without processing previous M-tier |
 | steel-quench not run | Area A in external publish context → **mandatory gate: Area A does not proceed until steel-quench completes** |
 | Self-recursive path | sim-conductor attempting to auto-PR its own M-tier |

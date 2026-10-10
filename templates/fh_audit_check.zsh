@@ -100,6 +100,9 @@ _fh_audit_check() {
   fi
 
   # ③ FH sim Area B — 30-day threshold (when FH_DIR is set)
+  #    30d is a monthly-target reminder, not an enforced maximum interval. It runs manually or
+  #    with FH_AUDIT_AUTO=1 and sees only reports in $FH_DIR/tracks/_meta. The skill's executor-applied
+  #    7-day re-run guard may inspect a different REPORT_DIR; their clocks agree only if paths agree.
   #    Source of the cadence: sim-conductor SKILL_detail §AreaB-Baseline («Area B once/month»); the
   #    report name is the skill's own `sim_*_area_B*.md` (its frequency-check bash globs exactly that).
   #    🟥 The glob used to be `sim_*.md`, which also matched non-B reports (e.g. `sim_…_area_D_…`) and
