@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/chrono-meta/forge-harness/main/docs/banner.png" alt="forge-harness — 锻造你的项目，让它通过，然后更快出炉。品质是杠杆，速度是结果。" width="680">
+  <img src="https://raw.githubusercontent.com/chrono-meta/forge-harness/main/docs/banner.png" alt="forge-harness — Forge your projects, pass them through, faster. Quality is the lever — speed is the result." width="680">
 </p>
 
 <p align="center">
@@ -17,395 +17,137 @@
   <a href="README.md">English</a> · <a href="README.ko.md">한국어</a> · <b>中文</b> · <a href="README.ja.md">日本語</a>
 </p>
 
-<p align="center">
-  <b>别再一遍遍向 agent 解释规则 — 把它们放进项目里。</b>
-</p>
+# forge-harness (FH)
 
-<p align="center">
-  <b>抓住的不只是你的 agent，还有你——的质量门禁。</b>
-</p>
+**FH 是面向 [Claude Code](https://github.com/anthropics/claude-code) 的元框架（meta-harness）：它帮你搭建框架（harness）和技能——一个项目所需的规则、门禁与记忆——并在发布之前检查它们。**
+
+*框架（harness）* 是你在某个项目里套在 AI agent 外面的那一层，让它不必每次会话都重新听一遍同样的指示：
+它遵循的规则、拦住错误改动的检查，以及它学到了什么的记录。*元*框架则是那个一个项目接一个项目地搭建并验证这些框架的框架。
+
+> **别再一遍遍向 agent 解释规则——把它们放进项目里。**
+
+<p align="center"><b>不仅能发现 agent 的问题，也能发现你的问题的质量门禁。</b></p>
+
+## 适合谁，你能得到什么
+
+适合在真实项目里使用 Claude Code（或其他编码 agent），厌倦了重复同样的话、或者发现改动有误时已经太晚的人。你会得到三样东西：
+
+| 你得到 | 实际表现 | 证据 |
+|---|---|---|
+| **合并前的门禁** | 在改动落地*之前*判定 diff，判定会点名这次改动丢掉了什么。判定是有类型的值（`PASS · PENDING · BLOCKED · ESCALATE`），而不是需要你去 grep 的文字。对 agent 写的代码有效，对你自己写的代码同样有效。 | 下方演示 GIF · 一次对他人所写代码的运行与一次埋洞测试，附样本量：[证据](#证据以及它薄弱的地方) |
+| **能延续的记忆** | `tracks/` 记录每次会话学到的东西，第 2 次会话从第 1 次停下的地方开始。 | 设计意图。会话结束时更新 `tracks/_meta/` 里的卡片，下次会话启动时读取它（[`CLAUDE.md`](CLAUDE.md) §Session Wrap-up）。本页没有链接任何实测收益；而且它要从第 2 次会话起才看得出来。 |
+| **替你挑检查的帮手** | 说“诊断这个项目”或“加速这个项目”，你会得到一份按优先级排序的待修复/待安装清单。逐项批准之前不会改动任何东西。 | 描述见 [`CLAUDE.md`](CLAUDE.md)（§Field-Harness Diagnostic）；没有关于它命中率的基准测试 |
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/chrono-meta/forge-harness/main/docs/demo/gate-block.gif" alt="regression guard blocking a change that dropped a Done When section, then passing once it is restored" width="820">
 </p>
 <p align="center">
-  <sub>这是真实运行，不是演示。一个 agent“整理”技能定义文件（<code>SKILL.md</code>）时删掉了 <b>Done When（完成条件）</b>小节。门禁会点名指出被删的小节；把它放回去，其余整理照常通过。<br>重新生成：<code>brew install vhs &amp;&amp; vhs docs/demo/gate-block.tape</code></sub>
+  <sub>录自守卫的一次真实运行（不是示意图；重新生成它的脚本链接在下面）：一个 agent “整理”了技能规格文件（<code>SKILL.md</code>），删掉了其中的 <b>Done When</b>（完成条件）一节。守卫 BLOCK，并点名缺失的那一节；把它放回去就返回 PASS，其余整理照常发布。<br>重新生成：<code>brew install vhs &amp;&amp; vhs docs/demo/gate-block.tape</code></sub>
 </p>
 
-<p align="center">
-  你大概已经在对 Claude Code 反复说同样的话：要跑的检查、要守的规则、一次变更该有的样子。
-  变得可复用的正是这一部分，而它刻意保持通用的形态，好在使用过程中按你的场景当场锻造。<br>
-  <sub>长起来的是尝试的次数：试错从你身上剥离，并行地跑。</sub>
-</p>
+## 快速开始
 
-<p align="center">
-  项目、技能、框架 —— 造出来、验过、再加速：这些都在这里交代。<br>
-  它不会就这么把结果递还给你，而是先让这份工作穿过好几道会以 <i>不同方式</i> 失败的检查。<br>
-  <b>而当同一个请求反复回来，它就替你造出那个专门干这件事的框架。</b>
-</p>
+选一扇门。它们的安装方式不同，得到的东西也不同。
 
----
-
-## 二选一。装法不同，拿到的东西也不同。
-
-### ① 只要门禁 —— 不需要 Claude Code
+**门 ① —— 只要门禁。无需克隆，无需插件，无需 Claude Code 会话。**
 
 ```bash
-npx --package @chrono-meta/fh-gate fh-gate          # 无需安装
-brew tap chrono-meta/forge-harness && brew install forge-harness   # 或者用这个
+cd your-repo && npx --package @chrono-meta/fh-gate fh-gate     # 审查当前仓库的 git diff
 ```
 
-**在 GitHub Actions 里** —— 同一道门禁作为一个 step，判定依然是带类型的：
+它通过 `git diff` 找到你改动的文件，发给审查后端，并输出判定（`FH_GATE_VERDICT: PASS | PENDING | BLOCKED | ESCALATE`）和退出码。只有审查真的跑过，PASS 才算数：后端始终没有应答、dry run、或者出现未知退出码，都不是 PASS，而 GitHub Actions 步骤默认会因此失败。需要 Node ≥ 16，以及安装并登录好的一个后端 CLI：`claude`（默认）或 `codex`（`FH_BACKEND=codex`）。可用于 CI、pre-commit 钩子，或放在另一个 agent 旁边。也有 GitHub Actions 步骤和 Homebrew tap——见[运行门禁](docs/REFERENCE.md#run-it-outside-claude-code--the-fh-gate-cli)。
 
-```yaml
-- uses: chrono-meta/forge-harness@v3.1.2
-  with:
-    files: ${{ steps.changed.outputs.files }}
-  env:
-    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-```
-
-已在 [GitHub Actions 应用市场](https://github.com/marketplace/actions/fh-gate-typed-ai-code-review-verdict) 上架。
-
-这个 step 会输出 `verdict`（PASS · PENDING · BLOCKED · ESCALATE · HARNESS_ERROR · ARG_ERROR ·
-DRY_RUN · UNKNOWN）和 `reviewed`。**`reviewed: false` 不是通过** —— 后端始终没有回答、一次 dry
-run、这层封装不认识的退出码，全都落在这里，而且默认全部让这个 step 失败。这个默认值正是重点：
-一道根本没跑过的检查，绝不能读起来是绿的。想要更宽松的策略就用 `fail-on:` 改，但要清楚你换掉的
-是什么。
-
-
-**你会拿到**
-
-- 变更在合并**之前**就有判定，而且这个判定会指名这次变更**丢了什么**，不是"好像哪里不对"。
-  上面那个 GIF 就是对一个真实 diff 的这种判定。
-- 判定是**带类型的值**，不是需要你 grep 的文本：`PASS · PENDING · BLOCKED · ESCALATE`。
-- 只要有 shell 就能跑 —— CI、pre-commit 钩子、别的编码 agent。Claude Code 是可选的。
-- **它审的不只是 agent 的代码，也包括你自己的。** 把一份 diff 指给它，它会点名那处薄弱 —— 悄悄
-  往 PASS 方向降级的判定、根本不存在的引用、泄漏的密钥、没有依据的主张 —— 好让你在合并*之前*改掉
-  再跑一遍。每个 FH 引擎各自落在哪里（造框架 · 写技能/agent · 代码评审 · 不可逆面的门禁 ·
-  上下文延续），以及模型层级与投入程度会改变什么：[`docs/USE_CASES.md`](docs/USE_CASES.md) ·
-  [`docs/model_tier_expectations.md`](docs/model_tier_expectations.md)。
-  这些门禁与 ISO/IEC 的 AI 测试及 AI 质量标准（42119 · 29119-11 · 25059 · 42001）如何对齐 ——
-  以带证据指针的自评形式：[`docs/STANDARDS_ALIGNMENT.md`](docs/STANDARDS_ALIGNMENT.md)。
-
-### ② 整套框架 —— 在 Claude Code 里
+**门 ② —— 在 Claude Code 里使用整套框架。**
 
 ```bash
 claude plugin marketplace add https://github.com/chrono-meta/forge-harness.git
 claude plugin install -s user fh-meta@forge-harness
-claude plugin install -s user fh-qp@forge-harness      # 可选：QP（Quality Platform）—— 通过本会话的 Playwright / computer-use MCP，对 Web/桌面应用做 计划→执行→回归
 git clone https://github.com/chrono-meta/forge-harness.git ~/projects/forge-harness
-cd ~/projects/forge-harness && claude        # 然后打个招呼：你好 · hi · 안녕 · こんにちは
+cd ~/projects/forge-harness && claude          # 然后输入：hi   （或 안녕 · こんにちは · 你好）
 ```
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/chrono-meta/forge-harness/main/docs/demo/door2-menu.gif" alt="在刚克隆的 forge-harness 里输入 hi：FH 读出这个检出，打开新用户菜单，并提示安装向导还没跑过" width="820">
-</p>
-<p align="center">
-  <sub>第四行做的全部事情。这是几分钟前才建的克隆 —— 它读出检出，看到没有会话文件，打开<b>新用户</b>菜单，并告诉你向导还没跑。<br>启动与等待时间已隐藏；屏幕上每一个字都是那次真实运行的输出。重新生成：<code>vhs docs/demo/door2-menu.tape</code></sub>
-</p>
+1. **在 Claude Code 中打开克隆下来的文件夹**（即 `cd … && claude` 那一行）。
+2. **打个招呼。** 在全新克隆里，FH 会读取检出内容，发现没有任何会话文件，于是打开一个面向新用户的简短菜单：*创建你的第一个项目 · 关联已有项目 · 阅读指南*。如果安装向导还没运行，它也会告诉你。
 
-**在①之上你还会拿到**
+   <img src="https://raw.githubusercontent.com/chrono-meta/forge-harness/main/docs/demo/door2-menu.gif" alt="typing hi in a fresh forge-harness clone; FH reads the checkout, opens the new-user menu, and warns that the install wizard has not run yet" width="760">
 
-- 你不必再自己挑该跑哪一道检查。它读出你正要做什么 —— 公开、删除、改写历史、开 PR ——
-  然后叫出那一刻该用的门禁。①是一条你要记住的命令，②是替你记住的那一层。
-- **41 种技能 · 8 个 agent**，用平常话就能叫：诊断一个项目、加速一个项目、给新项目接线。
-- `tracks/` 留住每次会话学到的东西，于是**第二次会话从第一次停下的地方开始**。
-  复利长在这里，第一天也判断不了的同样在这里。
-- 同一件事请求三次，它就不再回答了，而是给你造一个专门回答它的框架。
+3. **在同一次会话里拿到一次收获。** 说 **“关联一个项目”**（FH 会扫描 `../` 下的 git 仓库并创建 `tracks/{project}/`），然后说 **“加速这个项目”**（按优先级排序、需批准的计划）或 **“运行 /context-doctor”**（token 浪费扫描）。完整设置请运行 **`/install-wizard`**：每一项都逐个批准，拒绝的也会被记录。
 
-<sub>🟥 <b>②不会给你的一样东西。</b>FH 里还有一个 4 轴 <b>pre-commit</b> 钩子，但它不是给你的仓库用的：
-它把中枢路径和中枢标记写死在代码里，装进你的项目只会挡住你的提交，而不是帮你。安装向导也把它列为
-可选项，并写着「如果你不是在开发 FH 本身，就跳过」。<b>你自己仓库的门禁是①</b> —— 接到 CI
-或你自己的 pre-commit 上。</sub>
+**要求。** 门 ② 需要 Claude Code CLI（`claude --version`）。门 ① 需要 Node 和 `claude` 或 `codex` CLI，不需要 Claude Code 会话。FH 自己的某个门禁（克隆里的测试套件）另外需要 Python + PyYAML（`python3 -m pip install --user pyyaml`），缺少时会 fail-closed 拒绝通过。
+**不确定选哪扇门？** 从 ① 开始：一条命令，不需要全局安装。门 ② 是更大的安装，同时也带有 `fh-gate` CLI（[`CHEATSHEET.md`](CHEATSHEET.md)）；你在 ① 里学到的东西一点也不会浪费。
 
-<sub><b>拿不准？</b>先从①开始。一条命令，也没有什么要卸载的；②是①的超集，
-①里学到的东西一样都不会浪费。</sub>
+只装插件（不克隆）也能用，但不完整：你会得到技能和 agent，得不到 `CLAUDE.md` 的治理规则或 `tracks/` 记忆。第一次使用的韩文逐步指引：[`docs/USER_GUIDE.md`](docs/USER_GUIDE.md)。
 
-### 两扇门都«不是»什么
+## 一张图看懂它如何运作
 
-**它不替代事后的评审。** 它只是把问题提前，让抵达人类评审者的量变小 —— 不是让人不再评审。
-它针对的瓶颈，是"生成的速度"和"人能核对的速度"之间的差距；它从**前面**收窄这个差距，
-办法是减少需要往后传的东西。
+这是设计上的流程。哪些步骤由代码强制、哪些由被告知要遵守的 AI 规则承担，见下方“能做与不能做”表和 [`docs/map/FH_MAP.md`](docs/map/FH_MAP.md)。
 
-**diff 看不见的，依然是人的活。** 只有真跑起来才会显形的东西 —— 在真实的屏幕上、对着真实的状态 ——
-不在这些工具能触及的范围内。那部分工作不会因为上游有一道门禁就变少，变短的是队列。
+```
+   你说出想要什么  ──►  FH 读取意图  ──►  把它锻造成两种形态之一
+   （日常语言）                            ├─ AI 遵循的规则    （CLAUDE.md、技能）
+                                           └─ 不需要 AI 的代码  （钩子、门禁、脚本）
+                                                     │
+        对框架的每一次改动都要经过 ◄─────────────────┘
+        ┌──────────────────────────────────────────────────────────┐
+        │ 1. 设计之前，先写下“什么算成功 / 它绝不做什么”
+        │ 2. 从几个相互独立的角度去试（另一个模型家族、另一个仓库的视角）
+        │ 3. 一直攻击，直到剩下的是站得住的——然后再发布
+        └──────────────────────────────────────────────────────────┘
+                                   │
+   不可逆的步骤（发布 · 删除 · 重写历史）会停下来问人
+   检查没能测量的东西，报告为“未测量”——绝不报告成 0
+   每次会话学到的东西写进 tracks/  ──►  下一次会话从那里开始
+```
 
----
+枢纽（本仓库）保存共享的 `knowledge/` 和每个项目各自的 `tracks/`；你关联的每个项目都指回它。完整地图，每个节点都是真实路径：[`docs/map/FH_MAP.md`](docs/map/FH_MAP.md)（交互版：[chrono-meta.github.io/forge-harness](https://chrono-meta.github.io/forge-harness/)）。
 
-## 它真的抓到过什么吗？
+## 三个信念
 
-**在别人写的真实代码上**（2026-05-31）。`fh-gate` 跑在 OpenCode 的 AI 生成文件
-`permission/arity.ts` 上 —— 163 行，agent 写的，**CI 是绿的**。判定：**BLOCKED**，两项 CI 没抓到
-的 A 级发现（允许列表中的短 token 溢出；arity 表中缺失的 executor 工具）。
+1. **质量是杠杆，速度是结果。** 工作假设：经过一次冷眼审视的工作，之后需要的返工更少。本页没有对它做基准测试。
+2. **作者是最差的审查者。** 和 AI 一起做完之后，你就成了它的辩护人，所以真正算数的检查，是由从未见过你的推理过程的审查者做的——[`docs/WHY.md`](docs/WHY.md)。
+3. **在不可逆的边界上放机器；判断保持开放。** 在无法撤销的地方拦住，并承认你没有测量的东西——[`docs/ETHOS.md`](docs/ETHOS.md)。
 
-**在植入的洞上，模型固定不动**（2026-07-14）。八个隐晦的 *默认偏向 PASS*（fail-open）的洞，由另外
-两个模型撰写，所以这套测试集并没有对着我们调过。模型固定在一个中等层级的下限上，只有 **方法** 在变：
+## 能做与不能做
 
-| 方法 | 抓到 | 误报 |
-|---|---|---|
-| 普通审阅 | 5/8 —— **而且其中 2 次抓错了 bug**（假信心，比干脆漏掉更糟） | — |
-| + FH 的降级方向 (degrade-direction) 透镜 | 6/8 | 0 |
-| + 换一个模型家族，同一套透镜 | **8/8** | 0 |
-
-🟥 **吃重的那一行不是 8/8。** 两条单模型的路线漏掉的是 **同样那两个洞** —— 一个假值的 error
-sentinel，以及一处分隔符取反的解析。同样的输入，同样的盲点：再来一位 *同一种类* 的审阅者也一样
-会漏掉。这就是去相关 (decorrelation) 的全部理由，其余都是算术。样本很小（单次抽样）；增加重复
-次数和更难的洞是已经写明的下一步。方法：
-[`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md) §Dominance ·
-更多带日期的运行：[`docs/OUTPUT_EVIDENCE.md`](docs/OUTPUT_EVIDENCE.md)。
-
-<p align="center">
-  <b>质量是杠杆，速度是结果。</b> ·
-  <a href="docs/ETHOS.md"><b>原则</b></a> ·
-  <a href="docs/WHY.md"><b>存在的理由</b></a> ·
-  <a href="docs/OUTPUT_EVIDENCE.md"><b>证据</b></a> ·
-  <a href="CHEATSHEET.md"><b>如何使用</b></a><br>
-  <sub>如果这对你有用，⭐ 一下能帮助更多人发现它。</sub>
-</p>
-
-| 如果你为此而来…… | forge-harness 这样解决 |
+| 能做 | 不能做（仓库自己说明的） |
 |---|---|
-| 会话结束后上下文就消失了 | 持久化的 `tracks/` —— 随处可续、可恢复 |
-| 你在每个项目里重复相同的设置 | 一次连接到中枢，跨所有项目共享 |
-| 团队的 AI 经验只留在个人脑子里 | 把它编码固化，让所有人共享 |
-| 你希望工作越积累，AI 越 *变好* | 技能与模式随会话逐次复利累积 |
-| 你需要给 AI 生成的代码一层治理 | `fh-gate` 把任何编码 agent 包裹为一道生成后门禁 |
+| 在合并前判定 diff，并点名它丢掉了什么 | **取代事后审查。** 它让到达人手里的东西变少，而不是变得不必要。只有在真实屏幕、真实状态下运行才会暴露的问题，仍然是人的工作 |
+| 通过 git 钩子拦住提交和推送（规则、脚本、删除、强制推送） | **保证一定拦住。** 钩子在客户端，`--no-verify` 可以绕过；服务端的底线是“main 只能走 PR”加上必需的 CI 检查。它的 pre-commit 钩子是用来开发 FH 本身的——不要装进你自己的仓库，那里请用门 ① |
+| 把一个项目的经验带入下一次会话 | **在所有地方表现一致。** 问候时匹配你的语言是一条没有机械底线的文字规则；2026-08-21 的一次盲测中，有一种问候变体没有出现菜单 |
+| 让另一个模型家族（Codex、Gemini、本地）做审查，抓住单一家族漏掉的东西 | **在 Claude Code 之外完整可用。** 其他运行时得到方法论和 `fh-gate`/`fh-run`，得不到自动驾驶（[`docs/codex-compat.md`](docs/codex-compat.md)） |
+| 根据一句简短的请求为项目搭建框架 | **按需产出成品框架。** 将来要做这件事的孵化器只产出过一次，而且那次跳过了完整流程——这是前进的方向，不是已发布的功能 |
 
-> **本文档面向人类。** AI 运行规则 → [`CLAUDE.md`](CLAUDE.md) · 命令参考 →
-> [`CHEATSHEET.md`](CHEATSHEET.md)。上面那两扇门就是全部的决定；以下都是需要时再查的资料。
+## 证据，以及它薄弱的地方
 
----
+- **一份真实的第三方 diff（2026-05-31）。** 对 OpenCode 中 AI 所写的 `permission/arity.ts`（163 行，CI 全绿）运行 `fh-gate`：判定 BLOCKED，依据是 CI 漏掉的两个 A 级发现。
+- **埋洞测试，模型固定（2026-07-14）。** 另外两个模型写下的八个 fail-open 漏洞。普通审查 5/8（其中 2 个找错了 bug）· + FH 的 degrade-direction 视角 6/8 · + 第二个模型家族 8/8，误报 0。**单次抽样，样本很小。** 要点是两次单模型运行漏掉了*同样*的两个漏洞。方法见 [`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md)；更多运行见 [`docs/OUTPUT_EVIDENCE.md`](docs/OUTPUT_EVIDENCE.md)。
+- **成熟度是评级，不是宣称。** 下面列出的五重身份在 [`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md) 中带有注明日期的等级；依赖其中任何一个之前，先读它的等级。
+- 本页的数字（**46 个技能 · 14 个 agent**）是 `plugins/`（`fh-meta`、`fh-commons`、`fh-qp`、`fh-preprep`）下的技能文件夹和 agent 文件，统计于 2026-10-10。用语手册：[`CHEATSHEET.md` §12](CHEATSHEET.md#12-skills--agents--what-each-does-and-what-to-say)。
 
-## 上手
+## 用起来之后会遇到的词
 
-**打一句 `你好`** —— 或者 `hi`、`안녕`、`こんにちは`、`hola`、`bonjour`。任何一句都会打开一个带
-编号的菜单：选一个入口，回答几个问题，它就替你运行安装向导。说 **"连接一个项目"**，中枢会扫描
-`../`，找到 `.git` 目录，并创建 `tracks/{project}/`。
+开始时用不到这些。它们说明 FH 是怎么搭起来的，当问候或某个门禁用到其中一个时再来查。这里的定义只有一句话；正典是 [`fh_three_layer_canon.md`](knowledge/shared/harness-core/fh_three_layer_canon.md)。
 
-<sub>🟥 <b>关于这一点，说实话</b>：语言对齐是一条背后没有任何机械兜底的散文规则，所以它并不总是
-成立 —— 2026-08-21 在一个干净克隆上做的盲测里，它把整个菜单都翻了过来，但 <b>菜单会不会弹出来</b>
-更不稳：有一种问候写法就没能唤出菜单。直接说一声，它就会切过来。这条残留被如实写在
-<code>CLAUDE.md</code> §Voice/Tone 里，而不是被抹平。</sub>
-
-**前置条件。** 门②需要 Claude Code CLI（`claude --version`）；门①不需要 —— 这正是它存在的理由。
-另有一道门禁需要 **Python + PyYAML**（它要解析 YAML，缺了就 fail closed，会让整个 `npm test` 变红）：
-`python3 -m pip install --user pyyaml`。为什么它 fail closed：[`CHEATSHEET.md`](CHEATSHEET.md) §6。
-
-**你的头 15 分钟。** 当一句招呼能让 🐿️ 门菜单出现、而"连接一个项目"能建出
-`tracks/{your-project}/` 时，设置就成功了。然后在同一个会话里拿下一个收益：说 **"加速这个项目"**
-（一份排过序、安装要过门禁的方案），或者 **"跑一下 /context-doctor"**（token 浪费扫描）；想做完整
-的初始设置 —— hooks、门禁、基线，每一项单独批准，拒绝会被记录 —— 请要 **`/install-wizard`**。
-一条诚实说明：FH 的回报是 **复利累积**，它从 **第 2 个会话起** 才显形；第一天给你的是菜单、方案和
-门禁，别在第一天就去评判它。已经克隆到别的地方了？那个路径 *就是* 你的中枢。碰到不认识的词 →
-[`GLOSSARY.md`](knowledge/shared/GLOSSARY.md)；只想在一个项目上试试②？
-[`templates/starter_profile.md`](templates/starter_profile.md) 是一条命令加一份精选的头五个技能。
-
-> ⚠️ **仅插件是部分协同。** 你可以只装插件而不克隆中枢
-> （`claude plugin install -s user fh-meta@forge-harness`，然后 `cd` 进你的项目）。你会拿到技能和
-> agent，但 **拿不到** 中枢那一侧的编排 —— 即 `CLAUDE.md` 治理，以及让它们跨会话复利累积的
-> `tracks/` 记忆。
->
-> 🟥 **有两个版本号，它们量的不是同一件事。** **包版本**（页首的 npm 徽章）是你装到的东西；
-> **身份成熟度发布**（`identity-v1.0.0`，在 Releases 页上）是这个框架走到了哪一步 —— 刻意停在
-> `0.x`，因为它拒绝在五重身份还没全绿时就声称全绿。两者不在同一把尺子上，一个高的包版本号并不
-> 等于成熟：[`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md)。
-> 🟢 **2026-09-04 —— 两个计数器合并了。** `identity-v1.0.0`（每一重身份都 🟢）是身份轨道上的
-> **最后**一个标签，也是第一个带 *Latest* 徽章的标签。从此以后，一次发布就是**两者共用的一个
-> 号码** —— 下一个是承载身份 1.0 的那个包主版本 —— 发布说明用英文写，并附一份韩文摘要。上面那段
-> 保留下来，是作为"当年还没全绿时为何要把两条轨道分开"的理由；它是历史，不是当下的规则。
-
----
-
-## 为什么它是框架，而不是工具箱
-
-框架读取你的**意图**，并把它锻造成**机械化的形态** —— AI 能可靠遵循的规则，或者根本不需要模型的
-确定性代码。回报是**人这一侧的试错大幅减少**：请求 → 反馈 → 重新生成的循环 *换了位置* —— 挪进
-框架内部并行运转 —— 于是你的注意力只花在不可逆的变更上。**技能、agent 或插件** 是一个工具；
-**框架** 高出一级 —— 是一颗 *星*：一个项目的工具、规则、门禁与记忆，绑成一个运作的整体。
-**forge-harness 就是这些星所栖居的星系**，它把众多框架绑定在共享的下限之上，让它们一起演化而不是
-四散漂移。它还能在自己的沙箱里**以仿真方式跑一个现场框架**，再把它**输出 (emit)** 为一个独立的
-框架 —— 🟥 请把这一步读作行进方向，而不是一项已出货的功能：孵化舱迄今只输出过一次，而那次运行
-并没有走完整套流程。
-
-```
-forge-harness/   ← 中枢（持久大脑）              Project A ──→ 在 CLAUDE.md 中连接中枢
-├── knowledge/   → 跨所有项目共享                Project B ──→ 在 CLAUDE.md 中连接中枢
-└── tracks/      → 每个项目的工作记录
-```
-
-在结构上它是 **两个层** —— 一个与模型无关的 **方法论层**（`tracks/`、`knowledge/`、`SKILL.md`
-文档），和一个 Claude-Code 原生的 **自动化层**（agent、hooks、斜杠命令、`CLAUDE.md` 规则）。
-这条边界是刻意的，不是待填补的缺口：[`docs/codex-compat.md`](docs/codex-compat.md)。
-**它所处的位置（2026）：** 基础的 agent 编排正迅速商品化为标准基础设施，而 FH 刻意不把任何东西押
-在那套管道上 —— 它的持久层是那些 *不会* 商品化的东西：治理门禁、漂移控制，以及跨项目复利循环。
-路由与派发是手段；**门禁与循环才是资产。**
-
-### 五重身份 —— FH 是为了什么
-
-这不是五个模块，也不是五项已出货的功能：它们是 **技能自然聚拢成的形状**，是事后给它命名，而不是
-叠加在它们之上。
-
-| | 身份 | 一个人得到什么 |
+| 术语 | 一句话 | 延伸阅读 |
 |---|---|---|
-| **①** | **框架集群 (Harness cluster)** | 一个任务同时驾驭多个框架，治理在它们 *之间* 算出来 —— 没有的能力就**调用**而不是自己造，看到该造的就**吸收** |
-| **②** | **项目孵化器 (Project incubator)** | 新框架出炉时 **就已经会走路**，而不是一副空的脚手架 |
-| **③** | **治理门禁 (Governance gate)** | 不该出货的东西被 **机械地** 拦下，而不是靠记得去检查 |
-| **④** | **前沿吸收 (Frontier absorption)** | 拿不准的时候，先翻 *自己已有的* 再翻 *世上已有的* —— 于是什么都不重造 |
-| **⑤** | **放大器 (Amplifier)** | 一句简短的意图被一路锻造到成品 |
+| **三段工序** | FH 工作所遵循的顺序：先定义成功 → 并行、去相关地尝试 → 用六个轴烧一遍。速度是从末端出来的。 | [`ETHOS.md`](docs/ETHOS.md#the-forge) |
+| **四大引擎** | 产生输出的核心机制：`judgment-circuit` · `ship-gate` · `context-continuity` · `external-grounding`。 | 上述正典 |
+| **五重身份** | 技能聚成的形态：框架集群 · 项目孵化器 · 治理门禁 · 前沿吸收 · 放大器。逐个身份评级。 | [`docs/IDENTITIES.md`](docs/IDENTITIES.md) · [`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md) |
+| **六轴验证** | 六种审查方式，按审查者*拿到了什么*来划分：另一个模型家族 · 目标自己的正典 · 隔离式 grounding（依据建立） · 第三方仓库 · 首次真实使用 · 回退并观察。你按需挑选，不必六个都跑。 | 上述正典 |
+| **去相关（decorrelation）** | 让两项检查以*不同的方式*失败，使一方看不见的东西被另一方看见。 | [`docs/REFERENCE.md`](docs/REFERENCE.md) |
 
-第六行是刻意不放进表里的：`Ⓑ` **项目助推器 (Project Booster)** —— FH 的机制去加速 *对方框架自身
-的开发* —— 是真实存在且已被评级的，但它坐在另一层上，所以用字母而不是编号。**而且这张表不是五项
-能用的功能**：成熟度按身份逐项评级（`aspirational → partial → RC → REALIZED`）并配有带日期的
-证据，刻意 **没有** 复制到这里 —— 同一个等级放进两个文件总会有一个先腐坏，而本页有四种语言版本。
-在你依赖上表任何一行之前，请先读那些等级：
-[`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md)。 而**每一个该怎么用** —— 哪条命令、哪扇门点亮哪重身份 —— 见 [`docs/IDENTITIES.md`](docs/IDENTITIES.md)：等级说的是*做到了几分*，那一页说的是*怎么调用*。
+其他术语：[`GLOSSARY.md`](knowledge/shared/GLOSSARY.md)。
 
-有两条性质横贯这五重身份。**它搭上前沿，而不是给前沿打补丁** —— 跨家族派发（Claude、Codex、
-Gemini、本地）是为了共同演化，不是为了糊住弱点。**去相关 (decorrelation)** 是当下的信任杠杆，
-也是本页最吃重的那个词：刻意让两道检查以 *不同的方式* 失败 —— 换一个模型家族、拿真实目标真跑
-一次、请外人来审你自己的记录 —— 好让其中一道看不见的，另一道看得见。而且 **它沿两个方向演化**：
-向外，每次会话的教训复利汇入中枢；向内，同一套门禁掉转过来对准框架自己。
+## 接下来读什么
 
----
-
-## 它是怎么被造出来的 —— 三 · 四 · 五 · 六
-
-**三段工序 · 四大引擎 · 五重身份 · 六轴验证。** 上面那五重身份，是工序与引擎彼此咬合的地方浮现
-出来的东西 —— 这五重是已经锻打过、评过级、稳定下来的那些；其余的身份则随着你往哪个方向驾驭、
-推到多远而浮现又退去（操作者的表述，2026-09-05）。**四大引擎**（`judgment-circuit` · `ship-gate` ·
-`context-continuity` · `external-grounding`）是所有带 FH 特征的产出共同的那个内核；而 **三段工序**
-—— ① 在设计 *之前* 先立判断回路 → ② 中段并行去相关 → ③ 在六条轴上烧一遍 —— 是 FH 每一件活计都要
-走的顺序，锻造一台引擎本身也不例外，速度是末尾那支箭，不是第四个方框。**整张地图** —— FH 是什么、
-它是怎么实现的（每个节点都是一条真实路径）、为什么可信（门禁 · 检查通道 · 等级，都带文件路径），
-以及哪些是操作者本地的、哪些是通用的 —— 都在一页里：[`docs/map/FH_MAP.md`](docs/map/FH_MAP.md)，
-旁边还有三张可交互的图 —— 可在 **[chrono-meta.github.io/forge-harness](https://chrono-meta.github.io/forge-harness/)** 上直接看。
-
-[![FH 整张地图 —— 从入口 → 三段工序 → 四大引擎 → 身份的流程（点击查看可交互版本）](docs/map/fh_process.workflow.png)](https://chrono-meta.github.io/forge-harness/map/fh_process.workflow.html)
-⚠️ **六条轴不是第四层**，它们是 *③ 段究竟由什么构成*。完整正典，以及为什么这刻意 *不是* 一个干净的分层：
-[`fh_three_layer_canon.md`](knowledge/shared/harness-core/fh_three_layer_canon.md) —— 同样这三段
-用铁匠的用词（锻造 · 淬火 · 回火）讲一遍，在 [`ETHOS.md`](docs/ETHOS.md#the-forge) 里。
-
-🟥 **轴不是按*有多对抗*来分的，是按*它拿到了什么*来分的。** 给两位审阅者同样的输入，同一个盲点
-就会留下来，你堆多少位都一样：
-
-| 轴 | **它拿到什么** | 它抓到什么 | 典型手段 |
-|---|---|---|---|
-| **ⓐ 不同家族** | 变更 + 作者的框架叙述 | **实现** 错了 | 换一个模型家族的审阅者（`auto-decorrelation`） |
-| **ⓑ 立场 (standpoint)** | 变更 + **目标框架自己的正典** | **你引用的那条规约是不是真这么说** | 在那个框架自己的仓库与规则里跑这份变更（[`§7`](knowledge/shared/harness-core/field_verdict_crossfamily_gate.md)） |
-| **ⓒ 隔离接地** | 作者写下的那些句子 —— 他的主张，*以及* 他在 **动手之前声明过的东西** —— + 此刻的这棵树 | **主张** 错了 · 增量与当初声明的对不上 | 找一个没写过它的人，把它说的重新测一遍 |
-| **ⓓ 第三方对面** | 问题 + **别人的代码库** | **这是不是早就被解过了** · 你的变更会碰到别人仓库的哪里 | 在一个无关的第三方仓库里看同一个问题 |
-| **ⓔ 首次真实使用** | 一个实打实的目标 | **你测量的方式** 错了 —— 量具的量具 | 拿一个真实目标真跑一次，然后动手核对 |
-| **ⓕ 撤回并观察** | 把接线删掉之后的那棵树 | **锚** 错了 —— 那道检查是装饰 | 把它守护的东西删掉，确认 *正是那一条* 检查变红 |
-
-**你不必每次都把六条跑满，这正是设计** —— 别做乘法，要挑：
-
-```
-一行小修（typo · gitignore）    一条都不烧 —— 答案只有一个时，栽一套坐标系本身就是开销
-普通代码变更（可逆）             ⓔ 首次真实使用 + ⓕ 撤回
-判定 · 门禁代码                 + ⓐ 不同家族 —— 判定逻辑正是那种「与作者共享同一份乐观」的
-                               审阅者会结构性地漏掉的东西
-会碰到别人框架的变更             + ⓑ 立场 —— 就算堆三个家族，若三个都吃下了你的框架叙述，
-                               「那份正典是不是真这么说」就没有人去看
-超大型 · 不可逆                 + ⓒ 隔离 + ⓓ 第三方对面。全部烧一遍
-```
-
-一条轴是由它的 **输入** 定义的，不是由审阅者的能力定义的，所以基础模型的进步取代不了这一套：
-模型再强，也依然看不见它没拿到的信息。🟥 **引用之前必须读的限制** —— 这张表是 **n=1**（一份产物、
-一次会话、一位作者）；而当 16 条发现被抹去出处、交给另外两个家族的分类器做盲判之后，作者归给 ⓓ 的
-**5 条里有 3 条** 被判成了别的轴。在这些门禁里过完的一整天，连同被漏掉的部分：
-[`docs/GATE_DAY.md`](docs/GATE_DAY.md)。
-
----
-
-## 规则住在哪里 —— 三个位置
-
-框架靠把规则写下来学习，而那份总是被加载的文件只会越来越长 —— 于是推理走进死角：*一个不断学习的
-框架，启动成本只会不断变贵。* 但它并没有，因为一条规则有 **三个位置**，选哪一个取决于 *这条规则
-必须在什么时候触发*：**总是加载**（触发条件是一个 *意图* —— 没有任何 hook 能挂上去，所以显著性是
-唯一的一层）· **门禁自己的报错信息**（触发条件是一个 *动作*；那条挡住你的信息同时也在教你正确的
-形态，而且这个位置是免费的）· **hook**（记录本身的属性 —— 在场、带类型、可归属、非空洞）。
-中间那个位置通常是空着没用的。完整的表，以及"它只在失败时才触发"这条诚实的限制：
-[gate-locality](knowledge/shared/harness-core/gate_locality_principle.md) §Where a rule lives。
-
----
-
-## 在 Claude Code 之外跑 —— `fh-gate` CLI
-
-FH 把任何编码 agent（OpenCode、Codex 等）包裹为一道 **生成后治理门禁**。
-
-```bash
-npx --package @chrono-meta/fh-gate fh-gate                    # 默认：Claude 后端
-FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-gate   # Codex 后端
-FH_BACKEND=cross npx --package @chrono-meta/fh-gate fh-gate   # 两个家族都跑，findings 取并集
-# → FH_GATE_VERDICT: PASS | PENDING | BLOCKED | ESCALATE
-```
-
-对每种运行时都是同一套治理提示。`auto` 是回退式 *选择* —— 它只跑 **一条** 腿；`cross` 会跑两个
-家族并对 findings 取并集（只有一方发现的问题仍然是问题），成本约 2 倍，适用于判定 / 门禁 /
-不可逆面的变更，而不是默认值。输出始终声明实际跑了哪些腿，所以单家族的结果绝不会读起来像交叉
-验证过。`fh-run`（直接跑一个技能或 agent）、`fh-goal` 与 `fh-codex-doctor`（适配器漂移检查）
-随它一起出货 —— 参数与完整环境变量表见 [`CHEATSHEET.md`](CHEATSHEET.md)，规格见
-[`fh_integration_contract.md`](knowledge/shared/harness-core/fh_integration_contract.md)。
-**推荐姿态 —— Claude Code 作编排者，其余作边车**：非 CC 运行时也可以当你的主 agent，并通过
-`fh-gate`/`fh-run` 保有方法论层，但拿不到自动驾驶层（hooks 不会自动触发，派发需要适配器）——
-逐层详情在 [`docs/codex-compat.md`](docs/codex-compat.md)。
-
----
-
-## 模型设置
-
-Claude Code 不会按任务复杂度自动选择模型 —— 这个要你设置一次。
-
-| 命令 | 谁执行什么 | 最适合 |
-|---|---|---|
-| `/model sonnet` | Sonnet 会话；FH 在声明的下限 (floor) 上派发更高层级的子 agent | **FH 默认** —— 运行 + 日常开发 |
-| `/model opus` | Opus 处理一切 | 编辑框架的会话 · 每一轮最大深度 |
-| `/model opusplan` | Opus *规划* · Sonnet 执行 *(当 Opus 介入时)* | 讲究成本的日常编码 —— 见注意事项 |
-
-已测量：*运行* FH 几乎与模型无关 —— 上下文里的规则完成了大部分工作 —— 所以 FH 会自行在声明的
-下限上派发那少数几个深度敏感的轮次，并且 **绝不切换你的会话模型**；上限低于下限的环境会拿到一个
-明确的 `below-floor` 标记，而不是悄无声息地降级。⚠️ `opusplan` 的 Opus 介入 **无法保证**（一次
-实测的 10 轮运行里是 0 轮）。那条准则背后的两条结构性定律、可选本地边车的硬件层级，以及多模型
-边车姿态：[`docs/MODEL_SETUP.md`](docs/MODEL_SETUP.md)。
-
----
-
-## 41 skills · 8 agents
-
-计数 = 未废弃的技能。按验证 · 编排 · 诊断 · 收割 · 门禁 · 发现 · 模拟 · 设置分簇，另有 8 个 agent
-（`challenger` · `quench-challenger` · `beginner` · `main-player` · `expert` · `fact-checker` ·
-`hub-persona-auditor` · `persona-innovator`），由这些技能派发或直接点名调用。**完整用语手册** ——
-每个技能和 agent 连同它的一句话定义，以及触发它的那句平白说法：
-[`CHEATSHEET.md` §12](CHEATSHEET.md#12-skills--agents--what-each-does-and-what-to-say)。
-
----
-
-## 了解更多
-
-| 资源 | 用途 |
+| 如果你想… | 去这里 |
 |---|---|
-| [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) | 怎么真正用起来，从头到尾 |
-| [`CHEATSHEET.md`](CHEATSHEET.md) | 完整命令参考 |
-| [`docs/ETHOS.md`](docs/ETHOS.md) | FH 相信什么 —— 大锻炉、冷审阅者、让主张配得上自己的措辞 |
-| [`docs/WHY.md`](docs/WHY.md) | 它为什么存在 |
-| [`docs/OUTPUT_EVIDENCE.md`](docs/OUTPUT_EVIDENCE.md) | 证据 —— 论文、带日期的运行、外部收敛 |
-| [`docs/GATE_DAY.md`](docs/GATE_DAY.md) | 在这些门禁里过完的一天，测量过，漏掉的也点了名 |
-| [`docs/MODEL_SETUP.md`](docs/MODEL_SETUP.md) | 用哪个模型跑 FH、硬件层级、边车 |
-| [`docs/codex-compat.md`](docs/codex-compat.md) | 在非 Claude-Code 运行时上跑 FH |
-| [`knowledge/shared/GLOSSARY.md`](knowledge/shared/GLOSSARY.md) | 不认识的词 |
-| [`CLAUDE.md`](CLAUDE.md) | AI 运行规则 + 同步/推送协议 |
-| [`AGENTS.md`](AGENTS.md) | 运行时 agent 规格 |
-| [`CATALOG.md`](CATALOG.md) | 过往工作检索索引 |
-| [`fh_three_layer_canon.md`](knowledge/shared/harness-core/fh_three_layer_canon.md) | 三层正典 —— 工序、引擎、身份 |
-| [`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md) | 身份等级、两条版本轨道、dominance 结果 |
-| [`fh_integration_contract.md`](knowledge/shared/harness-core/fh_integration_contract.md) | 治理门禁规格 |
-| [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | 如何贡献技能与模式 |
-| [`tracks/_contrib/`](tracks/_contrib/README.md) | **同意通道** —— 分享一个去标识化的工作会话；仓库在众多操作者之间复利累积 |
+| 一步一步走完第一次会话（韩文） | [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) |
+| 命令与触发语 | [`CHEATSHEET.md`](CHEATSHEET.md) |
+| 完整的旧 README（引擎、模型设置、`fh-gate` 参数、技能列表、论文） | [`docs/REFERENCE.md`](docs/REFERENCE.md) |
+| 使用场景与各模型档位的预期 | [`docs/USE_CASES.md`](docs/USE_CASES.md) · [`docs/model_tier_expectations.md`](docs/model_tier_expectations.md) |
+| 为什么存在 / 相信什么 / 证据 | [`docs/WHY.md`](docs/WHY.md) · [`docs/ETHOS.md`](docs/ETHOS.md) · [`docs/OUTPUT_EVIDENCE.md`](docs/OUTPUT_EVIDENCE.md) |
+| 参与贡献 | [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) |
+| AI 运行规则 / 运行时入口 | [`CLAUDE.md`](CLAUDE.md) · [`AGENTS.md`](AGENTS.md) |
 
-> **FH 论文**：v1.0.2 方法论 · [Zenodo](https://zenodo.org/records/22843702)（DOI
-> 10.5281/zenodo.22843702）· cs.SE companion v1.2.2，预印本公开 ·
-> [Zenodo](https://zenodo.org/records/22674575)（DOI 10.5281/zenodo.22674575）·
-> [arXiv:2609.04218](https://arxiv.org/abs/2609.04218)（v2 于 2026-09-09 公布 — 新增 §6.7 并下调标题主张；Zenodo v1.2.2 于同日以相同内容发布，两处存档一致）· cs.AI companion
-> 筹备中。这些、独立的收敛性工作，以及每一项的注意事项：
-> [`docs/OUTPUT_EVIDENCE.md`](docs/OUTPUT_EVIDENCE.md)。
+> **这份文档是写给人看的。** 如果它对你有用，点个 star 能帮助更多人找到它。
