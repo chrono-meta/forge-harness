@@ -11,8 +11,9 @@
 | `CLAUDE.md` | Session rules, protocols, orchestration flow | Claude Code |
 | `AGENTS.md` | Portable runtime rules, agent roles, dispatch boundaries | AI runtimes + humans |
 
-`CLAUDE.md` governs Claude-native automation. This file is the portable entry point for Codex and
-other non-Claude runtimes, which do not auto-load `.claude/rules/*.md`.
+`CLAUDE.md` governs Claude-native automation. This file is the portable governor entry point for
+Codex and other runtimes; they must explicitly read applicable `.claude/rules/*.md`. Runtime-native
+features may execute the workflow, but do not automatically import Claude configuration.
 
 > **Whole map (any runtime, read first if you are new here)**: `docs/map/FH_MAP.md` — what FH is, how it is
 > implemented (every diagram node is a real path, re-checked by `scripts/test_fh_map_paths_lanes.sh`), why it is
@@ -68,8 +69,13 @@ its file never declared at all.
 
 ## Runtime Boundaries
 
-- **Two layers:** `tracks/`, `knowledge/`, and skill methodology are model-agnostic. Plugin agents,
-  hooks, slash commands, and `.claude/rules/` automation are Claude-native.
+- **Two layers:** `tracks/`, `knowledge/`, and skill methodology are model-agnostic. FH
+  `.claude/` automation is Claude-native; Codex-native skills, agents, and hooks are separate host
+  capabilities. Verify availability, configuration, trust, and payload compatibility before use.
+- **Governor versus sidecar:** when the user directly assigns this Codex session work, it is the
+  governor for that authorized scope: inspect, design, edit, test, repair, and integrate evidence.
+  A Codex process recruited as an audit sidecar stays read-only. The runtime name alone grants
+  neither write authority nor permission to publish. Claude Code remains the default FH governor.
 - **Output residency:** reusable methodology and polished public guidance belong in `knowledge/`,
   `plugins/`, or `docs/`. Raw signals, operator observations, handoffs, audit logs, and private
   reasoning are private-first; do not infer that colocated directories share a repository.
@@ -92,6 +98,26 @@ its file never declared at all.
 > **Detail**: See `knowledge/shared/harness-core/agents_md_runtime_details.md §Sidecar-routing-and-waiting`
 > — capability routing, the required wait command, and typed verdict meanings — read before dispatching a sidecar.
 
+## Governor Operation — Complete Authorized Work
+
+Carry the user's task through inspection, implementation, verification, and repair using available
+native tools or FH adapters. Continue independent reversible work while a check or required answer
+is pending. Do not hand ordinary technical decisions or hook diagnostics back to the user.
+
+When a gate stops work, read its typed result and actual failing condition, repair the cause within
+the authorized scope, and rerun the relevant checks. Distinguish a failed check from SKIP,
+UNMEASURED, an advisory warning, and a runtime permission denial. Never invent evidence, disable
+a gate, or convert a permission denial into an alternate-route execution.
+
+Reuse earlier authorization for the same scope and conditions; elapsed time, a resumed session,
+or a repaired check does not require asking the same intent again. Bring the user a compact,
+reviewable decision only for missing intent, an actual permission requirement, or an irreversible
+gate that the existing approval does not cover. Existing delegation-consent rules still apply.
+
+> **Detail**: Read `knowledge/shared/harness-core/agents_md_runtime_details.md §Governor-operation`
+> before diagnosing a blocked workflow or adapting host automation. It separates FH evidence,
+> task authorization, runtime permissions, and hook compatibility.
+
 ## Mandatory Non-Claude Checklist
 
 Because non-Claude runtimes do not auto-load Claude path rules, apply these rules explicitly:
@@ -105,9 +131,10 @@ Because non-Claude runtimes do not auto-load Claude path rules, apply these rule
    Anchors the check accepts: a URL · arXiv/DOI · `WebSearch`/`WebFetch` · `출처` · `원문 확인` ·
    `서베이`. Override is `FH_NOVELTY_OK=1`, and it appends to `tracks/_meta/.novelty_override_log`.
    ⚠️ The check sees only that an anchor **exists**, never that it supports the claim.
-1-b. **Before you trust the gate at all: check that this checkout is WIRED.** 🟥 Every "the hook
-   blocks this" sentence in `CLAUDE.md` and in item 1 above is true **only in a checkout where
-   `core.hooksPath` points at `templates/.git-hooks`.** Git tracks the hook files; it does **not**
+1-b. **Before you trust the gate at all: check that this checkout is WIRED.** 🟥 FH's shipped Git
+   pre-commit/pre-push blocking claims in `CLAUDE.md` and item 1 above apply **only in a checkout
+   where `core.hooksPath` points at `templates/.git-hooks`.** Host lifecycle hooks need separate
+   configuration, trust, and event-contract verification; Git wiring does not establish coverage. Git tracks the hook files; it does **not**
    carry that config value. Measured 2026-09-21, same commit, two checkouts: **15 layers compared,
    only 4 READ layers matched — all 11 ENFORCE/EVIDENCE/PATTERN layers were opposite.** The same
    commit passed silently in one and was blocked by Axis 2+3 in the other; what differed was the
@@ -292,16 +319,19 @@ Because non-Claude runtimes do not auto-load Claude path rules, apply these rule
 
 ## Invocation
 
-Non-Claude runtimes apply methodology manually. Prefer `FH_BACKEND=codex ... fh-run` for skills and
-agents. When a workflow references `Agent(subagent_type=...)` or a slash command, replace that step
-with `fh-run` or a direct `codex exec` call that reads the relevant spec. Use Codex native goal/session
-control; FH supplies the quality gate after goal completion.
+Use available Codex-native skills and tools for authorized governor work. Prefer
+`FH_BACKEND=codex ... fh-run` when a workflow needs an FH adapter. A Claude
+`Agent(subagent_type=...)` or slash-command step needs an explicit equivalent: a permitted native
+agent reading the spec, `fh-run`, or direct `codex exec`. Preserve the specified isolation, tool
+limits, model floor, consent, and return gate. Use native goal/session control when available;
+FH supplies the quality gate after goal completion. The tiers below classify the shipped FH
+implementation, not the maximum capabilities of the Codex host.
 
 | Tier | Definition | Skills |
 |---|---|---|
 | **M1 — Full** | No Claude-native dependency | `token-budget-gate`, `asset-placement-gate`, `phantom-quench`, `deep-clarify`, `convergence-loop`, `ko-tech-writer` (visual-QA degrades to text-only; the spoken register's Step 5-s renders audio through a shell TTS call — available here — but its **listening** pass is human in every runtime, so it degrades to declared-unmet, not to a Codex-specific gap) |
 | **M2 — Partial** | Core works; native agent or slash-command steps need adaptation | `deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop` |
-| **M3 — Claude-only** | Requires a Claude hook or session-scoped dispatch | `goal-quench`, `harness-pr-reviewer`, `install-wizard` |
+| **M3 — Claude-bound implementation** | Shipped workflow requires Claude-specific hook/configuration or session context | `goal-quench`, `harness-pr-reviewer`, `install-wizard` |
 
 > **Detail**: See `knowledge/shared/harness-core/agents_md_runtime_details.md §Invocation-patterns`
 > — single, parallel, and wave composition examples — read when choosing a dispatch shape.

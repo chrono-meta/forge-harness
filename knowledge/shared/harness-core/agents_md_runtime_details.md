@@ -19,7 +19,8 @@ methodology is portable, while their automatic invocation is Claude-native.
 The methodology layer is Codex-compatible, marked **beta** in the *validation-maturity* sense
 (external validation is still thin — see §Beta-removal), not in the *scope* sense: partial
 automation-layer support is the design, not an unfinished state. Gemini, Codex, and other runtimes
-can apply it by replacing hooks and native dispatch with manual invocation.
+can apply it through native capabilities and explicit FH adapters. A host supporting hooks does
+not establish compatibility with FH's Claude hook configuration or event payloads.
 
 Directory names do not determine publication residency:
 
@@ -32,10 +33,52 @@ In a workspace pairing a public mirror with a private companion store, preserve 
 even when both are locally available. Treat observational or operator-specific material as
 private-first and promote only the polished result.
 
+## §Governor-operation
+
+A user-directed Codex session may govern its assigned task; a delegated audit process may not
+promote itself into that role. Resolve role and scope first, then enumerate the available tools,
+installed skills, project registry, and adapters. Execute authorized reversible work and required
+quality checks; source-close findings before deciding. Do not infer broad design competence from
+an old model benchmark or infer current incapacity from a historical CLI limitation.
+
+Keep four decisions distinct:
+
+| Decision | Governor action |
+|---|---|
+| FH check failed | Read the failing source/typed result; repair and retest within scope |
+| Evidence unavailable or check skipped | Report the missing coverage; continue independent work; do not manufacture a PASS |
+| Task authorization already covers the action | Reuse it while scope and conditions remain unchanged |
+| Runtime permission or irreversible clearance missing | Prepare the concrete action and request the actual required clearance; do not bypass it |
+
+A hook interruption is a diagnostic event, not automatically a question for the operator. Capture
+the exit status, typed verdict, affected paths, and stated reason. Confirm checkout wiring and
+private pattern coverage before trusting a quiet result. Fix the underlying issue rather than
+setting an override or writing a marker to satisfy form. Evidence records describe real execution;
+human-authored evidence requirements remain human-authored.
+
+Codex's sandbox controls technical access; its approval policy/reviewer controls permission review.
+An automatic permission reviewer does not supply FH quality evidence or clear an irreversible gate.
+Do not change the operator's permission configuration as part of an ordinary documentation repair.
+Source: [Codex sandbox and approval controls](https://learn.chatgpt.com/docs/sandboxing).
+
+Before replacing a Claude automation step, inspect the actual host version, exposed tools,
+configuration, enabled plugin, hook trust, event schema, and result semantics. Codex supports its
+own hook definitions; project hooks require a trusted project layer and new/changed definitions
+require trust. Installation/enabling alone is insufficient. These are host capabilities, not a
+claim that FH's existing Claude hook bundle has been ported.
+Sources: [Codex hooks](https://learn.chatgpt.com/docs/hooks) and
+[Codex plugin construction](https://developers.openai.com/plugins/build/plugins).
+
+Select a supported native operation or an FH adapter only after those checks. Keep delegated
+auditors read-only, consent leased as specified in `AGENTS.md`, and result/return gates intact.
+If no runnable equivalent exists, name the specific missing phase; do not label the entire runtime
+manual-only. Before an outward or irreversible step, complete the reviewable artifact and apply
+`CLAUDE.md`'s corresponding gate using existing authorization where it actually covers that step.
+
 ## §Sidecar-routing-and-waiting
 
 A sidecar is a capability-routing layer, not a second harness or co-governor. Gemini/Antigravity is
-suited to breadth and multimodal work. Codex's primary FH role is repo-grounded audit: file reads,
+suited to breadth and multimodal work. When recruited as a sidecar, Codex's default FH role is repo-grounded audit: file reads,
 source-close grep, diff/patch review, gate execution, and phantom/backtrace. A Codex session with
 Browser or Chrome connectors may also take live web-flow automation.
 
@@ -178,7 +221,7 @@ is not the headless substitute.
 |---|---|---|
 | **M1 — Full** | No Claude-native dependency | `token-budget-gate`, `asset-placement-gate`, `phantom-quench`, `deep-clarify`, `convergence-loop` |
 | **M2 — Partial** | Core works; native agent/slash-command steps need adaptation | `deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop` |
-| **M3 — Claude-only** | Requires a Claude hook or session-scoped dispatch | `goal-quench`, `harness-pr-reviewer`, `install-wizard` |
+| **M3 — Claude-bound implementation** | Shipped workflow requires Claude-specific hook/configuration or session context | `goal-quench`, `harness-pr-reviewer`, `install-wizard` |
 
 **Which phase needs adapting** — the operative half of the M2/M3 rows. Without this a tier label
 tells a non-Claude runtime that a skill is "partial" but not *where* to intervene, which is the only
@@ -194,8 +237,9 @@ move, these per-skill cues did not, and they existed in no other file.)
 | `harness-pr-reviewer` (M3) | — | needs Claude session context |
 | `install-wizard` (M3) | — | writes `settings.json` |
 
-For M2, replace `Agent(subagent_type=...)` and slash-command steps with `fh-run` or direct
-`codex exec` reading the relevant spec.
+For M2, replace `Agent(subagent_type=...)` and slash-command steps with a permitted native agent,
+`fh-run`, or direct `codex exec` reading the relevant spec. Preserve isolation, tool limits, model
+floor, consent, and return gates; native availability alone does not satisfy them.
 
 Use Codex native goal/session control when available. FH's portable role is the post-goal quality
 gate (`fh-gate`). `fh-goal` is for non-interactive one-shot runs followed automatically by

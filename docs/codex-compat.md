@@ -6,7 +6,27 @@
 > what breaks, and what to expect when applying forge-harness (FH) methodology through OpenAI Codex
 > (`codex exec`) instead of Claude Code.
 
-FH is a 2-layer system: a **methodology layer** (`tracks/`, `knowledge/`, `SKILL.md` docs) that is model-agnostic, and an **automation layer** (Claude Code hooks, plugin-channel agents under `plugins/*/agents/`, field-project overrides under `.claude/agents/`, `/model`, settings.json) that is Claude-native. Codex users run the methodology layer by reading `SKILL.md` files directly; automation steps either run through runtime adapters (`fh-gate`, `fh-run`) or require manual substitution.
+FH is a 2-layer system: a **methodology layer** (`tracks/`, `knowledge/`, `SKILL.md` docs) that is model-agnostic, and an **automation layer** (Claude Code hooks, plugin-channel agents under `plugins/*/agents/`, field-project overrides under `.claude/agents/`, `/model`, settings.json) that is Claude-native. Codex users run methodology through native skills/tools or by reading `SKILL.md`; Claude-specific steps require a verified native equivalent or an FH adapter (`fh-gate`, `fh-run`). A directly tasked Codex session can govern implementation and repair; a recruited audit sidecar remains read-only. See `AGENTS.md §Governor Operation` for authorization and evidence boundaries.
+
+## Current host capability
+
+Codex has native project instructions, skills, and plugin support; it also documents native hooks.
+These capabilities remove the blanket assumption that every non-Claude automation step must be
+manual. They do not prove that a particular FH workflow is installed, enabled, trusted, or compatible.
+Sources: [Codex customization](https://learn.chatgpt.com/docs/customization/overview),
+[Codex hooks](https://learn.chatgpt.com/docs/hooks),
+[plugin construction](https://developers.openai.com/plugins/build/plugins).
+
+For each substituted step, verify the actual host and exposed tools, its configuration and trust,
+and the event/input/output contract. Preserve isolation, model floor, tool limits, delegation
+consent, and the caller's result gate. Keep M3 until the particular shipped dependency is adapted
+and validated; native hook support alone is insufficient to reclassify it. The doctor below audits
+FH source primitives and documented tiers, not live host permissions or hook trust.
+
+A governor investigates and repairs an FH hook failure before escalating a decision. Existing task
+approval carries forward within the same scope; a runtime access prompt is a separate technical
+requirement. Automatic permission review does not replace an FH check or human clearance for an
+irreversible surface. Source: [Codex sandboxing](https://learn.chatgpt.com/docs/sandboxing).
 
 ## Validated invocation pattern
 
@@ -106,11 +126,17 @@ Both ran end-to-end with no Claude-native dependency. The M1 tier claim holds fo
 
 ## Known limitations
 
-### 1. CC-native hooks fire and fail (noise, not breakage)
-When `codex exec` runs **inside this repo**, FH's Claude-native git/Stop/PostToolUse hooks attempt to fire and emit `hook: Stop Failed` / `hook: PostToolUse Failed` lines interleaved with output. These are **harmless to the skill result** — the skill's verdict is produced correctly — but they are visible noise. Running from a directory **without** FH's `.claude/settings.json` (the normal Codex-user case) avoids them entirely. Filter with `grep -vE "^hook:"` if needed.
+### 1. Historical hook noise is not current compatibility evidence
+Earlier author runs reported `hook: Stop Failed` / `hook: PostToolUse Failed` noise while
+producing skill verdicts. That observation does not establish current hook coverage or safety.
+For a current interruption, inspect the actual configuration, hook command, exit status, and typed
+result; distinguish a host event hook from Git's `core.hooksPath` backstop. Do not filter away a
+failure before determining whether it affects the required gate. Native Codex hooks use their own
+configuration/trust contract (see §Current host capability); FH's Claude configuration is not an
+automatic substitute.
 
-### 2. M2 skills need manual agent substitution
-M2 skills (`deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop`) have a core workflow that runs under Codex, but any step that dispatches `Agent(subagent_type=...)` or a slash command must be replaced by `fh-run` or a direct `codex exec` call reading the sub-agent's `SKILL.md`/agent `.md` — same workflow, different runtime (the "M2 adaptation pattern" in `AGENTS.md`). Example: `steel-quench` Waves 1–3 run; the `quench-challenger` agent step becomes `fh-run --agent fh-commons:quench-challenger`.
+### 2. M2 skills need explicit dispatch substitution
+M2 skills (`deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop`) have a core workflow that runs under Codex, but any step that dispatches `Agent(subagent_type=...)` or a slash command needs an explicit equivalent: a permitted native agent reading the spec, `fh-run`, or direct `codex exec`, preserving isolation, tool limits, model floor, consent, and return gate — same workflow, different runtime (the "M2 adaptation pattern" in `AGENTS.md`). Example: `steel-quench` Waves 1–3 run; the `quench-challenger` agent step becomes `fh-run --agent fh-commons:quench-challenger`.
 
 ### 3. M3 skills do not run automatically under Codex
 M3 skills (`goal-quench` Phase-3 Stop hook, `harness-pr-reviewer` CC session context, `install-wizard` settings.json write) require Claude-Code-native runtime and are **methodology reference only** under Codex unless a dedicated adapter exists. Use Codex's native goal/session features for goal control, and use `fh-gate` after completion for FH quality gating.
@@ -119,8 +145,9 @@ M3 skills (`goal-quench` Phase-3 Stop hook, `harness-pr-reviewer` CC session con
 Codex token usage is billed in the Codex CLI quota and is **not** recorded in any FH session log or orchestrator measurement. Cross-family runs (Gemini/Codex) are invisible to FH's token-budget tooling by construction.
 
 ### 6. 🟥 The gate may not be wired in your checkout — and a gate that never ran looks exactly like one that passed
-Every "the hook blocks this" statement in FH's docs is true only where `core.hooksPath` points at
-`templates/.git-hooks`. Git tracks the hook files; it does **not** carry that config value. Measured
+FH's shipped Git pre-commit/pre-push blocking claims apply only where `core.hooksPath` points at
+`templates/.git-hooks`. Host lifecycle hooks require their own configuration, trust, and contract
+verification; Git wiring does not establish their coverage. Git tracks the hook files; it does **not** carry that config value. Measured
 2026-09-21, same commit, two checkouts: **15 layers compared, only the 4 READ layers matched — all 11
 ENFORCE/EVIDENCE/PATTERN layers were opposite.** A third direction is quieter still: with the pattern
 layer absent the confidentiality scan still runs and still goes **green**, while company-name and
@@ -150,7 +177,7 @@ The sibling pattern for Gemini is `gemini -p "$(cat <skill+artifact>)"`. Outside
 | Tier | Under Codex | Action |
 |---|---|---|
 | **M1** | Runs fully (`token-budget-gate`, `asset-placement-gate`, `phantom-quench`, `deep-clarify`, `convergence-loop`, `ko-tech-writer` (visual-QA degrades to text-only; the spoken register's Step 5-s renders audio through a shell TTS call — available here — but its **listening** pass is human in every runtime, so it degrades to declared-unmet, not to a Codex-specific gap)) | `cat SKILL.md artifact \| codex exec -m gpt-5.5 -` |
-| **M2** | Core runs; agent/slash steps via adapter (`deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop`) | Substitute each dispatch with `fh-run` or a direct `codex exec` on the sub-agent's `.md` |
+| **M2** | Core runs; agent/slash steps via adapter (`deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop`) | Use a permitted native agent, `fh-run`, or direct `codex exec` reading the spec; preserve dispatch constraints |
 | **M3** | Does not run automatically | Use native Codex session features where available; otherwise read as methodology reference or use a dedicated adapter |
 
 ## Beta removal — remaining (external-blocked)
@@ -159,7 +186,7 @@ The sibling pattern for Gemini is `gemini -p "$(cat <skill+artifact>)"`. Outside
 
 | Sense | What it says | Is it a removal condition? |
 |---|---|---|
-| ⓐ **Scope** — partial support | The automation layer (hooks, sub-agent dispatch, slash commands) is Claude-Code-native *by construction*. Codex runs the methodology layer plus adapters. | **No.** This is the intended two-layer boundary, not a gap to be closed — the READMEs say exactly that. 100% parity is not a state this document is working toward, so do not write completion conditions against it. |
+| ⓐ **Scope** — partial support | The shipped Claude hook/configuration path is host-specific. Codex may run native capabilities and adapters after contract verification; full FH automation parity is not established. | **No.** This is the intended two-layer boundary, not a gap to be closed — the READMEs say exactly that. 100% parity is not a state this document is working toward, so do not write completion conditions against it. |
 | ⓑ **Validation maturity** — thin external evidence | Everything validated so far is author-run (see the M1 table above). No non-author has reproduced it. | **Yes.** This is what the `Status: beta` header means, and **every condition in the table below is a ⓑ condition.** |
 
 | Condition | Status |
