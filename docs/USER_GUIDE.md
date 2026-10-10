@@ -1,5 +1,24 @@
 # forge-harness 사용 가이드
 
+**한 줄로**: FH 는 Claude Code 용 **메타하네스**다 — 프로젝트에 필요한 규칙 · 게이트 · 기억(= 하네스)과 스킬을 짓도록 돕고, 내보내기 전에 검증한다.
+(하네스 = AI 에이전트가 같은 지시를 매번 다시 듣지 않도록 프로젝트에 둘러놓은 규칙 · 차단 장치 · 기록.)
+
+**이 가이드를 끝내면 얻는 것**: ① FH 를 깔고 첫 인사에 메뉴가 뜬다 ② 내 프로젝트 하나를 연결해 `tracks/` 가 생긴다 ③ 진단 또는 가속 요청 한 번으로 «순위 매긴 할 일 목록»을 받는다 (자동으로 고치지는 않는다).
+
+**첫 세션 경로**
+```
+1. 설치       claude plugin marketplace add https://github.com/chrono-meta/forge-harness.git
+              claude plugin install -s user fh-meta@forge-harness
+              git clone https://github.com/chrono-meta/forge-harness.git ~/projects/forge-harness
+2. 열기       cd ~/projects/forge-harness && claude
+3. 인사       "안녕"  → 새 설치면 메뉴: 첫 프로젝트 만들기 · 기존 프로젝트 매핑 · 가이드
+4. 연결       "프로젝트 연결해줘"  → ../ 의 git 레포를 찾아 tracks/{프로젝트}/ 생성
+5. 첫 성과    "이 프로젝트 가속화해줘" 또는 "/context-doctor"
+```
+설치 없이 게이트만 써보려면 `npx --package @chrono-meta/fh-gate fh-gate` 한 줄이면 된다(Claude Code 세션은 불필요, Node 와 `claude` 또는 `codex` CLI 는 필요). 효과가 쌓이는 쪽(세션 기록 이어받기)은 **두 번째 세션부터** 보이니 첫날 판단하지 마라.
+
+---
+
 > **이 문서는 '읽는' 문서다.** 명령을 찾으려면 `CHEATSHEET.md`, 과거 작업을 찾으려면
 > `CATALOG.md`, FH 가 무엇이고 왜 작동하는지는 `README.md` 를 봐라. 여기는 **처음 쓰는 사람이
 > 첫 세션을 완주하는 것**만 다룬다.
