@@ -96,7 +96,8 @@ This means FH is not just model-agnostic in theory — the methodology layer phy
 > degradation. Once EOL hits, sidecar team detection should probe `agy` first (follow-up:
 > `fh_signal_2026-06-11_fh-direct`).
 
-> **Load ≠ full parity**: "loads and lists as Enabled" means the SKILL.md *methodology* is readable and runnable as guidance. Skills whose steps dispatch a sub-agent (`Agent` tool, `fh-commons:*` challengers) or depend on slash-commands/hooks are **Claude-native** — on Gemini/Codex they degrade to manual methodology, not automated execution. Cross-CLI portability covers the *methodology layer*; the automation layer (sub-agents, hooks, slash commands) requires Claude Code as host. See `README.md §2-layer architecture`.
+> **Load ≠ full parity**: "loads and lists as Enabled" means the SKILL.md *methodology* is readable and runnable as guidance. Skills whose steps dispatch a sub-agent (`Agent` tool, `fh-commons:*` challengers) or depend on slash-commands/hooks are **Claude-native** — without a verified native equivalent or adapter, their Claude-specific steps require manual substitution. Cross-CLI portability covers the *methodology layer*; the shipped Claude automation still requires its matching host or a verified adapter. Current
+Codex-native capability is assessed separately; see `docs/codex-compat.md §Current host capability`. See `README.md §2-layer architecture`.
 
 > **Check-class taxonomy = the model-portability map**: the Axis-5 check classes
 > (`harness_6axis_framework.md` §Axis 5) double as the portability map. **Mandatory-pass** checks —
@@ -136,7 +137,7 @@ FH is a **multi-runtime harness with explicit runtime authority**, not Claude-on
 | Runtime | Authority | Fit task-class (aggressive *within* it, not blanket) |
 |---|---|---|
 | **Claude Code** | default **action/governor** — Claude-native automation, hooks, agents, MCP writeback, terminal verdict | orchestration · design-depth · synthesis · the writeback/commit path |
-| **Codex** | **audit / repo-grounded sidecar** | file reads · grep/source-close · diff & patch · gate execution · phantom/backtrace (`fh-run` / `codex exec`). **NOT** discovery/design-depth — below-floor there |
+| **Codex** | User-directed session: **governor for the assigned scope**. Recruited auditor: **repo-grounded sidecar** | Governor: implementation, repair, verification, and integration within exposed capability and authorization. Sidecar default: file reads · source-close · diff review · gate execution · phantom/backtrace; no target-tree writes |
 | **Gemini / agy** | **breadth / multimodal sidecar** | wide alt-generation · multimodal/video/image · exploratory critique · non-code artifacts. Outputs stay **source candidates** until grounded |
 | **Other runtimes** | **portable entrypoint only** (`AGENTS.md`) | apply FH methodology via adapter; do **not** inherit Claude-native automation or writeback authority unless explicitly scoped |
 
@@ -147,7 +148,10 @@ External causal anchor for *why* the ceiling sits in the weights (wsff.md, Human
 weeks — *"maintainability has no fast oracle, so we can't reward for it during RL"* — hence the
 human-review floor is structural, not a transitional patch. (Its Faros AI numbers are correlation-only;
 the author's own caveat travels with any citation.)
-"Aggressive" Codex/Gemini use is bounded by the fit task-class above, never a blanket main-seat swap.
+"Aggressive" sidecar use is bounded by the assigned task class, never a blanket main-seat swap.
+A directly tasked Codex governor is an explicit context, not a promotion of an audit sidecar or a
+change to the default Claude-led deployment. Historical model-floor observations do not classify
+every future Codex model; assess the actual model and task, retaining required verification floors.
 
 ### Write authority — a sidecar audits, it does not edit (measured 2026-08-21)
 
