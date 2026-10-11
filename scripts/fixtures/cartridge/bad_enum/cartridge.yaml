@@ -1,0 +1,1 @@
+{"schema_version": 1, "plugin": "bad_enum", "load": {"entry": ["skills/demo/SKILL.md"]}, "constraints": {"approval": "bogus", "writes": "read-only", "reversibility": "reversible", "residency": "public"}}

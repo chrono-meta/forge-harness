@@ -1,0 +1,24 @@
+schema_version: 1
+plugin: fh-qp
+load:
+  entry: [skills/qp/SKILL.md]
+  extra: [skills/qp-plan/SKILL.md, skills/qp-run/SKILL.md, skills/qp-regress/SKILL.md]
+constraints:
+  approval: ask
+  writes: write-local
+  reversibility: unknown
+  residency: public
+services:
+  - id: fh.irreversible-gate
+    need: required
+    on_absent: refuse-load
+  - id: fh.crossfamily-review
+    need: optional
+    on_absent: proceed-marked
+done_when:
+  - {text: "every artifact header carries engine= and evidence=", class: declared}
+  - {text: "verdict records pass the closed-status check", class: measured,
+     checker: scripts/qp_tools.sh, input: verdicts.tsv, pass: "rc=0"}
+capabilities: []
+purpose: "Plan, run and regress QA passes on a web or desktop app with typed verdicts"
+intents: ["이 사이트 QA 돌려줘", "make a test plan for this app"]
