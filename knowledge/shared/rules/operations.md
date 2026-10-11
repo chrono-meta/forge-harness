@@ -28,8 +28,9 @@ The hub audits and improves itself weekly.
 **Phase 1.5 (manual):**
 1. Gather window data by hand — `git log --since="{window}" --oneline` (+ count), `git tag --sort=-creatordate`, tail of `knowledge/shared/learnings/subagent_invocations_log.yaml`, stale-file spot checks. (No `_scanner.sh` exists — a prior reference here was a phantom, fixed 2026-06-11; the automation path is Phase 2 harvest-loop, a standalone scanner script is deliberately not built.)
 2. `bash scripts/below_floor_scan.sh` — below-floor marker re-run queue (the standing consumer §Floor governance promises: exit 1 = pending floor-tier re-validations, treat as S-tier; resolve via `floor-rerun:` / `floor-writeoff:` appended to the marker)
-3. Write `tracks/_audit/weekly_audit_YYYY-MM-DD.md` mirroring the previous audit file's format (frontmatter + activity table + 🟥🟧🟩 + pattern table — no separate template file exists)
-4. Propose 3-tier improvements (🟥mandatory/🟧strong/🟩recommended)
+3. **Carry-over re-check before copying.** Every carried-over / unresolved item from the previous audit is re-confirmed against a primary source (`gh pr view` · `git log -S` · a grep of the file it names) *before* it is copied forward, and the command used is written next to it together with what it returned for the current state (a `git log -S` hit shows history, not current status). Cannot confirm → mark `UNVERIFIED`; never promote it to "awaiting operator decision". (2026-10-11: a Haiku arm copied the 09-24 carry-over list without checking current state and re-reported an already-closed awesome-list PR and a nested-repo gitlink as pending; the governor corrected both.)
+4. Write `tracks/_audit/weekly_audit_YYYY-MM-DD.md` mirroring the previous audit file's format (frontmatter + activity table + 🟥🟧🟩 + pattern table — no separate template file exists)
+5. Propose 3-tier improvements (🟥mandatory/🟧strong/🟩recommended)
 
 **Recurrence escalation** (N=3 threshold): Scanner output shows the same defect class in 3+ distinct commits or sessions within the audit window → S-tier signal; propose instrumenting as a CI probe (`npm test` extension or pre-commit hook) rather than adding a new habit rule. Three recurrences indicate the defect class is structural — habits don't hold.
 

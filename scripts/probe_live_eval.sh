@@ -24,7 +24,7 @@
 # SELECTION. Not every probes.md row is live-runnable — see .claude/regression/probes_live.yaml's
 # header for the 4-step mechanical rule (class filter, utterance-shape filter, INERT-ANCHOR filter,
 # hand-curated CLI-event filter) and scripts/probe_live_eval_lib.py for the implementation. Run
-# `--dry-run` to see the full 33-row breakdown: which probes are selected, which are excluded and
+# `--dry-run` to see the full 32-row breakdown: which probes are selected, which are excluded and
 # why, and which pass the mechanical rule but have no authored expect/control yet
 # (NOT-YET-AUTHORED — an honest gap, not a silent drop). As of 2026-09-14 that bucket is EMPTY:
 # G-LINT-01, its long-standing occupant, moved to ARM_CAPABILITY_EXCLUDE because the real blocker

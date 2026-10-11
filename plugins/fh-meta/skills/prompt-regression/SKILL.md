@@ -58,8 +58,8 @@ ls .claude/regression/probes.md 2>/dev/null || echo "NO_CUSTOM_PROBES"
 ```
 
 **If custom probes exist**: load and use them. The hub repo ships its golden probe set
-(known-answer offline eval, **33 probes** with check classes — 27 mandatory-pass · 1 measured ·
-5 judged, of which 2 rows are inert deletion anchors, so live coverage is 31) at exactly this path
+(known-answer offline eval, **32 probes** with check classes — 27 mandatory-pass · 0 measured ·
+5 judged, of which 2 rows are inert deletion anchors, so live coverage is 30) at exactly this path
 — when present it is canonical and supersedes the default matrix below.
 
 > Count from the file, not from this line: `grep -cE '^\| *`[A-Z][A-Z0-9-]*-[0-9]+` *\|'

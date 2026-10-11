@@ -246,7 +246,7 @@ fi
 #     and 20 -> 21. It should have moved on 2026-09-14 with its twin; leaving it behind is the
 #     half-fix shape, and these three pinned numbers are what surfaced it.
 _lane S2 select-guard "selected count == 12 (13 - G-TRIG-01, 2026-09-17)" "12" "$sel_count"
-_lane S3 select-guard "excluded count == 21 (33 probes.md rows - 12 selected)" "21" "$exc_count"
+_lane S3 select-guard "excluded count == 20 (32 probes.md rows - 12 selected)" "20" "$exc_count"
 
 # S7/S8: the two newly-covered rows must actually be IN the selection, and the state-excluded row
 # must carry its OWN reason rather than the generic utterance-shape one. Counting alone would pass
