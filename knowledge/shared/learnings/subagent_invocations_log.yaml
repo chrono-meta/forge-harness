@@ -4651,3 +4651,28 @@
   learning: >-
     cross-family(codex)는 «회귀만» 으로 좁혀 물으면 수렴한다(2→3→parity) — 그리고 입장(메인테이너 sim)이 계열과 다른 축을 잡는다: codex 는 코드 구멍,
     메인테이너 sim 은 «그쪽이 이미 머지 차단 사유로 적은 형태» 와 과장 문구. qasp 는 계기가 살아 있어도 «표시 일관성» 부류를 구조적으로 못 본다 — 오라클 층이 빈다.
+
+- date: 2026-10-11
+  session: "cd86b9dd (FoD v0.1.22·v0.1.23 출하 · revfactory 측정 · N3/N4 체커 #868 · 슬롭 규약 #869 · 블랙춘 v2.19·v2.20 · 카트리지 스펙)"
+  agent: general-purpose ×~46 (Sonnet 고정) · codex 사이드카 다수
+  task: >-
+    FoD 라이브 레인·게이트 수리 · 블랙춘 프레임 수리 · harness-100 스캔 · generated_harness_check 레인 · 슬롭 sim/실측 · 카트리지 스펙 초안·검수 대응
+  count: 46
+  outcome: partial
+  evidence: >-
+    건수 = 인계 문서의 그날 집계(SubagentStop 기준 근사, 재개 정지 포함). 착지: FoD #207 · #208 · FH #868 · #869 · 블랙춘 v2.20 커밋 3건.
+    partial 사유: 실행 중 에이전트에 보낸 지시가 도구 결과 안에 도착해 거부됨 → 새 에이전트로 재디스패치 · 슬롭 sim 러너 비용 집계 버그($0 표기)
+  learning: >-
+    돌고 있는 에이전트에 SendMessage 로 범위를 바꾸면 «도구 결과 속 지시» 로 읽혀 거부될 수 있다 — 범위 변경은 새 디스패치로. 픽셀 수리는 «링 픽셀 변화 0» 같은 제약이 해법 자체를 막을 수 있다 — 운영자 그림이 반증했다.
+
+- date: 2026-10-12
+  session: "cd86b9dd (야간 자율주행 — v0.1.24 · 정리 갈래)"
+  agent: general-purpose ×6 (Sonnet, 재개 5회 포함 별도 집계 안 함) · codex 사이드카 ×11
+  task: >-
+    가벼운 게이트 설계 문서 + v2 개정 · 노블라이터 카트리지 추출 계획 · FH 출처 주석 토큰 실측 · fh-qp cartridge.yaml + cartridge_admit 초안·수리 6라운드
+  count: 6
+  outcome: accepted
+  evidence: >-
+    설계 문서 3건 착지(tracks/_meta) · cartridge_admit 레인 85(feat/cartridge-fh-qp ed2acc6) · codex 라운드마다 재현 입력 → fail-before 레인 → 수리 → 변이 빨강 확인
+  learning: >-
+    거부 목록(denylist)을 codex 와 주고받으면 S 가 2→1→3 으로 다시 늘었다 — 허용 목록으로 범위를 줄이자 S 0 으로 수렴. 같은 에이전트를 SendMessage 로 재개하면 이전 라운드 맥락을 잃지 않아 라운드당 1~4분.
