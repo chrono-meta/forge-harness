@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest:*)",
+      "Bash(git push)",
+      "Bash(git push origin:*)",
+      "Bash(rm todo.json)",
+      "Bash(rm -f todo.json)"
+    ]
+  }
+}
