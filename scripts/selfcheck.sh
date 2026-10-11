@@ -616,6 +616,22 @@ else
   fail=1
 fi
 
+# 생성된 하네스 검사기 (2026-10-11) — 외부 생성기 산출을 받는 «뒷단». 실물 픽스처 위에서 H1/H2 가 갈리고
+# 빈 입력이 PASS 로 새지 않는지(rc=3)를 잰다. 결론(안전)이 아니라 기록의 형태만 보는 검사기다.
+if [ ! -f scripts/generated_harness_check.py ]; then
+  _absent_subject_verdict "generated-harness-check lanes" "scripts/generated_harness_check.py" || fail=1
+elif [ -f scripts/test_generated_harness_check_lanes.sh ]; then
+  if ! python3 scripts/generated_harness_check.py --selftest >/dev/null 2>&1; then
+    echo "FAIL  generated-harness-check selftest: known-pair calibration failed"; fail=1
+  fi
+  if ! bash scripts/test_generated_harness_check_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  generated-harness-check lanes: checker present but its anchor is missing"
+  fail=1
+fi
+
 # pipefail 조기종료 클래스 잠금 (2026-09-21) — #785 가 한 자리를 고쳤고, 그 파일에 같은 형태가
 # **아직 셋** 남아 있었다(sync_to_be_lanes.sh:153·571·599, 생산자도 같은 `_sync_src`). 목록형
 # 잠금이 왜 안 되는지의 실물 증거다. 🟥 이 스캐너는 «레포 전체 0» 을 요구하지 않는다 — 오늘
