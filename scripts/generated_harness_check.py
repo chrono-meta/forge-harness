@@ -16,7 +16,7 @@
 #
 # 사람 확인:  H1 settings 의 permissions.allow 에 비가역 패턴 · H2 지침 본문이 비가역 동작을
 #             «확인 없이/알아서» 류와 같은(또는 바로 다음) 문장에서 허용.
-# 경고(rc 무영향): W1 읽기 전용 주장 vs 쓰기·Bash 도구 · W2 tools 줄 없음(전부 상속) ·
+# 경고(rc 무영향): W1 읽기 전용 주장 vs 쓰기·Bash 도구(tools 없음=전부 상속 포함) · W2 tools 줄 없음(전부 상속) · W7 스킬 파일명이 SKILL.md 아님 ·
 #             W4 죽은 참조 · W6 스킬 description 비어 있음.
 # 정보:       W3 Bash 범위 제한 서술 없음 · W5 Done When 없음(FH 기준, 생성기 결함 아님) ·
 #             아직 없는 입출력 경로(자리표시자·디렉터리·_workspace·런타임 산출 파일명).
@@ -271,7 +271,7 @@ DONE_WHEN_RE = re.compile(
     #       '^##[[:space:]]+(Done When|Completion Criteria)([[:space:]].*)?$'  (ERE → Python 이식)
     # 한글 «완료 조건/기준» 은 이 검사기의 확장이다(그쪽 패턴엔 없다).
     r"^##\s+(?:Done When|Completion Criteria)(?:\s.*)?$|^##\s+완료\s*(?:조건|기준)(?:\s.*)?$", re.M)
-RO_CLAIM_RE = re.compile(r"읽기\s*전용|read-?only|수정하지\s*않|(?:파일|코드)[을를]?\s*(?:수정|변경)하지\s*않", re.I)
+RO_CLAIM_RE = re.compile(r"읽기\s*전용|read-?only|수정하지\s*않|변경하지\s*않|(?:파일|코드)[을를]?\s*(?:수정|변경)하지\s*않", re.I)
 WRITE_TOOL_RE = re.compile(r"\b(Bash|Edit|Write|NotebookEdit)\b")
 BASH_LIMIT_RE = re.compile(r"Bash[^\n]{0,40}(?:제한|범위|만\s|only|한정)|(?:읽기\s*전용|read-?only)[^\n]{0,20}(?:명령|command)", re.I)
 FILE_EXT = r"(?:md|py|json|sh|toml|ya?ml|txt|csv|js|ts|html|cfg|ini)"
@@ -339,12 +339,19 @@ def check(target, exclude_skills=()):
             return False
         return True
 
-    cm = os.path.join(root, "CLAUDE.md")
-    if present(cm):
-        n_target += 1
-        load(cm, "claude_md")
-    elif os.path.lexists(cm):
-        n_target += 1
+    # Claude Code 는 루트 CLAUDE.md 와 .claude/CLAUDE.md 둘 다 프로젝트 지침으로 싣는다 — 둘 다 읽는다.
+    _seen_cm = set()   # 한쪽이 다른 쪽을 가리키는 링크면 같은 파일을 두 번 세지 않는다 (codex 회귀 리뷰)
+    for cm in (os.path.join(root, "CLAUDE.md"), os.path.join(cl, "CLAUDE.md")):
+        if os.path.exists(cm):
+            _real = os.path.realpath(cm)
+            if _real in _seen_cm:
+                continue
+            _seen_cm.add(_real)
+        if present(cm):
+            n_target += 1
+            load(cm, "claude_md")
+        elif os.path.lexists(cm):
+            n_target += 1
     adir = os.path.join(cl, "agents")
     if os.path.isdir(adir):
         for fn in sorted(os.listdir(adir)):
@@ -357,11 +364,25 @@ def check(target, exclude_skills=()):
     sdir = os.path.join(cl, "skills")
     if os.path.isdir(sdir):
         for d in sorted(os.listdir(sdir)):
-            sp = os.path.join(sdir, d, "SKILL.md")
             all_names.add(d)                      # 생성기 스킬 이름도 «실재 이름» 집합엔 들어간다
-            if d in skip or not os.path.lexists(sp):
+            if d in skip:
                 continue
+            # 발견은 listdir 기반 대소문자 무시 — macOS(대소문자 무시 FS)에서는 isfile 로 `skill.md` 와
+            # `SKILL.md` 를 못 가르고, 리눅스에서는 `SKILL.md` 고정 결합이 `skill.md` 를 «스킬 없음» 으로 놓친다.
+            try:
+                entries = sorted(os.listdir(os.path.join(sdir, d)))
+            except OSError:
+                continue
+            cands = [e for e in entries if e.lower() == "skill.md"]
+            if not cands:
+                continue
+            actual = "SKILL.md" if "SKILL.md" in cands else cands[0]
+            sp = os.path.join(sdir, d, actual)
             n_target += 1
+            if actual != "SKILL.md":
+                rep.add("warn", "W7", rel(sp), 1, actual,
+                        "스킬 정의 파일 이름이 정확히 SKILL.md 가 아님 — 대소문자 구분 파일시스템에서 스킬로 "
+                        "로드되지 않을 수 있다(미확인: 이 검사기는 로드 여부를 실행해 확인하지 않았다)")
             if present(sp):
                 load(sp, "skill")
     settings = []
@@ -438,6 +459,11 @@ def check(target, exclude_skills=()):
         tools = fm.get("tools")
         if tools is None:
             rep.add("warn", "W2", path, 1, "(tools 줄 없음)", "모든 도구 상속")
+            m = RO_CLAIM_RE.search(fm.get("description", "") + "\n" + text)
+            if m:   # tools 없음 = 모든 도구 상속이므로 «읽기 전용» 주장은 쓰기·Bash 상속과 충돌한다
+                mm = RO_CLAIM_RE.search(text)
+                ln = text[:mm.start()].count("\n") + 1 if mm else 1
+                rep.add("warn", "W1", path, ln, "(tools 줄 없음)", "읽기 전용 주장 vs tools 없음 → 쓰기·Bash 상속")
         else:
             if RO_CLAIM_RE.search(fm.get("description", "") + "\n" + text) and WRITE_TOOL_RE.search(tools):
                 m = RO_CLAIM_RE.search(text)
@@ -480,7 +506,9 @@ def check(target, exclude_skills=()):
                             rep.add("info", "IO", path, i, tok, "슬래시 없는 파일명이 트리에 없음 — 런타임 산출일 수 있어 판정하지 않음")
                         continue
                     cand = tok[2:] if tok.startswith("./") else tok
-                    if not (os.path.exists(os.path.join(root, cand)) or os.path.exists(os.path.join(fdir, cand))):
+                    # 해석 기준 셋: 대상 루트 · 그 파일이 있는 디렉터리 · .claude/ (스킬 문서가 `skills/x/skill.md` 처럼 쓴다)
+                    if not (os.path.exists(os.path.join(root, cand)) or os.path.exists(os.path.join(fdir, cand))
+                            or os.path.exists(os.path.join(cl, cand))):
                         rep.add("warn", "W4", path, i, tok, "죽은 참조: 대상 루트·파일 디렉터리 어느 쪽에도 없음")
                 elif re.match(r"^[a-z][a-z0-9]*(-[a-z0-9]+)+$", tok) and tok not in all_names:
                     first = tok.split("-")[0]

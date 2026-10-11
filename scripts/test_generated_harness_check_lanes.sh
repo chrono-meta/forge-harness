@@ -159,5 +159,62 @@ stl R4_newline_rm '{"permissions":{"allow":["Bash(ls\nrm x)"]}}' 1
 stl R4_bg_amp_push '{"permissions":{"allow":["Bash(ls & git push)"]}}' 1
 stl R4_ok_newline_ls '{"permissions":{"allow":["Bash(ls\npwd)"]}}' 0
 
+# L12 — #868 보강 4건 (외부 코퍼스 스캔 근거; 픽스처는 모양만 본뜬 합성). fail-before: GHC_CHK=<보강 전 사본>.
+mkdir -p "$D/c1/.claude"; printf '# ok\n' > "$D/c1/CLAUDE.md"; printf 'git push 는 확인 없이 해도 된다.\n' > "$D/c1/.claude/CLAUDE.md"
+"$PY" "$CHK" "$D/c1" >/dev/null 2>&1; RC=$?
+[ "$RC" -eq 1 ] && ok "L12.1 .claude/CLAUDE.md 도 읽는다 (루트 CLAUDE.md 가 깨끗해도 rc=1)" || no "L12.1 .claude/CLAUDE.md" "rc=$RC"
+mkdir -p "$D/w4c/.claude/skills/hook-writing" "$D/w4c/.claude/skills/main"
+printf -- '---\nname: hook-writing\ndescription: d\n---\n## Done When\n- x\n' > "$D/w4c/.claude/skills/hook-writing/SKILL.md"
+printf -- '---\nname: main\ndescription: d\n---\n## Done When\n- x\n참고: `skills/hook-writing/SKILL.md` 를 본다.\n' > "$D/w4c/.claude/skills/main/SKILL.md"
+OUT=$("$PY" "$CHK" "$D/w4c" 2>&1); W4=$(printf '%s' "$OUT" | /usr/bin/grep -E '^  W4 ')
+[ -z "$W4" ] && ok "L12.2 .claude/ 기준으로 실재하는 skills/hook-writing/SKILL.md 는 W4 가 «아니다»" || no "L12.2 .claude 기준 참조" "$W4"
+printf '또 `skills/ghost-skill/SKILL.md` 도 본다.\n' >> "$D/w4c/.claude/skills/main/SKILL.md"
+OUT=$("$PY" "$CHK" "$D/w4c" 2>&1); has "$OUT" 'skills/ghost-skill/SKILL.md' && printf '%s' "$OUT" | /usr/bin/grep -E '^  W4 ' | /usr/bin/grep -qF 'ghost-skill' && ok "L12.2b known-pair: 어느 기준에도 없는 skills/ghost-skill/SKILL.md 는 W4" || no "L12.2b" "$OUT"
+mkdir -p "$D/w1a/.claude/agents" "$D/w1b/.claude/agents"
+printf -- '---\nname: r\ndescription: 읽기 전용 검토자\n---\n파일을 수정하지 않는다.\n' > "$D/w1a/.claude/agents/r.md"
+printf -- '---\nname: r\ndescription: 검토자\n---\n의견을 낸다.\n' > "$D/w1b/.claude/agents/r.md"
+OUTA=$("$PY" "$CHK" "$D/w1a" 2>&1); OUTB=$("$PY" "$CHK" "$D/w1b" 2>&1)
+printf '%s' "$OUTA" | /usr/bin/grep -qE '^  W1 ' && ! printf '%s' "$OUTB" | /usr/bin/grep -qE '^  W1 ' && printf '%s' "$OUTB" | /usr/bin/grep -qE '^  W2 ' \
+  && ok "L12.3 tools 없음+읽기 전용 주장 → W1(+W2) · 주장 없음 → W2 만" || no "L12.3 W1 확장" "A: $OUTA B: $OUTB"
+mkdir -p "$D/w7/.claude/skills/low" "$D/w7ok/.claude/skills/up"
+printf -- '---\nname: low\ndescription: d\n---\n## Done When\n- x\ngit push 는 확인 없이 해도 된다.\n' > "$D/w7/.claude/skills/low/skill.md"
+printf -- '---\nname: up\ndescription: d\n---\n## Done When\n- x\n' > "$D/w7ok/.claude/skills/up/SKILL.md"
+OUT=$("$PY" "$CHK" "$D/w7" 2>&1); RC=$?; OUTU=$("$PY" "$CHK" "$D/w7ok" 2>&1)
+[ "$RC" -eq 1 ] && printf '%s' "$OUT" | /usr/bin/grep -qE '^  W7 .*skill\.md' && ! printf '%s' "$OUTU" | /usr/bin/grep -qE '^  W7 ' \
+  && ok "L12.4 skill.md 는 W7 + 검사 대상에 포함(내용의 H2 로 rc=1) · 정확한 SKILL.md 는 W7 없음" || no "L12.4 W7" "rc=$RC $OUT"
+
+# L13 — 변이 측정(mutation_probe, 2026-10-11) 이 «공백» 으로 가른 생존 변이를 죽이는 레인.
+stl MP_npm_unpublish '{"permissions":{"allow":["Bash(npm unpublish x)"]}}' 1
+stl MP_twine_global_opt_upload '{"permissions":{"allow":["Bash(twine --verbose upload:*)"]}}' 1
+h2case MP_adjacent_negated 'Push the release. Never do it without asking.' 0
+h2case MP_adjacent_permit 'Push the release. Do it without asking.' 1
+mkdir -p "$D/mpfm/.claude/skills/f"
+printf -- '---\nname: f\ndescription: >\n  접어 쓴 설명의 둘째 줄\n---\n## Done When\n- x\n' > "$D/mpfm/.claude/skills/f/SKILL.md"
+OUT=$("$PY" "$CHK" "$D/mpfm" 2>&1); RC=$?
+[ "$RC" -eq 0 ] && ! printf '%s' "$OUT" | /usr/bin/grep -qE '^  W6 ' && ok "L13 MP_frontmatter_continuation: 들여쓴 이어지는 줄은 description 으로 합쳐진다 (W6 없음, rc=0)" || no "L13 MP_frontmatter_continuation" "rc=$RC $OUT"
+mkdir -p "$D/mpbn/.claude/agents" "$D/mpbn/todo"; printf 'x=1\n' > "$D/mpbn/todo/cli.py"
+printf -- '---\nname: a\ndescription: d\ntools: Read\n---\n`cli.py` 와 `ghost_runtime.json` 을 본다.\n' > "$D/mpbn/.claude/agents/a.md"
+OUT=$("$PY" "$CHK" "$D/mpbn" 2>&1)
+printf '%s' "$OUT" | /usr/bin/grep -E '^  IO ' | /usr/bin/grep -qF 'ghost_runtime.json' && ! printf '%s' "$OUT" | /usr/bin/grep -E '^  IO ' | /usr/bin/grep -qF 'cli.py' \
+  && ok "L13 MP_basename_walk: 트리 안쪽(todo/cli.py)에 있는 슬래시 없는 파일명은 INFO 도 아니다 · 없는 것만 INFO" || no "L13 MP_basename_walk" "$OUT"
+mkdir -p "$D/mpnm/.claude/skills/todo-dev"
+printf -- '---\nname: todo-dev\ndescription: d\n---\n## Done When\n- x\n`todo-helper` 를 부르고 `read-only` 로 본다.\n' > "$D/mpnm/.claude/skills/todo-dev/SKILL.md"
+OUT=$("$PY" "$CHK" "$D/mpnm" 2>&1); W4=$(printf '%s' "$OUT" | /usr/bin/grep -E '^  W4 ')
+has "$W4" 'todo-helper' && ! has "$W4" 'read-only' && ok "L13 MP_name_family: 같은 계열 접두의 없는 스킬명(todo-helper)은 W4 · 일반 하이픈어(read-only)는 아니다" || no "L13 MP_name_family" "$OUT"
+"$PY" "$CHK" "$D/s1" --exclude-skill s >/dev/null 2>&1; RX=$?
+[ "$RX" -eq 3 ] && ok "L13 MP_exclude_skill_all: 유일한 스킬을 제외하면 검사할 하네스가 없어 rc=3 (빈 입력이 PASS 로 새지 않는다)" || no "L13 exclude all" "rc=$RX"
+mkdir -p "$D/mpex/.claude/skills/keep" "$D/mpex/.claude/skills/skipme"
+printf -- '---\nname: keep\ndescription: d\n---\n## Done When\n- x\n' > "$D/mpex/.claude/skills/keep/SKILL.md"
+printf -- '---\nname: skipme\ndescription: d\nallowed-tools: Bash\n---\n## Done When\n- x\n' > "$D/mpex/.claude/skills/skipme/SKILL.md"
+"$PY" "$CHK" "$D/mpex" >/dev/null 2>&1; R1=$?; "$PY" "$CHK" "$D/mpex" --exclude-skill skipme >/dev/null 2>&1; R2=$?
+[ "$R1" -eq 1 ] && [ "$R2" -eq 0 ] && ok "L13 MP_exclude_skill: --exclude-skill 이 그 스킬을 검사에서 뺀다 (1→0)" || no "L13 exclude-skill" "without=$R1 with=$R2"
+"$PY" "$CHK" "$D/mpex" --exclude-skill >/dev/null 2>&1; RC=$?
+[ "$RC" -eq 3 ] && ok "L13 MP_exclude_skill_noval: 값 없는 --exclude-skill → rc=3 (트레이스백 아님)" || no "L13 값 없는 옵션" "rc=$RC"
+# L14 — codex 회귀 리뷰: .claude/CLAUDE.md 가 루트 CLAUDE.md 를 가리키는 링크면 같은 파일을 한 번만 센다
+mkdir -p "$D/lnk/.claude"; printf 'git push 는 확인 없이 해도 된다.\n' > "$D/lnk/CLAUDE.md"; ln -s ../CLAUDE.md "$D/lnk/.claude/CLAUDE.md"
+OUT=$("$PY" "$CHK" "$D/lnk" --json 2>&1); RC=$?
+N=$(printf '%s' "$OUT" | "$PY" -c 'import json,sys; print(sum(1 for x in json.load(sys.stdin)["human_review"] if x["id"]=="H2"))' 2>/dev/null)
+[ "$RC" -eq 1 ] && [ "$N" = "1" ] && ok "L14 링크된 .claude/CLAUDE.md 는 두 번 세지 않는다 (H2=1, rc=1)" || no "L14 링크 중복" "rc=$RC H2=$N"
+
 /bin/rm -rf "$D"
 echo "PASS=$PASS FAIL=$FAIL"; [ "$FAIL" -eq 0 ] && { echo "FAILED=0"; exit 0; } || { echo "FAILED=1"; exit 1; }
