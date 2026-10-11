@@ -163,6 +163,17 @@ Be conscious of every principle below **before** writing code — directly reduc
 
 Starting design with zero cited references is a warning signal for **missing own assets**. Always present at least 1 grep result before beginning design.
 
+#### 6. Slop Check Before Saying "Done"
+
+Look only at what **this change added** — leave existing code alone. Same four questions in every language. Catching everything is not the goal; remove what you can see.
+
+1. **Unused** — for each new function, variable, file, or setting, look for its users. Delete it only when you have verified it is unused, counting dynamic and external uses (framework hooks, reflection, config, exports). If unsure, keep it.
+2. **Change-narrating comments** — rare, but a comment that only narrates *this edit* ("fixed", "now uses X", "previously") belongs in the commit message. Keep anything that carries safety, security, legal, or compatibility meaning — rewrite it as a lasting explanation instead. Every comment is re-read, and paid for in tokens, by whoever comes next.
+3. **Unrolled repetition** — when the new code repeats the same shape three or more times with only values changed, consider one loop, table, or function — only if behavior stays identical and it reads more clearly (see rule 1: three repeats permit abstraction, they do not require it).
+4. **Decoration** — unrequested abstraction, settings, or wrappers; guards for cases that cannot happen; tests that assert nothing.
+
+In the completion report, mention concrete cleanup you did or anything you were unsure about. Do not add a boilerplate "nothing found" line.
+
 ---
 
 ### Rule Hierarchy and Priority
