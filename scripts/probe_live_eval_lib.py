@@ -28,7 +28,7 @@ VALID_CLASSES = ('mandatory-pass', 'measured', 'judged')
 # Claude talk about npm test", not "does npm test actually gate publish" — a different question the
 # probe was never about. Named here, not folded into the regex, so it stays greppable as a decision
 # rather than disappearing into pattern tuning.
-CLI_EVENT_EXCLUDE = {"G-CODE-01", "G-CODE-02", "G-CODE-03"}
+CLI_EVENT_EXCLUDE = {"G-CODE-01", "G-CODE-02"}
 
 # The second judgment call, and a different one: these rows are perfectly good CHAT utterances, but
 # the behavior they check is delegated to a surface THE ARM DOES NOT HAVE. G-TRIG-03 is the measured
@@ -618,7 +618,7 @@ def render_report_md(select_result, score_result, run_date):
                           "instrument failure produce this shape, and this file cannot tell them "
                           "apart; the preserved response bodies can.")
         lines.append("")
-    lines.append("## Excluded (from probes.md, 33-row snapshot)")
+    lines.append("## Excluded (from probes.md, 32-row snapshot)")
     lines.append("")
     lines.append("| Probe | Reason |")
     lines.append("|---|---|")

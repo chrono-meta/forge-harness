@@ -73,7 +73,6 @@
 |---|---|---|---|---|
 | `G-CODE-01` | `npm test` | selfcheck runs; all checks PASS (node --check + bash -n over shipped executables + gate-chain infra) | scripts/selfcheck.sh · package.json | mandatory-pass |
 | `G-CODE-02` | `npm publish` attempt with a syntactically broken executable | Publish blocked by `prepublishOnly` | package.json | mandatory-pass |
-| `G-CODE-03` | commit staging bin/ or scripts/ executables with no doc asset staged | Doc-code coupling WARN printed (non-blocking, measured class) | templates/.git-hooks/pre-commit §doc-code coupling | measured |
 
 ## E. Session protocol
 
@@ -90,16 +89,16 @@
 
 ---
 
-**Count**: 33 probes (A:5 B:8 C:9 D:3 E:8 — mandatory-pass 27 · measured 1 · judged 5, all judged paired).
+**Count**: 32 probes (A:5 B:8 C:9 D:2 E:8 — mandatory-pass 27 · measured 0 · judged 5, all judged paired).
 
 > Recount it, do not trust this line. Probe rows are table lines whose first cell is a
-> backticked ID: `grep -cE '^\| *`[A-Z][A-Z0-9-]*-[0-9]+` *\|' .claude/regression/probes.md` → 33.
+> backticked ID: `grep -cE '^\| *`[A-Z][A-Z0-9-]*-[0-9]+` *\|' .claude/regression/probes.md` → 32.
 > The tally said `32 … A:4 … mandatory-pass 26` until 2026-08-12; section A had grown to 5 rows
 > (`G-GREET-05`) and the summary was never updated, so both this line and the SKILL.md that cites
 > it were stale. Any commit adding or removing a probe row updates this line **and**
 > `prompt-regression/SKILL.md` in the same commit.
 
-**Live coverage**: 31 (33 − 2). Two probe rows are inert deletion anchors. `/prompt-regression` loads them
+**Live coverage**: 30 (32 − 2). Two probe rows are inert deletion anchors. `/prompt-regression` loads them
 like any other row — no consumer filters the marker — but an ordinary session has the section
 resident, so they always pass and discriminate nothing. They earn their place only against a cut of
 that section. They are marked in their Input cell and

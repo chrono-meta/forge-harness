@@ -23,14 +23,14 @@
 #      ablation, "nothing evaluates them on an ordinary session" — scoring them live would invent a
 #      live signal for a probe designed to have none)
 #   4. NOT in the hand-curated CLI-event exclude set inside `probe_live_eval.sh`
-#      (`_cli_event_exclude()`) — G-CODE-01/02/03 pass rules 1-3 (their cells ARE backtick-quoted:
+#      (`_cli_event_exclude()`) — G-CODE-01/02 pass rules 1-3 (their cells ARE backtick-quoted:
 #      `npm test`, `npm publish`) but the quoted text is a SHELL COMMAND, not something a user says
 #      IN CONVERSATION to Claude; passing it as `--prompt` would test "does Claude talk about npm
 #      test" not "does npm test actually gate publish". This is the one judgment call rules 1-3
 #      cannot make mechanically, so it is named here rather than left implicit in a regex.
 #
 # Applying rules 1-4 to the 33-row probes.md (2026-09-04 snapshot) selects exactly the 12 rows below
-# — see `probe_live_eval.sh --dry-run` for the live recount and the excluded-21 reason table. If that
+# — see `probe_live_eval.sh --dry-run` for the live recount and the excluded-20 reason table. If that
 # recount and this file's id list ever disagree, TRUST THE RECOUNT (probes.md may have grown a new
 # row this file has not been curated against yet) and re-author the missing entries by hand — this
 # file's `polarity`/`expect_re`/`control_input` fields are judgment, not mechanically derivable.
