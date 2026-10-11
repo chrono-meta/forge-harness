@@ -2832,7 +2832,7 @@ else
   #     quoted `date: "<today>"` or extra spacing did not. Fail-open and over-block in one predicate.
   # Free-form stdout is never the verdict channel either — a python3 shim printing one banner line
   # would otherwise fail a healthy manifest.
-  MANIFEST_MSG=$(python3 - "$MANIFEST" "$TODAY" <<'PYEOF'
+  MANIFEST_MSG=$(python3 - "$MANIFEST" "$TODAY" "$(git rev-parse --show-toplevel 2>/dev/null)" <<'PYEOF'
 import sys
 try:
     import yaml
@@ -2864,6 +2864,54 @@ if orphan:
     sys.exit(1)
 def norm(v):
     return v.isoformat() if hasattr(v, "isoformat") else str(v).strip()
+# 🟥 레인 갈음(2026-10-11, P29 표본 n=20 — tracks/_meta/p29_manifest_sample_verify_2026-10-11.md):
+# 오늘자 엔트리가 `lane:` 키를 달면 «예측» 대신 «레인 + 안 보는 것» 으로 갈음한다는 선언이다.
+# 이 완화는 **가역 표면(커밋 게이트)** 한정이고, 갈음을 인정하는 조건은 형식뿐이다:
+#   ⓐ lane 이 repo 안에 실재하는 파일(죽은 포인터 차단 · 절대경로/`..` 거부)
+#   ⓑ `not_seen:` 이 비지 않고 자리표시자가 아님(레인이 안 보는 것을 한 줄로 적는다)
+#   ⓒ 부재 주장(«~가 남아 있지 않다/없다/never») 예측은 갈음 불가 — 레인 초록으로 증명되지 않는다
+#      (반증 사례: psa_scan_lib.sh «…경로가 남아 있지 않다» → #762 에서 반증, 레인은 초록이었다).
+# `lane:` 이 없는 엔트리는 종전과 같다. 막는 것은 갈음 선언의 형식이지 레인의 진위가 아니다.
+import os, re
+repo = sys.argv[3] if len(sys.argv) > 3 else ""
+_PH = {"", "-", "--", "n/a", "na", "none", "tbd", "todo", "tba", "없음", "해당 없음", "해당없음", "...", "…"}
+_ABS = re.compile(r"(남아\s*있지\s*않|남지\s*않|존재하지\s*않|없어진다|사라진다|사라짐|없어짐|없음|없다|\bnever\b|no longer|"
+                  r"not\s+(?:remain|exist)|none\s+remain)", re.I)
+def _flat(v):  # 매핑은 키가 아니라 값만 본다(codex B)
+    if isinstance(v, dict): return [t for x in v.values() for t in _flat(x)]
+    if isinstance(v, (list, tuple)): return [t for x in v for t in _flat(x)]
+    return [str(v)]
+def _lane_problem(e):
+    lane, ns = e.get("lane"), e.get("not_seen")
+    if not isinstance(lane, str) or not lane.strip():
+        return "`lane:` is empty or not a string"
+    lane = lane.strip()
+    if os.path.isabs(lane) or ".." in lane.replace("\\", "/").split("/"):
+        return "lane `%s` must be a repo-relative path without `..`" % lane
+    full = os.path.join(repo, lane)
+    if not os.path.isfile(full):
+        return "lane `%s` is not an existing regular file in the repo (dead pointer)" % lane
+    # symlink 로 repo 밖을 가리키는 «죽지 않은» 포인터 차단 (codex A · agy B-1)
+    if not os.path.realpath(full).startswith(os.path.realpath(repo) + os.sep):
+        return "lane `%s` resolves outside the repo" % lane
+    if not isinstance(ns, str) or ns.strip().lower() in _PH or len(ns.strip()) < 5:
+        return "`not_seen:` (what the lane does NOT check) is empty/placeholder — substitution refused"
+    for k in ("predicted_impact", "prediction", "impact"):
+        v = e.get(k)
+        # 문자열이 아닌 값(리스트 등)도 평탄화해서 본다 — 타입으로 부재 주장을 숨기지 못하게 (agy S-1 · codex A)
+        if v is not None and _ABS.search(" ".join(_flat(v))):
+            return ("`%s` makes an absence claim (남아 있지 않다/없다/never) — a green lane does not prove it; "
+                    "drop `lane:` and keep the classic prediction" % k)
+    return None
+# 갈음 판정은 **오늘자 마지막 엔트리**(= 이번 커밋이 방금 덧붙인 것)에 건다: `lane:` 이 null 이 아니면
+# 유효해야 통과, 아니면 rc 4. 앞선 커밋의 낡은 lane 은 보지 않는다(뒤 커밋의 종전 예측을 막지 않음 —
+# codex B · agy A-2). 마지막이 불량 lane 이면 앞에 유효 엔트리가 있어도 차단(agy S-1).
+# 종전 엔트리(lane 없음/null)는 종전과 같다.
+_today = [e for e in doc if norm(e.get("date")) == sys.argv[2]]
+if _today and _today[-1].get("lane") is not None:
+    pr = _lane_problem(_today[-1])
+    if pr:
+        print("lane substitution refused: " + pr); sys.exit(4)
 if not any(norm(e.get("date")) == sys.argv[2] for e in doc):
     sys.exit(2)                      # 2 = parses fine, but no entry for today
 sys.exit(0)
@@ -2884,6 +2932,10 @@ PYEOF
        fi ;;
     2) echo "  ❌ FAIL — manifest is valid YAML but has no entry dated $TODAY"
        echo "  Run /edit-manifest RECORD to log predicted impact for today's changes."
+       FAILED=1 ;;
+    4) echo "  ❌ FAIL — ${MANIFEST_MSG}"
+       echo "  레인 갈음은 \`lane: <repo 상대경로>\` + \`not_seen: <레인이 안 보는 것 한 줄>\` 이 있고 부재 주장 예측이 아닐 때만 인정된다."
+       echo "  아니면 \`lane:\` 줄을 지우고 종전 \`predicted_impact:\` 를 적어라."
        FAILED=1 ;;
     *) echo "  ❌ FAIL — edit_manifest.yaml did not validate: ${MANIFEST_MSG:-checker exited $MANIFEST_RC}"
        echo "  Usual causes: an unquoted value containing ': ' (quote it), or a list item indented"
