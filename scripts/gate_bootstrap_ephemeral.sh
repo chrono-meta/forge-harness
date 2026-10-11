@@ -79,8 +79,6 @@ _clears() {  # $1 = 로케일 · $2 = 문자열 → 바닥을 넘으면 0
   local n; n=$(_words "$1" "$2"); n=${n:-0}
   [ "$n" -ge "$_FLOOR" ] 2>/dev/null
 }
-_hangul_words() { _words "$1" "$_H_STR"; }
-_ascii_words()  { _words "$1" "$_A_STR"; }
 
 _find_utf8_locale() {
   local l

@@ -195,24 +195,6 @@ def smooth(v, k=5):
     return out
 
 
-def peaks_in(db, thr_v, f0, f1):
-    """f0..f1 프레임 구간의 음절 핵(평활 에너지 봉우리, 돌출 3dB · 간격 80ms)."""
-    lo_ = max(0, f0 - 20)
-    seg = smooth(db[lo_:f1 + 20], 5)
-    out, last = [], -999
-    for i in range(1, len(seg) - 1):
-        g = lo_ + i
-        if g < f0 or g >= f1:
-            continue
-        if seg[i] > thr_v and seg[i] >= seg[i - 1] and seg[i] > seg[i + 1]:
-            lo = min(seg[max(0, i - 15):i] or [seg[i]])
-            ro = min(seg[i + 1:i + 16] or [seg[i]])
-            if seg[i] - max(lo, ro) >= 3.0 and g - last >= 8:
-                out.append(g)
-                last = g
-    return out
-
-
 def f0_at(x, center_s):
     """40ms 창 · 4kHz 자기상관 피치(50~400Hz). 서브하모닉 회피: 최댓값 0.85 이상인 첫 국소 최대."""
     c = int(center_s * SR)
