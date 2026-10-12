@@ -140,6 +140,8 @@ inproc "checker JSON rc mismatch = HARNESS_ERROR" 0 "$FAKE
 sys.exit(0 if run_with('{\"verdict\":\"PASS\",\"rc\":1,\"errors\":[],\"human_review\":[]}', 0) == c.HARNESS_ERROR else 1)"
 inproc "checker JSON with errors = HARNESS_ERROR" 0 "$FAKE
 sys.exit(0 if run_with('{\"verdict\":\"PASS\",\"rc\":0,\"errors\":[{\"id\":\"E4\"}],\"human_review\":[]}', 0) == c.HARNESS_ERROR else 1)"
+inproc "checker JSON wrong verdict (ADMIT) with exit 0 = HARNESS_ERROR" 0 "$FAKE
+sys.exit(0 if run_with('{\"verdict\":\"ADMIT\",\"rc\":0,\"errors\":[],\"human_review\":[]}', 0) == c.HARNESS_ERROR else 1)"
 inproc "control: valid checker PASS JSON accepted" 0 "$FAKE
 c.subprocess.run = lambda *a, **k: subprocess.CompletedProcess(a, 0, '{\"verdict\":\"PASS\",\"rc\":0,\"errors\":[],\"human_review\":[]}', '')
 sys.exit(0 if c.run_checker('/nonexistent') == 0 else 1)"
