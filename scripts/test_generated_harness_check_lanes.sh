@@ -114,6 +114,78 @@ stl A5_no_permissions_ok '{"env":{"A":"b"}}' 0
 stl B8_echo_rm_is_arg '{"permissions":{"allow":["Bash(echo rm:*)"]}}' 0
 stl B8_cd_and_rm_is_head '{"permissions":{"allow":["Bash(cd x && rm y)"]}}' 1
 stl B8_env_prefix_stripped '{"permissions":{"allow":["Bash(FOO=1 sudo git push)"]}}' 1
+# 인터프리터·간접 실행 와일드카드 = 임의 명령 (카트리지 codex R8 A1) — 고정 대상은 통과
+stl R8_sh_star '{"permissions":{"allow":["Bash(sh:*)"]}}' 1
+stl R8_python3_star '{"permissions":{"allow":["Bash(python3:*)"]}}' 1
+stl R8_bash_dash_c '{"permissions":{"allow":["Bash(bash -c:*)"]}}' 1
+stl R8_node_space_star '{"permissions":{"allow":["Bash(node *)"]}}' 1
+stl R8_timeout_wrap '{"permissions":{"allow":["Bash(timeout 5 *)"]}}' 1
+stl R8_xargs_wrap '{"permissions":{"allow":["Bash(xargs:*)"]}}' 1
+stl R8_path_head_sh '{"permissions":{"allow":["Bash(/bin/sh:*)"]}}' 1
+stl R1_env_i_star '{"permissions":{"allow":["Bash(env -i *)"]}}' 1
+stl R1_sudo_n_star '{"permissions":{"allow":["Bash(sudo -n *)"]}}' 1
+stl R1_bash_cl '{"permissions":{"allow":["Bash(bash -cl:*)"]}}' 1
+stl R1_bash_noprofile_c '{"permissions":{"allow":["Bash(bash --noprofile -c:*)"]}}' 1
+stl R1_python_O_c '{"permissions":{"allow":["Bash(python3 -O -c:*)"]}}' 1
+stl R1_node_eval_eq '{"permissions":{"allow":["Bash(node --eval=*)"]}}' 1
+stl R1_python_stdin '{"permissions":{"allow":["Bash(python3 - :*)"]}}' 1
+stl R1_python_versioned '{"permissions":{"allow":["Bash(python3.12:*)"]}}' 1
+stl R1_lua '{"permissions":{"allow":["Bash(lua:*)"]}}' 1
+stl R1_quoted_sh '{"permissions":{"allow":["Bash(\"sh\":*)"]}}' 1
+stl R1_awk '{"permissions":{"allow":["Bash(awk:*)"]}}' 1
+stl R1_git_alias '{"permissions":{"allow":["Bash(git -c alias.ship=!* ship)"]}}' 1
+stl R1_ok_git_c_nonalias '{"permissions":{"allow":["Bash(git -c color.ui=never status)"]}}' 0
+stl R1_glob_head_py '{"permissions":{"allow":["Bash(py*)"]}}' 1
+stl R1_overblock_accepted_glob_head_qmark '{"permissions":{"allow":["Bash(l?:*)"]}}' 1
+stl R12_ok_glob_head_ls_prefix '{"permissions":{"allow":["Bash(ls*)"]}}' 0
+stl R2_deno_eval '{"permissions":{"allow":["Bash(deno eval:*)"]}}' 1
+stl R2_bun_exec '{"permissions":{"allow":["Bash(bun exec:*)"]}}' 1
+stl R2_python_glob_target '{"permissions":{"allow":["Bash(python3 /tmp/*)"]}}' 1
+stl R2_node_prefix_target '{"permissions":{"allow":["Bash(node /tmp/job*)"]}}' 1
+stl R2_glob_head_lua '{"permissions":{"allow":["Bash(lua* *)"]}}' 1
+stl R2_glob_head_python_ver '{"permissions":{"allow":["Bash(python3.1* *)"]}}' 1
+stl R2_ok_python_script_space_args '{"permissions":{"allow":["Bash(python3 scripts/x.py *)"]}}' 0
+stl R2_overblock_accepted_deno_run_file '{"permissions":{"allow":["Bash(deno run main.ts:*)"]}}' 1
+stl R3_awk_inline_program '{"permissions":{"allow":["Bash(awk BEGIN{system(ARGV[1])}/x/:*)"]}}' 1
+stl R3_awk_file '{"permissions":{"allow":["Bash(awk -f scripts/x.awk:*)"]}}' 1
+stl R3_python_m_timeit '{"permissions":{"allow":["Bash(python3 -m timeit:*)"]}}' 1
+stl R3_python_m_pip '{"permissions":{"allow":["Bash(python3 -m pip:*)"]}}' 1
+stl R3_python_m_unittest_not_reviewed '{"permissions":{"allow":["Bash(python3 -m unittest:*)"]}}' 1
+stl R4_python_m_pylint '{"permissions":{"allow":["Bash(python3 -m pylint:*)"]}}' 1
+stl R4_glob_head_python313 '{"permissions":{"allow":["Bash(python3.13*:*)"]}}' 1
+stl R4_ok_glob_head_shellcheck '{"permissions":{"allow":["Bash(shellcheck*)"]}}' 0
+stl R5_glob_head_bracket '{"permissions":{"allow":["Bash(python[3]:*)"]}}' 1
+stl R5_glob_head_qmark '{"permissions":{"allow":["Bash(python3.1?:*)"]}}' 1
+stl R5_npx_scoped_pkg '{"permissions":{"allow":["Bash(npx @babel/node:*)"]}}' 1
+stl R5_npm_exec '{"permissions":{"allow":["Bash(npm exec:*)"]}}' 1
+stl R5_pnpm_dlx '{"permissions":{"allow":["Bash(pnpm dlx:*)"]}}' 1
+stl R5_ok_npm_test '{"permissions":{"allow":["Bash(npm test:*)"]}}' 0
+stl R6_npm_opt_exec '{"permissions":{"allow":["Bash(npm --silent exec:*)"]}}' 1
+stl R6_pnpm_opt_dlx '{"permissions":{"allow":["Bash(pnpm --silent dlx:*)"]}}' 1
+stl R6_glob_head_npm_exec '{"permissions":{"allow":["Bash(npm* exec:*)"]}}' 1
+stl R6_ok_glob_head_npm_test '{"permissions":{"allow":["Bash(npm* test:*)"]}}' 0
+stl R7_npm_ex_glob '{"permissions":{"allow":["Bash(npm ex*)"]}}' 1
+stl R7_pnpm_dl_glob '{"permissions":{"allow":["Bash(pnpm dl*:*)"]}}' 1
+stl R7_overblock_accepted_npm_test_star_arg '{"permissions":{"allow":["Bash(npm test *)"]}}' 1
+stl R7_ok_npm_run_build '{"permissions":{"allow":["Bash(npm run build:*)"]}}' 0
+stl R8b_glob_head_bunx '{"permissions":{"allow":["Bash(bunx* @babel/node:*)"]}}' 1
+stl R8b_glob_head_npx '{"permissions":{"allow":["Bash(np? cowsay:*)"]}}' 1
+stl R8b_glob_head_np_q_covers_npx '{"permissions":{"allow":["Bash(np? test:*)"]}}' 1
+stl R8b_glob_head_bun_also_bunx '{"permissions":{"allow":["Bash(bun* scripts/x.ts:*)"]}}' 1
+stl R9_powershell_slash_command '{"permissions":{"allow":["Bash(powershell /Command:*)"]}}' 1
+stl R9_powershell_slash_encoded '{"permissions":{"allow":["Bash(powershell /EncodedCommand:*)"]}}' 1
+stl R9_cmd_slash_c '{"permissions":{"allow":["Bash(cmd /c:*)"]}}' 1
+stl R10_glob_head_cm '{"permissions":{"allow":["Bash(cm* /c:*)"]}}' 1
+stl R10_glob_head_cmd_star '{"permissions":{"allow":["Bash(cmd* /c:*)"]}}' 1
+stl R11_python_qmark_target '{"permissions":{"allow":["Bash(python3 /tmp/?.py:*)"]}}' 1
+stl R11_node_bracket_target '{"permissions":{"allow":["Bash(node /tmp/[ab].js:*)"]}}' 1
+stl R12_glob_head_qmark_python '{"permissions":{"allow":["Bash(?ython3 -c:*)"]}}' 1
+stl R12_glob_head_inner_qmark '{"permissions":{"allow":["Bash(pytho?3 -c:*)"]}}' 1
+stl R13_awk_versioned_progtext '{"permissions":{"allow":["Bash(awk5 BEGIN{system(1)}/x/:*)"]}}' 1
+stl R13_npx_versioned '{"permissions":{"allow":["Bash(npx2 scripts/x.js:*)"]}}' 1
+stl R8_ok_python3_fixed_script '{"permissions":{"allow":["Bash(python3 scripts/x.py:*)"]}}' 0
+stl R8_ok_node_fixed_script '{"permissions":{"allow":["Bash(node tools/build.js:*)"]}}' 0
+stl R8_ok_sh_exact '{"permissions":{"allow":["Bash(sh scripts/test.sh)"]}}' 0
 mkdir -p "$D/s1/.claude/skills/s" "$D/s1b/.claude/skills/s"
 printf -- '---\nname: s\ndescription: Example\nallowed-tools: Bash\n---\nRun the requested commands.\n' > "$D/s1/.claude/skills/s/SKILL.md"
 printf -- '---\nname: s\ndescription: Example\nallowed-tools: Read, Bash(python -m pytest:*)\n---\nRun tests.\n' > "$D/s1b/.claude/skills/s/SKILL.md"
