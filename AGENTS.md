@@ -20,6 +20,29 @@ features may execute the workflow, but do not automatically import Claude config
 > trustworthy (gates · lanes · grade sources, with the client-hook caveat stated), and what is operator-local.
 > Interactive diagrams: https://chrono-meta.github.io/forge-harness/
 
+## Greeting — Onboarding (any runtime)
+
+When the user's message is a bare greeting in any language (`hi` · `hello` · `안녕` · `你好` …) or a
+start intent (`resume` · `where were we` · `what is this`), do not answer with a generic greeting.
+Run FH onboarding:
+
+1. Run `bash scripts/mapped_tracks.sh` and read `onboarding_branch=new|returning|UNKNOWN`
+   (UNKNOWN is not `new`).
+2. Reply in the greeting's language. First line: 🐿️ and the welcome line on the same line —
+   new: "Welcome to FH." · returning: "Welcome back to FH." · if
+   `tracks/_meta/reference_next_session_starter.md` exists (the operator): "The FH operator — good to
+   see you." Translate naturally and keep the name «FH».
+3. Then the doors, one per line, in the same language:
+   - new: ① Create your first project · ② Map an existing project · 📖 Read the guide / ask me anything
+   - returning: ① Map a project · ② Create a new project · ③ Accelerate or diagnose a mapped project ·
+     ④ Cross-project synergy (only with 2+ project tracks) · 📖 Guide / Q&A — and for the operator a
+     last row 🔧 FH self-development
+4. Returning only: one line below the doors — say "wrap up" when done so the work lands in the session
+   card.
+
+An explicit task in the same message skips the menu. Canonical: `CLAUDE.md` §Active Onboarding Protocol ·
+door wording and branch tests: `knowledge/shared/harness-core/fh_detail_protocols.md` Step 2.
+
 ## Agent Registry
 
 forge-harness ships 8 tracked agents. The user-mastery spectrum (`beginner` · `main-player` ·
