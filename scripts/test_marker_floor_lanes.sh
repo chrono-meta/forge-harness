@@ -65,6 +65,13 @@ check "$T/m5" BLOCK "below-floor without ack (guard intact)"
 check "$T/m6" PASS  "opus at-floor (legacy lane intact)"
 check "$T/m7" PASS  "below-floor with quoted ack (legacy lane intact)"
 check "$T/m8" BLOCK "invalid floor-status (fail-closed on unknown value)"
+# 2026-10-12 agy 실측 — 힌트 예시값 베끼기. 힌트는 자리표시자를 주고, 자리표시자 그대로는 막는다
+printf "axis2-engine: <무엇이 돌렸나>\naxis2-model: <지금 실제로 도는 모델>\nfloor-status: at-floor\naxis2-evidence: PASS no-S\n" > "$T/m9"
+printf "axis2-engine: agy\naxis2-model: gemini-3.8-flash-high\nfloor-status: at-floor\naxis2-evidence: PASS no-S\n" > "$T/m10"
+check "$T/m9" BLOCK "placeholder axis2-engine/axis2-model pasted from the hint"
+check "$T/m10" PASS "non-Claude runtime model recorded truthfully (gemini via agy)"
+hint=$(bash -c "source '$T/fn.sh'; marker_recreate_hint /tmp/x" 2>&1)
+case "$hint" in *"axis2-model: opus"*|*"axis2-engine: quench-challenger"*) echo "❌ hint still shows copyable example values"; FAIL=1 ;; *) echo "✅ hint shows placeholders, not copyable values" ;; esac
 
 [ "$FAIL" -eq 0 ] && echo "── all marker-floor lane fixtures behave ──"
 exit "$FAIL"
