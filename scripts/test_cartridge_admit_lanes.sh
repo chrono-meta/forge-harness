@@ -32,7 +32,7 @@ cp -R "$FIX/hook_cartridge" "$tmp/reverted"; rm -rf "$tmp/reverted/hooks"
 lane "revert probe: hook removed admits"    0 "$tmp/reverted"
 
 # 인자를 명령으로 실행하는 허용 항목 — 카트리지 R8 이 찾은 구멍(generated_harness_check #874 에서 막음)
-for g in 'Bash(sh:*)' 'Bash(python3:*)' 'Bash(env -i *)' 'Bash(sh /dev/stdin:*)' 'Bash(bash /dev/fd/0:*)' 'Bash(sh //dev/stdin:*)' 'Bash(sh /./dev/stdin:*)' 'Bash(sh ${HOME:0:1}dev/stdin:*)' 'Bash(sh ${HOME:0:1}dev/fd/0:*)' 'Bash(sh ${X}/dev/stdin:*)' 'Bash(sh `echo /dev/stdin`:*)' 'Bash(\sh:*)' 'Bash(s""h:*)' 'Bash(X=`id` python3 scripts/x.py:*)' 'Bash(python3 scripts/x.py `id`:*)'; do
+for g in 'Bash(sh:*)' 'Bash(python3:*)' 'Bash(env -i *)' 'Bash(sh /dev/stdin:*)' 'Bash(bash /dev/fd/0:*)' 'Bash(sh //dev/stdin:*)' 'Bash(sh /./dev/stdin:*)' 'Bash(sh ${HOME:0:1}dev/stdin:*)' 'Bash(sh ${HOME:0:1}dev/fd/0:*)' 'Bash(sh ${X}/dev/stdin:*)' 'Bash(sh `echo /dev/stdin`:*)' 'Bash(\sh:*)' 'Bash(s""h:*)' 'Bash(X=`id` python3 scripts/x.py:*)' 'Bash(python3 scripts/x.py `id`:*)' 'Bash(git p""ush:*)' 'Bash(0</dev/null sh:*)'; do
   d="$tmp/indirect_$(printf '%s' "$g" | tr -c 'a-z0-9' '_')"; cp -R "$FIX/minimal_ok" "$d"
   G="$g" python3 -c 'import json,os,sys; p=sys.argv[1]; s=open(p).read(); open(p,"w").write(s.replace("allowed-tools: [\"Read\", \"Grep\"]", "allowed-tools: [\"Read\", " + json.dumps(os.environ["G"]) + "]"))' "$d/skills/demo/SKILL.md"
   G="$g" python3 -c 'import json,os,sys; sys.exit(0 if json.dumps(os.environ["G"]) in open(sys.argv[1]).read() else 1)' "$d/skills/demo/SKILL.md" || { echo "HARNESS-ERROR: fixture edit failed for $g"; exit 3; }
