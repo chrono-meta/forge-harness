@@ -165,6 +165,9 @@ def _indirect_wildcard(raw_seg):
         toks.pop(0)
     if not toks:
         return None
+    # 머리에 따옴표·역슬래시·전개가 있으면 무엇이 실행될지 문자열로 못 정한다(s""h · \sh, codex 카트리지 R12)
+    if re.search(r"[\"'\\$`]", toks[0]):
+        return "명령 머리에 셸 따옴표·전개 `%s`" % toks[0]
     head = _bare(toks[0])
     raw0 = toks[0].strip("\"'")
     raw0 = raw0[:-2] if raw0.endswith(":*") else raw0
