@@ -21,7 +21,9 @@
 #         2 usage (nothing merged) · 3 trivial --rerun refused (nothing merged)
 #         4 harness error (see message: before or after the merge)
 #         6 merge accepted but not completed (queue/lag) — NOT verified, nothing claimed
-#         5 merge itself failed (nothing merged)
+#         5 merge NOT observed (gh failed and GitHub still reports OPEN/CLOSED after bounded re-reads —
+#           an observation, not proof: stale state can outlast the re-reads)
+#         (gh non-zero but GitHub says MERGED → continue to verify; state unreadable → 4, outcome UNKNOWN)
 
 set -uo pipefail
 PR=""; RERUN=""; RERUN_SET=0; REPO="."
@@ -57,9 +59,31 @@ echo "── PR #$PR head recorded: $HEAD_OID"
 # 2. merge
 # 🟥 cross-family W1: pin the merge to the head we RECORDED. Without it, a push landing between the
 #   record and the merge gets squashed in unverified, and «merged and verified» describes a commit
-#   nobody checked. GitHub refuses the merge if the head moved — that refusal is rc=5, nothing merged.
+#   nobody checked. GitHub refuses the merge if the head moved — that refusal is rc=5 (merge not observed).
+# 🟥 gh's exit code is not the server's answer: gh merges on GitHub, THEN switches/deletes local
+#   branches, and that local half can fail (e.g. main checked out in another worktree) after the
+#   merge landed (2026-10-12, FoD #210 reported «nothing merged» while MERGED). Ask GitHub.
 if ! gh pr merge "$PR" --squash --delete-branch --admin --match-head-commit "$HEAD_OID" < /dev/null; then
-  echo "🟥 merge failed — nothing merged" >&2; exit 5
+  # bounded re-reads: one OPEN right after a server merge can be API lag, not a refusal (codex A1)
+  ST=""; HO=""
+  for _try in 1 2 3; do
+    _sv=$(gh pr view "$PR" --json state,headRefOid -q '.state+" "+.headRefOid' < /dev/null) || _sv=""
+    ST=$(printf '%s' "$_sv" | awk '{print $1}'); HO=$(printf '%s' "$_sv" | awk '{print $2}')
+    [ "$ST" = "OPEN" ] || break
+    [ "$_try" -lt 3 ] && sleep "${PMV_RETRY_SLEEP:-2}"
+  done
+  case "$ST" in
+    MERGED)
+      # MERGED alone does not say WHICH head merged — someone may have pushed and merged after we
+      # recorded (codex A2). Only the recorded head may continue to verification.
+      [ "$HO" = "$HEAD_OID" ] || { echo "🟥 HARNESS-ERROR: gh pr merge failed, and PR #$PR is MERGED from head ${HO:-?}, not the recorded $HEAD_OID — NOT verified" >&2; exit 4; }
+      echo "⚠️  gh pr merge exited non-zero; GitHub reports MERGED from the recorded head — continuing to verify" >&2
+      echo "   the head branch may still exist on origin — delete it by hand if so" >&2 ;;
+    # 🟥 a persistent OPEN cannot prove nothing merged (state may still be stale) — say what was seen
+    OPEN|CLOSED) echo "🟥 merge NOT observed — gh pr merge exited non-zero and GitHub reports $ST (read $_try time(s))" >&2
+                 echo "   if gh's error above was about LOCAL branches, re-check: gh pr view $PR --json state,mergeCommit" >&2; exit 5 ;;
+    *) echo "🟥 HARNESS-ERROR: gh pr merge failed and the PR state is unreadable — merge outcome UNKNOWN; check: gh pr view $PR --json state,mergeCommit" >&2; exit 4 ;;
+  esac
 fi
 
 # 3. merge commit
