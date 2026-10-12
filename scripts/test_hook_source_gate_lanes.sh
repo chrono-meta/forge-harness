@@ -44,6 +44,10 @@ echo "  ── 실물: fh_env_delta_scan 이 헤더만 남기지 않는가 ─�
 # 억제 시 sibling-only 케이스에서 «헤더 있고 내용 없음» 이 나오면 안 된다.
 T=$(mktemp -d) || { echo "❌ harness-error: mktemp"; exit 10; }
 trap 'rm -rf "$T"' EXIT
+# 비주제 레인 — 이 레인은 ①-c 만 본다. ①-b gh 와 ①-g 스캐너(실 레포 · 네트워크 · ≈13s/회)를
+# 레인 안 스텁으로 (scripts/lane_stub_env.sh)
+. "$D/lane_stub_env.sh"
+mkdir -p "$T/.lane_stub" && lane_stub_env_on "$T/.lane_stub" gh stale-ref || { echo "❌ harness-error: lane_stub_env"; exit 9; }
 out_clear=$(printf '{"source":"clear"}' | bash "$D/fh_env_delta_scan.sh" 2>/dev/null || true)
 if printf '%s' "$out_clear" | grep -q 'capability-surface change detected'; then
   printf '%s' "$out_clear" | grep -q '  • ' \
@@ -63,17 +67,24 @@ fi
 
 echo
 echo "  ── ①-c peer 스캔: claude-agents 스코프 ──"
+# 줄머리 앵커: 체커는 완료 로그 꼬리를 되읽어 출력한다 — 그 안의 «①-c» 글자가 ①-c 판정으로 세이면
+# 안 된다(2026-10-12 거짓 빨강, main 에서도 재현). ①-c 판정 줄은 전부 «기호 + 공백 + ①-c» 로 시작한다.
 CC="$D/session_close_check.sh"
 if [ -f "$CC" ]; then
-  a=$(CLAUDE_CODE_CHILD_SESSION=1 bash "$CC" 2>/dev/null | grep -c '①-c' || true)
-  b=$(env -u CLAUDE_CODE_CHILD_SESSION -u CLAUDE_CODE_AGENT bash "$CC" 2>/dev/null | grep -c '①-c' || true)
-  c=$(env -u CLAUDE_CODE_CHILD_SESSION -u CLAUDE_CODE_AGENT FH_PEER_SCAN_FORCE=1 bash "$CC" 2>/dev/null | grep -c '①-c' || true)
+  a=$(CLAUDE_CODE_CHILD_SESSION=1 bash "$CC" 2>/dev/null | grep -cE '^[^[:space:]]+ +①-c' || true)
+  b=$(env -u CLAUDE_CODE_CHILD_SESSION -u CLAUDE_CODE_AGENT bash "$CC" 2>/dev/null | grep -cE '^[^[:space:]]+ +①-c' || true)
+  c=$(env -u CLAUDE_CODE_CHILD_SESSION -u CLAUDE_CODE_AGENT FH_PEER_SCAN_FORCE=1 bash "$CC" 2>/dev/null | grep -cE '^[^[:space:]]+ +①-c' || true)
   [ "$a" -gt 0 ] && ok "자식 세션 → ①-c 뜬다" || ng "자식 세션인데 ①-c 없음"
   [ "$b" -eq 0 ] && ok "톱레벨(env 부재 시뮬) → 침묵 (솔로 세션 나그 금지)" || ng "env 부재인데 ①-c 떴다"
   [ "$c" -gt 0 ] && ok "CONTROL: override 로 강제하면 뜬다 (b 의 침묵이 기능 사망이 아님을 증명)" \
                  || ng "override 인데 안 뜬다 — b 의 0 은 기능 사망일 수 있다"
 else
   ok "session_close_check.sh 부재 — ①-c 레인 미측정(통과 아님)"
+fi
+
+if [ -f "$CC" ]; then
+  lane_stub_env_used gh && ok "lane_stub_env: gh 스텁 선택 확인(FH_LANE_STUB=off 면 해당 없음)" || ng "lane_stub_env: gh 스텁 미사용 — PATH 가림"
+  lane_stub_env_used stale-ref && ok "lane_stub_env: ①-g 스텁 선택 확인(FH_LANE_STUB=off 면 해당 없음)" || ng "lane_stub_env: ①-g 스텁 미사용 — 진짜 스캐너가 돌았다"
 fi
 
 echo

@@ -46,6 +46,9 @@ done
 T="$(fh_fixture_root "$(mktemp -d 2>/dev/null)")" || { echo "ⓘ mktemp failed — this suite's own setup broke (NOT a pass)"; exit 10; }
 : "${T:?fixture root unset}"
 trap 'rm -rf "$T"' EXIT INT TERM
+# 비주제 레인 — ①-b 의 gh 를 레인 안 스텁으로 (네트워크 의존 · scripts/lane_stub_env.sh)
+. "$ROOT/scripts/lane_stub_env.sh"
+mkdir -p "$T/.lane_stub" && lane_stub_env_on "$T/.lane_stub" gh || { echo "HARNESS-ERROR: lane_stub_env 를 못 켰다"; exit 9; }
 
 TODAY="$(date +%Y-%m-%d)"
 
@@ -538,6 +541,9 @@ else
     *)           ok "L24j A2: 잘린 키를 센다 ($_drop)" ;;
   esac
 fi
+
+lane_stub_env_used gh && ok "lane_stub_env: gh 스텁 선택 확인(FH_LANE_STUB=off 면 해당 없음)" \
+  || ng "lane_stub_env: gh 스텁이 한 번도 안 불렸다 — 체커가 다른 gh 를 골랐다(PATH 가림)"
 
 echo
 echo "── utterance-intake lanes: PASS=$PASS FAIL=$FAIL ──"
