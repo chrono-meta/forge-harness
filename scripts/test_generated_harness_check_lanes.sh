@@ -197,6 +197,10 @@ stl R11c_sh_param_expansion '{"permissions":{"allow":["Bash(sh ${HOME:0:1}dev/st
 stl R11c_sh_var '{"permissions":{"allow":["Bash(sh $D/x.sh:*)"]}}' 1
 stl R11c_sh_backtick '{"permissions":{"allow":["Bash(sh `echo x`.sh:*)"]}}' 1
 stl R11c_ok_hyphen_dot_path '{"permissions":{"allow":["Bash(python3 tools/build-site.v2.py:*)"]}}' 0
+stl R12c_head_empty_quotes '{"permissions":{"allow":["Bash(s\"\"h:*)"]}}' 1
+stl R12c_head_backslash '{"permissions":{"allow":["Bash(\\\\sh:*)"]}}' 1
+stl R12c_head_dollar '{"permissions":{"allow":["Bash($SHELL -c:*)"]}}' 1
+stl R12c_ok_plain_head '{"permissions":{"allow":["Bash(git status:*)"]}}' 0
 stl R8_ok_python3_fixed_script '{"permissions":{"allow":["Bash(python3 scripts/x.py:*)"]}}' 0
 stl R8_ok_node_fixed_script '{"permissions":{"allow":["Bash(node tools/build.js:*)"]}}' 0
 stl R8_ok_sh_exact '{"permissions":{"allow":["Bash(sh scripts/test.sh)"]}}' 0
