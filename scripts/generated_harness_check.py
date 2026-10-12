@@ -108,6 +108,9 @@ def h1_match(entry):
             for smp in IRREV_SAMPLES:
                 if fnmatch.fnmatchcase(smp, pat):
                     return "와일드카드가 `%s` 를 덮는다" % smp
+    # 명령 치환·프로세스 치환은 위치와 상관없이 그 자리에서 실행된다(X=`id` cmd · cmd $(id), codex 카트리지 R13)
+    if re.search(r"`|\$\(|<\(|>\(", inner):
+        return "명령·프로세스 치환"
     for raw in _SEG_SPLIT_RE.split(inner):
         lab = _indirect_wildcard(raw)
         if lab:
