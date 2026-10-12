@@ -209,7 +209,10 @@ Because non-Claude runtimes do not auto-load Claude path rules, apply these rule
    marker fields: the soul line written before design (or `none`), each axis run and not run — by
    name, and each axis's control with whether it survived. The minimum evidence that an axis ran is
    execution output with a live control; reporting an axis as run without one, or recording only a
-   reason for not choosing it, is not compliance. The axes are named in
+   reason for not choosing it, is not compliance. **`axis2-model:` is the model you are actually
+   running as** (e.g. a Gemini, GPT or Claude model id) — never copied from another marker or from a
+   hook hint; `axis2-engine:` names what really ran (`inline` if you reviewed it yourself). Measured
+   2026-10-12: a non-Claude runtime copied `opus` / `quench-challenger` from the hook hint 3/3. The axes are named in
    `knowledge/shared/harness-core/fh_three_layer_canon.md` — **§1-a is the original four
    (2026-08-09) and §1-a-2 expanded them to six (2026-08-16)**: ⓐ different family · ⓑ standpoint ·
    ⓒ isolated grounding · ⓓ third-party encounter · ⓔ first real use · ⓕ revert-and-observe.

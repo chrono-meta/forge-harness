@@ -776,7 +776,9 @@ marker_recreate_hint() {
   # 🟥 힌트는 «행위자가 읽는 자리»다(FH-T07). 2026-08-30 블라인드 sim 실측: 플로어 티어 세 팔이
   #    나머지 필드를 다 쓰고 `soul:` 을 **하나도 안 썼다** — 차단되는 필드인데도. 스펙에도 힌트에도
   #    없었기 때문이다. 여기에 최소 필드를 다 넣는다. 정본 = .claude/rules/fh_4axis_gate.md
-  echo "     printf 'axis2-engine: quench-challenger\\naxis2-model: opus\\nfloor-status: at-floor\\naxis2-evidence: PASS no-S\\nsoul: 성공 정의 = <...> · 절대 안 함 = <...>\\nsoul-check: reflected(<무엇이 되돌아왔나>)\\ndefeater: <틀렸다면 무엇이 관측되나>\\n' > \"$1\""
+  # 🟥 2026-10-12 agy 실측: Gemini 가 이 힌트의 예시값(quench-challenger · opus)을 3/3 그대로 베꼈다.
+  #    예시값을 «실제 값처럼 보이는 것» 으로 두면 다른 런타임이 자기 모델을 거짓 기입한다 → 자리표시자로.
+  echo "     printf 'axis2-engine: <무엇이 돌렸나 — quench-challenger | inline | codex | agy …>\\naxis2-model: <지금 실제로 도는 모델 — 다른 마커에서 베끼지 마라>\\nfloor-status: <at-floor|above-floor|sonnet-floor|below-floor>\\naxis2-evidence: <찾은 것 — PASS no-S 등>\\nsoul: 성공 정의 = <...> · 절대 안 함 = <...>\\nsoul-check: reflected(<무엇이 되돌아왔나>)\\ndefeater: <틀렸다면 무엇이 관측되나>\\n' > \"$1\""
 }
 
 # ── Cross-family leg — typed verdict (see the load-bearing block below for WHY) ──
@@ -2649,7 +2651,13 @@ validate_marker_floor() {
   if [ -z "$model" ]; then
     echo "  ❌ MARKER FORMAT — missing axis2-model: line"
     echo "     Record the tier that actually produced the adversarial pass"
-    echo "     (e.g. axis2-model: opus). This is what makes the floor auditable."
+    echo "     (the model you are actually running as — never copied from another marker or this hint). This is what makes the floor auditable."
+    return 1
+  fi
+  # 힌트의 자리표시자(<...>)를 그대로 붙여 넣은 마커 — 값을 안 채운 것이다(2026-10-12 agy 베끼기 실측)
+  if grep -qE '^[[:space:]]*(axis2-engine|axis2-model|floor-status):[[:space:]]*<' "$m"; then
+    echo "  ❌ MARKER FORMAT — axis2-engine/axis2-model/floor-status 에 자리표시자(<...>)가 남아 있다"
+    echo "     실제 값으로 채워라 — 특히 axis2-model 은 지금 도는 모델이다(다른 마커·힌트에서 베끼지 마라)."
     return 1
   fi
   # axis2-evidence — presence + non-vacuity (NOT provenance; see header note + the
