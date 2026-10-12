@@ -213,7 +213,8 @@ def _indirect_wildcard(raw_seg):
     # 은 H1. 절대 경로 스크립트(/usr/local/bin/x.py)는 과차단을 받아들인다.
     rel = posixpath.normpath(nxt) if nxt else ""
     if not nxt or nxt.startswith("-") or re.search(r"[*?\[]", nxt) or not _SCRIPT_TARGET_RE.search(nxt) \
-            or nxt.startswith("/") or nxt.startswith("~") or rel == ".." or rel.startswith("../"):
+            or nxt.startswith("/") or nxt.startswith("~") or rel == ".." or rel.startswith("../") \
+            or not re.fullmatch(r"[A-Za-z0-9_./-]+", nxt):   # 셸 전개($ ` { 따옴표)가 경로를 바꾼다(codex 카트리지 R11)
         return "인터프리터 `%s` 와일드카드 (고정 스크립트·모듈이 바로 뒤에 없다)" % head
     return None
 
