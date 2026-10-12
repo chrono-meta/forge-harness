@@ -193,6 +193,10 @@ stl R10c_python_tmp_abs '{"permissions":{"allow":["Bash(python3 /tmp/run.py:*)"]
 stl R10c_python_parent_escape '{"permissions":{"allow":["Bash(python3 ../../x.py:*)"]}}' 1
 stl R10c_python_home '{"permissions":{"allow":["Bash(python3 ~/x.py:*)"]}}' 1
 stl R10c_ok_python_dot_relative '{"permissions":{"allow":["Bash(python3 ./scripts/x.py:*)"]}}' 0
+stl R11c_sh_param_expansion '{"permissions":{"allow":["Bash(sh ${HOME:0:1}dev/stdin:*)"]}}' 1
+stl R11c_sh_var '{"permissions":{"allow":["Bash(sh $D/x.sh:*)"]}}' 1
+stl R11c_sh_backtick '{"permissions":{"allow":["Bash(sh `echo x`.sh:*)"]}}' 1
+stl R11c_ok_hyphen_dot_path '{"permissions":{"allow":["Bash(python3 tools/build-site.v2.py:*)"]}}' 0
 stl R8_ok_python3_fixed_script '{"permissions":{"allow":["Bash(python3 scripts/x.py:*)"]}}' 0
 stl R8_ok_node_fixed_script '{"permissions":{"allow":["Bash(node tools/build.js:*)"]}}' 0
 stl R8_ok_sh_exact '{"permissions":{"allow":["Bash(sh scripts/test.sh)"]}}' 0
