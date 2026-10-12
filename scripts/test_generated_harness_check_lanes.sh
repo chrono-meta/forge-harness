@@ -206,6 +206,11 @@ stl R13c_arg_backtick '{"permissions":{"allow":["Bash(python3 scripts/x.py `id`:
 stl R13c_arg_dollar_paren '{"permissions":{"allow":["Bash(python3 scripts/x.py $(id):*)"]}}' 1
 stl R13c_process_subst '{"permissions":{"allow":["Bash(diff <(id) a.txt)"]}}' 1
 stl R13c_ok_plain_var '{"permissions":{"allow":["Bash(python3 scripts/x.py $HOME:*)"]}}' 0
+stl R14c_quoted_subcommand '{"permissions":{"allow":["Bash(git p\"\"ush:*)"]}}' 1
+stl R14c_quoted_subcommand2 '{"permissions":{"allow":["Bash(git \"push\":*)"]}}' 1
+stl R14c_leading_redirect '{"permissions":{"allow":["Bash(0</dev/null sh:*)"]}}' 1
+stl R14c_output_redirect '{"permissions":{"allow":["Bash(ls > out.txt)"]}}' 1
+stl R14c_ok_plain '{"permissions":{"allow":["Bash(git log --oneline:*)"]}}' 0
 stl R8_ok_python3_fixed_script '{"permissions":{"allow":["Bash(python3 scripts/x.py:*)"]}}' 0
 stl R8_ok_node_fixed_script '{"permissions":{"allow":["Bash(node tools/build.js:*)"]}}' 0
 stl R8_ok_sh_exact '{"permissions":{"allow":["Bash(sh scripts/test.sh)"]}}' 0

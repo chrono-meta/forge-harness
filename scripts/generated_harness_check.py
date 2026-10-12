@@ -111,6 +111,10 @@ def h1_match(entry):
     # 명령 치환·프로세스 치환은 위치와 상관없이 그 자리에서 실행된다(X=`id` cmd · cmd $(id), codex 카트리지 R13)
     if re.search(r"`|\$\(|<\(|>\(", inner):
         return "명령·프로세스 치환"
+    # 따옴표·역슬래시는 낱말을 이어 붙여 서브커맨드를 가리고(git p""ush), 리다이렉션은 머리 앞에 와서
+    # 실행 대상을 가린다(0</dev/null sh). 문자열 검사로는 셸 파싱을 다 못 하므로 있으면 사람 확인(codex 카트리지 R14)
+    if re.search(r"[\"'\\<>]", inner):
+        return "따옴표·역슬래시·리다이렉션"
     for raw in _SEG_SPLIT_RE.split(inner):
         lab = _indirect_wildcard(raw)
         if lab:
