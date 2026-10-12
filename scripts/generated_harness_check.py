@@ -207,7 +207,9 @@ def _indirect_wildcard(raw_seg):
             return None
         return "인터프리터 `%s -m %s` 와일드카드 (검토된 모듈 아님)" % (head, mod or "*")
     nxt = rest[0] if rest else ""
-    if not nxt or nxt.startswith("-") or re.search(r"[*?\[]", nxt) or not _SCRIPT_TARGET_RE.search(nxt):
+    # /dev/stdin · /dev/fd/0 · /proc/self/fd/0 는 경로꼴이지만 «호출자가 넣는 코드» 다(codex 카트리지 R9)
+    if not nxt or nxt.startswith("-") or re.search(r"[*?\[]", nxt) or not _SCRIPT_TARGET_RE.search(nxt) \
+            or re.match(r"^/(?:dev|proc)/", nxt):
         return "인터프리터 `%s` 와일드카드 (고정 스크립트·모듈이 바로 뒤에 없다)" % head
     return None
 
