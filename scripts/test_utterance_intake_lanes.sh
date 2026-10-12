@@ -27,6 +27,9 @@
 
 set -uo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"
+# 상대 경로로 실행됐으면 절대 경로로 다시 실행한다 — 아래 cd 뒤에 lane_stub_env 가 호출자 경로를
+# 확인하기 때문이다(상대 경로는 cd 뒤에 다른 파일을 가리킨다).
+case "$0" in /*) ;; *) exec bash "$(cd "$(dirname "$0")" && pwd -P)/$(basename "$0")" "$@" ;; esac
 cd "$(dirname "$0")/.." || exit 1
 ROOT="$(pwd -P)"
 SUT="$ROOT/scripts/utterance_intake.sh"

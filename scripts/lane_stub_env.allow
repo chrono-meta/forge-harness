@@ -1,5 +1,5 @@
-test_card_drift_probe.sh
-test_session_close_lanes.sh
-test_utterance_intake_lanes.sh
-test_push_zone_lanes.sh
-test_hook_source_gate_lanes.sh
+scripts/test_card_drift_probe.sh
+scripts/test_session_close_lanes.sh
+scripts/test_utterance_intake_lanes.sh
+scripts/test_push_zone_lanes.sh
+scripts/test_hook_source_gate_lanes.sh
