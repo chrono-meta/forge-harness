@@ -40,6 +40,9 @@ export FH_COMPANION_STORE=""
 CHECK="$SCRIPT_DIR/session_close_check.sh"
 TODAY=$(date +%Y-%m-%d)
 FAILED=0
+# 비주제 레인 — ①-b 의 gh 를 레인 안 스텁으로 (네트워크 의존 · selfcheck 에서 ≈66s). scripts/lane_stub_env.sh
+. "$SCRIPT_DIR/lane_stub_env.sh"
+_LS_DIR=$(mktemp -d) && lane_stub_env_on "$_LS_DIR" gh || { echo "HARNESS-ERROR: lane_stub_env 를 못 켰다"; exit 9; }
 
 if [ ! -f "$CHECK" ]; then
   echo "FAIL  session-close lanes: subject $CHECK missing"
@@ -383,6 +386,10 @@ else
 fi
 rm -rf "$_ei"
 
+if ! lane_stub_env_used gh; then
+  echo "❌ lane_stub_env: gh 스텁이 한 번도 안 불렸다 — 체커가 다른 gh 를 골랐다(PATH 가림)"; FAILED=1
+fi
+rm -rf "$_LS_DIR"
 if [ "$PREMISE_FAILED" -ne 0 ]; then
   echo "SESSION-CLOSE LANES: FIXTURE ERROR — a lane's input state was never created; this run's ⑤ verdicts prove nothing (exit 3 ≠ gate failure)"
   exit 3

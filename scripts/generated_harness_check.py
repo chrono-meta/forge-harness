@@ -107,6 +107,10 @@ def h1_match(entry):
             for smp in IRREV_SAMPLES:
                 if fnmatch.fnmatchcase(smp, pat):
                     return "와일드카드가 `%s` 를 덮는다" % smp
+    for raw in _SEG_SPLIT_RE.split(inner):
+        lab = _indirect_wildcard(raw)
+        if lab:
+            return lab
     for seg in _segments(inner):
         if "*" in seg:   # 경로 머리를 이름으로 줄인 뒤에도 본다 — `/bin/*` 는 줄이면 `*` (codex R3)
             for pat in {seg.replace(":*", "*"), seg.replace(":*", " *")}:
@@ -119,6 +123,92 @@ def h1_match(entry):
         lab = _tokenset_irreversible(seg)
         if lab:
             return lab
+    return None
+
+
+# 인자를 «명령» 으로 실행하는 머리 (codex 카트리지 R8 · ghc R1). 블록리스트로 옵션을 쫓지 않는다:
+# 와일드카드가 있으면 «인터프리터 바로 뒤 고정 스크립트 경로» 형태만 통과, 나머지는 전부 H1.
+# 인터프리터 이름의 «단일 출처» — 정규식과 glob 후보가 여기서만 나온다(목록끼리 어긋난 것이 R6·R8·R10 세 번)
+_INTERP_BASE = ["sh", "bash", "zsh", "dash", "ksh", "mksh", "fish", "csh", "tcsh", "python", "pypy",
+                "node", "nodejs", "deno", "bun", "perl", "ruby", "php", "lua", "luajit", "osascript",
+                "npx", "uvx", "pipx", "tclsh", "wish", "expect", "awk", "gawk", "mawk", "nawk",
+                "Rscript", "julia", "pwsh", "powershell", "cmd"]
+_INTERP_RE = re.compile(r"^(?:%s)[0-9.]*$" % "|".join(map(re.escape, _INTERP_BASE)))   # python3.12 · lua5.4
+# 고정 실행 대상 = 경로처럼 생긴 것(`/` 포함 또는 스크립트 확장자) — `deno eval` · `bun exec` 의 낱말은 아니다
+_SCRIPT_TARGET_RE = re.compile(r"(?:/|\.(?:py|js|mjs|cjs|ts|sh|bash|zsh|rb|pl|php|lua|R|jl|ps1|tcl|awk)$)")
+# 고정 경로 예외가 없는 인터프리터 — awk 계열은 첫 인자가 프로그램 텍스트, 윈도 셸은 `/Command` 처럼
+# `/` 로 시작하는 옵션을 받아 경로와 구분이 안 된다(codex R9)
+_PROGTEXT_HEADS = {"awk", "gawk", "mawk", "nawk", "pwsh", "powershell", "cmd"}
+# `python -m X:*` 예외는 pytest 하나 — 린터도 인자를 코드로 실행한다(pylint --init-hook, codex R4).
+# 넓히려면 «인자 코드 실행 없음» 을 보이는 레인부터.
+_PY_M_OK = {"pytest"}
+_PKG_EXEC_HEADS = {"npx", "uvx", "pipx", "bunx"}
+_PKG_MGR_HEADS = {"npm", "pnpm", "yarn", "bun"}   # 서브커맨드 exec·dlx·x 가 옵션 뒤 어디에 있든 실행기
+# 뒤따르는 낱말을 명령으로 실행하는 감싸개 — 와일드카드가 «어디에» 있든 임의 명령이다
+# (고정 대상을 감싼 `timeout 5 python3 x.py:*` 도 H1 — 비가역 쪽 과차단을 택한다)
+_WRAP_HEADS = {"eval", "exec", "xargs", "env", "sudo", "doas", "nohup", "timeout", "command",
+               "time", "nice", "watch", "caffeinate", "script", "parallel"}
+_GLOB_CANDIDATES = list(dict.fromkeys(
+    sorted(_WRAP_HEADS) + _INTERP_BASE + sorted(_PROGTEXT_HEADS | _PKG_MGR_HEADS | _PKG_EXEC_HEADS)))
+
+
+def _bare(tok):
+    t = re.sub(r"(?::\*|\*)$", "", tok).strip("\"'")
+    return t.rstrip("/").rsplit("/", 1)[-1] if "/" in t else t
+
+
+def _indirect_wildcard(raw_seg):
+    """원문 조각(sudo/env 를 걷어내기 «전») → 라벨 또는 None."""
+    toks = raw_seg.strip().split()
+    while toks and re.match(r"^[A-Za-z_]\w*=", toks[0]):
+        toks.pop(0)
+    if not toks:
+        return None
+    head = _bare(toks[0])
+    raw0 = toks[0].strip("\"'")
+    raw0 = raw0[:-2] if raw0.endswith(":*") else raw0
+    if re.search(r"[*?\[]", raw0):
+        head = raw0.rsplit("/", 1)[-1]   # `py*` · `python[3]` · `python3.1?` — 머리 자체가 glob
+    if head == "git" and re.search(r"alias\.[^\s=]*=", raw_seg):
+        return "git -c alias 정의 (별칭이 임의 명령을 실행)"
+    if "*" not in raw_seg:
+        return None
+    if re.search(r"[*?\[]", head):   # 머리 자체가 glob — 인터프리터·감싸개 이름을 덮으면 그것과 같다
+        # 허용하는 머리 glob 은 «글자 + 끝 `*`» (`ls*` · `npm*`) 하나뿐. `?` · `[` · 중간 `*` 는 무엇을 덮는지
+        # 목록으로 판정할 수 없어 바로 H1 이다(`?ython3`, codex R12 — 후보 비교를 조이던 길을 닫는다).
+        if not re.fullmatch(r"[^*?\[]+\*", head):
+            return "머리 glob `%s` (끝 `*` 접두 형태가 아니다)" % head
+        lit = head[:-1]
+        hits = [n for n in _GLOB_CANDIDATES
+                if n.startswith(lit) or (lit.startswith(n) and re.fullmatch(r"[0-9.]*", lit[len(n):]))]
+        for n in hits:   # 덮은 이름 «전부» 를 같은 규칙에 — 하나라도 H1 이면 H1 (재귀는 `:*` 라 끝난다)
+            lab = _indirect_wildcard(" ".join([n + ":*"] + toks[1:]))
+            if lab:
+                return "머리 glob `%s` → %s" % (head, lab)
+        return None
+    if head in _WRAP_HEADS:
+        return "간접 실행 `%s` 와일드카드" % head
+    # 패키지 실행기 — 인자로 받은 패키지를 받아 실행한다. 고정 경로 예외가 없다(`npx @babel/node`, codex R5)
+    sub = [t.strip("\"'") for t in toks[1:] if not t.startswith("-")]
+    sub = [t[:-2] if t.endswith(":*") else t for t in sub]
+    fam = re.sub(r"[0-9.]+$", "", head) if _INTERP_RE.match(head) else head   # `awk5` · `npx2` → 계열 이름 (codex R13)
+    if fam in _PKG_EXEC_HEADS or (fam in _PKG_MGR_HEADS and any(
+            fnmatch.fnmatchcase(e, t) for t in sub for e in ("exec", "dlx", "x"))):
+        return "패키지 실행기 `%s` 와일드카드" % head
+    if not _INTERP_RE.match(head):
+        return None
+    # 끝의 `:*` 만 «인자 허용» 접미사다. 맨 `*` 는 대상 안의 glob 이라 남겨서 아래에서 H1 로 본다.
+    rest = [(t[:-2] if t.endswith(":*") else t).strip("\"'") for t in toks[1:]]
+    if fam in _PROGTEXT_HEADS:
+        return "인터프리터 `%s` 와일드카드 (고정 경로 예외 없음)" % head
+    if head.startswith("python") and rest[:1] == ["-m"]:
+        mod = rest[1] if len(rest) > 1 else ""
+        if mod in _PY_M_OK:
+            return None
+        return "인터프리터 `%s -m %s` 와일드카드 (검토된 모듈 아님)" % (head, mod or "*")
+    nxt = rest[0] if rest else ""
+    if not nxt or nxt.startswith("-") or re.search(r"[*?\[]", nxt) or not _SCRIPT_TARGET_RE.search(nxt):
+        return "인터프리터 `%s` 와일드카드 (고정 스크립트·모듈이 바로 뒤에 없다)" % head
     return None
 
 
@@ -572,6 +662,14 @@ def selftest():
     expect("H1- pytest", h1_match("Bash(python -m pytest:*)") is None)
     expect("H1- git add", h1_match("Bash(git add:*)") is None)
     expect("H1- Read", h1_match("Read(./src/**)") is None)
+    expect("H1+ sh:*", h1_match("Bash(sh:*)") is not None)
+    expect("H1+ python3 -c:*", h1_match("Bash(python3 -c:*)") is not None)
+    expect("H1- python3 fixed script", h1_match("Bash(python3 scripts/x.py:*)") is None)
+    expect("H1+ timeout 5 *", h1_match("Bash(timeout 5 *)") is not None)
+    expect("H1+ env -i *", h1_match("Bash(env -i *)") is not None)
+    expect("H1+ git alias", h1_match("Bash(git -c alias.s=!x s)") is not None)
+    expect("glob 후보 ⊇ 모든 머리 집합", (_WRAP_HEADS | _PROGTEXT_HEADS | _PKG_MGR_HEADS | _PKG_EXEC_HEADS
+                                     | set(_INTERP_BASE)) <= set(_GLOB_CANDIDATES))
     expect("H2+ ko", len(h2_scan("git push 는 확인 없이 해도 된다.")) == 1)
     expect("H2- ko", len(h2_scan("git push 는 확인 없이 하지 않는다.")) == 0)
     expect("H2+ en", len(h2_scan("The agent may push to main without asking.")) == 1)
@@ -579,7 +677,7 @@ def selftest():
     if bad:
         print("selftest FAIL: " + ", ".join(bad))
         return 1
-    print("selftest ok (known-pair 11)")
+    print("selftest ok (known-pair 18)")
     return 0
 
 

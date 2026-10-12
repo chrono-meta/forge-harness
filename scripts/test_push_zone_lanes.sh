@@ -42,6 +42,9 @@ fi
 WORK="$(fh_fixture_root "$(mktemp -d)")" || exit 1
 : "${WORK:?fixture root unset — refusing to run git in cwd}"
 trap 'rm -rf "$WORK"' EXIT
+# 비주제 레인 — ①-b 의 gh 를 레인 안 스텁으로 (네트워크 의존 · scripts/lane_stub_env.sh)
+. "$(dirname "${BASH_SOURCE[0]}")/lane_stub_env.sh"
+mkdir -p "$WORK/.lane_stub" && lane_stub_env_on "$WORK/.lane_stub" gh || { echo "HARNESS_ERROR — lane_stub_env 를 못 켰다"; exit 9; }
 cp "$HOOK_SRC" "$WORK/hook" || exit 1
 HOOK="$WORK/hook"
 
@@ -298,6 +301,9 @@ else
   fi
   rm -rf "$SR"
 fi
+
+if lane_stub_env_used gh; then echo "  ✅ lane_stub_env: gh 스텁 선택 확인(FH_LANE_STUB=off 면 해당 없음)"; PASSED=$((PASSED+1))
+else echo "  ❌ lane_stub_env: gh 스텁이 한 번도 안 불렸다 — 체커가 다른 gh 를 골랐다(PATH 가림)"; FAILED=$((FAILED+1)); fi
 
 echo ""
 echo "[push-zone] $PASSED passed, $FAILED failed"

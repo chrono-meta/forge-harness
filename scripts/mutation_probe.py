@@ -1055,11 +1055,6 @@ def read_bytes(path):
         return fh.read()
 
 
-def write_bytes(path, b):
-    with open(path, 'wb') as fh:
-        fh.write(b)
-
-
 def subject_pycs(subject):
     stem = os.path.splitext(os.path.basename(subject))[0]
     cache_dir = os.path.join(os.path.dirname(os.path.abspath(subject)), '__pycache__')
