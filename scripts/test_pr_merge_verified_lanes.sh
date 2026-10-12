@@ -36,7 +36,17 @@ D="$D"
 case "\$1 \$2" in
   "pr view")
     [ -f "\$D/view_fail" ] && exit 1
-    case "\$*" in *headRefOid*) cat "\$D/head.oid"; echo ;;
+    [ -f "\$D/view_fail_after_merge" ] && [ -s "\$D/merge.log" ] && exit 1
+    case "\$*" in
+      *state,headRefOid*)
+        if [ -f "\$D/merge.oid" ] && [ ! -f "\$D/queued" ]; then
+          if [ -f "\$D/stuck" ]; then echo "OPEN \$(cat "\$D/head.oid")"
+          elif [ -f "\$D/lag" ] && [ "\$(wc -l < "\$D/lag")" -lt 2 ]; then echo x >> "\$D/lag"; echo "OPEN \$(cat "\$D/head.oid")"
+          elif [ -f "\$D/other_head" ]; then echo "MERGED 0000000000000000000000000000000000000000"
+          else echo "MERGED \$(cat "\$D/head.oid")"; fi
+        elif [ -f "\$D/closed" ]; then echo "CLOSED \$(cat "\$D/head.oid")"
+        else echo "OPEN \$(cat "\$D/head.oid")"; fi ;;
+      *headRefOid*) cat "\$D/head.oid"; echo ;;
       *state*) if [ -f "\$D/merge.oid" ] && [ ! -f "\$D/queued" ]; then echo MERGED; else echo OPEN; fi ;;
       *mergeCommit*) if [ -f "\$D/queued" ]; then echo null; else cat "\$D/merge.oid" 2>/dev/null; echo; fi ;; esac ;;
   "pr merge")
@@ -49,13 +59,15 @@ case "\$1 \$2" in
     git -C "\$D/seed" switch -q main && git -C "\$D/seed" merge --squash -q feat >/dev/null 2>&1
     [ -f "\$D/drop_b" ] && git -C "\$D/seed" checkout -q HEAD -- b
     git -C "\$D/seed" commit -qm squash --no-verify && git -C "\$D/seed" push -q origin main
-    git -C "\$D/seed" rev-parse HEAD > "\$D/merge.oid" ;;
+    git -C "\$D/seed" rev-parse HEAD > "\$D/merge.oid"
+    [ -f "\$D/local_fail" ] && { echo "fatal: 'main' is already used by worktree" >&2; exit 1; }
+    exit 0 ;;
   *) exit 2 ;;
 esac
 EOF
   chmod +x "$D/bin/gh"
 }
-run() { local D="$1"; shift; OUT=$(cd "$D/work" && PATH="$D/bin:$PATH" bash "$SC" "$@" 2>&1); RC=$?; }
+run() { local D="$1"; shift; OUT=$(cd "$D/work" && PATH="$D/bin:$PATH" PMV_RETRY_SLEEP=0 bash "$SC" "$@" 2>&1); RC=$?; }
 merged() { [ -s "$1/merge.log" ]; }
 GOOD='grep -q a2 a && grep -q b2 b && echo instrument-ok'
 
@@ -99,6 +111,41 @@ setup mv; mkgh "$T/mv"; : > "$T/mv/moved"; run "$T/mv" 7 --rerun "$GOOD"
 setup q; mkgh "$T/q"; : > "$T/q/queued"; run "$T/q" 7 --rerun "$GOOD"
 { [ "$RC" -eq 6 ] && ! printf '%s' "$OUT" | grep -q 'merged and verified\|IS MERGED'; } \
   && ok "L9 merge queued / not completed → rc=6, reported as NOT verified" || { bad "L9 queued merge rc=$RC"; printf '%s\n' "$OUT" | tail -3; }
+
+# ── 2026-10-12 misreport: gh exits non-zero AFTER the server merged (local branch cleanup failed) ──
+# L10 GitHub says MERGED → never «nothing merged»; verification still runs to rc=0
+setup lf; mkgh "$T/lf"; : > "$T/lf/local_fail"; run "$T/lf" 7 --rerun "$GOOD"
+{ [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q 'merged and verified' && ! printf '%s' "$OUT" | grep -q 'nothing merged'; } \
+  && ok "L10 gh non-zero after server merge → re-queried MERGED, verified rc=0" || { bad "L10 local-cleanup failure rc=$RC"; printf '%s\n' "$OUT" | tail -4; }
+# L11 gh non-zero AND state unreadable → rc=4 «outcome UNKNOWN», never «nothing merged» — both with and
+#     without a real server merge behind the failure
+setup lu; mkgh "$T/lu"; : > "$T/lu/merge_fail"; : > "$T/lu/view_fail_after_merge"; run "$T/lu" 7 --rerun "$GOOD"
+{ [ "$RC" -eq 4 ] && printf '%s' "$OUT" | grep -q 'UNKNOWN' && ! printf '%s' "$OUT" | grep -q 'nothing merged'; } \
+  && ok "L11a gh fails (no merge) + state unreadable → rc=4 UNKNOWN" || { bad "L11a rc=$RC"; printf '%s\n' "$OUT" | tail -3; }
+setup lu2; mkgh "$T/lu2"; : > "$T/lu2/local_fail"; : > "$T/lu2/view_fail_after_merge"; run "$T/lu2" 7 --rerun "$GOOD"
+{ [ "$RC" -eq 4 ] && printf '%s' "$OUT" | grep -q 'UNKNOWN' && ! printf '%s' "$OUT" | grep -q 'nothing merged'; } \
+  && ok "L11b server merged, gh fails, state unreadable → rc=4 UNKNOWN" || { bad "L11b rc=$RC"; printf '%s\n' "$OUT" | tail -3; }
+# L12 verification still bites on the recovered path: local_fail + a squash that dropped b → rc=1
+setup lfd; mkgh "$T/lfd"; : > "$T/lfd/local_fail"; : > "$T/lfd/drop_b"; run "$T/lfd" 7 --rerun 'grep -q a2 a && echo a-ok'
+{ [ "$RC" -eq 1 ] && printf '%s' "$OUT" | grep -q 'IS MERGED but verification FAILED'; } \
+  && ok "L12 recovered path still verifies: dropped file → rc=1" || { bad "L12 rc=$RC"; printf '%s\n' "$OUT" | tail -3; }
+# L13 state lags (OPEN, OPEN, then MERGED) → re-reads, verified rc=0
+setup lag; mkgh "$T/lag"; : > "$T/lag/local_fail"; : > "$T/lag/lag"; run "$T/lag" 7 --rerun "$GOOD"
+{ [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q 'merged and verified'; } \
+  && ok "L13 OPEN→MERGED lag after gh failure → bounded re-read, rc=0" || { bad "L13 rc=$RC"; printf '%s\n' "$OUT" | tail -3; }
+# L14 MERGED from a head other than the recorded one → rc=4, NOT verified
+setup oh; mkgh "$T/oh"; : > "$T/oh/local_fail"; : > "$T/oh/other_head"; run "$T/oh" 7 --rerun "$GOOD"
+{ [ "$RC" -eq 4 ] && printf '%s' "$OUT" | grep -q 'not the recorded' && ! printf '%s' "$OUT" | grep -q 'merged and verified'; } \
+  && ok "L14 MERGED from a different head → rc=4 NOT verified" || { bad "L14 rc=$RC"; printf '%s\n' "$OUT" | tail -3; }
+# L15 CLOSED (unmerged) after gh failure → rc=5
+setup cl; mkgh "$T/cl"; : > "$T/cl/merge_fail"; : > "$T/cl/closed"; run "$T/cl" 7 --rerun "$GOOD"
+{ [ "$RC" -eq 5 ] && printf '%s' "$OUT" | grep -q 'reports CLOSED (read 1 time' && ! printf '%s' "$OUT" | grep -q 'nothing merged'; } \
+  && ok "L15 gh fails, PR CLOSED → rc=5 · actual read count" || { bad "L15 rc=$RC"; printf '%s\n' "$OUT" | tail -2; }
+# L16 residual made visible: server merged but state stays OPEN through every re-read → rc=5 reported as
+#     «NOT observed» with a re-check hint — never as «nothing merged»
+setup st; mkgh "$T/st"; : > "$T/st/local_fail"; : > "$T/st/stuck"; run "$T/st" 7 --rerun "$GOOD"
+{ [ "$RC" -eq 5 ] && printf '%s' "$OUT" | grep -q 'NOT observed' && printf '%s' "$OUT" | grep -q 'read 3 time' && ! printf '%s' "$OUT" | grep -q 'nothing merged'; } \
+  && ok "L16 stale OPEN through all re-reads → rc=5 «NOT observed», no false «nothing merged»" || { bad "L16 rc=$RC"; printf '%s\n' "$OUT" | tail -2; }
 
 printf 'PASS %d · FAIL %d\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
