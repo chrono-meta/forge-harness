@@ -201,6 +201,11 @@ stl R12c_head_empty_quotes '{"permissions":{"allow":["Bash(s\"\"h:*)"]}}' 1
 stl R12c_head_backslash '{"permissions":{"allow":["Bash(\\\\sh:*)"]}}' 1
 stl R12c_head_dollar '{"permissions":{"allow":["Bash($SHELL -c:*)"]}}' 1
 stl R12c_ok_plain_head '{"permissions":{"allow":["Bash(git status:*)"]}}' 0
+stl R13c_assign_backtick '{"permissions":{"allow":["Bash(X=`id` python3 scripts/x.py:*)"]}}' 1
+stl R13c_arg_backtick '{"permissions":{"allow":["Bash(python3 scripts/x.py `id`:*)"]}}' 1
+stl R13c_arg_dollar_paren '{"permissions":{"allow":["Bash(python3 scripts/x.py $(id):*)"]}}' 1
+stl R13c_process_subst '{"permissions":{"allow":["Bash(diff <(id) a.txt)"]}}' 1
+stl R13c_ok_plain_var '{"permissions":{"allow":["Bash(python3 scripts/x.py $HOME:*)"]}}' 0
 stl R8_ok_python3_fixed_script '{"permissions":{"allow":["Bash(python3 scripts/x.py:*)"]}}' 0
 stl R8_ok_node_fixed_script '{"permissions":{"allow":["Bash(node tools/build.js:*)"]}}' 0
 stl R8_ok_sh_exact '{"permissions":{"allow":["Bash(sh scripts/test.sh)"]}}' 0
