@@ -34,6 +34,7 @@
 import fnmatch
 import json
 import os
+import posixpath
 import re
 import sys
 
@@ -207,9 +208,12 @@ def _indirect_wildcard(raw_seg):
             return None
         return "인터프리터 `%s -m %s` 와일드카드 (검토된 모듈 아님)" % (head, mod or "*")
     nxt = rest[0] if rest else ""
-    # /dev/stdin · /dev/fd/0 · /proc/self/fd/0 는 경로꼴이지만 «호출자가 넣는 코드» 다(codex 카트리지 R9)
+    # 고정 스크립트는 «레포 안 상대 경로» 만이다. 절대 경로는 /dev/stdin · //dev/stdin · /./dev/fd/0 처럼
+    # 같은 파일을 가리키는 철자가 끝이 없어 열거로 못 막는다(codex 카트리지 R9·R10) — 절대 경로·레포 밖(..)
+    # 은 H1. 절대 경로 스크립트(/usr/local/bin/x.py)는 과차단을 받아들인다.
+    rel = posixpath.normpath(nxt) if nxt else ""
     if not nxt or nxt.startswith("-") or re.search(r"[*?\[]", nxt) or not _SCRIPT_TARGET_RE.search(nxt) \
-            or re.match(r"^/(?:dev|proc)/", nxt):
+            or nxt.startswith("/") or nxt.startswith("~") or rel == ".." or rel.startswith("../"):
         return "인터프리터 `%s` 와일드카드 (고정 스크립트·모듈이 바로 뒤에 없다)" % head
     return None
 
