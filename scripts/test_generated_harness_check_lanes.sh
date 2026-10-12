@@ -183,6 +183,10 @@ stl R12_glob_head_qmark_python '{"permissions":{"allow":["Bash(?ython3 -c:*)"]}}
 stl R12_glob_head_inner_qmark '{"permissions":{"allow":["Bash(pytho?3 -c:*)"]}}' 1
 stl R13_awk_versioned_progtext '{"permissions":{"allow":["Bash(awk5 BEGIN{system(1)}/x/:*)"]}}' 1
 stl R13_npx_versioned '{"permissions":{"allow":["Bash(npx2 scripts/x.js:*)"]}}' 1
+stl R9c_sh_dev_stdin '{"permissions":{"allow":["Bash(sh /dev/stdin:*)"]}}' 1
+stl R9c_python_dev_stdin '{"permissions":{"allow":["Bash(python3 /dev/stdin:*)"]}}' 1
+stl R9c_bash_dev_fd0 '{"permissions":{"allow":["Bash(bash /dev/fd/0:*)"]}}' 1
+stl R9c_node_proc_fd '{"permissions":{"allow":["Bash(node /proc/self/fd/0:*)"]}}' 1
 stl R8_ok_python3_fixed_script '{"permissions":{"allow":["Bash(python3 scripts/x.py:*)"]}}' 0
 stl R8_ok_node_fixed_script '{"permissions":{"allow":["Bash(node tools/build.js:*)"]}}' 0
 stl R8_ok_sh_exact '{"permissions":{"allow":["Bash(sh scripts/test.sh)"]}}' 0
