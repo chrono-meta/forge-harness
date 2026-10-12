@@ -115,6 +115,10 @@ def h1_match(entry):
     # 실행 대상을 가린다(0</dev/null sh). 문자열 검사로는 셸 파싱을 다 못 하므로 있으면 사람 확인(codex 카트리지 R14)
     if re.search(r"[\"'\\<>]", inner):
         return "따옴표·역슬래시·리다이렉션"
+    # 마지막 울타리: 셸 문법 우회는 목록으로 끝나지 않았다(codex 카트리지 R1~R15 — ${X:-push} · ! sh 까지).
+    # 평범한 명령 글자 밖이면 사람 확인. 운영자 결정 2026-10-12, 과차단은 받아들인다.
+    if re.search(r"[^A-Za-z0-9_./:*=, -]", inner):
+        return "허용 문자 밖의 글자 (셸 문법 가능성)"
     for raw in _SEG_SPLIT_RE.split(inner):
         lab = _indirect_wildcard(raw)
         if lab:
