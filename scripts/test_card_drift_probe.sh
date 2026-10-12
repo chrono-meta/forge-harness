@@ -45,6 +45,9 @@ unset FH_COMPANION_STORE FH_SESSION_CLOSE FH_CARRYOVER_OK FH_PEER_SCAN_FORCE FH_
 export FH_COMPANION_STORE=""
 CHECK="$SCRIPT_DIR/session_close_check.sh"
 FAILED=0
+# 비주제 레인 — ①-b 의 gh 를 레인 안 스텁으로 (네트워크 의존 · selfcheck 에서 ≈66s). scripts/lane_stub_env.sh
+. "$SCRIPT_DIR/lane_stub_env.sh"
+_LS_DIR=$(mktemp -d) && lane_stub_env_on "$_LS_DIR" gh || { echo "HARNESS-ERROR: lane_stub_env 를 못 켰다"; exit 9; }
 
 run_fixture() {  # $1=name  $2=card-content  $3=make-artifact(0/1)  $4=expect-warn(0/1)
   local name="$1" card="$2" mkart="$3" expect="$4"
@@ -154,6 +157,10 @@ else
   echo "✅ locale-range lint: 비ASCII 문자 범위 없음"
 fi
 
+if ! lane_stub_env_used gh; then
+  echo "❌ lane_stub_env: gh 스텁이 한 번도 안 불렸다 — 체커가 다른 gh 를 골랐다(PATH 가림)"; FAILED=1
+fi
+rm -rf "$_LS_DIR"
 
 echo "── card-drift probe calibration: $([ "$FAILED" -eq 0 ] && echo "PASS (전 픽스처) — 배선 가능" || echo "FAIL — 계기 불량, 배선 금지") ──"
 exit "$FAILED"
