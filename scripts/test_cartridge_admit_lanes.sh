@@ -31,6 +31,16 @@ tmp="$(mktemp -d)"; trap 'chmod -R u+w "$tmp" 2>/dev/null; rm -rf "$tmp"' EXIT
 cp -R "$FIX/hook_cartridge" "$tmp/reverted"; rm -rf "$tmp/reverted/hooks"
 lane "revert probe: hook removed admits"    0 "$tmp/reverted"
 
+# 인자를 명령으로 실행하는 허용 항목 — 카트리지 R8 이 찾은 구멍(generated_harness_check #874 에서 막음)
+for g in 'Bash(sh:*)' 'Bash(python3:*)' 'Bash(env -i *)'; do
+  d="$tmp/indirect_$(printf '%s' "$g" | tr -c 'a-z0-9' '_')"; cp -R "$FIX/minimal_ok" "$d"
+  sed -i.bak "s/allowed-tools: \[\"Read\", \"Grep\"\]/allowed-tools: [\"Read\", \"$g\"]/" "$d/skills/demo/SKILL.md" && rm -f "$d/skills/demo/SKILL.md.bak"
+  /usr/bin/grep -qF "$g" "$d/skills/demo/SKILL.md" || { echo "HARNESS-ERROR: fixture edit failed for $g"; exit 3; }
+  lane "indirect grant $g = HUMAN_REVIEW" 1 "$d"
+done
+d="$tmp/fixed_script"; cp -R "$FIX/minimal_ok" "$d"
+sed -i.bak 's/allowed-tools: \["Read", "Grep"\]/allowed-tools: ["Read", "Bash(python3 scripts\/x.py:*)"]/' "$d/skills/demo/SKILL.md" && rm -f "$d/skills/demo/SKILL.md.bak"
+lane "control: fixed script grant admits" 0 "$d"
 cp -R "$FIX/minimal_ok" "$tmp/unparsable"; printf 'plugin: [unclosed\n' > "$tmp/unparsable/cartridge.yaml"
 lane "unparsable manifest = HARNESS_ERROR"  3 "$tmp/unparsable"
 
