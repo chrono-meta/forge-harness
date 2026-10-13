@@ -4676,3 +4676,51 @@
     설계 문서 3건 착지(tracks/_meta) · cartridge_admit 레인 85(feat/cartridge-fh-qp ed2acc6) · codex 라운드마다 재현 입력 → fail-before 레인 → 수리 → 변이 빨강 확인
   learning: >-
     거부 목록(denylist)을 codex 와 주고받으면 S 가 2→1→3 으로 다시 늘었다 — 허용 목록으로 범위를 줄이자 S 0 으로 수렴. 같은 에이전트를 SendMessage 로 재개하면 이전 라운드 맥락을 잃지 않아 라운드당 1~4분.
+- date: 2026-10-14
+  agent: general-purpose (sonnet)
+  task: FoD v1 B11 SPEC r4 leak rewrites (clean room, review text only)
+  trigger: codex r4 REVISE A14 C5
+  outcome: accepted
+  evidence: governor grep of 28 A identifiers = 0 residual; Z145-Z149 present; cap table appended
+  tokens: 173982
+  note: also removed 6 same-class names unflagged by review
+- date: 2026-10-14
+  agent: general-purpose (sonnet)
+  task: FoD gate unresolved-redirect fix implementation (worktree fod-wt-redirect, branch fix/gate-unresolved-redirect)
+  trigger: redirect design finalized at cap (r3 -> final)
+  outcome: accepted
+  evidence: commit 2ac9215; governor re-run new 53/0 old 45/8; revert probe b reproduced (R-D10, R-D10c flip); real ~/.claude sha unchanged; no bypass tokens in diff
+  tokens: 279537
+  note: pre-commit gate needed a dedicated FOD_WORK assembly tree (shared tree incomplete); one gate run ~20min
+- date: 2026-10-14
+  agent: general-purpose (sonnet)
+  task: FoD gate mention-as-write fix implementation (worktree fod-wt-mention, branch fix/gate-mention-as-write)
+  trigger: mention design finalized at cap (§9 final)
+  outcome: accepted
+  evidence: commit 7670b77; governor re-run new 41/0 old 29/12 (M1-M3b allow + D7/D7b/D9/D19b old holes closed); revert probe c reproduced (D7, D7b, D19b flip); real ~/.claude sha unchanged; no bypass tokens in diff
+  tokens: 309224
+  note: arm's own Bash was blocked twice by the installed global gate (code text mentioning protected folder) and it switched to Write/Edit for worktree files — over-block of the very class being fixed, but it is a tool reroute after a gate block; surfaced to operator. Probe e initially instrument-error (green), fixed by narrowing exemption FORBID regex import->import( ; sent to codex review.
+- date: 2026-10-14
+  agent: general-purpose (sonnet) — resumed mention arm
+  task: fix codex mention impl r1 (6 findings) — closed allowlists
+  trigger: codex impl r1 REVISE
+  outcome: accepted
+  evidence: commit 5f17f40; governor re-run new 51/0, old fails only allow+old-hole lanes; real ~/.claude unchanged; watchdog fail-open measured as pre-existing on both gates
+  tokens: 347379
+  note: shrinking to ast grammar + program allowlist moved the REAL M2 and M3 shapes back to DENY (named residual); only M1 and grammar-shaped variants are newly allowed. Old holes D7/D7b/D9/D19b closed.
+- date: 2026-10-14
+  agent: general-purpose (sonnet) — resumed redirect arm x3
+  task: fix codex redirect impl r1/r2/r3 findings (commits 036bdeb, 8253b5a, 4aec3c4)
+  trigger: codex impl REVISE each round, cap 3
+  outcome: accepted
+  evidence: governor re-ran lanes each round (61/0, 69/0, 71/0) and own revert probes (GIT_* env, ROOTCOMPLETE); real ~/.claude unchanged; branch pushed
+  tokens: 962430
+  note: name allowlist made the preregistered real case (uppercase HOOK) a residual — governor declined widening at cap
+- date: 2026-10-14
+  agent: general-purpose (sonnet) — resumed mention arm x3
+  task: fix codex mention impl r1/r2/r3 findings (commits 5f17f40, b8851f5, 805609a)
+  trigger: codex impl REVISE each round, cap 3
+  outcome: partial
+  evidence: governor re-ran lanes each round (51/0, 56/0, 62/0) + revert probe script 8/8; real ~/.claude unchanged; branch pushed
+  tokens: 1095435
+  note: partial = fix landed safely but only real case M1 is unblocked; M2/M3 back to residual after closing to allowlists. No gate-block reroute after the rule was added to the brief.
