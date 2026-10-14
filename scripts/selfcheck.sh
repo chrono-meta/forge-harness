@@ -2101,6 +2101,19 @@ else
   fail=1
 fi
 
+# env-delta SessionStart hook — linked worktrees are not new sibling repos (2026-10-15: 30 of 33
+# «unmapped siblings» were worktrees). Same pairing rule as above.
+if [ ! -f scripts/fh_env_delta_scan.sh ]; then
+  _absent_subject_verdict "test_env_delta_worktree_lanes.sh" "scripts/fh_env_delta_scan.sh" || fail=1
+elif [ -f scripts/test_env_delta_worktree_lanes.sh ]; then
+  if ! bash scripts/test_env_delta_worktree_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_env_delta_worktree_lanes.sh: fh_env_delta_scan.sh present but its anchor is missing"
+  fail=1
+fi
+
 # SessionStart multi-hook + install-wizard snippet merge. Subject for both = the shipped settings
 # snippets; a clone without them is a legitimate SKIP, a clone with them and no anchor is not —
 # UNLESS the anchor itself is declared package-mode-optional. test_sessionstart_multihook_lanes.sh
