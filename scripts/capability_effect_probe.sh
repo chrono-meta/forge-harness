@@ -316,7 +316,9 @@ probe_one() {  # $1=capfile → rc
   #    (d) 가 말하는 결함을 프로브 자신이 갖고 있었던 것이다. 절대경로 쓰기의 가장 흔한
   #    표적이 홈이므로 여기에도 감시를 둔다. ⚠️ 완전하지 않다 — 아래 §잔여 참조.
   local home_before home_after
-  home_before=$(ls -A "$HOME" 2>/dev/null | LC_ALL=C sort | shasum -a 256 | cut -d" " -f1)
+  # 해시 없이 목록 자체를 비교한다 — `shasum` 직접 호출은 shasum 없는 Linux 에서 앞뒤 모두 빈 값이 돼
+  #   홈 감시가 늘 «안 바뀜» 으로 죽었다(2026-10-14, L20b 문구 검사가 드러냄). 해시 도구 의존 자체를 뺀다.
+  home_before=$(ls -A "$HOME" 2>/dev/null | LC_ALL=C sort; echo "|end")   # 표지: 치환이 끝 줄바꿈을 먹지 않게(codex R3 #2)
   mkdir -p "$sandbox/scripts"; printf 'x\n' > "$sandbox/scripts/CANARY_SCRIPTS"
 
   local before after out rc
@@ -388,7 +390,7 @@ $out2"
   _cleanup_probe
   rm -rf "$outside"
 
-  home_after=$(ls -A "$HOME" 2>/dev/null | LC_ALL=C sort | shasum -a 256 | cut -d" " -f1)
+  home_after=$(ls -A "$HOME" 2>/dev/null | LC_ALL=C sort; echo "|end")   # 표지: 치환이 끝 줄바꿈을 먹지 않게(codex R3 #2)
   local home_changed
   home_changed=$([ "$home_before" = "$home_after" ] && echo 0 || echo 1)
 
@@ -873,54 +875,127 @@ EOF
   #     ⓑ shim 빌더가 `set -f`(전역 noglob) 때문에 확장이 안 됨 — **캘리브레이션 짝**이 적발
   #   여기서는 도구를 **하나씩** 빼고, 매 arm 에 기대값을 다르게 건다.
   #   ★PATH 원소 분해는 공백/글롭 안전하게(`tr` → 줄 단위). cross-family 지목 #7.
-  _mkshim() {  # $1=shim경로  $2..=제외할 도구명
+  #   🟥 PATH 전체가 아니라 **허용 목록**만 링크한다 (pmh-dev #87). 옛 판은 PATH 의 모든 실행 파일을
+  #     깔았고, Windows Git Bash 는 `ln -s` 를 «복사» 로 바꾸므로 System32 까지 수천 개가 임시 트리로
+  #     복사돼 EDR 이 짖었다. 이제 실행 파일을 넘기기 전에 텍스트 탐침으로 심링크가 되는지 묻고, 안 되면
+  #     rc=2 로 돌아가 부르는 쪽이 그 레인을 SKIP(미측정, 통과 아님)한다.
+  #   ⚠️ 보장 범위(codex R3 #1): MSYS/Git Bash 처럼 폴백이 «균일한» ln 에서는 실행 파일 복사 0 이다.
+  #     텍스트는 링크하고 실행 파일만 복사하는 ln 이라면 첫 실행 파일 하나가 복사된 뒤 rc=3(FAIL)로 멈춘다.
+  _SHIM_TOOLS="bash sh env cat cp mv rm ln mkdir mktemp touch chmod ls find stat readlink realpath
+    dirname basename sed awk grep egrep tr cut head tail sort uniq wc comm diff cmp xargs od
+    date sleep uname id expr git perl shasum sha256sum"
+  _mkshim() {  # $1=shim경로  $2..=제외할 도구명  · rc=2 = 심링크를 못 만드는 환경(복사 폴백)
     local shimd="$1"; shift
     mkdir -p "$shimd"
-    printf '%s\n' "$PATH" | tr ':' '\n' > "$d/_pathdirs"
-    local _p _f _b _x _skip
-    set +f
-    while IFS= read -r _p; do
-      [ -n "$_p" ] && [ -d "$_p" ] || continue
-      for _f in "$_p"/*; do
-        [ -e "$_f" ] || continue
-        _b=${_f##*/}; _skip=0
-        for _x in "$@"; do [ "$_b" = "$_x" ] && { _skip=1; break; }; done
-        [ "$_skip" = 1 ] && continue
-        [ -e "$shimd/$_b" ] || ln -s "$_f" "$shimd/$_b" 2>/dev/null
-      done
-    done < "$d/_pathdirs"
-    set -f
+    # 실행 파일을 넘기기 «전에» 무해한 텍스트 파일로 심링크가 되는지 묻는다 — 복사 폴백이면
+    # 복사되는 것은 이 텍스트 한 장뿐이다(cross-family codex R1 #1: 사후 감지는 이미 복사한 뒤다)
+    printf 'symlink probe\n' > "$shimd/.lnprobe.txt"
+    MSYS=winsymlinks:nativestrict ln -s "$shimd/.lnprobe.txt" "$shimd/.lnprobe" 2>/dev/null
+    if [ ! -L "$shimd/.lnprobe" ]; then rm -f "$shimd/.lnprobe" "$shimd/.lnprobe.txt"; return 2; fi
+    rm -f "$shimd/.lnprobe" "$shimd/.lnprobe.txt"
+    hash -r   # type -P 가 해시 캐시가 아니라 지금 PATH 의 첫 일치를 고르게(codex R1 #2)
+    local _t _x _skip _src
+    for _t in $_SHIM_TOOLS; do
+      _skip=0
+      for _x in "$@"; do [ "$_t" = "$_x" ] && { _skip=1; break; }; done
+      [ "$_skip" = 1 ] && continue
+      _src=$(type -P "$_t" 2>/dev/null) || continue
+      [ -n "$_src" ] || continue
+      # 탐침이 심링크였는데 실행 파일에서 실패·복사하면 «환경 미지원» 이 아니라 구성 오류다 — rc=3(codex R2 #1·#2)
+      MSYS=winsymlinks:nativestrict ln -s "$_src" "$shimd/$_t" 2>/dev/null || return 3
+      if [ ! -L "$shimd/$_t" ]; then rm -f "$shimd/$_t"; return 3; fi
+    done
   }
+  _shim_skip() { echo "⏭  $1 SKIP — 이 환경에서는 심링크를 못 만든다(복사 폴백). 복사하지 않는다 — 미측정, 통과 아님"; }
+  # rc=2 만 SKIP 이다. 그 밖의 실패(링크 도중 오류)는 SKIP 으로 접지 않고 FAIL 로 센다(codex R2 #2)
+  _shim_ready() {  # $1=레인 $2=shim경로 $3..=제외할 도구명 · 0=준비됨
+    local _lane="$1" _rc; shift
+    _mkshim "$@"; _rc=$?
+    [ "$_rc" = 0 ] && return 0
+    if [ "$_rc" = 2 ]; then _shim_skip "$_lane"
+    else fails=$((fails+1)); echo "❌ $_lane shim 구성 오류 rc=$_rc — 링크 도중 실패/복사(SKIP 아님)"; fi
+    return 1
+  }
+  # 정상 위반 판정인가 — rc 만이 아니라 판정 문구가 있고 도구 조회 오류가 없어야 한다(codex R1 #3 · R2 #3)
+  _viol_ok() { printf '%s' "$1" | grep -q '^🟥 VIOLATION .*샌드박스가 바뀌었다' \
+               && ! printf '%s' "$1" | grep -qiE 'command not found|not found|no such file'; }
+
+  # L20g **판정 문구 검사 자체의 짝** — 위반 문구만 있으면 참, 도구 조회 오류가 섞이면 거짓, 문구가 없으면 거짓.
+  if _viol_ok '🟥 VIOLATION /x/a.cap — `writes: read-only` 선언인데 샌드박스가 바뀌었다' \
+     && ! _viol_ok "$(printf 'bash: touch: command not found\n🟥 VIOLATION /x/a.cap — 샌드박스가 바뀌었다')" \
+     && ! _viol_ok '✅ VERIFIED /x/a.cap'; then
+    pass=$((pass+1)); echo "✅ L20g 판정 문구 검사: 양성 1 참 · 조회 오류 섞임 거짓 · 문구 없음 거짓"
+  else
+    fails=$((fails+1)); echo "❌ L20g 판정 문구 검사가 짝을 못 가른다 — rc=1 만으로 통과하는 레인이 된다"
+  fi
+
+  # L20-ctl **허용 목록 컨트롤** — 아무것도 안 뺀 shim 에서 «정상 위반 판정» 이 나와야 한다.
+  #   rc 만 보면 의존 도구가 빠져 오류로 끝난 rc=1 도 통과한다(codex R1 #3) — 판정 문구까지 본다.
+  #   이게 빨갛면 허용 목록에 프로브가 쓰는 도구가 빠진 것이고, 아래 L20 계열의 rc 는 의미가 없다.
+  if _shim_ready "L20-ctl" "$d/bin_all"; then
+    out=$(PATH="$d/bin_all" "${BASH:-/bin/bash}" "$0" "$d/agg_viol.cap" 2>&1); rc=$?
+    if [ "$rc" = "1" ] && _viol_ok "$out"; then
+      pass=$((pass+1)); echo "✅ L20-ctl 허용 목록 shim 에서 정상 위반 판정(도구 누락 없음)"
+    else
+      fails=$((fails+1)); echo "❌ L20-ctl rc=$rc (1 + 위반 문구 기대) — 허용 목록에 프로브가 쓰는 도구가 빠졌다: $(printf '%s' "$out" | head -1)"
+    fi
+  fi
+  # L20e **복사 폴백이면 실행 파일을 하나도 안 넘긴다** — 복사하는 가짜 ln 이 받은 원본을 전부 적는다.
+  mkdir -p "$d/fakeln"; : > "$d/fakeln_sources"
+  printf '#!/bin/sh\n# 심링크 대신 복사하는 ln (MSYS 기본 폴백 재현) — 받은 원본을 적는다\nshift; printf "%%s\\n" "$1" >> "%s"; cp "$1" "$2"\n' "$d/fakeln_sources" > "$d/fakeln/ln"; chmod +x "$d/fakeln/ln"
+  ( PATH="$d/fakeln:$PATH"; _mkshim "$d/bin_copy" ); rc=$?
+  _nsrc=$(wc -l < "$d/fakeln_sources" | tr -d ' ')
+  _nexe=$(grep -vc '\.lnprobe\.txt$' "$d/fakeln_sources")
+  _nleft=$(find "$d/bin_copy" -type f 2>/dev/null | wc -l | tr -d ' ')
+  if [ "$rc" = "2" ] && [ "$_nsrc" = "1" ] && [ "$_nexe" = "0" ] && [ "$_nleft" = "0" ]; then
+    pass=$((pass+1)); echo "✅ L20e 복사 폴백 환경: 텍스트 탐침 한 장만 넘기고 rc=2 · 실행 파일 0 · 남은 사본 0"
+  else
+    fails=$((fails+1)); echo "❌ L20e rc=$rc 넘긴 원본=$_nsrc 그중 실행 파일=$_nexe 남은 사본=$_nleft (2·1·0·0 기대) — 복사 폴백에서 실행 파일을 넘긴다"
+  fi
 
   # L20 해시 도구가 **둘 다** 없으면 판정하지 않는다.
-  _mkshim "$d/bin_none" shasum sha256sum
+  if _shim_ready "L20" "$d/bin_none" shasum sha256sum; then
   out=$(PATH="$d/bin_none" "${BASH:-/bin/bash}" "$0" "$d/agg_viol.cap" 2>&1); rc=$?
   if [ "$rc" = "10" ] && printf '%s' "$out" | grep -q "sha256sum"; then
     pass=$((pass+1)); echo "✅ L20 해시 도구 전무는 HARNESS_ERROR (이유도 찍힌다)"
   else
     fails=$((fails+1)); echo "❌ L20 rc=$rc (10 기대) — 계기 사망이 통과/판정으로 렌더된다"
   fi
+  fi
   # L20b **과차단 방지** — `shasum` 만 없고 `sha256sum` 이 있으면 정상 판정해야 한다.
   #   cross-family 지목 #3: 이 파일은 files[] 로 출하되고 Linux 소비자는 sha256sum 만 갖는다.
   if command -v sha256sum >/dev/null 2>&1; then
-    _mkshim "$d/bin_s256" shasum
+    if _shim_ready "L20b" "$d/bin_s256" shasum; then
     out=$(PATH="$d/bin_s256" "${BASH:-/bin/bash}" "$0" "$d/agg_viol.cap" 2>&1); rc=$?
-    if [ "$rc" = "1" ]; then
+    if [ "$rc" = "1" ] && _viol_ok "$out"; then
       pass=$((pass+1)); echo "✅ L20b shasum 부재+sha256sum 존재 → 폴백이 정상 판정(과차단 없음)"
     else
       fails=$((fails+1)); echo "❌ L20b rc=$rc (1 기대) — 폴백이 없거나 과차단한다"
     fi
+    fi
+    # L20f **shasum 없이도 홈 감시가 산다** — 옛 판은 홈 목록을 `shasum` 으로 직접 해시해서, shasum 없는
+    #   Linux 에서 앞뒤가 둘 다 빈 값 → 홈 쓰기가 늘 «안 바뀜» 이었다. L14b 와 같은 과녁을 shim 아래에서 친다.
+    if _shim_ready "L20f" "$d/bin_s256f" shasum; then
+    out=$(PATH="$d/bin_s256f" "${BASH:-/bin/bash}" "$0" "$d/outside.cap" 2>&1); rc=$?
+    rm -f "$_homemark"
+    if [ "$rc" = "1" ] && printf '%s' "$out" | grep -q '홈 디렉토리'; then
+      pass=$((pass+1)); echo "✅ L20f shasum 부재에서도 홈 쓰기는 VIOLATION(이유 «홈»)"
+    else
+      fails=$((fails+1)); echo "❌ L20f rc=$rc · 이유=[$(printf '%s' "$out" | tail -1)] — shasum 없는 환경에서 홈 감시가 죽었다"
+    fi
+    fi
   else
-    echo "⏭  L20b SKIP — 이 머신에 sha256sum 이 없다(미측정, 통과 아님)"
+    echo "⏭  L20b · L20f SKIP — 이 머신에 sha256sum 이 없다(미측정, 통과 아님)"
   fi
   # L20c **«있는데 고장난» 해시 도구** — cross-family 지목 #1. 프리플라이트는 통과한다.
-  _mkshim "$d/bin_broken" shasum sha256sum
+  if _shim_ready "L20c" "$d/bin_broken" shasum sha256sum; then
   printf '#!/bin/sh\nexit 1\n' > "$d/bin_broken/shasum"; chmod +x "$d/bin_broken/shasum"
   out=$(PATH="$d/bin_broken" "${BASH:-/bin/bash}" "$0" "$d/agg_viol.cap" 2>&1); rc=$?
-  if [ "$rc" = "1" ]; then
+  if [ "$rc" = "1" ] && _viol_ok "$out"; then
     pass=$((pass+1)); echo "✅ L20c 해시 도구가 고장나도 파일 생성은 잡힌다(이름 목록 축)"
   else
     fails=$((fails+1)); echo "❌ L20c rc=$rc (1 기대) — 고장난 계기가 거짓 VERIFIED 를 낸다"
+  fi
   fi
   # L20d **읽을 수 없는 파일** — 가짜 도구 없이 재현되는 형태(cross-family 지목 #1 두 번째).
   cat > "$d/unreadable.cap" <<EOF
