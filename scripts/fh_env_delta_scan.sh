@@ -60,12 +60,28 @@ BE_ABS=""; [ -n "$BE" ] && BE_ABS="$(_abspath "$BE")"
 # _candidate DIR → echoes basename if DIR is an unmapped mapping candidate, else nothing + returns 1.
 # ONE predicate for BOTH sibling-scan and current-cwd (codex [MED]×2: cwd previously had weaker
 # exclusions + ignored the skip sentinel → could propose the hub/companion/hidden repo and re-nag a
-# skipped repo). [LOW]: `-e .git` (not `-d`) so git worktrees/submodules (`.git` is a file) count.
+# skipped repo). `-e .git` (not `-d`) so a `.git` FILE still counts as a repo (submodule).
+# A LINKED WORKTREE is not a new project — it is another checkout of its main repo. The sibling scan
+# skips it (the main repo is scanned on its own); the cwd check resolves it to the main repo, so
+# working inside a worktree of a mapped repo stays silent. Measured 2026-10-15: 30 of 33 «unmapped
+# siblings» were worktrees of friends-on-desk / qasp-dev / clawd-on-desk / the hub itself.
+# _main_of_worktree DIR → main repo root if DIR's `.git` file points at `<main>/.git/worktrees/<x>`.
+# Pure file read (no git call): the hook stays offline-safe and fast.
+_main_of_worktree() {
+  local gd
+  [ -f "$1/.git" ] || return 1
+  gd="$(sed -n 's/^gitdir: //p' "$1/.git" 2>/dev/null | head -1)"
+  case "$gd" in */.git/worktrees/*) printf '%s' "${gd%%/.git/worktrees/*}" ;; *) return 1 ;; esac
+}
 _candidate() {
-  local d abs name
+  local d abs name main mode="${2:-sibling}"
   abs="$(_abspath "$1")" || return 1
   [ -n "$abs" ] || return 1
-  [ -e "$abs/.git" ] || return 1                       # real repo (dir OR file .git = worktree)
+  [ -e "$abs/.git" ] || return 1                       # real repo (dir OR file .git)
+  if main="$(_main_of_worktree "$abs")"; then
+    [ "$mode" = cwd ] || return 1                      # sibling scan: the main repo stands for it
+    abs="$(_abspath "$main")" || return 1; [ -n "$abs" ] || return 1
+  fi
   name="$(basename "$abs")"
   [ "$abs" = "$FH_ABS" ] && return 1                   # not the hub
   [ -n "$BE_ABS" ] && [ "$abs" = "$BE_ABS" ] && return 1   # not the companion store
@@ -88,7 +104,7 @@ done
 
 # Current cwd itself an unmapped project? (the pmh-pull / task-first-in-new-project case) — SAME
 # predicate, so identical exclusions + skip-sentinel apply.
-CWD_UNMAPPED="$(_candidate "${CLAUDE_PROJECT_DIR:-$PWD}")" || CWD_UNMAPPED=""
+CWD_UNMAPPED="$(_candidate "${CLAUDE_PROJECT_DIR:-$PWD}" cwd)" || CWD_UNMAPPED=""
 
 # Nothing new → silent no-op (majority path).
 # ── /clear·compact 억제는 **표시 판단보다 먼저** 접는다 ─────────────────────────

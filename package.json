@@ -316,6 +316,7 @@
     "scripts/test_memory_link_check.sh",
     "scripts/test_node_check_lanes.sh",
     "scripts/test_node_infra_delta_lanes.sh",
+    "scripts/test_env_delta_worktree_lanes.sh",
     "scripts/test_ollama_panel_lanes.sh",
     "scripts/test_outbound_pr_gate_lanes.sh",
     "scripts/test_outbound_query_hook_lanes.sh",
