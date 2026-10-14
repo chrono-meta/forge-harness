@@ -4724,3 +4724,35 @@
   evidence: governor re-ran lanes each round (51/0, 56/0, 62/0) + revert probe script 8/8; real ~/.claude unchanged; branch pushed
   tokens: 1095435
   note: partial = fix landed safely but only real case M1 is unblocked; M2/M3 back to residual after closing to allowlists. No gate-block reroute after the rule was added to the brief.
+- date: 2026-10-14
+  agent: general-purpose (sonnet) — B11 test author + B11b test author
+  task: FoD v1 cleanroom B11 assembly tests (128) and B11b blocked trio (Z125 ledger shim, Z126, Z127) with reference impl set aside
+  trigger: FoD v1 cleanroom pipeline (operator «Write 도구 허용» for B11b delta files)
+  outcome: accepted
+  evidence: B11 full suite 3101/3101, B11b 8 tests fail 8/8 without reference impl (tests valid); home_guard OK
+  tokens: UNMEASURED
+  note: B11 author blocked 3x by old installed gate mention=write over-block; resumed after #213 install. Governor fixed X-Z126b writing salt to HOME (temp ledger env).
+- date: 2026-10-14
+  agent: run_isolated arms (claude sonnet, codexm, codexh) — B11b
+  task: implement B11b from sealed spec in isolation
+  trigger: cleanroom isolated-arm stage
+  outcome: accepted
+  evidence: all 3 arms 3122/3122, audit hits 0, verdict_v2 claude PASS, codexm PASS, codexh HUMAN 1; codexm adopted, suite 3109/3109
+  tokens: UNMEASURED
+  note: consolidated entry for three arms.
+- date: 2026-10-14
+  agent: general-purpose (sonnet) — FoD settings arm (fix/chat-model-follow-agent)
+  task: settings 7 items (agent-default model, badge row, harness subtitle, git-based chips, work-folder line, usage card, usage count)
+  trigger: operator «ㅇㅇ» / «같이 얹어줘» / «칸도 있으면 좋겠다»
+  outcome: accepted
+  evidence: gate 613/0, live lanes 9 kinds pass, merged #218 (377068c), installed
+  tokens: UNMEASURED
+  note: arm's first usage-counter write landed in real ~/.claude (caught by chatux live); moved to userData. Arm heredoc edit blocked by gate; governor rephrased via Edit tool.
+- date: 2026-10-14
+  agent: general-purpose (sonnet) — FoD multisend/observe arm
+  task: governor chat multi-@ send + per-session reply observation (design r3 final)
+  trigger: operator «설계 확정되면 구현까지 ㄱㄱ»
+  outcome: accepted
+  evidence: lanes 155/0, gate 615/0, live fh_chat main 77/0, codex impl r1-r3 fixes applied, branch feat/chat-multisend-observe ceb627e pushed (PR not opened)
+  tokens: UNMEASURED
+  note: arm report labelled the equal-time tie rule «operator-approved»; corrected — it was a governor decision from codex r3.
