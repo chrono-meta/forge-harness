@@ -51,25 +51,15 @@ core invariants never melt). The nursery also **verifies what it births**: harne
 
 > **3층 정본 — 공정 · 엔진 · 정체성**: 거버넌스를 실현하는 **기법**의 뼈대는 세 층이다 — **3단 공정**(FH 의 모든 작업이 밟는 방법론 — 엔진을 벼릴 때도 같다: 초기 영혼 → 중간 **병렬 탈상관** 가속화(두 다이얼 — **탈상관**=사각 위험[모델 계열 ⓐ + 입장 ⓑ] · **병렬**=표면 크기. 곱하지 말고 골라라) → **마무리 6축 태우기**) → **4대 엔진**(영혼·품질게이트·질문하기·맥락유지) → **정체성**(방법론과 코어가 맞물려 나타나는 능력 — 5대는 단련된 실물과 등급을 가진 안정 정체성, 그 외는 방향·레버에 따라 나타나고 사라지는 면모; 운영자 정식화 2026-09-05). 기억용 형태는 **3단 공정 · 4대 엔진 · 5대 정체성 · 6축 검증**이나 🟥 **6축은 네 번째 층이 아니다** — 3단 공정 ③단계가 무엇으로 이루어지는지다. **Read `knowledge/shared/harness-core/fh_three_layer_canon.md`** before naming, re-scoping, or citing any of the three — it also defines the **6 verification axes** (ⓐ계열 · ⓑ입장 · ⓒ격리 그라운딩 · ⓓ3자대면 · ⓔ첫실사용 · ⓕ되돌림; §1-a 가 최초 4축, §1-a-2 가 2026-08-16 확장) that the third stage actually consists of, and states why the three are *not* a clean stack. 🟥 **축은 «얼마나 적대적인가»가 아니라 «무엇을 받았는가»로 갈린다** — 받는 것이 같으면 리뷰어를 몇 명 붙여도 같은 사각이 남는다. 🟢 **외부 수치(2026-09-12, `arXiv:2609.10969`)가 같은 방향을 가리킨다** — «같은 증거를 읽는 교차-모델 투표»보다 «독립 출처»가 위험 제안을 훨씬 덜 승인한다(read `knowledge/shared/harness-core/fh_three_layer_canon.md §CM-External-Commit-Gate-Number` — 2×2 조건·팔별 승인율·효과 크기 — read before citing the number). 🟥 **그 수치를 읽고 바꿨다(같은 날)**: 강한 쪽(`standpoint:`)의 `tier2`+ grounds 검사가 **advisory 에서 차단으로** 올라갔고(`STANDPOINT_GROUNDS_GRACE_DATE=2026-09-12`, 소급 없음), `crossfamily:` 의 `panel(...)` 은 이제 **`evidence=SHARED|INDEPENDENT|MIXED`** 토큰을 요구한다 — «같은 diff 를 읽은 패널» 이 강한 값으로 기록되던 자리가 그 62.9 % 팔이다. 🟥 **닫힌 것은 여전히 형식이지 진위가 아니다** — 게임 가능성은 §Mechanization Boundary 가 사람에게 남긴 의도된 잔여다.  🟥 **명칭 충돌 — 이 파일 안에 「4축」이 두 개다.** §FH Improvement **4-Axis Auto-Gate** 의 4축(Axis 1 회귀 · 2 적대 · 3 팬텀 · 4 매니페스트)은 **커밋 게이트**이고, 여기 6축은 **검증 축**이다. 부분적으로만 겹치고(Axis 1·4 는 ⓐ~ⓕ 에 대응이 없다) **서로 대체하지 않는다**. 그래서 6축은 「6축 게이트」가 아니라 「**6축 검증**」으로 부른다. Grade table stays canonical in `ship_readiness_gate.md`; this pointer never carries grades.
 
-> **자기 대조는 상시 의무 — 트리거는 발화가 아니라 «지금 FH/PMH 자산을 건드리고 있다»**
-> (운영자 결정 2026-08-09; 이 저장소든 **다른 사용자의 install 이든** 동일). §FH Improvement
-> 4-Axis Auto-Gate 와 **같은 트리거**이므로 새 트리거도 새 파일도 만들지 않는다 — 기록 자리는
-> **4축 마커의 기존 필드**(`axis2-*` · `axis3-*` · `residual`)다.
-> **마커에 반드시 남는 3줄** ① **①영혼** — 설계 *전에* 쓴 «성공 정의 / 절대 안 함»(없으면 `없음`)
-> · ② **돌린 축과 안 돌린 축을 각각 이름으로.** 마커 `axes-run` 은 **2026-08-17 부로 여섯 글자**를 요구한다 — **기호 키**(ⓐ계열 · ⓑ입장 · ⓒ격리 그라운딩 · ⓓ3자대면 · ⓔ첫실사용 · ⓕ되돌림). 그 전 날짜의 마커는 옛 **ASCII 네 글자**(a·b·c·d) 그대로다. 🟥 **두 배열은 같은 글자가 다른 축을 가리킨다** — 옛 `b`=첫실사용은 지금 **ⓔ**, 옛 `d`=되돌림은 지금 **ⓕ** 라서, 옛 줄을 그대로 옮기면 축 둘이 조용히 뒤바뀌고 아무 오류도 안 난다. **어느 배열인지는 마커 파일명의 날짜로 판별한다**(`< 2026-08-17` = 옛 4축). ⚠️ **표기법은 판별자가 아니다** — 옛 날짜 마커에도 기호 키를 옛 4축 의미로 쓴 실례가 있어, 감사자의 grep 은 거기서 틀린 답을 낸다(read `knowledge/shared/harness-core/fh_three_layer_canon.md §CM-Axes-Run-Notation-Evidence` — 코퍼스 53건 실측 — read before grepping `axes-run` across dates). ⓑ입장은 값을 여기 적지 않고 **`standpoint:` 자기 필드**를 가리킨다(`ⓑ=→standpoint`, 그 줄이 비면 죽은 포인터라 차단). 즉 산문 정본과 기계가 **축 개수로는 맞았고**, 남은 어긋남은 `standpoint:` 값의 **grounds** 한 칸이다. 🟥 **값 검증 코드는 있다(옛 «0줄» 서술은 거짓, 2026-08-23 RETRACTED)** — `templates/.git-hooks/pre-commit` 의 `validate_standpoint_leg()` 가 enum 을 **차단**하고, `tier2`+ 의 «실행을 명명했는가» grounds 도 **2026-09-12 부로 차단**한다(`STANDPOINT_GROUNDS_GRACE_DATE=2026-09-12`, 소급 없음 · 레인 `scripts/test_marker_standpoint_lanes.sh`). 🟥 막는 것은 **기록의 형태**이지 그 실행의 진위가 아니다 — 자평·게임 가능성은 그대로 열려 있다(read `knowledge/shared/harness-core/fh_three_layer_canon.md §CM-Standpoint-Validator-Retraction` — `return 1` 6개 목록 · 차단으로 올린 외부 근거 · 반쪽-픽스 경위 — read before claiming what the hook does or does not validate). 형식 정본 = `.claude/rules/fh_4axis_gate.md §Marker axis fields`
-> · ③ **각 축의 컨트롤과 그 생사**. 축을 «돌렸다»의 **최소 증거 = 컨트롤이 살아 있는 실행 출력**
-> 이다 — 안 고른 이유만 적은 것은 준수가 아니다.
-> **비용 경계**: 넷을 매번 다 돌리지 않는다. 실패 모드에 맞춰 **고른다**.
-> **옵셔널 `affected:`** — 「이 변경이 건드리는 것 + 열린 질문」 한 줄(없으면 통과, 자리표시자만
-> 있으면 차단). **옵셔널 `oracle:`** — 「기대값을 무엇으로 정했나」 닫힌 enum 6(known-pair ·
-> metamorphic · back-to-back · a-b · human · none — `none` 은 사유 필수; 없으면 통과, 훅은 형식만.
-> TR 29119-11 오라클 문제의 기록면, 2026-09-05). 상세는 `fh_4axis_gate.md §Marker axis fields`.
-> 🟥 **자평이다 · 게임 가능하다 — 둘은 안 닫혔다.** `crossfamily:` · `standpoint:` · `thirdparty:` 세 필드는
-> 훅에서 닫힌 enum + 비공허 근거로 검증되지만(2026-08-17~), 닫힌 것은 **«형식»이지 «진위»가 아니다**. 그건
-> 결함이 아니라 §Mechanization Boundary 가 의도적으로 사람에게 남긴 자리다. 닫는 방향은 **cross-family 가 그
-> 마커를 읽는 것**이지 자기 채점을 더 성실히 하는 게 아니다(read `knowledge/shared/harness-core/fh_three_layer_canon.md §CM-Self-Grading-Open` — 도그푸드 증거 · 2026-08-17 병렬 두 세션 실측 — read before claiming the marker fields are verified).
-> **근거·사례·표본 한계는 `fh_three_layer_canon.md` §1-c — 인용하기 전에 읽어라.** 이 규칙은
-> **n=1 세션 표본**에서 모든 install 로 일반화한 것이고, 그 절이 그 사실을 명시한다.
+> **자기 대조는 상시 의무 — 트리거는 발화가 아니라 «지금 FH/PMH 자산을 건드리고 있다»**(운영자 결정 2026-08-09; 이 저장소든
+> 다른 사용자의 install 이든). §4-Axis Auto-Gate 와 **같은 트리거**라 새 트리거·새 파일 없이 **4축 마커의 기존 필드**에 남긴다:
+> ① `soul:` — 설계 *전에* 쓴 «성공 정의 / 절대 안 함» · ② `axes-run:` — 돌린 축과 안 돌린 축을 이름으로(2026-08-17 부터 기호 키
+> ⓐ~ⓕ 여섯 글자. 🟥 옛 ASCII 네 글자와 **같은 글자가 다른 축**이다 — 판별은 마커 파일명 날짜) · ③ 각 축의 컨트롤과 그 생사
+> («돌렸다»의 최소 증거 = 컨트롤이 살아 있는 실행 출력). 넷을 매번 다 돌리지 않고 실패 모드에 맞춰 고른다.
+> 🟥 훅이 막는 것은 **기록의 형태**지 진위가 아니다 — 자평·게임 가능성은 열려 있고, 닫는 방향은 cross-family 가 마커를 읽는 것이다.
+> **Detail**: 필드 형식(`affected:`·`oracle:` 포함) = `.claude/rules/fh_4axis_gate.md §Marker axis fields` · 근거·옛/새 축 대응·표본 한계(n=1) =
+> `knowledge/shared/harness-core/fh_three_layer_canon.md §1-c` · `§CM-Axes-Run-Notation-Evidence` · `§CM-Standpoint-Validator-Retraction` ·
+> `§CM-Self-Grading-Open` — **마커를 쓰거나, 날짜를 넘어 `axes-run` 을 grep 하거나, 훅이 무엇을 검증하는지 주장하기 전에 읽어라.**
 
 ## Core Reference Documents (Consult First)
 
@@ -353,32 +343,15 @@ green `gh pr merge` only says the merge happened, not that the squash carried th
 (2026-09-21: four merges, none checked). `--rerun` is required and refused before merging if it is
 missing or does nothing (`true`, `echo …`).
 
-**Mechanically enforced** by `templates/.git-hooks/pre-push`, which blocks a direct push to
-`main`/`master` unless the explicit `MAIN_PUSH_OK=1` acknowledgment is set (same channel shape as
-`DESTRUCTIVE_OP_OK` / `PUBLIC_SURFACE_OK`). Known-pair calibrated: direct-to-main blocks,
-feature-branch push passes untouched, override honored — over-blocking would just train the override
-into muscle memory and disarm it.
-
-> **Two layers, and which one is the floor.** The **hard floor is server-side**: this repo runs
-> `enforce_admins: true` with `required_approving_review_count: 0` (the count must be `0`, or a solo
-> operator is locked out of merging their own PRs). The pre-push hook is the **shift-left layer** — it
-> fails at push time and prints the remedy — deliberately not the floor, since a client-side hook is
-> bypassable with `--no-verify`.
->
-> 🟥 **Branch protection is TWO independent layers — legacy protection and rulesets coexist, and the
-> strictest wins.** A field on the protection object is **never** the effective answer by itself.
-> Read **both** before declaring any branch surface open or closed:
-> `GET /repos/{owner}/{repo}/rules/branches/{branch}` (rulesets) **and**
-> `GET /repos/{owner}/{repo}/branches/{branch}/protection` (legacy). Reading one alone misjudged this
-> repo **three times** ([[reference_github_protection_two_layers]]).
->
-> ⚠️ **Live residual on `main`**: `required_status_checks.strict: false` — the required `validate` check
-> re-runs on every push to the PR branch, but nothing re-forces it against a **moving** main, so a green
-> check can land behind concurrent merges it never saw. And `validate` is **not** Axis 1.
-
+**Two layers.** Shift-left = `templates/.git-hooks/pre-push` blocks a direct push to `main`/`master` unless
+`MAIN_PUSH_OK=1` (logged, same shape as `DESTRUCTIVE_OP_OK`; known-pair calibrated). The **hard floor is server-side**
+(`enforce_admins: true`, review count `0` so a solo operator can merge) — a client hook is bypassable with `--no-verify`.
+🟥 **Branch protection is legacy protection AND rulesets — strictest wins.** Read **both**
+(`/rules/branches/{branch}` and `/branches/{branch}/protection`) before declaring any branch surface open or closed;
+reading one alone misjudged this repo three times ([[reference_github_protection_two_layers]]). ⚠️ Live residual:
+`strict: false` on `main`, and the required `validate` check is **not** Axis 1.
 > **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Branch-Protection-Two-Layers`
-> — the force-push retraction and why it was narrow, which surface each layer actually governs, and the
-> three misreadings — read before asserting that any branch surface is open or closed.
+> — the force-push retraction, which surface each layer governs, the three misreadings — read before asserting that any branch surface is open or closed.
 
 ## Permission-Denial Guidance (When Auto-Mode Blocks an Action)
 
@@ -557,50 +530,23 @@ properties**, and only the second is mandatory on a reversible commit surface. (
 pipeline**, not an afterthought, and a below-floor orchestrator RUNS the review by default
 (run-first, ask-last — `sonnet_floor_doctrine.md`).
 
-**Standpoint axis (2026-08-14, orthogonal to family — §7 of the detail doc)**: family diversity
-raises resolution *within* one standpoint (the author's own repo, the author's own reading of a
-target's rules); it does not decorrelate the review's ground-truth source. For a **shared-body /
-cross-harness-boundary** change — scoped by *effect* (alters another harness's behavior, gate
-outcome, or interaction contract), not merely by touching a synced file path — the marker
-additionally carries `standpoint:` — a closed enum (`tier1` content-only · **`tier1b(<harness>)`
-STATIC read of the target's own files, executed nothing** · `tier2(<harness>)`
-peer-simulated, **EXECUTED CODE in** the target's own repo — 🟥 the discriminator is mechanical:
-*name the command you ran and the output you saw*; cannot name one → `tier1b`, always. Reading the
-target's real files, however cold, is `tier1b` (an earlier sim citation here is RETRACTED; the rule stands on its own wording — same §CM-Crossfamily-Typing-History) ·
-`tier2b(<harness>)` same operator, target's real
-runtime (local wiring visible, not independent) · `tier3(<harness>)` a *different* operator of the
-target harness ran it · `not-applicable` · degrade triad `DEGRADED_NO_TARGET_ACCESS` could-not /
-`DEGRADED_NOT_RUN` did-not / `UNKNOWN` did-not-look — same shape as `crossfamily:`'s triad,
-**distinct literal values**, do not reuse crossfamily's tokens).
-🟥 **Settle the TARGET CLASS(es) before the tier — §7's `Q0` (operator decision 2026-08-17).**
-A consumer install **is** another harness; what the enum scopes is not who *receives* the change but
-where it has to be **executed**. Q0 is **not first-match — it can return more than one target, and each
-owes its own tier**: ⓐ a **named peer** whose local repo carries the changed surface, or which the
-cluster registry / a `scripts/adapters/` entry names → the enum as written · ⓑ the delta changes
-**consumer-visible behavior** (what a consumer's gate blocks or passes, what their session is told to do,
-what an install receives) → target = a *clean install of the packed artifact*, and it binds **now,
-pre-push — never deferred to the eventual release** · ⓒ neither → `not-applicable`.
-🟥 Do **not** read «no cross-repo consumer contract» as «this file is not shipped» — shipped-ness is
-**not** the discriminator; the behavior clause is. ⚠️ The consumer-install arm's *presence* half is
-mechanized at ship time; its **execution** half has **no lane** — do it by hand, and never cite that arm
-as mechanized.
-
-> **Detail**: See `knowledge/shared/harness-core/field_verdict_crossfamily_gate.md §Q0-Evidence`
-> — the 97% shipped-path measurement and what it does *not* say, plus two citation warnings that
-> three marker-audit legs got wrong — read before citing any number from this paragraph.
-
-🟥 **The execution is the load-bearing half** (operator decision 2026-08-16). A static standpoint read
-competes with cross-family review for the same defect classes and mostly loses; *running the target
-harness locally, to completion*, is the part with no substitute. **So `tier2`+ asserts something was RUN**
-— the discriminator is mechanical: **name the command you ran and the output you saw.** Cannot name one →
-`tier1b`, always. Reading the target's real files, however cold, is `tier1b`; that rung is deliberately
-the weak one so that recording it honestly surfaces that the execution arm is still owed.
-
-> **Detail**: See `knowledge/shared/harness-core/field_verdict_crossfamily_gate.md §Standpoint-Execution-Evidence` — the measured
-> one-delta comparison, the two RETRACTED citations this paragraph used to carry, the English naming
-> collision with FH's persona sense of "standpoint", and the 2026-08-20 correction about what the hook
-> actually validates (the enum, not the grounds) — read before citing this paragraph's evidence or
-> claiming what `standpoint:` enforces.
+**Standpoint axis (2026-08-14, orthogonal to family — §7 of the detail doc)**: family diversity raises
+resolution *within* one standpoint; it does not decorrelate the review's ground-truth source. For a
+**shared-body / cross-harness-boundary** change (scoped by *effect* — alters another harness's behavior,
+gate outcome, or interaction contract) the marker carries `standpoint:`, a closed enum: `tier1` · `tier1b(<h>)`
+static read · `tier2(<h>)` executed in the target's repo · `tier2b(<h>)` same operator, real runtime ·
+`tier3(<h>)` different operator · `not-applicable` · degrade triad `DEGRADED_NO_TARGET_ACCESS` /
+`DEGRADED_NOT_RUN` / `UNKNOWN` (own literals — never reuse crossfamily's tokens).
+🟥 **Settle the target class(es) first — §7 `Q0`, not first-match, each target owes its own tier**: ⓐ a named
+peer carrying the changed surface · ⓑ **consumer-visible behavior** changed → a clean install of the packed
+artifact, binding **pre-push** (shipped-ness is not the discriminator; the execution half has **no lane** — by
+hand) · ⓒ neither → `not-applicable`.
+🟥 **Execution is the load-bearing half** (2026-08-16): `tier2`+ asserts something RAN — **name the command you
+ran and the output you saw**; cannot name one → `tier1b`, always (the hook blocks unnamed `tier2`+ grounds since
+2026-09-12 — it checks the record's shape, not that the run was real).
+> **Detail**: See `knowledge/shared/harness-core/field_verdict_crossfamily_gate.md` §7 · `§Q0-Evidence` (97% shipped-path
+> measurement + citation warnings) · `§Standpoint-Execution-Evidence` (one-delta comparison, RETRACTED citations, naming
+> collision) — read before choosing a tier, citing a number, or claiming what `standpoint:` enforces.
 > **Detail**: See `knowledge/shared/harness-core/field_verdict_crossfamily_gate.md` — the discretion
 > principle, the four-faces failure signature, why same-family review misses it, the full gate
 > mechanics, the n=7 qasp field evidence incl. the **9 default-toward-PASS holes across 3 harnesses**
@@ -1234,24 +1180,12 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc. —
        `package.json`) → Pre-Publish gate → `npm publish` → `git tag vX.Y.Z` at publish. **Propose, don't
        auto-publish.** (Why lockstep — Codex caches on plugin.json version — + drift-check + tag-drift caveat → §detail below.)
 
-       🟥 **WHICH DIGIT — 운영자 결정(2026-08-17). 의도적으로 strict semver 가 아니다.**
-       판단 기준은 **무엇이 기술적으로 깨졌나**가 아니라 **번호가 읽는 이에게 무엇을 말하나**다.
-
-       | major `+1.0.0` | ⓐ 완전히 새로 지음 · ⓑ 정체성 **다섯이 «전부» 🟢**(= `identity-v1.0.0` 급 사건. 🟥 하나가 🟢 로 올라선 순간이 **아니고**, 정체성 등급은 npm 이 나르는 신호가 **아니다** — 🟢 **2026-09-04 정정: `identity-v1.0.0` 부터 두 번호를 통일한다(운영자 결정). 번호가 등급을 «나르되» 등급의 정본은 여전히 등급표 셀이다.** 첫 적용 = 다음 릴리스 3.0.0) · ⓒ capability **class** 가 생기거나 교체됨. 🟥 **이미 있던 게이트를 조인 것에는 절대 안 쓴다** |
-       |---|---|
-       | **minor** `+0.1.0` | 새 자산 · 새 게이트 레인 · 행동을 바꾸는 교리. **소비자의 게이트 수용을 깨는 변경도 여기** — 대신 `BREAKING (gate):` 줄이 의무 |
-       | **patch** `+0.0.1` | 수정 · 배선 · 행동 무변경 문서 |
-
-       🟥 **major-ⓒ 와 minor 의 판별자 = *class* 냐 *instance* 냐.** Wave-1 공격각 하나 추가 =
-       instance → minor. 공격각 **레지스트리**가 없던 자리에 생김 = class → major.
-
-       ⚠️ **의무**: 게이트 수용을 깨는 minor 는 릴리스 설명 **과** CHANGELOG 에
-       `BREAKING (gate): <무엇이 이제 막히나> — <한 줄 처방>` 를 반드시 싣는다. 이 줄이 없으면
-       이 정책은 그냥 «minor 에 파괴적 변경을 묻는 것»이다. 2026-08-17 부터 적용, 소급 아님.
-
-       > **Detail**: See `knowledge/shared/harness-core/claude_md_gate_details.md §Version-Digit-Policy`
-       > — 왜 strict semver 가 아닌지, 3.0.0 이 될 뻔한 판례, 게이트-조임을 minor 로 두는 근거와
-       > 그 정직성 조건 — **버전 자릿수를 실제로 정할 때 읽어라.**
+       🟥 **WHICH DIGIT (운영자 결정 2026-08-17 — 의도적으로 strict semver 가 아니다; 번호가 읽는 이에게 무엇을 말하나)**:
+       **major** = 완전히 새로 지음 · 정체성 다섯이 «전부» 🟢 · capability **class** 신설/교체(게이트 조임엔 절대 안 씀) ·
+       **minor** = 새 자산·게이트 레인·행동 교리 — 소비자 게이트 수용을 깨면 릴리스 설명과 CHANGELOG 에
+       `BREAKING (gate): <무엇이 막히나> — <처방>` 의무 · **patch** = 수정·배선·행동 무변경 문서.
+       > **Detail**: `knowledge/shared/harness-core/claude_md_gate_details.md §Version-Digit-Policy` — 표 원문 · class/instance 판별 ·
+       > 3.0.0 판례 — **버전 자릿수를 실제로 정할 때 읽어라.**
   → ④-c Handoff lifecycle (cross-machine continuity) — when a durable **result artifact lands** this
        session (mechanical hint: a new `*result*`/`*signal*`/`*_run_*` file in your companion store or
        `tracks/`), do two things: **(a) ④-c stamps** any `"run this/start here"` run-handoff whose
