@@ -1,5 +1,12 @@
 # forge-harness (fh-meta) Changelog
 
+### [3.26.2] — 2026-10-14 — self-test 가 Windows 에서 실행 파일을 대량 복사하던 것
+
+**patch.** 수리.
+
+- `capability_effect_probe.sh --self-test`(selfcheck 가 부른다): shim 빌더가 PATH 의 모든 실행 파일을 임시 폴더에 링크했고, Windows Git Bash 는 그 링크를 복사로 바꿔 보안 제품 오탐이 났다. 허용 목록만 링크하고, 심링크가 안 되는 환경이면 실행 파일을 하나도 넘기지 않고 해당 레인을 SKIP(미측정, 통과 아님)으로 남긴다(#890).
+- 같은 파일: 홈 디렉터리 감시가 `shasum` 을 직접 불러, shasum 이 없는 호스트에서는 홈 쓰기를 늘 «안 바뀜» 으로 봤다 — 목록을 직접 비교한다(#890).
+
 ### [3.26.1] — 2026-10-13 — README 정리 · 레인 플레이크 · live-eval 거짓 적색
 
 **patch.** 행동을 바꾸지 않는 문서·계기 수정.
