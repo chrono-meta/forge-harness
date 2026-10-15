@@ -514,7 +514,7 @@ print('OK')
       M_TIER=$((M_TIER + 1))
     elif [ "$before" -gt 0 ] && [ "$after" -lt "$before" ]; then
       if [ "$detail" -gt 0 ]; then
-        echo "  ℹ️  '$label' section moved to SKILL_detail.md ($before → $after + $detail in detail)"
+        echo "  ℹ️  '$label' section moved to ${sib##*/} ($before → $after + $detail in detail)"
         verbose "suppressed section loss: sibling SKILL_detail.md preserves '$label' section header count"
       else
         echo "  ℹ️  '$label' section heading renamed within known synonym group ($before → $after)"
@@ -583,7 +583,7 @@ print('OK')
     combined_code=$((after_code + detail_code))
     delta=$((before_code - combined_code))
     if [ "$after_code" -lt "$before_code" ] && [ "$combined_code" -ge "$before_code" ]; then
-      echo "  ℹ️  code blocks moved to SKILL_detail.md ($before_code → $after_code + $detail_code in detail)"
+      echo "  ℹ️  code blocks moved to ${sib##*/} ($before_code → $after_code + $detail_code in detail)"
       verbose "suppressed code-block reduction: sibling SKILL_detail.md preserves fenced-block count"
     fi
     if [ "$delta" -gt 4 ]; then
@@ -608,7 +608,7 @@ print('OK')
       if [ -n "$detail_content" ]; then
         in_detail=$(_gain count_in "$token")
         if [ $((after + in_detail)) -ge "$before" ]; then
-          echo "  ℹ️  token '$token' moved to SKILL_detail.md ($before → $after + $in_detail in detail)"
+          echo "  ℹ️  token '$token' moved to ${sib##*/} ($before → $after + $in_detail in detail)"
           verbose "suppressed token reduction: sibling SKILL_detail.md preserves '$token' count"
           continue
         fi
