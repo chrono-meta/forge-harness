@@ -4,7 +4,6 @@
 # checks stayed green under 4 mutants). Fixtures carry their own negative next to each positive.
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TOOL="$HERE/memory_gc_report.py"
 PY="${PYTHON:-python3}"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 pass=0; fail=0
@@ -124,7 +123,7 @@ w MEMORY.md "# Memory Index
 - [P again](fb_promote.md) — duplicate
 - [gone](fb_missing.md#sec) — dangling with fragment"
 
-J="$("$PY" "$TOOL" "$M" --today 2026-10-15 --json)"; rc=$?
+J="$(python3 "$HERE/memory_gc_report.py" "$M" --today 2026-10-15 --json)"; rc=$?
 q(){ printf '%s' "$J" | "$PY" -c "import json,sys;d=json.load(sys.stdin);E={e['file']:e for e in d['entries']};print($1)"; }
 
 eq "L0 report runs" "$rc" 0
@@ -149,12 +148,12 @@ eq "L16 every topic file has an entry" "$(q "len(d['entries'])")" 15
 
 # cap boundary: an index that fits exactly is within cap; one char over names the line and the loaded prefix
 C="$T/c"; mkdir -p "$C"; printf '[a](a.md)' > "$C/MEMORY.md"; printf -- '---\nmetadata:\n  type: feedback\n---\n' > "$C/a.md"
-eq "L17 exact-fit index is within cap" "$("$PY" "$TOOL" "$C" --cap 9 --json | "$PY" -c "import json,sys;print(json.load(sys.stdin)['cut'])")" None
+eq "L17 exact-fit index is within cap" "$(python3 "$HERE/memory_gc_report.py" "$C" --cap 9 --json | "$PY" -c "import json,sys;print(json.load(sys.stdin)['cut'])")" None
 printf 'line one\n[a](a.md)\n' > "$C/MEMORY.md"
-eq "L18 cut names line 2 with 3 chars loaded" "$("$PY" "$TOOL" "$C" --cap 12 --json | "$PY" -c "import json,sys;c=json.load(sys.stdin)['cut'];print(c['line'],c['chars_loaded_in_line'])")" "2 3"
+eq "L18 cut names line 2 with 3 chars loaded" "$(python3 "$HERE/memory_gc_report.py" "$C" --cap 12 --json | "$PY" -c "import json,sys;c=json.load(sys.stdin)['cut'];print(c['line'],c['chars_loaded_in_line'])")" "2 3"
 
-"$PY" "$TOOL" "$T/nope" >/dev/null 2>&1; eq "L19 missing dir = HARNESS-ERROR rc=2, not an empty report" "$?" 2
-before="$(cd "$M" && find . -type f -exec cksum {} + | sort)"; "$PY" "$TOOL" "$M" >/dev/null 2>&1; after="$(cd "$M" && find . -type f -exec cksum {} + | sort)"
+python3 "$HERE/memory_gc_report.py" "$T/nope" >/dev/null 2>&1; eq "L19 missing dir = HARNESS-ERROR rc=2, not an empty report" "$?" 2
+before="$(cd "$M" && find . -type f -exec cksum {} + | sort)"; python3 "$HERE/memory_gc_report.py" "$M" >/dev/null 2>&1; after="$(cd "$M" && find . -type f -exec cksum {} + | sort)"
 eq "L20 read-only: fixture bytes unchanged" "$before" "$after"
 
 # R2 fixtures (codex R2): mixed validity never drives lifecycle · indentless list flagged ·
@@ -191,21 +190,21 @@ rw "note(v2).md" "$hdr
 ---"
 rw MEMORY.md "- [m](mix_cold.md) [p](mix_prom.md) [f](flat.md)
 - [a](<my note.md>) [b](sp%20name.md) [c](note(v2).md) [x](<gone note.md>) [y](gone(v2).md)"
-JR="$("$PY" "$TOOL" "$R" --today 2026-10-15 --json)"
+JR="$(python3 "$HERE/memory_gc_report.py" "$R" --today 2026-10-15 --json)"
 qr(){ printf '%s' "$JR" | "$PY" -c "import json,sys;d=json.load(sys.stdin);E={e['file']:e for e in d['entries']};print($1)"; }
 eq "L21 valid-old + future hit: flagged, not cold" "$(qr "(E['mix_cold.md']['status'], d['cold'])")" "('HITS_MALFORMED', [])"
 eq "L22 three valid + one malformed: no promotion" "$(qr "d['promote']")" "[]"
 eq "L23 indentless hits item flagged, not silently dropped" "$(qr "(E['flat.md']['status'], E['flat.md']['age'])")" "('HITS_MALFORMED', None)"
 eq "L24 <...>, %20 and balanced-paren destinations resolve" "$(qr "sorted(d['unlisted'])")" "[]"
 eq "L25 their missing twins are dangling" "$(qr "sorted(x[0] for x in d['dangling'])")" "['gone note.md', 'gone(v2).md']"
-JP="$("$PY" "$TOOL" "$R" --today 2026-10-15 --cap 22 --json)"
+JP="$(python3 "$HERE/memory_gc_report.py" "$R" --today 2026-10-15 --cap 22 --json)"
 eq "L26 past_cap follows the link's own offset on a shared line" \
   "$(printf '%s' "$JP" | "$PY" -c "import json,sys;E={e['file']:e for e in json.load(sys.stdin)['entries']};print(E['mix_cold.md']['past_cap'],E['mix_prom.md']['past_cap'])")" "False True"
 
 # R3 (codex): two links on ONE line keep their link order, not filename order
 Q="$T/q"; mkdir -p "$Q"; for f in z a; do printf -- '---\nmetadata:\n  type: user\n---\n' > "$Q/$f.md"; done
 printf -- '- [z](z.md) [a](a.md)\n' > "$Q/MEMORY.md"
-eq "L27 same-line links keep link order" "$("$PY" "$TOOL" "$Q" --json | "$PY" -c "import json,sys;print(json.load(sys.stdin)['order'])")" "['z.md', 'a.md']"
+eq "L27 same-line links keep link order" "$(python3 "$HERE/memory_gc_report.py" "$Q" --json | "$PY" -c "import json,sys;print(json.load(sys.stdin)['order'])")" "['z.md', 'a.md']"
 
 echo "memory_gc_report lanes: $pass pass · $fail fail"
 [ $fail -eq 0 ]
