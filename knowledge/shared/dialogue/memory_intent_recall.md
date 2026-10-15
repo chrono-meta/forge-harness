@@ -173,6 +173,41 @@ guard's **explicit, goal-justified opt-out**. (Operator observation, 2026-06-14:
   are the graceful fallback. A hook-enforced semantic recall is a future candidate, deliberately not
   built today (keep the surface thin).
 
+## Lifecycle — which entries stay above the index cap (recurrence age, not recency)
+
+The index is a **capped overview**: the loader reads about 25,000 characters of `MEMORY.md` and drops
+the rest without warning, so the ordering rule decides which entries a new session ever sees. Ordering
+by recency pushes long-confirmed feedback below the cut. The lifecycle model (generational GC applied to
+agent rules — imweb tech, 2026-10-06) ranks by **age instead: age rises only when the same observation
+is recorded again.**
+
+- **Record recurrence, do not re-create.** When a mistake a memory already covers happens again, append
+  one dated line to that file's frontmatter instead of writing a near-duplicate file:
+  ```yaml
+  metadata:
+    type: feedback
+    hits:
+      - 2026-10-15 | live-lane windows covered the operator's screen
+      - 2026-10-16 | same class, a different lane
+  ```
+  The first line is the founding incident. A recurrence stated only in prose ("하루 3회") is invisible
+  to any ranking.
+- **States.** age 1 and recent = new · age ≥ 2 = recurred · age ≥ 3 across ≥ 2 distinct days =
+  **promotion candidate** (to a rule, a hook or a lint — same-day repeats count once, they may be one
+  session's circumstances; promotion is proposed, a human approves) · a non-user entry at age 1 with no
+  recurrence for 30 days or more = **cold**: drop it from the index, keep the file. User entries never go cold.
+- **Never delete for lack of recurrence.** A rule that is followed well also stops recurring; the
+  record cannot tell "obsolete" from "working". And **no `hits` is UNMEASURED, not age 1** — an entry
+  nobody has recorded a date for is never called cold.
+- **Before adding an entry at all:** a fact the agent can find another way (reading code, running a
+  command, a test, a hook message) does not belong in memory — route it to that mechanism. Memory keeps
+  judgment.
+- **Instrument:** `python3 scripts/memory_gc_report.py <memory_dir>` — read-only. It prints index
+  hygiene (unlisted files, duplicate lines, dangling local links), the line where the loader cap cuts, age per
+  entry (and every malformed, unreadable or future-dated record as an error — never as "no hits"), cold and promotion candidates, and a proposed order (user entries first, then measured entries
+  by age, then the rest in place). It changes nothing; reordering the index and promoting are separate,
+  approved steps. Lanes: `scripts/test_memory_gc_report_lanes.sh`.
+
 ## Check class
 
 **Judged** — recall relevance and divergent-traversal are LLM-judge calls, paired (no judge-only path)

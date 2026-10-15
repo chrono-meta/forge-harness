@@ -2114,6 +2114,19 @@ else
   fail=1
 fi
 
+# memory_gc_report.py — read-only lifecycle report over a memory dir (age from `hits`, cold, promote,
+# index hygiene, loader cap). Same pairing rule as above.
+if [ ! -f scripts/memory_gc_report.py ]; then
+  _absent_subject_verdict "test_memory_gc_report_lanes.sh" "scripts/memory_gc_report.py" || fail=1
+elif [ -f scripts/test_memory_gc_report_lanes.sh ]; then
+  if ! bash scripts/test_memory_gc_report_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_memory_gc_report_lanes.sh: memory_gc_report.py present but its anchor is missing"
+  fail=1
+fi
+
 # SessionStart multi-hook + install-wizard snippet merge. Subject for both = the shipped settings
 # snippets; a clone without them is a legitimate SKIP, a clone with them and no anchor is not —
 # UNLESS the anchor itself is declared package-mode-optional. test_sessionstart_multihook_lanes.sh
