@@ -1,6 +1,6 @@
 ---
 name: context-doctor
-description: Reduces token waste in Claude Code sessions across two axes — context footprint (auto-generates .claudeignore, guides over-read files and /clear timing) and command output (routes to a command-output proxy/hook such as rtk to trim verbose CLI stdout). In hub environments, regularly audits bloated CLAUDE.md/MEMORY.md/memory/*.md files and proposes compression. Usable standalone without a hub clone.
+description: Reduces token waste in Claude Code sessions (run the built-in `/context` first; this skill covers what it does not) across two axes — context footprint (auto-generates .claudeignore, guides over-read files and /clear timing) and command output (routes to a command-output proxy/hook such as rtk to trim verbose CLI stdout). In hub environments, regularly audits bloated CLAUDE.md/MEMORY.md/memory/*.md files and proposes compression. Usable standalone without a hub clone.
 user-invocable: true
 allowed-tools: ["Read", "Write", "Bash", "Glob", "Grep"]
 model: sonnet

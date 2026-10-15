@@ -791,7 +791,8 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 
 | Conversation Signal Keywords | Proposed Skill |
 |---|---|
-| "context is getting long", "token limit", "/clear", "slow", "context", "토큰 아깝다" (burden already felt — retrospective; future-cost estimates go to `/token-budget-gate`) | `/context-doctor` |
+| "context is getting long", "token limit", "/clear", "slow", "context", "토큰 아깝다" (burden already felt — retrospective; future-cost estimates go to `/token-budget-gate`) | built-in `/context` · `/compact` first, then `/context-doctor` for what they do not do |
+| **a need a Claude Code built-in may already cover** — undo edits, branch or fork this conversation, run in background, think harder, simplify a diff, usage/insights, a side question, install check (`/doctor`) | **`knowledge/shared/harness-core/builtin_capability_map.md`** — built-in first, FH skill only for what it adds (no-reinvention Tier 0) |
 | **"이 절 잘라도 되나", "상주에서 빼자", "cut this section", "is this section load-bearing", "ablate this"** — a proposal to REMOVE resident text (the decision `/context-doctor` and `/salience-splitter` reach, not the routing to them) | **Ablation procedure — do not decide by eye.** Canon = `scripts/probe_scope_check.sh` header (arms · isolation · `reps>=3` · pre-registration · the two leak channels); runner precondition = `bash scripts/ablation_calibrate.sh` exits 0; verdicts land in `.claude/regression/ablation_verdicts.md`. **A section is CUT only on a pre-registered question set an isolated arm B answers correctly** — "I read it and it looks redundant" is not a measurement, and arm B answering *confidently wrong* is a KEEP, not a pass |
 | "wrap up this week", "review", "audit", "weekly", "retrospective" | `/harvest-loop` |
 | "pull this into FH", "reverse-harvest", "worth keeping", "harvest pattern", "field pattern" | `/field-harvest` |
