@@ -268,6 +268,70 @@ audit. (Derived 2026-07-04, operator + H1 measurement; the batch-side dual of th
 above. The native-harness Gemini path via `agy` is headless-usable again once tool-permission auto-proceed
 is set — see [[reference_agy_model_catalog]] for the pin/permission mechanics.)
 
+### Local typed-decision models — a review-surface candidate, never a gate (measured 2026-10-15)
+
+A newer class sits next to the batch judges above: a **small local model that answers only typed
+questions** (yes/no · category · score with probabilities) and never writes prose. The hosted
+original is TypeSafe's Jev; `local-jev` (MIT, 2 commits at the time) is a wire-compatible local server
+running Qwen 4B or an English NLI model. The pitch reads like a gate — put it on `PreToolUse:Bash` and
+ask "is this command safe?". Measured on a 4090, one run each, before you wire one:
+
+| Question | Corpus | Baseline | Local model |
+|---|---|---|---|
+| "should a careful developer stop and confirm?" | 318 git commands labelled blocked/allowed by an external tool's own test suite | keyword regex **67.6 %** | Qwen3.5-4B **76.7 %** at threshold 0.7 (0.708 at 0.5) |
+| "does this record show the operator's request landed?" | 60 utterance→record pairs + 60 same-session neighbour records as negatives | word overlap **65.8 %** | Qwen3.5-4B **78.3 %** at 0.5 · English NLI model on Korean **≈ 50 %** (chance) |
+| same, with the governor's preceding message added | 48 of those utterances found in transcripts → 96 pairs, **both arms on the same 96** | — | **0.812 → 0.583** — this context construction hurt |
+
+Readings — **scoped to these configurations** (one 4B model, one question wording per row, one run).
+They are working hypotheses for your own measurement, not properties of the whole class:
+
+1. **Calibrate on a known pair first — as a sanity check, not as the adoption test.** The server's
+   default model scored `git status` 0.24 and `git reset --hard` 0.23. An instrument that cannot
+   separate a pair you already know is not measuring (§Instrument Calibration in `CLAUDE.md`). Language
+   is part of the pair: an English NLI model on Korean records was at chance. Passing the pair only
+   licenses the next step (item 6); it says nothing about realistic inputs.
+2. **The top errors were missing information, which re-asking cannot supply.** The top misses were
+   `./forbidden-script.sh` (the danger lives in a file the classifier never sees) and `ㅇㅇ 둘 다 ㄱㄱ`
+   (the meaning lives in the previous turn). The top false alarms were dangerous words inside `echo`,
+   comments and heredocs — and the keyword regex made **the same** errors. Two separate claims: ⓐ for
+   these errors, asking again cannot help, because the missing file or turn is still missing; ⓑ the
+   server documents its default backend as one forward pass reading answer-token probabilities with no
+   sampling, i.e. deterministic — re-check that for your backend and settings before relying on it, and
+   do run repeats when you need to *measure* variability. Not every miss was hand-checked; these are the
+   top-ranked ones. What can move the number is **changing the input** — see item 3 for why that alone
+   is not enough. This is the axis of [[feedback_decorrelation_axis_is_what_you_send]], applied to a
+   classifier.
+3. **Changing the input is necessary, not sufficient.** Adding the governor's preceding message brought
+   back short acknowledgements (missed 6 → 1) but collapsed specificity (false alarms 1 → 38).
+   *Hypothesis, not established*: the context carried the topic, and the negatives shared the topic.
+   Before adding a context field, ask whether it separates positives from negatives or only describes
+   both — then measure it.
+4. **Observing a command's effects needs a real sandbox, not a throwaway clone.** A disposable
+   repository copy does not isolate credentials, the rest of the host filesystem or the network, so
+   running an unknown script there is not a safe way to find out what it does. If you feed observed
+   effects to the classifier, run under real isolation (no credentials, no network, a disposable
+   filesystem) and forbid real external side effects. Effects on remote systems (push, publish, remote
+   delete) are not observed by such a run, and those stay with a human.
+5. **Surface class decides where it may sit — accuracy alone does not.** It never clears an irreversible
+   surface by itself, whatever its number (§Irreversibility Gates — Surface-Class Degrade Invariant). A
+   review surface is a *candidate*, not a default: an aggregate percentage hides class balance and which
+   errors cost what, and an advisory can make readers skip an unflagged item or discard a valid one. Before
+   placing it, analyse its false negatives and false positives for that task, and keep human review of
+   what it does **not** flag or what it drops.
+6. **Adopt only on a representative held-out comparison.** Beyond the known pair, run it and the current
+   method on a held-out sample of that harness's real inputs, with the error costs that matter there, and
+   switch it on only if it wins. Pick thresholds on a different sample from the one you report.
+7. **Where it can be worth more: residency — once verified.** A local model *can* keep data on the
+   machine, which matters for a field harness that may not send logs or commands to a cloud model
+   (company QA logs, an offline gate on a company laptop). That is a property of your deployment, not of
+   the model: confirm the endpoint is local, that the server has no outbound network or telemetry path,
+   and that weight downloads happen before sensitive data is sent. Offer it as an **optional slot** —
+   on only when a verified-local endpoint is configured, today's behaviour otherwise.
+
+Limits of these numbers: one run each, no sealed pre-registration, threshold 0.7 chosen after seeing
+three values (optimistic), one 4B model, one question wording per table row, and the git labels are an
+external tool's policy rather than "needed a human".
+
 **Maintenance-Cost Rule** — a compatibility layer is cheap as a *thin entrypoint*, expensive when it
 *duplicates canonical knowledge*. The test:
 
