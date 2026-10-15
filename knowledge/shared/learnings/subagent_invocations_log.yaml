@@ -4756,3 +4756,35 @@
   evidence: lanes 155/0, gate 615/0, live fh_chat main 77/0, codex impl r1-r3 fixes applied, branch feat/chat-multisend-observe ceb627e pushed (PR not opened)
   tokens: UNMEASURED
   note: arm report labelled the equal-time tie rule «operator-approved»; corrected — it was a governor decision from codex r3.
+- date: 2026-10-15
+  agent: general-purpose (sonnet) — FoD v1 B12 pipeline (spec author · test author · LIVE_ONLY runner) + run_isolated arms (claude, codexm, codexh)
+  task: B12 renderer cleanroom bundle end to end
+  trigger: operator «1 승인 2 추천대로 3 그렇게하자» · «합본 오면 추천대로 결정해줘»
+  outcome: accepted
+  evidence: spec r4 cap, 805 tests, 3 arms 3932/3932 audit 0, verdict_v2 codexh PASS364 HUMAN0 adopted, suite 3914/3914
+  tokens: UNMEASURED
+  note: consolidated. LIVE_ONLY runner agent opened Electron dialogs on the operator's screen (stopped; memory feedback_live_lanes_must_not_show_on_operator_screen).
+- date: 2026-10-15
+  agent: general-purpose (sonnet) — FoD B12b (spec author · test author) + run_isolated arms (claude, codexm, codexh)
+  task: B12b settings views from B7 §4-5
+  trigger: operator «ㅇㅇ 가자»
+  outcome: accepted
+  evidence: 136 cases, codex r1 REVISE→r2 PASS, 172 tests (clean 0/172), 3 arms 172/172 audit 0, v2 all PASS, claude adopted
+  tokens: UNMEASURED
+  note: governor iface omitted test/live → B11c 2 failures in all arms (governor defect, not arm).
+- date: 2026-10-15
+  agent: general-purpose (sonnet) — FoD glue implementers (B11c, B12c, palette, confirm §5, stage themes, B11d + gate reaction, mac packaging + L-PERM)
+  task: wire bundles into the running app; palette B; permission center; stamp reactions; mac dmg
+  trigger: operator «ㄱㄱㄱ» · «B로 ㄱㄱ» · «A ㄱ» · «야간주행»
+  outcome: accepted
+  evidence: suite 3914→4238, live 10/9/5/10→19/1/0/14, L-PERM 9/9, dmg arm64/x64 codesign verify rc=0; GLUE 3-arm debt paid (codexh PASS375 HUMAN0 adopted)
+  tokens: UNMEASURED
+  note: consolidated 7 dispatches. B11d and packaging are single-implementer (3-arm debt remains). One agent rewrote spec drafts (history) — restored from the companion-store mirror.
+- date: 2026-10-15
+  agent: general-purpose (sonnet) — research and sims (local-jev none; built-in map facts + context:fork probe; memory hits backfill; floor sims x6 arms; local spec colour edit)
+  task: cheat-sheet internalization, memory GC backfill, doc floor sims
+  trigger: operator «ㄱㄱ» · «ㅇㅇㅇ 그러자»
+  outcome: partial
+  evidence: built-in facts 19/19 doc-verified, fork probe controls alive (F 3/3 canary), hits proposals 681 lines (2 files inflated, corrected), live-repo doc sims contaminated by git status cue (not counted)
+  tokens: UNMEASURED
+  note: partial because 3 live-repo sim arms were contaminated and the hits extraction was not line-verified.
