@@ -425,11 +425,29 @@ print('OK')
   # too, the reverse consolidation (detail → SKILL.md, e.g. un-splitting a skill) would otherwise
   # read as content loss in the detail file and fire a false positive on exactly the refactor
   # salience-splitter is designed to reverse.
-  detail_content=""
+  # The resident/reference pair (2026-10-16): CLAUDE.md keeps a ~95-line resident core and the full
+  # ruleset lives in claude_md_full_reference.md with section names unchanged — the same split
+  # shape as SKILL.md/SKILL_detail.md, so it gets the same symmetric lookup. Only these two exact
+  # paths pair; any other file keeps an empty sibling, so this does not widen what counts as a move.
+  #
+  # 🟥 Credit only what the sibling GAINED in this change (2026-10-16, cross-family codex HIGH).
+  # The lookup used to compare against the sibling's CURRENT total, so a sibling that already held
+  # the content excused any later deletion — reproduced: an unchanged reference with matching tokens
+  # let CLAUDE.md lose its rules and PASS, and «both files lose half» (2+2 → 1+1) also passed. The
+  # SKILL pair had the same hole. Now every count below is after(sibling) − before(sibling), floored
+  # at 0: content counts as moved only if it arrived in the sibling in this same change.
+  detail_content=""; detail_before=""; sib=""
   case "$f" in
-    */SKILL.md)        detail_content=$(read_after "$(dirname "$f")/SKILL_detail.md") ;;
-    */SKILL_detail.md) detail_content=$(read_after "$(dirname "$f")/SKILL.md") ;;
+    */SKILL.md)        sib="$(dirname "$f")/SKILL_detail.md" ;;
+    */SKILL_detail.md) sib="$(dirname "$f")/SKILL.md" ;;
+    CLAUDE.md)         sib="knowledge/shared/harness-core/claude_md_full_reference.md" ;;
+    knowledge/shared/harness-core/claude_md_full_reference.md) sib="CLAUDE.md" ;;
   esac
+  if [ -n "$sib" ]; then detail_content=$(read_after "$sib"); detail_before=$(read_before "$sib"); fi
+  _gain() {  # $1=counter fn  $2=pattern -> max(0, count in sibling after − count in sibling before)
+    local a b; a=$("$1" "$detail_content" "$2"); b=$("$1" "$detail_before" "$2")
+    a=${a:-0}; b=${b:-0}; [ "$a" -gt "$b" ] && echo $((a - b)) || echo 0
+  }
 
   # Deprecation/tombstone exemption (stub-shaped): a file soft-deleted into a small pointer
   # stub. Content loss is the INTENT (mirrors the file-deletion skip above), so content-
@@ -489,7 +507,7 @@ print('OK')
     before=$(count_regex_in "$before_content" "$pattern")
     after=$(count_regex_in "$after_content" "$pattern")
     detail=0
-    [ -n "$detail_content" ] && detail=$(count_regex_in "$detail_content" "$pattern")
+    [ -n "$detail_content" ] && detail=$(_gain count_regex_in "$pattern")
     combined=$((after + detail))
     if [ "$before" -gt 0 ] && [ "$combined" -lt "$before" ]; then
       echo "  ❌ M-TIER  '$label' section group dropped ($before → $combined)"
@@ -513,7 +531,7 @@ print('OK')
     group_before=$(count_regex_in "$before_content" "$group_pattern")
     group_after=$(count_regex_in "$after_content" "$group_pattern")
     group_detail=0
-    [ -n "$detail_content" ] && group_detail=$(count_regex_in "$detail_content" "$group_pattern")
+    [ -n "$detail_content" ] && group_detail=$(_gain count_regex_in "$group_pattern")
     group_combined=$((group_after + group_detail))
     [ "$group_before" -gt 0 ] && [ "$group_combined" -ge "$group_before" ] || return
     for name in "$@"; do
@@ -521,7 +539,7 @@ print('OK')
       before=$(count_regex_in "$before_content" "$exact_pattern")
       after=$(count_regex_in "$after_content" "$exact_pattern")
       detail=0
-      [ -n "$detail_content" ] && detail=$(count_regex_in "$detail_content" "$exact_pattern")
+      [ -n "$detail_content" ] && detail=$(_gain count_regex_in "$exact_pattern")
       if [ "$before" -gt 0 ] && [ $((after + detail)) -lt "$before" ]; then
         verbose "suppressed dropped heading '$name': '$group_label' known-synonym group is preserved ($group_before → $group_combined)"
       fi
@@ -547,7 +565,7 @@ print('OK')
         [ -n "$header" ] || continue
         before=$(count_exact_line_in "$before_content" "$header")
         after=$(count_exact_line_in "$after_content" "$header")
-        detail=$(count_exact_line_in "$detail_content" "$header")
+        detail=$(_gain count_exact_line_in "$header")
         if [ "$before" -gt 0 ] && [ "$after" -lt "$before" ] && [ $((after + detail)) -ge "$before" ]; then
           verbose "suppressed section-header reduction: '$header' moved to sibling SKILL_detail.md"
         fi
@@ -560,7 +578,7 @@ print('OK')
   before_code=$(count_in "$before_content" '^```')
   after_code=$(count_in "$after_content" '^```')
   detail_code=0
-  [ -n "$detail_content" ] && detail_code=$(count_in "$detail_content" '^```')
+  [ -n "$detail_content" ] && detail_code=$(_gain count_in '^```')
   if [ "$before_code" -gt 0 ]; then
     combined_code=$((after_code + detail_code))
     delta=$((before_code - combined_code))
@@ -588,7 +606,7 @@ print('OK')
     after=$(count_in "$after_content" "$token")
     if [ "$before" -gt 0 ] && [ "$after" -lt "$before" ]; then
       if [ -n "$detail_content" ]; then
-        in_detail=$(count_in "$detail_content" "$token")
+        in_detail=$(_gain count_in "$token")
         if [ $((after + in_detail)) -ge "$before" ]; then
           echo "  ℹ️  token '$token' moved to SKILL_detail.md ($before → $after + $in_detail in detail)"
           verbose "suppressed token reduction: sibling SKILL_detail.md preserves '$token' count"
