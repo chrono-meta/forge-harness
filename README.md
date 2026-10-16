@@ -39,7 +39,7 @@ themselves or of finding out too late that a change was wrong. You get three thi
 
 | You get | In practice | Evidence |
 |---|---|---|
-| **A gate before merge** | A diff is judged *before* it lands, and the verdict names what the change lost. The verdict is a typed value (`PASS · PENDING · BLOCKED · ESCALATE`), not text you grep. It works on your own code, not only an agent's. | Demo GIF below · a run on code someone else wrote and a planted-hole test, with sample sizes: [Evidence](#evidence) |
+| **A gate before merge** | A diff is judged *before* it lands, and the verdict names what the change lost. The verdict is a typed value (`PASS · PENDING · BLOCKED · ESCALATE`), not text you grep. It works on your own code, not only an agent's. | Demo GIF below · a run on code someone else wrote and a planted-hole test, with sample sizes: [Evidence](#evidence) · method and controlled ablation: [arXiv:2609.04218](https://arxiv.org/abs/2609.04218) |
 | **Memory that carries over** | `tracks/` keeps what each session learned, so session 2 starts where session 1 stopped. | At session end the card in `tracks/_meta/` is updated, and the next session starts from it ([`CLAUDE.md`](CLAUDE.md) §Session Wrap-up). |
 | **Someone who picks the check for you** | Say "diagnose this project" or "accelerate this project" and you get a ranked list of what to fix or install. Nothing is changed until you approve each item. | The procedure is in [`CLAUDE.md`](CLAUDE.md) §Field-Harness Diagnostic. Each item lands only after you approve it |
 
