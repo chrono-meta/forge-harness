@@ -1,5 +1,18 @@
 # forge-harness (fh-meta) Changelog
 
+### [3.27.0] — 2026-10-16 — CLAUDE.md 를 95줄 상주 핵심으로 · 내장 기능 지도 · 메모리 수명 GC
+
+**minor.** 매 세션 실리는 지침이 1,274줄(13.2만 자)에서 95줄(1.5만 자)로 줄어든다. 행동 교리의 위치가 바뀌고 회귀 가드 한 칸이 조여진다.
+
+BREAKING (gate): Axis 1 회귀 가드가 «짝 파일로 옮겼다」(SKILL.md ↔ SKILL_detail.md, 새로 CLAUDE.md ↔ claude_md_full_reference.md)를 **이번 변경에서 짝 파일이 늘어난 만큼만** 인정한다 — 짝 파일에 이미 있던 내용으로 삭제를 가리던 커밋이 이제 차단된다. 처방: 지운 내용을 같은 커밋에서 짝 파일로 실제로 옮기거나, 손실이 의도면 이유를 적고 Axes 2–3 를 돈다.
+
+- `CLAUDE.md`: 읽기 전에 발동해야 하고 훅이 없는 규칙만 남긴 95줄 상주 핵심. 전문은 `knowledge/shared/harness-core/claude_md_full_reference.md`(절 이름 불변 — 다른 곳의 `CLAUDE.md §X` 는 §X 가 여기 없으면 그 파일 §X). 격리 클론 플로어 sim(Sonnet, 의도 11종 ×3, 사전등록) 후퇴 0. 권한 거부 안내는 상주에 넣으면 인사 발동이 0/3 으로 떨어져 참조 쪽에 남겼다(#900).
+- `templates/regression_guard.sh`: 짝 파일 조회에 CLAUDE.md 쌍 추가 + 증가분 기준(위 BREAKING), 레인 `scripts/test_regression_guard_sibling_lanes.sh` 13개(되돌림 3)(#900).
+- 새 문서 `knowledge/shared/harness-core/builtin_capability_map.md`: Claude Code 내장 기능(/context · /compact · /doctor · /rewind · /branch · /fork · /simplify 등)을 먼저 쓰고 FH 는 그 위에 더하는 것만 — 지도 유무 플로어 sim /rewind 3v0 · /doctor 3v0. 행마다 한국어 의도어(#897 · #899).
+- 새 도구 `scripts/memory_gc_report.py`(읽기 전용): 메모리 재발 기록(hits)으로 목록 순서 · 승격 후보 · cold 를 제안한다. 레인 28(#896).
+- 문서: 작은 로컬 판정 모델(local-jev)은 게이트가 아니라 검토 표면 후보(#895) · CLAUDE.md 겹치는 4개 절 요약(#894).
+- 수리: env-delta 가 연결된 워크트리를 «미매핑 형제 레포」로 세던 것(#893).
+
 ### [3.26.2] — 2026-10-14 — self-test 가 Windows 에서 실행 파일을 대량 복사하던 것
 
 **patch.** 수리.
