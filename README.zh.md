@@ -6,12 +6,9 @@
   <a href="https://arxiv.org/abs/2609.04218"><img src="https://img.shields.io/badge/arXiv-2609.04218-b31b1b.svg" alt="arXiv:2609.04218 — the FH governance paper"></a>
   <a href="https://github.com/walkinglabs/awesome-harness-engineering#coding-agent-harnesses"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Harness Engineering"></a>
   <a href="https://github.com/VoltAgent/awesome-agent-skills#community-skills"><img src="https://img.shields.io/badge/listed_in-awesome--agent--skills-0ea5e9.svg" alt="Listed in awesome-agent-skills"></a>
-  <a href="https://github.com/anthropics/claude-code"><img src="https://img.shields.io/badge/Claude_Code-compatible-a855f7.svg" alt="Claude Code compatible — official Claude Code repository"></a>
-  <a href="https://chrono-meta.github.io/forge-harness/"><img src="https://img.shields.io/badge/whole_map-interactive-6366f1.svg" alt="FH whole map — interactive diagrams on GitHub Pages"></a>
   <a href="https://github.com/marketplace/actions/fh-gate-typed-ai-code-review-verdict"><img src="https://img.shields.io/badge/GitHub_Action-marketplace-2088FF.svg" alt="GitHub Actions Marketplace — fh-gate"></a>
   <a href="https://www.npmjs.com/package/@chrono-meta/fh-gate"><img src="https://img.shields.io/npm/v/@chrono-meta/fh-gate.svg?color=cb3837" alt="npm"></a>
   <a href="https://github.com/chrono-meta/homebrew-forge-harness"><img src="https://img.shields.io/badge/homebrew-tap-FBB040.svg" alt="Homebrew tap"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e.svg" alt="MIT License"></a>
 </p>
 
 <p align="center">
@@ -35,7 +32,7 @@
 
 | 你得到 | 实际表现 | 证据 |
 |---|---|---|
-| **合并前的门禁** | 在改动落地*之前*判定 diff，判定会点名这次改动丢掉了什么。判定是有类型的值（`PASS · PENDING · BLOCKED · ESCALATE`），而不是需要你去 grep 的文字。对 agent 写的代码有效，对你自己写的代码同样有效。 | 下方演示 GIF · 一次对他人所写代码的运行与一次埋洞测试，附样本量：[证据](#证据以及它薄弱的地方) |
+| **合并前的门禁** | 在改动落地*之前*判定 diff，判定会点名这次改动丢掉了什么。判定是有类型的值（`PASS · PENDING · BLOCKED · ESCALATE`），而不是需要你去 grep 的文字。对 agent 写的代码有效，对你自己写的代码同样有效。 | 下方演示 GIF · 一次对他人所写代码的运行与一次埋洞测试，附样本量：[证据](#证据以及它薄弱的地方) · 方法与受控消融实验：[arXiv:2609.04218](https://arxiv.org/abs/2609.04218) |
 | **能延续的记忆** | `tracks/` 记录每次会话学到的东西，第 2 次会话从第 1 次停下的地方开始。 | 设计意图。会话结束时更新 `tracks/_meta/` 里的卡片，下次会话启动时读取它（[`CLAUDE.md`](CLAUDE.md) §Session Wrap-up）。本页没有链接任何实测收益；而且它要从第 2 次会话起才看得出来。 |
 | **替你挑检查的帮手** | 说“诊断这个项目”或“加速这个项目”，你会得到一份按优先级排序的待修复/待安装清单。逐项批准之前不会改动任何东西。 | 描述见 [`CLAUDE.md`](CLAUDE.md)（§Field-Harness Diagnostic）；没有关于它命中率的基准测试 |
 

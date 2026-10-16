@@ -6,12 +6,9 @@
   <a href="https://arxiv.org/abs/2609.04218"><img src="https://img.shields.io/badge/arXiv-2609.04218-b31b1b.svg" alt="arXiv:2609.04218 — the FH governance paper"></a>
   <a href="https://github.com/walkinglabs/awesome-harness-engineering#coding-agent-harnesses"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Harness Engineering"></a>
   <a href="https://github.com/VoltAgent/awesome-agent-skills#community-skills"><img src="https://img.shields.io/badge/listed_in-awesome--agent--skills-0ea5e9.svg" alt="Listed in awesome-agent-skills"></a>
-  <a href="https://github.com/anthropics/claude-code"><img src="https://img.shields.io/badge/Claude_Code-compatible-a855f7.svg" alt="Claude Code compatible — official Claude Code repository"></a>
-  <a href="https://chrono-meta.github.io/forge-harness/"><img src="https://img.shields.io/badge/whole_map-interactive-6366f1.svg" alt="FH whole map — interactive diagrams on GitHub Pages"></a>
   <a href="https://github.com/marketplace/actions/fh-gate-typed-ai-code-review-verdict"><img src="https://img.shields.io/badge/GitHub_Action-marketplace-2088FF.svg" alt="GitHub Actions Marketplace — fh-gate"></a>
   <a href="https://www.npmjs.com/package/@chrono-meta/fh-gate"><img src="https://img.shields.io/npm/v/@chrono-meta/fh-gate.svg?color=cb3837" alt="npm"></a>
   <a href="https://github.com/chrono-meta/homebrew-forge-harness"><img src="https://img.shields.io/badge/homebrew-tap-FBB040.svg" alt="Homebrew tap"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e.svg" alt="MIT License"></a>
 </p>
 
 <p align="center">
@@ -35,7 +32,7 @@
 
 | 得られるもの | 実際には | 根拠 |
 |---|---|---|
-| **マージ前のゲート** | 変更が入る*前*に diff を判定し、その変更が何を失ったかを名指しします。判定は grep する文章ではなく、型を持つ値（`PASS · PENDING · BLOCKED · ESCALATE`）です。エージェントのコードだけでなく、自分で書いたコードにも働きます。 | 下のデモ GIF · 他人が書いたコードでの実行と穴を仕込んだテスト（サンプル数つき）: [根拠](#根拠とその限界) |
+| **マージ前のゲート** | 変更が入る*前*に diff を判定し、その変更が何を失ったかを名指しします。判定は grep する文章ではなく、型を持つ値（`PASS · PENDING · BLOCKED · ESCALATE`）です。エージェントのコードだけでなく、自分で書いたコードにも働きます。 | 下のデモ GIF · 他人が書いたコードでの実行と穴を仕込んだテスト（サンプル数つき）: [根拠](#根拠とその限界) · 方法論と統制されたアブレーション: [arXiv:2609.04218](https://arxiv.org/abs/2609.04218) |
 | **引き継がれる記憶** | `tracks/` に各セッションで学んだことが残り、2 回目のセッションは 1 回目が止まったところから始まります。 | 設計意図です。セッション終了時に `tracks/_meta/` のカードが更新され、次のセッションが起動時にそれを読みます（[`CLAUDE.md`](CLAUDE.md) §Session Wrap-up）。このページには計測された効果へのリンクはありません。2 回目のセッションから現れる効果でもあります。 |
 | **検査を選んでくれる相手** | 「このプロジェクトを診断して」または「このプロジェクトを加速して」と言うと、直すもの・入れるものの優先順位つき一覧が返ります。項目ごとに承認するまで何も変更されません。 | [`CLAUDE.md`](CLAUDE.md) に記述あり（§Field-Harness Diagnostic）。どのくらいの頻度で当たるかのベンチマークはなし |
 

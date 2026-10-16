@@ -6,12 +6,9 @@
   <a href="https://arxiv.org/abs/2609.04218"><img src="https://img.shields.io/badge/arXiv-2609.04218-b31b1b.svg" alt="arXiv:2609.04218 — the FH governance paper"></a>
   <a href="https://github.com/walkinglabs/awesome-harness-engineering#coding-agent-harnesses"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Harness Engineering"></a>
   <a href="https://github.com/VoltAgent/awesome-agent-skills#community-skills"><img src="https://img.shields.io/badge/listed_in-awesome--agent--skills-0ea5e9.svg" alt="Listed in awesome-agent-skills"></a>
-  <a href="https://github.com/anthropics/claude-code"><img src="https://img.shields.io/badge/Claude_Code-compatible-a855f7.svg" alt="Claude Code compatible — official Claude Code repository"></a>
-  <a href="https://chrono-meta.github.io/forge-harness/"><img src="https://img.shields.io/badge/whole_map-interactive-6366f1.svg" alt="FH whole map — interactive diagrams on GitHub Pages"></a>
   <a href="https://github.com/marketplace/actions/fh-gate-typed-ai-code-review-verdict"><img src="https://img.shields.io/badge/GitHub_Action-marketplace-2088FF.svg" alt="GitHub Actions Marketplace — fh-gate"></a>
   <a href="https://www.npmjs.com/package/@chrono-meta/fh-gate"><img src="https://img.shields.io/npm/v/@chrono-meta/fh-gate.svg?color=cb3837" alt="npm"></a>
   <a href="https://github.com/chrono-meta/homebrew-forge-harness"><img src="https://img.shields.io/badge/homebrew-tap-FBB040.svg" alt="Homebrew tap"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e.svg" alt="MIT License"></a>
 </p>
 
 <p align="center">
@@ -37,7 +34,7 @@
 
 | 얻는 것 | 실제로는 | 근거 |
 |---|---|---|
-| **머지 전 게이트** | 변경이 들어오기 *전에* diff 를 판정하고, 판정문은 그 변경이 무엇을 잃었는지 이름으로 짚어 줍니다. 판정은 grep 으로 뒤지는 글이 아니라 타입이 있는 값(`PASS · PENDING · BLOCKED · ESCALATE`)입니다. 에이전트가 쓴 코드뿐 아니라 직접 쓴 코드에도 동작합니다. | 아래 데모 GIF · 남이 쓴 코드에 돌린 실행과 구멍을 심은 시험(표본 크기 포함): [근거](#근거) |
+| **머지 전 게이트** | 변경이 들어오기 *전에* diff 를 판정하고, 판정문은 그 변경이 무엇을 잃었는지 이름으로 짚어 줍니다. 판정은 grep 으로 뒤지는 글이 아니라 타입이 있는 값(`PASS · PENDING · BLOCKED · ESCALATE`)입니다. 에이전트가 쓴 코드뿐 아니라 직접 쓴 코드에도 동작합니다. | 아래 데모 GIF · 남이 쓴 코드에 돌린 실행과 구멍을 심은 시험(표본 크기 포함): [근거](#근거) · 방법론과 통제된 제거 실험: [arXiv:2609.04218](https://arxiv.org/abs/2609.04218) |
 | **이어지는 기억** | `tracks/` 에 세션마다 배운 것이 남아서, 두 번째 세션이 첫 번째 세션이 멈춘 자리에서 시작합니다. | 세션을 마칠 때 `tracks/_meta/` 의 카드가 갱신되고, 다음 세션은 그 카드를 읽고 시작합니다([`CLAUDE.md`](CLAUDE.md) §Session Wrap-up). |
 | **검사를 대신 골라 주는 상대** | "이 프로젝트 진단해줘" 또는 "이 프로젝트 가속화해줘"라고 하면 고치거나 설치할 것의 우선순위 목록을 받습니다. 항목마다 승인하기 전에는 아무것도 바뀌지 않습니다. | 절차는 [`CLAUDE.md`](CLAUDE.md) §Field-Harness Diagnostic 에 있습니다. 항목마다 승인한 뒤에만 반영합니다 |
 
