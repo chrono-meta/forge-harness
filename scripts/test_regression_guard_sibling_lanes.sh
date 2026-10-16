@@ -57,7 +57,7 @@ run_lane() {
     echo "  ❌ $id — guard rc=$rc (could not run)"; printf '%s\n' "$out" | tail -3 | sed 's/^/       /'; FAIL=1; return
   fi
   if [ "$want" = block ] && [ "$rc" -eq 2 ]; then echo "  ✅ $id — M-tier block (rc=2)"
-  elif [ "$want" = pass ] && [ "$rc" -ne 2 ] && printf '%s\n' "$out" | grep -q "moved to"; then echo "  ✅ $id — no M-tier, move recognised (rc=$rc)"
+  elif [ "$want" = pass ] && [ "$rc" -ne 2 ] && grep -q "moved to" <<<"$out"; then echo "  ✅ $id — no M-tier, move recognised (rc=$rc)"
   elif [ "$want" = pass ] && [ "$rc" -ne 2 ]; then echo "  ❌ $id — rc=$rc but no «moved to» line: the pair was never examined (a SKIP is not a pass)"; FAIL=1
   else echo "  ❌ $id — expected $want, got rc=$rc"; printf '%s\n' "$out" | grep -E 'M-TIER|moved' | head -4 | sed 's/^/       /'; FAIL=1; fi
 }
@@ -98,8 +98,8 @@ printf '# agents\nshort.\n' > "$d/AGENTS.md"
 printf '# full reference\n%s' "$BODY" > "$d/$REF"
 git -C "$d" add -A
 out=$(cd "$d" && bash "$GUARD" --staged 2>&1)
-if printf '%s\n' "$out" | grep -q "AGENTS.md" && ! printf '%s\n' "$out" | grep -qE "moved to SKILL_detail.md.*" ; then
-  if printf '%s\n' "$out" | grep -A30 "AGENTS.md" | grep -q "M-TIER"; then echo "  ✅ S5 AGENTS.md loss is not excused by the reference file"
+if grep -q "AGENTS.md" <<<"$out" && ! grep -qE "moved to SKILL_detail.md.*" <<<"$out"; then
+  sec=$(grep -A30 "AGENTS.md" <<<"$out"); if [[ "$sec" == *"M-TIER"* ]]; then echo "  ✅ S5 AGENTS.md loss is not excused by the reference file"
   else echo "  ❌ S5 AGENTS.md token loss produced no M-TIER line"; FAIL=1; fi
 else echo "  ❌ S5 AGENTS.md was not examined, or was treated as a move"; FAIL=1; fi
 
@@ -124,7 +124,7 @@ git -C "$d" add -A; git -C "$d" commit -q -m split
 printf '# hub\n%s' "$BODY" > "$d/CLAUDE.md"; printf '# full reference\nmoved back.\n' > "$d/$REF"
 git -C "$d" add -A
 out=$(cd "$d" && bash "$GUARD" --staged 2>&1)
-if printf '%s\n' "$out" | grep -A60 "claude_md_full_reference.md" | grep -q "moved to" && ! printf '%s\n' "$out" | grep -A60 "claude_md_full_reference.md" | grep -q "M-TIER"; then
+sec=$(grep -A60 "claude_md_full_reference.md" <<<"$out"); if [[ "$sec" == *"moved to"* ]] && [[ "$sec" != *"M-TIER"* ]]; then
   echo "  ✅ S8 reference -> CLAUDE.md reverse move recognised"
 else echo "  ❌ S8 reverse move not recognised on the reference side"; FAIL=1; fi
 
@@ -135,7 +135,7 @@ printf '# hub\n## Trigger Phrases\n- say hi\n' > "$d/CLAUDE.md"; printf '# full 
 git -C "$d" add -A; git -C "$d" commit -q -m trig
 printf '# hub\nno triggers.\n- say hi\n' > "$d/CLAUDE.md"; git -C "$d" add -A
 out=$(cd "$d" && bash "$GUARD" --staged 2>&1)
-if printf '%s\n' "$out" | grep -q "'Triggers' section group dropped"; then echo "  ✅ S9 F2: unchanged sibling heading does not excuse a dropped section"
+if grep -q "'Triggers' section group dropped" <<<"$out"; then echo "  ✅ S9 F2: unchanged sibling heading does not excuse a dropped section"
 else echo "  ❌ S9 F2: dropped section was excused (no «section group dropped» line)"; FAIL=1; fi
 
 # S10 (F3 isolated): sibling already holds fences, unchanged; CLAUDE.md loses all of its fences
@@ -145,7 +145,7 @@ printf '# hub\n%s\n' "$F6" > "$d/CLAUDE.md"; printf '# full reference\n%s\n' "$F
 git -C "$d" add -A; git -C "$d" commit -q -m fences
 printf '# hub\nno code.\n' > "$d/CLAUDE.md"; git -C "$d" add -A
 out=$(cd "$d" && bash "$GUARD" --staged 2>&1)
-if printf '%s\n' "$out" | grep -q "code blocks reduced"; then echo "  ✅ S10 F3: unchanged sibling fences do not excuse lost code blocks"
+if grep -q "code blocks reduced" <<<"$out"; then echo "  ✅ S10 F3: unchanged sibling fences do not excuse lost code blocks"
 else echo "  ❌ S10 F3: lost code blocks were excused"; FAIL=1; fi
 
 # R1: revert probe — delete the CLAUDE.md case from a copy of the guard; S1 must now block
@@ -169,7 +169,7 @@ else
   printf '# full reference\n%s' "$BODY" > "$d/$REF"; git -C "$d" add -A; git -C "$d" commit -q -m ref
   printf '# hub\nresident core only.\n' > "$d/CLAUDE.md"; git -C "$d" add -A
   rc=0; out=$(cd "$d" && bash "$G3" --staged 2>&1) || rc=$?
-  if { [ "$rc" -eq 0 ] || [ "$rc" -eq 1 ]; } && printf '%s\n' "$out" | grep -q "moved to"; then echo "  ✅ R2 revert probe: whole-total credit lets S6 through as a «move» (rc=$rc) — S6 is what catches it"
+  if { [ "$rc" -eq 0 ] || [ "$rc" -eq 1 ]; } && grep -q "moved to" <<<"$out"; then echo "  ✅ R2 revert probe: whole-total credit lets S6 through as a «move» (rc=$rc) — S6 is what catches it"
   else echo "  ❌ R2 revert probe: S6 still blocked with whole-total credit — S6 is not anchoring the gain rule"; FAIL=1; fi
 fi
 
@@ -183,8 +183,8 @@ else
   git -C "$d" add -A; git -C "$d" commit -q -m split
   printf '# hub\n%s' "$BODY" > "$d/CLAUDE.md"; printf '# full reference\nmoved back.\n' > "$d/$REF"; git -C "$d" add -A
   rc=0; out=$(cd "$d" && bash "$G4" --staged 2>&1) || rc=$?
-  if [ "$rc" -gt 2 ] || ! printf '%s\n' "$out" | grep -q "claude_md_full_reference.md"; then echo "  ❌ R3 revert probe: mutated guard did not run or never examined the reference (rc=$rc) — HARNESS-ERROR"; FAIL=1
-  elif printf '%s\n' "$out" | grep -A60 "claude_md_full_reference.md" | grep -q "moved to"; then echo "  ❌ R3 revert probe: reverse move still recognised without the reverse arm"; FAIL=1
+  if [ "$rc" -gt 2 ] || ! grep -q "claude_md_full_reference.md" <<<"$out"; then echo "  ❌ R3 revert probe: mutated guard did not run or never examined the reference (rc=$rc) — HARNESS-ERROR"; FAIL=1
+  elif sec=$(grep -A60 "claude_md_full_reference.md" <<<"$out"); [[ "$sec" == *"moved to"* ]]; then echo "  ❌ R3 revert probe: reverse move still recognised without the reverse arm"; FAIL=1
   else echo "  ✅ R3 revert probe: without the reverse arm the reference side no longer sees a move"; fi
 fi
 
