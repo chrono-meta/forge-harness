@@ -3,6 +3,7 @@
 </p>
 
 <p align="center">
+  <a href="https://arxiv.org/abs/2609.04218"><img src="https://img.shields.io/badge/arXiv-2609.04218-b31b1b.svg" alt="arXiv:2609.04218 — the FH governance paper"></a>
   <a href="https://github.com/walkinglabs/awesome-harness-engineering#coding-agent-harnesses"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Harness Engineering"></a>
   <a href="https://github.com/VoltAgent/awesome-agent-skills#community-skills"><img src="https://img.shields.io/badge/listed_in-awesome--agent--skills-0ea5e9.svg" alt="Listed in awesome-agent-skills"></a>
   <a href="https://github.com/anthropics/claude-code"><img src="https://img.shields.io/badge/Claude_Code-compatible-a855f7.svg" alt="Claude Code compatible — official Claude Code repository"></a>
