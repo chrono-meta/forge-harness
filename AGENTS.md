@@ -8,7 +8,8 @@
 
 | File | Scope | Audience |
 |---|---|---|
-| `CLAUDE.md` | Session rules, protocols, orchestration flow | Claude Code |
+| `CLAUDE.md` | Resident core (~80 lines): rules that must fire before anything is read | Claude Code |
+| `knowledge/shared/harness-core/claude_md_full_reference.md` | The full session rules, protocols, orchestration flow — a `CLAUDE.md §X` reference whose §X is not a `CLAUDE.md` heading resolves here | Claude Code + any runtime reading a cited section |
 | `AGENTS.md` | Portable runtime rules, agent roles, dispatch boundaries | AI runtimes + humans |
 
 `CLAUDE.md` governs Claude-native automation. This file is the portable governor entry point for

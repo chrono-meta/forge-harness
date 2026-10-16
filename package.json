@@ -347,6 +347,7 @@
     "scripts/test_psa_singlefile_lanes.sh",
     "scripts/test_push_zone_lanes.sh",
     "scripts/test_regression_guard_ci_lanes.sh",
+    "scripts/test_regression_guard_sibling_lanes.sh",
     "scripts/test_relay_channel_lanes.sh",
     "scripts/test_remote_marker_gate_lanes.sh",
     "scripts/test_residency_admission_lanes.sh",
