@@ -67,6 +67,9 @@ LANES = [
     ("C10 구어 이유 어미(N4)", r"(니까요|고요|거든요|달라도요)[*.\s]*(<!--.*)?$"),
     ("C11 당신·필요로(N5)", r"당신|필요로\s*(합|하|한)"),
     ("C12 라틴 뒤 조사 띄어쓰기(N9)", r"[A-Za-z0-9)`]\s(는|은|이|가|을|를|로|로는|의|에서|에)(?![가-힣])"),
+    # ── 2026-10-17 저녁 운영자 교정 N14·N15. 합성어/복합어로만 좁혔다(일상어 겹침은 레인에서 뺌)
+    ("C13 내부 합성어(N14)", r"공격 배터리|이긴 기록|열화 방향 렌즈"),
+    ("C14 시험→테스트 복합어(N15)", r"(?<![가-힣])시험\s?(환경|결과|케이스|코드|자동화|하네스|통과)"),
 ]
 
 # 절대 잡히면 안 되는 토큰 — 「늘 잡는다」를 내는 죽은 계기 배제용
@@ -142,10 +145,10 @@ def main():
 
     print("")
     if nfail == 0:
-        print("CALIBRATED (%d lanes) -- Step 2 classes (C1-C5, C7-C12) + Step 4-b two patterns discriminate."
+        print("CALIBRATED (%d lanes) -- Step 2 classes (C1-C5, C7-C14) + Step 4-b two patterns discriminate."
               % npass)
         print("  NOT proven: 'zero residue' in any real document. That is measured per document.")
-        print("  C7-C12 positives are the harvest's own 'before' sentences (re-built short), so")
+        print("  C7-C12 positives are the harvest's own 'before' sentences (re-built short); C13-C14 positives are constructed (no harvest pair), so")
         print("  false-positive rate on out-of-distribution text is UNMEASURED. C9 over-blocks by design.")
         print("  Citing this suite as evidence of 'zero residue' reproduces the very downgrade")
         print("  recorded in harness_terminal_correlation_and_recommendations.md.")
