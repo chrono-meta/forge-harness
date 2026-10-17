@@ -402,7 +402,7 @@ landing_witness() {
 
 # 프롬프트는 프로필 유무로 **형태가 갈린다**. 미설정이면 종전 문자열 그대로(FH 경로 무변경).
 _build_prompt() {
-    local base="[automated-run: launchd] Run /frontier-digest for today (${HUMAN_DATE}). Fetch latest signals from HN, arXiv, and GitHub."
+    local base="[automated-run: launchd] Run /frontier-digest for today (${HUMAN_DATE}). Fetch latest signals from every channel in the skill's Step 1 source list (HN, arXiv, TLDR, The Batch, GeekNews, Launch YC, Product Hunt, Show HN, vendor changelogs)."
     local prof="${FH_DIR}/${PROFILE_PATH}"
     if [ -n "$PROFILE_PATH" ] && [ -f "$prof" ]; then
         printf '%s\n\n%s\n\n%s\n\n%s\n\n%s\n' \
