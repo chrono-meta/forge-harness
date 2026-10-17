@@ -368,6 +368,53 @@ def score_probe(primary_text, control_text, polarity, expect_re):
         return (PASS if not primary_hit else FAIL), primary_hit, control_hit
 
 
+def _read_meta_tsv(path):
+    """key->value from a <arm>_r<n>.meta.tsv, or None when the file is absent."""
+    text = _read_text(path)
+    if text is None:
+        return None
+    out = {}
+    for line in text.splitlines():
+        if '\t' in line:
+            k, v = line.split('\t', 1)
+            out[k.strip()] = v.strip()
+    return out
+
+
+def budget_line(base, arms_reps):
+    """BUDGET LINE (2026-10-17): the cap each verdict row ran under and whether any episode ENDED
+    AT it. Read from the runner's per-episode meta.tsv (written from the real invocation) — never
+    from constants in this file. `ended_at_cap` is three-valued: yes when ANY episode was cut at
+    its cap; otherwise UNKNOWN when any episode's value is UNKNOWN or its meta/field is missing
+    (an older run, or a stub that wrote none — not measured is not `no`); otherwise no.
+    Returns (ended_at_cap, text, n_yes, n_eps)."""
+    ends, caps = [], set()
+    for arm, i in arms_reps:
+        m = _read_meta_tsv(os.path.join(base, '%s_r%d.meta.tsv' % (arm, i)))
+        if m is None:
+            # No meta AND no transcript = the rep never ran: nothing to classify. A transcript
+            # without meta is an episode that ran unmeasured — UNKNOWN, never skipped (a skip
+            # let 2 `no` + 1 missing read as `no`).
+            if os.path.exists(os.path.join(base, '%s_r%d.txt' % (arm, i))):
+                ends.append('UNKNOWN')
+            continue
+        ends.append(m.get('ended_at_cap', 'UNKNOWN') or 'UNKNOWN')
+        caps.add('timeout=%ss max_turns=%s tokens=%s' % (
+            m.get('timeout_s', '?'), m.get('max_turns', '?'), m.get('token_cap', '?')))
+    if not caps:
+        return 'UNKNOWN', 'no episode meta (cap not recorded)', 0, len(ends)
+    n_yes = sum(1 for e in ends if e == 'yes')
+    if n_yes:
+        end = 'yes'
+    elif any(e != 'no' for e in ends):
+        end = 'UNKNOWN'
+    else:
+        end = 'no'
+    text = '%s ended_at_cap=%s%s' % ('; '.join(sorted(caps)), end,
+                                      ' (%d/%d episodes)' % (n_yes, len(ends)) if n_yes else '')
+    return end, text, n_yes, len(ends)
+
+
 def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
     """Read <run_root>/<id>/{primary,control}_r{1..reps}.txt for every id, score EACH rep, take the
     majority, and return a report dict. Does not touch the network or spawn `claude` — pure
@@ -396,7 +443,8 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
     for pid in ids_in_order:
         spec = by_id.get(pid)
         if spec is None:
-            rows.append({'id': pid, 'verdict': 'UNKNOWN-ID', 'primary_hit': None, 'control_hit': None})
+            rows.append({'id': pid, 'verdict': 'UNKNOWN-ID', 'primary_hit': None, 'control_hit': None,
+                         'ended_at_cap': 'UNKNOWN', 'budget': 'n/a (unknown id)'})
             continue
         base = os.path.join(run_root, pid)
         has_ctrl_b = bool(spec.get('control_input_b'))
@@ -480,6 +528,10 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
             elif control_text is None or control_text == '':
                 reasons.append('control: %s' % _failure_reason(base, 'control'))
             row['reason'] = '; '.join(reasons)
+        arms = ['primary', 'control'] + (['control_b'] if has_ctrl_b else [])
+        b_end, b_text, b_yes, b_n = budget_line(base, [(a, i) for a in arms for i in range(1, reps + 1)])
+        row['ended_at_cap'] = b_end
+        row['budget'] = b_text
         rows.append(row)
 
     # ── RUN-BLACKOUT / BLACKOUT-SUSPECT (2026-09-14) ──────────────────────────────────────────
@@ -568,6 +620,106 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
     }
 
 
+def parse_prev_report(path):
+    """Rows of a previous live_eval_<date>.md run table -> {id: verdict}. None when unreadable or
+    no run table is found (the caller then says `before: not supplied`, never invents one)."""
+    text = _read_text(path)
+    if not text:
+        return None
+    out = {}
+    for line in text.splitlines():
+        cells = [c.strip() for c in line.strip().strip('|').split('|')]
+        if (line.startswith('|') and len(cells) >= 3
+                and cells[1] in (PASS, FAIL, UNCALIBRATED, FAILED_TO_RUN, 'UNKNOWN-ID')):
+            out[cells[0]] = cells[1]
+    return out or None
+
+
+def _group_summary(verdicts, ended=None):
+    """verdicts: list of verdict strings -> counts. pass_rate is over PASS+FAIL only, the same
+    denominator score_run uses; None when nothing ran."""
+    ran = [v for v in verdicts if v in (PASS, FAIL)]
+    passed = [v for v in ran if v == PASS]
+    d = {'n': len(verdicts), 'ran': len(ran), 'passed': len(passed),
+         'failed_to_run': sum(1 for v in verdicts if v == FAILED_TO_RUN),
+         'uncalibrated': sum(1 for v in verdicts if v == UNCALIBRATED),
+         'pass_rate': (len(passed) / float(len(ran))) if ran else None}
+    if ended is not None:
+        d['ended_at_cap_yes'] = sum(1 for e in ended if e == 'yes')
+        d['ended_at_cap_unknown'] = sum(1 for e in ended if e == 'UNKNOWN')
+    return d
+
+
+def split_by_target(rows, target, before=None):
+    """--target <probe-id>: the targeted probe reported SEPARATELY from the rest, now and (when a
+    prior report is supplied) before. 'Fixed the target' and 'moved everything' are different
+    facts that one pooled pass_rate cannot tell apart. Record only: no verdict is changed and the
+    exit code never reads this. Returns None when target is not among the scored rows."""
+    tr = [r for r in rows if r['id'] == target]
+    if not tr:
+        return None
+    others = [r for r in rows if r['id'] != target]
+    res = {'target': target,
+           'after_target': tr[0]['verdict'], 'after_target_cap': tr[0].get('ended_at_cap', 'UNKNOWN'),
+           'after_others': _group_summary([r['verdict'] for r in others],
+                                          [r.get('ended_at_cap', 'UNKNOWN') for r in others]),
+           'before': None, 'moved': []}
+    if before is not None:
+        oth_ids = [r['id'] for r in others]
+        b_oth = [before[i] for i in oth_ids if i in before]
+        res['before'] = {'target': before.get(target, 'ABSENT-IN-BEFORE'),
+                         'others': _group_summary(b_oth),
+                         'others_missing': [i for i in oth_ids if i not in before]}
+        res['moved'] = ['%s %s->%s' % (r['id'], before[r['id']], r['verdict'])
+                        for r in others if r['id'] in before and before[r['id']] != r['verdict']]
+    return res
+
+
+def _fmt_pr(g):
+    return ('%d/%d pass_rate=%s failed_to_run=%d uncalibrated=%d' % (
+        g['passed'], g['ran'], ('%.2f' % g['pass_rate']) if g['pass_rate'] is not None else 'n/a',
+        g['failed_to_run'], g['uncalibrated']))
+
+
+def render_target_lines(t):
+    L = []
+    L.append('target=%s' % t['target'])
+    if t['before'] is not None:
+        L.append('  target   before=%s  after=%s (ended_at_cap=%s)' % (
+            t['before']['target'], t['after_target'], t['after_target_cap']))
+        L.append('  others   before: %s' % _fmt_pr(t['before']['others']))
+        if t['before']['others_missing']:
+            L.append('           (not in before report, excluded from its count: %s)'
+                     % ','.join(t['before']['others_missing']))
+    else:
+        L.append('  target   before=not supplied (pass --before <prior live_eval .md>)  after=%s '
+                 '(ended_at_cap=%s)' % (t['after_target'], t['after_target_cap']))
+    L.append('  others   after:  %s  ended_at_cap yes=%d unknown=%d' % (
+        _fmt_pr(t['after_others']), t['after_others']['ended_at_cap_yes'],
+        t['after_others']['ended_at_cap_unknown']))
+    if t['before'] is not None:
+        miss = t['before']['others_missing']
+        if t['moved']:
+            moved = ', '.join(t['moved'])
+        elif miss:
+            # «none» over a before-report that lacks those probes would read as «no movement».
+            moved = 'not comparable (%d others absent from before)' % len(miss)
+        else:
+            moved = 'none'
+        L.append('  others moved: %s' % moved)
+    return L
+
+
+def render_target_md(t):
+    out = ['## Target split — %s' % t['target'], '',
+           'Record only: the targeted probe is reported apart from the other probes so that '
+           '"fixed the target" is distinct from "moved everything". No verdict above depends on this.',
+           '']
+    out.extend('- ' + l.strip() if i else '- ' + l for i, l in enumerate(render_target_lines(t)))
+    out.append('')
+    return out
+
+
 def render_report_md(select_result, score_result, run_date):
     lines = []
     lines.append("# live_eval — %s" % run_date)
@@ -585,13 +737,13 @@ def render_report_md(select_result, score_result, run_date):
     if score_result is not None:
         lines.append("## Run — model=%s threshold=%.2f" % (score_result['model'], score_result['threshold']))
         lines.append("")
-        lines.append("| Probe | Verdict | reps(pass/ran) | primary_hit | control_hit | polarity | Reason |")
-        lines.append("|---|---|---|---|---|---|---|")
+        lines.append("| Probe | Verdict | reps(pass/ran) | primary_hit | control_hit | polarity | Reason | Budget |")
+        lines.append("|---|---|---|---|---|---|---|---|")
         for r in score_result['rows']:
-            lines.append("| %s | %s | %s | %s | %s | %s | %s |" % (
+            lines.append("| %s | %s | %s | %s | %s | %s | %s | %s |" % (
                 r['id'], r['verdict'], r.get('reps', '-'),
                 r.get('primary_hit'), r.get('control_hit'), r.get('polarity', ''),
-                _md_escape(r.get('reason', ''))))
+                _md_escape(r.get('reason', '')), _md_escape(r.get('budget', ''))))
         lines.append("")
         pr = score_result['pass_rate']
         pr_s = ("%.2f" % pr) if pr is not None else "n/a"
@@ -618,6 +770,8 @@ def render_report_md(select_result, score_result, run_date):
                           "instrument failure produce this shape, and this file cannot tell them "
                           "apart; the preserved response bodies can.")
         lines.append("")
+    if score_result is not None and score_result.get('target'):
+        lines.extend(render_target_md(score_result['target']))
     lines.append("## Excluded (from probes.md, 32-row snapshot)")
     lines.append("")
     lines.append("| Probe | Reason |")
@@ -705,8 +859,21 @@ def _cmd_score(args):
         reason = r.get('reason', '')
         if reason:
             line += " reason=%s" % reason
+        line += " | %s" % r.get('budget', '')
         print(line)
     print("")
+    if getattr(args, 'target', None):
+        before = parse_prev_report(args.before) if getattr(args, 'before', None) else None
+        if getattr(args, 'before', None) and before is None:
+            print("⚠️  --before %s unreadable or has no run table — before side NOT supplied" % args.before)
+        t = split_by_target(score_result['rows'], args.target, before)
+        if t is None:
+            print("❌ --target %s is not among the scored probes" % args.target, file=sys.stderr)
+            return 2
+        score_result['target'] = t
+        for l in render_target_lines(t):
+            print(l)
+        print("")
     pr = score_result['pass_rate']
     pr_s = ("%.2f" % pr) if pr is not None else "n/a"
     print("total=%d ran=%d failed_to_run=%d uncalibrated=%d passed=%d pass_rate=%s threshold=%.2f"
@@ -758,6 +925,8 @@ def main():
     sc.add_argument('--report-out')
     sc.add_argument('--run-date')
     sc.add_argument('--reps', type=int, default=1)
+    sc.add_argument('--target')
+    sc.add_argument('--before')
 
     args = ap.parse_args()
     if args.cmd == 'select':

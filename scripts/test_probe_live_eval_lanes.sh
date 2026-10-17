@@ -724,6 +724,122 @@ _lane EV8 evidence "control — the LIVE evidence dir was not written by these l
 
 fi
 echo ""
+echo "── budget line + --target split (2026-10-17) ─────────────────────"
+# WHY. A FAIL that ended at a harness cap (timeout) reads identically to a real FAIL, and one pooled
+# pass_rate cannot say whether a repair fixed its target or moved everything. These lanes pin that
+# every row carries the cap and ended_at_cap (three-valued: a missing record is UNKNOWN, never no),
+# and that --target splits the summary while the default output is untouched.
+_budget() {  # $1=ended value for primary_r1 meta, or MISSING  -> "ended_at_cap|budget"
+  python3 - "$REPO_ROOT" "$1" <<'PY'
+import sys, os, tempfile
+sys.path.insert(0, os.path.join(sys.argv[1], 'scripts'))
+from probe_live_eval_lib import score_run
+root = tempfile.mkdtemp(); base = os.path.join(root, 'G-X'); os.makedirs(base)
+open(os.path.join(base, 'primary_r1.txt'), 'w').write('nothing')
+open(os.path.join(base, 'control_r1.txt'), 'w').write('weather')
+for arm in ('primary', 'control'):
+    if sys.argv[2] == 'MISSING':
+        continue
+    if sys.argv[2] == 'PARTIAL' and arm == 'primary':
+        continue                       # transcript present, meta absent: ran but unmeasured
+    end = sys.argv[2] if arm == 'primary' else 'no'
+    open(os.path.join(base, arm + '_r1.meta.tsv'), 'w').write(
+        'rc\t0\ntimeout_s\t900\nmax_turns\tunset\ntoken_cap\tunset\nended_at_cap\t%s\n' % end)
+r = score_run([{'id': 'G-X', 'polarity': 'present', 'expect_re': 'ZZZ'}], root, ['G-X'], 0.8, 'sonnet')['rows'][0]
+print('%s|%s|%s' % (r['verdict'], r['ended_at_cap'], r['budget']))
+PY
+}
+r="$(_budget yes)"
+_lane BU1 budget "KNOWN-POSITIVE — a FAIL whose primary episode ended at the cap says so" \
+  "FAIL|yes|timeout=900s max_turns=unset tokens=unset ended_at_cap=yes (1/2 episodes)" "$r"
+r="$(_budget no)"
+_lane BU2 budget "KNOWN-NEGATIVE — a FAIL that ended on its own says ended_at_cap=no" \
+  "FAIL|no|timeout=900s max_turns=unset tokens=unset ended_at_cap=no" "$r"
+r="$(_budget MISSING)"
+_lane BU3 budget "no meta recorded -> UNKNOWN (not measured is not no)" \
+  "FAIL|UNKNOWN|no episode meta (cap not recorded)" "$r"
+# BU5 (review B1): one episode's meta missing while its transcript exists must not let the other
+# episode's `no` stand for the row — before the fix this printed `...|no|...`.
+r="$(_budget PARTIAL)"
+_lane BU5 budget "partial meta (transcript without meta) -> UNKNOWN, not the other episode's no" \
+  "FAIL|UNKNOWN|timeout=900s max_turns=unset tokens=unset ended_at_cap=UNKNOWN" "$r"
+
+# BU4/TG*: end to end through the runner with a stub sim that writes the meta the real runner writes.
+if [ "$NOPROBES" -eq 1 ]; then _skipblock "budget/target runner lanes BU4 TG3-TG5 (need probes.md)"; else
+BSTUB="$T/bud_stub"; mkdir -p "$BSTUB"
+cat > "$BSTUB/fake_sim_budget.sh" <<'FAKEBUD'
+#!/usr/bin/env bash
+arm=""; out=""
+while [ $# -gt 0 ]; do case "$1" in --arm) arm="$2"; shift 2 ;; --out) out="$2"; shift 2 ;; *) shift ;; esac; done
+mkdir -p "$out"
+printf 'stub body %s\n' "$arm" > "$out/${arm}_r1.txt"
+if [ "${FH_BUD_STUB_CAP:-no}" = yes ]; then rc=124; end=yes; else rc=0; end=no; fi
+printf 'rc\t%s\ntimeout_s\t900\nmax_turns\tunset\ntoken_cap\tunset\nended_at_cap\t%s\n' "$rc" "$end" > "$out/${arm}_r1.meta.tsv"
+echo "RESULT: CLEAN"; exit 0
+FAKEBUD
+chmod +x "$BSTUB/fake_sim_budget.sh"
+( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$BSTUB/fake_sim_budget.sh" FH_BUD_STUB_CAP=yes \
+    bash "$RUNNER" --ids "G-GREET-01" --no-evidence --report-out "$T/bud_report.md" ) >"$T/bud.log" 2>&1
+_lane BU4 budget "runner -> report row carries 'ended_at_cap=yes' when the stub hit its cap" \
+  "yes" "$(grep -E '^\| G-GREET-01 ' "$T/bud_report.md" | grep -q 'ended_at_cap=yes' && echo yes || echo no)"
+
+# TG3 default output unchanged: no --target -> no split section anywhere.
+_lane TG3 target "default (no --target): report has no 'Target split' section" \
+  "no" "$(grep -q 'Target split' "$T/bud_report.md" && echo yes || echo no)"
+
+# TG4 a --target that is not in the run is refused BEFORE any live call (stub counter stays empty).
+TGCOUNT="$T/tg_counter"; : > "$TGCOUNT"
+( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$STUBROOT/fake_sim_ok.sh" FH_FAKESIM_COUNTER="$TGCOUNT" \
+    bash "$RUNNER" --ids "G-GREET-01" --target NOT-A-PROBE --no-evidence --report-out "$T/tg4.md" ) >/dev/null 2>&1
+tg4_rc=$?
+_lane TG4 target "unknown --target -> rc=2 and zero runner calls" "2/0" "$tg4_rc/$(wc -l < "$TGCOUNT" | tr -d ' ')"
+
+# TG5 --target + --before through the runner: section present, before side filled in.
+cat > "$T/prev.md" <<'PREV'
+## Run — model=sonnet threshold=0.80
+
+| Probe | Verdict | reps(pass/ran) | primary_hit | control_hit | polarity | Reason |
+|---|---|---|---|---|---|---|
+| G-GREET-01 | FAIL | 0/1 | False | False | present |  |
+PREV
+( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$BSTUB/fake_sim_budget.sh" \
+    bash "$RUNNER" --ids "G-GREET-01,G-TRIG-07" --target G-GREET-01 --before "$T/prev.md" \
+    --no-evidence --report-out "$T/tg5.md" ) >"$T/tg5.log" 2>&1
+_lane TG5 target "--target + --before: report has the split, target before=FAIL shown" \
+  "yes" "$(grep -q '^## Target split — G-GREET-01' "$T/tg5.md" && grep -q 'before=FAIL' "$T/tg5.md" && echo yes || echo no)"
+fi
+
+_target() {  # $1=before verdicts "A:V,B:V,.." $2=after verdicts ; target=A -> prints summary tokens
+  python3 - "$REPO_ROOT" "$1" "$2" <<'PY'
+import sys, os
+sys.path.insert(0, os.path.join(sys.argv[1], 'scripts'))
+from probe_live_eval_lib import split_by_target
+parse = lambda s: dict(x.split(':') for x in s.split(','))
+before, after = parse(sys.argv[2]), parse(sys.argv[3])
+t = split_by_target([{'id': k, 'verdict': v, 'ended_at_cap': 'no'} for k, v in after.items()], 'A', before)
+print('%s>%s | others %s>%s | moved=%s' % (t['before']['target'], t['after_target'],
+      t['before']['others']['passed'], t['after_others']['passed'], len(t['moved'])))
+PY
+}
+r="$(_target 'A:FAIL,B:PASS,C:PASS' 'A:PASS,B:PASS,C:PASS')"
+_lane TG1 target "target fixed, others untouched -> moved=0 (fixed the target, moved nothing else)" \
+  "FAIL>PASS | others 2>2 | moved=0" "$r"
+r="$(_target 'A:FAIL,B:PASS,C:PASS' 'A:PASS,B:FAIL,C:PASS')"
+_lane TG2 target "KNOWN-NEGATIVE pair — target fixed but a neighbour regressed -> moved=1, others 2>1" \
+  "FAIL>PASS | others 2>1 | moved=1" "$r"
+# TG6 (review B4): a before-report that lacks the other probes must not render «others moved: none».
+r="$(python3 - "$REPO_ROOT" <<'PY'
+import sys, os
+sys.path.insert(0, os.path.join(sys.argv[1], 'scripts'))
+from probe_live_eval_lib import split_by_target, render_target_lines
+t = split_by_target([{'id': k, 'verdict': 'PASS', 'ended_at_cap': 'no'} for k in 'ABC'], 'A', {'A': 'FAIL'})
+print([l for l in render_target_lines(t) if 'others moved' in l][0].strip())
+PY
+)"
+_lane TG6 target "narrower --before -> 'not comparable', never 'none'" \
+  "others moved: not comparable (2 others absent from before)" "$r"
+
+echo ""
 echo "── summary ──────────────────────────────────────────────────────"
 echo "lanes: $N   failed: $([ "$FAIL" -eq 0 ] && echo 0 || echo '>=1')"
 [ -n "$SKIPPED_BLOCKS" ] && echo "skipped (installed package, not a pass):$SKIPPED_BLOCKS"
