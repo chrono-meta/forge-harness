@@ -519,7 +519,7 @@ else
 fi
 
 # CLAUDE.md size guard — Claude Code warns «CLAUDE.md is over the 150.0k-char limit» on every session
-# start of a clone (measured 2026-09-26: 154,149 chars since ~v3.16.0). Guard at 145k (headroom ~1k/week).
+# start of a clone (measured 2026-09-26: 154,149 chars since ~v3.16.0). Guard ratcheted 145k → 18k on 2026-10-17 (see the lane header; forks: FH_CLAUDE_MD_LIMIT).
 if [ ! -f CLAUDE.md ]; then
   _absent_subject_verdict "claude-md size lanes" "CLAUDE.md" || fail=1
 elif [ -f scripts/test_claude_md_size_lanes.sh ]; then

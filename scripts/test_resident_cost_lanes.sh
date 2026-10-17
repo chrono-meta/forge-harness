@@ -12,7 +12,7 @@
 #   R8 합계 = 측정된 칸의 합(MEMORY 는 적재분)
 #   R9 되돌림: nchars 를 바이트로 바꾼 변이체 → R1 이 빨개져야 한다(적용 확인 → 실행 → 판정)
 #   R10 실물: 이 레포 CLAUDE.md 줄이 독립 계산(len)과 같은 값
-# CLAUDE.md 크기 «가드»(145,000 한계)는 scripts/test_claude_md_size_lanes.sh 가 맡는다 — 여기서 다시 안 잰다.
+# CLAUDE.md 크기 «가드»(18,000 한계)는 scripts/test_claude_md_size_lanes.sh 가 맡는다 — 여기서 다시 안 잰다.
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"; ROOT="$(cd "$HERE/.." && pwd)"
 METER="${RESIDENT_COST_METER:-$HERE/resident_cost.py}"   # R9 가 변이체를 넣을 때만 바뀐다
