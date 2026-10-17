@@ -986,6 +986,8 @@ for _pair in \
   "scripts/session_close_check.sh|scripts/test_peer_worktree_detect_lanes.sh" \
   "scripts/env_purity_scan.sh|scripts/test_env_purity_lanes.sh" \
   "scripts/frontier_digest_daily.sh|scripts/test_frontier_digest_retry.sh" \
+  "plugins/fh-meta/skills/frontier-digest/SKILL.md|scripts/test_frontier_digest_recall.sh" \
+  "scripts/test_frontier_digest_recall.sh|scripts/test_frontier_digest_recall_negctl.sh" \
   "scripts/knowledge_seam_check.sh|scripts/test_knowledge_seam_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_crossfamily_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_floor_lanes.sh" \
