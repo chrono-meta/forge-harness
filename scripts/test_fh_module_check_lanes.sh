@@ -489,5 +489,93 @@ run "RV11 git \\ ⏎ push continuation blocks"                  1 c check "$W/sc
 run "RV12 non-UTF-8 manifest is UNMEASURED (2), not BLOCK"     2 c check "$W/nonutf8.yaml"
 run "RV13 unreadable registry cannot claim «not installed» (2)" 2 c check "$W/needs_base/fh-module.yaml" --installed "$W/no-such-dir"
 
+# ── export (standalone proof): copy only what is declared, run the calibration inside the copy ──
+printf 'python3 scripts/helper.py\n' > "$R/scripts/cal_dep.sh"
+printf 'print("helper ok")\n' > "$R/scripts/helper.py"
+rv ex_undeclared <<YAML
+id: ex-undeclared
+version: 1.0.0
+touches_irreversible: none
+data_class: public
+requires: {modules: [], core_min: 3.0.0}
+calibration: {command: "bash scripts/cal_dep.sh"}
+YAML
+rv ex_declared <<YAML
+id: ex-declared
+version: 1.0.0
+touches_irreversible: none
+data_class: public
+requires: {modules: [], core_min: 3.0.0}
+calibration: {command: "bash scripts/cal_dep.sh"}
+files: [scripts/helper.py]
+YAML
+rv ex_uncal <<YAML
+id: ex-uncal
+version: 1.0.0
+touches_irreversible: none
+data_class: public
+requires: {modules: [], core_min: 3.0.0}
+calibration: UNCALIBRATED
+YAML
+rv ex_badfile <<YAML
+id: ex-badfile
+version: 1.0.0
+touches_irreversible: none
+$TAIL
+files: [../outside.txt]
+YAML
+run "EX1 undeclared dependency: calibration fails inside the export (1)" 1 c export "$W/ex_undeclared/fh-module.yaml" --out "$W/out1"
+run "EX2 declared in files: standalone (0)"                             0 c export "$W/ex_declared/fh-module.yaml" --out "$W/out2"
+run "EX3 UNCALIBRATED cannot prove standalone (2)"                      2 c export "$W/ex_uncal/fh-module.yaml" --out "$W/out3"
+mkdir -p "$W/out4"; echo x > "$W/out4/keep"
+run "EX4 a non-empty --out is refused (2)"                              2 c export "$W/ex_declared/fh-module.yaml" --out "$W/out4"
+run "EX5 a blocked manifest exports nothing (1)"                        1 c export "$W/ex_badfile/fh-module.yaml" --out "$W/out5"
+echo decoy > "$R/scripts/undeclared_decoy.txt"   # exists next to the declared file; must not be copied
+run "EX2b export again after adding a decoy (0)"                        0 c export "$W/ex_declared/fh-module.yaml" --out "$W/out2b"
+if [ ! -e "$W/out5" ] && [ -f "$W/out2b/scripts/helper.py" ] && [ ! -e "$W/out2b/scripts/undeclared_decoy.txt" ] && [ ! -e "$W/out2b/fh-module.yaml" ] && [ -f "$W/out2b/.fh-export/MODULE.md" ]; then PASS=$((PASS+1)); echo "PASS  EX6 only declared files are copied; a refused export leaves no folder"
+else FAIL=$((FAIL+1)); echo "FAIL  EX6 export copied the wrong set"; fi
+
+run "EX7 the pilot (ko-tech-writer) exports standalone"             0 python3 "$CHK" export "$REPO/plugins/fh-commons/skills/ko-tech-writer/fh-module.yaml" --repo "$REPO" --out "$W/pilot"
+
+# ── export review fixes (codex + API Sonnet, 2026-10-18) ──
+mkdir -p "$R/plugins/p/skills/linked" && echo "# s" > "$R/plugins/p/skills/linked/SKILL.md" && ln -sf /etc/hosts "$R/plugins/p/skills/linked/leak"
+rv ex_symlink <<YAML
+id: ex-symlink
+version: 1.0.0
+provides: {skills: [linked]}
+touches_irreversible: none
+$TAIL
+YAML
+rv ex_dot <<YAML
+id: ex-dot
+version: 1.0.0
+touches_irreversible: none
+$TAIL
+files: [.]
+YAML
+rv ex_slug <<YAML
+id: ex-slug
+version: 1.0.0
+provides: {skills: ["../../../scripts"]}
+touches_irreversible: none
+$TAIL
+YAML
+printf 'exit 2\n' > "$R/scripts/cal_unm.sh"
+rv ex_unm <<YAML
+id: ex-unm
+version: 1.0.0
+touches_irreversible: none
+data_class: public
+requires: {modules: [], core_min: 3.0.0}
+calibration: {command: "bash scripts/cal_unm.sh"}
+YAML
+run "EX8 a symlink inside a skill folder blocks (1)"                   1 c export "$W/ex_symlink/fh-module.yaml" --out "$W/out8"
+run "EX9 files: [.] blocks (1)"                                         1 c export "$W/ex_dot/fh-module.yaml" --out "$W/out9"
+run "EX10 a skill name with .. blocks (1)"                              1 c export "$W/ex_slug/fh-module.yaml" --out "$W/out10"
+run "EX11 --out inside the repo is refused (2)"                         2 c export "$W/ex_declared/fh-module.yaml" --out "$R/inside"
+run "EX12 calibration rc 2 is UNMEASURED, not BLOCK (2)"                2 c export "$W/ex_unm/fh-module.yaml" --out "$W/out12"
+if [ ! -e "$W/out8" ] && [ ! -e "$W/out12" ] && [ ! -e "$R/inside" ] && ! ls -d "$W"/.fh-export-* >/dev/null 2>&1; then PASS=$((PASS+1)); echo "PASS  EX13 refused or failed exports leave no folder and no staging"
+else FAIL=$((FAIL+1)); echo "FAIL  EX13 leftovers after a refused export"; fi
+
 echo "lanes: pass=$PASS fail=$FAIL"
 [ "$FAIL" = 0 ]
