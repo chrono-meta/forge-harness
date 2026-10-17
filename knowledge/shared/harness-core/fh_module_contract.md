@@ -40,6 +40,7 @@ Unknown key or unknown enum value = BLOCK. Missing required field = BLOCK.
 | `data_class` | `public` / `private` / `company` |
 | `requires` | `{modules: [ids], core_min: MAJOR.MINOR.PATCH}` |
 | `calibration` | `{command: <known-pair test>}` or the literal `UNCALIBRATED` (allowed, reported as a note, never a verdict). **v0 checks presence and shape only — the checker does not run the calibration command** |
+| `files` | optional list of repo-relative paths the module ships besides its skill/agent folders and command files; `export` copies exactly these |
 | `records` | optional list of paths the module writes (used by removal) |
 
 ## 3. Install-time check (`scripts/fh_module_check.py check`)
@@ -57,6 +58,20 @@ Exit codes: **0 OK, 1 BLOCK, 2 UNMEASURED, 3 OK-but-UNCALIBRATED** (valid, no ve
 5. Calibration: `UNCALIBRATED` with a non-empty `provides.verdicts` BLOCKs; a `calibration.command` follows the command shape above (missing target = UNMEASURED). Duplicate YAML keys BLOCK.
 6. `--installed DIR` (`*/fh-module.yaml|yml`, `*.yaml|yml`): a missing dir, zero manifests, or a malformed `requires` is UNMEASURED; duplicate installed ids BLOCK; also duplicate id, or a `requires.modules` entry not installed, BLOCKs.
 7. `adds_constraints` below the core floor (approval below `ask`, degrade `advisory`) **BLOCK** — in `check` and in `merge`. A module can only add constraints; a below-floor value is never silently clamped, because a consumer reading the manifest directly would see the weaker value. Enum fields must be strings; a list or mapping where a name belongs BLOCKs (it used to crash to 2). A present `core_route` (even `null`) with `touches_irreversible: none` BLOCKs. Non-UTF-8 input is UNMEASURED. With `--installed`, an unreadable registry is UNMEASURED and cannot also report «required module not installed».
+
+## 3b. Export — the standalone proof (`fh_module_check.py export <manifest> --out DIR`)
+
+A standalone skill must run without FH around it (operator: «스킬 단품은 스탠드얼론으로 동작할수있게 … 자체하네스를 필요하면 내장한채로»). `export` proves it instead of asserting it: it copies **only what the manifest declares** — the skill and agent folders, every hook/verdict/calibration command file, and the optional `files:` list (repo-relative, same path rules as commands) — into an empty folder, then runs the module's own calibration **inside that folder** with a fresh HOME.
+
+- Copied: **git-tracked files only** (an untracked or ignored local file would make STANDALONE true here and false elsewhere). **Any symlink** in a declared path BLOCKs. Skill/agent names must be plain slugs; `files` may not be `.`, `.git…`, or the reserved `fh-module.yaml` / `MODULE.md` / `.fh-export`. Export metadata goes to `.fh-export/`.
+- Built in a staging folder next to `--out` and moved there only on success; the calibration runs in a separate scratch copy with a fresh HOME/TMPDIR/XDG and a PATH of system dirs plus the interpreters' own dirs (never a repo dir), stdin closed, in its own process group (killed whole on timeout). `--out` inside the repo is refused.
+- rc 0 **STANDALONE**: the known-pair test passes with only the declared, tracked files.
+- rc 1: the manifest does not pass `check`; a symlink, a non-slug name, `.`/`.git`; or the calibration fails inside the export — including when its output says a file was not found (python exits 2 there): an undeclared dependency, named in the output tail.
+- rc 2: `UNCALIBRATED`, a missing or untracked declared file, a non-empty `--out` or one inside the repo, a timeout, or the calibration's own UNMEASURED (rc 2 without a missing-file message, 126/127, a signal).
+
+Measured on the pilot: without `files:` the export failed with «missing scripts/ko_tech_writer_calibrate.py» (the lane calls it); declaring it made the export STANDALONE (7 files). Lanes EX1–EX7; dropping the pilot's `files:` turns EX7 red.
+
+**Not proven by export (named residual)**: there is no OS sandbox — a calibration that reads the repo by absolute path or reaches the real home via the user database can pass falsely; tools it needs from the machine (python3, rg) come from the system PATH; a calibration that exits 0 without testing reads as STANDALONE (the contract requires a known-pair test, the checker does not inspect it); whether the skill's prose still makes sense without FH is a reading question, not a run.
 
 ## 4. Composition and removal
 
@@ -77,6 +92,6 @@ Pilot: `plugins/fh-commons/skills/ko-tech-writer/fh-module.yaml`.
 
 ## 7. Not in v0
 
-**Export for standalone use** — a step that packs one skill with only what it needs (its files, its lanes, an embedded guard if it touches anything irreversible) so it runs without FH. Blind Sonnet sims (2026-10-17, 3/3) found the contract and then said exactly this was missing; the operator's rule is «스킬 단품은 스탠드얼론으로 동작해야». Next piece.
+**Packaging an embedded guard** — export copies a module that touches nothing irreversible; a module that does (`touches_irreversible` other than `none`) would need the core gate it routes to inside the export. Not built.
 
 Version-range solving for `requires`, applying the archive plan, enforcing `core_min` against the installed core version, and installing hooks into settings. The checker validates a manifest; it does not install.

@@ -5,12 +5,14 @@ Subcommands
   check  <manifest> [--repo DIR] [--installed DIR]   install-time check
   merge  <manifest> <manifest>...                    strictest-wins merge of constraints
   remove <id> --installed DIR                        removal plan (refused while a dependant exists)
+  export <manifest> --out DIR [--repo DIR]           copy only what the module declares into DIR, then run its
+                                                     calibration THERE: rc 0 = it runs standalone (no FH around it)
 
 Exit codes: 0 OK . 1 BLOCK . 2 UNMEASURED (unreadable / tooling down / empty core list) .
 3 OK-but-UNCALIBRATED (valid, no verdict entry points, calibration declared UNCALIBRATED; never a clean pass).
 Fail closed: nothing unreadable, unknown or empty ever exits 0.
 """
-import argparse, glob, hashlib, json, os, re, sys
+import argparse, glob, hashlib, json, os, re, shutil, subprocess, sys
 
 OK, BLOCK, UNMEASURED, UNCAL = 0, 1, 2, 3
 
@@ -62,7 +64,7 @@ CORE_GATES = {
     "history": {"destructive-op": "templates/predelete_check.sh"},
 }
 TOP_KEYS = {"id", "version", "provides", "adds_constraints", "touches_irreversible", "core_route",
-            "data_class", "requires", "calibration", "records"}
+            "data_class", "requires", "calibration", "records", "files"}
 PROVIDES_KEYS = {"skills", "agents", "hooks", "verdicts"}
 HOOK_KEYS = {"event", "matcher", "command", "action", "order", "target"}
 VERDICT_KEYS = {"entry", "command", "exit_codes"}
@@ -244,6 +246,8 @@ def validate(m, vd, repo_core, repo):
     for k in ("skills", "agents"):
         if k in pv and not is_list_of_str(pv[k]):
             vd.block("provides.%s must be a list of non-empty strings" % k)
+        elif k in pv and any(not SLUG.fullmatch(x) for x in pv[k]):
+            vd.block("provides.%s names must be plain slugs (no paths, no globs)" % k)
     hooks = pv.get("hooks", [])
     if hooks is None: hooks = []
     if not isinstance(hooks, list):
@@ -364,6 +368,21 @@ def validate(m, vd, repo_core, repo):
     if rec is not None and not is_list_of_str(rec):
         vd.block("records must be a list of paths")
 
+    # files the module ships beyond its skill/agent folders and command files (export copies exactly these)
+    if "files" in m:
+        fl = m["files"]
+        if not is_list_of_str(fl):
+            vd.block("files must be a list of repo-relative paths")
+        else:
+            rr = os.path.realpath(repo)
+            for f in fl:
+                if f.startswith("/") or ".." in f.split("/") or not CMD_ARG.match(f):
+                    vd.block("files: %r must be a plain repo-relative path" % f)
+                elif not os.path.exists(os.path.join(repo, f)):
+                    vd.unm("files: %s does not exist" % f)
+                elif os.path.commonpath([rr, os.path.realpath(os.path.join(repo, f))]) != rr:
+                    vd.block("files: %s resolves outside the repo" % f)
+
 
 def load_installed(d):
     mods, errs, dups = {}, [], []
@@ -479,18 +498,185 @@ def cmd_remove(a):
     return vd.code()
 
 
+RESERVED_EXPORT = {"fh-module.yaml", "MODULE.md", ".fh-export"}
+
+
+def tracked(repo):
+    """Repo-relative paths git tracks (None if not a git checkout). Export copies only these: an untracked or ignored
+    local file would make STANDALONE true on this machine and false for everyone else."""
+    try:
+        r = subprocess.run(["git", "-C", repo, "ls-files", "-z"], capture_output=True, timeout=60)
+    except Exception:
+        return None
+    if r.returncode != 0:
+        return None
+    return set(x for x in r.stdout.decode("utf-8", "replace").split("\0") if x)
+
+
+def module_paths(m, repo):
+    """Everything export copies, repo-relative: skill and agent folders, every command file, the declared files.
+    -> (paths, problems). Names are literal slugs; a skill/agent that does not resolve to exactly one place is a problem."""
+    out, prob = [], []
+    pv = m.get("provides") or {}
+    for s_ in pv.get("skills") or []:
+        if not SLUG.fullmatch(str(s_)):
+            prob.append("skill name %r is not a plain slug" % s_); continue
+        hits = sorted(glob.glob(os.path.join(repo, "plugins", "*", "skills", glob.escape(s_))))
+        if len(hits) != 1: prob.append("skill %s resolves to %d folders" % (s_, len(hits)))
+        else: out.append(os.path.relpath(hits[0], repo))
+    for ag in pv.get("agents") or []:
+        if not SLUG.fullmatch(str(ag)):
+            prob.append("agent name %r is not a plain slug" % ag); continue
+        hits = sorted(glob.glob(os.path.join(repo, "plugins", "*", "agents", glob.escape(ag) + ".md")))
+        if len(hits) != 1: prob.append("agent %s resolves to %d files" % (ag, len(hits)))
+        else: out.append(os.path.relpath(hits[0], repo))
+    cmds = [h.get("command") for h in pv.get("hooks") or [] if isinstance(h, dict)]
+    cmds += [v.get("command") for v in pv.get("verdicts") or [] if isinstance(v, dict)]
+    cal = m.get("calibration")
+    if isinstance(cal, dict): cmds.append(cal.get("command"))
+    for c in cmds:
+        full, kind, msg = resolve_cmd(c, repo)
+        if kind: prob.append(msg)
+        else: out.append(os.path.relpath(full, repo))
+    out += list(m.get("files") or [])
+    return sorted(set(out)), prob
+
+
+def expand_tracked(rels, repo, trk):
+    """Declared paths -> the tracked files under them. Symlinks anywhere are refused (a link can point outside the repo
+    or at an undeclared file and turn a non-standalone module into STANDALONE)."""
+    files, prob = [], []
+    rr = os.path.realpath(repo)
+    for rel in rels:
+        top = rel.split("/")[0]
+        if rel in (".", "") or ".git" in rel.split("/") or rel in RESERVED_EXPORT:
+            prob.append("export: %s cannot be exported" % rel); continue
+        src = os.path.join(repo, rel)
+        if os.path.islink(src):
+            prob.append("export: %s is a symlink" % rel); continue
+        if os.path.isdir(src):
+            for d, dirs, fs in os.walk(src):
+                for n in dirs + fs:
+                    if os.path.islink(os.path.join(d, n)):
+                        prob.append("export: %s is a symlink" % os.path.relpath(os.path.join(d, n), repo))
+                for n in fs:
+                    r_ = os.path.relpath(os.path.join(d, n), repo)
+                    if trk is None or r_ in trk: files.append(r_)
+        elif trk is None or rel in trk:
+            files.append(rel)
+        else:
+            prob.append("export: %s is not tracked by git (it would not exist for anyone else)" % rel)
+        if os.path.commonpath([rr, os.path.realpath(src)]) != rr:
+            prob.append("export: %s resolves outside the repo" % rel)
+    return sorted(set(files)), prob
+
+
+def trusted_path(repo):
+    """PATH for the calibration run: the system dirs plus where the allowed interpreters live, never a dir inside the repo."""
+    rr = os.path.realpath(repo)
+    dirs = ["/usr/bin", "/bin", "/usr/sbin", "/sbin"]
+    for it in sorted(INTERPRETERS):
+        w = shutil.which(it)
+        if w:
+            d = os.path.dirname(os.path.realpath(w))
+            if os.path.commonpath([rr, d]) != rr and d not in dirs: dirs.append(d)
+    return ":".join(dirs)
+
+
+def cmd_export(a):
+    """Copy only what the module declares (git-tracked, no symlinks) into an empty folder outside the repo, run its
+    calibration in a scratch copy of that folder. rc 0 = STANDALONE. The calibration's own rc 2 (or a missing
+    interpreter, or a signal) is UNMEASURED, not a dependency failure."""
+    import tempfile, signal
+    vd = Verdict()
+    repo = os.path.abspath(a.repo) if a.repo else default_repo()
+    m, err = load_yaml(a.manifest)
+    if err:
+        (vd.block if err.startswith("duplicate key") else vd.unm)(err); vd.report(); return vd.code()
+    core, cerr = core_hooks(repo)
+    if cerr: vd.unm(cerr)
+    validate(m, vd, core, repo)
+    if vd.blocks or vd.unmeasured:
+        print("export refused: the manifest does not pass check"); vd.report(); return vd.code()
+    cal = m.get("calibration")
+    if not isinstance(cal, dict):
+        vd.unm("calibration is UNCALIBRATED: a standalone run cannot be proven"); vd.report(); return vd.code()
+    out = os.path.realpath(os.path.abspath(a.out))
+    rr = os.path.realpath(repo)
+    if os.path.commonpath([rr, out]) == rr:
+        vd.unm("--out %s is inside the repo: the run could reach the repo it is meant to stand without" % out); vd.report(); return vd.code()
+    if os.path.exists(out) and (not os.path.isdir(out) or os.listdir(out)):
+        vd.unm("--out %s exists and is not an empty folder" % out); vd.report(); return vd.code()
+    rels, prob = module_paths(m, repo)
+    trk = tracked(repo)
+    files, prob2 = expand_tracked(rels, repo, trk)
+    for p_ in prob + prob2:
+        (vd.block if ("symlink" in p_ or "outside" in p_ or "cannot be exported" in p_ or "slug" in p_) else vd.unm)(p_)
+    if vd.blocks or vd.unmeasured:
+        vd.report(); return vd.code()
+    parent = os.path.dirname(out) or "."
+    os.makedirs(parent, exist_ok=True)
+    stage = tempfile.mkdtemp(prefix=".fh-export-", dir=parent)
+    scratch = tempfile.mkdtemp(prefix="fh-export-run-")
+    try:
+        for rel in files:
+            dst = os.path.join(stage, rel)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(os.path.join(repo, rel), dst, follow_symlinks=False)
+        os.makedirs(os.path.join(stage, ".fh-export"))
+        shutil.copy2(a.manifest, os.path.join(stage, ".fh-export", "fh-module.yaml"))
+        with open(os.path.join(stage, ".fh-export", "MODULE.md"), "w", encoding="utf-8") as fh:
+            fh.write("# %s %s (standalone export)\n\nFiles: %d git-tracked files.\nRun its known-pair test from this folder: `%s`\n"
+                     % (m.get("id"), m.get("version"), len(files), cal["command"]))
+        run_dir = os.path.join(scratch, "m")
+        shutil.copytree(stage, run_dir, symlinks=True)
+        home = os.path.join(scratch, "home"); tmp = os.path.join(scratch, "tmp")
+        os.makedirs(home); os.makedirs(tmp)
+        env = {"PATH": trusted_path(repo), "HOME": home, "TMPDIR": tmp, "LANG": os.environ.get("LANG", "C.UTF-8"),
+               "XDG_CONFIG_HOME": os.path.join(home, ".config"), "XDG_CACHE_HOME": os.path.join(home, ".cache")}
+        pr = subprocess.Popen(cal["command"].split(), cwd=run_dir, env=env, stdin=subprocess.DEVNULL,
+                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT, start_new_session=True)
+        try:
+            outb, _ = pr.communicate(timeout=int(getattr(a, "timeout", 600) or 600))
+        except subprocess.TimeoutExpired:
+            try: os.killpg(pr.pid, signal.SIGKILL)
+            except Exception: pass
+            pr.communicate()
+            vd.unm("calibration timed out inside the export (process group killed)"); vd.report(); return vd.code()
+        rc = pr.returncode
+        tail = "\n".join(outb.decode("utf-8", "replace").strip().splitlines()[-8:])
+        print("calibration rc=%d inside a scratch copy of the export (%d files)" % (rc, len(files)))
+        if rc == 0:
+            os.rename(stage, out) if not os.path.exists(out) else (os.rmdir(out), os.rename(stage, out))
+            stage = None
+            print("STANDALONE: the module's own known-pair test passes with only its declared, git-tracked files -> %s" % out)
+        elif re.search(r"No such file|can't open file|cannot find module|Cannot find module|ModuleNotFoundError|missing .*\.(py|sh|js|md)", tail):
+            # a file the run reached for is not in the export — an undeclared dependency, whatever the rc (python exits 2 here)
+            vd.block("not standalone: the calibration reached for a file the export does not have:\n" + tail)
+        elif rc == 2 or rc in (126, 127) or rc < 0:
+            vd.unm("calibration could not measure inside the export (rc=%d: its own UNMEASURED, a missing interpreter or a signal):\n%s" % (rc, tail))
+        else:
+            vd.block("not standalone: calibration fails inside the export (an undeclared dependency?):\n" + tail)
+    finally:
+        if stage and os.path.isdir(stage): shutil.rmtree(stage, ignore_errors=True)
+        shutil.rmtree(scratch, ignore_errors=True)
+    vd.report()
+    return vd.code()
+
+
 def main(argv):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd")
     c = sub.add_parser("check"); c.add_argument("manifest"); c.add_argument("--repo"); c.add_argument("--installed")
     g = sub.add_parser("merge"); g.add_argument("manifests", nargs="+"); g.add_argument("--repo")
     r = sub.add_parser("remove"); r.add_argument("id"); r.add_argument("--installed", required=True)
+    x = sub.add_parser("export"); x.add_argument("manifest"); x.add_argument("--out", required=True); x.add_argument("--repo"); x.add_argument("--timeout", type=int, default=600)
     try:
         a = ap.parse_args(argv)
     except SystemExit:
         return UNMEASURED
     try:
-        return {"check": cmd_check, "merge": cmd_merge, "remove": cmd_remove}[a.cmd](a)
+        return {"check": cmd_check, "merge": cmd_merge, "remove": cmd_remove, "export": cmd_export}[a.cmd](a)
     except Exception as e:                      # fail closed: an internal error is never a pass
         print("UNMEASURED: checker error %s: %s" % (type(e).__name__, e))
         return UNMEASURED

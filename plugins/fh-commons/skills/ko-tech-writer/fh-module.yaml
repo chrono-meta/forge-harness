@@ -14,3 +14,6 @@ requires:
   core_min: 3.0.0
 calibration:
   command: bash scripts/test_ko_tech_writer_lanes.sh
+# what export copies besides the skill folder and the command file (found by `export`: the lane calls this script)
+files:
+  - scripts/ko_tech_writer_calibrate.py
