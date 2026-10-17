@@ -97,22 +97,24 @@ or the `tracks/` memory. First-time walkthrough in Korean: [`docs/USER_GUIDE.md`
 This is the intended flow. Which steps are enforced by code and which by rules the AI is told to follow is
 in the "What FH does, and how far it goes" table below and in [`docs/map/FH_MAP.md`](docs/map/FH_MAP.md).
 
+```mermaid
+flowchart TD
+    A["You say what you want<br/>(plain language)"] --> B["FH reads the intent"] --> C["Forges it into one of two forms"]
+    C --> R1["Rules an AI follows<br/>(CLAUDE.md, skills)"]
+    C --> R2["Code that needs no AI<br/>(hooks, gates, scripts)"]
+    R1 --> S1
+    R2 --> S1
+    subgraph G["Every change to the harness passes through"]
+        direction TB
+        S1["1. Write down what counts as success and what it never does, *before* designing"] --> S2["2. Try it from several independent angles<br/>(another model family, another repo's view)"] --> S3["3. Attack it until what is left is sound, then ship"]
+    end
 ```
-   you say what you want  ──►  FH reads the intent  ──►  forges it into one of two forms
-   (plain language)                                        ├─ rules an AI follows  (CLAUDE.md, skills)
-                                                           └─ code that needs no AI (hooks, gates, scripts)
-                                                                     │
-        every change to the harness passes through ◄─────────────────┘
-        ┌──────────────────────────────────────────────────────────┐
-        │ 1. write down "what counts as success / what it never does" BEFORE designing
-        │ 2. try it from several independent angles (other model family, other repo's view)
-        │ 3. attack it until what is left is sound — then ship
-        └──────────────────────────────────────────────────────────┘
-                                   │
-   irreversible steps (publish · delete · rewrite history) stop and ask a human
-   what a check could not measure is reported as "not measured" — never as 0
-   what each session learned is written to tracks/  ──►  the next session starts there
-```
+
+If the diagram does not render: you say what you want → FH reads the intent → forges it into rules an AI follows or code that needs no AI → (every change) 1. write down success and what it never does first → 2. try it from independent angles → 3. attack it until what is left is sound, then ship.
+
+- Irreversible steps (publish · delete · rewrite history) stop and ask a human
+- What a check could not measure is reported as "not measured", never as 0
+- What each session learned is written to `tracks/`, and the next session starts there
 
 The hub (this repo) holds shared `knowledge/` and per-project `tracks/`; each project you connect points
 back to it. Full map, every node a real path: [`docs/map/FH_MAP.md`](docs/map/FH_MAP.md) (interactive:
