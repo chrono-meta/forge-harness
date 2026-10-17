@@ -59,6 +59,14 @@ LANES = [
     ("C5 소유 직역", r"(을|를) (갖|가지)"),
     ("C6 전칭 어휘", r"전부|모두|하나도|전혀|일절|예외 없이"),
     ("C6b 부정형 전칭", r"(안|못) ?(했|만들|나오|잡히)|지 않았(다|습니다)"),
+    # ── 측정 클래스 (2026-10-17 수확 tracks/_meta/ko_style_harvest_2026-10-17.md §4 에서 보정한 정규식)
+    # 🟥 아래 히트는 전부 «후보»다. 운영자 손편집이 이 패턴들과 반대로 간 사례가 있다(그것을 등).
+    ("C7 겹화살괄호·낫표(Y1/Y2)", r"[«»「」『』]"),
+    ("C8 절 기호(Y3)", r"§"),
+    ("C9 안/못+동사(N3·후보·노이즈 큼)", r"(?<![가-힣])(안|못) [가-힣]{1,6}", "candidate"),
+    ("C10 구어 이유 어미(N4)", r"(니까요|고요|거든요|달라도요)[*.\s]*(<!--.*)?$"),
+    ("C11 당신·필요로(N5)", r"당신|필요로\s*(합|하|한)"),
+    ("C12 라틴 뒤 조사 띄어쓰기(N9)", r"[A-Za-z0-9)`]\s(는|은|이|가|을|를|로|로는|의|에서|에)(?![가-힣])"),
 ]
 
 # 절대 잡히면 안 되는 토큰 — 「늘 잡는다」를 내는 죽은 계기 배제용
@@ -89,10 +97,22 @@ def main():
     print("")
 
     npass = nfail = 0
-    for label, pat in LANES:
+    for lane in LANES:
+        label, pat = lane[0], lane[1]
+        candidate = len(lane) > 2 and lane[2] == "candidate"
         p = count(POS, pat)
         n = count(NEG, pat)
-        if p >= 1 and n == 0:
+        if candidate:
+            # 후보 전용 레인: 정상 용례를 잡는 과차단이 **예상된 결과**다. 판별(discriminates)을 주장하지 않는다.
+            if p >= 1 and n >= 1:
+                print("OK   %s -- CANDIDATE-ONLY: positive %d / negative %d (expected over-block; "
+                      "does NOT discriminate, hits need per-case judgment)" % (label, p, n))
+                npass += 1
+            else:
+                print("FAIL %s -- candidate lane lost its documented over-block or positive "
+                      "(positive %d / negative %d)" % (label, p, n))
+                nfail += 1
+        elif p >= 1 and n == 0:
             print("OK   %s -- positive %d / negative 0 (discriminates)" % (label, p))
             npass += 1
         elif p < 1:
@@ -122,9 +142,11 @@ def main():
 
     print("")
     if nfail == 0:
-        print("CALIBRATED (%d lanes) -- Step 2 five classes + Step 4-b two patterns discriminate."
+        print("CALIBRATED (%d lanes) -- Step 2 classes (C1-C5, C7-C12) + Step 4-b two patterns discriminate."
               % npass)
         print("  NOT proven: 'zero residue' in any real document. That is measured per document.")
+        print("  C7-C12 positives are the harvest's own 'before' sentences (re-built short), so")
+        print("  false-positive rate on out-of-distribution text is UNMEASURED. C9 over-blocks by design.")
         print("  Citing this suite as evidence of 'zero residue' reproduces the very downgrade")
         print("  recorded in harness_terminal_correlation_and_recommendations.md.")
         return 0
