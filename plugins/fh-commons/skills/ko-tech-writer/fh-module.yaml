@@ -1,0 +1,16 @@
+# FH module manifest (contract v0) - pilot. Spec: knowledge/shared/harness-core/fh_module_contract.md
+id: ko-tech-writer
+version: 0.1.0
+provides:
+  skills: [ko-tech-writer]
+  agents: []
+  hooks: []
+  verdicts: []
+adds_constraints: []
+touches_irreversible: none
+data_class: public
+requires:
+  modules: []
+  core_min: 3.0.0
+calibration:
+  command: bash scripts/test_ko_tech_writer_lanes.sh
