@@ -105,6 +105,7 @@
     "plugins/fh-commons/skills",
     "plugins/fh-commons/skills/ko-tech-writer/fixtures/known_negative.md",
     "plugins/fh-commons/skills/ko-tech-writer/fixtures/known_positive.md",
+    "plugins/fh-commons/skills/ko-tech-writer/fixtures/known_unclosed.md",
     "plugins/fh-meta/.claude-plugin/plugin.json",
     "plugins/fh-meta/CHANGELOG.md",
     "plugins/fh-meta/agents",
