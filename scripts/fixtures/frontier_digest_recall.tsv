@@ -1,0 +1,5 @@
+# item<TAB>kind<TAB>announced-on channel ids (comma-separated; at least ONE must be in SKILL.md Step 1)
+# Known-positive recall set. Channel assignments are the operator-reported/expected venues, not live-verified.
+Aside	agent browser (YC-backed)	launch-yc,product-hunt
+Orca	agent orchestration	show-hn,product-hunt,geeknews
+Context7	docs MCP	show-hn,product-hunt,geeknews

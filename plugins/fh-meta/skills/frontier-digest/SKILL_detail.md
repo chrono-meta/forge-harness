@@ -172,7 +172,23 @@ curl -s --max-time 8 "https://news.hada.io/rss/news"
 
 Korean dev-news aggregator (HN-equivalent), AI-heavy. **The `/rss/news` path serves an Atom feed** (`<feed>`/`<entry>`, NOT RSS `<item>` — verified 2026-06-20: 50 `<entry>` elements, 0 `<item>`). Parse `<entry>` → `<title>` + `<link href>`; keep AI/agent/LLM/harness-relevant items only. `/rss/news` is a *general* dev-news feed, so if 0 AI-relevant items remain after filtering, **drop GeekNews from this run's progress line rather than padding to 5**. Endpoint verified HTTP 200 (2026-06-20); `/rss/new` and `/rss/topics` 404 — use `/rss/news`. Max 5 items.
 
-Report progress: `📡 HN 15 items · arxiv 5 items · TLDR 5 items · Batch 5 items · GeekNews 5 items collected`
+### Launch channels and vendor feeds (added 2026-10-17; ids match SKILL.md Step 1)
+
+Why: the digest missed «Aside» (YC-backed agent browser) because HN/arXiv/GitHub-style legs do not carry
+launch announcements. Official pages/feeds only, no scraping that bypasses a site's terms; endpoints below
+were live-checked once on 2026-10-17 (HTTP status · entries counted by `<entry`/`<item`/`objectID`).
+🟥 **Unreadable-leg rule**: a non-200, a challenge/consent page, a JS-only shell, or an empty parse is
+`UNMEASURED (<reason>)` in the progress line — never `0 items`.
+
+- **Launch YC (`launch-yc`)**: `https://www.ycombinator.com/launches` — newest launches; keep AI/agent/dev-tool ones. Cite the launch URL. ⚠️ 2026-10-17: HTTP 200 but a 16 KB JS-rendered shell, 0 entries via curl → read it with WebFetch (rendered) or report `UNMEASURED (js shell)`.
+- **Product Hunt (`product-hunt`)**: official Atom feed `https://www.producthunt.com/feed` (2026-10-17: 200, 50 `<entry>`). ⚠️ the `?category=` parameter returned a byte-near-identical feed, so it is not shown to filter — filter by keyword yourself. Parse `<entry>` title + link.
+- **Show HN (`show-hn`)**: `'https://hn.algolia.com/api/v1/search_by_date?tags=show_hn&query=<KW>&hitsPerPage=8&numericFilters=points%3E10'` (quoted; 2026-10-17: 200, 8 hits for «agent») for the same keywords as the HN leg. Cite the HN item id.
+- **GeekNews (`geeknews`)**: unchanged section above (still wired).
+- **Vendor changelogs/blogs (`vendor-changelogs`)**: Feeds: OpenAI `https://openai.com/news/rss.xml` (200, RSS) · Google DeepMind `https://deepmind.google/blog/rss.xml` (200, RSS). HTML pages, no feed found (200, parse with WebFetch): Anthropic `https://www.anthropic.com/news` · Gemini API changelog `https://ai.google.dev/gemini-api/docs/changelog` · Meta AI `https://ai.meta.com/blog/` · Cursor `https://cursor.com/changelog`. Keep entries newer than the previous digest; cite the entry URL.
+
+Recall regression: `scripts/test_frontier_digest_recall.sh` against `scripts/fixtures/frontier_digest_recall.tsv` (structural only: each known item must have a channel in the Step 1 list; the channel assignments are expectations, not announcement evidence — do not cite the lane as measured recall).
+
+Report progress: `📡 HN 15 items · arxiv 5 items · TLDR 5 items · Batch 5 items · GeekNews 5 items · LaunchYC n · PH n · ShowHN n · Vendors n collected` (a leg that could not be read is `UNMEASURED`, never `0`)
 
 ---
 
