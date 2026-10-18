@@ -445,6 +445,38 @@ chk $? "CONTROL: the pre-repair substring form accepts both — the fixtures dis
 # through _show_failure, whose empty branch prints "(no output captured)" at runtime, so the failure
 # is loud rather than silent. Regression is anchored; evasion is a named residual, not a solved one.
 
+# ── Pair-suite exit-code verdict (2026-10-19) ──────────────────────────────────
+# fh_signal_2026-10-18_selfcheck-timeout-unlabelled: a suite killed by the 300 s lane timeout
+# (rc=124) fell into a bare `*) fail=1` and the whole run said FAIL with no line naming anything.
+# Lift the REAL function out of selfcheck.sh and call it — a re-spelled copy would stay green
+# while the subject regressed. Every non-zero rc must print a line containing the suite label;
+# rc 0 must print nothing and return 0 (the negative control that keeps "prints a line" from
+# passing a function that prints on every call).
+echo ""
+echo "── pair-suite rc verdict (_pair_rc_verdict) ──"
+_FN=$(sed -n '/^_pair_rc_verdict() {/,/^}/p' "$SELFCHECK")
+if [ -z "$_FN" ]; then
+  chk 1 "_pair_rc_verdict found in selfcheck.sh (lane would test nothing)"
+else
+  eval "$_FN"
+  _o=$(_pair_rc_verdict lane_x.sh subj_x 0); _r=$?
+  [ "$_r" -eq 0 ] && [ -z "$_o" ]; chk $? "rc=0 → pass, silent (control)"
+  for _c in 124 1 3 137; do
+    _o=$(_pair_rc_verdict lane_x.sh subj_x "$_c"); _r=$?
+    [ "$_r" -ne 0 ] && printf '%s' "$_o" | grep -q 'lane_x.sh'; chk $? "rc=$_c → failure AND a line naming the suite"
+  done
+  _o=$(_pair_rc_verdict lane_x.sh subj_x 124)
+  printf '%s' "$_o" | grep -q '^TIMEOUT '; chk $? "rc=124 → labelled TIMEOUT (not a generic FAIL)"
+  for _c in 10 2 126 127; do
+    _o=$(_pair_rc_verdict lane_x.sh subj_x "$_c"); _r=$?
+    [ "$_r" -ne 0 ] && printf '%s' "$_o" | grep -q '^HARNESS ERROR '; chk $? "rc=$_c → failure AND HARNESS ERROR"
+  done
+  # The loop must route through the function — a lifted function with no caller is decoration.
+  # Uncommented line only (codex review 2026-10-19: a commented-out call passed the first form).
+  # Still a text check — it cannot prove the line is reached; that residual is named, not closed.
+  grep -qE '^[[:space:]]+_pair_rc_verdict "\$_lbl" "\$_subj" "\$_rc" \|\| fail=1' "$SELFCHECK"; chk $? "pair loop calls _pair_rc_verdict (uncommented) and sets fail on it"
+fi
+
 echo ""
 if [ "$FAILED" -ne 0 ]; then
   echo "SELFCHECK STATE LANES: FAIL — a discriminator would mis-route"
