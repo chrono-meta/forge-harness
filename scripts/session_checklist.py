@@ -445,6 +445,13 @@ def do_extract(transcript_path, out_path):
             "| S%d | (요약) | %s |  |  |  |  |" % (s, md_escape(blurb))
         )
 
+    # Re-running extract on a sheet that is already filled must not wipe it (2026-10-18: the mid-session nudge
+    # tells the session to re-extract into the SAME file; a plain overwrite erased 259 filled rows' 상태/증거).
+    # Carry the four judgement cells forward by (시각, 발화) — both are generated deterministically — and keep
+    # any filled row that no longer matches in a section at the end: dropped judgements are named, never lost.
+    if out_path and os.path.exists(out_path):
+        lines_out = carry_forward(lines_out, out_path)
+
     content = "\n".join(lines_out) + "\n"
     sys.stdout.write(content)
 
@@ -453,6 +460,65 @@ def do_extract(transcript_path, out_path):
             f.write(content)
 
     return rc
+
+
+def _cells(line):
+    """split a markdown table row on unescaped «|» (md_escape writes «\\|»); None if not a 7-cell data row."""
+    if not line.startswith("| "):
+        return None
+    parts, cur, i = [], "", 0
+    while i < len(line):
+        ch = line[i]
+        if ch == "\\" and i + 1 < len(line) and line[i + 1] == "|":
+            cur += "\\|"; i += 2; continue
+        if ch == "|":
+            parts.append(cur); cur = ""
+        else:
+            cur += ch
+        i += 1
+    parts.append(cur)
+    cells = [c.strip() for c in parts[1:-1]]
+    return cells if len(cells) == 7 else None
+
+
+CARRY_HEADING = "## 이전 결과서에서 이어받지 못한 판정"
+
+
+def carry_forward(lines_out, out_path):
+    try:
+        with open(out_path, "r", encoding="utf-8", errors="replace") as f:
+            old = f.read().split("\n")
+    except OSError:
+        return lines_out
+    prev, orphans_prev = {}, []
+    in_orphans = False
+    for l in old:
+        if l.startswith(CARRY_HEADING):
+            in_orphans = True; continue
+        c = _cells(l)
+        if not c or c[0] in ("#", "---") or set(c[0]) <= set("-"):
+            continue
+        if not any(c[3:]):
+            continue                                   # an empty row has nothing to carry
+        if in_orphans:
+            orphans_prev.append(l); continue           # earlier orphans stay orphans unless they match below
+        prev.setdefault((c[1], c[2]), c[3:])
+    used, out = set(), []
+    for l in lines_out:
+        c = _cells(l)
+        key = (c[1], c[2]) if c else None
+        if c and key in prev and not any(c[3:]):
+            out.append("| %s | %s | %s | %s | %s | %s | %s |" % tuple(c[:3] + prev[key]))
+            used.add(key); continue
+        out.append(l)
+    orphans = ["| %s | %s | %s | %s | %s | %s | %s |" % ((("-",) + k + tuple(v))) for k, v in prev.items() if k not in used]
+    orphans += orphans_prev
+    if used or orphans:
+        out.insert(4, "↩️ 이전 결과서에서 판정 %d줄 이어받음 · 못 맞춘 판정 %d줄은 맨 아래 «이전 결과서에서 이어받지 못한 판정»에 보존" % (len(used), len(orphans)))
+    if orphans:
+        out += ["", CARRY_HEADING, "", "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안(이번 세션 vs 이월) |",
+                "|---|---|---|---|---|---|---|"] + orphans
+    return out
 
 
 # ---------------------------------------------------------------------------

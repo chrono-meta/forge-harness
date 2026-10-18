@@ -738,6 +738,35 @@ else
   fail "L39 rc=$RC (see $TMPDIR_ROOT/l39.out)"
 fi
 
+# L40 — re-extracting into a filled sheet carries the judgements forward (2026-10-18: the mid-session nudge
+# re-extracts into the SAME file; a plain overwrite erased 259 filled rows). Known pair: a filled row is carried,
+# an empty row stays empty; a filled row whose utterance is gone is kept under the orphan heading; no file → plain write.
+build_jsonl "$TMPDIR_ROOT/l40.jsonl" "[{'type':'user','timestamp':'2026-10-18T01:00:00.000Z','message':{'role':'user','content':'Please move the session bar a little higher than it is now.'}},{'type':'user','timestamp':'2026-10-18T01:05:00.000Z','message':{'role':'user','content':'Please also fix the badge that sits too far to the right.'}}]"
+L40="$TMPDIR_ROOT/l40.md"
+run "$TMPDIR_ROOT/l40a.out" extract --transcript "$TMPDIR_ROOT/l40.jsonl" --out "$L40"
+L40A_RC=$RC
+L40_PLAIN=$(grep -c '↩️' "$L40")                                      # control: no prior file → no carry line
+python3 - "$L40" <<'PYEOF'
+import sys
+p = sys.argv[1]; L = open(p, encoding="utf-8").read().split("\n")
+for i, l in enumerate(L):
+    if l.startswith("| 1 |"):
+        L[i] = l.replace("|  |  |  |  |", "| ✅DONE | abc1234 (#99) | - | - |")
+L.append("| 7 | 10-17 09:00 | an utterance no longer in the transcript | 🟡PARTIAL | - | half done | 이월: finish |")
+open(p, "w", encoding="utf-8").write("\n".join(L))
+PYEOF
+run "$TMPDIR_ROOT/l40b.out" extract --transcript "$TMPDIR_ROOT/l40.jsonl" --out "$L40"
+if [ "$L40A_RC" -eq 0 ] && [ "$RC" -eq 0 ] && [ "$L40_PLAIN" = 0 ] \
+   && grep -q '^| 1 | .*session bar.* | ✅DONE | abc1234 (#99) | - | - |$' "$L40" \
+   && grep -qE '^\| 2 \| .*badge.* \|  \|  \|  \|  \|$' "$L40" \
+   && grep -q '^## 이전 결과서에서 이어받지 못한 판정' "$L40" \
+   && grep -q 'an utterance no longer in the transcript | 🟡PARTIAL' "$L40" \
+   && grep -q '판정 1줄 이어받음 · 못 맞춘 판정 1줄' "$L40"; then
+  pass "L40 extract into a filled sheet: judgement carried (row 1), empty row stays empty (row 2), unmatched judgement kept under the orphan heading, no-file run writes plainly"
+else
+  fail "L40 rc=$L40A_RC/$RC plain=$L40_PLAIN (see $L40)"
+fi
+
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
