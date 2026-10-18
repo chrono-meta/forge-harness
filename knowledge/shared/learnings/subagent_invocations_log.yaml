@@ -4841,3 +4841,31 @@
   outcome: accepted — cause confirmed against code by the governor
   evidence: FoD PR #58 (RO1/RO2 fail before; suite 4571/0)
   tokens: UNMEASURED
+- date: 2026-10-18
+  agent: "general-purpose (sonnet) ×1 — fill the session request checklist (259 rows, read-only except the sheet)"
+  task: "fill 상태/증거/사유/제안 for every row of tracks/_meta/session_checklist_2026-10-18_58f95111.md"
+  trigger: "operator «체크리스트에 받아적고 마무리시점이나 중간에 한번씩 파악해보는거» (standing dispatch request, lease to 2026-11-09)"
+  outcome: "accepted — governor spot-checked 5 sampled DONE evidences (3 FoD SHAs + 2 record lines) with a fabricated-SHA negative control; converted 141 «not a request» HELD rows to N/A"
+  evidence: "checklist rows=273 violations=0"
+  tokens: UNMEASURED
+- date: 2026-10-18
+  agent: "general-purpose (sonnet) ×1 — FoD settings card pattern, Gate page, Autopilot consent window, «게걸음» wording"
+  task: "fix the screens the operator screenshotted; six follow-up corrections relayed mid-run"
+  trigger: "operator screenshots + «오토파일럿 켜기하니까 뜨는 팝업이 너무못생겼» · «캐릭터 쪽만 카드상단 구분자가 잘 서있고» (standing dispatch request)"
+  outcome: "accepted — governor re-ran the official suite (agent's glob had missed files: 4643 reported vs 4670 actual, all pass) and opened the PNGs before asking to merge"
+  evidence: "FoD PR #72 (3dead56), installed"
+  tokens: UNMEASURED
+- date: 2026-10-18
+  agent: "general-purpose (sonnet) ×1 — FoD chat @ multi-send"
+  task: "⌘Enter adds recipient chips; one message sent per session by key"
+  trigger: "operator «@를 친 후에 목록을 3개 불러서 동시에 보내려고하는데» + «ㅇㅇ 그러자»"
+  outcome: "accepted — governor re-ran the 10 Electron lanes outside the sandbox (10/10, 0 skipped) and checked mergeability against #72"
+  evidence: "FoD PR #73 (8bccbcf), merged main 4681/4681, installed"
+  tokens: UNMEASURED
+- date: 2026-10-18
+  agent: "codex (gpt-5.5) ×2 rounds + general-purpose (sonnet) ×1 read-through — utterance checklist hook review"
+  task: "adversarial review of the UserPromptSubmit hook and close step ①-g"
+  trigger: "4-axis gate cross-family requirement for FH #914"
+  outcome: "accepted — 20 codex findings fixed with fail-before lanes; Sonnet raised 8 (2 already fixed, 2 fixed, rest residual/refuted)"
+  evidence: "FH PR #914 (c7948db)"
+  tokens: UNMEASURED
