@@ -767,6 +767,144 @@ else
   fail "L40 rc=$L40A_RC/$RC plain=$L40_PLAIN (see $L40)"
 fi
 
+# ---------------------------------------------------------------------------
+# L41-L45 — the hook record as a second channel (merge with the transcript, tag source, never a silent zero)
+# transcript: alpha 09:00Z · beta 09:10Z · gamma 09:20Z; hook: alpha · delta (09:05Z, hook only) · beta (+20s); hook ts is local-naive
+# ---------------------------------------------------------------------------
+python3 - "$TMPDIR_ROOT" <<'PYEOF'
+import json, sys, datetime
+d = sys.argv[1]
+def loc(z):  # UTC «…Z» -> local naive, as the hook writes it
+    t = datetime.datetime.strptime(z, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc).astimezone()
+    return t.strftime("%Y-%m-%dT%H:%M:%S")
+tr = [("2026-10-01T09:00:00Z", "alpha request about the status bar"),
+      ("2026-10-01T09:10:00Z", "beta request about the export button"),
+      ("2026-10-01T09:20:00Z", "gamma request only the transcript saw")]
+with open(d + "/l41_tr.jsonl", "w", encoding="utf-8") as f:
+    for z, t in tr:
+        f.write(json.dumps({"type": "user", "timestamp": z, "message": {"role": "user", "content": t}}) + "\n")
+hk = [("2026-10-01T09:00:00Z", "alpha request about the status bar"),
+      ("2026-10-01T09:05:00Z", "delta request sent while a tool was running"),
+      ("2026-10-01T09:10:20Z", "beta request about the export button")]
+with open(d + "/l41_hook.jsonl", "w", encoding="utf-8") as f:
+    for n, (z, t) in enumerate(hk, 1):
+        f.write(json.dumps({"ts": loc(z), "n": n, "text": t}) + "\n")
+with open(d + "/l44_hook.jsonl", "w", encoding="utf-8") as f:   # one good row, one torn line, one row without text
+    f.write(json.dumps({"ts": loc("2026-10-01T09:05:00Z"), "n": 1, "text": "delta request sent while a tool was running"}) + "\n")
+    f.write('{"ts": "2026-10-01T09:06:00", "n": 2, "text": "torn li\n')
+    f.write(json.dumps({"ts": loc("2026-10-01T09:07:00Z"), "n": 3}) + "\n")
+with open(d + "/l42_tr.jsonl", "w", encoding="utf-8") as f:
+    f.write(json.dumps({"type": "user", "timestamp": "2026-10-01T09:00:00Z", "message": {"role": "user", "content": "please continue with the next step"}}) + "\n")
+with open(d + "/l42_hook.jsonl", "w", encoding="utf-8") as f:
+    for z in ("2026-10-01T09:00:00Z", "2026-10-01T13:00:00Z"):
+        f.write(json.dumps({"ts": loc(z), "n": 1, "text": "please continue with the next step"}) + "\n")
+PYEOF
+run "$TMPDIR_ROOT/l41.out" extract --transcript "$TMPDIR_ROOT/l41_tr.jsonl" --utterances "$TMPDIR_ROOT/l41_hook.jsonl"
+L41_RC=$RC
+L41_ROWS=$(grep -cE '^\| [0-9HS]+ \|' "$TMPDIR_ROOT/l41.out")
+if [ "$L41_RC" -eq 0 ] && [ "$L41_ROWS" -eq 4 ] \
+   && [ "$(grep -c 'alpha request' "$TMPDIR_ROOT/l41.out")" -eq 1 ] \
+   && [ "$(grep -c 'beta request' "$TMPDIR_ROOT/l41.out")" -eq 1 ] \
+   && grep -q '^| 3 | .*gamma request' "$TMPDIR_ROOT/l41.out" \
+   && grep -q '^| H1 | 10-01 09:05 | delta request' "$TMPDIR_ROOT/l41.out" \
+   && grep -q '훅 기록 채널 읽음 — 3건 · 전사와 일치 2건 · 훅 전용 1건' "$TMPDIR_ROOT/l41.out"; then
+  pass "L41 hook+transcript: a message in both is ONE row (no dup), hook-only is an H row with its time, transcript-only keeps its number, header counts 3/2/1"
+else
+  fail "L41 rc=$L41_RC rows=$L41_ROWS (see $TMPDIR_ROOT/l41.out)"
+fi
+
+# L42 — the same words far apart in time are a distinct message, not folded into the first
+run "$TMPDIR_ROOT/l42.out" extract --transcript "$TMPDIR_ROOT/l42_tr.jsonl" --utterances "$TMPDIR_ROOT/l42_hook.jsonl"
+if [ "$RC" -eq 0 ] && [ "$(grep -c 'please continue' "$TMPDIR_ROOT/l42.out")" -eq 2 ] && grep -q '^| H1 | 10-01 13:00 |' "$TMPDIR_ROOT/l42.out"; then
+  pass "L42 the same words 4h later are a second message (H row); the pair inside the window is one"
+else
+  fail "L42 rc=$RC (see $TMPDIR_ROOT/l42.out)"
+fi
+
+# L43 — hook file absent: the header says NOT READ (never zero), rc stays 0, transcript rows print
+run "$TMPDIR_ROOT/l43.out" extract --transcript "$TMPDIR_ROOT/l41_tr.jsonl" --utterances "$TMPDIR_ROOT/no_such_hook.jsonl"
+if [ "$RC" -eq 0 ] && grep -q '훅 기록 채널 안 읽음 — 파일 없음' "$TMPDIR_ROOT/l43.out" \
+   && grep -q '0건이 아니라 미열람' "$TMPDIR_ROOT/l43.out" \
+   && [ "$(grep -cE '^\| [0-9]+ \|' "$TMPDIR_ROOT/l43.out")" -eq 3 ]; then
+  pass "L43 hook record absent: header says not read (not zero), the transcript's 3 rows intact, rc=0"
+else
+  fail "L43 rc=$RC (see $TMPDIR_ROOT/l43.out)"
+fi
+
+# L44 — malformed hook lines: loud in the header, rc=2, transcript rows and the readable hook row survive
+run "$TMPDIR_ROOT/l44.out" extract --transcript "$TMPDIR_ROOT/l41_tr.jsonl" --utterances "$TMPDIR_ROOT/l44_hook.jsonl"
+if [ "$RC" -eq 2 ] && grep -q '훅 기록 2줄 해석 실패' "$TMPDIR_ROOT/l44.out" \
+   && [ "$(grep -cE '^\| [0-9]+ \|' "$TMPDIR_ROOT/l44.out")" -eq 3 ] \
+   && grep -q '^| H1 | .*delta request' "$TMPDIR_ROOT/l44.out"; then
+  pass "L44 malformed hook lines: header names 2 bad lines, rc=2, transcript rows and the readable hook row kept"
+else
+  fail "L44 rc=$RC (see $TMPDIR_ROOT/l44.out)"
+fi
+
+# L45 — hook path unreadable as a record (a directory): channel error in the header, rc=2, no crash, transcript rows kept
+mkdir -p "$TMPDIR_ROOT/l45_dir"
+run "$TMPDIR_ROOT/l45.out" extract --transcript "$TMPDIR_ROOT/l41_tr.jsonl" --utterances "$TMPDIR_ROOT/l45_dir"
+if [ "$RC" -eq 2 ] && grep -q '훅 기록 채널 오류' "$TMPDIR_ROOT/l45.out" \
+   && [ "$(grep -cE '^\| [0-9]+ \|' "$TMPDIR_ROOT/l45.out")" -eq 3 ]; then
+  pass "L45 hook path unreadable: channel error in the header, rc=2, transcript rows kept"
+else
+  fail "L45 rc=$RC (see $TMPDIR_ROOT/l45.out)"
+fi
+
+# ---------------------------------------------------------------------------
+# L46-L51 — merge edge cases a cross-family read reproduced (codex 2026-10-19). Each calls the REAL functions.
+# L46 repeated short text: two «yes» pairs stay two rows (nearest-first greedy made three)
+# L47 truncated hook row cannot steal the row a full hook row needs
+# L48 hook row without a usable ts is a parse failure, not a text-only match
+# L49 invalid UTF-8 in a hook line is a parse failure, not a replaced-character H row
+# L50 DST fall-back hour: the nearer of the two instants is used (America/New_York)
+# L51 carry_forward keeps BOTH judgments of two rows with the same minute and words
+# ---------------------------------------------------------------------------
+L46_OUT=$(python3 - "$SUBJ" "$TMPDIR_ROOT" <<'PYEOF'
+import importlib.util, json, os, sys, datetime, time
+spec = importlib.util.spec_from_file_location("sck", sys.argv[1]); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+d = sys.argv[2]
+def loc(z):
+    t = datetime.datetime.strptime(z, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc).astimezone()
+    return t.strftime("%Y-%m-%dT%H:%M:%S")
+res = {}
+raw = [{"ts": "2026-10-01T09:00:00Z", "text": "yes"}, {"ts": "2026-10-01T09:20:00Z", "text": "yes"}]
+hk = [{"ts": loc("2026-10-01T09:11:00Z"), "text": "yes", "truncated": False}, {"ts": loc("2026-10-01T09:40:00Z"), "text": "yes", "truncated": False}]
+only, n = m.merge_hook_rows(raw, hk); res["L46"] = (len(only), n) == (0, 2)
+raw = [{"ts": "2026-10-01T09:00:00Z", "text": "prefix B"}, {"ts": "2026-10-01T09:01:00Z", "text": "prefix A"}]
+hk = [{"ts": loc("2026-10-01T09:00:00Z"), "text": "prefix", "truncated": True}, {"ts": loc("2026-10-01T09:00:01Z"), "text": "prefix B", "truncated": False}]
+only, n = m.merge_hook_rows(raw, hk); res["L47"] = (len(only), n) == (0, 2)
+with open(d + "/l48.jsonl", "w") as f:
+    f.write(json.dumps({"n": 1, "text": "yes"}) + "\n"); f.write(json.dumps({"ts": "bad", "n": 2, "text": "yes"}) + "\n")
+st, rows, bad, _ = m.read_hook_channel(d + "/l48.jsonl"); res["L48"] = (st, len(rows), bad) == ("read", 0, 2)
+with open(d + "/l49.jsonl", "wb") as f:
+    f.write(b'{"ts": "2026-10-01T09:00:00", "n": 1, "text": "y\xffs"}\n')
+st, rows, bad, _ = m.read_hook_channel(d + "/l49.jsonl"); res["L49"] = (len(rows), bad) == (0, 1)
+raw = [{"ts": "2026-10-01T09:00:00Z", "text": "prefix A"}, {"ts": "2026-10-01T09:01:00Z", "text": "prefix B"}]
+hk = [{"ts": loc("2026-10-01T09:00:00Z"), "text": "prefix", "truncated": True}, {"ts": loc("2026-10-01T09:01:00Z"), "text": "prefix A", "truncated": True}]
+only, n = m.merge_hook_rows(raw, hk); res["L47b"] = (len(only), n) == (0, 2)
+res["L48b"] = m.parse_ts_candidates("2026-10-01T09:00:00garbage") == [] and m.parse_ts_candidates("2026-10-01T09:00:00.123Z") != []
+os.environ["TZ"] = "America/New_York"; time.tzset()
+raw = [{"ts": "2026-11-01T06:30:00Z", "text": "second half hour"}]
+hk = [{"ts": "2026-11-01T01:30:00", "text": "second half hour", "truncated": False}]
+only, n = m.merge_hook_rows(raw, hk); res["L50"] = (len(only), n) == (0, 1)
+out = d + "/l51.md"
+row = "| %s | 10-01 09:00 | yes | %s |  |  |  |"
+with open(out, "w") as f:
+    f.write("\n".join(["# t", "", "x", "", "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안(이번 세션 vs 이월) |", "|---|---|---|---|---|---|---|", row % ("H1", "✅"), row % ("H2", "❌")]) + "\n")
+new = ["# t", "", "x", "", "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안(이번 세션 vs 이월) |", "|---|---|---|---|---|---|---|", row % ("H1", ""), row % ("H2", "")]
+got = m.carry_forward(new, out)
+res["L51"] = any(l.startswith("| H1 |") and "✅" in l for l in got) and any(l.startswith("| H2 |") and "❌" in l for l in got)
+print(" ".join("%s=%s" % (k, int(v)) for k, v in sorted(res.items())))
+PYEOF
+)
+for L in L46 L47 L47b L48 L48b L49 L50 L51; do
+  case " $L46_OUT " in
+    *" $L=1 "*) pass "$L merge edge case (codex 2026-10-19 repro) holds" ;;
+    *) fail "$L merge edge case — got: ${L46_OUT:-<no output: the python block crashed>}" ;;
+  esac
+done
+
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
