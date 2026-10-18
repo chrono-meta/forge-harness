@@ -1088,6 +1088,9 @@ for _pair in \
   "scripts/transcript_utterances.py|scripts/test_utterance_intake_lanes.sh" \
   "scripts/compaction_probe.sh|scripts/test_utterance_intake_lanes.sh" \
   "scripts/session_close_check.sh|scripts/test_utterance_intake_lanes.sh" \
+  `# ── 발화 체크리스트 훅(2026-10-18): 말한 순간 받아 적기 · 중간 점검 · 한글 턴. files[] 로 배포(selfcheck 가 이름을 대므로 package-coverage 가 요구) ──` \
+  "scripts/utterance_checklist_hook.sh|scripts/test_utterance_checklist_hook_lanes.sh" \
+  "scripts/utterance_checklist_hook.py|scripts/test_utterance_checklist_hook_lanes.sh" \
   `# ── 워크트리 회수(2026-09-05, N=2 재발 → 스크립트). 사람이 부르는 도구지만 레인은 자동 ──` \
   "scripts/worktree_reclaim.sh|scripts/test_worktree_reclaim_lanes.sh" \
   `# ── 가벼운 게이트 P1·P2(2026-10-12): 비주제 레인의 gh·①-g 스텁 + 켠/끈 비교기 ──` \

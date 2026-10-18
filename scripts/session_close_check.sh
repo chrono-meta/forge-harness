@@ -364,6 +364,50 @@ else
   echo "⚠️  ①-f utterance_intake.sh 없음 — skipped, not passed (UNMEASURED)"
 fi
 
+# ── ①-g REQUEST CHECKLIST RESULT SHEET (advisory) ─────────────────────────────
+# WHY. ①-f asks «did the utterance reach a record»; the operator asked a different question twice:
+# «체크리스트에 받아적고 마무리시점이나 중간에 한번씩 파악해보는거» (2026-10-18) and, on 2026-09-18, a close
+# report «like TCs — done / partly / not done, with reasons and proposals» (fh_signal_2026-09-18_request-
+# checklist-close-report.md). session_checklist.py was built for that and never called from here; ①-f's own
+# history (a checker with zero call sites) repeated. utterance_checklist_hook.sh nudges it mid-session; this
+# line asks for it at the close. Advisory: the table is a surface the operator reads and contests row by row,
+# not a gate (form is checked, truth is not — session_checklist.py header).
+_SC_PY="$FH/scripts/session_checklist.py"
+if [ -f "$_SC_PY" ]; then
+  _SC_FILES=()
+  # this session's sheet (any date — a session can cross midnight); without a session id, today's sheets
+  # (codex R1 B11: a sheet from another session must not satisfy this one's close)
+  if [ -n "${_UI_SID:-}" ]; then
+    for _p in "$FH"/tracks/_meta/session_checklist_*_"${_UI_SID:0:8}".md; do [ -f "$_p" ] && _SC_FILES+=("$_p"); done
+  else
+    for _p in "$FH"/tracks/_meta/session_checklist_"$TODAY"_*.md; do [ -f "$_p" ] && _SC_FILES+=("$_p"); done
+    [ "${#_SC_FILES[@]}" -gt 0 ] && echo "ℹ️  ①-g 세션 id 미상 — 오늘자 결과서 ${#_SC_FILES[@]} 개를 본다(다른 세션 것일 수 있다: «이 세션 결과서가 있다» 의 증명이 아니다)"
+  fi
+  if [ "${#_SC_FILES[@]}" -eq 0 ]; then
+    echo "⚠️  ①-g 오늘자 요청 체크리스트 결과서가 없다 — advisory, 막지 않는다"
+    if [ -n "${_UI_TR:-}" ] && [ -f "${_UI_TR:-/nonexistent}" ]; then
+      printf '     만들기: python3 scripts/session_checklist.py extract --transcript %q --out %q\n' "$_UI_TR" "tracks/_meta/session_checklist_${TODAY}_${_UI_SID:0:8}.md"
+    else
+      echo "     만들기: python3 scripts/session_checklist.py extract --transcript <이 세션 전사본> --out tracks/_meta/session_checklist_${TODAY}_<세션8>.md"
+    fi
+    echo "     → 상태 칸을 증거·사유와 함께 채우고, 열린 줄을 운영자에게 표로 보여라(영혼 다지기)."
+  else
+    for _f in "${_SC_FILES[@]}"; do
+      _SC_OUT=$(python3 "$_SC_PY" check --file "$_f" 2>&1); _SC_RC=$?
+      case "$_SC_RC" in
+        0) echo "✅ ①-g 결과서 형식 OK — ${_f#$FH/} (형식만 본다: 상태가 참인지는 운영자가 본다)" ;;
+        1) echo "⚠️  ①-g 결과서에 빈 칸·사유 없는 미완 줄이 있다 — ${_f#$FH/}"
+           printf '%s\n' "$_SC_OUT" | tail -8 | sed 's/^/     /' ;;
+        4) echo "⚠️  ①-g 결과서 표에 행이 0 개다(DEAD CONTROL) — ${_f#$FH/} · «잴 게 없었다» 가 아니라 «안 적었다» 다" ;;
+        *) echo "⚠️  ①-g 결과서 검사 UNMEASURED (rc=$_SC_RC) — ${_f#$FH/}"
+           printf '%s\n' "$_SC_OUT" | tail -4 | sed 's/^/     /' ;;
+      esac
+    done
+  fi
+else
+  echo "⚠️  ①-g session_checklist.py 없음 — skipped, not passed (UNMEASURED)"
+fi
+
 # ② FH assets changed today → harvest-loop owed
 # NOTE: no `grep -q` here — under `set -o pipefail`, -q's early exit SIGPIPEs git log (141),
 # masking a real match as pipeline failure so the warning NEVER fired on true positives
