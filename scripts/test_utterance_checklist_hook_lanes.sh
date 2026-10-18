@@ -55,6 +55,9 @@ done
 ls "$T/etc" >/dev/null 2>&1 && no U4b "path escape created a dir" || ok "U4b a session id with ../ writes nothing outside"
 before=$(wc -l < "$D/$SID.jsonl" | tr -d " "); run "<task-notification>배경 작업이 끝났다 길게 적은 알림</task-notification>"
 [ "$(wc -l < "$D/$SID.jsonl" | tr -d " ")" = "$before" ] && ok "U4c an injected notice is not written down" || no U4c "row added"
+# U4d a subagent hand-back relayed into the prompt is not the operator (first live use: 2 of 15 rows were hand-backs)
+before=$(wc -l < "$D/$SID.jsonl" | tr -d " "); run '<agent-message from="a0000000000000000"> [Subagent hand-back] 체크리스트 259행을 전부 채웠다</agent-message>'
+[ "$(wc -l < "$D/$SID.jsonl" | tr -d " ")" = "$before" ] && ok "U4d a subagent hand-back is not written down" || no U4d "row added"
 
 # U5 output is valid JSON with the UserPromptSubmit shape whenever there is output
 run "한글로 된 내용 있는 요청입니다"

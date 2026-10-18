@@ -13,7 +13,7 @@ command (B10) · a status label the checker rejects (B12).
 import errno, fcntl, json, os, re, shlex, stat, sys, time
 
 ACK = re.compile(r"^(?:ㅇ+|ㄱ+|ㅇㅋ+|ㅇㅇㄱㄱ|ㄴㄴ|ok(?:ay)?|ㅇㅋㅇㅋ|넵|네+|응+|좋아|굿|확인(?:완료)?|ㄱㄱ+|go|yes|y|no|n|ㅋ+|ㅎ+)[\s.!~?ㅋㅎ]*$", re.I)
-INJECTED = re.compile(r"^\s*(?:<(?:task-notification|system-reminder|command-name|command-message|command-args|local-command-stdout|local-command-stderr|bash-input|bash-stdout|bash-stderr)\b|\[SYSTEM NOTIFICATION|\[Cross-session delivery notice\]|\[automated-run)", re.I)
+INJECTED = re.compile(r"^\s*(?:<(?:task-notification|system-reminder|command-name|command-message|command-args|local-command-stdout|local-command-stderr|bash-input|bash-stdout|bash-stderr|agent-message)\b|\[SYSTEM NOTIFICATION|\[Cross-session delivery notice\]|\[automated-run)", re.I)
 MAX_KEEP = 20000          # chars kept per utterance; longer ones are marked truncated, never cut silently
 MAX_SCAN = 20000          # chars scanned for language (bounded work on huge pastes)
 
