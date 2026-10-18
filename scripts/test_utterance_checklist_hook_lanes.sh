@@ -159,5 +159,14 @@ for i in 1 2 3; do mk "상태 저장이 안 돼도 번호가 겹치면 안 된�
 python3 -c 'import json,sys;r=[json.loads(l)["n"] for l in open(sys.argv[1])];assert r==[1,2,3],r' "$T4/tracks/_meta/utterances/$S6.jsonl" && ok "U18 numbering comes from the record when state cannot be saved (1,2,3)" || no U18 "repeated numbers"
 rm -rf "$T4"
 
+# U19 the body runs on its own (the .sh is a thin wrapper): FH_HUB set → row + language line, FH_HUB unset → silent, rc 0 both
+PYB="$HERE/utterance_checklist_hook.py"
+S19="0123abcd-0000-4000-8000-000000000019"
+J19=$(python3 -c 'import json,sys;print(json.dumps({"prompt":"본체를 직접 실행해서 받아 적는지 본다","session_id":sys.argv[1]}))' "$S19")
+O19=$(printf '%s' "$J19" | FH_HUB="$T" python3 "$PYB"); R19=$?
+[ $R19 = 0 ] && printf '%s' "$O19" | grep -q '한글로' && [ "$(wc -l < "$D/$S19.jsonl" 2>/dev/null | tr -d ' ')" = 1 ] && ok "U19a body run directly → row + language line" || no U19a "rc=$R19 out=$O19"
+O19b=$(printf '%s' "$J19" | env -u FH_HUB python3 "$PYB"); R19b=$?
+[ $R19b = 0 ] && [ -z "$O19b" ] && [ "$(wc -l < "$D/$S19.jsonl" | tr -d ' ')" = 1 ] && ok "U19b body without FH_HUB → silent, nothing written" || no U19b "rc=$R19b out=$O19b"
+
 echo "lanes: pass=$pass fail=$fail"
 [ $fail = 0 ]
