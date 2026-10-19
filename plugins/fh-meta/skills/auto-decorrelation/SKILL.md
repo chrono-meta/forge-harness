@@ -527,6 +527,23 @@ at N per run (no loop).
 
 - **Consent-default-OFF + paid-asks** — no surprise credit spend.
 - **No sidecar-only verdict** — governor source-closes; ungroundable findings dropped.
+- **A closed finding names its repro** — the guard above says the governor closes; this says what a
+  closure must show. In the PR body's sanitized evidence capsule (`fh_4axis_gate.md` §Reviewer-visible
+  evidence), each sidecar finding gets one line:
+  - `repro: <command> -> <outcome>` — **closed**. The finding's own repro (or a lane that exercises it)
+    was run by the governor or a worker with a conclusive outcome: reproduced, fixed, re-run clean.
+  - `rejected: <grounds>` — **closed**. Shown not to apply, from the source or a run (cite which).
+    Non-reproduction alone is not grounds. Ungroundable findings dropped under the guard above are
+    still listed here, so the record keeps them.
+  - `open: <reason>` — **not closed**: `not-reproduced` (acted on from the sidecar's text alone, e.g. a
+    worker replied "fixed"), `reproduced-unresolved`, or `repro-failed`.
+  **A finding with no line counts as open**, never as closed.
+  Why: in multi-agent runs (arXiv:2610.15459), among failures with complete detection records, 76.2%
+  under partial-content faults gave no immediate failure signal, and the Flat topology's advantage came
+  primarily from an alternative information path that preserved the needed evidence. On 2026-10-19 FH's
+  own work passed most codex A findings to workers as text, and only some were re-run. A record
+  convention, not a gate; UNCALIBRATED until the next harvest samples five closures for whether the
+  lines exist at all.
 - **Honest caveat is load-bearing** — "100% 아님": decorrelation is an expected uplift, measured not
   assumed (naive stacks score 0 — `feedback_harness_ceiling_principle`).
 - **Silent degrade** — missing CLIs never hard-fail; the gap is recorded, not hidden.

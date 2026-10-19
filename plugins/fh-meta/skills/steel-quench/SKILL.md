@@ -525,7 +525,8 @@ over **unchanged** code:
    terminal) or run one more round over the trimmed artifact before declaring Done.
 2. **Record the per-round yield vector** in the Axis-2 marker — `axis2-rounds: 4A / 3A+1B / 2A /
    0A+3B / 1A+2B`. It is what makes the stop decision auditable afterwards, and a flat or rising
-   vector is criterion 4's only input.
+   vector is the input to criterion 4's reduce-the-design branch (its premise-attack branch fires on
+   shared assumptions, whatever the vector).
 
    **PIN THE TARGET — mandatory on every dispatched Wave, and the reason criterion 1 can be trusted
    at all.** The dispatch prompt carries a measured fingerprint and orders the agent to report
@@ -584,13 +585,22 @@ over **unchanged** code:
    stays flat is not telling you to review harder; it is telling you that each round's repairs are
    manufacturing the next round's findings. Cut the scope that is generating them (see the
    Added-Scope Gate in `.claude/rules/fh_4axis_gate.md`) and re-audit the smaller artifact.
-   **Attack the premise before the third repair — this applies whether or not the yield falls.**
+   **Attack the premise before the third repair — when two rounds' A-or-higher findings share one assumption,
+   whether or not the yield falls.**
    When two rounds' A-or-higher findings are different instances of one assumption — «this list can
    be completed», «this string shape covers every caller» — another instance-level repair is likely
    to repeat the failure. Before choosing the next repair, write the shared premise down in one line,
    test it directly (one counter-example settles it), and if it falls, change the design rather than
    the list: flip a blocklist to an allowlist, move the check to where the input is already typed, or
-   drop the exemption. Measured 2026-10-19, same day, two surfaces: FoD gate read-side exemptions
+   drop the exemption. **Which cure**: flipping to «unknown goes to a person» is right on an
+   irreversible surface, or where the expected rate of person-routed prompts fits a review budget you
+   can name — it moves the cost
+   into over-blocking, and an over-block that fires often trains the bypass. Elsewhere prefer moving the
+   check to typed input or dropping the exemption. If you flip, say what the over-block costs (which
+   common inputs now reach a person). Two more flips on 2026-10-19 were gate surfaces and list their
+   accepted over-blocks in the PR body (FoD #80 delete outside the working folder: `echo rm …`,
+   `git rm`, `rm x # /path` · #81 writes to the user settings file: `jq … > tmp && mv`, quoted `>`,
+   `cat … 2>/dev/null`). Measured 2026-10-19, same day, two surfaces: FoD gate read-side exemptions
    (5 A in one cross-family round — `_getframe`, NFKC fullwidth names, `PYTHONPATH`, …) and the
    cartridge admission checker (R1 4 A, R2 1 A) both rested on «a blocklist of shell/tool strings can
    be completed»; the exemptions were dropped and the checker flipped to an allowlist, so an unknown
