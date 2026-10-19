@@ -52,7 +52,7 @@ Proposal format: `"If it's related to [X], should I simulate with /sim-conductor
 /sim-conductor E --target <file>      # artifact quality review (post-pipeline)
 ```
 
-**Frequency limits**: Area A after asset changes or manual trigger · Area B **min 7-day interval** (executor-applied guard: stop a re-run inside 7 days) · target cadence once/month (30-day reminder, when the optional `fh_audit_check.zsh` is enabled and the report is under `$FH_DIR/tracks/_meta`) · Area C/D/E no limit. The 7-day rule is the execution procedure; the 30-day check is only a conditional reminder. They use the same clock only when they inspect the same report directory.
+**Frequency limits**: Area A after asset changes or manual trigger · Area B **min 7-day interval** (executor-applied guard: stop a re-run inside 7 days) · **event-bound, no periodic cadence** (operator decision 2026-10-19): run Area B before a minor/major release or a public announcement — the moment an outside reader's view pays — unless one already ran since the previous minor release. The trigger lives in `templates/PRE-PUBLISH-CHECKLIST.md §Read it as a reader`; `fh_audit_check.zsh` no longer nags on a 30-day clock · Area C/D/E no limit. Why: per-change 4-axis gates with a cross-family reviewer, the nightly live-eval and the weekly harvest cover what a monthly whole-plugin pass used to; what only Area B sees (whole-set naming gaps, an outsider's first read) matters at publication.
 
 ---
 
@@ -62,7 +62,7 @@ Auto-detect harness root, sync sim clone if present, set `$REPORT_DIR`.
 
 > **Detail**: See `SKILL_detail.md §Step0-Bash` — harness root detection, sim clone sync, report dir creation — read when executing Step 0.
 
-**Area B frequency check** (the 7-day *minimum* interval, not the monthly target): Before running Area B, inspect the latest Area B report in `$REPORT_DIR`; if it is less than 7 days old, stop and report its date. This is an executor-applied procedure, not an automatic shell gate. No report in the selected `$REPORT_DIR` → treat as first run for this check. Separately, the optional `fh_audit_check.zsh` reminder only looks in `$FH_DIR/tracks/_meta`; it may not see a report stored in a different `$REPORT_DIR`.
+**Area B frequency check** (the 7-day *minimum* interval): Before running Area B, inspect the latest Area B report in `$REPORT_DIR`; if it is less than 7 days old, stop and report its date. This is an executor-applied procedure, not an automatic shell gate. No report in the selected `$REPORT_DIR` → treat as first run for this check. There is no maximum-interval reminder any more — when to run is decided by the release/announcement event above.
 
 ---
 

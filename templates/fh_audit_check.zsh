@@ -99,25 +99,12 @@ _fh_audit_check() {
     fi
   fi
 
-  # ③ FH sim Area B — 30-day threshold (when FH_DIR is set)
-  #    30d is a monthly-target reminder, not an enforced maximum interval. It runs manually or
-  #    with FH_AUDIT_AUTO=1 and sees only reports in $FH_DIR/tracks/_meta. The skill's executor-applied
-  #    7-day re-run guard may inspect a different REPORT_DIR; their clocks agree only if paths agree.
-  #    Source of the cadence: sim-conductor SKILL_detail §AreaB-Baseline («Area B once/month»); the
-  #    report name is the skill's own `sim_*_area_B*.md` (its frequency-check bash globs exactly that).
-  #    🟥 The glob used to be `sim_*.md`, which also matched non-B reports (e.g. `sim_…_area_D_…`) and
-  #    would silently reset the Area B clock on a D-only run — a false-negative. Narrowed to the
-  #    skill's own pattern. (Measured-loop sims from sim_isolated_run.sh are NOT Area B runs and are
-  #    deliberately not counted.)
-  if [[ -n "${FH_DIR}" && -d "${FH_DIR}/tracks/_meta" ]]; then
-    local -a _fh_sims
-    _fh_sims=( "${FH_DIR}/tracks/_meta"/sim_*_area_B*.md(N.om) )
-    local sim="${_fh_sims[1]:-}"
-    if [[ -n "$sim" ]]; then
-      local d=$(( (now - $(_fh_mtime "$sim")) / 86400 ))
-      (( d >= 30 )) && warns+=("FH internal sim ${d}d elapsed → run /sim-conductor Area B in your FH cwd")
-    fi
-  fi
+  # ③ FH sim Area B — REMOVED 2026-10-19 (operator decision «사건기준으로 바꿔줘»).
+  #    Area B used to nag here on a 30-day clock. It is now event-bound: run it before a minor/major
+  #    release or a public announcement (templates/PRE-PUBLISH-CHECKLIST.md §Read it as a reader;
+  #    sim-conductor SKILL.md §Frequency limits). A terminal opening is not that event, so this
+  #    banner no longer has an Area B line. The 7-day minimum-interval guard stays in the skill.
+  #    Lanes: scripts/test_fh_audit_check_lanes.sh ③ asserts the line is gone even at 116d.
 
   # ④ Custom sentinels — per-file threshold in CC_SENTINELS_DIR (optional)
   #    Uppercase filename = env var key: CC_SENTINEL_{NAME}_DAYS (default 90)

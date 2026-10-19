@@ -27,8 +27,8 @@ mkdir -p "$REPORT_DIR"
 ```bash
 ls "$REPORT_DIR"/sim_*_area_B*.md 2>/dev/null | sort | tail -1
 # Executor: if the latest report is <7 days old, output warning + stop (manual procedure, not shell-enforced).
-# The optional fh_audit_check.zsh nag is at 30d and only scans $FH_DIR/tracks/_meta;
-# it shares this clock only when that is also $REPORT_DIR.
+# No periodic reminder since 2026-10-19 — Area B is event-bound (before a minor/major release
+# or a public announcement; templates/PRE-PUBLISH-CHECKLIST.md §Read it as a reader).
 ```
 
 ---
@@ -219,7 +219,7 @@ Claude blind spots (external-only findings):
 
 Structural methods to reduce self-reference risk in Area B:
 
-1. **Regular adversarial attacks**: Area B once/month (target cadence; the optional 30-day reminder is not an enforced maximum interval, and the executor-applied 7-day check in SKILL.md is the minimum interval, not a weekly cadence) + `challenger` attack once/quarter. Route challenger → defense results directly into SKILL.md via steel-quench handoff after Area B ends.
+1. **Adversarial attacks at publication**: Area B before a minor/major release or a public announcement (event-bound since 2026-10-19 — no monthly cadence; the executor-applied 7-day check in SKILL.md is the minimum interval) + `challenger` attack in the same run. Route challenger → defense results directly into SKILL.md via steel-quench handoff after Area B ends.
 2. **Direct external user validation**: Non-owner attempts install + invocation → collect reactions. (cascade β validated: first autonomous external run confirmed.)
 3. **steel-quench integration**: After Area B ends, hand off challenger findings to `/steel-quench` for deeper adversarial review + SKILL.md inscription.
 4. **Dual validation principle**: Internal validation (Area B) alone is insufficient — minimized only when combined with external install reaction collection or cross-model validation. **For risk≥medium targets this is no longer advisory: it is the hard Cross-Model Coverage Gate** (SKILL.md Step 0.6) — at least one persona from outside the orchestrator's session context (external CLI → cross-session Claude → else `cross_model_coverage: NONE` withdraws auto-commit). Promoted from advisory to gate by the judge-robustness swarm (2026-06-13): a homogeneous same-session panel shares blind spots, so its clean verdict cannot self-certify.
