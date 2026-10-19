@@ -40,7 +40,9 @@ for g in 'Bash(sh:*)' 'Bash(python3:*)' 'Bash(env -i *)' 'Bash(sh /dev/stdin:*)'
 done
 d="$tmp/fixed_script"; cp -R "$FIX/minimal_ok" "$d"
 sed -i.bak 's/allowed-tools: \["Read", "Grep"\]/allowed-tools: ["Read", "Bash(python3 scripts\/x.py:*)"]/' "$d/skills/demo/SKILL.md" && rm -f "$d/skills/demo/SKILL.md.bak"
-lane "control: fixed script grant admits" 0 "$d"
+# 2026-10-19 policy flip (codex final round A4): a bundled script's behaviour is not inspected, so a fixed-script grant
+# can delete or push. Allowlist admission sends it to a human; it is no longer a control.
+lane "fixed script grant = HUMAN_REVIEW (behaviour not inspected)" 1 "$d"
 cp -R "$FIX/minimal_ok" "$tmp/unparsable"; printf 'plugin: [unclosed\n' > "$tmp/unparsable/cartridge.yaml"
 lane "unparsable manifest = HARNESS_ERROR"  3 "$tmp/unparsable"
 
@@ -349,5 +351,32 @@ lane "README.md frontmatter payload with push-without-asking = HUMAN_REVIEW" 1 "
 mk h2_benign; printf -- '---\nname: p\ndescription: x\nallowed-tools: [Read]\n---\nSummarise the page.\n' > "$tmp/h2_benign/README.md"
 setmanifest "$tmp/h2_benign" 'd["load"]["entry"]=["README.md"]'
 lane "control: README.md frontmatter benign payload admits" 0 "$tmp/h2_benign"
+
+# ---- final round lanes (codex 2026-10-19, defensive read: under-classification) ----
+# A1 a cartridge that DECLARES irreversible / unknown / write-remote is never auto-admitted
+for kv in 'reversibility=irreversible' 'reversibility=unknown' 'writes=write-remote'; do
+  k="${kv%%=*}"; v="${kv#*=}"; mk "decl_${k}_${v}"
+  setmanifest "$tmp/decl_${k}_${v}" "d[\"constraints\"][\"$k\"]=\"$v\""
+  lane "declared $k=$v = HUMAN_REVIEW" 1 "$tmp/decl_${k}_${v}"
+done
+# A2 a tool outside the reversible allowlist (MCP and friends) is reviewed; Read stays the clean control
+for g in 'mcp__github__push_files' 'mcp__filesystem__delete_file' 'Agent' 'KillShell'; do
+  n="tool_$(printf '%s' "$g" | tr -c 'a-zA-Z0-9' '_')"; mk "$n"
+  printf -- '---\nname: demo\ndescription: x\nallowed-tools: ["Read", "%s"]\n---\n# demo\n' "$g" > "$tmp/$n/skills/demo/SKILL.md"
+  lane "tool $g = HUMAN_REVIEW" 1 "$tmp/$n"
+done
+# A3 Bash outside the read-only allowlist, incl. forms the old blocklist did not name; git status stays the control above
+for g in 'Bash(git config core.hooksPath:*)' 'Bash(git rebase:*)' 'Bash(git commit --amend:*)' 'Bash(find . -delete)' 'Bash(git log:*)'; do
+  n="bash_$(printf '%s' "$g" | tr -c 'a-zA-Z0-9' '_')"; mk "$n"
+  G="$g" python3 -c 'import json,os,sys; open(sys.argv[1],"w").write("---\nname: demo\ndescription: x\nallowed-tools: [\"Read\", "+json.dumps(os.environ["G"])+"]\n---\n# demo\n")' "$tmp/$n/skills/demo/SKILL.md"
+  lane "Bash grant $g = HUMAN_REVIEW" 1 "$tmp/$n"
+done
+# R2: executable frontmatter (`hooks:` in a skill) is not an inert key
+mk fm_hooks; printf -- '---\nname: demo\ndescription: x\nallowed-tools: ["Read"]\nhooks:\n  PreToolUse:\n    - matcher: Read\n      hooks:\n        - type: command\n          command: git rebase main\n---\n# demo\n' > "$tmp/fm_hooks/skills/demo/SKILL.md"
+lane "skill frontmatter hooks: = HUMAN_REVIEW" 1 "$tmp/fm_hooks"
+mk fm_inert; printf -- '---\nname: demo\ndescription: x\nallowed-tools: ["Read"]\nmodel: sonnet\nuser-invocable: true\n---\n# demo\n' > "$tmp/fm_inert/skills/demo/SKILL.md"
+lane "control: inert frontmatter keys admit" 0 "$tmp/fm_inert"
+mk ls_bash; printf -- '---\nname: demo\ndescription: x\nallowed-tools: ["Read", "Bash(ls:*)"]\n---\n# demo\n' > "$tmp/ls_bash/skills/demo/SKILL.md"
+lane "control: Bash(ls:*) admits" 0 "$tmp/ls_bash"
 
 [ "$fail" = 0 ] && echo "ALL LANES PASS" || { echo "LANES FAILED"; exit 1; }

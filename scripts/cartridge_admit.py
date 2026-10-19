@@ -51,6 +51,17 @@ TOP_KEYS = {"schema_version", "plugin", "load", "constraints", "services", "done
 REQUIRED_KEYS = {"schema_version", "plugin", "load", "constraints"}
 DONE_CLASSES = {"measured", "declared"}
 WRITE_TOOLS = {"Write", "Edit", "NotebookEdit"}
+# Admission is an ALLOWLIST (2026-10-19, codex final round: 4 A where a blocklist let mcp__*, `git rebase`, `find -delete`
+# and a bundled script through as ADMIT). Only grants that are plainly reversible ADMIT; every other grant is HUMAN_REVIEW.
+# Same lesson as the static shell-string checks that never converged: name what is safe, not what is dangerous.
+REVERSIBLE_TOOLS = {"Read", "Grep", "Glob", "LS", "NotebookRead", "TodoWrite", "WebSearch", "WebFetch",
+                    "Write", "Edit", "MultiEdit", "NotebookEdit"}   # writes are cross-checked against declared `writes`
+# Bash grants that ADMIT, exact text. `git log/diff/show` are left out on purpose: `--output=<file>` writes.
+# Frontmatter keys that carry no executable behaviour. Anything else (above all `hooks:`, which Claude Code runs from
+# a skill's or agent's frontmatter) goes to a human — codex final round R2, 2026-10-19.
+INERT_FRONTMATTER = {"name", "description", "allowed-tools", "tools", "model", "argument-hint", "user-invocable",
+                     "disable-model-invocation", "origin", "license", "version", "when_to_use", "metadata"}
+READONLY_BASH = {"Bash(git status)", "Bash(git status:*)", "Bash(ls)", "Bash(ls:*)", "Bash(pwd)"}
 PLUGIN_JSON_KEYS = {"name", "version", "description", "author", "homepage", "repository", "license",
                     "keywords", "engines"}
 PLUGIN_JSON = os.path.join(".claude-plugin", "plugin.json")
@@ -315,6 +326,8 @@ def skill_tools(root, targets):
     tools, grants = set(), []
     for rel in sorted(rels):
         fm = frontmatter(read_text(root, rel), rel)
+        for key in sorted(k for k in fm if str(k) not in INERT_FRONTMATTER):
+            grants.append("%s: frontmatter key %r (outside the inert-key allowlist)" % (rel, key))
         for key in ("allowed-tools", "tools"):
             v = fm.get(key)
             if v is None:
@@ -327,10 +340,16 @@ def skill_tools(root, targets):
                 raise Stop(HARNESS_ERROR, "%s: %s must be a string or a list of strings" % (rel, key))
             for item in items:
                 item = item.strip()
-                tools.add(re.split(r"[(\s]", item, 1)[0])
+                name = re.split(r"[(\s]", item, maxsplit=1)[0]
+                tools.add(name)
                 label = checker_h1(item)
                 if label:
                     grants.append("%s: %s (%s)" % (rel, item, label))
+                elif name == "Bash" or item.startswith("Bash"):
+                    if re.sub(r"\s+", " ", item) not in READONLY_BASH:
+                        grants.append("%s: %s (Bash outside the read-only allowlist)" % (rel, item))
+                elif name not in REVERSIBLE_TOOLS:
+                    grants.append("%s: %s (tool outside the reversible allowlist)" % (rel, item))
     tools.discard("")
     return tools, grants
 
@@ -454,7 +473,11 @@ def admit(src, keep_dir=None):
         report["steps"]["static_check"] = {"rc": crc, "verdict": "HUMAN_REVIEW" if crc == 1 else "PASS"}
         required = [s["id"] for s in manifest.get("services", []) if s["need"] == "required"]
         report["steps"]["services"] = {"required_unverified": required}
-        rc = HUMAN_REVIEW if crc == 1 or required or grants else ADMIT
+        # A cartridge that DECLARES it may be irreversible / unknown, or writes remotely, is never auto-admitted (codex A1).
+        declared_risk = [a for a, bad in (("reversibility", ("unknown", "irreversible")), ("writes", ("write-remote",)))
+                         if merged[a] in bad]
+        report["steps"]["declared_risk"] = declared_risk or "ok"
+        rc = HUMAN_REVIEW if crc == 1 or required or grants or declared_risk else ADMIT
         if rc == ADMIT and keep_dir:
             report["snapshot_kept"] = keep(root, digest, keep_dir)
     except Stop as s:
