@@ -584,6 +584,20 @@ over **unchanged** code:
    stays flat is not telling you to review harder; it is telling you that each round's repairs are
    manufacturing the next round's findings. Cut the scope that is generating them (see the
    Added-Scope Gate in `.claude/rules/fh_4axis_gate.md`) and re-audit the smaller artifact.
+   **Attack the premise before the third repair — this applies whether or not the yield falls.**
+   When two rounds' A-or-higher findings are different instances of one assumption — «this list can
+   be completed», «this string shape covers every caller» — another instance-level repair is likely
+   to repeat the failure. Before choosing the next repair, write the shared premise down in one line,
+   test it directly (one counter-example settles it), and if it falls, change the design rather than
+   the list: flip a blocklist to an allowlist, move the check to where the input is already typed, or
+   drop the exemption. Measured 2026-10-19, same day, two surfaces: FoD gate read-side exemptions
+   (5 A in one cross-family round — `_getframe`, NFKC fullwidth names, `PYTHONPATH`, …) and the
+   cartridge admission checker (R1 4 A, R2 1 A) both rested on «a blocklist of shell/tool strings can
+   be completed»; the exemptions were dropped and the checker flipped to an allowlist, so an unknown
+   string now lands on the human instead of on a missing list entry. That flip is not convergence —
+   the checker shipped NOT-CONVERGED at the round cap, and said so
+   ([[feedback_static_shell_string_check_does_not_converge]]).
+   Prior art: the «attack the premise» principle in pstack (`cursor/plugins`).
 5. Full Wave results → recommend persisting to `tracks/_meta/steel_quench_YYYY_MM_DD_{slug}.md`
 
 > **Why this replaced "zero new S-grade → terminate" (measured 2026-08-02, PR #231).** A single
