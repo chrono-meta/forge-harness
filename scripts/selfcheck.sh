@@ -1051,6 +1051,7 @@ for _pair in \
   "scripts/sim_isolated_run.sh|scripts/test_sim_path_isolation_lanes.sh" \
   `# ── mutation_probe (2026-10-07) — revert_probe 의 «저자가 고른 변이 1개» 를 연산자 생성 변이로 넓힌 것. 앵커가 고정하는 것은 생성기 보정(리다이렉트 비변이)과 «못 잰 것은 2» 다 ──` \
   "scripts/mutation_probe.py|scripts/test_mutation_probe_lanes.sh" \
+  "scripts/cartridge_admit.py|scripts/test_cartridge_admit_lanes.sh" \
   `# ── live-eval — the live twin of the static /prompt-regression probe check (2026-09-04) ──` \
   "scripts/probe_live_eval.sh|scripts/test_probe_live_eval_lanes.sh" \
   "scripts/probe_live_eval_lib.py|scripts/test_probe_live_eval_lanes.sh" \

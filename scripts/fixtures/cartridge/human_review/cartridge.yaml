@@ -1,0 +1,1 @@
+{"schema_version": 1, "plugin": "human_review", "load": {"entry": ["skills/demo/SKILL.md"]}, "constraints": {"approval": "ask", "writes": "read-only", "reversibility": "reversible", "residency": "public"}}

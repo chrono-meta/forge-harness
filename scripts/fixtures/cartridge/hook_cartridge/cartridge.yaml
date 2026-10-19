@@ -1,0 +1,1 @@
+{"schema_version": 1, "plugin": "hook_cartridge", "load": {"entry": ["skills/demo/SKILL.md"]}, "constraints": {"approval": "ask", "writes": "read-only", "reversibility": "reversible", "residency": "public"}}
