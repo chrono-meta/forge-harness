@@ -21,6 +21,10 @@ lane "fh-qp = HUMAN_REVIEW (blanket Bash)"  1 "$ROOT/plugins/fh-qp"
 steps="$("$PY" "$ADMIT" "$ROOT/plugins/fh-qp" --json | "$PY" -c 'import json,sys; d=json.load(sys.stdin)["steps"]; print(d["scope"], d["schema"], d["static_check"]["rc"])')"
 if [ "$steps" = "ok ok 1" ]; then echo "PASS fh-qp scope/schema ok, static check rc=1"; else echo "FAIL fh-qp steps: $steps"; fail=1; fi
 lane "minimal cartridge admits"             0 "$FIX/minimal_ok"
+# Direct run of the subject by a literal interpreter — the lanes above call it through "$PY" "$ADMIT", which the
+# new-code-anchor check cannot follow to an execution (CI on #922: MENTION_ONLY). Same verdict, asserted on rc.
+python3 "$HERE/cartridge_admit.py" "$FIX/minimal_ok" >/dev/null 2>&1; _direct_rc=$?
+if [ "$_direct_rc" = 0 ]; then echo "PASS direct run: minimal cartridge admits (rc=0)"; else echo "FAIL direct run: minimal cartridge want rc=0 got rc=$_direct_rc"; fail=1; fi
 lane "hook-declaring cartridge refused"     2 "$FIX/hook_cartridge"
 lane "bad constraint enum refused"          2 "$FIX/bad_enum"
 lane "missing cartridge.yaml = HARNESS_ERROR" 3 "$FIX/no_manifest"
