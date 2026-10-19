@@ -84,11 +84,14 @@ Isolated delegation is part of the identity: dispatch separable work (blind eval
 | "research this" | built-in `/deep-research` → WebSearch/WebFetch synthesis → `/frontier-digest` only for AI/harness trends |
 | a need a Claude Code built-in may cover | `builtin_capability_map.md` |
 | "what did we do last week / find past work" | read `CATALOG.md` first, then open only matched files |
+| "wrap up this week" · weekly review · a retrospective over a *period* (not this session) | `/harvest-loop`. Closing *this* session — with or without a retro of it — is Session Wrap-up below (its ② already runs harvest-loop) |
+| a bare "정리해줘" / "organize this" with no object in the message or the conversation | ask what to organize (`/deep-clarify`) — never assume the session close; material just pasted or produced *is* the object |
+| "context is getting long" · token limit · the session itself feels slow | built-in `/context` · `/compact` first, then `/context-doctor` for what they do not cover |
 | anything else | skill descriptions route themselves; the full previous table is in `claude_md_full_reference.md §Autonomous Initiative Layer` |
 
 Propose a skill in one line; never re-propose one the user rejected 3× (UAP: `tracks/_meta/user_adaptation_profile.md`). Before offering to stop asking after 3 consecutive accepts, read `claude_md_full_reference.md §Operational Adaptation Loop` — classes that touch or feed an irreversible sink never promote. At session start and on entering field acceleration or an FH-asset change, apply `claude_md_full_reference.md §Cadence Rules` and §Event-bound proposals.
 
-## Session Wrap-up (fires on "wrap up / done / 마무리 / 마감" in any language)
+## Session Wrap-up (fires on "wrap up / done / 마무리 / 마감" in any language — closing *this* session; a week/period review or a bare "정리해줘" is routed by the table above)
 Read `claude_md_full_reference.md §Session Wrap-up` first (thread-continuation block, Agent View pre-read, multi-session close). ① git status + unpushed → ①-b open-PR sweep (propose merges, never auto) → ①-f `scripts/utterance_intake.sh` → ①-g request-checklist result sheet: `scripts/session_checklist.py extract` → fill 상태 with evidence/reasons → **show the operator the table**, open rows first (a hook also nudges this mid-session, every 15 written-down requests) → ② harvest-loop if FH assets changed or `close_retro` is granted → ③ sync to the companion store if you keep one — an ephemeral/cloud session leaves a handoff somewhere durable before it ends → ④ memory hygiene → ④-b npm freshness (propose republish, never auto; version digit policy in `claude_md_gate_details.md §Version-Digit-Policy`) → ④-c stamp superseded handoffs → ⑤ append close findings to `tracks/_meta/fh_completed_{date}.md`, **then** rewrite `tracks/_meta/reference_next_session_starter.md` (card last; anything dropped from the card must be logged done or explained) → ⑥ `FH_SESSION_CLOSE=1 git push`. Log completed items in `fh_completed_{date}.md` as they finish, not at close. Detail: `claude_md_full_reference.md §Session Wrap-up`.
 
 ## Where the rest lives
