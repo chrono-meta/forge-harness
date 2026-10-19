@@ -39,6 +39,11 @@ cd "$REPO_ROOT" || exit 1
 #   scripts/sync_to_be_lanes.sh             — forward-path lane suite for sync-to-be.sh, itself
 #       ACCEPTED_ABSENT above; added 2026-08-14, pmh-dev#69.
 ACCEPTED_ABSENT=(
+  # 2026-10-19 — cartridge admission checker and its lanes. Not shipped yet on purpose: publishing cartridges
+  #    (fh-cartridges) is an open operator decision, and shipping the checker would put it in the next npm
+  #    release by default. selfcheck resolves its row as SKIP («not in files[], and absent») on a consumer tree.
+  "scripts/cartridge_admit.py"
+  "scripts/test_cartridge_admit_lanes.sh"
   # 🟥 2026-09-21 (야간) — 정책렌즈 채점기와 그 레인. **FH 자기 연구의 실험 기록**이지 소비자
   #    능력이 아니다: 판정 대상이 `scripts/fixtures/policy_lens_knownpair_2026-09-21/` 안의
   #    1차 런 48개 파일(236K)이고, 그것까지 실어 보내면 아무도 안 쓰는 실험 아카이브가 패키지
