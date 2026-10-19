@@ -72,7 +72,9 @@ echo "  ── ①-c peer 스캔: claude-agents 스코프 ──"
 CC="$D/session_close_check.sh"
 if [ -f "$CC" ]; then
   a=$(CLAUDE_CODE_CHILD_SESSION=1 bash "$CC" 2>/dev/null | grep -cE '^[^[:space:]]+ +①-c' || true)
-  b=$(env -u CLAUDE_CODE_CHILD_SESSION -u CLAUDE_CODE_AGENT bash "$CC" 2>/dev/null | grep -cE '^[^[:space:]]+ +①-c' || true)
+  # 아래 ①-g 팔이 읽는다 — 체커가 스텁을 «안 불렀다» 와 «가리고 진짜를 불렀다» 는 다르다.
+  _CCOUT="$(env -u CLAUDE_CODE_CHILD_SESSION -u CLAUDE_CODE_AGENT bash "$CC" 2>/dev/null || true)"
+  b=$(printf '%s\n' "$_CCOUT" | grep -cE '^[^[:space:]]+ +①-c' || true)
   c=$(env -u CLAUDE_CODE_CHILD_SESSION -u CLAUDE_CODE_AGENT FH_PEER_SCAN_FORCE=1 bash "$CC" 2>/dev/null | grep -cE '^[^[:space:]]+ +①-c' || true)
   [ "$a" -gt 0 ] && ok "자식 세션 → ①-c 뜬다" || ng "자식 세션인데 ①-c 없음"
   [ "$b" -eq 0 ] && ok "톱레벨(env 부재 시뮬) → 침묵 (솔로 세션 나그 금지)" || ng "env 부재인데 ①-c 떴다"
@@ -84,7 +86,19 @@ fi
 
 if [ -f "$CC" ]; then
   lane_stub_env_used gh && ok "lane_stub_env: gh 스텁 선택 확인(FH_LANE_STUB=off 면 해당 없음)" || ng "lane_stub_env: gh 스텁 미사용 — PATH 가림"
-  lane_stub_env_used stale-ref && ok "lane_stub_env: ①-g 스텁 선택 확인(FH_LANE_STUB=off 면 해당 없음)" || ng "lane_stub_env: ①-g 스텁 미사용 — 진짜 스캐너가 돌았다"
+  # 🟥 «스텁이 안 불렸다» 의 원인이 둘이고, 초판은 둘을 한 문장으로 접어 **거짓 진단**을 냈다.
+  #    2026-10-19 클린룸 감사 실측: 깃 없는 소비자 타르볼에서 이 스위트가 재현성 있게 빨갛고
+  #    (깃 트리 두 곳은 초록) 메시지가 「진짜 스캐너가 돌았다」였다. 실제로는 체커 자신이
+  #    «①-g stale-ref: git 없음/비-레포 — 대상 목록을 못 만들었다. UNMEASURED» 를 찍고
+  #    스캐너를 **아예 안 불렀다**. 즉 가림이 아니라 미측정이고, 「진짜가 돌았다」는 거짓이다.
+  #    ⇒ 체커 자신의 출력으로 가른다(기록의 속성을 보는 것이지 결론을 보는 게 아니다).
+  if lane_stub_env_used stale-ref; then
+    ok "lane_stub_env: ①-g 스텁 선택 확인(FH_LANE_STUB=off 면 해당 없음)"
+  elif printf '%s\n' "${_CCOUT:-}" | grep -q '①-g stale-ref: git 없음/비-레포'; then
+    ok "lane_stub_env: ①-g 는 체커가 UNMEASURED 를 선언해 스캐너를 안 불렀다 — 미측정(통과 아님), 가림 아님"
+  else
+    ng "lane_stub_env: ①-g 스텁 미사용 — PATH 가림(진짜 스캐너가 돌았다)"
+  fi
 fi
 
 echo
