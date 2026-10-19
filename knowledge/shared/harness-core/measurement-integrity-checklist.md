@@ -43,6 +43,22 @@ accept a measurement's self-report (of identity or of grounding) when a discrimi
 check is available. Its sharpest tool is the **deleted-content discriminator**: a probe target that no
 longer contains X makes any answer citing X self-invalidating — certainty no prompt instruction buys.
 
+## Explain the number — say what limits it
+
+A reported number carries one more line: **what bounds it** — the grader, the sample size, a timeout,
+the model tier, the channel that was read. The same 0/1 can mean «the behaviour is absent» or «the
+instrument could not see it», and this line is where the reader learns which question is still open.
+The line names a suspected bound; it does **not** overturn the score. A failed pre-registered check
+stays failed in the record. A replacement result needs all three: the bound tested on a known pair,
+the corrected grader pre-registered for the next round (§Measured-Loop), and a re-run — never a
+re-reading of the old transcript. Example, 2026-10-19: live-eval G-TRIG-04 scored 0/1
+after a routing fix, and the transcript said «weekly harvest» where the pre-registered grader wants
+the literal `harvest-loop`. The honest report is
+`0/1 — suspected bound: grader literal (transcript paraphrases the target); routing not yet shown`,
+which sends the next session to test the grader on a known pair instead of either re-opening the fix
+or quietly closing it. This is a line in the report, not a gate: no hook checks it. Prior art:
+«explain the number» in pstack (`cursor/plugins`).
+
 ## Done When
 
 - The checklist enumerates all five failure modes, each with its countermeasure.
