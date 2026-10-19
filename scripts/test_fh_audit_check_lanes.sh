@@ -89,10 +89,11 @@ run_new() {
   echo "── ② frontier digest"
   hasnt "$S" "$F8" "$T/f8.sent" "frontier"              "L8  old diagnosis file, fresh digest → silent"
   has   "$S" "$F9" "$T/f9.sent" "frontier_digest 10d"   "L9  KP: digest 10d → warns"
-  echo "── ③ sim Area B"
-  has   "$S" "$F4" "$T/f4.sent" "FH internal sim 40d"   "L4  area_D run does not reset Area B clock"
-  has   "$S" "$F5" "$T/f5.sent" "FH internal sim 116d"  "L5  KP: Area B 116d → warns (true alarm kept)"
+  echo "── ③ sim Area B — event-bound since 2026-10-19: no terminal line at any age"
+  hasnt "$S" "$F4" "$T/f4.sent" "FH internal sim"       "L4  Area B 40d → silent (event-bound, no clock)"
+  hasnt "$S" "$F5" "$T/f5.sent" "FH internal sim"       "L5  Area B 116d → silent (the old true alarm is retired by decision)"
   hasnt "$S" "$F1" "$T/f1.sent" "FH internal sim"       "L5b Area B 3d → silent"
+  has   "$S" "$F2" "$T/f2.sent" "weekly_audit 10d"      "L5c control: the banner still prints (removal did not silence ①)"
   echo "── ④ sentinels"
   for m in projA_mapping_skipped projB_wizard_done projC_wizard_declined projD_wizard_reminder_muted; do
     hasnt "$S" "$F6" "$S6" "$m sentinel"                "L6  state marker $m not aged"
@@ -127,11 +128,15 @@ probe() { # name sed-expr lane-fn
 }
 lane1() { hasnt "$1" "$F1" "$T/f1.sent" "weekly audit history" "L1-probe"; }
 lane2() { hasnt "$1" "$F8" "$T/f8.sent" "frontier" "L8-probe"; has "$1" "$F9" "$T/f9.sent" "frontier_digest 10d" "L9-probe"; }
-lane3() { has "$1" "$F4" "$T/f4.sent" "FH internal sim 40d" "L4-probe"; }
+# lane3: the retired ③ — a warning-presence mutant: insert an Area B line (no threshold, no dir guard)
+# in a copy; the 116d fixture must make it speak, so the lane proves «no Area B line» is really asserted
+lane3() { hasnt "$1" "$F5" "$T/f5.sent" "FH internal sim" "L5-probe"; }
 lane4() { hasnt "$1" "$F6" "$S6" "projA_mapping_skipped sentinel" "L6-probe"; }
 probe weekly   's#tracks/_audit"/weekly_audit_\*\.md#tracks/_audit"/harvest_*.md#' lane1
 probe frontier 's#tracks/_meta"/frontier_digest_\*\.md#knowledge/shared/harness-core"/harness_frontier_diagnosis_*.md#' lane2
-probe sim      's#sim_\*_area_B\*\.md#sim_*.md#' lane3
+probe sim      '/# ④ Custom sentinels/i\
+  local -a _fh_sims; _fh_sims=( "${FH_DIR}/tracks/_meta"/sim_*_area_B*.md(N.om) ); local sim="${_fh_sims[1]:-}"; [[ -n "$sim" ]] \&\& warns+=("FH internal sim (re-inserted mutant)")
+' lane3
 probe sentinel '/\*_wizard_done|\*_mapping_skipped/d' lane4
 lane5() { hasntk "$1" "$F10" "$T/f10.sent" "weekly_audit" "L10-probe"; }
 probe emulate  '/^  emulate -L zsh$/d' lane5

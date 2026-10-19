@@ -19,6 +19,10 @@
 
 ## When it applies
 
+The leak gates (Steps 0–3) apply to any first-time public action below. The last item of
+**§Read it as a reader** (Area B) applies to every minor/major release and every public announcement
+of the harness itself, not only the first one.
+
 Any first-time public action:
 - `gh repo create --public` / `gh repo create ... --public`
 - `gh repo edit --visibility public` (private → public flip)
@@ -127,6 +131,12 @@ opens and look at what they see:
 - [ ] Does it say **what the reader should do next**?
 
 A lens already exists — `/sim-conductor` A-1 (`beginner` cold-read) — or just render it and read it.
+
+- [ ] **Minor/major release or public announcement of the harness itself**: run `/sim-conductor` Area B
+      (whole-set internal audit: outside-reader briefing · naming/structure gaps · challenger) unless one
+      already ran since the previous minor release. This replaced a 30-day terminal reminder on
+      2026-10-19 (operator decision): Area B's distinct value is an outsider's view of the whole set,
+      and that view pays at publication, not on a clock.
 
 🟥 **Why this is a human step and not a scan**: a static check catches what is ABSENT, never what is
 UNREADABLE. Two independent measurements arrived here the same day (2026-08-17): one harness axis

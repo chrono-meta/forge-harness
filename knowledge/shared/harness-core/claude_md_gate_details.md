@@ -405,6 +405,13 @@ sessions (no FH asset modification) never see this notice — the Sonnet default
 > CLAUDE.md 는 규칙(3값 + 판별자 + `BREAKING (gate):` 의무)만 상주로 갖고, 아래 근거·판례를
 > 여기서 읽는다. salience-split 2026-08-21.
 
+> **minor·major 를 올릴 때 (또는 하네스를 공개 발표할 때) 하나 더 — `/sim-conductor` Area B.**
+> 2026-10-19 운영자 결정으로 Area B 는 30일 터미널 알림에서 **사건 기준**으로 바뀌었다. 그 사건이 바로
+> 여기다: 직전 minor 발행 뒤 Area B 가 한 번도 안 돌았으면 태그 푸시 전에 돌린다(외부 독자 관점 ·
+> 이름·구조 빈틈 · challenger). patch 는 해당 없음. 상세 = `templates/PRE-PUBLISH-CHECKLIST.md
+> §Read it as a reader` 마지막 항목. 태그 워크플로(`publish.yml`)는 이걸 검사하지 않는다 — 기계가 아니라
+> 이 절차가 지킨다(판단 단계라 일부러 기계화하지 않음).
+
 🟥 **WHICH DIGIT — operator decision 2026-08-17, and it is deliberately NOT strict semver.**
 There was no policy before this line, which is why one session proposed three different bumps
 for the same delta on three different (and each individually defensible) grounds. Decide by
