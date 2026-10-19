@@ -79,6 +79,12 @@ case "${FH_STUB_MODE:-say}" in
                  if [ "$_n" -eq 2 ]; then exit 7; fi
                  printf '{"session_id":"SID-fixed","result":"turn %s ok"}\n' "$_n" ;;
   hang)     sleep 30 ;;
+  # L29e — turn 1 crashes (rc 7), every later turn hangs. The rep returns its FIRST failing rc (7),
+  # so the budget line must read the per-turn table to see the timeout.
+  turns_die1_hang) _c=$(cat "${FH_STUB_SID_COUNTER:-/dev/null}" 2>/dev/null); [ -n "$_c" ] || _c=0
+                 _n=$((_c+1)); echo "$_n" > "${FH_STUB_SID_COUNTER:-/dev/null}" 2>/dev/null || true
+                 if [ "$_n" -eq 1 ]; then exit 7; fi
+                 sleep 30 ;;
 esac
 exit 0
 STUB
@@ -522,6 +528,51 @@ mt_run turns b28n
 grep -q "RESULT: CLEAN" "$WORKROOT/o_b28n.log" \
   && ok "L28n CONTROL — healthy multi-turn run is CLEAN (k/l/m are not firing on everything)" \
   || no "L28n CONTROL was not CLEAN — L28k/l/m prove nothing"
+
+# ── L29 budget line (2026-10-17) — meta.tsv carries the cap the episode ran under and whether it
+#    ENDED AT it. Known-positive: a hanging stub under --timeout 1 (rc=124) -> yes. Known-negative:
+#    a normal answer -> no. And the two non-answers stay UNKNOWN, never `no`.
+bud_meta() {  # $1=tag $2=stub mode  $3..= extra runner args ; env passes through. prints meta path
+  local tag="$1" mode="$2"; shift 2
+  ( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE="$mode" \
+      bash "$SUT" --arm a --reps 1 --prompt p --out "$WORKROOT/o_$tag" "$@" ) >"$WORKROOT/o_$tag.log" 2>&1
+  printf '%s' "$WORKROOT/o_$tag/a_r1.meta.tsv"
+}
+meta_get() { awk -F'\t' -v k="$2" '$1==k{print $2}' "$1" 2>/dev/null; }
+M="$(bud_meta b29a hang --timeout 1)"
+{ [ "$(meta_get "$M" ended_at_cap)" = yes ] && [ "$(meta_get "$M" rc)" = 124 ] && [ "$(meta_get "$M" timeout_s)" = 1 ]; } \
+  && ok "L29a KNOWN-POSITIVE — hang under --timeout 1: rc=124, timeout_s=1, ended_at_cap=yes" \
+  || no "L29a timeout not recorded as ended_at_cap=yes ($(meta_get "$M" rc)/$(meta_get "$M" ended_at_cap))"
+M="$(bud_meta b29b say --timeout 60)"
+{ [ "$(meta_get "$M" ended_at_cap)" = no ] && [ "$(meta_get "$M" max_turns)" = unset ] && [ "$(meta_get "$M" timeout_s)" = 60 ]; } \
+  && ok "L29b KNOWN-NEGATIVE — normal answer: ended_at_cap=no, max_turns=unset, timeout_s=60" \
+  || no "L29b normal answer mis-recorded ($(meta_get "$M" ended_at_cap))"
+M="$(bud_meta b29c die --timeout 60)"
+[ "$(meta_get "$M" ended_at_cap)" = UNKNOWN ] \
+  && ok "L29c a crash (rc=7) is UNKNOWN, not no and not yes" \
+  || no "L29c crash classified as '$(meta_get "$M" ended_at_cap)'"
+M="$(CLAUDE_CODE_MAX_OUTPUT_TOKENS=100 bud_meta b29d say --timeout 60)"
+{ [ "$(meta_get "$M" token_cap)" = 100 ] && [ "$(meta_get "$M" ended_at_cap)" = UNKNOWN ]; } \
+  && ok "L29d token cap read from the inherited env (100); rc=0 under a cap is UNKNOWN (stop reason not read)" \
+  || no "L29d token_cap/ended_at_cap: $(meta_get "$M" token_cap)/$(meta_get "$M" ended_at_cap)"
+# L29e (review B2) — multi-turn: turn 1 rc=7, turn 2 times out. rep rc stays 7 (first failure), and
+# before the fix ended_at_cap was UNKNOWN — the timeout was hidden.
+: > "$WORKROOT/sid_b29e"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=turns_die1_hang \
+   FH_STUB_SID_COUNTER="$WORKROOT/sid_b29e" \
+   bash "$SUT" --arm mt --reps 1 --turns "$WORKROOT/t3.txt" --timeout 1 --out "$WORKROOT/o_b29e" ) >"$WORKROOT/o_b29e.log" 2>&1
+M="$WORKROOT/o_b29e/mt_r1.meta.tsv"
+{ [ "$(meta_get "$M" rc)" = 7 ] && [ "$(meta_get "$M" ended_at_cap)" = yes ]; } \
+  && ok "L29e multi-turn: turn-2 timeout behind a turn-1 crash still reads ended_at_cap=yes (rc stays 7)" \
+  || no "L29e multi-turn timeout hidden: rc=$(meta_get "$M" rc) ended_at_cap=$(meta_get "$M" ended_at_cap)"
+# L29f (review C2) — a reused --out whose rep fails before writing meta must not keep the old meta.
+mkdir -p "$WORKROOT/o_b29f"
+printf 'rc\t0\nended_at_cap\tno\n' > "$WORKROOT/o_b29f/a_r1.meta.tsv"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say \
+   bash "$SUT" --arm a --reps 1 --prompt p --base-ref no-such-ref --base-sha 0000000 --out "$WORKROOT/o_b29f" ) >"$WORKROOT/o_b29f.log" 2>&1
+{ grep -q "BASE CLONE FAILED" "$WORKROOT/o_b29f.log" && [ ! -e "$WORKROOT/o_b29f/a_r1.meta.tsv" ]; } \
+  && ok "L29f clone failure on a reused --out leaves no stale ended_at_cap=no behind" \
+  || no "L29f stale meta survived (clone-fail seen: $(grep -c 'BASE CLONE FAILED' "$WORKROOT/o_b29f.log"))"
 
 echo "sim_isolated_run lanes: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1

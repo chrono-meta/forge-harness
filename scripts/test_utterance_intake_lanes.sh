@@ -171,7 +171,17 @@ N20=$(python3 "$EXTRACT" "$T/tr.jsonl" --min-chars 20 2>/dev/null | grep -c .); 
 [ "${N0:-0}" -eq 4 ] && ok "L9 --min-chars 0 → 4 발화 (known-positive)" || ng "L9 --min-chars 0 → $N0 (기대 4)"
 [ "${N20:-0}" -eq 3 ] && ok "L9b --min-chars 20 → 3 발화 (필터가 실제로 거른다)" || ng "L9b --min-chars 20 → $N20 (기대 3)"
 # 출력 형식: n<TAB>ts<TAB>text
-python3 "$EXTRACT" "$T/tr.jsonl" --min-chars 0 2>/dev/null | head -1 | grep -qE $'^1\t2026-09-05T01:00:00' \
+# 🟥 파이프를 걷은 이유 — `… | head -1 | grep -q` 는 `set -o pipefail` 밑에서 조기종료
+#    소비자가 생산자를 SIGPIPE 로 죽이고, 그 rc 가 레인 판정이 된다. 레포 자기 계기
+#    (`scripts/pipefail_earlyexit_scan.sh`)가 이 줄을 이미 `head / GUARD` VULN 으로
+#    이름 대고 있었다. 2026-10-12 클린룸 감사에서 **실제로 떴다**: 한 selfcheck 로그 안의
+#    같은 레인 4회 실행 중 1회만 적색(앞선 3개 회차 로그에서는 4/4 × 3 = 12/12 초록),
+#    부하를 준 단독 재현 1/30 · 부하가 빠진 뒤 0/180. 조용한 «통과»가 아니라 조용한
+#    «적색»이고, 그래서 더 나쁘다 — 주간 감사의 회차 간 diff 를 오염시켜 「새로 깨진 것」
+#    판정 자체를 못 쓰게 만든다. 처방은 레포 관례 그대로: 먼저 담고 here-string 으로 본다.
+#    기존 부채 121 곳은 이 변경의 일이 아니다 — 그쪽은 델타 잠금이 이미 관장한다.
+_L9C_OUT=$(python3 "$EXTRACT" "$T/tr.jsonl" --min-chars 0 2>/dev/null)
+grep -qE $'^1\t2026-09-05T01:00:00' <<<"${_L9C_OUT%%$'\n'*}" \
   && ok "L9c tsv 형식이 n<TAB>ts<TAB>text" || ng "L9c tsv 형식이 어긋난다"
 
 # ── L10 seal 출력 골든 — 공용화가 기존 원장을 바꾸지 않았다 ─────────────────

@@ -243,5 +243,11 @@ probes:
     # the 38 recorded control responses: primary 0/4 -> 4/4, control false-positives 2/38 UNCHANGED
     # (both belong to G-GREET-04, both already present under the old pattern; G-MAP-01's own control
     # is 0/4). Widening did not buy the hits with discrimination.
-    expect_re: "(auto_project_mapping|매핑|[Mm]apping [Pp]rotocol)"
+    # 🟥 WIDENED AGAIN 2026-10-13 — FAIL 0/3 every night since 10-11 (and 1/3·0/3 on 10-06/07) while the
+    # rule fired correctly: all three 10-13 arms scanned the parent dir, asked for a path, and listed the
+    # protocol's own step 1 «create `tracks/{name}/learnings/`» — they just never NAMED the protocol.
+    # Added that step-1 path (auto_project_mapping.md:36) as an alternative. Measured on every recorded
+    # run (2026-09-14..10-13): primary 37/87 -> 61/87 (3 of the misses are rate-limit stubs), and on all
+    # 1,057 recorded control responses (every probe) the new alternative adds 0 control hits.
+    expect_re: "(auto_project_mapping|매핑|[Mm]apping [Pp]rotocol|tracks/[^/\s`]+/learnings)"
     control_input: "오늘 날씨 어때?"

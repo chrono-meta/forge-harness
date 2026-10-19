@@ -4676,3 +4676,196 @@
     설계 문서 3건 착지(tracks/_meta) · cartridge_admit 레인 85(feat/cartridge-fh-qp ed2acc6) · codex 라운드마다 재현 입력 → fail-before 레인 → 수리 → 변이 빨강 확인
   learning: >-
     거부 목록(denylist)을 codex 와 주고받으면 S 가 2→1→3 으로 다시 늘었다 — 허용 목록으로 범위를 줄이자 S 0 으로 수렴. 같은 에이전트를 SendMessage 로 재개하면 이전 라운드 맥락을 잃지 않아 라운드당 1~4분.
+- date: 2026-10-14
+  agent: general-purpose (sonnet)
+  task: FoD v1 B11 SPEC r4 leak rewrites (clean room, review text only)
+  trigger: codex r4 REVISE A14 C5
+  outcome: accepted
+  evidence: governor grep of 28 A identifiers = 0 residual; Z145-Z149 present; cap table appended
+  tokens: 173982
+  note: also removed 6 same-class names unflagged by review
+- date: 2026-10-14
+  agent: general-purpose (sonnet)
+  task: FoD gate unresolved-redirect fix implementation (worktree fod-wt-redirect, branch fix/gate-unresolved-redirect)
+  trigger: redirect design finalized at cap (r3 -> final)
+  outcome: accepted
+  evidence: commit 2ac9215; governor re-run new 53/0 old 45/8; revert probe b reproduced (R-D10, R-D10c flip); real ~/.claude sha unchanged; no bypass tokens in diff
+  tokens: 279537
+  note: pre-commit gate needed a dedicated FOD_WORK assembly tree (shared tree incomplete); one gate run ~20min
+- date: 2026-10-14
+  agent: general-purpose (sonnet)
+  task: FoD gate mention-as-write fix implementation (worktree fod-wt-mention, branch fix/gate-mention-as-write)
+  trigger: mention design finalized at cap (§9 final)
+  outcome: accepted
+  evidence: commit 7670b77; governor re-run new 41/0 old 29/12 (M1-M3b allow + D7/D7b/D9/D19b old holes closed); revert probe c reproduced (D7, D7b, D19b flip); real ~/.claude sha unchanged; no bypass tokens in diff
+  tokens: 309224
+  note: arm's own Bash was blocked twice by the installed global gate (code text mentioning protected folder) and it switched to Write/Edit for worktree files — over-block of the very class being fixed, but it is a tool reroute after a gate block; surfaced to operator. Probe e initially instrument-error (green), fixed by narrowing exemption FORBID regex import->import( ; sent to codex review.
+- date: 2026-10-14
+  agent: general-purpose (sonnet) — resumed mention arm
+  task: fix codex mention impl r1 (6 findings) — closed allowlists
+  trigger: codex impl r1 REVISE
+  outcome: accepted
+  evidence: commit 5f17f40; governor re-run new 51/0, old fails only allow+old-hole lanes; real ~/.claude unchanged; watchdog fail-open measured as pre-existing on both gates
+  tokens: 347379
+  note: shrinking to ast grammar + program allowlist moved the REAL M2 and M3 shapes back to DENY (named residual); only M1 and grammar-shaped variants are newly allowed. Old holes D7/D7b/D9/D19b closed.
+- date: 2026-10-14
+  agent: general-purpose (sonnet) — resumed redirect arm x3
+  task: fix codex redirect impl r1/r2/r3 findings (commits 036bdeb, 8253b5a, 4aec3c4)
+  trigger: codex impl REVISE each round, cap 3
+  outcome: accepted
+  evidence: governor re-ran lanes each round (61/0, 69/0, 71/0) and own revert probes (GIT_* env, ROOTCOMPLETE); real ~/.claude unchanged; branch pushed
+  tokens: 962430
+  note: name allowlist made the preregistered real case (uppercase HOOK) a residual — governor declined widening at cap
+- date: 2026-10-14
+  agent: general-purpose (sonnet) — resumed mention arm x3
+  task: fix codex mention impl r1/r2/r3 findings (commits 5f17f40, b8851f5, 805609a)
+  trigger: codex impl REVISE each round, cap 3
+  outcome: partial
+  evidence: governor re-ran lanes each round (51/0, 56/0, 62/0) + revert probe script 8/8; real ~/.claude unchanged; branch pushed
+  tokens: 1095435
+  note: partial = fix landed safely but only real case M1 is unblocked; M2/M3 back to residual after closing to allowlists. No gate-block reroute after the rule was added to the brief.
+- date: 2026-10-14
+  agent: general-purpose (sonnet) — B11 test author + B11b test author
+  task: FoD v1 cleanroom B11 assembly tests (128) and B11b blocked trio (Z125 ledger shim, Z126, Z127) with reference impl set aside
+  trigger: FoD v1 cleanroom pipeline (operator «Write 도구 허용» for B11b delta files)
+  outcome: accepted
+  evidence: B11 full suite 3101/3101, B11b 8 tests fail 8/8 without reference impl (tests valid); home_guard OK
+  tokens: UNMEASURED
+  note: B11 author blocked 3x by old installed gate mention=write over-block; resumed after #213 install. Governor fixed X-Z126b writing salt to HOME (temp ledger env).
+- date: 2026-10-14
+  agent: run_isolated arms (claude sonnet, codexm, codexh) — B11b
+  task: implement B11b from sealed spec in isolation
+  trigger: cleanroom isolated-arm stage
+  outcome: accepted
+  evidence: all 3 arms 3122/3122, audit hits 0, verdict_v2 claude PASS, codexm PASS, codexh HUMAN 1; codexm adopted, suite 3109/3109
+  tokens: UNMEASURED
+  note: consolidated entry for three arms.
+- date: 2026-10-14
+  agent: general-purpose (sonnet) — FoD settings arm (fix/chat-model-follow-agent)
+  task: settings 7 items (agent-default model, badge row, harness subtitle, git-based chips, work-folder line, usage card, usage count)
+  trigger: operator «ㅇㅇ» / «같이 얹어줘» / «칸도 있으면 좋겠다»
+  outcome: accepted
+  evidence: gate 613/0, live lanes 9 kinds pass, merged #218 (377068c), installed
+  tokens: UNMEASURED
+  note: arm's first usage-counter write landed in real ~/.claude (caught by chatux live); moved to userData. Arm heredoc edit blocked by gate; governor rephrased via Edit tool.
+- date: 2026-10-14
+  agent: general-purpose (sonnet) — FoD multisend/observe arm
+  task: governor chat multi-@ send + per-session reply observation (design r3 final)
+  trigger: operator «설계 확정되면 구현까지 ㄱㄱ»
+  outcome: accepted
+  evidence: lanes 155/0, gate 615/0, live fh_chat main 77/0, codex impl r1-r3 fixes applied, branch feat/chat-multisend-observe ceb627e pushed (PR not opened)
+  tokens: UNMEASURED
+  note: arm report labelled the equal-time tie rule «operator-approved»; corrected — it was a governor decision from codex r3.
+- date: 2026-10-15
+  agent: general-purpose (sonnet) — FoD v1 B12 pipeline (spec author · test author · LIVE_ONLY runner) + run_isolated arms (claude, codexm, codexh)
+  task: B12 renderer cleanroom bundle end to end
+  trigger: operator «1 승인 2 추천대로 3 그렇게하자» · «합본 오면 추천대로 결정해줘»
+  outcome: accepted
+  evidence: spec r4 cap, 805 tests, 3 arms 3932/3932 audit 0, verdict_v2 codexh PASS364 HUMAN0 adopted, suite 3914/3914
+  tokens: UNMEASURED
+  note: consolidated. LIVE_ONLY runner agent opened Electron dialogs on the operator's screen (stopped; memory feedback_live_lanes_must_not_show_on_operator_screen).
+- date: 2026-10-15
+  agent: general-purpose (sonnet) — FoD B12b (spec author · test author) + run_isolated arms (claude, codexm, codexh)
+  task: B12b settings views from B7 §4-5
+  trigger: operator «ㅇㅇ 가자»
+  outcome: accepted
+  evidence: 136 cases, codex r1 REVISE→r2 PASS, 172 tests (clean 0/172), 3 arms 172/172 audit 0, v2 all PASS, claude adopted
+  tokens: UNMEASURED
+  note: governor iface omitted test/live → B11c 2 failures in all arms (governor defect, not arm).
+- date: 2026-10-15
+  agent: general-purpose (sonnet) — FoD glue implementers (B11c, B12c, palette, confirm §5, stage themes, B11d + gate reaction, mac packaging + L-PERM)
+  task: wire bundles into the running app; palette B; permission center; stamp reactions; mac dmg
+  trigger: operator «ㄱㄱㄱ» · «B로 ㄱㄱ» · «A ㄱ» · «야간주행»
+  outcome: accepted
+  evidence: suite 3914→4238, live 10/9/5/10→19/1/0/14, L-PERM 9/9, dmg arm64/x64 codesign verify rc=0; GLUE 3-arm debt paid (codexh PASS375 HUMAN0 adopted)
+  tokens: UNMEASURED
+  note: consolidated 7 dispatches. B11d and packaging are single-implementer (3-arm debt remains). One agent rewrote spec drafts (history) — restored from the companion-store mirror.
+- date: 2026-10-15
+  agent: general-purpose (sonnet) — research and sims (local-jev none; built-in map facts + context:fork probe; memory hits backfill; floor sims x6 arms; local spec colour edit)
+  task: cheat-sheet internalization, memory GC backfill, doc floor sims
+  trigger: operator «ㄱㄱ» · «ㅇㅇㅇ 그러자»
+  outcome: partial
+  evidence: built-in facts 19/19 doc-verified, fork probe controls alive (F 3/3 canary), hits proposals 681 lines (2 files inflated, corrected), live-repo doc sims contaminated by git status cue (not counted)
+  tokens: UNMEASURED
+  note: partial because 3 live-repo sim arms were contaminated and the hits extraction was not line-verified.
+- date: 2026-10-16
+  agent: general-purpose (sonnet) — today's 7 dispatches before the compact (qasp TC design + v1.0.1 real-surface run, assembly audit, settings-view polish, B11d codexm, old-repo PR harvest, slim CLAUDE.md sims, /simplify floor sim)
+  task: FoD v1 install defects found by real use; slim CLAUDE.md; built-in map Korean intents
+  trigger: operator «추천대로 모두 해줘» · «qasp능력활용해서 테스트좀시켜봐» · «ㅇㅇ 둘다승인»
+  outcome: accepted
+  evidence: qasp 143 TCs run 53 PASS / 36 FAIL / 52 NOT-RUN; audit 82 rows (23 NO, 11 SILENT-NOOP) later confirmed by wave-1 fail-before tests; slim sims P1 5/6 P1b 3/3
+  tokens: UNMEASURED
+  note: consolidated entry, backfilled after compact (push had warned ④-e).
+- date: 2026-10-16
+  agent: general-purpose (sonnet) — FoD wave 2 gate activity window port
+  task: port ours fod-gate-activity / map-view / review into v1 and open it from the menu (worktree fix/wave2-activity)
+  trigger: operator «ㅇㅋ ㄱㄱ» (wave 2)
+  outcome: accepted
+  evidence: authorship chrono-meta only; diffs vs originals small (26/0/2 lines); 4 tests fail-before (files moved aside) → pass; suite 4290; cherry-picked as d551a55, suite 4294 on the wave-2 branch
+  tokens: UNMEASURED
+  note: once-allow and allow-rule lines left inert (no deps) by design; real window not yet checked on screen.
+- date: 2026-10-16
+  agent: general-purpose (sonnet) ×4 — FoD wave 3 arms in worktrees (view, quota, character, doctor)
+  task: connect the remaining audit rows (sound/flash/face/wake/HUD ctx; status line, pollers, ring mode; roaming, screens, ⌘H, drop, first position; health check, watch/sync, agents tab, zip import, logs, fodtier)
+  trigger: operator «ㅇㅇ 그렇게 자율주행해줘 … 다 해야하는것들이니까»
+  outcome: accepted
+  evidence: each arm wrote fail-before assembly tests (view 9, quota 13+8+3, character 15, doctor 30); quota arm re-run twice on codex findings (HIGH 2+1, MED 4+2 fixed); merged into fix/wave3 (governor replayed long-line conflicts; renamed doctor w3→w3d after a variable clash; unified globals fallback); PR #7 merged, suite 4407/4407, 1.0.4 prerelease
+  tokens: UNMEASURED
+  note: doctor arm started before its worktree existed (governor command blocked by a gate) and correctly stopped without acting; it was resumed after the worktree was created.
+- date: 2026-10-17
+  agent: fh-commons:quench-challenger (sonnet) — adversarial review of ko-tech-writer S10~S17 diff
+  task: verify classes against the harvest, lane pass reasons, venue over-claims, S2 rule, private names
+  trigger: governor 4-axis Axis 2 for PR #905 (operator «ㅇㅇㅇ 그러자» on the Korean style work)
+  outcome: accepted
+  evidence: 4 A + 6 B; all fixed by the authoring agent; governor re-ran lanes (CALIBRATED 15) and its own C8 revert probe (FAIL → restore green)
+  tokens: UNMEASURED
+  note: it caught the authoring agent using the operator's own hand-edited sentence as a defect example — the class of error the skill exists to avoid.
+- date: 2026-10-17
+  agent: general-purpose (sonnet) ×8 — qasp P1/P2, FoD fixes, hidden mode, generic shim, style harvest, venue calibration, digest triage, tech doc plan
+  task: see tracks/_meta/fh_completed_2026-10-17.md
+  trigger: operator «그렇게가자» · «머지하자» · «마음대로 해» · «ㅇㅇㅇ 그러자» · «거버너로서 병렬로 작업해줘»
+  outcome: accepted (shim agent's Pomatez run blocked by the permission classifier — not worked around; governor ran it under the operator's approval)
+  evidence: PRs qasp-dev #352 #353, FoD #39 #40(merged) #41 #42, FH #904 #905
+  tokens: UNMEASURED
+- date: 2026-10-17
+  agent: general-purpose (sonnet) ×3 — FoD empty question card, pin/row asymmetry, ring hover needs a click (all read-only)
+  task: diagnose three FoD bugs the operator screenshotted on the installed 49c27e1 build
+  trigger: operator screenshots + «여기도 버그네» · «한도링 호버는 지금 fod는 여전히 안되네» (standing dispatch request, lease to 2026-11-09)
+  outcome: "accepted — all three causes confirmed by the governor against code (card: update drops questions; pin: zero-area needle filled not stroked; hover: polling commit 10d1a6b never pushed before #53 merged)"
+  evidence: FoD PR #54 (D11b and S36 fail before / pass after; suite 4566/0)
+  tokens: UNMEASURED
+- date: 2026-10-17
+  agent: general-purpose (sonnet) ×1 — FoD reaction looping diagnosis (read-only)
+  task: why an idle click / double-click reaction loops
+  trigger: operator «대기상태일때 좌 우 터치나 더블클릭하면 … 연속재생하네» (standing dispatch request)
+  outcome: accepted — cause confirmed against code by the governor
+  evidence: FoD PR #58 (RO1/RO2 fail before; suite 4571/0)
+  tokens: UNMEASURED
+- date: 2026-10-18
+  agent: "general-purpose (sonnet) ×1 — fill the session request checklist (259 rows, read-only except the sheet)"
+  task: "fill 상태/증거/사유/제안 for every row of tracks/_meta/session_checklist_2026-10-18_58f95111.md"
+  trigger: "operator «체크리스트에 받아적고 마무리시점이나 중간에 한번씩 파악해보는거» (standing dispatch request, lease to 2026-11-09)"
+  outcome: "accepted — governor spot-checked 5 sampled DONE evidences (3 FoD SHAs + 2 record lines) with a fabricated-SHA negative control; converted 141 «not a request» HELD rows to N/A"
+  evidence: "checklist rows=273 violations=0"
+  tokens: UNMEASURED
+- date: 2026-10-18
+  agent: "general-purpose (sonnet) ×1 — FoD settings card pattern, Gate page, Autopilot consent window, «게걸음» wording"
+  task: "fix the screens the operator screenshotted; six follow-up corrections relayed mid-run"
+  trigger: "operator screenshots + «오토파일럿 켜기하니까 뜨는 팝업이 너무못생겼» · «캐릭터 쪽만 카드상단 구분자가 잘 서있고» (standing dispatch request)"
+  outcome: "accepted — governor re-ran the official suite (agent's glob had missed files: 4643 reported vs 4670 actual, all pass) and opened the PNGs before asking to merge"
+  evidence: "FoD PR #72 (3dead56), installed"
+  tokens: UNMEASURED
+- date: 2026-10-18
+  agent: "general-purpose (sonnet) ×1 — FoD chat @ multi-send"
+  task: "⌘Enter adds recipient chips; one message sent per session by key"
+  trigger: "operator «@를 친 후에 목록을 3개 불러서 동시에 보내려고하는데» + «ㅇㅇ 그러자»"
+  outcome: "accepted — governor re-ran the 10 Electron lanes outside the sandbox (10/10, 0 skipped) and checked mergeability against #72"
+  evidence: "FoD PR #73 (8bccbcf), merged main 4681/4681, installed"
+  tokens: UNMEASURED
+- date: 2026-10-18
+  agent: "codex (gpt-5.5) ×2 rounds + general-purpose (sonnet) ×1 read-through — utterance checklist hook review"
+  task: "adversarial review of the UserPromptSubmit hook and close step ①-g"
+  trigger: "4-axis gate cross-family requirement for FH #914"
+  outcome: "accepted — 20 codex findings fixed with fail-before lanes; Sonnet raised 8 (2 already fixed, 2 fixed, rest residual/refuted)"
+  evidence: "FH PR #914 (c7948db)"
+  tokens: UNMEASURED

@@ -69,6 +69,8 @@
 #   bash scripts/probe_live_eval.sh --ids G-GREET-01,G-TRIG-02 --model sonnet
 #   bash scripts/probe_live_eval.sh --subset 3
 #   bash scripts/probe_live_eval.sh --subset 3 --report-out /tmp/spot.md   # spot-check: keep the nightly record untouched
+#   bash scripts/probe_live_eval.sh --target G-TRIG-02 --before tracks/_meta/live_eval_2026-10-16.md
+#                                  # after a repair aimed at one probe: target reported apart from the other probes, before/after
 #   bash scripts/probe_live_eval.sh                      # full selected set — nightly cron shape
 #
 # PORTABILITY: bash 3.2 (macOS) + bash 5.x (Linux CI). No associative arrays, no `${var,,}`,
@@ -140,6 +142,8 @@ SUBSET=""
 IDS=""
 OUTDIR=""
 REPORT_OUT=""   # --report-out: where the markdown report lands (default: tracks/_meta/live_eval_<date>.md)
+TARGET=""       # --target <probe-id>: report that probe apart from the rest (record only; default output unchanged)
+BEFORE=""       # --before <prior live_eval .md>: the "before" side of the --target split
 NO_EVIDENCE=0   # --no-evidence: skip the preserved-artifact copy (lanes / throwaway spot-checks)
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -151,6 +155,8 @@ while [ $# -gt 0 ]; do
     --out)      OUTDIR="${2:-}"; shift 2 ;;
     --report-out) REPORT_OUT="${2:-}"; shift 2 ;;   # lanes/spot-checks MUST pass this — never the live path
     --no-evidence) NO_EVIDENCE=1; shift ;;
+    --target)   TARGET="${2:-}"; shift 2 ;;
+    --before)   BEFORE="${2:-}"; shift 2 ;;
     *) echo "unknown flag: $1" >&2; exit 2 ;;
   esac
 done
@@ -197,6 +203,15 @@ if [ "$SELECTED_COUNT" -eq 0 ]; then
   rm -rf "$WORKDIR"
   exit 2
 fi
+
+# --target must name a probe that is actually in this run: a typo would otherwise burn the whole
+# live run and only fail at report time.
+if [ -n "$TARGET" ] && ! grep -qxF -- "$TARGET" "$SPEC_DIR/selected_ids.txt"; then
+  echo "❌ --target '$TARGET' is not among the selected probes (see SELECTED above) — refusing before any live call." >&2
+  rm -rf "$WORKDIR"
+  exit 2
+fi
+[ -z "$BEFORE" ] || [ -n "$TARGET" ] || { echo "❌ --before only makes sense with --target" >&2; rm -rf "$WORKDIR"; exit 2; }
 
 # `claude` presence is the REAL runner's preflight, so it is checked only on that path. Under
 # FH_SIM_RUNNER_BIN the stub owns its own preflight — measured 2026-09-05 on CI (ubuntu, no
@@ -336,7 +351,10 @@ echo ""
 # default overwrote a real night's distribution once (2026-09-05 10:18: test_probe_live_eval_lanes.sh FF4
 # ran the real script with a stub runner and replaced the 02:30 report). Lanes pass --report-out.
 REPORT_PATH="${REPORT_OUT:-$REPO_ROOT/tracks/_meta/live_eval_${RUN_DATE}.md}"
-python3 "$LIB" score \
+SCORE_EXTRA=()
+[ -n "$TARGET" ] && SCORE_EXTRA+=(--target "$TARGET")
+[ -n "$BEFORE" ] && SCORE_EXTRA+=(--before "$BEFORE")
+python3 "$LIB" score ${SCORE_EXTRA[@]+"${SCORE_EXTRA[@]}"} \
   --probes-live "$PROBES_LIVE" \
   --select-json "$SELECT_JSON" \
   --ids-file "$SPEC_DIR/selected_ids.txt" \

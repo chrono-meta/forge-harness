@@ -1,5 +1,59 @@
 # forge-harness (fh-meta) Changelog
 
+### [3.28.0] — 2026-10-18 — 발화 체크리스트 훅 · FH 모듈 계약 v0 · ko-tech-writer 실교정 규칙
+
+**minor.** 새 자산(훅 · 모듈 계약 · 검사기)과 새 레인. 소비자 게이트 수용이 깨지는 변경은 없다.
+
+- 새 훅 `scripts/utterance_checklist_hook.sh`(UserPromptSubmit): 운영자 요청을 말하는 즉시 gitignored 기록에 받아 적고, 15줄마다 세션 중간 점검(결과서 갱신 → 표 보여주기)을 알리고, 한글 메시지엔 «이 턴은 한글로» 한 줄을 붙인다. 짧은 맞장구와 런타임 주입 알림(서브에이전트 보고 포함)은 적지 않는다. `session_checklist.py extract` 는 다시 뽑을 때 이미 채운 판정을 이어받고, 못 맞춘 판정은 따로 남긴다. 레인 44 + 40(#914).
+- 새 계약 `fh-module.yaml` + 검사기(FH 모듈 계약 v0, 레인 63, 파일럿 ko-tech-writer)와 `export` — 모듈의 보정 레인을 사본에서 돌려 단독 실행을 증명한다(#911 · #912).
+- ko-tech-writer: 운영자 실교정에서 온 규칙 S10~S24 + 기술 블로그 매체 프로필, S7 약어 후보(C16) · 경동사 «내다» 후보(C15) · 블록 인식 `--scan` · 오탐 감소(#905 · #907 · #910).
+- frontier-digest: 출시 · Show HN · 벤더 채널 추가와 구조적 재현율 레인(#909). live-eval: 행마다 예산 줄(ended_at_cap) + `--target` 분리(#906).
+- 크기 가드: CLAUDE.md 상한 145,000 → 18,000자(#908). README: 거버넌스 논문 arXiv:2609.04218 인용 · 영어판 한 장 그림(#902~#904).
+
+### [3.27.0] — 2026-10-16 — CLAUDE.md 를 95줄 상주 핵심으로 · 내장 기능 지도 · 메모리 수명 GC
+
+**minor.** 매 세션 실리는 지침이 1,274줄(13.2만 자)에서 95줄(1.5만 자)로 줄어든다. 행동 교리의 위치가 바뀌고 회귀 가드 한 칸이 조여진다.
+
+BREAKING (gate): Axis 1 회귀 가드가 «짝 파일로 옮겼다」(SKILL.md ↔ SKILL_detail.md, 새로 CLAUDE.md ↔ claude_md_full_reference.md)를 **이번 변경에서 짝 파일이 늘어난 만큼만** 인정한다 — 짝 파일에 이미 있던 내용으로 삭제를 가리던 커밋이 이제 차단된다. 처방: 지운 내용을 같은 커밋에서 짝 파일로 실제로 옮기거나, 손실이 의도면 이유를 적고 Axes 2–3 를 돈다.
+
+- `CLAUDE.md`: 읽기 전에 발동해야 하고 훅이 없는 규칙만 남긴 95줄 상주 핵심. 전문은 `knowledge/shared/harness-core/claude_md_full_reference.md`(절 이름 불변 — 다른 곳의 `CLAUDE.md §X` 는 §X 가 여기 없으면 그 파일 §X). 격리 클론 플로어 sim(Sonnet, 의도 11종 ×3, 사전등록) 후퇴 0. 권한 거부 안내는 상주에 넣으면 인사 발동이 0/3 으로 떨어져 참조 쪽에 남겼다(#900).
+- `templates/regression_guard.sh`: 짝 파일 조회에 CLAUDE.md 쌍 추가 + 증가분 기준(위 BREAKING), 레인 `scripts/test_regression_guard_sibling_lanes.sh` 13개(되돌림 3)(#900).
+- 새 문서 `knowledge/shared/harness-core/builtin_capability_map.md`: Claude Code 내장 기능(/context · /compact · /doctor · /rewind · /branch · /fork · /simplify 등)을 먼저 쓰고 FH 는 그 위에 더하는 것만 — 지도 유무 플로어 sim /rewind 3v0 · /doctor 3v0. 행마다 한국어 의도어(#897 · #899).
+- 새 도구 `scripts/memory_gc_report.py`(읽기 전용): 메모리 재발 기록(hits)으로 목록 순서 · 승격 후보 · cold 를 제안한다. 레인 28(#896).
+- 문서: 작은 로컬 판정 모델(local-jev)은 게이트가 아니라 검토 표면 후보(#895) · CLAUDE.md 겹치는 4개 절 요약(#894).
+- 수리: env-delta 가 연결된 워크트리를 «미매핑 형제 레포」로 세던 것(#893).
+
+### [3.26.2] — 2026-10-14 — self-test 가 Windows 에서 실행 파일을 대량 복사하던 것
+
+**patch.** 수리.
+
+- `capability_effect_probe.sh --self-test`(selfcheck 가 부른다): shim 빌더가 PATH 의 모든 실행 파일을 임시 폴더에 링크했고, Windows Git Bash 는 그 링크를 복사로 바꿔 보안 제품 오탐이 났다. 허용 목록만 링크하고, 심링크가 안 되는 환경이면 실행 파일을 하나도 넘기지 않고 해당 레인을 SKIP(미측정, 통과 아님)으로 남긴다(#890).
+- 같은 파일: 홈 디렉터리 감시가 `shasum` 을 직접 불러, shasum 이 없는 호스트에서는 홈 쓰기를 늘 «안 바뀜» 으로 봤다 — 목록을 직접 비교한다(#890).
+
+### [3.26.1] — 2026-10-13 — README 정리 · 레인 플레이크 · live-eval 거짓 적색
+
+**patch.** 행동을 바꾸지 않는 문서·계기 수정.
+
+- README(한·영): 하는 일과 그 범위를 정본과 맞추고, 깨져 보이던 `**` 강조를 걷었다(#885).
+- 레인: `pipefail` 아래 조기 종료 소비자(`| head -1 | grep -q`)가 생산자를 SIGPIPE 로 죽여 간헐 적색을 내던 한 곳을 고쳤다(#872).
+- live-eval G-MAP-01: 매핑 규칙은 발동했는데 응답이 프로토콜 이름 대신 1단계 경로를 말해 매일 FAIL 로 채점되던 것 — 1단계 경로도 일치로 센다. 기록된 대조 응답 1,057 개에 새 일치 0(#887).
+
+### [3.26.0] — 2026-10-12 — 권한 검사 강화 · 가벼운 게이트 · 다른 런타임 온보딩
+
+**minor.** 새 도구(생성된 하네스의 비가역 권한 검사)와 가벼운 게이트를 싣고, pre-commit 마커 검사를 한 칸 조인다.
+
+BREAKING (gate): pre-commit 이 `axis2-engine` · `axis2-model` · `floor-status` 값이 `<` 로 시작하는 마커(재생성 힌트의 자리표시자를 그대로 둔 마커)를 차단한다 — 처방: 자리표시자를 실제로 돌린 엔진·모델·티어 값으로 바꿔 적는다.
+
+- 새 도구 `scripts/generated_harness_check.py`: 외부 생성기가 쓴 하네스·카트리지의 비가역 권한(publish · 삭제 · 이력 재작성 · 강제 푸시 등)을 사람 확인으로 분류한다. 인자를 명령으로 실행하는 Bash 허용(`sh:*` · `python3:*` · `env -i *` · `npx …`)과 인터프리터·감싸개·패키지 실행기 와일드카드, 표준입력 경로(`/dev/stdin`)와 그 별칭, 셸 전개·명령 치환, 머리 따옴표, 따옴표·역슬래시·리다이렉션, 문자 허용목록 밖의 글자가 든 항목을 H1(사람 확인)으로. 고정 스크립트는 레포 안 상대 경로(`python3 scripts/x.py:*`)로 쓰면 통과한다. 로컬 프로젝트 23개 판정 변화 0. 정적 문자열 검사의 한계로 셸 문법 우회는 다 닫히지 않는다(codex 15라운드 — 잔여로 기록).
+- 가벼운 게이트 P1·P2: selfcheck 의 비주제 레인 5개가 `gh` 와 오래된 Zenodo 참조 스캐너를 레인 안에서만 스텁한다(`scripts/lane_stub_env.sh`, 허용 목록). 생산 체커·훅은 그대로. 켠/끈 비교기 `scripts/lane_onoff_compare.py`.
+- `pr_merge_verified.sh`: gh 가 서버 머지 뒤 로컬 정리에서 실패해도 «nothing merged» 라고 하지 않는다 — GitHub 상태를 다시 묻는다.
+- `AGENTS.md`: 인사 절 — Antigravity 등 Claude Code 밖 런타임에서도 FH 온보딩이 뜬다(agy 실측 0/3 → 3/3).
+- pre-commit 마커 재생성 힌트를 자리표시자로 — 다른 런타임이 예시값을 베껴 모델을 거짓 기입하던 것(agy 3/3)을 막는다. 자리표시자를 그대로 둔 마커는 차단한다(위 BREAKING).
+- `templates/.claude/rules/session.md`: «완료 전 슬롭 점검» — 언어와 무관한 행동 규약(호출 없는 새 함수 · 복붙 · 수리 경위를 적는 주석). 샘플링 점검이며 전수 차단이 아니다.
+- Axis 4 매니페스트가 예측 대신 «레인 + 미관측»을 받는다.
+- README 를 한 페이지 입구로 다시 쓰고 번역 3종을 맞췄다. 번역본의 동작 그림은 Mermaid 로.
+- 정리: WARN 만 내던 doc-code 결합 블록 삭제 · 호출 없는 함수 4개 삭제 · 주간 감사에 이월 재대조 단계.
+
 ### [3.25.1] — 2026-10-10 — 로컬 미디어 입력 · 오류처리 · 점검 주기
 
 **patch.** PR #861의 출시 후 수정 사항을 배포한다.

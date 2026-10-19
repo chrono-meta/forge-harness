@@ -1,6 +1,6 @@
 ---
 name: install-doctor
-description: Scans the existing environment before and after meta-harness plugin install to diagnose conflicts, duplicates, and silent overwrite risks. Reports potential conflict areas with existing CLAUDE.md, skills, hooks, and audit practices. Activates on "install conflict", "any overlaps?", "is it safe to install?".
+description: Scans the existing environment (after the built-in `/doctor` — this covers FH-plugin conflicts it does not) before and after meta-harness plugin install to diagnose conflicts, duplicates, and silent overwrite risks. Reports potential conflict areas with existing CLAUDE.md, skills, hooks, and audit practices. Activates on "install conflict", "any overlaps?", "is it safe to install?".
 user-invocable: true
 allowed-tools: ["Read", "Bash", "Glob", "Grep"]
 model: sonnet

@@ -3,13 +3,22 @@
 
 Two subcommands:
 
-  extract --transcript <jsonl> [--out <md>]
+  extract --transcript <jsonl> [--out <md>] [--utterances <jsonl>]
       Reads a Claude Code transcript JSONL and emits a checklist SKELETON in
       Markdown: one row per operator utterance, 상태 column EMPTY. Opens TWO
       channels — raw entries and compaction-summary "All user messages"
       sections — and prints how many of each it found (0 found still counts
       as OPENED, never as "not opened"). See fh_signal_2026-09-18 for the
-      doctrine this mechanizes.
+      doctrine this mechanizes. A THIRD channel, the UserPromptSubmit hook record
+      (tracks/_meta/utterances/<session_id>.jsonl, written by utterance_checklist_hook.py),
+      is merged in: it also holds messages sent while a tool was running, which the
+      transcript misses. Merge rule: a hook row is the same utterance as a transcript row
+      when the normalized text is equal (a hook row flagged `truncated` matches by prefix)
+      AND the timestamps are within HOOK_MATCH_WINDOW_S; each transcript row pairs with at
+      most one hook row (nearest in time). Unpaired hook rows are added as `H<n>` rows;
+      transcript rows keep `<n>`, summary rows `S<n>`. The header always states the hook
+      channel's state: not read (file absent) is NOT zero rows; a malformed line or an
+      unreadable file is a channel error (rc=2) and the transcript rows still print.
 
   check --file <md>
       Validates a FILLED checklist. FORM ONLY — this command never judges
@@ -57,6 +66,7 @@ closing/companion mark) apply only to entries that carry no metadata at all;
 there a byte-identical pasted envelope is indistinguishable by design.
 """
 import argparse
+import datetime
 import json
 import os
 import re
@@ -343,7 +353,112 @@ def md_escape(text):
     return (text or "").replace("|", "\\|")
 
 
-def do_extract(transcript_path, out_path):
+HOOK_MATCH_WINDOW_S = 1800  # a queued message can reach the transcript long after the hook saw it; further apart = a repeat, not the same message
+
+
+def parse_ts(ts):
+    """transcript timestamps are UTC («…Z»); hook timestamps are local naive («YYYY-MM-DDTHH:MM:SS»). -> aware UTC datetime or None."""
+    c = parse_ts_candidates(ts)
+    return c[0] if c else None
+
+
+TS_SHAPE_RE = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z?$")
+
+
+def parse_ts_candidates(ts):
+    """-> [aware UTC datetimes]. A local naive time inside a DST fall-back hour names TWO instants (fold 0 and 1);
+    both are returned so the matcher can use the nearer one (codex 2026-10-19: picking one created a duplicate row)."""
+    if not isinstance(ts, str) or not TS_SHAPE_RE.match(ts):
+        return []     # exact shape only — `ts[:19]` alone accepted trailing garbage as a valid time (codex R2)
+    try:
+        dt = datetime.datetime.strptime(ts[:19], "%Y-%m-%dT%H:%M:%S")
+    except ValueError:
+        return []
+    if ts.endswith("Z"):
+        return [dt.replace(tzinfo=datetime.timezone.utc)]
+    out = []
+    for fold in (0, 1):
+        u = dt.replace(fold=fold).astimezone(datetime.timezone.utc)
+        if u not in out:
+            out.append(u)
+    return out
+
+
+def default_hook_path(transcript_path):
+    sid = os.path.splitext(os.path.basename(transcript_path))[0]
+    hub = os.environ.get("FH_HUB") or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(hub, "tracks", "_meta", "utterances", sid + ".jsonl")
+
+
+def read_hook_channel(path):
+    """-> (state, rows, bad_lines, detail). state: «read» · «absent» · «error». rows: [{ts, text, truncated}]."""
+    if not os.path.lexists(path):
+        return "absent", [], 0, ""
+    if not os.path.isfile(path):
+        return "error", [], 0, "not a regular file"
+    rows, bad = [], 0
+    try:
+        with open(path, "rb") as f:
+            for raw in f:
+                try:
+                    line = raw.decode("utf-8").strip()   # strict: a replaced byte would make a different text and a spurious H row
+                    if not line:
+                        continue
+                    d = json.loads(line)
+                except Exception:
+                    bad += 1
+                    continue
+                if not isinstance(d, dict) or not isinstance(d.get("text"), str) or not d["text"].strip():
+                    bad += 1
+                    continue
+                if not parse_ts_candidates(d.get("ts")):
+                    bad += 1    # the hook always writes ts; without it the time window cannot apply, so the row is not trusted
+                    continue
+                rows.append({"ts": d.get("ts"), "text": d["text"], "truncated": d.get("truncated") is True})
+    except OSError as e:
+        return "error", [], 0, e.strerror or "unreadable"
+    return "read", rows, bad, ""
+
+
+def merge_hook_rows(raw_rows, hook_rows):
+    """-> (hook_only, matched_count). Both channels record the same conversation in the same order, so pairing is
+    ORDER-PRESERVING, not nearest-first: hook rows in time order each take the EARLIEST unpaired transcript row of equal
+    normalized text inside HOOK_MATCH_WINDOW_S. Exact-text pairs (any row) are made first and truncated-prefix pairs
+    second, so a truncated hook row cannot take the row another hook row matches exactly. Still greedy, not an optimal
+    assignment — a named residual. (codex 2026-10-19: nearest-first greedy turned two
+    repeated «yes» pairs into three rows.) A transcript row with no usable time pairs on text alone."""
+    raw_norms = [normalize_utterance(r["text"]) for r in raw_rows]
+    raw_dts = [parse_ts(r["ts"]) for r in raw_rows]
+    order = sorted(range(len(hook_rows)), key=lambda k: (min(parse_ts_candidates(hook_rows[k]["ts"]) or [datetime.datetime.max.replace(tzinfo=datetime.timezone.utc)]), k))
+    used, paired = set(), set()
+
+    def within(hdts, i):
+        if raw_dts[i] is None or not hdts:
+            return True
+        return min(abs((h - raw_dts[i]).total_seconds()) for h in hdts) <= HOOK_MATCH_WINDOW_S
+
+    for prefix_pass in (False, True):
+        for k in order:
+            h = hook_rows[k]
+            if k in paired or (prefix_pass and not h["truncated"]):
+                continue     # pass 1 = exact text for every row (a truncated row whose text is exact counts); pass 2 = prefixes
+            hn = normalize_utterance(h["text"])
+            hdts = parse_ts_candidates(h["ts"])
+            cands = [i for i, rn in enumerate(raw_norms)
+                     if i not in used and (rn == hn or (prefix_pass and hn and rn.startswith(hn))) and within(hdts, i)]
+            if cands:
+                best = min(cands, key=lambda i: (raw_dts[i] is None, raw_dts[i] or 0, i))
+                used.add(best); paired.add(k)
+    hook_only = []
+    for k in order:
+        if k in paired:
+            continue
+        hdts = parse_ts_candidates(hook_rows[k]["ts"])
+        hook_only.append({"ts": hdts[0].strftime("%Y-%m-%dT%H:%M:%SZ") if hdts else None, "text": hook_rows[k]["text"]})
+    return hook_only, len(paired)
+
+
+def do_extract(transcript_path, out_path, utterances_path=None):
     if not os.path.isfile(transcript_path):
         sys.stderr.write("error: transcript not found: %s\n" % transcript_path)
         return 10
@@ -389,6 +504,13 @@ def do_extract(transcript_path, out_path):
                 continue
             raw_rows.append({"ts": entry.get("timestamp"), "text": text})
 
+    hook_path = utterances_path or default_hook_path(transcript_path)
+    hook_state, hook_rows, hook_bad, hook_detail = read_hook_channel(hook_path)
+    hook_only, hook_matched = merge_hook_rows(raw_rows, hook_rows)
+
+    # summary quotes are compared against the transcript rows only, as before: matching them against hook-only rows
+    # too dropped a distinct request that happened to repeat a short quote (codex 2026-10-19). A duplicate row is the
+    # safe direction; a missing one is not.
     raw_norms = [normalize_utterance(r["text"]) for r in raw_rows]
 
     summary_found_total = 0
@@ -406,7 +528,7 @@ def do_extract(transcript_path, out_path):
     n_raw = len(raw_rows)
     n_summary_found = summary_found_total
     n_summary_added = len(summary_rows)
-    rc = 2 if parse_errors else 0  # v5: an unparsable line may have been an utterance — loud, never rc=0
+    rc = 2 if (parse_errors or hook_bad or hook_state == "error") else 0  # v5: an unparsable line may have been an utterance — loud, never rc=0
 
     lines_out = []
     title = "# 세션 요청 체크리스트 (스켈레톤) — %s" % os.path.basename(transcript_path)
@@ -419,6 +541,15 @@ def do_extract(transcript_path, out_path):
     lines_out.append(chr(0x1F4CE) + " " + "원장 = %s (%d lines)" % (transcript_path, line_count))
     if parse_errors:
         lines_out.append("🟥 JSONL 파싱 실패 %d줄 — 그 줄의 발화는 이 표에 없다 (rc=2)" % parse_errors)
+    if hook_state == "read":
+        lines_out.append("🪝 훅 기록 채널 읽음 — %d건 · 전사와 일치 %d건 · 훅 전용 %d건 (행 번호 H = 훅 전용, S = 요약, 숫자 = 전사)"
+                         % (len(hook_rows), hook_matched, len(hook_only)))
+    elif hook_state == "absent":
+        lines_out.append("🟨 훅 기록 채널 안 읽음 — 파일 없음: %s (0건이 아니라 미열람; 훅이 안 걸렸거나 다른 허브일 수 있다)" % hook_path)
+    else:
+        lines_out.append("🟥 훅 기록 채널 오류 — %s: %s (rc=2; 전사 행은 그대로 아래에 있다)" % (hook_path, hook_detail))
+    if hook_bad:
+        lines_out.append("🟥 훅 기록 %d줄 해석 실패 — 그 줄의 발화는 이 표에 없을 수 있다 (rc=2)" % hook_bad)
     lines_out.append("")
     lines_out.append(
         "| # | \uc2dc\uac01 | \ubc1c\ud654(\uc694\uc9c0) | \uc0c1\ud0dc | \uc99d\uac70 | \uc0ac\uc720 / \ub0a8\uc740 \uac83 | \uc81c\uc548(\uc774\ubc88 \uc138\uc158 vs \uc774\uc6d4) |"
@@ -435,6 +566,16 @@ def do_extract(transcript_path, out_path):
             "| %d | %s | %s |  |  |  |  |" % (n, format_ts(r["ts"]), md_escape(blurb))
         )
 
+    h = 0
+    for r in hook_only:
+        h += 1
+        blurb = collapse(r["text"])
+        if len(blurb) > 160:
+            blurb = blurb[:160] + "\u2026"
+        lines_out.append(
+            "| H%d | %s | %s |  |  |  |  |" % (h, format_ts(r["ts"]), md_escape(blurb))
+        )
+
     s = 0
     for r in summary_rows:
         s += 1
@@ -445,6 +586,13 @@ def do_extract(transcript_path, out_path):
             "| S%d | (요약) | %s |  |  |  |  |" % (s, md_escape(blurb))
         )
 
+    # Re-running extract on a sheet that is already filled must not wipe it (2026-10-18: the mid-session nudge
+    # tells the session to re-extract into the SAME file; a plain overwrite erased 259 filled rows' 상태/증거).
+    # Carry the four judgement cells forward by (시각, 발화) — both are generated deterministically — and keep
+    # any filled row that no longer matches in a section at the end: dropped judgements are named, never lost.
+    if out_path and os.path.exists(out_path):
+        lines_out = carry_forward(lines_out, out_path)
+
     content = "\n".join(lines_out) + "\n"
     sys.stdout.write(content)
 
@@ -453,6 +601,65 @@ def do_extract(transcript_path, out_path):
             f.write(content)
 
     return rc
+
+
+def _cells(line):
+    """split a markdown table row on unescaped «|» (md_escape writes «\\|»); None if not a 7-cell data row."""
+    if not line.startswith("| "):
+        return None
+    parts, cur, i = [], "", 0
+    while i < len(line):
+        ch = line[i]
+        if ch == "\\" and i + 1 < len(line) and line[i + 1] == "|":
+            cur += "\\|"; i += 2; continue
+        if ch == "|":
+            parts.append(cur); cur = ""
+        else:
+            cur += ch
+        i += 1
+    parts.append(cur)
+    cells = [c.strip() for c in parts[1:-1]]
+    return cells if len(cells) == 7 else None
+
+
+CARRY_HEADING = "## 이전 결과서에서 이어받지 못한 판정"
+
+
+def carry_forward(lines_out, out_path):
+    try:
+        with open(out_path, "r", encoding="utf-8", errors="replace") as f:
+            old = f.read().split("\n")
+    except OSError:
+        return lines_out
+    prev, orphans_prev = {}, []
+    in_orphans = False
+    for l in old:
+        if l.startswith(CARRY_HEADING):
+            in_orphans = True; continue
+        c = _cells(l)
+        if not c or c[0] in ("#", "---") or set(c[0]) <= set("-"):
+            continue
+        if not any(c[3:]):
+            continue                                   # an empty row has nothing to carry
+        if in_orphans:
+            orphans_prev.append(l); continue           # earlier orphans stay orphans unless they match below
+        prev.setdefault((c[1], c[2]), []).append(c[3:])   # a LIST per key: repeated rows (same minute, same words) keep each judgment, in order
+    used, out = 0, []
+    for l in lines_out:
+        c = _cells(l)
+        key = (c[1], c[2]) if c else None
+        if c and prev.get(key) and not any(c[3:]):
+            out.append("| %s | %s | %s | %s | %s | %s | %s |" % tuple(c[:3] + prev[key].pop(0)))
+            used += 1; continue
+        out.append(l)
+    orphans = ["| %s | %s | %s | %s | %s | %s | %s |" % ((("-",) + k + tuple(v))) for k, vs in prev.items() for v in vs]
+    orphans += orphans_prev
+    if used or orphans:
+        out.insert(4, "↩️ 이전 결과서에서 판정 %d줄 이어받음 · 못 맞춘 판정 %d줄은 맨 아래 «이전 결과서에서 이어받지 못한 판정»에 보존" % (used, len(orphans)))
+    if orphans:
+        out += ["", CARRY_HEADING, "", "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안(이번 세션 vs 이월) |",
+                "|---|---|---|---|---|---|---|"] + orphans
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -685,6 +892,8 @@ def build_parser():
     p_extract = sub.add_parser("extract", help="extract a checklist skeleton from a transcript JSONL")
     p_extract.add_argument("--transcript", required=True)
     p_extract.add_argument("--out", default=None)
+    p_extract.add_argument("--utterances", default=None,
+                           help="hook record jsonl (default: <hub>/tracks/_meta/utterances/<session id>.jsonl)")
 
     p_unblocked = sub.add_parser(
         "unblocked",
@@ -799,7 +1008,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     if args.cmd == "extract":
-        return do_extract(args.transcript, args.out)
+        return do_extract(args.transcript, args.out, args.utterances)
     if args.cmd == "check":
         return do_check(args.file)
     if args.cmd == "unblocked":

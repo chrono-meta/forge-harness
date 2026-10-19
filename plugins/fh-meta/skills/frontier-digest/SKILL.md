@@ -1,6 +1,6 @@
 ---
 name: frontier-digest
-description: Collects the latest AI/harness engineering trends from HackerNews and arxiv, then synthesizes them into actionable insights directly relevant to forge-harness operations. Triggered by "AI trends", "latest trends", "this week's AI updates", "what's on the frontier", "harness trends", "frontier-digest".
+description: Collects the latest AI/harness engineering trends from HackerNews, arxiv, launch channels (Launch YC, Product Hunt, Show HN), GeekNews and vendor changelogs, then synthesizes them into actionable insights directly relevant to forge-harness operations. Triggered by "AI trends", "latest trends", "this week's AI updates", "what's on the frontier", "harness trends", "frontier-digest".
 user-invocable: true
 allowed-tools: ["Bash", "WebFetch", "WebSearch", "Write"]
 model: sonnet
@@ -8,7 +8,7 @@ model: sonnet
 
 # frontier-digest — FH Frontier Insight Collection & Synthesis
 
-> Automatically collects the latest AI/agent/harness engineering trends from HackerNews and arxiv,
+> Automatically collects the latest AI/agent/harness engineering trends from HackerNews, arxiv, launch channels, GeekNews and vendor changelogs,
 > then compresses and synthesizes them into insights directly relevant to forge-harness skills and structure.
 
 ## Triggers
@@ -65,17 +65,21 @@ On **cadence-triggered** runs (7d), ask the operator one line before collecting:
 
 ## Step 1. Data Collection
 
-Collect from five sources (bash per source in §Collection-Bash):
+Collect from the sources below (bash/endpoint per source in §Collection-Bash). The backticked `id` is the channel identity the recall lane (`scripts/test_frontier_digest_recall.sh`) checks — keep it when editing a row:
 
 | Source | Method | Cap |
 |---|---|---|
-| HackerNews | Algolia API `search_by_date` (date-sorted, never `/search`), score > 30, keyword-relevant | 15 items |
-| arxiv | export API, latest by submittedDate | 6 items |
-| TLDR AI | RSS, title + link | 5 items |
-| The Batch (deeplearning.ai) | HTML scraping, `aria-label` + `/the-batch/issue-N` href (the JSON `slug` shape died 2026-09-11) | 5 items, or `UNMEASURED` |
-| GeekNews (news.hada.io) | Atom feed (`/rss/news` path), title + link, AI/agent/LLM-relevant | 5 items |
+| HackerNews `hn` | Algolia API `search_by_date` (date-sorted, never `/search`), score > 30, keyword-relevant | 15 items |
+| arxiv `arxiv` | export API, latest by submittedDate | 6 items |
+| TLDR AI `tldr-ai` | RSS, title + link | 5 items |
+| The Batch (deeplearning.ai) `the-batch` | HTML scraping, `aria-label` + `/the-batch/issue-N` href (the JSON `slug` shape died 2026-09-11) | 5 items, or `UNMEASURED` |
+| GeekNews (news.hada.io) `geeknews` | Atom feed (`/rss/news` path), title + link, AI/agent/LLM-relevant | 5 items |
+| Launch YC `launch-yc` | official page `ycombinator.com/launches`, newest launches, AI/agent/dev-tool only | 5 items, or `UNMEASURED` |
+| Product Hunt `product-hunt` | official Atom feeds, categories `artificial-intelligence` and `developer-tools` | 5 items, or `UNMEASURED` |
+| Show HN `show-hn` | Algolia `search_by_date` with `tags=show_hn`, points floor lower than the main HN leg | 8 items, or `UNMEASURED` |
+| Vendor changelogs/blogs `vendor-changelogs` | Anthropic, OpenAI, Google DeepMind/Gemini, Meta AI, Cursor — RSS where one exists, else the official news/changelog page | 1-2 per vendor, new since last digest, or `UNMEASURED` |
 
-Report progress: `📡 HN 15 items · arxiv 5 items · TLDR 5 items · Batch 5 items · GeekNews 5 items collected`
+Report progress: `📡 HN 15 items · arxiv 5 items · TLDR 5 items · Batch 5 items · GeekNews 5 items · LaunchYC n · PH n · ShowHN n · Vendors n collected` (a leg that could not be read is `UNMEASURED`, never `0`)
 
 > **Detail**: See `SKILL_detail.md §Collection-Bash` — curl commands per source with parsing notes — read when executing Step 1.
 

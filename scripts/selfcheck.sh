@@ -519,7 +519,7 @@ else
 fi
 
 # CLAUDE.md size guard — Claude Code warns «CLAUDE.md is over the 150.0k-char limit» on every session
-# start of a clone (measured 2026-09-26: 154,149 chars since ~v3.16.0). Guard at 145k (headroom ~1k/week).
+# start of a clone (measured 2026-09-26: 154,149 chars since ~v3.16.0). Guard ratcheted 145k → 18k on 2026-10-17 (see the lane header; forks: FH_CLAUDE_MD_LIMIT).
 if [ ! -f CLAUDE.md ]; then
   _absent_subject_verdict "claude-md size lanes" "CLAUDE.md" || fail=1
 elif [ -f scripts/test_claude_md_size_lanes.sh ]; then
@@ -964,6 +964,42 @@ fi
 # script ships — both, and this anchor, are declared in package_coverage_check.sh ACCEPTED_ABSENT.
 # On a consumer install the SUBJECT arm fires first and `_ships_per_files` returns 1, so the row
 # resolves to "SKIP (subject not in files[], and absent)" — the anchor arm is never reached.
+# Verdict for one subject|anchor suite's exit code. A function (2026-10-19) so the lane
+# test_selfcheck_state_lanes.sh can call THIS code rather than a re-spelled copy. rc 0 = pass.
+# 124 got its own arm because `timeout` kills silently: on 2026-10-18 a full local run ended
+# `SELFCHECK: FAIL` with no FAIL line in 6,236 lines — the killed suite fell into a bare `*)`
+# that set fail and printed nothing (fh_signal_2026-10-18_selfcheck-timeout-unlabelled). The
+# catch-all now names the suite and its rc, so no exit code can fail without a line.
+_pair_rc_verdict() { # $1=label $2=subject $3=rc · return 1 = counts as a failure
+  local _lbl="$1" _subj="$2" _rc="$3"
+  case "$_rc" in
+    0) ;;
+    # The suite could not MEASURE. Distinguished from "the lane failed" because the two send a
+    # reader to different places, and a bare fail=1 sends them to the wrong one. 10 = the suite's
+    # own setup failed (mktemp, used by several of these); 2 = its subject was missing when it
+    # looked (test_knowledge_seam_lanes.sh:7 FATALs this way); 126/127 = the anchor is not
+    # executable or not found at all, i.e. a broken install that reached this arm anyway.
+    # Every one of them still sets fail — a harness that could not measure did not pass — but it
+    # is LABELLED, so the next reader debugs the instrument instead of the lane.
+    # The first draft of this loop routed only 10 and let everything else fall into an unlabelled
+    # fail=1. That is the same "assumed impossible rather than routed" shape that the sibling
+    # commit in lane_runner_check.sh had just written a paragraph against; adversarial review
+    # caught the inconsistency between the two files.
+    10|2|126|127)
+      echo "HARNESS ERROR  $_lbl: the suite exited $_rc — it could not measure, so its verdicts"
+      echo "      prove nothing about $_subj. Not a lane failure, and not a pass either."
+      return 1 ;;
+    124)
+      echo "TIMEOUT  $_lbl: exited 124, the code \`timeout\` uses when it kills a suite (limit 300 s) —"
+      echo "      not measured, not a pass. A suite that itself exits 124 lands here too."
+      echo "      Re-run that suite alone to see whether it hangs or is only slow under load."
+      return 1 ;;
+    *)
+      echo "FAIL  $_lbl (rc=$_rc) — see that suite's output above; subject: $_subj"
+      return 1 ;;
+  esac
+  return 0
+}
 _LANE_TO=""; command -v timeout >/dev/null 2>&1 && _LANE_TO="timeout 300"
 for _pair in \
   `# 사용 원장 (2026-09-13 신설). SUBJECT 를 원장 모듈로 잡는다 — 배선이 끊기는 자리는 preprep.py 의 __main__ 한 줄이 아니라 모듈이 사라지는 쪽이고, import 가 try/except 라 모듈이 없으면 조용히 무동작으로 돌아간다. 그 무음이 이 레인이 잡을 것이다.` \
@@ -986,10 +1022,14 @@ for _pair in \
   "scripts/session_close_check.sh|scripts/test_peer_worktree_detect_lanes.sh" \
   "scripts/env_purity_scan.sh|scripts/test_env_purity_lanes.sh" \
   "scripts/frontier_digest_daily.sh|scripts/test_frontier_digest_retry.sh" \
+  "plugins/fh-meta/skills/frontier-digest/SKILL.md|scripts/test_frontier_digest_recall.sh" \
+  "scripts/test_frontier_digest_recall.sh|scripts/test_frontier_digest_recall_negctl.sh" \
+  "scripts/fh_module_check.py|scripts/test_fh_module_check_lanes.sh" \
   "scripts/knowledge_seam_check.sh|scripts/test_knowledge_seam_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_crossfamily_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_floor_lanes.sh" \
   ".github/workflows/regression-guard.yml|scripts/test_regression_guard_ci_lanes.sh" \
+  "templates/regression_guard.sh|scripts/test_regression_guard_sibling_lanes.sh" \
   ".github/workflows/validate.yml|scripts/test_leak_scan_control_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_standpoint_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_thirdparty_lanes.sh" \
@@ -1085,6 +1125,9 @@ for _pair in \
   "scripts/transcript_utterances.py|scripts/test_utterance_intake_lanes.sh" \
   "scripts/compaction_probe.sh|scripts/test_utterance_intake_lanes.sh" \
   "scripts/session_close_check.sh|scripts/test_utterance_intake_lanes.sh" \
+  `# ── 발화 체크리스트 훅(2026-10-18): 말한 순간 받아 적기 · 중간 점검 · 한글 턴. files[] 로 배포(selfcheck 가 이름을 대므로 package-coverage 가 요구) ──` \
+  "scripts/utterance_checklist_hook.sh|scripts/test_utterance_checklist_hook_lanes.sh" \
+  "scripts/utterance_checklist_hook.py|scripts/test_utterance_checklist_hook_lanes.sh" \
   `# ── 워크트리 회수(2026-09-05, N=2 재발 → 스크립트). 사람이 부르는 도구지만 레인은 자동 ──` \
   "scripts/worktree_reclaim.sh|scripts/test_worktree_reclaim_lanes.sh" \
   `# ── 가벼운 게이트 P1·P2(2026-10-12): 비주제 레인의 gh·①-g 스텁 + 켠/끈 비교기 ──` \
@@ -1107,25 +1150,7 @@ do
     # a substitute; without it `< /dev/null` is the whole defence and a suite that reads stdin ends
     # immediately instead of waiting forever.
     $_LANE_TO bash "$_anc" < /dev/null; _rc=$?
-    case "$_rc" in
-      0) ;;
-      # The suite could not MEASURE. Distinguished from "the lane failed" because the two send a
-      # reader to different places, and a bare fail=1 sends them to the wrong one. 10 = the suite's
-      # own setup failed (mktemp, used by several of these); 2 = its subject was missing when it
-      # looked (test_knowledge_seam_lanes.sh:7 FATALs this way); 126/127 = the anchor is not
-      # executable or not found at all, i.e. a broken install that reached this arm anyway.
-      # Every one of them still sets fail — a harness that could not measure did not pass — but it
-      # is LABELLED, so the next reader debugs the instrument instead of the lane.
-      # The first draft of this loop routed only 10 and let everything else fall into an unlabelled
-      # fail=1. That is the same "assumed impossible rather than routed" shape that the sibling
-      # commit in lane_runner_check.sh had just written a paragraph against; adversarial review
-      # caught the inconsistency between the two files.
-      10|2|126|127)
-        echo "HARNESS ERROR  $_lbl: the suite exited $_rc — it could not measure, so its verdicts"
-        echo "      prove nothing about $_subj. Not a lane failure, and not a pass either."
-        fail=1 ;;
-      *) fail=1 ;;
-    esac
+    _pair_rc_verdict "$_lbl" "$_subj" "$_rc" || fail=1
   elif _pkg_accepted_absent "$_anc"; then
     # DECLARED legitimately unshipped — the single source for that answer, not a guess from the
     # environment. The first draft printed "this package predates it", which is a WRONG DIAGNOSIS
@@ -2099,6 +2124,32 @@ elif [ -f scripts/test_node_infra_delta_lanes.sh ]; then
   fi
 else
   echo "FAIL  test_node_infra_delta_lanes.sh: fh_node_check.sh present but its anchor is missing"
+  fail=1
+fi
+
+# env-delta SessionStart hook — linked worktrees are not new sibling repos (2026-10-15: 30 of 33
+# «unmapped siblings» were worktrees). Same pairing rule as above.
+if [ ! -f scripts/fh_env_delta_scan.sh ]; then
+  _absent_subject_verdict "test_env_delta_worktree_lanes.sh" "scripts/fh_env_delta_scan.sh" || fail=1
+elif [ -f scripts/test_env_delta_worktree_lanes.sh ]; then
+  if ! bash scripts/test_env_delta_worktree_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_env_delta_worktree_lanes.sh: fh_env_delta_scan.sh present but its anchor is missing"
+  fail=1
+fi
+
+# memory_gc_report.py — read-only lifecycle report over a memory dir (age from `hits`, cold, promote,
+# index hygiene, loader cap). Same pairing rule as above.
+if [ ! -f scripts/memory_gc_report.py ]; then
+  _absent_subject_verdict "test_memory_gc_report_lanes.sh" "scripts/memory_gc_report.py" || fail=1
+elif [ -f scripts/test_memory_gc_report_lanes.sh ]; then
+  if ! bash scripts/test_memory_gc_report_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_memory_gc_report_lanes.sh: memory_gc_report.py present but its anchor is missing"
   fail=1
 fi
 

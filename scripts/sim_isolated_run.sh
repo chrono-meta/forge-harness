@@ -571,6 +571,10 @@ snapshot "$OUTDIR/_machine_before.txt"
 
 CONTAMINATED=0
 for r in $(seq 1 "$REPS"); do
+  # A reused --out must not carry the previous run's budget record into a rep that fails before
+  # writing its own (clone failure `continue`s first) — a stale `ended_at_cap=no` would be read as
+  # this run's. Same for the per-turn table the budget line reads.
+  rm -f "$OUTDIR/${ARM}_r${r}.meta.tsv" "$OUTDIR/${ARM}_r${r}.turns.tsv"
   # Each clone gets its OWN parent directory. Siblings under one parent are visible to `../`,
   # and that is not hypothetical: an arm measured 2026-08-29 scanned its parent for mappable
   # projects and reported finding "iso_A, door_CTRL" — the other arms' work dirs. Content stayed
@@ -757,6 +761,33 @@ for r in $(seq 1 "$REPS"); do
   rc=$?
   fi
   bytes=$(wc -c < "$OUTDIR/${ARM}_r${r}.txt" | tr -d ' ')
+
+  # ── BUDGET LINE (2026-10-17) — which cap this episode ran under, and did it END at that cap. ──
+  # Caps are read off the ARGV actually handed to `claude -p` (TOOLS/MCPARGS arrays) and the env it
+  # inherited — never retyped. `timeout_s` is the very $TIMEOUT fed to fh_timeout above.
+  # ended_at_cap is three-valued, never defaulted to "no":
+  #   yes     rc=124 — fh_timeout's own convention for all three kinds (gnu / gtimeout / bash watchdog)
+  #   no      rc=0 AND no turn/token cap was set (nothing else could have stopped it early)
+  #   UNKNOWN anything else: rc=0 with a turn/token cap set (a max-turns stop exits 0 and this
+  #           runner reads no stop reason), or a non-124 failure (crash vs kill is not told apart)
+  _cap_arg() { local _f="$1"; shift; while [ $# -gt 0 ]; do [ "$1" = "$_f" ] && { printf '%s' "${2:-unset}"; return; }; shift; done; printf 'unset'; }
+  _cap_turns="$(_cap_arg --max-turns "${TOOLS[@]}" ${MCPARGS[@]+"${MCPARGS[@]}"})"
+  _cap_tokens="${CLAUDE_CODE_MAX_OUTPUT_TOKENS:-unset}"
+  # Multi-turn: the rep returns its FIRST failing rc, so turn 1 rc=7 + turn 2 rc=124 returns 7 and
+  # would hide the timeout. Any turn row with rc=124 makes the episode `yes`. timeout_s is per turn.
+  _turn_timeout=0
+  [ -f "$OUTDIR/${ARM}_r${r}.turns.tsv" ] && \
+    awk -F'\t' 'NR>1 && $2==124 {f=1} END {exit !f}' "$OUTDIR/${ARM}_r${r}.turns.tsv" && _turn_timeout=1
+  if [ "$rc" -eq 124 ] || [ "$_turn_timeout" -eq 1 ]; then _cap_end=yes
+  elif [ "$rc" -eq 0 ] && [ "$_cap_turns" = unset ] && [ "$_cap_tokens" = unset ]; then _cap_end=no
+  else _cap_end=UNKNOWN; fi
+  {
+    printf 'rc\t%s\n' "$rc"
+    printf 'timeout_s\t%s\n' "$TIMEOUT"
+    printf 'max_turns\t%s\n' "$_cap_turns"
+    printf 'token_cap\t%s\n' "$_cap_tokens"
+    printf 'ended_at_cap\t%s\n' "$_cap_end"
+  } >> "$OUTDIR/${ARM}_r${r}.meta.tsv"
 
   # 🟥 An empty output is NOT a "no" answer. The first version of tonight's runner used
   # `timeout 300`, which killed exactly the heavy arms — the ones where the behaviour under test

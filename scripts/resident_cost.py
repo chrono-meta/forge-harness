@@ -25,7 +25,7 @@
 #
 # 범위 밖(이름으로 남긴다): 시스템 프롬프트 · 이 레포 밖 플러그인의 스킬 목록 · MCP 도구 설명 · 토큰 수.
 #   그래서 «합계» 는 «FH 가 좌우하는 상주분» 이지 세션 전체 비용이 아니다.
-# CLAUDE.md 크기 «가드» 는 scripts/test_claude_md_size_lanes.sh 가 따로 한다(한계 145,000). 이건 계기지 게이트가 아니다.
+# CLAUDE.md 크기 «가드» 는 scripts/test_claude_md_size_lanes.sh 가 따로 한다(한계 18,000 — 2026-10-17 래칫). 이건 계기지 게이트가 아니다.
 #
 # 사용: python3 scripts/resident_cost.py [--json] [--repo DIR] [--user-claude FILE] [--memory-dir DIR]
 #                                        [--memory-cap-chars N] [--no-user]
