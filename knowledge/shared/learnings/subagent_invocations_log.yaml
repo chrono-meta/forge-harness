@@ -4869,3 +4869,31 @@
   outcome: "accepted — 20 codex findings fixed with fail-before lanes; Sonnet raised 8 (2 already fixed, 2 fixed, rest residual/refuted)"
   evidence: "FH PR #914 (c7948db)"
   tokens: UNMEASURED
+- date: 2026-10-19
+  agent: "general-purpose (sonnet) ×1 — FoD gate false positives (read-only settings pipe · zero-commit push)"
+  task: "narrow two gate_hook.py false positives on a FoD worktree branch, with lanes and a revert check"
+  trigger: "session card item 4 + operator «FH 자체 개발 자율주행해줘» (standing dispatch request)"
+  outcome: "rejected — own lanes 55/55, but codex found 5 A bypasses of both exemptions (frame builtins, NFKC identifiers, PYTHONPATH startup, insteadOf twice, pre-push on a no-op push); not pushed, direction recorded in a signal"
+  evidence: "FoD branch fix/gate-readonly-pipe-fp (fe68e1e, unpushed) · tracks/_meta/fh_signal_2026-10-19_gate-fp-exemptions-bypassed.md"
+  tokens: UNMEASURED
+- date: 2026-10-19
+  agent: "general-purpose (sonnet) ×1 — Codex gate evidence design (read-only)"
+  task: "compare in-agent PreToolUse wiring vs app-side per-request review for Codex autopilot evidence"
+  trigger: "session card item 1 (operator «ㅇㅇ 가자», 10-18) + standing dispatch request"
+  outcome: "accepted as design input — governor checked the three load-bearing code claims (gate-consult 8 s / error = human, evidence kinds call|session, codex pending); one cited path was off (src/ours/, not src/main/)"
+  evidence: "tracks/_meta/design_2026-10-19_codex-gate-evidence.md"
+  tokens: UNMEASURED
+- date: 2026-10-19
+  agent: "general-purpose (sonnet) ×1 worktree + codex (gpt) ×2 rounds — checklist hook channel"
+  task: "make session_checklist.py extract read the UserPromptSubmit hook record as a second channel"
+  trigger: "session card item 3 + standing dispatch request"
+  outcome: "accepted after repair — worker patch passed its own 44 lanes; codex R1 found 6 A (greedy pairing, missing ts, DST, summary dedupe drop, carry_forward loss, UTF-8), R2 2 B; governor fixed all with fail-before lanes"
+  evidence: "FH PR #919 (f6c0be1)"
+  tokens: UNMEASURED
+- date: 2026-10-19
+  agent: "codex (gpt) ×2 — adversarial reads of FH #917 (CLAUDE.md routing) and #918 (selfcheck labels)"
+  task: "4-axis cross-family review"
+  trigger: "4-axis gate"
+  outcome: "accepted — #917 1 A + 2 B, #918 3 B, all fixed and re-measured"
+  evidence: "FH PR #917 (c1516a2) · #918 (62ee9e8)"
+  tokens: UNMEASURED
