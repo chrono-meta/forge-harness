@@ -964,6 +964,42 @@ fi
 # script ships — both, and this anchor, are declared in package_coverage_check.sh ACCEPTED_ABSENT.
 # On a consumer install the SUBJECT arm fires first and `_ships_per_files` returns 1, so the row
 # resolves to "SKIP (subject not in files[], and absent)" — the anchor arm is never reached.
+# Verdict for one subject|anchor suite's exit code. A function (2026-10-19) so the lane
+# test_selfcheck_state_lanes.sh can call THIS code rather than a re-spelled copy. rc 0 = pass.
+# 124 got its own arm because `timeout` kills silently: on 2026-10-18 a full local run ended
+# `SELFCHECK: FAIL` with no FAIL line in 6,236 lines — the killed suite fell into a bare `*)`
+# that set fail and printed nothing (fh_signal_2026-10-18_selfcheck-timeout-unlabelled). The
+# catch-all now names the suite and its rc, so no exit code can fail without a line.
+_pair_rc_verdict() { # $1=label $2=subject $3=rc · return 1 = counts as a failure
+  local _lbl="$1" _subj="$2" _rc="$3"
+  case "$_rc" in
+    0) ;;
+    # The suite could not MEASURE. Distinguished from "the lane failed" because the two send a
+    # reader to different places, and a bare fail=1 sends them to the wrong one. 10 = the suite's
+    # own setup failed (mktemp, used by several of these); 2 = its subject was missing when it
+    # looked (test_knowledge_seam_lanes.sh:7 FATALs this way); 126/127 = the anchor is not
+    # executable or not found at all, i.e. a broken install that reached this arm anyway.
+    # Every one of them still sets fail — a harness that could not measure did not pass — but it
+    # is LABELLED, so the next reader debugs the instrument instead of the lane.
+    # The first draft of this loop routed only 10 and let everything else fall into an unlabelled
+    # fail=1. That is the same "assumed impossible rather than routed" shape that the sibling
+    # commit in lane_runner_check.sh had just written a paragraph against; adversarial review
+    # caught the inconsistency between the two files.
+    10|2|126|127)
+      echo "HARNESS ERROR  $_lbl: the suite exited $_rc — it could not measure, so its verdicts"
+      echo "      prove nothing about $_subj. Not a lane failure, and not a pass either."
+      return 1 ;;
+    124)
+      echo "TIMEOUT  $_lbl: exited 124, the code \`timeout\` uses when it kills a suite (limit 300 s) —"
+      echo "      not measured, not a pass. A suite that itself exits 124 lands here too."
+      echo "      Re-run that suite alone to see whether it hangs or is only slow under load."
+      return 1 ;;
+    *)
+      echo "FAIL  $_lbl (rc=$_rc) — see that suite's output above; subject: $_subj"
+      return 1 ;;
+  esac
+  return 0
+}
 _LANE_TO=""; command -v timeout >/dev/null 2>&1 && _LANE_TO="timeout 300"
 for _pair in \
   `# 사용 원장 (2026-09-13 신설). SUBJECT 를 원장 모듈로 잡는다 — 배선이 끊기는 자리는 preprep.py 의 __main__ 한 줄이 아니라 모듈이 사라지는 쪽이고, import 가 try/except 라 모듈이 없으면 조용히 무동작으로 돌아간다. 그 무음이 이 레인이 잡을 것이다.` \
@@ -1113,25 +1149,7 @@ do
     # a substitute; without it `< /dev/null` is the whole defence and a suite that reads stdin ends
     # immediately instead of waiting forever.
     $_LANE_TO bash "$_anc" < /dev/null; _rc=$?
-    case "$_rc" in
-      0) ;;
-      # The suite could not MEASURE. Distinguished from "the lane failed" because the two send a
-      # reader to different places, and a bare fail=1 sends them to the wrong one. 10 = the suite's
-      # own setup failed (mktemp, used by several of these); 2 = its subject was missing when it
-      # looked (test_knowledge_seam_lanes.sh:7 FATALs this way); 126/127 = the anchor is not
-      # executable or not found at all, i.e. a broken install that reached this arm anyway.
-      # Every one of them still sets fail — a harness that could not measure did not pass — but it
-      # is LABELLED, so the next reader debugs the instrument instead of the lane.
-      # The first draft of this loop routed only 10 and let everything else fall into an unlabelled
-      # fail=1. That is the same "assumed impossible rather than routed" shape that the sibling
-      # commit in lane_runner_check.sh had just written a paragraph against; adversarial review
-      # caught the inconsistency between the two files.
-      10|2|126|127)
-        echo "HARNESS ERROR  $_lbl: the suite exited $_rc — it could not measure, so its verdicts"
-        echo "      prove nothing about $_subj. Not a lane failure, and not a pass either."
-        fail=1 ;;
-      *) fail=1 ;;
-    esac
+    _pair_rc_verdict "$_lbl" "$_subj" "$_rc" || fail=1
   elif _pkg_accepted_absent "$_anc"; then
     # DECLARED legitimately unshipped — the single source for that answer, not a guess from the
     # environment. The first draft printed "this package predates it", which is a WRONG DIAGNOSIS
