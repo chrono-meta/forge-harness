@@ -30,6 +30,37 @@
 #   FH_RECORD_BASE=<p>  directory for governance_log YAML (default: FH_ROOT/tracks/_meta)
 
 set -euo pipefail
+# Unexpected failure → HARNESS_ERROR (10), never PENDING (1). Under `set -e` a command that fails where
+# nobody expected it ends the script with that command's status — usually 1, which the contract reads as
+# PENDING ("proceed with awareness"). MEASURED 2026-10-20: `TMPDIR=/nonexistent` made `mktemp` fail and
+# the gate exited 1 (also through bin/fh-gate.js). Every intended outcome leaves through an explicit
+# `exit N`, which does not fire ERR. A failing `X=$(cmd)` at top level still fires it.
+# 🟥 NOT `set -E`: errtrace carries the trap INTO command substitutions, where it ignores the caller's
+#    `|| rc=$?`. Measured on the first draft: the cross-mode leg capture `_legout=$(…) || _legrc=$?` got
+#    10 instead of the leg's 2, and one lane folded a BLOCKED leg into a PASS union. The regression suite
+#    (`cross: one leg BLOCKED → union BLOCKED`) is the anchor for this line.
+# 10 is written as a literal because EXIT_HARNESS_ERROR is defined further down.
+trap 'echo "ERROR: fh-gate: unexpected failure at line $LINENO (status $?) — failing closed as HARNESS_ERROR." >&2 || :; exit 10' ERR
+# The ERR trap does not see every unexpected end: an unbound variable under `set -u` exits 1 without
+# firing ERR, and so does a failure inside a function called from the EXIT trap (cross-family review,
+# 2026-10-20 — `cleanup(){ false; }; trap cleanup EXIT; exit 2` returned 1). So the exit itself is the
+# second check: a status of 0-3 is a verdict, and a verdict may only leave through a line that set
+# _FH_VERDICT_EXIT=1 first (--version, --help, the cross union, the final verdict). Anything else that
+# ends with 0-3 is reported as HARNESS_ERROR. Cleanup runs here too, and its own failure cannot change
+# the status. Every message on these paths is `|| :` — with stderr closed a failing echo would otherwise
+# end the handler before its `exit 10` (cross-family review round 2: `--invalid 2>&-` returned 1).
+_FH_VERDICT_EXIT=0
+_FH_CLEANUP=0
+_fh_on_exit() {
+  local rc=$?
+  if [ "$_FH_CLEANUP" = 1 ]; then cleanup 2>/dev/null || true; fi
+  if [ "$rc" -le 3 ] && [ "$_FH_VERDICT_EXIT" != 1 ]; then
+    echo "ERROR: fh-gate: ended with status $rc without reaching a verdict — failing closed as HARNESS_ERROR." >&2 || :
+    exit 10
+  fi
+  exit "$rc"
+}
+trap _fh_on_exit EXIT
 
 FH_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # Single source of truth: read version from the package.json shipped alongside this script.
@@ -76,7 +107,7 @@ EXIT_DRY_RUN=12
 case "${1:-}" in
   --version|-V)
     printf '%s\n' "fh-gate $VERSION"
-    exit 0
+    _FH_VERDICT_EXIT=1; exit 0
     ;;
   --help|-h)
     printf '%s\n' "fh-gate $VERSION — FH governance gate"
@@ -110,7 +141,7 @@ case "${1:-}" in
     printf '%s\n' "  FH_VERBOSE=1                         print full backend stderr"
     printf '%s\n' ""
     printf '%s\n' "  https://github.com/chrono-meta/forge-harness"
-    exit 0
+    _FH_VERDICT_EXIT=1; exit 0
     ;;
   -*)
     printf '%s\n' "ERROR: unrecognized option '${1}'." >&2
@@ -203,7 +234,8 @@ $(printf '%s' "$_legout" | sed -n '/^---$/,$p')"
     printf 'FH_GATE_DECORRELATED: yes\n'
   fi
   printf '%s\n' "$_CROSS_OUT"
-  echo "→ fh-gate: cross mode — legs [$_CROSS_LEGS], union verdict $_CROSS_WORST" >&2
+  echo "→ fh-gate: cross mode — legs [$_CROSS_LEGS], union verdict $_CROSS_WORST" >&2 || :
+  _FH_VERDICT_EXIT=1
   case "$_CROSS_WORST" in
     PASS)     exit $EXIT_PASS ;;
     PENDING)  exit $EXIT_PENDING ;;
@@ -436,7 +468,7 @@ else
 fi
 
 cleanup() { rm -f "$PROMPT_FILE" "$OUTPUT_FILE" "$ERR_FILE" "$PARSE_FILE" "$SCHEMA_FILE" "$CODEX_LAST"; }
-trap cleanup EXIT
+_FH_CLEANUP=1                                   # _fh_on_exit (top of file) calls cleanup from here on
 
 # --- Build prompt ---
 cat > "$PROMPT_FILE" <<PROMPT
@@ -764,11 +796,12 @@ FINDINGS_N_LOG=$(grep -m 1 "^FH_FINDINGS_COUNT:" "$PARSE_FILE" 2>/dev/null | awk
 } >> "$RECORD_PATH" || echo "WARN: governance log write failed: $RECORD_PATH" >&2
 
 # Exit code
+_FH_VERDICT_EXIT=1
 case "$VERDICT" in
-  PASS)     echo "→ verdict: PASS" >&2;     exit $EXIT_PASS ;;
-  PENDING)  echo "→ verdict: PENDING" >&2;  exit $EXIT_PENDING ;;
-  BLOCKED)  echo "→ verdict: BLOCKED" >&2;  exit $EXIT_BLOCKED ;;
-  ESCALATE) echo "→ verdict: ESCALATE" >&2; exit $EXIT_ESCALATE ;;
+  PASS)     echo "→ verdict: PASS" >&2 || :;     exit $EXIT_PASS ;;
+  PENDING)  echo "→ verdict: PENDING" >&2 || :;  exit $EXIT_PENDING ;;
+  BLOCKED)  echo "→ verdict: BLOCKED" >&2 || :;  exit $EXIT_BLOCKED ;;
+  ESCALATE) echo "→ verdict: ESCALATE" >&2 || :; exit $EXIT_ESCALATE ;;
   *)
     echo "ERROR: unrecognized verdict '${VERDICT:-EMPTY}' — harness error, failing safe (commit not allowed)" >&2
     exit $EXIT_HARNESS_ERROR

@@ -257,6 +257,24 @@ check_out "cross: codex absent → single leg, DECORRELATED: no" 0 'FH_GATE_DECO
 check "cross: no family available → fails closed" 10 \
   env PATH="/usr/bin:/bin" FH_BACKEND=cross bash "$GATE" "$SUBJECT" quick test
 
+# An unexpected failure must not leave as status 1 (= PENDING, "proceed"). Reported from outside
+# (2026-10-20); measured: `mktemp` failing under `set -e` ended the gate with 1, also through the npm bin.
+check "unexpected failure (mktemp) → HARNESS_ERROR, not PENDING" 10 \
+  env TMPDIR="$TMPROOT/does-not-exist" FH_DRY_RUN=1 bash "$GATE" "$SUBJECT" quick test
+check "unexpected failure via npm bin → HARNESS_ERROR, not PENDING" 10 \
+  env TMPDIR="$TMPROOT/does-not-exist" FH_DRY_RUN=1 node bin/fh-gate.js "$SUBJECT" quick test
+# `set -u` ends the script with 1 WITHOUT firing ERR — only the exit-time check sees it (cross-family review).
+# Outside an FH checkout the record base falls back to $HOME, so an unset HOME is an unbound variable there.
+# With stderr closed every message fails; the handlers' own messages must not stop their `exit`, and a real
+# verdict must keep its code (cross-family review round 2: `--invalid 2>&-` returned 1).
+check "stderr closed + unexpected failure → still HARNESS_ERROR" 10 \
+  env TMPDIR="$TMPROOT/does-not-exist" FH_DRY_RUN=1 bash -c 'exec 2>&-; exec bash "$@"' _ "$GATE" "$SUBJECT" quick test
+check "stderr closed + PASS verdict → still PASS (0)" 0 \
+  env PATH="$FAKEBIN:/usr/bin:/bin" FH_BACKEND=claude FH_MODEL=fake FAKE_PAYLOAD="$CROSS_PASS" \
+      bash -c 'exec 2>&-; exec bash "$@"' _ "$GATE" "$SUBJECT" quick test
+check "unbound variable (HOME unset, outside a checkout) → HARNESS_ERROR" 10 \
+  env -u HOME FH_DRY_RUN=1 bash -c 'cd "$1" && exec bash "$2" "$3" quick test' _ "$TMPROOT" "$PWD/$GATE" "$SUBJECT"
+
 echo
 echo "────────────────────────────────────────────────────────────────────"
 printf 'fh-gate regressions: %d passed, %d failed\n' "$pass" "$fail"
