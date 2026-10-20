@@ -396,6 +396,8 @@
     "scripts/validate_yaml.sh",
     "scripts/version_lockstep_check.sh",
     "scripts/worktree_reclaim.sh",
+    "scripts/dispatch_receipt.py",
+    "scripts/test_dispatch_receipt_lanes.sh",
     "templates/.claude/rules/mcp_tool_gating.md",
     "templates/.claude/rules/session.md",
     "templates/.git-hooks",

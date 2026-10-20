@@ -1133,7 +1133,9 @@ for _pair in \
   `# ── 가벼운 게이트 P1·P2(2026-10-12): 비주제 레인의 gh·①-g 스텁 + 켠/끈 비교기 ──` \
   "scripts/lane_stub_env.sh|scripts/test_lane_stub_env_lanes.sh" \
   "scripts/lane_stub_env.allow|scripts/test_lane_stub_env_lanes.sh" \
-  "scripts/lane_onoff_compare.py|scripts/test_lane_stub_env_lanes.sh"
+  "scripts/lane_onoff_compare.py|scripts/test_lane_stub_env_lanes.sh" \
+  `# ── 위임 마감 영수증(2026-10-20): 에이전트가 «고쳤다» 고 한 것을 거버너가 저장소에서 잰다(보고 ≠ 변경) ──` \
+  "scripts/dispatch_receipt.py|scripts/test_dispatch_receipt_lanes.sh"
 do
   _subj="${_pair%%|*}"; _anc="${_pair##*|}"; _lbl="${_anc##*/}"
   if [ ! -f "$_subj" ]; then
