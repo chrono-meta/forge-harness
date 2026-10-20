@@ -202,6 +202,15 @@ if [[ "$FH_BACKEND" == "cross" ]]; then
     # without letting it abort. Verified against a BLOCKED leg, not assumed.
     _legrc=0
     _legout=$(FH_BACKEND="$_leg" "$0" "$@" 2>/dev/null) || _legrc=$?
+    # 11 (argument error) and 12 (dry-run) are not a leg failing — every leg gets the same arguments, so
+    # every leg would say the same. Pass them through instead of folding them into "harness error 10"
+    # (found 2026-10-20 by a local-model self-audit candidate, reproduced: cross + bad level → 10, not 11;
+    # cross + FH_DRY_RUN=1 → 10 and the prompt was lost). A dry-run leg's stdout IS the prompt — print it.
+    if [ "$_legrc" -eq "$EXIT_ARG_ERROR" ] || [ "$_legrc" -eq "$EXIT_DRY_RUN" ]; then
+      [ "$_legrc" -eq "$EXIT_DRY_RUN" ] && printf '%s\n' "$_legout"
+      echo "→ fh-gate: cross mode — leg $_leg exited $_legrc (same arguments for every leg); passing it through" >&2 || :
+      exit "$_legrc"
+    fi
     if [ "$_legrc" -ge 10 ]; then
       _CROSS_ERR="${_CROSS_ERR}${_CROSS_ERR:+, }$_leg (harness error $_legrc)"; continue
     fi

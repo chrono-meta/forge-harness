@@ -265,6 +265,16 @@ check "unexpected failure via npm bin → HARNESS_ERROR, not PENDING" 10 \
   env TMPDIR="$TMPROOT/does-not-exist" FH_DRY_RUN=1 node bin/fh-gate.js "$SUBJECT" quick test
 # `set -u` ends the script with 1 WITHOUT firing ERR — only the exit-time check sees it (cross-family review).
 # Outside an FH checkout the record base falls back to $HOME, so an unset HOME is an unbound variable there.
+# cross mode must pass a leg's 11/12 through — every leg gets the same arguments (local-model self-audit
+# candidate, reproduced 2026-10-20: both came out as 10). Control: the non-cross bad level is 11.
+check "cross + bad gate level → 11 (argument error), not 10" 11 \
+  env PATH="$FAKEBIN:/usr/bin:/bin" FH_BACKEND=cross FH_MODEL=fake bash "$GATE" "$SUBJECT" medium test
+check "cross + FH_DRY_RUN=1 → 12 (dry-run), not 10" 12 \
+  env PATH="$FAKEBIN:/usr/bin:/bin" FH_BACKEND=cross FH_DRY_RUN=1 FH_MODEL=fake bash "$GATE" "$SUBJECT" quick test
+check_out "cross + FH_DRY_RUN=1 → the prompt is printed" 12 'FH GOVERNANCE GATE' \
+  env PATH="$FAKEBIN:/usr/bin:/bin" FH_BACKEND=cross FH_DRY_RUN=1 FH_MODEL=fake bash "$GATE" "$SUBJECT" quick test
+check "control: non-cross bad gate level → 11" 11 \
+  env PATH="$FAKEBIN:/usr/bin:/bin" FH_BACKEND=claude FH_MODEL=fake bash "$GATE" "$SUBJECT" medium test
 # With stderr closed every message fails; the handlers' own messages must not stop their `exit`, and a real
 # verdict must keep its code (cross-family review round 2: `--invalid 2>&-` returned 1).
 check "stderr closed + unexpected failure → still HARNESS_ERROR" 10 \
