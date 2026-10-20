@@ -588,6 +588,49 @@ for f in "${FILES[@]}"; do
              | grep -vE '^[0-9]+:[[:space:]]*#' \
              | grep -vE '#[[:space:]]*noqa[:[:space:]]*degrade')
     fi
+
+    # S7 — `set -e` under a declared exit contract that has its OWN error code, with no ERR trap.
+    #   Under `set -e` a command that fails where nobody expected it ends the script with THAT
+    #   command's status — usually 1. If the contract reserves a separate code for "the tool itself
+    #   broke" (10 HARNESS_ERROR and the like), the low codes are verdicts, so a crash leaks out as
+    #   one of them. Measured 2026-10-20 on fh-gate.sh: a failing `mktemp` exited 1 = PENDING
+    #   ("proceed with awareness"); reported from outside, fixed in #927. The cure is an ERR trap
+    #   that exits the error code, plus an exit-time check that 0..N only leave through the verdict
+    #   sites (`set -u` and a failing EXIT-trap function end with 1 WITHOUT firing ERR).
+    #   SCOPE, so this stays quiet: all three must hold — `set -…e…` · a comment header naming exit
+    #   codes · a contract line naming an error code (harness/internal/tool error). A contract of
+    #   just "0 = pass, 1 = fail" is excluded: there an unexpected 1 already points the safe way.
+    #   Census 2026-10-20 over this repo's tracked shell: 1 file matched the shape (fh-gate.sh).
+    #   FILE-level probe: it reports the `set -e` line once.
+    #   Round-1 cross-family review (codex) widened three things: `set -o errexit` and `cmd; set -e`
+    #   activate it; an `EXIT_*ERROR=10`-style constant counts as a contract; and a trap only counts
+    #   when it EXITS — `trap cleanup ERR` (no exit) and a commented-out trap do not protect anything.
+    #   A grep that ERRORS (rc>1) is reported as S7-UNMEASURED, never read as "no hit" — the same
+    #   default-toward-clean shape this probe exists to find.
+    _s7_rc() { grep "$@" "$f" >/dev/null 2>&1; echo $?; }
+    _s7_lines=$(grep -nE '(^|[;{&|])[[:space:]]*set[[:space:]]+(-[A-Za-z]*e[A-Za-z]*|-o[[:space:]]+errexit)([[:space:];]|$)' "$f" 2>/dev/null); _s7_r1=$?
+    _s7_set=$(printf '%s\n' "$_s7_lines" | grep -vE '^[0-9]+:[[:space:]]*#' | grep -vE '#[[:space:]]*noqa[:[:space:]]*degrade' | sed -n 1p)
+    _s7_r2=$(_s7_rc -qE '^[[:space:]]*#.*\b[Ee]xit([[:space:]]+codes?|[[:space:]]+status(es)?)?[[:space:]]*:')
+    _s7_r3=$(_s7_rc -qiE '^[[:space:]]*#.*\b[0-9]+([[:space:]]*(—|–|-|=|:|\))[[:space:]]*.{0,40}|[[:space:]]+)(harness|internal|tool)[ _-]?error')
+    #   ^ a CONTRACT ENTRY (`10 — Harness error`, `10 harness error`), not prose that happens to hold a
+    #     number and the word (an old test file's comment «the count is 0 … HARNESS_ERROR» was flagged).
+    _s7_r4=$(_s7_rc -qE '^[[:space:]]*[A-Z_]*(HARNESS|INTERNAL|TOOL)_?ERR(OR)?[A-Z_]*=[0-9]+')
+    # protecting trap: an ACTIVE (non-comment) `trap … ERR` line that exits, or that names a handler
+    # function whose body (next 12 lines) exits.
+    _s7_traps=$(grep -nE "^[^#]*\btrap[[:space:]].*[[:space:]'\"]ERR(['\"]|[[:space:];]|$)" "$f" 2>/dev/null); _s7_r5=$?
+    _s7_guard=""
+    if [ -n "$_s7_traps" ]; then
+      if printf '%s\n' "$_s7_traps" | grep -qE '\bexit\b'; then _s7_guard=1
+      else
+        _s7_h=$(printf '%s\n' "$_s7_traps" | sed -nE "s/.*trap[[:space:]]+['\"]?([A-Za-z_][A-Za-z0-9_]*)['\"]?[[:space:]].*/\\1/p" | sed -n 1p)
+        [ -n "$_s7_h" ] && grep -A12 -E "^[[:space:]]*(function[[:space:]]+)?${_s7_h}[[:space:]]*\(\)" "$f" 2>/dev/null | grep -qE '\bexit\b' && _s7_guard=1
+      fi
+    fi
+    if [ "$_s7_r1" -gt 1 ] || [ "$_s7_r2" -gt 1 ] || [ "$_s7_r3" -gt 1 ] || [ "$_s7_r4" -gt 1 ] || [ "$_s7_r5" -gt 1 ]; then
+      emit "$f" 1 "S7-UNMEASURED(sh)" "could not read this file for the set -e / exit-contract check (grep error) — NOT checked, not clean"
+    elif [ -n "$_s7_set" ] && { { [ "$_s7_r2" -eq 0 ] && [ "$_s7_r3" -eq 0 ]; } || [ "$_s7_r4" -eq 0 ]; } && [ -z "$_s7_guard" ]; then
+      emit "$f" "${_s7_set%%:*}" "S7:set-e-leaks-verdict(sh)" "\`set -e\` under an exit contract that has its own error code, but no ERR trap that exits — an unexpected failure exits with the failing command's status (usually 1), which the contract reads as a verdict; add \`trap '…; exit <error-code>' ERR\` and an EXIT check that 0..N only leave through the verdict sites (set -u and EXIT-trap failures do not fire ERR). Do NOT add set -E without checking \`\$( ) || rc=\$?\` captures"
+    fi
   fi
 
   # Probe A — except/else/finally block returning a permissive value within 2 lines.

@@ -257,6 +257,41 @@ check_out "cross: codex absent → single leg, DECORRELATED: no" 0 'FH_GATE_DECO
 check "cross: no family available → fails closed" 10 \
   env PATH="/usr/bin:/bin" FH_BACKEND=cross bash "$GATE" "$SUBJECT" quick test
 
+# An unexpected failure must not leave as status 1 (= PENDING, "proceed"). Reported from outside
+# (2026-10-20); measured: `mktemp` failing under `set -e` ended the gate with 1, also through the npm bin.
+check "unexpected failure (mktemp) → HARNESS_ERROR, not PENDING" 10 \
+  env TMPDIR="$TMPROOT/does-not-exist" FH_DRY_RUN=1 bash "$GATE" "$SUBJECT" quick test
+check "unexpected failure via npm bin → HARNESS_ERROR, not PENDING" 10 \
+  env TMPDIR="$TMPROOT/does-not-exist" FH_DRY_RUN=1 node bin/fh-gate.js "$SUBJECT" quick test
+# `set -u` ends the script with 1 WITHOUT firing ERR — only the exit-time check sees it (cross-family review).
+# Outside an FH checkout the record base falls back to $HOME, so an unset HOME is an unbound variable there.
+# cross mode must pass a leg's 11/12 through — every leg gets the same arguments (local-model self-audit
+# candidate, reproduced 2026-10-20: both came out as 10). Control: the non-cross bad level is 11.
+check "cross + bad gate level → 11 (argument error), not 10" 11 \
+  env PATH="$FAKEBIN:/usr/bin:/bin" FH_BACKEND=cross FH_MODEL=fake bash "$GATE" "$SUBJECT" medium test
+check "cross + FH_DRY_RUN=1 → 12 (dry-run), not 10" 12 \
+  env PATH="$FAKEBIN:/usr/bin:/bin" FH_BACKEND=cross FH_DRY_RUN=1 FH_MODEL=fake bash "$GATE" "$SUBJECT" quick test
+check_out "cross + FH_DRY_RUN=1 → the prompt is printed" 12 'FH GOVERNANCE GATE' \
+  env PATH="$FAKEBIN:/usr/bin:/bin" FH_BACKEND=cross FH_DRY_RUN=1 FH_MODEL=fake bash "$GATE" "$SUBJECT" quick test
+check "control: non-cross bad gate level → 11" 11 \
+  env PATH="$FAKEBIN:/usr/bin:/bin" FH_BACKEND=claude FH_MODEL=fake bash "$GATE" "$SUBJECT" medium test
+# With stderr closed every message fails; the handlers' own messages must not stop their `exit`, and a real
+# verdict must keep its code (cross-family review round 2: `--invalid 2>&-` returned 1).
+check "stderr closed + unexpected failure → still HARNESS_ERROR" 10 \
+  env TMPDIR="$TMPROOT/does-not-exist" FH_DRY_RUN=1 bash -c 'exec 2>&-; exec bash "$@"' _ "$GATE" "$SUBJECT" quick test
+# With stderr closed a PASS run either keeps 0 or fails closed with 10 — which one depends on whether some
+# ordinary `>&2` line on the way fails first (macOS bash 3.2 here: 0; the Linux CI runner: 10). What it must
+# never do is leave as 1/2/3, i.e. a verdict it did not reach. (First draft pinned 0 and CI showed 10.)
+env PATH="$FAKEBIN:/usr/bin:/bin" FH_BACKEND=claude FH_MODEL=fake FAKE_PAYLOAD="$CROSS_PASS" \
+    bash -c 'exec 2>&-; exec bash "$@"' _ "$GATE" "$SUBJECT" quick test >/dev/null 2>&1
+_sc=$?
+case "$_sc" in
+  0|10) printf 'PASS  %-58s (exit %s)\n' "stderr closed + PASS run → 0 or 10, never a lower verdict" "$_sc"; pass=$((pass + 1)) ;;
+  *)    printf 'FAIL  %-58s expected 0 or 10, got %s\n' "stderr closed + PASS run → 0 or 10, never a lower verdict" "$_sc"; fail=$((fail + 1)) ;;
+esac
+check "unbound variable (HOME unset, outside a checkout) → HARNESS_ERROR" 10 \
+  env -u HOME FH_DRY_RUN=1 bash -c 'cd "$1" && exec bash "$2" "$3" quick test' _ "$TMPROOT" "$PWD/$GATE" "$SUBJECT"
+
 echo
 echo "────────────────────────────────────────────────────────────────────"
 printf 'fh-gate regressions: %d passed, %d failed\n' "$pass" "$fail"
