@@ -650,15 +650,31 @@ grep -qE 'invalid=0' <<<"$out" && grep -qE 'mutants=2 killed=1 survived=1 ' <<<"
 
 echo "── R7: blind review of v7 (2026-10-08) — each lane red on fbfe773"
 # R7-1 — a probe that READ the subject while another probe's mutant was live, and locked it only after that
-#        probe had restored it, must not adopt the mutant. Deterministic: the subject is large enough that
-#        reading + enumerating it outlasts the 0.4 s after which «the other probe» puts the original back.
+#        probe had restored it, must not adopt the mutant. The restore must land after the probe READ the
+#        subject (first thing it does) and before it LOCKED it (after enumerating every mutant).
+#        🟥 2026-10-20: this used a fixed 0.4 s over a 6000-line subject and called it deterministic. It was
+#        not: time-to-lock measured 468 ms on macOS, 523 ms on ubuntu 24.04 and 288 ms on 26.04 (Python 3.14)
+#        — so on 26.04 the restore landed AFTER the lock, the probe refused for a different reason (the
+#        lane wrote the subject during the control run) and this lane went red on a correct probe. Now the
+#        delay is measured on this machine: one undisturbed run times its «subject:» header (printed after
+#        the lock), and the restore fires at half of that. Twice the lines makes that window seconds wide.
 printf '#!/usr/bin/env bash\n[ "$a" -ne 1 ] && echo x1\n' > r71.orig
-for k in $(seq 2 6000); do printf '[ "$a" -eq %d ] && echo x%d\n' "$k" "$k"; done >> r71.orig
-sed '2s/-ne 1/-eq 1/' r71.orig > r71.sh            # the other probe's mutant is live
+for k in $(seq 2 12000); do printf '[ "$a" -eq %d ] && echo x%d\n' "$k" "$k"; done >> r71.orig
 printf 'grep -q "exit 113" r71.sh && exit 1\nexit 0\n' > lane_r71.sh
-s71=$(date +%s%N)
+cp r71.orig r71.sh
+_ms(){ python3 -c 'import time; print(int(time.time() * 1000))'; }   # BSD date has no %N
+c71=$(_ms); h71=""
+while IFS= read -r l; do
+  case "$l" in subject:*) [ -n "$h71" ] || h71=$(( $(_ms) - c71 )) ;; esac
+done < <(python3 "$PROBE" r71.sh lane_r71.sh --max 1 --timeout 30 2>&1)
+cmp -s r71.sh r71.orig || cp r71.orig r71.sh
+# no header = the calibration run never reached the lock: the delay is unknown, so the lane fails below
+# (d71 stays 0 → the restore lands before the read → no refusal) rather than guessing a number.
+[ -n "$h71" ] || echo "  ⚠️  R7-1 calibration: no «subject:» header — time-to-lock unknown on this machine"
+d71=$(awk -v ms="${h71:-0}" 'BEGIN { printf "%.3f", ms / 2000 }')
+sed '2s/-ne 1/-eq 1/' r71.orig > r71.sh            # the other probe's mutant is live
 python3 "$PROBE" r71.sh lane_r71.sh --max 1 --timeout 30 > r71.out 2>&1 & pb=$!
-sleep 0.4; cat r71.orig > r71.sh; t71=$(date +%s%N)   # … and now it restores (same inode)
+sleep "$d71"; cat r71.orig > r71.sh                 # … and now it restores (same inode)
 wait "$pb"; rc=$?
 grep -q 'changed between reading it and locking it' r71.out && [ "$rc" -eq 2 ] && cmp -s r71.sh r71.orig && [ ! -e "$(bkpath r71.sh)" ] ; chk $? "R7-1 a subject that changed between read and lock → 2, the original stays (fbfe773: the stale mutant was backed up as «original» and written back)"
 cp r71.orig r71.sh
