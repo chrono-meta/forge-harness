@@ -18,7 +18,9 @@ on:
 
 jobs:
   validate:
-    runs-on: ubuntu-24.04  # pinned 2026-10-20: ubuntu-latest moved to 26.04 and the locale-invariance lane cannot measure there (rc=2), which turned main red
+    runs-on: ubuntu-24.04  # pinned 2026-10-20: ubuntu-latest moved to 26.04 and the locale-invariance lane could not measure there (rc=2), which turned main red
+    # The cause was uutils `wc` (no locale split); the suite now builds its control from a GNU wc when one exists
+    # (26.04 ships it as `gnuwc`). Keep this pin until newest-runner-canary.yml is green on the newest image — unpin from that run.
     # NO LOCALE PIN HERE — and its absence is a measured result, not an oversight.
     # The first CI run failed two ways (card-drift positives 0/4, ref-path 0 refs) and the
     # hypothesis was a Korean/emoji-vs-grep locale mismatch, so a run pinned LANG/LC_ALL=C.UTF-8

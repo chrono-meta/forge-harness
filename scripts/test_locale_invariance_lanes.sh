@@ -59,6 +59,25 @@ KO='성공 정의는 이것이고 절대 안 하는 것은 저것이다'
 
 # ── 계기 교정 ②: 이 기계에서 위험이 «실재하나» — wc -w 가 실제로 갈리는지 먼저 보인다.
 #    안 갈리면(예: POSIX 구현이 멀티바이트를 알아서 처리) 아래 레인들은 아무것도 못 가른다.
+#    🟥 2026-10-20: ubuntu 26.04 의 `wc` 는 uutils(Rust) 0.10 이라 POSIX 에서도 한글을 8 낱말로
+#    센다(8/8) — 그래서 이 스위트가 L0 에서 rc=2 로 끝났고, wc 와 무관한 레인(L9 브래킷 fail-OPEN ·
+#    L11–L14)까지 같이 안 돌았다(main 이 빨개진 원인, #928). 그 이미지에도 GNU 판이 `gnuwc` 로
+#    들어 있고 그건 갈린다(11/8). 되돌림 프로브가 재는 것은 «옛 훅이 쓰던 `wc -w` 가 로케일로
+#    갈리는 기계»이므로, 시스템 wc 가 안 갈릴 때만 **실제로 갈리는** 후보를 찾아 PATH 앞에 둔다.
+#    고르는 기준은 이름이 아니라 실측(같은 KO 를 두 로케일로 세어 달라야 채택). 하나도 없으면
+#    종전대로 rc=2 — 대조군 없는 초록은 측정이 아니다.
+_wc_splits(){ [ "$(LC_ALL=POSIX bash -c 'printf "%s" "$1" | "$0" -w | tr -d " "' "$1" "$KO")" \
+               != "$(LC_ALL="$UTF8" bash -c 'printf "%s" "$1" | "$0" -w | tr -d " "' "$1" "$KO")" ]; }
+if ! _wc_splits wc; then
+  for _wc in gnuwc gwc; do
+    _wcp=$(command -v "$_wc" 2>/dev/null) || continue
+    if _wc_splits "$_wcp"; then
+      mkdir -p "$T/wcbin" && ln -s "$_wcp" "$T/wcbin/wc" && export PATH="$T/wcbin:$PATH"
+      echo "  wc 계기: $_wcp (시스템 wc 는 로케일로 안 갈린다 — 갈리는 구현으로 대조군을 세운다)"
+      break
+    fi
+  done
+fi
 w_posix=$(LC_ALL=POSIX bash -c 'printf "%s" "$1" | wc -w | tr -d " "' _ "$KO")
 w_utf8=$(LC_ALL="$UTF8" bash -c 'printf "%s" "$1" | wc -w | tr -d " "' _ "$KO")
 _t "L0 계기 교정 — 이 기계에서 \`wc -w\` 가 로케일로 갈린다"

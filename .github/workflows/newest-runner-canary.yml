@@ -1,0 +1,53 @@
+name: Newest-runner canary
+
+# WHY THIS EXISTS (2026-10-20). GitHub moved `ubuntu-latest` to 26.04 overnight and main went red
+# with no change of ours: 26.04 ships uutils (Rust) coreutils, whose `wc -w` does not split by
+# locale, so the locale-invariance suite lost its control and returned rc=2 (UNMEASURED). The fix
+# was to pin every required workflow to ubuntu-24.04 (#928) — which also means the required checks
+# can no longer SEE the next image change. This workflow is the eye that pin closed: it runs the
+# same selfcheck on the newest image once a week, so an environment change shows up here as a
+# warning days before anyone unpins, instead of as a red main.
+#
+# 🟥 NOT a required check, and it must stay that way. A red here means «the newest image breaks
+#    something», which is information for a person, not a merge verdict. Making it required would
+#    re-create exactly the failure the pin fixed (main red for an environment change).
+# 🟥 A green here is a measurement of the newest image AT THAT RUN, not a promise it stays green.
+#    Unpin only after reading the run that names the image (the "Runner image" step prints it).
+
+on:
+  schedule:
+    - cron: '17 3 * * 1'   # weekly, Monday 03:17 UTC
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/newest-runner-canary.yml'   # a PR that edits this file measures it once
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest   # deliberately unpinned — that is the whole point of this job
+    steps:
+      - uses: actions/checkout@v4
+      - name: Runner image (what this run actually measured)
+        run: |
+          echo "ImageOS=${ImageOS:-?} ImageVersion=${ImageVersion:-?}"
+          grep -E '^(VERSION|ID)=' /etc/os-release
+          wc --version | head -1
+          grep --version | head -1
+      - name: Install zsh (second shell arm for the psa lanes — same as validate.yml)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zsh
+          zsh --version
+      - name: Lane-suite runtime prerequisites (same as validate.yml)
+        run: |
+          if python3 -c "import yaml" 2>/dev/null; then
+            echo "pyyaml already available"
+          else
+            python3 -m pip install --quiet --disable-pip-version-check 'pyyaml==6.0.2' \
+              || python3 -m pip install --quiet --disable-pip-version-check --break-system-packages 'pyyaml==6.0.2'
+          fi
+          python3 -c "import yaml; print('pyyaml', yaml.__version__)"
+          node -v
+      - name: Selfcheck on the newest image
+        run: bash scripts/selfcheck.sh
