@@ -297,3 +297,15 @@ session dispatched 20+ subagents and logged none of them, in the same session th
 log file from a branch queued for deletion. The hook only tallies; it never writes an entry, because a
 fabricated `outcome`/`evidence` would poison the promotion gate worse than a missing one.
 
+
+## §Edit-Handback-Receipt — an agent's «I changed X» is closed by the governor's own receipt (2026-10-20)
+
+CLAUDE.md §Agent Dispatch says a sidecar's findings stay evidence until the governor closes each against a mechanical anchor.
+For **edit work** (an agent that commits on a branch or in a worktree) there was no anchor, so the close step read the agent's
+own summary («committed 7f2acd2, 11 files, tests green»). Before calling dispatched edit work done, run
+`python3 scripts/dispatch_receipt.py <worktree> <base> --claimed <the files the agent named>` from the governor's shell and
+quote its output: head sha, branch, commits, `diff --stat`, uncommitted count and a hash per changed file are what the
+repository says. rc=1 means the claim and the change differ (named both ways) or the work is not committed — read it as
+«not closed», never as a small discrepancy. «0 files» with a non-empty claim is rc=1, not a pass. The receipt says what
+changed, not whether it is right: tests and review still decide that. Outside anchors: `arXiv:2610.15459`, «report ≠
+change» (frontier digest 2026-10-20). Lanes: `scripts/test_dispatch_receipt_lanes.sh` (wired in selfcheck).
