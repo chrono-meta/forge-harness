@@ -17,7 +17,7 @@
 🟥 구조 술어만 쓴다 — FH 고유 어휘(마커·4축·영혼)를 넣지 않는다. 그래야 남의 레포에도 돈다.
 """
 from __future__ import annotations
-import os, re, sys, json, argparse
+import os, re, sys, json, argparse, subprocess
 from typing import Dict, List, Tuple
 
 DOC_EXT = {".md"}
@@ -56,14 +56,53 @@ def _inside(root: str, path: str) -> bool:
     return c == r or c.startswith(r + os.sep)
 
 
+_TRACKED_CACHE: dict = {}
+_INVENTORY_FAILED = "INVENTORY-FAILED"
+
+
+def _tracked(root: str):
+    """git 저장소면 추적된 파일의 실경로 집합(frozenset), git 밖이면 None, git 인데 목록을 못 얻으면 _INVENTORY_FAILED.
+    🟥 2026-10-20: 이름 대체 찾기가 os.walk 로 트리 «전체» 를 훑어서, 저자 머신의 미추적 실험 폴더(tracks/_meta/claude200 안 복제본
+       10개)가 known-pair 대상의 이름을 겹치게 만들었다 → 보정이 «대상이 실재하지 않는다» 로 거짓 실패(깨끗한 복제본은 통과).
+       반대로 미추적 파일 하나가 사라진 대상을 «있다» 로 만들 수도 있다(되돌림 레인 L9 B 에서 실측).
+    🟥 codex 1라운드: git 이 실패하면 «git 밖» 으로 떨어져 옛 동작이 돌아오면 안 된다 — «git 밖» 은 rev-parse 가 그렇다고 말할 때만,
+       그 밖의 실패는 _INVENTORY_FAILED(resolve 가 아무것도 못 찾는 닫힌 쪽). 서브모듈 안 파일도 포함(--recurse-submodules),
+       충돌 단계 중복은 한 번만(--deduplicate), 실경로 집합은 루트마다 한 번만 계산."""
+    if root in _TRACKED_CACHE:
+        return _TRACKED_CACHE[root]
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    out = _INVENTORY_FAILED
+    try:
+        top = subprocess.run(["git", "-C", root, "rev-parse", "--show-toplevel"], capture_output=True, env=env, timeout=10)
+        if top.returncode != 0:
+            msg = top.stderr.decode("utf-8", "replace").lower()
+            out = None if "not a git repository" in msg else _INVENTORY_FAILED
+        else:
+            t = top.stdout.decode("utf-8", "surrogateescape").strip()
+            r = subprocess.run(["git", "-C", t, "-c", "core.fsmonitor=false", "ls-files", "-z", "--full-name",
+                                "--recurse-submodules", "--deduplicate"], capture_output=True, env=env, timeout=30)
+            if r.returncode == 0:
+                out = frozenset(os.path.realpath(os.path.join(t, x.decode("utf-8", "surrogateescape")))
+                                for x in r.stdout.split(b"\0") if x)
+    except (OSError, subprocess.SubprocessError):
+        out = _INVENTORY_FAILED
+    _TRACKED_CACHE[root] = out
+    return out
+
+
 def resolve(root: str, p: str) -> str | None:
     # `..` 를 담은 참조는 «해석하기 전에» 거절한다 — 해석 후 판정은 심링크 한 겹에 뚫린다.
     cand = os.path.join(root, p)
-    if os.path.isfile(cand) and not os.path.islink(cand) and _inside(root, cand):
+    tracked = _tracked(root)
+    if tracked == _INVENTORY_FAILED:
+        return None                                             # git 인데 목록을 못 얻었다 — 못 찾은 것으로(닫힌 쪽), 옛 전체 훑기로 안 떨어진다
+    if os.path.isfile(cand) and not os.path.islink(cand) and _inside(root, cand) \
+            and (tracked is None or os.path.realpath(cand) in tracked):
         return cand
     base = os.path.basename(p)
-    hits = [f for f in walk(root)
-            if os.path.basename(f) == base and not os.path.islink(f) and _inside(root, f)]
+    pool = sorted(tracked) if tracked is not None else walk(root)   # git 이면 추적 파일만, 아니면 종전처럼 트리 전체
+    hits = [f for f in pool
+            if os.path.basename(f) == base and os.path.isfile(f) and not os.path.islink(f) and _inside(root, f)]
     return hits[0] if len(hits) == 1 else None
 
 # 실행 증거: 인터프리터 뒤 또는 명령 위치. 주석줄과 grep 패턴 안은 제외.
