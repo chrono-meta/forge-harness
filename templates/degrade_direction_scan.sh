@@ -611,7 +611,9 @@ for f in "${FILES[@]}"; do
     _s7_lines=$(grep -nE '(^|[;{&|])[[:space:]]*set[[:space:]]+(-[A-Za-z]*e[A-Za-z]*|-o[[:space:]]+errexit)([[:space:];]|$)' "$f" 2>/dev/null); _s7_r1=$?
     _s7_set=$(printf '%s\n' "$_s7_lines" | grep -vE '^[0-9]+:[[:space:]]*#' | grep -vE '#[[:space:]]*noqa[:[:space:]]*degrade' | sed -n 1p)
     _s7_r2=$(_s7_rc -qE '^[[:space:]]*#.*\b[Ee]xit([[:space:]]+codes?|[[:space:]]+status(es)?)?[[:space:]]*:')
-    _s7_r3=$(_s7_rc -qiE '^[[:space:]]*#.*\b[0-9]+\b.*(harness[ _-]?error|internal[ _-]?error|tool[ _-]?error)')
+    _s7_r3=$(_s7_rc -qiE '^[[:space:]]*#.*\b[0-9]+([[:space:]]*(—|–|-|=|:|\))[[:space:]]*.{0,40}|[[:space:]]+)(harness|internal|tool)[ _-]?error')
+    #   ^ a CONTRACT ENTRY (`10 — Harness error`, `10 harness error`), not prose that happens to hold a
+    #     number and the word (an old test file's comment «the count is 0 … HARNESS_ERROR» was flagged).
     _s7_r4=$(_s7_rc -qE '^[[:space:]]*[A-Z_]*(HARNESS|INTERNAL|TOOL)_?ERR(OR)?[A-Z_]*=[0-9]+')
     # protecting trap: an ACTIVE (non-comment) `trap … ERR` line that exits, or that names a handler
     # function whose body (next 12 lines) exits.
