@@ -119,6 +119,36 @@ else
   no "L7 되돌림 전이" "주입rc=$INJ 복원rc=$RST 잔존=$LEFT"
 fi
 
+# L9 — 2026-10-20: 이름 대체 찾기는 git 이면 «추적된» 파일만 본다. 미추적 사본(실험 복제본)이 이름을 겹치게 해 보정이 거짓 실패하던 것.
+G8="$TMP/l8repo"; mkdir -p "$G8/templates" "$G8/junk/a" "$G8/junk/b" "$TMP/l8plain"
+git -C "$G8" init -q && echo t > "$G8/templates/known.sh" && git -C "$G8" add templates/known.sh \
+  && git -C "$G8" -c user.email=t@t -c user.name=t -c commit.gpgsign=false commit -qm k
+cp "$G8/templates/known.sh" "$G8/junk/a/known.sh"; cp "$G8/templates/known.sh" "$G8/junk/b/known.sh"; echo u > "$G8/junk/a/only_untracked.sh"
+echo p > "$TMP/l8plain/plain.sh"
+L8=$(python3 - "$SCAN" "$G8" "$TMP/l8plain" <<'PY8'
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("s", sys.argv[1]); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+g, plain = sys.argv[2], sys.argv[3]
+a = m.resolve(g, "scripts/known.sh")
+b = m.resolve(g, "scripts/only_untracked.sh")
+c = m.resolve(plain, "x/plain.sh")
+print("A=%s B=%s C=%s" % (bool(a and a.endswith("templates/known.sh")), b is None, bool(c and c.endswith("plain.sh"))))
+PY8
+)
+if [ "$L8" = "A=True B=True C=True" ]; then ok "L9 이름 찾기: 미추적 사본 둘이 있어도 추적된 하나 · 미추적에만 있으면 없음 · git 밖은 종전대로"
+else no "L9 이름 찾기 (추적 파일 기준)" "$L8"; fi
+
+# L9b — codex R1: git 이 «git 밖» 이 아닌 이유로 실패하면 옛 전체 훑기로 돌아가지 않고 못 찾은 것으로 닫힌다
+mkdir -p "$TMP/fakegit"; printf '#!/bin/sh\necho "fatal: index file corrupt" >&2\nexit 128\n' > "$TMP/fakegit/git"; chmod +x "$TMP/fakegit/git"
+L9B=$(PATH="$TMP/fakegit:/usr/bin:/bin" python3 - "$SCAN" "$G8" <<'PY9'
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("s", sys.argv[1]); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+print("FAILED=%s R=%s" % (m._tracked(sys.argv[2]) == m._INVENTORY_FAILED, m.resolve(sys.argv[2], "templates/known.sh")))
+PY9
+)
+if [ "$L9B" = "FAILED=True R=None" ]; then ok "L9b git 목록 실패 → 못 찾음(닫힌 쪽) · 옛 전체 훑기로 안 떨어진다"
+else no "L9b git 목록 실패의 방향" "$L9B"; fi
+
 echo "── PASS=$PASS FAIL=$FAIL ──"
 [ "$FAIL" -eq 0 ] || { echo "FAILED=1"; exit 1; }
 echo "FAILED=0"
