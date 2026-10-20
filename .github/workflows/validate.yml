@@ -18,7 +18,7 @@ on:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # pinned 2026-10-20: ubuntu-latest moved to 26.04 and the locale-invariance lane cannot measure there (rc=2), which turned main red
     # NO LOCALE PIN HERE — and its absence is a measured result, not an oversight.
     # The first CI run failed two ways (card-drift positives 0/4, ref-path 0 refs) and the
     # hypothesis was a Korean/emoji-vs-grep locale mismatch, so a run pinned LANG/LC_ALL=C.UTF-8

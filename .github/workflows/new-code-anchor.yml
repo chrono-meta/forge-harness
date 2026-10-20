@@ -32,7 +32,7 @@ on:
 
 jobs:
   new-code-anchor:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       # fetch-depth: 0 is load-bearing, not hygiene. The default shallow checkout has no
       # merge-base with the base ref, and the checker's response to that is exit 10 (UNMEASURED),
