@@ -269,9 +269,16 @@ check "unexpected failure via npm bin → HARNESS_ERROR, not PENDING" 10 \
 # verdict must keep its code (cross-family review round 2: `--invalid 2>&-` returned 1).
 check "stderr closed + unexpected failure → still HARNESS_ERROR" 10 \
   env TMPDIR="$TMPROOT/does-not-exist" FH_DRY_RUN=1 bash -c 'exec 2>&-; exec bash "$@"' _ "$GATE" "$SUBJECT" quick test
-check "stderr closed + PASS verdict → still PASS (0)" 0 \
-  env PATH="$FAKEBIN:/usr/bin:/bin" FH_BACKEND=claude FH_MODEL=fake FAKE_PAYLOAD="$CROSS_PASS" \
-      bash -c 'exec 2>&-; exec bash "$@"' _ "$GATE" "$SUBJECT" quick test
+# With stderr closed a PASS run either keeps 0 or fails closed with 10 — which one depends on whether some
+# ordinary `>&2` line on the way fails first (macOS bash 3.2 here: 0; the Linux CI runner: 10). What it must
+# never do is leave as 1/2/3, i.e. a verdict it did not reach. (First draft pinned 0 and CI showed 10.)
+env PATH="$FAKEBIN:/usr/bin:/bin" FH_BACKEND=claude FH_MODEL=fake FAKE_PAYLOAD="$CROSS_PASS" \
+    bash -c 'exec 2>&-; exec bash "$@"' _ "$GATE" "$SUBJECT" quick test >/dev/null 2>&1
+_sc=$?
+case "$_sc" in
+  0|10) printf 'PASS  %-58s (exit %s)\n' "stderr closed + PASS run → 0 or 10, never a lower verdict" "$_sc"; pass=$((pass + 1)) ;;
+  *)    printf 'FAIL  %-58s expected 0 or 10, got %s\n' "stderr closed + PASS run → 0 or 10, never a lower verdict" "$_sc"; fail=$((fail + 1)) ;;
+esac
 check "unbound variable (HOME unset, outside a checkout) → HARNESS_ERROR" 10 \
   env -u HOME FH_DRY_RUN=1 bash -c 'cd "$1" && exec bash "$2" "$3" quick test' _ "$TMPROOT" "$PWD/$GATE" "$SUBJECT"
 
