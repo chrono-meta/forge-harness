@@ -39,7 +39,7 @@ permissions:
 
 jobs:
   ratchet:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       # 🟥 fetch-depth: 0 IS LOAD-BEARING, NOT A CONVENIENCE. The shrink-only half of the ratchet
       # diffs the `baseline:` section against the base commit; the default depth-1 checkout has no
