@@ -835,5 +835,86 @@ else
 fi
 rm -rf "$_s1bc"
 
+# ── S7: `set -e` under an exit contract with its own error code, no ERR trap (fh-gate.sh, 2026-10-20) ──
+# POS = the pre-#927 shape. CTL1 = same file with the ERR trap. CTL2 = a contract with no separate error
+# code ("0 pass / 1 fail" — an unexpected 1 already points the safe way). POS must fire for the two
+# zeros to be readable.
+_s7=$(mktemp -d "${TMPDIR:-/tmp}/s7_XXXXXX")
+cat > "$_s7/pos.sh" <<'P1'
+#!/usr/bin/env bash
+# Exit codes:
+#   0  — PASS
+#   1  — PENDING (proceed with awareness)
+#   10 — Harness error
+set -euo pipefail
+F=$(mktemp "$TMPDIR/x_XXXXXX")
+echo "FH_GATE_VERDICT: PASS"; exit 0
+P1
+cat > "$_s7/ctl1.sh" <<'P2'
+#!/usr/bin/env bash
+# Exit codes:
+#   0  — PASS
+#   1  — PENDING (proceed with awareness)
+#   10 — Harness error
+set -euo pipefail
+trap 'exit 10' ERR
+F=$(mktemp "$TMPDIR/x_XXXXXX")
+echo "FH_GATE_VERDICT: PASS"; exit 0
+P2
+cat > "$_s7/ctl2.sh" <<'P3'
+#!/usr/bin/env bash
+# Exit:   0 = all assertions pass; 1 = a regression.
+set -euo pipefail
+run_assertions
+P3
+# Round-1 cross-family additions: a trap that does not exit is no guard (POS2); `set -o errexit` with an
+# EXIT_*ERROR constant and no comment header is the same contract (POS3); a named handler that exits is a
+# guard (CTL3).
+cat > "$_s7/pos2.sh" <<'P4'
+#!/usr/bin/env bash
+# Exit codes: 0 PASS · 1 PENDING · 10 harness error
+set -euo pipefail
+cleanup() { rm -f "$F"; }
+trap cleanup ERR
+F=$(mktemp "$TMPDIR/x_XXXXXX")
+P4
+cat > "$_s7/pos3.sh" <<'P5'
+#!/usr/bin/env bash
+set -o errexit
+EXIT_PASS=0
+EXIT_HARNESS_ERROR=10
+F=$(mktemp "$TMPDIR/x_XXXXXX")
+P5
+cat > "$_s7/ctl3.sh" <<'P6'
+#!/usr/bin/env bash
+# Exit codes: 0 PASS · 1 PENDING · 10 harness error
+set -euo pipefail
+on_err() {
+  echo "failed" >&2
+  exit 10
+}
+trap on_err ERR
+F=$(mktemp "$TMPDIR/x_XXXXXX")
+P6
+_s7n(){ bash "$SCAN" "$1" 2>/dev/null | grep -c 'S7:' || true; }
+_p=$(_s7n "$_s7/pos.sh"); _c1=$(_s7n "$_s7/ctl1.sh"); _c2=$(_s7n "$_s7/ctl2.sh")
+_p2=$(_s7n "$_s7/pos2.sh"); _p3=$(_s7n "$_s7/pos3.sh"); _c3=$(_s7n "$_s7/ctl3.sh")
+if [ "$_p2" -eq 1 ]; then ok "S7 POS2: a trap that does not exit (trap cleanup ERR) is not a guard"
+else bad "S7 POS2: trap cleanup ERR suppressed the finding ($_p2)"; fi
+if [ "$_p3" -eq 1 ]; then ok "S7 POS3: set -o errexit + EXIT_HARNESS_ERROR constant (no comment header) is flagged"
+else bad "S7 POS3: errexit/constant spelling missed ($_p3)"; fi
+if [ "$_c3" -eq 0 ]; then ok "S7 CTL3: a named ERR handler that exits is a guard"
+else bad "S7 CTL3: flagged a file whose ERR handler exits ($_c3)"; fi
+if [ "$_p" -eq 1 ]; then
+  ok "S7 POS: set -e + own error code + no ERR trap is flagged once ($_p)"
+  if [ "$_c1" -eq 0 ]; then ok "S7 CTL1: the same file with an ERR trap is silent"
+  else bad "S7 CTL1: flagged a file that has the ERR trap ($_c1)"; fi
+  if [ "$_c2" -eq 0 ]; then ok "S7 CTL2: a pass/fail-only contract is silent"
+  else bad "S7 CTL2: flagged a contract without a separate error code ($_c2)"; fi
+else
+  bad "S7 POS: expected exactly 1 hit, got $_p — CTL results UNINTERPRETABLE"
+fi
+rm -rf "$_s7"
+
 echo "degrade-scan shell probes: $pass passed, $fail failed"
 
