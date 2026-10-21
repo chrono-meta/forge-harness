@@ -361,7 +361,10 @@ FH_BACKEND=cross npx --package @chrono-meta/fh-gate fh-gate   # BOTH families, f
 Same governance prompt for every runtime. `auto` is fallback *selection* — it runs **one** leg; `cross`
 runs both families and unions their findings (a finding only one family saw is still a finding), costs
 ~2x, and is for load-bearing verdict / gate / irreversible-surface changes, not a default. The output
-always declares which legs actually ran, so a single-family result never reads as cross-checked.
+always declares which legs actually ran, so a single-family result never reads as cross-checked. If only
+one family could run, a PASS or PENDING from it comes back as **ESCALATE (exit 3)** with
+`FH_GATE_ESCALATE_REASON: cross-degraded …`; set `FH_GATE_CROSS_ALLOW_SINGLE=1` to accept a single family
+(the output then carries `FH_GATE_CROSS_OVERRIDE:`).
 `fh-run` (one skill or agent directly), `fh-goal` and `fh-codex-doctor` (adapter drift check) ship
 alongside it — flags and the full env table in [`CHEATSHEET.md`](../CHEATSHEET.md), spec in
 [`fh_integration_contract.md`](../knowledge/shared/harness-core/fh_integration_contract.md).
