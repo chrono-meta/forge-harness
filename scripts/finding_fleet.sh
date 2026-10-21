@@ -142,7 +142,7 @@ with open(sys.argv[2], "w", encoding="utf-8") as w:
   eval "$cmd" < "$pf" > "$raw" 2>"$out/err2_${fam}_${role}.txt"
   local rc=$?
   FAM="$fam" ROLE="$role" RC="$rc" /usr/bin/python3 - "$raw" "$out/part2_${fam}_${role}.jsonl" "$out/findings_r1.jsonl" <<'PYR2'
-import json, os, sys
+import json, os, re, sys
 own_r1 = {}   # own round-1 id -> its trusted member_id alias (or None)
 try:
     for _l in open(sys.argv[3], encoding="utf-8"):
@@ -186,9 +186,21 @@ with open(dst, "w", encoding="utf-8") as w:
         line = line.strip().lstrip("\ufeff")
         if line.startswith("DROPPED:"):
             _body = line[len("DROPPED:"):]
+            # 🟥 A DROPPED line withdraws ONE finding: the one its body STARTS with (id or title, the longest that
+            #    fits, followed by a non-[A-Za-z0-9_-] char or the end). Searching the whole line used to withdraw
+            #    every finding merely named in it — «codex-logic-10» took «codex-logic-1», title «Q10» took «Q1»,
+            #    «… Race condition remains valid» took «Race condition» — and the silently omitted finding then
+            #    counted as accounted for, so no fallback ran (L125–L127, 2026-10-22, codex R1). An unrecognised
+            #    withdrawal falls back to round 1 (the safe side). ASCII boundary so «codex-logic-1은» still counts.
+            _head = _body.strip().lstrip("\"'`*#([ ").strip()
+            _best = None
             for _id, _t in own_r1_titles.items():
-                if _id in _body or (_t and _t in _body):
-                    withdrawn_ids.add(_id)
+                for _ref in (_id, _t):
+                    if _ref and _head.startswith(_ref) and not re.match(r"[A-Za-z0-9_-]", _head[len(_ref):len(_ref) + 1]):
+                        if _best is None or len(_ref) > len(_best[1]):
+                            _best = (_id, _ref)
+            if _best:
+                withdrawn_ids.add(_best[0])
             # 🟥 saw_bytes 를 여기서 «올리지 않는다». DROPPED 는 2차 계약이 요구한 출력이므로
             #    「계약 밖 응답」의 증거가 될 수 없다 (cross-family #5, codex 2026-09-10).
             # 🟥 "DROPPED: none" 은 삭제가 아니다. 세면 «숨은 수확 손실» 계측이 그 자리에서 거짓이 된다.
