@@ -2006,6 +2006,89 @@ else
   no "L124 빈 1차 fail-open" "empty_rc=$R124 (3 기대) '$(printf '%s' "$O124" | /usr/bin/grep -o 'status=[A-Z_0-9]*' | head -1)' ctrl_rc=$R124c (0 기대)"
 fi
 
+# ── L125/L126 🟥 2차 철회 대조가 «부분 문자열» 이라 남의 발견을 삼키던 구멍 (2026-10-22, 호출지점 재고 조사) ──
+# 기전: `if _id in _body` — `DROPPED: codex-logic-10` 이 `codex-logic-1` 도 «철회됨» 으로 세서, 2차에서 조용히
+# 빠진 1번이 «설명됨» 이 되고 폴백도 안 돌았다(무음 삭제). 제목도 같은 부류(`Q1` ⊂ `Q10`).
+# 픽스처는 뚫리는 표기 그대로: 1차 10건 → 2차가 2~9 를 KEEP · 10 을 DROPPED · 1 은 말없이 뺀다.
+cat > "$D/x_ten.sh" <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+row(){ printf '{"id":"codex-logic-%s","title":"%s","file":"x_t.py","line":%s,"severity":"B","category":"s","detail":"x","defeater":"y","confidence":0.6}\n' "$1" "$2" "$1"; }
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*)
+    for i in 2 3 4 5 6 7 8 9; do row $i "kept-$i"; done
+    if [ -n "$TEN_DROP_BOTH" ]; then echo 'DROPPED: codex-logic-1 — re-read; not a defect'; fi
+    echo 'DROPPED: codex-logic-10 — re-read; not a defect' ;;
+  *) for i in 1 2 3 4 5 6 7 8 9 10; do printf '{"title":"r1-%s","file":"x_t.py","line":%s,"severity":"B","category":"s","detail":"x","defeater":"y","confidence":0.6}\n' "$i" "$i"; done ;;
+esac
+EOS
+cat > "$D/x_qtitle.sh" <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) echo 'DROPPED: Q10 — re-read; not a defect' ;;
+  *) echo '{"title":"Q1","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}'
+     echo '{"title":"Q10","file":"x_t.py","line":2,"severity":"B","category":"d","detail":"x","defeater":"y","confidence":0.7}' ;;
+esac
+EOS
+chmod +x "$D/x_ten.sh" "$D/x_qtitle.sh"
+printf 'codex|logic|sh %s\n' "$D/x_ten.sh" > "$D/f125.tbl"
+O125=$(bash "$FL" "$D/x_t.py" --out "$D/f125" --fleet "$D/f125.tbl" --round2 2>&1)
+# 컨트롤: 1 과 10 을 둘 다 «명시적으로» 내리면 폴백 없이 철회된다 — 경계 비교가 정당한 철회까지 막지 않는다
+O125c=$(TEN_DROP_BOTH=1 bash "$FL" "$D/x_t.py" --out "$D/f125c" --fleet "$D/f125.tbl" --round2 2>&1)
+if printf '%s\n' "$O125" | /usr/bin/grep -q 'unaccounted_r1=codex-logic-1 ' \
+   && /usr/bin/grep -q '"r1-1"' "$D/f125/findings.jsonl" 2>/dev/null \
+   && ! printf '%s\n' "$O125c" | /usr/bin/grep -q 'unaccounted_r1=' \
+   && ! /usr/bin/grep -q '"r1-1"' "$D/f125c/findings.jsonl" 2>/dev/null \
+   && /usr/bin/grep -q '"kept-2"' "$D/f125c/findings.jsonl" 2>/dev/null; then
+  ok "L125 🟥 «DROPPED: codex-logic-10» 은 codex-logic-1 을 철회하지 않는다(말없이 빠진 1 → 폴백) · 컨트롤: 둘 다 명시 철회 → 폴백 없음"
+else
+  no "L125 id 부분일치 철회" "$(printf '%s\n' "$O125" | /usr/bin/grep -E 'unaccounted|MEMBER2' | head -2) | ctrl: $(printf '%s\n' "$O125c" | /usr/bin/grep -E 'unaccounted|MEMBER2' | head -2)"
+fi
+printf 'codex|logic|sh %s\n' "$D/x_qtitle.sh" > "$D/f126.tbl"
+O126=$(bash "$FL" "$D/x_t.py" --out "$D/f126" --fleet "$D/f126.tbl" --round2 2>&1)
+if printf '%s\n' "$O126" | /usr/bin/grep -q 'unaccounted_r1=' \
+   && /usr/bin/grep -q '"Q1"' "$D/f126/findings.jsonl" 2>/dev/null; then
+  ok "L126 🟥 제목 «Q10» 철회가 제목 «Q1» 을 삼키지 않는다(Q1 은 설명 안 됨 → 폴백, 1차 그대로)"
+else
+  no "L126 제목 부분일치 철회" "$(printf '%s\n' "$O126" | /usr/bin/grep -E 'unaccounted|MEMBER2' | head -2)"
+fi
+
+# ── L127 🟥 codex R1 (같은 날) — 줄 «어디서든» 찾으면 이름만 «언급된» 발견도 철회로 셌다 ──
+# 처방 = DROPPED 줄은 «맨 앞에 오는» 한 발견만 철회한다(가장 긴 일치). 네 형태, 앞 셋은 말없이 빠진 A 가 살아 폴백해야,
+# 넷째(한국어 조사)는 정당한 철회로 인정돼야 한다 — 과차단 컨트롤.
+cat > "$D/x_two.sh" <<'EOS'
+#!/bin/sh
+IN=$(cat); [ -n "$IN" ] || IN="$*"
+case "$IN" in
+  *"YOUR OWN ROUND-1 FINDINGS"*) printf '%s\n' "$TWO_DROP" ;;
+  *) printf '{"title":"%s","file":"x_t.py","line":1,"severity":"A","category":"d","detail":"x","defeater":"y","confidence":0.7}\n' "$TWO_A"
+     printf '{"title":"%s","file":"x_t.py","line":2,"severity":"B","category":"d","detail":"x","defeater":"y","confidence":0.7}\n' "$TWO_B" ;;
+esac
+EOS
+chmod +x "$D/x_two.sh"
+printf 'codex|logic|sh %s\n' "$D/x_two.sh" > "$D/f127.tbl"
+r127=""
+t127(){ # $1=label $2=A title $3=B title $4=DROPPED line $5=expect (fallback|withdrawn)
+  _o=$(TWO_A="$2" TWO_B="$3" TWO_DROP="$4" bash "$FL" "$D/x_t.py" --out "$D/f127_$1" --fleet "$D/f127.tbl" --round2 2>&1)
+  if [ "$5" = fallback ]; then
+    printf '%s\n' "$_o" | /usr/bin/grep -q 'unaccounted_r1=' && /usr/bin/grep -qF "\"title\": \"$2\"" "$D/f127_$1/findings.jsonl" 2>/dev/null \
+      || /usr/bin/grep -qF "\"title\":\"$2\"" "$D/f127_$1/findings.jsonl" 2>/dev/null || r127="$r127 $1"
+  else
+    printf '%s\n' "$_o" | /usr/bin/grep -q 'status=ZERO_SELFDROPPED' || r127="$r127 $1"
+  fi
+}
+t127 punct   'Race'         'Race-condition' 'DROPPED: Race-condition — invalid' fallback
+t127 inid    'logic'        'Other'          'DROPPED: codex-logic-2 — invalid' fallback
+t127 reason  'Race condition' 'Other'        'DROPPED: codex-logic-2 — duplicate; Race condition remains valid' fallback
+# 컨트롤: 두 줄이 각자 «맨 앞» 에 한 발견씩 — 한국어 조사가 붙어도 정당한 철회로 셈 → 전원 철회
+t127 korean  '경쟁 조건'     'Other'          "$(printf 'DROPPED: 경쟁 조건은 오탐\nDROPPED: codex-logic-2은 오탐')" withdrawn
+if [ -z "$r127" ]; then
+  ok "L127 🟥 DROPPED 는 맨 앞 한 발견만 철회(구두점 붙은 긴 제목 · id 속 제목 · 사유 속 언급 → 폴백) · 컨트롤: 한국어 조사 붙은 정당 철회는 인정"
+else
+  no "L127 맨 앞 한 발견 철회" "failed:$r127"
+fi
+
 /bin/rm -rf "$D"
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ] && { echo "FAILED=0"; exit 0; } || { echo "FAILED=1"; exit 1; }
