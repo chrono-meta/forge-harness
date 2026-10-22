@@ -86,3 +86,28 @@ jobs:
           PV_GOT: ${{ steps.verify.outputs.got }}
         run: |
           printf '::warning::published OK (npm publish returned 0); the registry read replica has not shown %s yet - got %s. This is propagation lag, NOT a publish failure. Do NOT hand-publish; re-check with: npm view @chrono-meta/fh-gate version\n' "$PV_WANT" "$PV_GOT"
+
+  # 🟥 2026-10-22 운영자 «fh도 명시로 릴리즈올린지 2주가 넘게 지났더라 · 업데이트는 했음에도»: 위 job 은 npm 만 발행하고
+  #    GitHub 릴리스 페이지는 사람이 따로 만들어야 했다 — npm 은 v3.28.0 까지 나갔는데 페이지는 v3.24.0(09-30)에 멈춰 있었다.
+  #    발행이 성공한 뒤에만, 쓰기 권한을 이 job 에만 주고(npm 발행 단계는 계속 읽기 전용), CHANGELOG 의 그 버전 절로 페이지를 만든다.
+  #    이미 있으면 손대지 않는다. 절이 없으면 경고만 — 발행은 끝났고, 빨간 잡은 «손 발행» 을 부른다(위 verify 주석과 같은 이유).
+  release-page:
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: GitHub release page from the CHANGELOG section
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          v="${TAG#v}"
+          if gh release view "$TAG" >/dev/null 2>&1; then echo "release $TAG already exists - nothing to do"; exit 0; fi
+          awk -v v="$v" 'index($0,"### ["v"]")==1{f=1;sub(/^### \[[0-9.]+\] — [0-9-]+ — /,"");print > "'"$RUNNER_TEMP"'/title.txt";next} f&&/^### \[/{exit} f{print}' plugins/fh-meta/CHANGELOG.md > "$RUNNER_TEMP/body.md"
+          if [ ! -s "$RUNNER_TEMP/title.txt" ] || ! grep -q '[^[:space:]]' "$RUNNER_TEMP/body.md"; then
+            echo "::warning::no CHANGELOG section for $v in plugins/fh-meta/CHANGELOG.md - release page not created (npm publish is unaffected)"; exit 0
+          fi
+          printf '\n— CHANGELOG: plugins/fh-meta/CHANGELOG.md · npm: @chrono-meta/fh-gate@%s\n' "$v" >> "$RUNNER_TEMP/body.md"
+          gh release create "$TAG" --verify-tag --title "$TAG — $(cat "$RUNNER_TEMP/title.txt")" --notes-file "$RUNNER_TEMP/body.md"
