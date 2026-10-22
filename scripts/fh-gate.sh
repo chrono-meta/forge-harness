@@ -184,7 +184,8 @@ esac
 # `cross` is a REQUEST, not a guarantee — a machine may have only one family installed. When a leg is
 # unavailable or errors, this degrades to the surviving leg and SAYS SO, loudly, in both the human and
 # the machine-readable output. A single-leg result that reads as if it were cross-checked is the same
-# class of defect as a check that did not run reading as PASS.
+# class of defect as a check that did not run reading as PASS. Since 2026-10-22 the EXIT CODE says so too:
+# a single-leg PASS/PENDING leaves as ESCALATE (3) unless FH_GATE_CROSS_ALLOW_SINGLE=1 (see below).
 #
 # COST: cross is ~2x. It is deliberately NOT a default — [[feedback_decorrelation_not_fanout_cost_boundary]]
 # says match the parallelisation axis to the failure mode rather than multiply. Callers should request
@@ -229,23 +230,40 @@ $(printf '%s' "$_legout" | sed -n '/^---$/,$p')"
     exit $EXIT_HARNESS_ERROR
   fi
 
+  # 🟥 A single-leg PASS/PENDING used to leave with 0/1 — the codes a two-family run gives — so a caller reading
+  # only the exit code could not tell «cross-checked» from «one family alone» (2026-10-22, LLM call-site inventory).
+  # Cross was requested and could not be provided: that goes to a person (ESCALATE), unless the caller says
+  # exactly FH_GATE_CROSS_ALLOW_SINGLE=1, which is echoed into the output. BLOCKED/ESCALATE already stop.
+  _CROSS_FINAL="$_CROSS_WORST"; _CROSS_OVERRIDE=""
+  if [ "$_CROSS_RAN" -lt 2 ] && [ "$(_sev_rank "$_CROSS_WORST")" -lt "$(_sev_rank ESCALATE)" ]; then
+    if [ "${FH_GATE_CROSS_ALLOW_SINGLE:-}" = "1" ]; then
+      _CROSS_OVERRIDE=1
+    else
+      _CROSS_FINAL="ESCALATE"
+    fi
+  fi
   printf 'FH_STATUS: SUCCESS\n'
-  printf 'FH_GATE_VERDICT: %s\n' "$_CROSS_WORST"
+  printf 'FH_GATE_VERDICT: %s\n' "$_CROSS_FINAL"
   printf 'FH_GATE_MODE: cross\n'
   printf 'FH_GATE_LEGS: %s\n' "$_CROSS_LEGS"
   if [ "$_CROSS_RAN" -lt 2 ]; then
     # Degraded, and it must be impossible to mistake this for a two-family result.
     printf 'FH_GATE_DECORRELATED: no\n'
     printf 'FH_GATE_DEGRADED: %s\n' "$_CROSS_ERR"
+    if [ "$_CROSS_FINAL" != "$_CROSS_WORST" ]; then
+      printf 'FH_GATE_ESCALATE_REASON: cross-degraded (single leg %s said %s; set FH_GATE_CROSS_ALLOW_SINGLE=1 to accept one family)\n' "$_CROSS_LEGS" "$_CROSS_WORST"
+    elif [ -n "$_CROSS_OVERRIDE" ]; then
+      printf 'FH_GATE_CROSS_OVERRIDE: FH_GATE_CROSS_ALLOW_SINGLE=1 (single leg %s accepted as %s)\n' "$_CROSS_LEGS" "$_CROSS_WORST"
+    fi
     echo "WARN: FH_BACKEND=cross ran a SINGLE leg ($_CROSS_LEGS) — $_CROSS_ERR." >&2
     echo "      This verdict is NOT decorrelated. Treat it as $_CROSS_LEGS alone." >&2
   else
     printf 'FH_GATE_DECORRELATED: yes\n'
   fi
   printf '%s\n' "$_CROSS_OUT"
-  echo "→ fh-gate: cross mode — legs [$_CROSS_LEGS], union verdict $_CROSS_WORST" >&2 || :
+  echo "→ fh-gate: cross mode — legs [$_CROSS_LEGS], union verdict $_CROSS_WORST, final $_CROSS_FINAL" >&2 || :
   _FH_VERDICT_EXIT=1
-  case "$_CROSS_WORST" in
+  case "$_CROSS_FINAL" in
     PASS)     exit $EXIT_PASS ;;
     PENDING)  exit $EXIT_PENDING ;;
     BLOCKED)  exit $EXIT_BLOCKED ;;

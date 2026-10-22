@@ -250,8 +250,43 @@ check_out "cross: both legs' findings survive the union" 2 'FH_GATE_LEGS: claude
   run_cross "$CROSS_BLOCK" "$CROSS_BLOCK"
 # A machine with only one family is the COMMON case, not an edge case. It must not be silent.
 ONELEG="$TMPROOT/oneleg"; mkdir -p "$ONELEG"; cp "$FAKEBIN/claude" "$ONELEG/claude"
-check_out "cross: codex absent → single leg, DECORRELATED: no" 0 'FH_GATE_DECORRELATED: no' \
+# the gate needs jq; with PATH cut to $ONELEG:/usr/bin:/bin a Homebrew-only jq vanishes and every single-leg lane
+# would end at 10 before reaching the code under test (codex R1, 2026-10-22) — carry jq, never the other backend
+_jq=$(command -v jq 2>/dev/null) && [ ! -e "$ONELEG/jq" ] && ln -s "$_jq" "$ONELEG/jq"
+check_out "cross: codex absent → single leg, DECORRELATED: no" 3 'FH_GATE_DECORRELATED: no' \
   env PATH="$ONELEG:/usr/bin:/bin" FH_BACKEND=cross FH_MODEL=fake \
+      FAKE_PAYLOAD_CLAUDE="$CROSS_PASS" FAKE_PAYLOAD="$CROSS_PASS" \
+      bash "$GATE" "$SUBJECT" quick test
+# 🟥 2026-10-22: a single-leg PASS used to exit 0 — the same code as a two-family PASS, so a caller that reads
+# only the exit code (a pre-commit hook, `fh-gate && merge`) could not tell them apart; only text lines differed
+# (LLM call-site inventory, arXiv:2610.24545). Cross was REQUESTED, so a run that could not provide it is not
+# a pass: it goes to a person (ESCALATE, 3) with the reason in a machine-readable line.
+check_out "cross: single leg PASS → ESCALATE (3), not a pass" 3 'FH_GATE_VERDICT: ESCALATE' \
+  env PATH="$ONELEG:/usr/bin:/bin" FH_BACKEND=cross FH_MODEL=fake \
+      FAKE_PAYLOAD_CLAUDE="$CROSS_PASS" FAKE_PAYLOAD="$CROSS_PASS" \
+      bash "$GATE" "$SUBJECT" quick test
+check_out "cross: single leg PASS → the reason is machine-readable" 3 '^FH_GATE_ESCALATE_REASON: cross-degraded' \
+  env PATH="$ONELEG:/usr/bin:/bin" FH_BACKEND=cross FH_MODEL=fake \
+      FAKE_PAYLOAD_CLAUDE="$CROSS_PASS" FAKE_PAYLOAD="$CROSS_PASS" \
+      bash "$GATE" "$SUBJECT" quick test
+CROSS_PEND='{"status":"SUCCESS","verdict":"PENDING","findings_count":1,"findings_a":0,"findings_b":1,"findings":[{"grade":"B","location":"x:1","title":"t","evidence":"e","fix":"f"}]}'
+check_out "cross: single leg PENDING → ESCALATE (1 is «proceed»)" 3 'FH_GATE_VERDICT: ESCALATE' \
+  env PATH="$ONELEG:/usr/bin:/bin" FH_BACKEND=cross FH_MODEL=fake \
+      FAKE_PAYLOAD_CLAUDE="$CROSS_PEND" FAKE_PAYLOAD="$CROSS_PEND" \
+      bash "$GATE" "$SUBJECT" quick test
+# control: a single-leg BLOCKED keeps its own, stricter code
+check_out "cross: single leg BLOCKED stays BLOCKED (2)" 2 'FH_GATE_VERDICT: BLOCKED' \
+  env PATH="$ONELEG:/usr/bin:/bin" FH_BACKEND=cross FH_MODEL=fake \
+      FAKE_PAYLOAD_CLAUDE="$CROSS_BLOCK" FAKE_PAYLOAD="$CROSS_BLOCK" \
+      bash "$GATE" "$SUBJECT" quick test
+# the explicit, logged override keeps the leg's verdict — and says so in the output
+check_out "cross: single leg + FH_GATE_CROSS_ALLOW_SINGLE=1 → PASS, override logged" 0 '^FH_GATE_CROSS_OVERRIDE: FH_GATE_CROSS_ALLOW_SINGLE=1' \
+  env PATH="$ONELEG:/usr/bin:/bin" FH_BACKEND=cross FH_MODEL=fake FH_GATE_CROSS_ALLOW_SINGLE=1 \
+      FAKE_PAYLOAD_CLAUDE="$CROSS_PASS" FAKE_PAYLOAD="$CROSS_PASS" \
+      bash "$GATE" "$SUBJECT" quick test
+# control: the override is exact — any other value does not unlock it
+check_out "cross: FH_GATE_CROSS_ALLOW_SINGLE=yes is not the override" 3 'FH_GATE_VERDICT: ESCALATE' \
+  env PATH="$ONELEG:/usr/bin:/bin" FH_BACKEND=cross FH_MODEL=fake FH_GATE_CROSS_ALLOW_SINGLE=yes \
       FAKE_PAYLOAD_CLAUDE="$CROSS_PASS" FAKE_PAYLOAD="$CROSS_PASS" \
       bash "$GATE" "$SUBJECT" quick test
 check "cross: no family available → fails closed" 10 \
