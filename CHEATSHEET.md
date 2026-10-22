@@ -238,7 +238,7 @@ npx --package @chrono-meta/fh-gate fh-gate                    # auto-detect from
 npx --package @chrono-meta/fh-gate fh-gate "src/foo.ts" full  # explicit files + level
 FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-gate   # Codex backend (default: claude)
 # → FH_GATE_VERDICT: PASS | PENDING | BLOCKED | ESCALATE
-# → exit: 0 PASS · 1 PENDING · 2 BLOCKED · 3 ESCALATE · 10 harness error · 11 arg error
+# → exit: 0 PASS · 1 PENDING · 2 BLOCKED · 3 ESCALATE · 10 harness error · 11 arg error · 12 dry-run
 
 # Run a skill or agent doc through a backend, outside Claude Code
 npx --package @chrono-meta/fh-gate fh-run --skill <name>

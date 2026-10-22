@@ -4897,3 +4897,31 @@
   outcome: "accepted — #917 1 A + 2 B, #918 3 B, all fixed and re-measured"
   evidence: "FH PR #917 (c1516a2) · #918 (62ee9e8)"
   tokens: UNMEASURED
+- date: 2026-10-22
+  agent: "general-purpose (sonnet) ×1 — FoD capability claims through harness2's measurement discipline (read-only)"
+  task: "list FoD's capability claims, grade each by P2–P7 evidence, name the experiments' measurement defects, propose the smallest settling experiment per claim"
+  trigger: "operator «하네스2에게 fod입장리뷰를 시켜보는건 또 어떨까» + standing dispatch request"
+  outcome: "accepted as design input — verdict «not yet»; its §3 became the P8 preregistration; line citations not yet cross-checked by the governor"
+  evidence: "tracks/_meta/review_2026-10-22_fod-capability-harness2-lens.md · tracks/_meta/p3_contract_ab/p8/PREREGISTRATION_P8.md"
+  tokens: UNMEASURED
+- date: 2026-10-22
+  agent: "general-purpose (sonnet) ×1 — P8 bug-fix task set builder (blind to the hypothesis)"
+  task: "build and verify 32 real bug-fix tasks (parent FAIL / fix PASS, behaviour-only hidden tests) from the operator's FoD and FH repos"
+  trigger: "operator «C1·C2 본실험 (추천)» — evidence isolation: tasks built by a session that does not write the hypothesis"
+  outcome: "pending at log time"
+  evidence: "tracks/_meta/p3_contract_ab/p8/ (tasks.json · BUILD_NOTES.md)"
+  tokens: UNMEASURED
+- date: 2026-10-22
+  agent: "fh-meta:hub-persona-auditor ∥ fh-meta:persona-innovator → fh-meta:challenger (sonnet ×3) + codex (gpt) ×1 — sim-conductor Area B before v3.29.0"
+  task: "pre-release whole-set audit (outside reader · naming/structure · what was missed) over v3.28.0..main"
+  trigger: "sim-conductor §Frequency, event-bound before a minor release (#925)"
+  outcome: "accepted — M: BREAKING (gate) lines for cross single-family ESCALATE and exit 10 (+ cross 11/12 from challenger); codex found cartridge_admit MultiEdit gap (checkout-only, governor-verified). False positives caught: innovator «cartridge ships to npm», auditor «CHEATSHEET lacks 10»"
+  evidence: "tracks/_meta/sim_2026_10_22_area_B.md · CHANGELOG [3.29.0]"
+  tokens: UNMEASURED
+- date: 2026-10-22
+  agent: "codex (gpt) ×5 — read-only correctness reviews"
+  task: "FoD #129 (R1), FoD #131 (R1, R2), FH #934 (release-page job), FH release delta (Area B leg)"
+  trigger: "cross-family review on load-bearing changes (FoD standing delegation · publish path)"
+  outcome: "accepted — #129 0 findings (26k tokens read); #131 R1 card scroll reset, R2 scroll clamp + bridge recording while FH mode off (all fixed with lanes); #934 0 findings (56k); delta: MultiEdit gap"
+  evidence: "FoD PR #129 · #131 · FH PR #934"
+  tokens: UNMEASURED

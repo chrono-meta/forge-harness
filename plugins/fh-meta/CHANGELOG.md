@@ -1,5 +1,27 @@
 # forge-harness (fh-meta) Changelog
 
+### [3.29.0] — 2026-10-22 — fh-gate 가 실패를 통과로 접지 않는다(종료 코드 10 · cross 단일 계열 ESCALATE) · GitHub 릴리스 페이지 자동 · 위임 영수증
+
+**minor.** In short (for upgraders): the `fh-gate` CLI now fails closed in two places where it could pass or proceed before — read the two BREAKING lines below if you run it in CI or branch on its exit code. Nothing else changes for package consumers. Upgrading from 3.28.0 needs no action unless you use `FH_BACKEND=cross` or branch on exit codes.
+
+BREAKING (gate): `FH_BACKEND=cross` 에서 두 계열 중 한쪽만 돌았을 때(다른 CLI 없음 · 오류 · 판정 없음) **예전엔 남은 한쪽의 판정이 그대로 나갔다(PASS 면 종료 0)** — 이제 **ESCALATE(종료 3)** 와 `FH_GATE_ESCALATE_REASON: cross-degraded` 다. 한 계열로 충분하다고 판단하면 `FH_GATE_CROSS_ALLOW_SINGLE=1` 로 예전처럼 받을 수 있고, 그때 출력에 `FH_GATE_CROSS_OVERRIDE:` 줄이 남는다(#933).
+
+BREAKING (gate): 아무도 예상하지 못한 자리에서 명령이 실패하면(예: `TMPDIR` 이 없어 `mktemp` 실패 · 닫힌 stderr · 설정 안 된 HOME) **예전엔 그 명령의 상태(대개 1 = PENDING, «알고 진행») 가 그대로 나갔다** — 이제 **10(HARNESS_ERROR, fail-closed)** 이다. 0~3 은 네 판정 자리에서만 나간다. `bin/fh-gate.js` 를 거쳐도 같다. 종료 코드로 분기하는 CI 는 10 을 실패로 다뤄야 한다(#927). 같은 이유로 cross 모드의 인자 오류 · dry-run 은 예전엔 10 으로 뭉개졌는데 이제 원래 코드 11 · 12 로 나간다. 같은 모양이 다시 생기지 않게 degrade-scan S7 이 «set -e 판정 스크립트에 종료하는 ERR 트랩이 없다» 를 짚는다.
+
+소비자에게 닿는 작은 변화:
+- `session_checklist.py extract`: 대화 기록에 더해 훅 기록(`tracks/_meta/utterances/<sid>.jsonl`)을 두 번째 채널로 읽는다 — 도구가 도는 중에 보낸 메시지도 잡힌다. 훅 기록이 **깨져 있으면** 종료 2(없으면 그대로 진행)(#919).
+- `doc_claim_triad_scan`: 이름만으로 경로를 찾을 때 git 이 추적하는 파일 안에서만 찾고, git 이 실패하면 아무것도 찾지 않는다 — 아직 add 안 한 새 파일은 못 찾는다(#931).
+- `finding_fleet.sh`: `DROPPED:` 줄은 그 줄이 **시작하는** 발견 하나만 철회한다 — 이름이 언급만 된 다른 발견은 남는다(#932).
+- `selfcheck`: 실패한 짝 묶음을 이름으로 적고, 300초 제한에 끊긴 것은 timeout 으로 적는다(#918).
+- 세션 마감 ⑥: 보낼 커밋이 없으면 push 대신 마감 검사를 바로 돈다(#924). `CLAUDE.md` 라우팅: 주간 회고 · 대상 없는 «정리해줘» (무엇을 정리할지 묻는다) · 긴 컨텍스트는 세션 마감으로 가지 않는다(#917).
+- 새 도구 `scripts/dispatch_receipt.py`: 위임한 에이전트가 «했다» 고 한 편집을 git 이 보여 주는 대로 확인하는 거버너 자신의 영수증(#930).
+- 방법론: 전제를 공격하라 · 숫자를 설명하라 · 짓는 쪽 베이크오프(steel-quench 수렴 기준 4 등, #923) · 닫힌 사이드카 발견은 재현을 적는다(#926). sim-conductor 영역 B 는 30일 주기 대신 마이너/메이저 릴리스 · 발표 직전에 돈다(#925 — 이 릴리스가 그 첫 적용).
+
+허브 내부 · 소비자 영향 없음:
+- 태그 푸시 뒤 GitHub 릴리스 페이지를 이 CHANGELOG 의 해당 절로 자동으로 만든다 — 페이지가 v3.24.0 에서 멈춰 있던 것(npm 은 v3.28.0 까지)을 닫는다. v3.25.0~v3.28.0 페이지는 소급해 만들었다(#934).
+- CI 러너를 ubuntu-24.04 로 고정하고(ubuntu-latest 가 26.04 로 옮겨 main 이 빨개졌다), 매주 최신 러너에서 selfcheck 를 도는 카나리아를 뒀다 — 필수 검사 아님(#928 · #929).
+- 카트리지 입장 검사기 `scripts/cartridge_admit.py`(ADMIT · HUMAN_REVIEW · REFUSE · HARNESS_ERROR, 허용 목록 방식) — 체크아웃 전용, npm 에 싣지 않는다(#922). 위임 기록(#920).
+
 ### [3.28.0] — 2026-10-18 — 발화 체크리스트 훅 · FH 모듈 계약 v0 · ko-tech-writer 실교정 규칙
 
 **minor.** 새 자산(훅 · 모듈 계약 · 검사기)과 새 레인. 소비자 게이트 수용이 깨지는 변경은 없다.
