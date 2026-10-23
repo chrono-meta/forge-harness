@@ -175,7 +175,7 @@ destroys live state without anyone noticing. This is why the loss class is calle
 
 ### Scholarly deposit (Zenodo / DOI / arXiv) — measured 2026-09-07, why Step 1b exists
 
-Two things happened on the same day, on the same record (`10.5281/zenodo.22542168`, v1.0.1):
+Two things happened on the same day, on the same record (`10.5281/zenodo.22542168`, v1.0.1): <!-- stale-ref: pinned-line=22542168 -->
 
 1. **Form ≠ server.** The rich-text description and the companion-DOI related identifier were visible
    in the deposit form and **absent** from `/api/records/<id>/draft`. The editor had not flushed its
