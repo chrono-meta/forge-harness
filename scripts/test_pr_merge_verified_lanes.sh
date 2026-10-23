@@ -67,7 +67,11 @@ esac
 EOF
   chmod +x "$D/bin/gh"
 }
-run() { local D="$1"; shift; OUT=$(cd "$D/work" && PATH="$D/bin:$PATH" PMV_RETRY_SLEEP=0 bash "$SC" "$@" 2>&1); RC=$?; }
+# 🟥 env -u CLAUDECODE: the lane itself often runs inside Claude Code; without it every «no agent marker» control inherits the
+#   marker and reads agent-session (measured on the first run of L18).
+run() { local D="$1"; shift; OUT=$(cd "$D/work" && env -u CLAUDECODE PATH="$D/bin:$PATH" PMV_RETRY_SLEEP=0 PMV_RECEIPTS="$D/receipts.jsonl" bash "$SC" "$@" 2>&1); RC=$?; }
+# receipt field reader: rcpt <dir> <field> → value of the LAST receipt line (empty if none)
+rcpt() { [ -s "$1/receipts.jsonl" ] && tail -1 "$1/receipts.jsonl" | python3 -c "import json,sys;v=json.load(sys.stdin).get(sys.argv[1]);print('' if v is None else v)" "$2"; }
 merged() { [ -s "$1/merge.log" ]; }
 GOOD='grep -q a2 a && grep -q b2 b && echo instrument-ok'
 
@@ -146,6 +150,28 @@ setup cl; mkgh "$T/cl"; : > "$T/cl/merge_fail"; : > "$T/cl/closed"; run "$T/cl" 
 setup st; mkgh "$T/st"; : > "$T/st/local_fail"; : > "$T/st/stuck"; run "$T/st" 7 --rerun "$GOOD"
 { [ "$RC" -eq 5 ] && printf '%s' "$OUT" | grep -q 'NOT observed' && printf '%s' "$OUT" | grep -q 'read 3 time' && ! printf '%s' "$OUT" | grep -q 'nothing merged'; } \
   && ok "L16 stale OPEN through all re-reads → rc=5 «NOT observed», no false «nothing merged»" || { bad "L16 rc=$RC"; printf '%s\n' "$OUT" | tail -2; }
+
+# ── merge receipt: actor + lease (frontier digest 2026-10-23, arXiv:2610.28683) ──
+# L17 an agent session merging under a named lease → one receipt line naming both, with the merge commit and outcome
+setup rl; mkgh "$T/rl"; OUT=$(cd "$T/rl/work" && CLAUDECODE=1 PATH="$T/rl/bin:$PATH" PMV_RETRY_SLEEP=0 PMV_RECEIPTS="$T/rl/receipts.jsonl" bash "$SC" 7 --rerun "$GOOD" --lease "night-2026-10-22" 2>&1); RC=$?
+{ [ "$RC" -eq 0 ] && [ "$(rcpt "$T/rl" actor)" = "agent-session:claude-code" ] && [ "$(rcpt "$T/rl" lease)" = "night-2026-10-22" ] \
+  && [ "$(rcpt "$T/rl" outcome)" = "verified" ] && [ "$(rcpt "$T/rl" merge)" = "$(cat "$T/rl/merge.oid")" ] && [ "$(wc -l < "$T/rl/receipts.jsonl")" -eq 1 ]; } \
+  && ok "L17 agent merge under a lease → receipt: actor agent-session · lease · verified · merge oid" || { bad "L17 rc=$RC receipt=$(cat "$T/rl/receipts.jsonl" 2>/dev/null)"; printf '%s\n' "$OUT" | tail -3; }
+# L18 control: no lease, no agent marker → actor human-or-unknown, lease NONE (recorded, not refused)
+{ [ "$(rcpt "$T/ok" actor)" = "human-or-unknown" ] && [ "$(rcpt "$T/ok" lease)" = "NONE" ]; } \
+  && ok "L18 no lease, no agent marker → human-or-unknown · NONE (merge still allowed)" || bad "L18 receipt=$(cat "$T/ok/receipts.jsonl" 2>/dev/null)"
+# L19 negative control — a refusal BEFORE the merge, or a merge GitHub did not take, leaves no receipt. It cannot detect the feature
+#     being removed on its own (codex R1); L17 · L18 · L21 are its positive pair.
+{ [ ! -s "$T/nore/receipts.jsonl" ] && [ ! -s "$T/triv/receipts.jsonl" ] && [ ! -s "$T/mf/receipts.jsonl" ]; } \
+  && ok "L19 refused / not-merged runs leave no receipt" || bad "L19 a receipt was written for a run that did not merge"
+# L20 an empty --lease is a usage error before the merge
+setup le; mkgh "$T/le"; run "$T/le" 7 --rerun "$GOOD" --lease ""
+# the message names --lease: an unknown-option rc=2 alone would also pass (codex R1)
+{ [ "$RC" -eq 2 ] && ! merged "$T/le" && printf '%s' "$OUT" | grep -qF -- '--lease needs a non-empty label'; } && ok "L20 empty --lease → rc=2 «needs a non-empty label», no merge" || bad "L20 empty lease rc=$RC out=$OUT"
+# L22 a queued merge (GitHub accepted the request, not completed) is receipted as such — the request was made
+[ "$(rcpt "$T/q" outcome)" = "accepted-not-completed" ] && ok "L22 queued merge → receipt outcome accepted-not-completed" || bad "L22 receipt=$(cat "$T/q/receipts.jsonl" 2>/dev/null)"
+# L21 a merged-but-failed verification still gets its receipt, with that outcome
+[ "$(rcpt "$T/drop" outcome)" = "verify-failed" ] && ok "L21 verify FAILED after merge → receipt outcome verify-failed" || bad "L21 receipt=$(cat "$T/drop/receipts.jsonl" 2>/dev/null)"
 
 printf 'PASS %d · FAIL %d\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
