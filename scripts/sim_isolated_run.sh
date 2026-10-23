@@ -532,6 +532,53 @@ fh_timeout() {
 OUTDIR="${OUTDIR:-$(mktemp -d "${TMPDIR:-/tmp}/fh-sim-XXXXXX")}"
 mkdir -p "$OUTDIR"
 
+# ── ancestor-instruction guard (2026-10-23) ───────────────────────────────────────────────────────
+# 🟥 Every arm's clone lives under $OUTDIR, and `claude -p` loads CLAUDE.md / CLAUDE.local.md / .claude/rules
+#    from EVERY ancestor of its cwd. An --out inside a checkout (e.g. tracks/_meta/<exp>/out) therefore hands
+#    every arm the LIVE repo's instructions on top of the clone's own — measured 2026-10-23 with a known pair:
+#    under the FH checkout 3 instruction files, under /private/tmp NONE. A whole experiment series
+#    (P8/P8b/P9) ran that way; agents then edited the live repos by absolute path. Refuse before any arm
+#    starts (and again per rep for the wrapper the clone actually lands in — a pre-existing w_* can carry
+#    its own CLAUDE.md, codex R1). A bare .git is NOT an instruction source and is not refused (codex R1).
+#    FH_SIM_ALLOW_INHERIT=1 is the logged override for a run that WANTS the inheritance.
+# --out is resolved to an absolute physical path once, so the walk below and every later `$OUTDIR/...`
+# (including redirects made from inside `cd "$WORK"`) see the same place (Gemini R1: relative --out,
+# logical vs physical symlink paths). An unresolvable --out stops here instead of looping on `dirname ""`.
+OUTDIR=$(cd "$OUTDIR" 2>/dev/null && pwd -P) || { echo "FAIL: --out could not be resolved" >&2; exit 2; }
+[ -n "$OUTDIR" ] || { echo "FAIL: --out resolved to an empty path" >&2; exit 2; }
+fh_sim_instr_hits() { # $1=absolute dir → prints instruction sources in $1 and every ancestor (space-separated)
+  local d="$1" n hits=""
+  while [ -n "$d" ]; do
+    for n in CLAUDE.md CLAUDE.local.md .claude/CLAUDE.md .claude/CLAUDE.local.md AGENTS.md; do   # not GEMINI.md: Claude does not load it (codex R2)
+      [ -e "$d/$n" ] && hits="$hits $d/$n"
+    done
+    if [ -d "$d/.claude/rules" ] && [ -n "$(find -L "$d/.claude/rules" -name '*.md' -print 2>/dev/null | head -1)" ]; then   # -L: symlinked rules dirs load too (codex R2)
+      hits="$hits $d/.claude/rules/"
+    fi
+    [ "$d" = "/" ] && break
+    d=$(dirname "$d")
+  done
+  printf '%s' "$hits"
+}
+fh_sim_refuse_inherit() { # $1=dir $2=what → returns 0 to proceed, exits 2 on refusal
+  local hits; hits=$(fh_sim_instr_hits "$1")
+  [ -z "$hits" ] && return 0
+  if [ "${FH_SIM_ALLOW_INHERIT:-0}" = 1 ]; then
+    echo "⚠️  FH_SIM_ALLOW_INHERIT=1 — arms WILL inherit ($2):$hits" >&2; return 0
+  fi
+  echo "🟥 REFUSED: $2 ($1) sits under instruction files — every arm would load them:$hits" >&2
+  echo "   use an --out outside any checkout and outside \$HOME (default: mktemp under \$TMPDIR), or FH_SIM_ALLOW_INHERIT=1 if inheritance is the point" >&2
+  exit 2
+}
+fh_sim_refuse_inherit "$OUTDIR" "--out"
+# User-level instructions load for every project whatever the cwd — not refused (identical for every arm),
+# but printed so a reader of the run knows they were there (codex R1).
+_user_cfg="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+_user_instr=""
+[ -e "$_user_cfg/CLAUDE.md" ] && _user_instr="$_user_instr $_user_cfg/CLAUDE.md"
+[ -d "$_user_cfg/rules" ] && [ -n "$(find -L "$_user_cfg/rules" -name '*.md' -print 2>/dev/null | head -1)" ] && _user_instr="$_user_instr $_user_cfg/rules/"
+[ -n "$_user_instr" ] && echo "ℹ️  user-level instructions load in every arm (same for all, not refused):$_user_instr" >&2
+
 # ── machine-surface snapshot ──────────────────────────────────────────────────────────────────
 # Enumerated, not guessed. Each line is a surface a past run actually touched or plausibly could.
 # `not found` is written as `ABSENT`, never as an empty string — an unreadable surface and an
@@ -581,6 +628,7 @@ for r in $(seq 1 "$REPS"); do
   # isolated, but their EXISTENCE leaked into the arm's reasoning, which is enough to change an
   # answer about "what projects are around". Isolation has to hold for the parent too.
   WRAP="$OUTDIR/w_${ARM}_r${r}"; mkdir -p "$WRAP"
+  fh_sim_refuse_inherit "$(cd "$WRAP" && pwd -P)" "rep wrapper"   # a pre-existing w_* may carry its own instructions
   WORK="$WRAP/repo"
   # A disposable clone per REP, not per arm: two reps of the same arm contaminate each other
   # exactly as two different arms do. That was the measured failure — reps 1 and 2 of build_cron.

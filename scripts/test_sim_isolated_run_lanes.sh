@@ -574,5 +574,59 @@ printf 'rc\t0\nended_at_cap\tno\n' > "$WORKROOT/o_b29f/a_r1.meta.tsv"
   && ok "L29f clone failure on a reused --out leaves no stale ended_at_cap=no behind" \
   || no "L29f stale meta survived (clone-fail seen: $(grep -c 'BASE CLONE FAILED' "$WORKROOT/o_b29f.log"))"
 
+# L30 (2026-10-23) — an --out under instruction files refuses BEFORE any arm runs; the logged override proceeds.
+#   Known pair: same runner, same stub, the only difference is a CLAUDE.md in an ancestor of --out.
+INH="$WORKROOT/inherit_parent"; mkdir -p "$INH"; printf '# parent instructions\n' > "$INH/CLAUDE.md"
+LOG30="$WORKROOT/argv30.log"; : > "$LOG30"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say FH_STUB_ARGV_LOG="$LOG30" \
+   bash "$SUT" --arm a --reps 1 --prompt p --out "$INH/o30" ) >"$WORKROOT/o30.log" 2>&1; RC30=$?
+{ [ "$RC30" = 2 ] && grep -q "REFUSED: --out" "$WORKROOT/o30.log" && grep -q "inherit_parent/CLAUDE.md" "$WORKROOT/o30.log" && [ ! -s "$LOG30" ]; } \
+  && ok "L30a --out under a CLAUDE.md ancestor → rc 2 · REFUSED names the file · no arm invoked" \
+  || no "L30a inherited instructions not refused (rc=$RC30 · argv lines=$(wc -l < "$LOG30" | tr -d ' '))"
+LOG30b="$WORKROOT/argv30b.log"; : > "$LOG30b"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say FH_STUB_ARGV_LOG="$LOG30b" FH_SIM_ALLOW_INHERIT=1 \
+   bash "$SUT" --arm a --reps 1 --prompt p --out "$INH/o30b" ) >"$WORKROOT/o30b.log" 2>&1
+{ grep -q "FH_SIM_ALLOW_INHERIT=1 — arms WILL inherit" "$WORKROOT/o30b.log" && [ -s "$LOG30b" ]; } \
+  && ok "L30b FH_SIM_ALLOW_INHERIT=1 → printed warning, the arm runs" \
+  || no "L30b override did not proceed visibly (argv lines=$(wc -l < "$LOG30b" | tr -d ' '))"
+rm -rf "$INH"
+# L30c known-NEGATIVE — a parent with only a bare .git (no instruction file) is NOT refused (codex R1: over-block)
+mkdir -p "$WORKROOT/bare_git_parent/.git"; LOG30c="$WORKROOT/argv30c.log"; : > "$LOG30c"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say FH_STUB_ARGV_LOG="$LOG30c" \
+   bash "$SUT" --arm a --reps 1 --prompt p --out "$WORKROOT/bare_git_parent/o" ) >"$WORKROOT/o30c.log" 2>&1
+{ ! grep -q "REFUSED" "$WORKROOT/o30c.log" && [ -s "$LOG30c" ]; } \
+  && ok "L30c bare .git parent, no instruction file → not refused, the arm runs" \
+  || no "L30c a bare .git parent was refused or the arm did not run"
+# L30d ancestor .claude/rules/*.md counts as an instruction source (codex R1)
+mkdir -p "$WORKROOT/rules_parent/.claude/rules"; printf 'x\n' > "$WORKROOT/rules_parent/.claude/rules/r.md"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say \
+   bash "$SUT" --arm a --reps 1 --prompt p --out "$WORKROOT/rules_parent/o" ) >"$WORKROOT/o30d.log" 2>&1; RC30d=$?
+{ [ "$RC30d" = 2 ] && grep -q "rules_parent/.claude/rules/" "$WORKROOT/o30d.log"; } \
+  && ok "L30d ancestor .claude/rules/*.md → refused (rc 2, names the rules dir)" \
+  || no "L30d ancestor rules not refused (rc=$RC30d)"
+# L30e a reused --out whose rep wrapper already holds a CLAUDE.md → refused at the rep (codex R1)
+mkdir -p "$WORKROOT/o30e/w_a_r1"; printf 'x\n' > "$WORKROOT/o30e/w_a_r1/CLAUDE.md"; LOG30e="$WORKROOT/argv30e.log"; : > "$LOG30e"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say FH_STUB_ARGV_LOG="$LOG30e" \
+   bash "$SUT" --arm a --reps 1 --prompt p --out "$WORKROOT/o30e" ) >"$WORKROOT/o30e.log" 2>&1; RC30e=$?
+{ [ "$RC30e" = 2 ] && grep -q "REFUSED: rep wrapper" "$WORKROOT/o30e.log" && [ ! -s "$LOG30e" ]; } \
+  && ok "L30e pre-existing w_a_r1/CLAUDE.md → refused at the rep, no arm invoked" \
+  || no "L30e pre-existing wrapper instructions slipped through (rc=$RC30e · argv lines=$(wc -l < "$LOG30e" | tr -d ' '))"
+# L30f an unresolvable --out stops at once (Gemini R1: empty path looped on dirname "")
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say \
+   bash "$SUT" --arm a --reps 1 --prompt p --out "/dev/null/x" ) >"$WORKROOT/o30f.log" 2>&1; RC30f=$?
+[ "$RC30f" = 2 ] && ok "L30f unresolvable --out → rc 2, no hang" || no "L30f unresolvable --out rc=$RC30f"
+rm -rf "$WORKROOT/bare_git_parent" "$WORKROOT/rules_parent" "$WORKROOT/o30e"
+# L30g symlinked rules dir in an ancestor still counts (codex R2) · L30h GEMINI.md alone is not a Claude source (codex R2)
+mkdir -p "$WORKROOT/sym_parent/.claude/rules" "$WORKROOT/sym_parent/shared-rules"; printf 'x\n' > "$WORKROOT/sym_parent/shared-rules/policy.md"
+ln -s ../../shared-rules "$WORKROOT/sym_parent/.claude/rules/shared"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say \
+   bash "$SUT" --arm a --reps 1 --prompt p --out "$WORKROOT/sym_parent/o" ) >"$WORKROOT/o30g.log" 2>&1; RC30g=$?
+[ "$RC30g" = 2 ] && ok "L30g symlinked ancestor rules dir → refused" || no "L30g symlinked rules slipped through (rc=$RC30g)"
+mkdir -p "$WORKROOT/gem_parent"; printf 'x\n' > "$WORKROOT/gem_parent/GEMINI.md"; LOG30h="$WORKROOT/argv30h.log"; : > "$LOG30h"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say FH_STUB_ARGV_LOG="$LOG30h" \
+   bash "$SUT" --arm a --reps 1 --prompt p --out "$WORKROOT/gem_parent/o" ) >"$WORKROOT/o30h.log" 2>&1
+{ ! grep -q REFUSED "$WORKROOT/o30h.log" && [ -s "$LOG30h" ]; } && ok "L30h GEMINI.md-only parent → not refused, the arm runs" || no "L30h GEMINI.md over-blocked"
+rm -rf "$WORKROOT/sym_parent" "$WORKROOT/gem_parent"
+
 echo "sim_isolated_run lanes: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1
