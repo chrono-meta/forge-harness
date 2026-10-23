@@ -152,6 +152,7 @@ grep -q 'TIMEOUT  L2' <<<"$out" ; chk $? "R3 a hang is reported as TIMEOUT, its 
 
 echo "── S: in-place safety — each lane is a blocking repro from the 2026-10-07 blind review"
 bkpath() { python3 -c 'import hashlib,os,sys;print("/tmp/mutation_probe-%d/path-%s.backup"%(os.getuid(),hashlib.sha256(os.path.realpath(sys.argv[1]).encode()).hexdigest()[:16]))' "$1"; }
+ibkpath() { python3 -c 'import os,sys;st=os.stat(sys.argv[1]);print("/tmp/mutation_probe-%d/inode-%d-%d.backup"%(os.getuid(),st.st_dev,st.st_ino))' "$1"; }
 sha_of() { python3 -c 'import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$1"; }
 procs_matching() {  # count live processes whose WHOLE cmdline is $1 — /proc, not pgrep (pgrep absent → vacuous);
   local n=0 c                # exact match, so the counter never counts itself (a substring grep did)
@@ -482,8 +483,23 @@ out=$(python3 "$PROBE" z16.sh lane_z16.sh --timeout 30 2>&1); rc=$?
 # Z17 — a closed stdout does not lose the run
 cp age.sh z17.sh; h0=$(sha_of z17.sh)
 sed 's#age\.sh#z17.sh#' lane_strong.sh > lane_z17.sh   # v6 ran lane_strong here, which never sources z17.sh — the v7 control caught it
-python3 "$PROBE" z17.sh lane_z17.sh --timeout 30 2>z17.err | head -c 1 >/dev/null; rc=${PIPESTATUS[0]}; [ "$rc" -eq 0 ] || { echo "  (Z17 rc=$rc)"; sed 's/^/    /' z17.err; }
-[ "$rc" -eq 0 ] && [ "$(sha_of z17.sh)" = "$h0" ] ; chk $? "Z17 stdout closed mid-run → still rc 0 and restored (v5: BrokenPipe traceback rc 1)"
+# 🟥 전제 먼저 — 상태 디렉터리는 컨테이너 전역(`/tmp/mutation_probe-$uid`)이고 inode 키는
+#    파일이 지워지면 재사용된다. 그래서 **다른 트리가 지난주에 남긴 백업**이 이번 픽스처의
+#    inode 와 같은 이름일 수 있고, 그러면 프로브는 (옳게) rc=2 «CANNOT JUDGE» 로 거절한다.
+#    초판은 그 rc=2 를 `❌ Z17 stdout closed mid-run` 으로 찍었다 — 즉 **안 재어진 것을
+#    「이 동작이 깨졌다」로 거짓 진단**했다. 2026-10-19 클린룸 감사 실측: 컨테이너 재사용 4회차,
+#    10-12 자 백업 inode-65024-1941405 이 10-19 의 z17 픽스처와 같은 이름이었다.
+#    ⇒ 실행 **전에** 두 키(path·inode)를 보고, 이미 있으면 UNMEASURED 로 센다(통과 아님 —
+#    스위트는 그래도 exit 1 이다). 메시지 문자열을 grep 하지 않고 기록의 존재만 본다.
+_z17stale=""
+for _b in "$(bkpath z17.sh)" "$(ibkpath z17.sh)"; do [ -e "$_b" ] && _z17stale="$_b"; done
+if [ -n "$_z17stale" ]; then
+  echo "  ⚠️  Z17 UNMEASURED — 전역 상태 디렉터리에 남의 백업이 먼저 있다: $_z17stale (inode 재사용). 비우고 다시 돌려라"
+  UNMEASURED=$((UNMEASURED+1))
+else
+  python3 "$PROBE" z17.sh lane_z17.sh --timeout 30 2>z17.err | head -c 1 >/dev/null; rc=${PIPESTATUS[0]}; [ "$rc" -eq 0 ] || { echo "  (Z17 rc=$rc)"; sed 's/^/    /' z17.err; }
+  [ "$rc" -eq 0 ] && [ "$(sha_of z17.sh)" = "$h0" ] ; chk $? "Z17 stdout closed mid-run → still rc 0 and restored (v5: BrokenPipe traceback rc 1)"
+fi
 # Z18 — --json through a hard link to the subject
 cp age.sh z18.sh; ln -f z18.sh z18.json; h0=$(sha_of z18.sh)
 out=$(python3 "$PROBE" z18.sh lane_weak.sh --timeout 30 --json z18.json 2>&1); rc=$?

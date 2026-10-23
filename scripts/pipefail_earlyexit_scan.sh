@@ -295,9 +295,19 @@ scan_file(){
   #    숙주 스크립트를 SET-E 로 오표기했다(실측 1건, test_degrade_scan_shell_probes.sh).
   #    그래서 논리행 스트림을 **한 번** 만들고 세 판정 모두 그것을 읽는다.
   local LOGICAL; LOGICAL="$(_logical_lines "$f")"
-  printf '%s' "$LOGICAL" | /usr/bin/grep -qE 'set[[:space:]]+[-+][A-Za-z]*o[[:space:]]+pipefail' || return 0
+  # 🟥 아래 두 판정은 here-string 이다 — 파이프였다. 이 스캐너가 이름을 대는 바로 그 형태
+  #    (`printf '%s' "$BIG" | grep -q`, 이 파일 머리 ⓐ 가 «20/20 뒤집힌다» 고 적은 것)를
+  #    **스캐너 자신이** 쓰고 있었고, 첫 판정의 실패 분기는 `|| return 0` — 즉 그 파일을
+  #    **조용히 건너뛴다**. 논리행이 큰 파일에서 적발이 무음으로 사라진다.
+  #    2026-10-19 클린룸 감사 실측: 한 트리·한 계기에서 요약 VULN 이 112~123 으로 흔들렸고,
+  #    116↔123 의 차이는 전부 한 파일(test_finding_pipeline_lanes.sh, 논리행 85,558 B)의
+  #    7 줄이었다. 그 파일 내용으로 이 guard 만 떼어 돌리면 38/60 으로 실패한다.
+  #    🟥 그리고 그 무음은 **델타 잠금까지** 뚫렸다 — 같은 known-positive 한 줄을 넣고 10 회:
+  #    작은 파일(50 KB) 차단 10/10 · 큰 파일(133 KB) **차단 3/10 · 「새 취약형 0 곳 ✅」 7/10**.
+  #    레인 = L9d/L9d-rv(`scripts/test_pipefail_class_lock_lanes.sh`).
+  /usr/bin/grep -qE 'set[[:space:]]+[-+][A-Za-z]*o[[:space:]]+pipefail' <<<"$LOGICAL" || return 0
   local sete=0
-  printf '%s' "$LOGICAL" | /usr/bin/grep -qE '(^|\t)[[:space:]]*set[[:space:]]+-[A-Za-z]*e[A-Za-z]*([[:space:]]|$)' && sete=1
+  /usr/bin/grep -qE '(^|\t)[[:space:]]*set[[:space:]]+-[A-Za-z]*e[A-Za-z]*([[:space:]]|$)' <<<"$LOGICAL" && sete=1
 
   printf '%s\n' "$LOGICAL" | while IFS=$'\t' read -r lno logical; do
       case "$logical" in *'|'*) ;; *) continue;; esac

@@ -167,6 +167,50 @@ if [ -d "$G/.git" ]; then
                   || no "L9c 줄밀림 오차단" "rc=$_R"
 fi
 
+# ── L9d 델타 잠금이 «큰 파일» 에서도 걸리나 — 2026-10-19 클린룸 감사가 뚫은 자리 ──────
+# L9b 는 픽스처가 **작아서** 통과했다. 스캐너의 `scan_file` 첫 판정이
+# `printf '%s' "$LOGICAL" | grep -q … || return 0` 였고, 논리행이 버퍼를 넘는 파일에서는
+# 그 파이프 자신이 뒤집혀 **파일이 조용히 건너뛰어진다** — 즉 이 스위트가 이름을 대는 형태를
+# 스캐너가 자기 몸에 갖고 있었다. 실측(2026-10-19): 같은 known-positive 한 줄을 넣고 10 회,
+# 작은 파일(50 KB) 차단 10/10 · 큰 파일(133 KB) 차단 3/10 — 「새 취약형 0 곳 ✅」 7/10.
+# 🟥 확률 레인은 자기가 flaky 가 되므로, 픽스처를 **반드시 뒤집히는 크기**(~300 KB 논리행)로
+#    짓는다 — L0 과 같은 규율이다. 주석행은 논리행에서 빠지므로 패딩은 실행행으로 만든다.
+G2="$D/g2"; mkdir -p "$G2/scripts"
+( cd "$G2" && git init -q . && git config user.email t@t && git config user.name t ) \
+  || um "L9d 준비" "git init 실패"
+if [ -d "$G2/.git" ]; then
+  { printf '#!/usr/bin/env bash\nset -uo pipefail\n'
+    /usr/bin/awk 'BEGIN{for(i=0;i<3000;i++) printf ": \"pad %05d %s\"\n", i, "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}'
+  } > "$G2/scripts/big.sh"
+  [ "$(_sz "$G2/scripts/big.sh")" -gt 262144 ] \
+    && ok "L9d-0 픽스처 논리행이 버퍼를 한참 넘는다 ($(_sz "$G2/scripts/big.sh") B) — 확률이 아니라 확정" \
+    || no "L9d-0 픽스처" "$(_sz "$G2/scripts/big.sh") B — 작으면 아래 팔이 수리 전에도 통과한다"
+  ( cd "$G2" && git add scripts/big.sh && git commit -qm base ) >/dev/null 2>&1
+  _B2="$( cd "$G2" && git rev-parse HEAD )"
+  printf 'if cat big.txt | tr a b | grep -q NEEDLE; then :; fi\n' >> "$G2/scripts/big.sh"
+  _O9D="$(PIPESCAN_REPO="$G2" /bin/bash "$SCAN" changed "$_B2" 2>&1)"; _R9D=$?
+  if [ "$_R9D" -eq 1 ] && printf '%s' "$_O9D" | /usr/bin/grep -q 'scripts/big.sh'; then
+    ok "L9d 큰 파일에 새 취약형이 들어오면 rc=1 이고 파일을 이름으로 댄다"
+  else
+    no "L9d 큰 파일 델타 잠금" "rc=$_R9D — $(printf '%s' "$_O9D" | tr '\n' ' ' | cut -c1-140)"
+  fi
+  # L9d-rv 되돌림(뮤턴트) 프로브 — here-string 을 파이프로 되돌린 **사본**에서는 이 팔이
+  # 통과해 버려야 한다. 그렇지 않으면 L9d 는 장식이다(#780 L13c · #784 L14g 의 교훈).
+  _RV="$D/scan_rv.sh"
+  /usr/bin/sed -E 's#^(  )(/usr/bin/grep -qE .*pipefail.) <<<"\$LOGICAL" \|\| return 0#\1printf "%s" "$LOGICAL" | \2 || return 0#' \
+    "$SCAN" > "$_RV" && chmod +x "$_RV"
+  if /usr/bin/grep -q 'printf "%s" "$LOGICAL" | /usr/bin/grep -qE' "$_RV"; then
+    ok "L9d-rv-0 되돌림 적용됨 (첫 판정을 파이프로 복원한 사본)"
+    _ORV="$(PIPESCAN_REPO="$G2" /bin/bash "$_RV" changed "$_B2" 2>&1)"; _RRV=$?
+    case "$_RRV" in
+      0) ok "L9d-rv 되돌리면 잠금이 열린다 (rc=0 «새 취약형 0 곳») — L9d 가 하중을 진다" ;;
+      *) no "L9d-rv 되돌림 프로브" "rc=$_RRV — 되돌려도 막힌다면 L9d 가 다른 것을 재고 있다" ;;
+    esac
+  else
+    um "L9d-rv 되돌림" "sed 치환이 안 걸렸다 — 수리 줄 모양이 바뀌었으면 이 프로브를 고쳐라"
+  fi
+fi
+
 # ── L10 레포 부채 — 정보용. 🟥 절대 차단하지 않는다(만족 불가능한 요구 = override 훈련) ──
 _RO="$(/bin/bash "$SCAN" 2>&1 || true)"
 _V="$(printf '%s\n' "$_RO" | /usr/bin/sed -n 's/.*VULN  *= *\([0-9][0-9]*\).*/\1/p' | head -1)"
