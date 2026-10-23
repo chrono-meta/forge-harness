@@ -138,31 +138,38 @@ if command -v git >/dev/null 2>&1 && [ -d "$HUB_ROOT/.git" ] ||    { command -v 
   if git -C "$HUB_ROOT" rev-parse --git-dir >/dev/null 2>&1; then _TRACKED_OK=1; fi
 fi
 
+_TRACKED_NL=$'\n'"$_TRACKED"$'\n'
 _SESS=0
 _SESS_NAMES=""
 _is_shipped() {  # $1 = path relative to HUB_ROOT
   [ "$_TRACKED_OK" = "1" ] || return 1
-  # 🟥 here-string, NOT a pipe. Under `set -o pipefail` a matching `grep -qxF` exits before
-  #    reading its input, the producer dies of SIGPIPE, and pipefail raises that 141 as the
-  #    pipeline's status — so **a match is read as a non-match**. `$_TRACKED` is `git ls-files`
-  #    output, which grows with the hub, so there is no structural bound to hide behind: the
-  #    scanner's own measurements put the onset near ~16 KB (`pipefail_earlyexit_scan.sh` header),
-  #    ≈300 tracked paths under tracks/. Reproduced deterministically at 6,000 paths
-  #    (2026-09-28): pipe form → rc=141 “NO-MATCH”, here-string → MATCH.
-  # 🟥 And the direction is the one this function exists to prevent: a shipped file read as
-  #    user-made makes a **fresh clone** answer `returning`, the onboarding FP CLAUDE.md names.
-  #    Lane: test_mapped_tracks_lanes.sh §L-pipe.
-  grep -qxF "$1" <<<"$_TRACKED"
+  # 🟥 In-process literal match (no pipe, no per-file fork).
+  #    · Why NOT a pipe: under `set -o pipefail` a matching `grep -qxF` exits before reading its
+  #      input, the producer dies of SIGPIPE, and pipefail raises that 141 as the pipeline's
+  #      status — so **a match is read as a non-match**. `$_TRACKED` is `git ls-files` output,
+  #      which grows with the hub, so there is no structural bound to hide behind: the scanner's
+  #      own measurements put the onset near ~16 KB (`pipefail_earlyexit_scan.sh` header), ≈300
+  #      tracked paths under tracks/. Reproduced deterministically at 6,000 paths (2026-09-28):
+  #      pipe form → rc=141 “NO-MATCH”, here-string → MATCH.
+  #    · And the direction is the one this function exists to prevent: a shipped file read as
+  #      user-made makes a **fresh clone** answer `returning`, the onboarding FP CLAUDE.md names.
+  #      Lane: test_mapped_tracks_lanes.sh §L-pipe.
+  #    · Why NOT `grep -qxF "$1" <<<"$_TRACKED"`: the here-string avoids SIGPIPE, but forks a
+  #      process per file across tracks/*/session_*.md and tracks/_meta/*.md (≈1,300–1,800 files,
+  #      measured ≈6–12 s on macOS). Precomputing `$_TRACKED_NL` once and matching via `case`
+  #      keeps it in-shell; quoting `"$1"` forces glob characters (`[`, `]`, `*`, `?`) in a path
+  #      to match literally rather than as patterns (Lane §L-glob).
+  case "$_TRACKED_NL" in *$'\n'"$1"$'\n'*) return 0;; *) return 1;; esac
 }
 for _f in "$HUB_ROOT"/tracks/*/session_*.md "$HUB_ROOT"/tracks/_meta/*.md; do
   [ -f "$_f" ] || continue
   _rel="tracks/${_f#"$HUB_ROOT"/tracks/}"
-  case "$(basename "$_f")" in .gitkeep) continue ;; esac
+  case "${_f##*/}" in .gitkeep) continue ;; esac
   _is_shipped "$_rel" && continue
   _SESS=$((_SESS + 1))
   # Cap the sample. The COUNT is the answer; the names are a debugging aid, and an operator hub
   # has hundreds — dumping them turns a one-line verdict into a screenful nobody reads.
-  [ "$_SESS" -le 3 ] && _SESS_NAMES="$_SESS_NAMES $(basename "$_f")"
+  [ "$_SESS" -le 3 ] && _SESS_NAMES="$_SESS_NAMES ${_f##*/}"
 done
 
 if [ "$_TRACKED_OK" = "1" ]; then

@@ -269,7 +269,7 @@ else
   python3 - "$SUT" "$MUTP" <<'PY'
 import io, sys
 src = io.open(sys.argv[1], encoding='utf-8').read()
-old = '  grep -qxF "$1" <<<"$_TRACKED"'
+old = '  case "$_TRACKED_NL" in *$\'\\n\'"$1"$\'\\n\'*) return 0;; *) return 1;; esac'
 new = '  printf \'%s\\n\' "$_TRACKED" | grep -qxF "$1"'
 if src.count(old) != 1:
     sys.stderr.write("SUBN=%d\n" % src.count(old)); sys.exit(3)
@@ -286,6 +286,60 @@ PY
   fi
 fi
 rm -rf "$BIG"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# L-glob — 🟥 `case "$_TRACKED_NL"` 전환 시 경로의 글로브 문자(`[`, `]`, `*`, `?`)가 패턴이 아닌
+#   리터럴로 매치돼야 한다(`"$1"` 인용 필수). 인용이 빠지면:
+#   ① tracked 인 `shipped_[v1].md` 는 패턴 `[v1]` 이 리터럴 `[v1]` 과 불일치해 동봉 파일로 안 읽히고,
+#   ② untracked 인 근접 경로(`harness_bench_[i]ssue_monitor.md` 등)나 `[v1]` 문자클래스 전개(`shipped_v.md`)가
+#      동봉 파일과 오매치될 수 있다.
+printf '# bracket\n' > "$BR/tracks/_meta/shipped_[v1].md"
+printf '# star\n'    > "$BR/tracks/_meta/shipped_*.md"
+git -C "$BR" add -f "tracks/_meta/shipped_[v1].md" "tracks/_meta/shipped_*.md" >/dev/null 2>&1
+git -C "$BR" -c user.email=t@t -c user.name=t commit -q -m ship-glob 2>/dev/null
+v=$(_bv "$BR")
+[ "$v" = "new" ] \
+  && ok "L-glob tracked paths containing '[' or '*' are still recognised as shipped (got new)" \
+  || ng "L-glob tracked path with '[' or '*' misread as user-made (got '$v' — missing quoting on \"\$1\"?)"
+
+printf '# near-miss class\n'   > "$BR/tracks/_meta/shipped_v.md"
+printf '# near-miss pattern\n' > "$BR/tracks/_meta/harness_bench_[i]ssue_monitor.md"
+_g_out=$( cd "$BR" && bash scripts/mapped_tracks.sh 2>&1 )
+_g_sess=$(printf '%s\n' "$_g_out" | sed -n 's/^session_files=//p')
+_g_br=$(printf '%s\n'   "$_g_out" | sed -n 's/^onboarding_branch=//p')
+[ "$_g_sess" = "2" ] && [ "$_g_br" = "returning" ] \
+  && ok "L-glob control — untracked near-miss paths are NOT recognised as shipped (session_files=$_g_sess · $_g_br)" \
+  || ng "L-glob control — untracked near-miss path was swallowed as shipped (session_files=$_g_sess branch=$_g_br)"
+rm -f "$BR/tracks/_meta/shipped_v.md" "$BR/tracks/_meta/harness_bench_[i]ssue_monitor.md"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# L-fork — 🟥 파일 수에 비례하는 fork 가 없어야 한다(온보딩 지연 7~12s 의 원인, 2026-10-23 실측).
+#   grep · basename 을 세는 심(shim)을 PATH 앞에 두고 untracked 200개 위에서 돌린다. 수정판은 상수 회,
+#   뮤턴트(here-string grep 복원)는 파일마다 1회 이상 → 이 레인이 «빨라짐» 의 기계 앵커다(codex: L-glob 은
+#   옛 grep 에서도 초록이라 fork 제거를 증명하지 못한다).
+SHIM="$(mktemp -d)"; CNT="$SHIM/count"; : > "$CNT"
+for _t in grep basename; do
+  _real=$(command -v "$_t")
+  printf '#!/bin/bash\necho %s >> "%s"\nexec "%s" "$@"\n' "$_t" "$CNT" "$_real" > "$SHIM/$_t"; chmod +x "$SHIM/$_t"
+done
+for _i in $(seq 1 200); do printf '# u\n' > "$BR/tracks/_meta/u_$_i.md"; done
+( cd "$BR" && PATH="$SHIM:$PATH" bash scripts/mapped_tracks.sh >/dev/null 2>&1 )
+_n=$(wc -l < "$CNT" | tr -d ' ')
+[ "$_n" -lt 50 ] \
+  && ok "L-fork 200 files → grep/basename calls $_n (< 50, not per file)" \
+  || ng "L-fork 200 files → grep/basename calls $_n — forks per file again"
+sed 's|case "\$_TRACKED_NL" in \*\$'"'"'\\n'"'"'"\$1"\$'"'"'\\n'"'"'\*) return 0;; \*) return 1;; esac|grep -qxF "$1" <<<"$_TRACKED"|' \
+  "$BR/scripts/mapped_tracks.sh" > "$BR/scripts/mapped_tracks_fork_mut.sh"
+if cmp -s "$BR/scripts/mapped_tracks.sh" "$BR/scripts/mapped_tracks_fork_mut.sh"; then
+  ng "L-fork revert — 뮤턴트 생성 실패(치환 대상 부재). HARNESS ERROR, 초록으로 안 읽는다"
+else
+  : > "$CNT"; ( cd "$BR" && PATH="$SHIM:$PATH" bash scripts/mapped_tracks_fork_mut.sh >/dev/null 2>&1 )
+  _m=$(wc -l < "$CNT" | tr -d ' ')
+  [ "$_m" -ge 200 ] \
+    && ok "L-fork revert — here-string grep 을 되돌리면 호출이 $_m 회로 늘어난다(레인이 결함에 결박됨)" \
+    || ng "L-fork revert — 뮤턴트도 $_m 회 — 이 레인은 fork 를 재지 못한다"
+fi
+rm -f "$BR"/tracks/_meta/u_*.md "$BR/scripts/mapped_tracks_fork_mut.sh"; rm -rf "$SHIM"
 
 if [ "$FAIL" -eq 0 ]; then
   echo "MAPPED-TRACKS LANES: PASS ($PASS/$PASS)"
