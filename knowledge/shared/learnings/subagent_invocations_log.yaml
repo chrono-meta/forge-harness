@@ -4960,3 +4960,31 @@
   outcome: "accepted — Argon voided P8B-09 and caught the v1.0.3 pin conflicting with 830f0a9; codex found the FoD residency hole (user-writable edition.json); Flash found the sim guard dirname loop; Argon weekly bucket exhausted (429); two Flash runs ended «interrupted» (cause unverified)"
   evidence: "FH #938 · #939 · #940 · FoD #133 · tracks/_meta/p3_contract_ab/p8/PREREGISTRATION_P8.md 수정 3b"
   tokens: UNMEASURED
+- date: 2026-10-23
+  agent: "general-purpose (sonnet) ×1 — P10 task-set builder (isolated: /private/tmp/fod-p10, hypothesis not shared)"
+  task: "24 behaviour-graded bug-fix tasks where a single pass tends to miss (boundary · aliasing · sibling regression · docstring spec)"
+  trigger: "operator «🔧 FH 자체 개발이랑 fod 개발 이어서 병렬로 가자» · card «끔이 자주 실패하는 과제 묶음부터»"
+  outcome: "accepted — governor re-ran verify 24/24 (fail-before rc=1 · fix rc=0), hidden tests absent from parent trees, 0 spy/mock graders"
+  evidence: "/private/tmp/fod-p10/BUILD_REPORT.md · tracks/_meta/p3_contract_ab/p10/PREREGISTRATION_P10.md"
+  tokens: UNMEASURED
+- date: 2026-10-23
+  agent: "general-purpose (sonnet) ×1 — FH small-fix bundle (worktree, patch only)"
+  task: "session_checklist unblocked TypeError · pr_merge_verified --rerun advisory · old-sheet empty-cell advisories"
+  trigger: "card FH «안 닫힌 것»"
+  outcome: "accepted with additions — governor fixed a fourth defect the builder only reported (N/A key compare) and two codex R1 Lows; builder's first L25 lane stayed green under revert (fixture lacked the defect shape), rebuilt"
+  evidence: "FH #945"
+  tokens: UNMEASURED
+- date: 2026-10-23
+  agent: "general-purpose (sonnet) ×1 — FoD Codex gate plan B builder"
+  task: "implement design B (consult evidence for codex) with lanes and isolated measurement"
+  trigger: "operator «둘 다» (FH 갈래) · card «Codex 게이트 구현(안 B) 미착수»"
+  outcome: "no change needed — B had already landed as FoD #78 (2026-10-19, incl. codex: wired-consult); the card was stale. Builder re-ran lanes 17/17 · full suite 5099/0 fail/1 skip, measured consult latency ≈246 ms (synthetic), permission_mode real value still unmeasured"
+  evidence: "FoD #78 (9dbd153) · /private/tmp/fod-build/codexgate-REPORT.md"
+  tokens: UNMEASURED
+- date: 2026-10-23
+  agent: "codex (gpt) ×1 — read-only review"
+  task: "adversarial review of FH #945 diff"
+  trigger: "load-bearing change to the merge wrapper"
+  outcome: "accepted — 2 Low (non-ASCII path escaping · glob/dir words silencing the advisory), both fixed with revert-probed lanes"
+  evidence: "FH #945"
+  tokens: UNMEASURED
