@@ -4925,3 +4925,38 @@
   outcome: "accepted — #129 0 findings (26k tokens read); #131 R1 card scroll reset, R2 scroll clamp + bridge recording while FH mode off (all fixed with lanes); #934 0 findings (56k); delta: MultiEdit gap"
   evidence: "FoD PR #129 · #131 · FH PR #934"
   tokens: UNMEASURED
+- date: 2026-10-23
+  agent: "general-purpose (sonnet) ×1 — frontier digest 10-23 triage"
+  task: "read today's digest + live_eval and propose FH candidates"
+  trigger: "operator «다른팔로 오늘자 다이제스트도 확인해보자» + standing dispatch request"
+  outcome: "accepted — live_eval 12 PASS; candidates C1 (withhold builder claim → P9) and C2 (merge receipt actor/lease → FH #937)"
+  evidence: "tracks/_meta/fh_completed_2026-10-23.md · FH #937"
+  tokens: UNMEASURED
+- date: 2026-10-23
+  agent: "general-purpose (sonnet) ×3 — P8b harder-task builders (A FoD multi-file · B FH multi-file · C report rewrite), isolated, blind to the hypothesis"
+  task: "build behaviour-graded bug-fix tasks (parent FAIL / fix PASS) for the FoD capability A/B"
+  trigger: "operator «병렬가속화도 거버너모드로 가능하면 하자» + standing dispatch request"
+  outcome: "accepted with governor re-check 42/42; later the experiment that used them was found contaminated (work trees inside the FH checkout) — tasks kept, runs voided; Gemini Argon audit voided one task (P8B-09)"
+  evidence: "tracks/_meta/p3_contract_ab/p8b/{A,B,C}/BUILD_NOTES.md · p8b/RESULTS_P8b.md"
+  tokens: UNMEASURED
+- date: 2026-10-23
+  agent: "general-purpose (sonnet) ×3 — FoD feature builders F1 second opinion · F2 speed meter · F3 in-house context pack (separate clones under /private/tmp/fod-build)"
+  task: "build each feature with lanes and revert probes; commit locally, no push"
+  trigger: "operator AskUserQuestion choice: full-mode second opinion · speed meter · in-house context pack + FoD standing delegation"
+  outcome: "accepted after governor integration (char/token-level 3-way merge, duplicate prefs reader collapsed); F1 could not run gate self-check (FH hook blocked an uncommitted gate file) — governor ran it after commit; F2 proxy label renamed by governor"
+  evidence: "FoD #133 · #134 · #135 · v1.0.32 prerelease"
+  tokens: UNMEASURED
+- date: 2026-10-23
+  agent: "general-purpose (sonnet) ×1 — FoD codex R1 fixer"
+  task: "fix 7 cross-review findings (2 residency A) each with a red-before/green-after lane"
+  trigger: "codex R1 on the integrated FoD branch"
+  outcome: "accepted — governor re-ran suite (5095, 0 fail) and self-check; codex R2 found 3 B, fixed by governor"
+  evidence: "FoD #133 commits 93edcc4 · b65da72 · 7927e12 · 16438bf"
+  tokens: UNMEASURED
+- date: 2026-10-23
+  agent: "codex (gpt) ×9 + agy (gemini-4-argon-high ×5, gemini-3.8-flash-high ×4) — read-only reviews, task audit, patch author"
+  task: "P8b task validity audit (Argon) · stale-ref R1/R2 · FoD 1.0.32 R1/R2 · mapped_tracks patch (Argon author) + review · sim guard R1/R2 · memory anchor lint · onboarding blind sim (Flash ×6)"
+  trigger: "operator «코덱스랑 제미나이는 쓸일이 없는거지?» · «제미나이는 플래시로 대체하자»"
+  outcome: "accepted — Argon voided P8B-09 and caught the v1.0.3 pin conflicting with 830f0a9; codex found the FoD residency hole (user-writable edition.json); Flash found the sim guard dirname loop; Argon weekly bucket exhausted (429); two Flash runs ended «interrupted» (cause unverified)"
+  evidence: "FH #938 · #939 · #940 · FoD #133 · tracks/_meta/p3_contract_ab/p8/PREREGISTRATION_P8.md 수정 3b"
+  tokens: UNMEASURED
