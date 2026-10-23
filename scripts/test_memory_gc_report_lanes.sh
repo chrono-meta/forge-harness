@@ -34,7 +34,7 @@ w fb_promote.md "$hdr
     - 2026-10-01 | same day again
     - 2026-10-05 | other day
 ---
-body"
+body — fixed in 4cab596 (an evidence anchor, so this one may be promoted)"
 w fb_two_two.md "$hdr
   type: feedback
   hits:
@@ -206,5 +206,95 @@ Q="$T/q"; mkdir -p "$Q"; for f in z a; do printf -- '---\nmetadata:\n  type: use
 printf -- '- [z](z.md) [a](a.md)\n' > "$Q/MEMORY.md"
 eq "L27 same-line links keep link order" "$(python3 "$HERE/memory_gc_report.py" "$Q" --json | "$PY" -c "import json,sys;print(json.load(sys.stdin)['order'])")" "['z.md', 'a.md']"
 
+
+# 🟥 residual edges NOT chased (round cap 2, static matcher does not converge): '#123456 ' CSS colours without ';' · repo#N inside
+#    URLs counted twice (presence only, harmless) · sha-looking words in prose with mixed letters/digits (e.g. 'b2c3d4e') count.
+# ── evidence anchors (harness2: a lesson is stored/promoted only with a cited contrast) — own fixture dir ──
+M2="$T/m2"; mkdir -p "$M2"
+w2(){ printf '%s\n' "$2" > "$M2/$1"; }
+w2 fb_anchored.md "$hdr
+  type: feedback
+  hits:
+    - 2026-10-01 | a
+    - 2026-10-02 | b
+    - 2026-10-03 | c
+---
+fixed in 4cab596 — measured with scripts/test_x.sh"
+w2 fb_held.md "$hdr
+  type: feedback
+  hits:
+    - 2026-10-01 | a
+    - 2026-10-02 | b
+    - 2026-10-03 | c
+---
+happened on 2026-10-03, three times (a date is not an evidence anchor)"
+pos(){ w2 "$1" "$hdr
+  type: project
+---
+$2"; }
+pos a_sha.md "fixed in 4cab596"
+pos a_sha_ctx.md "landed as commit 1234567"
+pos a_pr.md "see #1"
+pos a_repo_pr.md "see chrono-meta/forge-harness#938"
+pos a_path.md "the bug was in src/main.rs"
+pos a_upper.md "documented in README.MD"
+pos a_docker.md "the Dockerfile pins it"
+pos a_arxiv.md "per arXiv:2610.29609"
+pos a_url.md "see https://example.org/x"
+w2 a_hitline.md "$hdr
+  type: feedback
+  hits:
+    - 2026-10-01 | fixed in 4cab596
+---
+the rule, stated without citing anything"
+pos n_noise.md "color #fff, version 3.29, the word deadbeef, abcdefg, C# and &#39; are not anchors"
+pos n_css.md "color: #123456;"
+pos n_uuid.md "request 3f2a9c1e-8b7d-4e21-9a3b-0c5d6e7f8a9b failed"
+pos n_slug.md "see [intro](#2-intro)"
+pos n_wiki.md "see [[feedback_x]] for the relation"
+pos n_wiki_ext.md "see [[feedback_x.md]] for the relation"
+pos n_frag.md "see [step](#2)"
+pos n_uuid_ctx.md "commit 1234567-dead-beef-1234-123456789abc"
+pos a_arxiv_old.md "per arXiv:hep-th/9901001"
+pos n_date.md "happened on 2026-10-03, three times"
+w2 n_fm.md "---
+name: x
+description: |
+  quoted
+  ---
+  see https://example.org/frontmatter
+metadata:
+  type: project
+---
+plain body"
+w2 MEMORY.md "# Memory Index
+- [A](fb_anchored.md)
+- [H](fb_held.md)
+- [U](user_plain.md)
+- [a1](a_sha.md)
+- [a2](a_sha_ctx.md)
+- [a3](a_pr.md)
+- [a4](a_repo_pr.md)
+- [a5](a_path.md)
+- [a6](a_upper.md)
+- [a7](a_docker.md)
+- [a8](a_arxiv.md)
+- [a9](a_url.md)
+- [a10](a_hitline.md)
+- [n1](n_noise.md)
+- [n2](n_css.md)
+- [n3](n_uuid.md)
+- [n4](n_slug.md)
+- [n5](n_wiki.md)
+- [n6](n_date.md)
+- [n7](n_fm.md)
+- [n8](n_wiki_ext.md)
+- [n9](n_frag.md)
+- [n10](n_uuid_ctx.md)
+- [a11](a_arxiv_old.md)"
+q2(){ "$PY" "$HERE/memory_gc_report.py" "$M2" --today 2026-10-15 --json | "$PY" -c "import json,sys; d=json.load(sys.stdin); print($1)"; }
+eq "L30 promote needs an evidence anchor; a recurring entry citing only dates is held, not promoted" "$(q2 "(d['promote'], d['promote_held'])")" "([['fb_anchored.md', 3, 3]], [['fb_held.md', 3, 3]])"
+eq "L31 each anchor class counts on its own (sha · named sha · #N · owner/repo#N · path · upper-case ext · Dockerfile · arXiv · URL · hit line); every non-anchor stays unanchored (#fff · CSS · UUID · #slug · [[wiki]] · date · frontmatter URL)" "$(q2 "sorted(d['unanchored'])")" "['fb_held.md', 'n_css.md', 'n_date.md', 'n_fm.md', 'n_frag.md', 'n_noise.md', 'n_slug.md', 'n_uuid.md', 'n_uuid_ctx.md', 'n_wiki.md', 'n_wiki_ext.md']"
+eq "L32 user entries are never listed as unanchored (and the list is not empty, so this is not vacuous)" "$(q2 "('user_plain.md' in d['unanchored'], len(d['unanchored']) > 0)")" "(False, True)"
 echo "memory_gc_report lanes: $pass pass · $fail fail"
 [ $fail -eq 0 ]
