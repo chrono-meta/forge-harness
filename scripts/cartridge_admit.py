@@ -50,7 +50,7 @@ TOP_KEYS = {"schema_version", "plugin", "load", "constraints", "services", "done
             "capabilities", "purpose", "intents"}
 REQUIRED_KEYS = {"schema_version", "plugin", "load", "constraints"}
 DONE_CLASSES = {"measured", "declared"}
-WRITE_TOOLS = {"Write", "Edit", "NotebookEdit"}
+WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}   # MultiEdit added 2026-10-23 (codex, pre-v3.29.0 Area B)
 # Admission is an ALLOWLIST (2026-10-19, codex final round: 4 A where a blocklist let mcp__*, `git rebase`, `find -delete`
 # and a bundled script through as ADMIT). Only grants that are plainly reversible ADMIT; every other grant is HUMAN_REVIEW.
 # Same lesson as the static shell-string checks that never converged: name what is safe, not what is dangerous.

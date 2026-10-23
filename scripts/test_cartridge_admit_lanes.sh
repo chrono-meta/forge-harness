@@ -104,6 +104,11 @@ lane "allowed-tools of wrong type = HARNESS_ERROR" 3 "$tmp/toolstype"
 # merge conflict (inline form) -- control for the guard itself
 mk conflict; printf -- '---\nname: demo\ndescription: x\nallowed-tools: ["Write"]\n---\n# demo\n' > "$tmp/conflict/skills/demo/SKILL.md"
 lane "inline Write vs writes=read-only refused" 2 "$tmp/conflict"
+# MultiEdit writes too (cross-family review before v3.29.0: it was auto-allowed as reversible but missing from WRITE_TOOLS,
+# so a read-only cartridge granting it raised no conflict while the same grant of Write did)
+mk conflict_me; printf -- '---\nname: demo\ndescription: x\nallowed-tools: ["MultiEdit"]\n---\n# demo\n' > "$tmp/conflict_me/skills/demo/SKILL.md"
+# rc=2 alone does not say WHICH refusal (codex R1): the reason must be the write conflict naming MultiEdit
+outlane "inline MultiEdit vs writes=read-only refused" 2 "$tmp/conflict_me" "declared writes=read-only but tools include ['MultiEdit']"
 mk conflict_ok; printf -- '---\nname: demo\ndescription: x\nallowed-tools: ["Write"]\n---\n# demo\n' > "$tmp/conflict_ok/skills/demo/SKILL.md"
 setmanifest "$tmp/conflict_ok" 'd["constraints"]["writes"]="write-local"'
 lane "control: Write with writes=write-local admits" 0 "$tmp/conflict_ok"
