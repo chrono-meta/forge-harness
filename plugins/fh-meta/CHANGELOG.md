@@ -1,5 +1,22 @@
 # forge-harness (fh-meta) Changelog
 
+### [3.30.0] — 2026-10-23 — sim 러너가 지침 파일 아래 출력 폴더를 거부 · 머지 영수증 · 메모리 근거 앵커 · 온보딩 빨라짐
+
+**minor.** In short (for upgraders): `scripts/sim_isolated_run.sh` now refuses an `--out` that sits under a directory holding Claude instruction files — read the BREAKING line below if you run it from inside a checkout. The rest adds output (a receipt line, report sections, an advisory), is faster, or corrects how three tools classify what they read (`unblocked` status rows, memory promote candidates, stale-reference pins) — see the bullets. Upgrading from 3.29.0 needs no action unless you point `--out` inside a repo.
+
+BREAKING (gate): `sim_isolated_run.sh` 는 `--out` 의 조상 어디에든 `CLAUDE.md` · `CLAUDE.local.md` · `.claude/CLAUDE(.local).md` · `AGENTS.md` · `.claude/AGENTS.md` · `.claude/rules/*.md` 가 있으면 **어떤 팔도 돌리기 전에 종료 2 로 거부한다** — 예전엔 그대로 돌았고, `claude -p` 가 조상 지침을 전부 실어 팔마다 실제 레포 지침이 섞였다(2026-10-23 짝 실측: 체크아웃 아래 지침 3개 로드 · `/private/tmp` 아래 0개). 처방: `--out` 을 레포 밖(기본 mktemp 또는 `/private/tmp/...`)에 둔다. 섞여도 된다고 판단하면 `FH_SIM_ALLOW_INHERIT=1`(출력에 한 번 남는다). `$HOME/.claude` 안의 사용자 전역 지침은 모든 팔에 똑같이 실리므로 거부 사유가 아니다(#940 · #942).
+
+소비자에게 닿는 작은 변화:
+- `pr_merge_verified.sh`: GitHub 가 머지 요청을 받은 뒤 로컬 영수증 한 줄(pr · head · merge · outcome · actor · lease) 기록을 **시도한다** — 기본 경로 `<git-common-dir>/fh-merge-receipts.jsonl`, `PMV_RECEIPTS` 로 바꿀 수 있다. 쓰기에 실패하면 경고만 하고 종료 코드는 그대로다. 거절된 머지엔 안 남긴다. `--lease '<label>'` 로 어떤 승인 아래 머지했는지 적는다(기록만, 강제 아님)(#937). `--rerun` 의 낱말 어디에도(그리고 그 낱말이 가리키는 스크립트 본문에도) PR 이 바꾼 파일이 안 나오면 stderr 에 경고 한 줄 — 종료 코드와 머지는 그대로다(#945).
+- `session_checklist.py unblocked`: 상태 칸이 빈 결과서에서 `TypeError` 로 죽던 것을 고쳤다 · N/A 행을 «아직 열림» 으로 보고하던 것도 고쳤다(#945).
+- `memory_gc_report.py`: 근거 앵커(커밋 · #N · 파일 경로 · arXiv · URL)가 없는 반복 교훈은 승격 후보 대신 «promote held», 앵커 없는 feedback/project 는 «unanchored» 목록으로 나온다. 읽기 전용 · 순서 불변(#943).
+- `stale_ref_scan.py`: `<!-- stale-ref: pinned-line=<id> -->` 줄 고정 — 그 줄의 그 id 만 조용히 한다. 파일 고정은 HTML 주석 안 · 온전한 낱말일 때만 센다(예전엔 산문 속 언급이나 `pinned-off` 같은 근사어가 파일 전체를 조용히 했다)(#938).
+- 배포되는 레인 `test_hook_source_gate_lanes.sh` 가 git 없는 트리(압축 해제본 등)에서 거짓 적색을 내던 것을 고쳤다. 같은 주간 클린룸 감사 5회차가 pipefail 델타 잠금이 큰 파일에서 열리던 것도 닫았다(체크아웃 전용)(#921).
+- 온보딩: `mapped_tracks.sh` 가 파일마다 fork 하지 않는다(운영자 허브 실측 7.1–12.0 s → 0.32–0.37 s, 출력 바이트 동일). `AGENTS.md` 는 비-Claude 런타임이 온보딩 파일 셋을 첫 턴에 병렬로 읽게 한다(agy 블라인드 sim: 도구 라운드 6–15 → 1)(#939).
+
+허브 내부 · 소비자 영향 없음:
+- 컴패니언 스토어 동기화가 실험 작업 트리(`work/` · `work.hidden/` · `repo/`)를 복사하지 않는다(#944). 위임 기록(#941). 카트리지 검사기가 MultiEdit 을 쓰기 도구로 센다(#936 — 체크아웃 전용).
+
 ### [3.29.0] — 2026-10-22 — fh-gate 가 실패를 통과로 접지 않는다(종료 코드 10 · cross 단일 계열 ESCALATE) · GitHub 릴리스 페이지 자동 · 위임 영수증
 
 **minor.** In short (for upgraders): the `fh-gate` CLI now fails closed in two places where it could pass or proceed before — read the two BREAKING lines below if you run it in CI or branch on its exit code. Nothing else changes for package consumers. Upgrading from 3.28.0 needs no action unless you use `FH_BACKEND=cross` or branch on exit codes.
