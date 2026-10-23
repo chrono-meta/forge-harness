@@ -31,3 +31,10 @@ vendor/
 .pending
 .pending_*
 .last_payload
+
+# 2026-10-23: experiment work trees (P8/P8b/P9 runner copies under **/runs/*/work*, sim clones under **/w_*_r*/repo;
+# launchd sync pushed ~437k files to the companion store). Name-level only (the loader allows no inner /).
+# 🟥 residual: also stops mirroring same-named art dirs (fh_squirrel_anim_*/*/work, blackchun_v2_*/audit_blind_r2/work) — already mirrored, finished 10-03.
+work/
+work.hidden/
+repo/
