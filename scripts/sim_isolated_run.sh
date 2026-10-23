@@ -546,13 +546,24 @@ mkdir -p "$OUTDIR"
 # logical vs physical symlink paths). An unresolvable --out stops here instead of looping on `dirname ""`.
 OUTDIR=$(cd "$OUTDIR" 2>/dev/null && pwd -P) || { echo "FAIL: --out could not be resolved" >&2; exit 2; }
 [ -n "$OUTDIR" ] || { echo "FAIL: --out resolved to an empty path" >&2; exit 2; }
+# 🟥 사용자 설정 디렉터리(${CLAUDE_CONFIG_DIR:-$HOME/.claude})는 모든 팔이 어차피 싣는다 — 워크가 그 .claude 의 부모(보통 $HOME)에
+#    닿았을 때 그 안의 CLAUDE.md/CLAUDE.local.md/AGENTS.md/rules 는 hit 가 아니다(아래 정보 줄이 한 번 찍는다). $HOME 에 직접 놓인
+#    CLAUDE.md 는 여전히 hit. 물리 경로(pwd -P)로 비교해 심볼릭 HOME/설정 디렉터리도 같게 동작한다.
+_user_cfg="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+_user_cfg_phys=$(cd "$_user_cfg" 2>/dev/null && pwd -P) || _user_cfg_phys=""
+FH_SIM_REPORTED_HITS=" "   # 이미 경고한 hit — --reps N 에서 같은 경고를 매 rep 반복하지 않는다
 fh_sim_instr_hits() { # $1=absolute dir → prints instruction sources in $1 and every ancestor (space-separated)
-  local d="$1" n hits=""
+  local d="$1" n hits="" skipclaude cp
   while [ -n "$d" ]; do
-    for n in CLAUDE.md CLAUDE.local.md .claude/CLAUDE.md .claude/CLAUDE.local.md AGENTS.md; do   # not GEMINI.md: Claude does not load it (codex R2)
+    skipclaude=0
+    if [ -n "$_user_cfg_phys" ] && [ -d "$d/.claude" ]; then
+      cp=$(cd "$d/.claude" 2>/dev/null && pwd -P) && [ "$cp" = "$_user_cfg_phys" ] && skipclaude=1
+    fi
+    for n in CLAUDE.md CLAUDE.local.md .claude/CLAUDE.md .claude/CLAUDE.local.md AGENTS.md .claude/AGENTS.md; do   # not GEMINI.md: Claude does not load it (codex R2)
+      case "$n" in .claude/*) [ "$skipclaude" = 1 ] && continue ;; esac
       [ -e "$d/$n" ] && hits="$hits $d/$n"
     done
-    if [ -d "$d/.claude/rules" ] && [ -n "$(find -L "$d/.claude/rules" -name '*.md' -print 2>/dev/null | head -1)" ]; then   # -L: symlinked rules dirs load too (codex R2)
+    if [ "$skipclaude" = 0 ] && [ -d "$d/.claude/rules" ] && [ -n "$(find -L "$d/.claude/rules" -name '*.md' -print 2>/dev/null | head -1)" ]; then   # -L: symlinked rules dirs load too (codex R2)
       hits="$hits $d/.claude/rules/"
     fi
     [ "$d" = "/" ] && break
@@ -561,10 +572,14 @@ fh_sim_instr_hits() { # $1=absolute dir → prints instruction sources in $1 and
   printf '%s' "$hits"
 }
 fh_sim_refuse_inherit() { # $1=dir $2=what → returns 0 to proceed, exits 2 on refusal
-  local hits; hits=$(fh_sim_instr_hits "$1")
+  local hits h newhits=""; hits=$(fh_sim_instr_hits "$1")
   [ -z "$hits" ] && return 0
   if [ "${FH_SIM_ALLOW_INHERIT:-0}" = 1 ]; then
-    echo "⚠️  FH_SIM_ALLOW_INHERIT=1 — arms WILL inherit ($2):$hits" >&2; return 0
+    for h in $hits; do
+      case "$FH_SIM_REPORTED_HITS" in *" $h "*) ;; *) newhits="$newhits $h"; FH_SIM_REPORTED_HITS="$FH_SIM_REPORTED_HITS$h " ;; esac
+    done
+    [ -n "$newhits" ] && echo "⚠️  FH_SIM_ALLOW_INHERIT=1 — arms WILL inherit ($2):$newhits" >&2
+    return 0
   fi
   echo "🟥 REFUSED: $2 ($1) sits under instruction files — every arm would load them:$hits" >&2
   echo "   use an --out outside any checkout and outside \$HOME (default: mktemp under \$TMPDIR), or FH_SIM_ALLOW_INHERIT=1 if inheritance is the point" >&2
@@ -573,7 +588,6 @@ fh_sim_refuse_inherit() { # $1=dir $2=what → returns 0 to proceed, exits 2 on 
 fh_sim_refuse_inherit "$OUTDIR" "--out"
 # User-level instructions load for every project whatever the cwd — not refused (identical for every arm),
 # but printed so a reader of the run knows they were there (codex R1).
-_user_cfg="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 _user_instr=""
 [ -e "$_user_cfg/CLAUDE.md" ] && _user_instr="$_user_instr $_user_cfg/CLAUDE.md"
 [ -d "$_user_cfg/rules" ] && [ -n "$(find -L "$_user_cfg/rules" -name '*.md' -print 2>/dev/null | head -1)" ] && _user_instr="$_user_instr $_user_cfg/rules/"

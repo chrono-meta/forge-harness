@@ -619,14 +619,48 @@ rm -rf "$WORKROOT/bare_git_parent" "$WORKROOT/rules_parent" "$WORKROOT/o30e"
 # L30g symlinked rules dir in an ancestor still counts (codex R2) · L30h GEMINI.md alone is not a Claude source (codex R2)
 mkdir -p "$WORKROOT/sym_parent/.claude/rules" "$WORKROOT/sym_parent/shared-rules"; printf 'x\n' > "$WORKROOT/sym_parent/shared-rules/policy.md"
 ln -s ../../shared-rules "$WORKROOT/sym_parent/.claude/rules/shared"
-( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say \
+LOG30g="$WORKROOT/argv30g.log"; : > "$LOG30g"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say FH_STUB_ARGV_LOG="$LOG30g" \
    bash "$SUT" --arm a --reps 1 --prompt p --out "$WORKROOT/sym_parent/o" ) >"$WORKROOT/o30g.log" 2>&1; RC30g=$?
-[ "$RC30g" = 2 ] && ok "L30g symlinked ancestor rules dir → refused" || no "L30g symlinked rules slipped through (rc=$RC30g)"
+{ [ "$RC30g" = 2 ] && grep -q "sym_parent/.claude/rules/" "$WORKROOT/o30g.log" && [ ! -s "$LOG30g" ]; } \
+  && ok "L30g symlinked ancestor rules dir → refused (rc 2, names the rules dir, no arm invoked)" \
+  || no "L30g symlinked rules slipped through (rc=$RC30g · argv lines=$(wc -l < "$LOG30g" | tr -d ' '))"
 mkdir -p "$WORKROOT/gem_parent"; printf 'x\n' > "$WORKROOT/gem_parent/GEMINI.md"; LOG30h="$WORKROOT/argv30h.log"; : > "$LOG30h"
 ( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say FH_STUB_ARGV_LOG="$LOG30h" \
    bash "$SUT" --arm a --reps 1 --prompt p --out "$WORKROOT/gem_parent/o" ) >"$WORKROOT/o30h.log" 2>&1
 { ! grep -q REFUSED "$WORKROOT/o30h.log" && [ -s "$LOG30h" ]; } && ok "L30h GEMINI.md-only parent → not refused, the arm runs" || no "L30h GEMINI.md over-blocked"
 rm -rf "$WORKROOT/sym_parent" "$WORKROOT/gem_parent"
+# L30i an ancestor with only .claude/AGENTS.md is an instruction source (Gemini R3)
+mkdir -p "$WORKROOT/cagents_parent/.claude"; printf 'x\n' > "$WORKROOT/cagents_parent/.claude/AGENTS.md"; LOG30i="$WORKROOT/argv30i.log"; : > "$LOG30i"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say FH_STUB_ARGV_LOG="$LOG30i" \
+   bash "$SUT" --arm a --reps 1 --prompt p --out "$WORKROOT/cagents_parent/o" ) >"$WORKROOT/o30i.log" 2>&1; RC30i=$?
+{ [ "$RC30i" = 2 ] && grep -q "cagents_parent/.claude/AGENTS.md" "$WORKROOT/o30i.log" && [ ! -s "$LOG30i" ]; } \
+  && ok "L30i ancestor .claude/AGENTS.md only → refused (rc 2, names it, no arm invoked)" \
+  || no "L30i .claude/AGENTS.md not refused (rc=$RC30i · argv lines=$(wc -l < "$LOG30i" | tr -d ' '))"
+rm -rf "$WORKROOT/cagents_parent"
+# L30j the user config dir is not an ancestor hit: HOME with ~/.claude/CLAUDE.md + --out under HOME → not refused,
+#     the informational user-level line prints once (CLAUDE_CONFIG_DIR unset). L30k known-positive: a plain ~/CLAUDE.md still refuses.
+mkdir -p "$FAKEHOME/.claude" "$FAKEHOME/clean"; printf 'user\n' > "$FAKEHOME/.claude/CLAUDE.md"; LOG30j="$WORKROOT/argv30j.log"; : > "$LOG30j"
+( cd "$SRC" && env -u CLAUDE_CONFIG_DIR PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say FH_STUB_ARGV_LOG="$LOG30j" \
+   bash "$SUT" --arm a --reps 1 --prompt p --out "$FAKEHOME/clean/o" ) >"$WORKROOT/o30j.log" 2>&1
+{ ! grep -q REFUSED "$WORKROOT/o30j.log" && [ -s "$LOG30j" ] && [ "$(grep -c 'user-level instructions load' "$WORKROOT/o30j.log")" = 1 ]; } \
+  && ok "L30j HOME/.claude/CLAUDE.md + --out under HOME → not refused, arm runs, user-level line printed once" \
+  || no "L30j user config dir over-blocked or info line wrong (argv lines=$(wc -l < "$LOG30j" | tr -d ' ') · info=$(grep -c 'user-level instructions load' "$WORKROOT/o30j.log"))"
+printf 'plain\n' > "$FAKEHOME/CLAUDE.md"; LOG30k="$WORKROOT/argv30k.log"; : > "$LOG30k"
+( cd "$SRC" && env -u CLAUDE_CONFIG_DIR PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say FH_STUB_ARGV_LOG="$LOG30k" \
+   bash "$SUT" --arm a --reps 1 --prompt p --out "$FAKEHOME/clean/o2" ) >"$WORKROOT/o30k.log" 2>&1; RC30k=$?
+{ [ "$RC30k" = 2 ] && grep -q "home/CLAUDE.md" "$WORKROOT/o30k.log" && [ ! -s "$LOG30k" ]; } \
+  && ok "L30k plain HOME/CLAUDE.md → refused (rc 2, names it, no arm invoked)" \
+  || no "L30k plain HOME CLAUDE.md slipped through (rc=$RC30k · argv lines=$(wc -l < "$LOG30k" | tr -d ' '))"
+rm -rf "$FAKEHOME/CLAUDE.md" "$FAKEHOME/.claude" "$FAKEHOME/clean"
+# L30l override with --reps 2: the inherit warning prints once, not per rep
+mkdir -p "$WORKROOT/inh2"; printf 'x\n' > "$WORKROOT/inh2/CLAUDE.md"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say FH_SIM_ALLOW_INHERIT=1 \
+   bash "$SUT" --arm a --reps 2 --prompt p --out "$WORKROOT/inh2/o" ) >"$WORKROOT/o30l.log" 2>&1
+[ "$(grep -c 'arms WILL inherit' "$WORKROOT/o30l.log")" = 1 ] \
+  && ok "L30l FH_SIM_ALLOW_INHERIT=1 --reps 2 → inherit warning exactly once" \
+  || no "L30l inherit warning count=$(grep -c 'arms WILL inherit' "$WORKROOT/o30l.log")"
+rm -rf "$WORKROOT/inh2"
 
 echo "sim_isolated_run lanes: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1
