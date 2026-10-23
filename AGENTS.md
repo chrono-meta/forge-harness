@@ -27,8 +27,13 @@ When the user's message is a bare greeting in any language (`hi` · `hello` · `
 start intent (`resume` · `where were we` · `what is this`), do not answer with a generic greeting.
 Run FH onboarding:
 
-1. Run `bash scripts/mapped_tracks.sh` and read `onboarding_branch=new|returning|UNKNOWN`
-   (UNKNOWN is not `new`).
+1. **First turn — three reads in parallel, then answer:** in the first turn issue, in parallel,
+   `bash scripts/mapped_tracks.sh` (it prints `onboarding_branch=new|returning|UNKNOWN`; UNKNOWN is
+   not `new`), a read of `knowledge/shared/harness-core/fh_detail_protocols.md`, and a read of the top
+   ~60 lines of `tracks/_meta/reference_next_session_starter.md` (if present). All three are reads:
+   act on none of them until all three are back and the procedure file has been read — that keeps the
+   order `CLAUDE.md` §Active Onboarding Protocol requires (procedure before Step 1) while the reads
+   share one turn instead of three to five sequential ones. Never skip a file that section requires.
 2. Reply in the greeting's language. First line: 🐿️ and the welcome line on the same line —
    new: "Welcome to FH." · returning: "Welcome back to FH." · if
    `tracks/_meta/reference_next_session_starter.md` exists (the operator): "The FH operator — good to
