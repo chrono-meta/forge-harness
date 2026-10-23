@@ -4988,3 +4988,45 @@
   outcome: "accepted — 2 Low (non-ASCII path escaping · glob/dir words silencing the advisory), both fixed with revert-probed lanes"
   evidence: "FH #945"
   tokens: UNMEASURED
+- date: 2026-10-23
+  agent: "general-purpose (sonnet) ×2 — FoD consult-vs-hook equivalence lane builder (R0 + R1 fixes)"
+  task: "prove the app-side consult never allows a Bash command the PreToolUse hook stops"
+  trigger: "operator «ㅇㅇ 바로시작하자» (wired-consult keep + equivalence lane)"
+  outcome: "accepted — 0 divergence over 696 cmds, 72 pass cells, 33 rule cells, 5 repo states; governor verified pass.js confirm semantics and the allowRules wiring, added EQ-W guard after codex R2"
+  evidence: "chrono-meta/friends-on-desk#136"
+  tokens: UNMEASURED
+- date: 2026-10-23
+  agent: "fh-meta:persona-innovator (sonnet) ×1 + agy gemini-3.8-flash-high ×1 (critic)"
+  task: "alternative experiment frames after two ceiling calibrations; critique of those frames"
+  trigger: "operator «탈상관 이노베이터 정체성 다 잘 활용해줘»"
+  outcome: "accepted frame 1 (done-claim honesty) → H1; Gemini added the claim-suppression control and frozen extraction rule; governor noted frame 3 duplicates P9"
+  evidence: "tracks/_meta/p3_contract_ab/h1_honesty/PREREGISTRATION_H1.md"
+  tokens: UNMEASURED
+- date: 2026-10-23
+  agent: "general-purpose (sonnet) ×3 — H1 claim extractors (1 keyword-script, 2 reading)"
+  task: "blind extraction of FIXED/TESTED/SCOPE claims from 128 final messages"
+  trigger: "H1 preregistration"
+  outcome: "first extractor used a keyword script against the brief → kept as second instrument; reading extraction 64+64; run-level agreement 117/128"
+  evidence: "tracks/_meta/p3_contract_ab/h1_honesty/RESULTS_H1.md"
+  tokens: UNMEASURED
+- date: 2026-10-23
+  agent: "codex (gpt) ×4 — read-only reviews"
+  task: "CHANGELOG v3.30.0 fact-check · equivalence lane R1 · R2"
+  trigger: "release + load-bearing gate test"
+  outcome: "accepted — 3 CHANGELOG overstatements fixed; R1 6 findings fixed; R2 2 High adjudicated against source (one pinned by EQ-W guard, one named residual)"
+  evidence: "FH #946 · FoD #136"
+  tokens: UNMEASURED
+- date: 2026-10-24
+  agent: "general-purpose (sonnet) ×1 — P11 fix-of-fix task miner (isolated /private/tmp/fod-p11)"
+  task: "tasks from commits that had to repair an earlier fix (clawd-on-desk 21 · forge-harness 2)"
+  trigger: "operator «코덱스로그인도되면 ㄱㄱ» · P10 ceiling"
+  outcome: "accepted with exclusions — 23/23 fail-before/fix verified ×3 by governor; 6 path-scoring tasks excluded from the primary set; later a Gemini audit found 2 more defective tasks (P11-12 prompt↔test contradiction, P11-17 exact-string requirement)"
+  evidence: "tracks/_meta/p3_contract_ab/p11/RESULTS_P11.md"
+  tokens: UNMEASURED
+- date: 2026-10-24
+  agent: "codex (gpt) ×1 + agy gemini-3.8-flash-high ×1 — P11 task-validity audit"
+  task: "can the graded behaviour be inferred from the prompt alone (5 tasks both models failed)"
+  trigger: "a third hypothesis (task defect) missing from the P11 preregistration"
+  outcome: "codex 5/5 VALID (2 wrong, one with a false source claim); Gemini found both defects; governor confirmed in source — the H-blind-spot reading was withdrawn"
+  evidence: "tracks/_meta/p3_contract_ab/p11/RESULTS_P11.md"
+  tokens: UNMEASURED
