@@ -967,7 +967,7 @@ else
       _sr_uns=$(printf '%s' "$_sr_v" | sed -n 's/.*UNSCANNABLE=\([0-9]*\).*/\1/p')
       if [ "${_sr_sup:-0}" -gt 0 ] 2>/dev/null; then
         echo "⚠️  ①-g stale-ref: ${_sr_sup} 개 id 가 폐기된 버전을 가리킨다 — advisory, 막지 않는다."
-        echo "     🟥 의도한 pin 일 수 있다 — 눈으로 확인하고 고쳐라(고정이면 파일에 'stale-ref: pinned')."
+        echo "     🟥 의도한 pin 일 수 있다 — 눈으로 확인하고 고쳐라(발행 스냅샷이면 파일 첫머리에 '<!-- stale-ref: pinned -->', 옛 판을 일부러 가리키는 한 줄이면 그 줄에 '<!-- stale-ref: pinned-line=<id> -->'). 일부러 빨갛게 둔 것(예: replace 전 arXiv 판)은 그대로 둔다."
         printf '%s\n' "$_sr_out" | grep -E '^ +🟥 SUPERSEDED' | sed 's/^/     /'
       fi
       if [ "${_sr_unr:-0}" -gt 0 ] 2>/dev/null || [ "${_sr_uns:-0}" -gt 0 ] 2>/dev/null; then

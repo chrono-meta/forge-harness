@@ -62,7 +62,7 @@ run () { python3 scripts/stale_ref_scan.py --offline-fixture "$TMP/fx.json" --bo
 # ── L1 자기검사가 실제로 돈다 ─────────────────────────────────────────────────
 python3 scripts/stale_ref_scan.py --self-check > "$TMP/sc" 2>&1; rc=$?
 n_pass=$(/usr/bin/grep -c '^  PASS' "$TMP/sc" || true)
-if [ "$rc" = "0" ] && [ "$n_pass" -ge 17 ]; then ok "L1 --self-check rc=0 · PASS 레인 $n_pass (>=17)"
+if [ "$rc" = "0" ] && [ "$n_pass" -ge 25 ]; then ok "L1 --self-check rc=0 · PASS 레인 $n_pass (>=25)"
 else ng "L1 --self-check rc=$rc · PASS $n_pass"; fi
 
 # ── L2 known-POSITIVE: <wbr> 분할 DOI 가 SUPERSEDED 로 잡힌다 ─────────────────
@@ -91,6 +91,13 @@ printf '<!-- stale-ref: pinned — published snapshot -->\n10.5281/zenodo.203975
 rc=$(run "$TMP/d.html")
 if [ "$rc" = "0" ] && /usr/bin/grep -q 'CHANGELOG-EXCLUDED=1' "$TMP/out"; then ok "L5 pin 마커 → rc=0"
 else ng "L5 rc=$rc — pin 이 안 먹는다"; fi
+
+# ── L5b 줄 pin — 그 줄만 제외, 같은 파일의 다른 낡은 인용은 그대로 잡힌다 ─────────────
+printf 'v1 paper 10.5281/zenodo.20397566 old name <!-- stale-ref: pinned-line=20397566 -->\nlater cite 10.5281/zenodo.20397566 again\n' > "$TMP/d2.md"
+rc=$(run "$TMP/d2.md")
+if [ "$rc" = "1" ] && /usr/bin/grep -q 'SUPERSEDED=1' "$TMP/out" && /usr/bin/grep -q 'CHANGELOG-EXCLUDED=1' "$TMP/out"; then
+  ok "L5b 줄 pin → 같은 id 의 고정 줄은 제외 · 고정 안 된 줄은 SUPERSEDED 1 rc=1 (main 의 id 묶음 통과)"
+else ng "L5b rc=$rc · $(/usr/bin/grep -o 'SUPERSEDED=[0-9]* .*CHANGELOG-EXCLUDED=[0-9]*' "$TMP/out" | head -1)"; fi
 
 # ── L6 🟥 못 읽은 입력은 UNSCANNABLE + rc=10 (적대검증 S-1) ───────────────────
 printf '%%PDF-1.4\000\000binary\n' > "$TMP/e.pdf"
@@ -123,6 +130,9 @@ PYX
 }
 probe "L8  scan_body 죽이기" "    return sites" "    return []"
 probe "L9  rc 지배 제거" "    if unresolved or unscannable:" "    if False:"
+probe "L10b 줄 pin 제거" "in_changelog or m.group(1) in line_pinned))" "in_changelog))"
+probe "L10d 줄 pin 이 id 를 안 가림" "in_changelog or m.group(1) in line_pinned))" "in_changelog or bool(line_pinned)))"
+probe "L10c 파일 pin 접두 일치" 'pinned(?=\s|-->)", re.IGNORECASE)' 'pinned", re.IGNORECASE)'
 probe "L10 바이너리 검사 제거" '    if b"\x00" in raw:' "    if False:"
 
 # 원본 불변 확인 — 프로브가 대상을 건드리지 않았나

@@ -22,7 +22,7 @@ model: sonnet
 
 > **Renamed from `source-grounding-audit` (2026-06-06)** — the grounding member of the quench series
 > (steel-quench · phantom-quench · goal-quench). Same skill, same ruleset; only the label changed to fit
-> the family. The **v1 paper (Zenodo 10.5281/zenodo.20397566) cites the old name** — that is the
+> the family. The **v1 paper (Zenodo 10.5281/zenodo.20397566) cites the old name** — that is the <!-- stale-ref: pinned-line=20397566 -->
 > historical record, not a phantom (`paper/forge_harness_v1.0.html` is left unchanged by design; readers
 > map *source-grounding-audit (v1) = phantom-quench (current)*). The deprecated redirect stub directory
 > was removed 2026-06-12 — old-name utterances ("source grounding audit", "grounding audit") route here

@@ -95,7 +95,16 @@ CHANGELOG_WORD_RE = re.compile(_CL_WORDS, re.IGNORECASE)
 #: 되므로 구조적으로 수리 불가능한 SUPERSEDED 를 영구히 낸다(적대검증 A-5: 이 레포에만 셋).
 #: 만족 불가능한 요구는 override 를 훈련시키므로, 파일이 스스로 «이건 스냅샷이다» 라고
 #: 말할 수단을 준다. 🟥 **파일명 추론이 아니라 «파일이 선언한 것»** 이다 — 추론은 조용히 틀린다.
-PIN_MARKER_RE = re.compile(r"stale-ref:\s*pinned", re.IGNORECASE)
+#: 🟥 (2026-10-23) 선언은 **HTML 주석 안에서만**, 낱말은 **경계까지**: 산문이 마커 문법을 언급만 해도
+#: 파일이 통째로 꺼지던 것(Argon R1 #4)과 `pinned-off` · `pinned_line` 같은 접두 일치(#2)를 닫는다.
+PIN_MARKER_RE = re.compile(r"<!--\s*stale-ref:\s*pinned(?=\s|-->)", re.IGNORECASE)
+#: 🟥 **줄 단위 pin (2026-10-23).** 살아 있는 문서 안에서 «v1 논문은 옛 이름을 쓴다» 처럼 옛 판을
+#: 일부러 가리키는 한 줄 때문에 파일 전체를 pin 하면, 그 파일에 뒤에 생기는 진짜 낡은 인용까지 묻힌다.
+#: 형식 `<!-- stale-ref: pinned-line=<id>[,<id>] -->` — **이름 붙인 id 만** 그 줄에서 기록으로 친다.
+#: 같은 줄(표의 한 행)의 다른 DOI 는 살아 있다(Argon R1 #3). id 없는 형식 · `pinned-lines` ·
+#: `pinned-line-disabled` 는 선언이 아니다(접두 일치는 낡은 인용을 조용히 숨긴다, codex R1). `-->`
+#: 앞 공백은 없어도 된다(Argon R1 #1). 줄 pin 은 `pinned` 뒤가 `-` 라 파일 pin 으로 번지지 않는다(ⓕ-3).
+LINE_PIN_RE = re.compile(r"<!--\s*stale-ref:\s*pinned-line=(\d+(?:,\d+)*)\s*-->", re.IGNORECASE)
 
 #: 못 읽은 입력의 판별 — NUL 바이트 또는 디코드 실패율. 적대검증 S-1.
 UNSCANNABLE_REPLACEMENT_RATIO = 0.02
@@ -143,7 +152,8 @@ def scan_body(path, lines):
     for the printed snippet. `in_changelog` reflects the flag's state AFTER this line is checked for a
     heading, so a heading line itself and everything after it (same file) are marked True."""
     in_changelog = False
-    pinned = any(PIN_MARKER_RE.search(l) for l in lines[:40])
+    # 앞 40줄을 합쳐서 찾는다 — 주석이 `<!--` / `stale-ref: pinned` / `-->` 로 여러 줄에 걸쳐도 선언이다(codex R2)
+    pinned = bool(PIN_MARKER_RE.search("\n".join(lines[:40])))
     sites = []
     for i, line in enumerate(lines, 1):
         if is_changelog_heading(line):
@@ -151,9 +161,11 @@ def scan_body(path, lines):
         if pinned:
             in_changelog = True        # 스냅샷 파일 전체를 «기록» 으로 취급
         flat = TAG_RE.sub("", line)
+        # 원문 줄에서 찾는다 — 마커가 HTML 주석이라 TAG_RE 가 지운다
+        line_pinned = {x for m in LINE_PIN_RE.finditer(line) for x in m.group(1).split(",")}
         for m in ZID_RE.finditer(flat):
             snippet = line.strip()[:140]
-            sites.append((i, m.group(1), snippet, in_changelog))
+            sites.append((i, m.group(1), snippet, in_changelog or m.group(1) in line_pinned))
     return sites
 
 
@@ -354,6 +366,38 @@ def run_self_check():
            'cite 10.5281/zenodo.20397566']
     got = [(r, inc) for _, r, _, inc in scan_body("x.html", pin)]
     lane("exclude: 'stale-ref: pinned' marks the whole file a record", got == [("20397566", True)], str(got))
+
+    # ⓕ-2 줄 pin — 그 줄의 «이름 붙인 id» 만 기록, 같은 파일의 다른 인용은 살아 있다
+    lp = ['The v1 paper (Zenodo 10.5281/zenodo.20397566) cites the old name <!-- stale-ref: pinned-line=20397566 -->',
+          'cite 10.5281/zenodo.22542168 for the method']
+    got = [(r, inc) for _, r, _, inc in scan_body("x.md", lp)]
+    lane("exclude: 'pinned-line=<id>' excludes only that id on its own line",
+         got == [("20397566", True), ("22542168", False)], str(got))
+
+    # ⓕ-3 🟥 known-NEGATIVE — 앞 40줄 안의 줄 pin 이 파일 pin 으로 번지지 않는다(같은 id 가 아래 줄에 다시)
+    got = [inc for _, _, _, inc in scan_body("x.md", lp[:1] + ['later 10.5281/zenodo.20397566 again'])]
+    lane("exclude NEG: a line pin is not a file pin", got == [True, False], str(got))
+
+    # ⓕ-4 🟥 known-NEGATIVE — 선언이 아닌 것들: 긴 낱말 · id 없음 · 산문 언급 · 파일 pin 접두
+    near = ['a 10.5281/zenodo.20397566 <!-- stale-ref: pinned-line-disabled -->',
+            'b 10.5281/zenodo.20397566 <!-- stale-ref: pinned-lines=20397566 -->',
+            'c 10.5281/zenodo.20397566 <!-- stale-ref: pinned-line -->',
+            'd 10.5281/zenodo.20397566 write `stale-ref: pinned-line=20397566` to pin a line']
+    got = [inc for _, _, _, inc in scan_body("x.md", near)]
+    lane("exclude NEG: near-miss / id-less / prose markers are not line pins", got == [False] * 4, str(got))
+    for fp in ('<!-- stale-ref: pinned-off -->', '<!-- stale-ref: pinned_line -->', 'see `stale-ref: pinned` in prose'):
+        got = [inc for _, _, _, inc in scan_body("x.md", [fp, 'cite 10.5281/zenodo.20397566'])]
+        lane("exclude NEG: %r is not a file pin" % fp, got == [False], str(got))
+
+    # ⓕ-4b 여러 줄 주석의 파일 pin 도 선언이다(codex R2 — 줄마다 찾으면 놓친다)
+    got = [inc for _, _, _, inc in scan_body("x.html", ['<!--', 'stale-ref: pinned', '-->', 'cite 10.5281/zenodo.20397566'])]
+    lane("exclude: a multi-line comment file pin is honoured", got == [True], str(got))
+
+    # ⓕ-5 같은 줄 두 DOI — 이름 붙인 쪽만 빠진다 · `-->` 앞 공백 없어도 된다 · 40줄 밖에서도 된다
+    row = [''] * 60 + ['| a | 10.5281/zenodo.20397566 | 10.5281/zenodo.22542168 |<!-- stale-ref: pinned-line=20397566-->']
+    got = [(r, inc) for _, r, _, inc in scan_body("x.md", row)]
+    lane("exclude: line pin names one id of two, no space before -->, past line 40",
+         got == [("20397566", True), ("22542168", False)], str(got))
 
     # ⓖ 🟥 못 읽은 입력 — 이 파일 자신을 바이너리로 만들어 본다(임시 파일)
     import tempfile
