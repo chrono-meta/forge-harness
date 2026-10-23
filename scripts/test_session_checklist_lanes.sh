@@ -905,6 +905,40 @@ for L in L46 L47 L47b L48 L48b L49 L50 L51; do
   esac
 done
 
+# L52 — `unblocked` on a sheet with an empty 상태 cell must not crash (TypeError: None in keys, 2026-10-23)
+L52_FILE="$TMPDIR_ROOT/l52.md"
+{
+  echo "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안 |"
+  echo "|---|---|---|---|---|---|---|"
+  echo "| A1 | 10-01 09:00 | first | ✅DONE | e | - | - |"
+  echo "| A2 | 10-01 09:01 | second, blocked on A1 | ⏳IN-PROGRESS | e | A1 선행 | next |"
+  echo "| A3 | 10-01 09:02 | never filled |  |  |  |  |"
+} >"$L52_FILE"
+run "$TMPDIR_ROOT/l52.out" unblocked --file "$L52_FILE"
+if [ "$RC" -eq 1 ] && grep -q "A2 is still open, but its blocker A1 reads DONE" "$TMPDIR_ROOT/l52.out" \
+   && ! grep -q "Traceback" "$TMPDIR_ROOT/l52.out"; then
+  pass "L52 unblocked survives an empty 상태 cell and still reports the real finding"
+else
+  fail "L52 unblocked rc=$RC (want 1, finding A2/A1, no Traceback) — $(tail -2 "$TMPDIR_ROOT/l52.out" | tr '\n' ' ')"
+fi
+
+# L52b — an N/A row whose blocker reads DONE is closed, not «still open» (the key is "N/A"; a "n/a" compare never matched)
+L52B_FILE="$TMPDIR_ROOT/l52b.md"
+{
+  echo "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안 |"
+  echo "|---|---|---|---|---|---|---|"
+  echo "| A1 | 10-01 09:00 | first | ✅DONE | e | - | - |"
+  echo "| A2 | 10-01 09:01 | second, blocked on A1 | ⏳IN-PROGRESS | e | A1 선행 | next |"
+  echo "| A3 | 10-01 09:02 | dropped, blocked on A1 | N/A | e | A1 선행 — 범위 밖 | - |"
+} >"$L52B_FILE"
+run "$TMPDIR_ROOT/l52b.out" unblocked --file "$L52B_FILE"
+if [ "$RC" -eq 1 ] && grep -q "A2 is still open, but its blocker A1 reads DONE" "$TMPDIR_ROOT/l52b.out" \
+   && ! grep -q "A3 is still open" "$TMPDIR_ROOT/l52b.out"; then
+  pass "L52b unblocked treats an N/A row as closed (A2 reported, A3 not)"
+else
+  fail "L52b unblocked rc=$RC (want 1, A2 reported, A3 silent) — $(tail -3 "$TMPDIR_ROOT/l52b.out" | tr '\n' ' ')"
+fi
+
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then

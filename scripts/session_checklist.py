@@ -962,7 +962,8 @@ def do_unblocked(file_path):
             rid = re.sub(r"[^A-Za-z0-9]", "", cells[idx_num]).upper()
             if not rid:
                 continue
-            keys = classify_status(cells[idx_status] if idx_status < len(cells) else "")
+            # an empty/invalid status cell classifies to None — that row is open (idle), never a crash
+            keys = classify_status(cells[idx_status] if idx_status < len(cells) else "") or set()
             status_by_id[rid] = keys
             rows_flat.append((rid, keys, cells))
 
@@ -973,7 +974,7 @@ def do_unblocked(file_path):
         # open rows collapsed two different nothings into the same rc=4: "every dependency was
         # resolved and closed" and "nobody ever wrote a dependency". The first is a clean run; the
         # second is an unread channel. («not found» is not «0» — the named family in this repo.)
-        idle = not ("DONE" in keys or "n/a" in keys)
+        idle = not ("DONE" in keys or "N/A" in keys)   # classify_status returns the key "N/A", never "n/a"
         joined = " | ".join(cells)
         for m in DEP_RE.finditer(joined):
             dep = m.group(1).upper()

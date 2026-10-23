@@ -21,6 +21,8 @@ setup() {
   git init -q --bare -b main "$d/origin.git"
   git clone -q "$d/origin.git" "$d/seed" 2>/dev/null
   printf 'a1\n' > "$d/seed/a"; printf 'b1\n' > "$d/seed/b"
+  # SETUP_EXTRA=1: a tracked dir whose listing names `a`, and a runner whose text names `a` — the shapes a glob/dir word can drag in
+  [ -n "${SETUP_EXTRA:-}" ] && { mkdir -p "$d/seed/d"; printf 'x\n' > "$d/seed/d/a"; printf 'grep -q a2 a\n' > "$d/seed/r.sh"; }
   git -C "$d/seed" add -A; git -C "$d/seed" commit -qm init --no-verify; git -C "$d/seed" push -q origin HEAD:main
   git -C "$d/seed" switch -qc feat; printf 'a2\n' > "$d/seed/a"; printf 'b2\n' > "$d/seed/b"
   git -C "$d/seed" commit -qam feat --no-verify; git -C "$d/seed" push -q origin feat
@@ -172,6 +174,25 @@ setup le; mkgh "$T/le"; run "$T/le" 7 --rerun "$GOOD" --lease ""
 [ "$(rcpt "$T/q" outcome)" = "accepted-not-completed" ] && ok "L22 queued merge → receipt outcome accepted-not-completed" || bad "L22 receipt=$(cat "$T/q/receipts.jsonl" 2>/dev/null)"
 # L21 a merged-but-failed verification still gets its receipt, with that outcome
 [ "$(rcpt "$T/drop" outcome)" = "verify-failed" ] && ok "L21 verify FAILED after merge → receipt outcome verify-failed" || bad "L21 receipt=$(cat "$T/drop/receipts.jsonl" 2>/dev/null)"
+
+# ── --rerun coverage advisory (warning only) ──
+# L23 a real but unrelated --rerun (touches none of the PR's changed files) → warning, yet the merge and verify still go through
+setup cv; mkgh "$T/cv"; run "$T/cv" 7 --rerun 'git --version && echo unrelated-ok'
+{ [ "$RC" -eq 0 ] && merged "$T/cv" && printf '%s' "$OUT" | grep -q 'mentions none of this PR'"'"'s 2 changed file'; } \
+  && ok "L23 --rerun naming no changed file → advisory warning, merge + verify unchanged (rc=0)" || { bad "L23 rc=$RC"; printf '%s\n' "$OUT" | tail -4; }
+# L24 control: a --rerun that names the changed files stays silent (L1's GOOD names a and b)
+setup cv2; mkgh "$T/cv2"; run "$T/cv2" 7 --rerun "$GOOD"
+{ [ "$RC" -eq 0 ] && ! printf '%s' "$OUT" | grep -q 'mentions none of this PR'; } \
+  && ok "L24 --rerun naming the changed files → no advisory" || bad "L24 rc=$RC (advisory fired on a covering --rerun?)"
+
+# L25 a glob in --rerun is NOT expanded against the checkout — `echo *` would pull in r.sh (whose text names `a`) and silence the advisory (cross-family R1)
+SETUP_EXTRA=1 setup cvg; mkgh "$T/cvg"; run "$T/cvg" 7 --rerun 'git --version && echo *'
+{ [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q 'mentions none of this PR'; } \
+  && ok "L25 --rerun with a bare glob → advisory still fires (no pathname expansion)" || bad "L25 rc=$RC (glob expanded into a runner that names a changed file?)"
+# L25b a word naming a tracked DIRECTORY adds nothing — its tree listing (here `a`) is not a script's text (cross-family R1)
+SETUP_EXTRA=1 setup cvd; mkgh "$T/cvd"; run "$T/cvd" 7 --rerun 'git --version && ls d'
+{ [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q 'mentions none of this PR'; } \
+  && ok "L25b --rerun naming a tracked dir → advisory still fires (blobs only)" || bad "L25b rc=$RC (dir listing counted as coverage?)"
 
 printf 'PASS %d · FAIL %d\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

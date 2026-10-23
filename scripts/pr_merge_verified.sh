@@ -81,6 +81,28 @@ git cat-file -e "$HEAD_OID^{commit}" 2>/dev/null \
   || { echo "🟥 HARNESS-ERROR (before merge): PR head $HEAD_OID not fetchable — not merging" >&2; exit 4; }
 echo "── PR #$PR head recorded: $HEAD_OID"
 
+# 1b. coverage advisory — WARNING ONLY (never changes rc, never merges or refuses). post_squash_verify's precheck rejects a
+#   command that is trivially empty; it cannot see a command that is real but never touches this PR's files. Static, pre-merge,
+#   no execution: does any word of --rerun (or a tracked script it names) mention a path/basename this PR changes?
+_changed=$(git -c core.quotepath=off diff --name-only "$(git merge-base origin/main "$HEAD_OID" 2>/dev/null || echo "$HEAD_OID^")" "$HEAD_OID" < /dev/null 2>/dev/null) || _changed=""
+if [ -n "$_changed" ]; then
+  _hay="$RERUN"
+  set -f   # split --rerun into words WITHOUT globbing it against the checkout (cross-family R1: `echo *` listed dirs)
+  for _w in $RERUN; do   # unquoted on purpose: split into words; a word naming a tracked FILE adds that file's text (a runner script)
+    _w="${_w//[\"\';|&()]/}"
+    [ -n "$_w" ] && [ "$(git cat-file -t "$HEAD_OID:$_w" < /dev/null 2>/dev/null)" = blob ] \
+      && _wc=$(git show "$HEAD_OID:$_w" < /dev/null 2>/dev/null) && _hay="$_hay $_wc"
+  done
+  set +f
+  _hay=" $(printf '%s' "$_hay" | tr -s '[:space:]"'"'"';|&()' ' ') "
+  _hit=0
+  while IFS= read -r _f; do
+    [ -n "$_f" ] || continue
+    case "$_hay" in *" $_f "*|*" $(basename "$_f") "*) _hit=1; break ;; esac
+  done <<< "$_changed"
+  [ "$_hit" -eq 1 ] || echo "⚠️  --rerun mentions none of this PR's $(printf '%s\n' "$_changed" | wc -l | tr -d ' ') changed file(s) (nor any script it names) — it may not exercise the change. Advisory only; merging continues." >&2
+fi
+
 # 2. merge
 # 🟥 cross-family W1: pin the merge to the head we RECORDED. Without it, a push landing between the
 #   record and the merge gets squashed in unverified, and «merged and verified» describes a commit
