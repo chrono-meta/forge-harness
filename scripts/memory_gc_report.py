@@ -14,6 +14,11 @@ WHAT: reads every topic file's frontmatter and the index, and reports
   · every entry    — status, type, age (from `metadata.hits`), distinct days, last hit, index line
   · cold           — non-user, age 1, last hit ≥ --cold-days ago → drop from the INDEX only
   · promote        — age ≥ --promote-age across ≥ 2 distinct days → propose a rule/hook (human approves)
+                     — only when the body cites at least one evidence anchor; otherwise «promote held»
+  · unanchored     — feedback/project entries whose body cites no evidence anchor (commit sha · #PR/issue ·
+                     file path · arXiv id · URL). harness2 (google-research, 2026-10) stores a lesson only with
+                     a cited run contrast; this is the record-property half of that: present or not, never
+                     whether the cited thing proves the lesson (judgment stays judgment).
   · order          — user entries in index order, then valid measured entries by age (ties: index
                      order), then the rest in index order; cold entries leave the order. Entries with an
                      error status never drive cold / promote / measured ranking until repaired
@@ -35,6 +40,35 @@ usage: memory_gc_report.py <memory_dir> [--index MEMORY.md] [--today YYYY-MM-DD]
 exit: 0 report printed · 2 memory dir or index unreadable (instrument error, never an empty report)
 """
 import argparse, datetime as dt, json, os, re, sys, urllib.parse
+
+# Evidence anchors a lesson can cite. A date alone is not an anchor (it says when, not what was measured).
+# Presence is what is reported, never how many (one anchor is enough; double matches do not matter).
+# NOT anchors, by design: [[wiki-links]] to other memories (a relation, not an artifact), bare dates.
+# Round-1/2 review (codex · Gemini Flash, 2026-10-23) set these edges. Stopped at the round cap: a static string
+# matcher does not converge (each round finds new edges) — residuals are listed in the lanes file, not chased.
+_EXT = (r'md|sh|py|js|mjs|cjs|ts|tsx|jsx|json|ya?ml|toml|txt|plist|html|css|rs|go|rb|java|kt|swift|c|h|cpp|hpp|'
+        r'sql|lock|cfg|ini|env|xml|csv|ipynb')
+ANCHOR_RES = [
+    # commit sha: hex mixing letters and digits, any case, not part of a #colour, UUID or longer word
+    re.compile(r'(?<![#\w-])(?=[0-9a-fA-F]*[0-9])(?=[0-9a-fA-F]*[a-fA-F])[0-9a-fA-F]{7,40}(?![\w-])'),
+    # commit sha named as such: then all-digit / all-letter hex counts too («commit 1234567», «커밋 deadbeef»)
+    re.compile(r'(?:commit|sha|커밋)\s*[:#]?\s*`?[0-9a-fA-F]{7,40}(?![\w-])', re.I),
+    # PR / issue: #N (not &#39; entities, not #section-slugs, not «#123456;» CSS) and owner/repo#N
+    re.compile(r'(?<![\w&#(])#\d+(?![\w;-])'),   # not «(#2)» — a link to a section of the same document
+    re.compile(r'[\w.-]+/[\w.-]+#\d+\b'),
+    # file path (case-insensitive extension) and the usual extensionless build files
+    re.compile(r'[\w./~-]+\.(?:' + _EXT + r')\b', re.I),
+    re.compile(r'\b(?:Dockerfile|Makefile|Gemfile|Procfile)\b'),
+    re.compile(r'arXiv[: ]?(?:\d{4}\.\d{4,5}|[a-z-]+(?:\.[A-Z]{2})?/\d{7})', re.I),     # arXiv id (new and legacy)
+    re.compile(r'https?://\S+')]                                                    # URL
+
+
+_WIKI = re.compile(r'\[\[[^\]]*\]\]')
+
+
+def count_anchors(text):
+    text = _WIKI.sub(' ', text)          # [[x]] / [[x.md]] is a relation to another memory, never an anchor
+    return sum(len(r.findall(text)) for r in ANCHOR_RES)                                                    # URL
 
 def link_dests(line):
     """Markdown inline-link destinations with their start offset: <...> form, balanced parens, title dropped."""
@@ -76,7 +110,7 @@ def indent(line):
 
 def parse_entry(path, today):
     """-> dict(status, type, hits[(date,str)], bad[str])"""
-    out = {'status': 'OK', 'type': None, 'hits': [], 'bad': []}
+    out = {'status': 'OK', 'type': None, 'hits': [], 'bad': [], 'anchors': 0}
     try:
         text = open(path, encoding='utf-8').read()
     except (OSError, UnicodeDecodeError) as e:
@@ -88,11 +122,13 @@ def parse_entry(path, today):
         out['status'] = 'NO_FRONTMATTER'
         return out
     try:
-        end = next(i for i in range(1, len(lines)) if lines[i].strip() == '---')
+        end = next(i for i in range(1, len(lines)) if lines[i].rstrip() == '---')
     except StopIteration:
         out['status'] = 'UNTERMINATED_FRONTMATTER'
         return out
     fm = lines[1:end]
+    body = "\n".join(lines[end + 1:])
+    out['anchors'] = count_anchors(body)
     meta_i = next((i for i, l in enumerate(fm) if indent(l) == 0 and re.match(r'^metadata:\s*$', l)), None)
     if meta_i is None:
         return out
@@ -143,6 +179,7 @@ def parse_entry(path, today):
         out['hits'].append((d.isoformat(), m.group(2)))
     if out['bad'] and out['status'] == 'OK':
         out['status'] = 'HITS_MALFORMED'
+    out['anchors'] += count_anchors("\n".join(t for _, t in out['hits']))   # a hit line may cite the evidence
     return out
 
 
@@ -199,7 +236,7 @@ def main():
     entries = []
     for n in names:
         p = parse_entry(os.path.join(a.memory_dir, n), today)
-        e = {'file': n, 'status': p['status'], 'type': p['type'], 'bad': p['bad'],
+        e = {'file': n, 'status': p['status'], 'type': p['type'], 'bad': p['bad'], 'anchors': p['anchors'],
              'index_line': pos.get(n, {}).get('line'), 'index_ord': pos.get(n, {}).get('ord'),
              'past_cap': pos.get(n, {}).get('past_cap', False)}
         if p['hits']:
@@ -215,8 +252,11 @@ def main():
     ok = lambda e: e['status'] == 'OK'
     cold = [e for e in entries if ok(e) and e['type'] != 'user' and e['age'] == 1
             and days_since(e['last_hit']) >= a.cold_days]
-    promote = [e for e in entries if ok(e) and e['age'] is not None and e['age'] >= a.promote_age
-               and e['distinct_days'] >= 2]
+    due = [e for e in entries if ok(e) and e['age'] is not None and e['age'] >= a.promote_age
+           and e['distinct_days'] >= 2]
+    promote = [e for e in due if e['anchors'] > 0]
+    promote_held = [e for e in due if e['anchors'] == 0]          # recurring, but cites nothing to promote on
+    unanchored = [e for e in entries if ok(e) and e['type'] in ('feedback', 'project') and e['anchors'] == 0]
     cold_set = {e['file'] for e in cold}
     listed = sorted((e for e in entries if e['index_line'] is not None), key=lambda e: e['index_ord'])
     users = [e for e in listed if e['type'] == 'user']
@@ -234,6 +274,8 @@ def main():
            'errors': [[e['file'], e['status'], e['bad']] for e in entries if e['status'] != 'OK'],
            'cold': [e['file'] for e in cold],
            'promote': [[e['file'], e['age'], e['distinct_days']] for e in promote],
+           'promote_held': [[e['file'], e['age'], e['distinct_days']] for e in promote_held],
+           'unanchored': [e['file'] for e in unanchored],
            'order': order, 'entries': entries}
     if a.json:
         print(json.dumps(rep, ensure_ascii=False, indent=1))
@@ -259,6 +301,14 @@ def main():
     print(f"  promote candidates (age ≥ {a.promote_age} over ≥ 2 days → propose rule/hook, human approves): {len(promote)}")
     for e in promote:
         print(f"    promote  {e['file']}  age {e['age']} · days {e['distinct_days']} · last {e['last_hit']}")
+    print(f"  promote held (recurs, but the body cites no evidence anchor — add one before proposing): {len(promote_held)}")
+    for e in promote_held:
+        print(f"    held     {e['file']}  age {e['age']} · days {e['distinct_days']} · last {e['last_hit']}")
+    print(f"  unanchored feedback/project (no commit · #PR · file · arXiv · URL in the body): {len(unanchored)}")
+    for e in unanchored[:20]:
+        print(f"    unanchored {e['file']}")
+    if len(unanchored) > 20:
+        print(f"    … {len(unanchored) - 20} more (--json lists all)")
     print(f"  proposed order ({len(order)}):")
     for n, f in enumerate(order, 1):
         print(f"    {n:>3}. {f}")
