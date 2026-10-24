@@ -137,6 +137,35 @@ for case in 'd["schema_version"]=True' 'd["load"]["extra"]=False' 'd["load"]["ex
   lane "strict type: $case refused" 2 "$tmp/typ"; rm -rf "$tmp/typ"
 done
 
+# kind / applies_when (2026-10-24): kind is a closed enum; a method must say where its failure occurs; the verdict JSON
+# carries kind (UNDECLARED when absent) so a loader can tell an activity (routes itself) from a method (must be loaded).
+mk kind_m; setmanifest "$tmp/kind_m" 'd["kind"]="method"; d["applies_when"]="work spans sessions and decisions are only in the prompt"'
+lane "control: kind method with applies_when admits" 0 "$tmp/kind_m"
+kindjson() { # name dir want_rc want_verdict want_kind — parse stdout JSON; rc, top-level verdict and kind must agree
+  local out rc; out="$("$PY" "$ADMIT" "$2" --json 2>/dev/null)"; rc=$?
+  if printf '%s' "$out" | "$PY" -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if (d.get("verdict"),d.get("kind"))==(sys.argv[1],sys.argv[2]) else 1)' "$4" "$5" && [ "$rc" = "$3" ]; then
+    echo "PASS $1 (rc=$rc verdict=$4 kind=$5)"; else echo "FAIL $1: want rc=$3 verdict=$4 kind=$5, got rc=$rc"; fail=1; fi
+}
+kindjson "verdict JSON carries kind=method" "$tmp/kind_m" 0 ADMIT method
+kindjson "absent kind reported as UNDECLARED" "$FIX/minimal_ok" 0 ADMIT UNDECLARED
+mk kind_inv; setmanifest "$tmp/kind_inv" 'd["kind"]="Method"; d["applies_when"]="three words here"'
+kindjson "invalid kind reported as INVALID, not UNDECLARED" "$tmp/kind_inv" 2 REFUSE INVALID
+mk kind_a; setmanifest "$tmp/kind_a" 'd["kind"]="activity"'
+lane "control: kind activity without applies_when admits" 0 "$tmp/kind_a"
+mk kind_aw; setmanifest "$tmp/kind_aw" 'd["kind"]="activity"; d["applies_when"]="the request names a code review"'
+lane "control: kind activity with applies_when admits" 0 "$tmp/kind_aw"
+mk kind_nok; setmanifest "$tmp/kind_nok" 'd["applies_when"]="work spans several sessions"'
+lane "control: applies_when without kind admits" 0 "$tmp/kind_nok"
+for case in 'd["kind"]="Method"; d["applies_when"]="three words here"' 'd["kind"]="methodology"; d["applies_when"]="three words here"' \
+            'd["kind"]=["method"]; d["applies_when"]="three words here"' 'd["kind"]="method"' 'd["kind"]="method"; d["applies_when"]="TBD"' \
+            'd["kind"]="method"; d["applies_when"]="sessions"' 'd["kind"]="method"; d["applies_when"]=5' \
+            'd["kind"]="method"; d["applies_when"]=None' 'd["kind"]="method"; d["applies_when"]=["a","b","c"]' \
+            'd["kind"]="method"; d["applies_when"]=True' 'd["kind"]="method"; d["applies_when"]="TBD TBD TBD"' \
+            'd["kind"]="method"; d["applies_when"]="none n/a ?"' 'd["kind"]=None' 'd["kind"]={"m":1}'; do
+  mk kind_bad; setmanifest "$tmp/kind_bad" "$case"
+  lane "kind/applies_when: $case refused" 2 "$tmp/kind_bad"; rm -rf "$tmp/kind_bad"
+done
+
 # 7 checker output validated; 8 snapshot integrity (in-process, the subprocess / copy step is replaced)
 inproc() { # name expected_rc(0=assertion holds) python-body
   local name="$1" out rc
