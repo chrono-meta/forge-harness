@@ -38,3 +38,10 @@ vendor/
 work/
 work.hidden/
 repo/
+
+# 2026-10-24: experiment runners give every run a temp HOME (runs/*/home, probe_claudemd/home, grader/home) holding
+# claude-cli caches, a login-config copy and a Keychains SYMLINK (git stores the link path only, measured: 62 × mode
+# 120000). 642 such files reached the store before this line. Measured before adding it: 0 dirs named `home` in the hub
+# outside the experiment folders (p3_contract_ab · p9_claim_withhold).
+# 🟥 residual: any future non-experiment directory named `home` under tracks/ will not be mirrored either.
+home/

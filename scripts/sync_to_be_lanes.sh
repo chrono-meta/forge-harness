@@ -128,6 +128,23 @@ out="$(PATH="$SHIM" MID=lanea run 2>&1)"
 [ ! -e "$BEX/tracks-chamber/runy/deep/er/vendor/pkg/lib.js" ]; chk $? "tar fallback: a nested vendor/ clone never landed"
 printf '%s' "$out" | grep -q '제외(vendor/'; chk $? "the vendor/ exclusion is announced, not silent"
 
+echo "── L4g experiment run trees (runs/*/work · runs/*/home) never reach the store; the run's record does (2026-10-23 · 10-24) ──"
+# 2026-10-23 launchd sync pushed ~437k experiment work-tree files (work/ · work.hidden/ · repo/ added then, no lane);
+# 2026-10-24 642 temp-HOME files followed (caches, a login-config copy, Keychains symlinks) → home/.
+new_env l4g
+mkdir -p "$HUB/tracks/_meta/exp/runs/r1/work/src" "$HUB/tracks/_meta/exp/runs/r1/home/Library/Caches/tool" "$HUB/tracks/_meta/exp/probe/home/cfg"
+printf 'agent edit\n' > "$HUB/tracks/_meta/exp/runs/r1/work/src/a.py"
+printf 'cache\n' > "$HUB/tracks/_meta/exp/runs/r1/home/Library/Caches/tool/c.json"
+printf '{}\n' > "$HUB/tracks/_meta/exp/probe/home/cfg/.claude.json"
+printf 'result\n' > "$HUB/tracks/_meta/exp/RESULTS.md"
+printf '{"grade":"PASS"}\n' > "$HUB/tracks/_meta/exp/runs/r1/record.json"
+MID=lanea run >/dev/null 2>&1
+[ -f "$BEX/tracks-meta/exp/RESULTS.md" ]; chk $? "CONTROL: the experiment's results file synced (run actually executed)"
+[ -f "$BEX/tracks-meta/exp/runs/r1/record.json" ]; chk $? "CONTROL: a run's own record next to work/ and home/ still synced (the excludes did not kill runs/)"
+[ ! -e "$BEX/tracks-meta/exp/runs/r1/work/src/a.py" ]; chk $? "a run's work/ tree never landed in the store"
+[ ! -e "$BEX/tracks-meta/exp/runs/r1/home/Library/Caches/tool/c.json" ]; chk $? "a run's temp home/ (caches) never landed in the store"
+[ ! -e "$BEX/tracks-meta/exp/probe/home/cfg/.claude.json" ]; chk $? "a probe's temp home/ (login-config copy) never landed in the store"
+
 echo "── L4e compaction session markers (.pending · .pending_* · .last_payload) never leave the hub; seals do (2026-10-03) ──"
 # fh_signal_2026-09-30_compaction-digest-stale: a legacy `.pending` mirrored into the store became a
 # tracked file, survived the digest's own consume-and-delete, and was restored by the return path —
