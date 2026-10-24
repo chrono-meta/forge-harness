@@ -346,6 +346,7 @@
     "scripts/test_preprep_retired_lanes.sh",
     "scripts/test_preprep_slide_refs_lanes.sh",
     "scripts/test_prepush_destructive_lanes.sh",
+    "scripts/test_prepush_real_fire_lanes.sh",
     "scripts/test_prepush_stdin_integrity.sh",
     "scripts/test_prior_art_prompt_lanes.sh",
     "scripts/test_probe_live_eval_lanes.sh",

@@ -8,6 +8,10 @@
 #   • tag / notes ref deletion      (git push origin :refs/tags/vX)
 #   • FORCE / non-fast-forward push (history rewrite — git push -f)
 #   • implicit deletes from         git push --mirror / --prune
+#     (--prune: git lists the deletes on stdin. --mirror: git does NOT — measured 2026-10-24, git 2.50.1 — so the
+#      hook detects a mirror push and computes the deletes from `git ls-remote`; see the mirror block below.)
+#   Each line above is measured by a REAL push in scripts/test_prepush_real_fire_lanes.sh (hook fired · stdin line ·
+#   remote unchanged), not only by synthetic stdin in test_prepush_destructive_lanes.sh.
 #
 # What it is and is NOT (honest scope):
 #   • It closes the **honest-weak-model** gap: an agent that simply *forgot* the prose
@@ -332,6 +336,75 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   fi
   # remote_sha == ZERO → creating a new branch (not destructive) → ignore
 done
+
+# ── `git push --mirror` deletes refs WITHOUT telling this hook (2026-10-24, sibling-harness report) ──────────────
+# Measured with git 2.50.1 (scripts/test_prepush_real_fire_lanes.sh L8): a mirror push deleted an unmerged remote
+# branch and the stdin above carried NO `(delete)` line for it — only the refs the push creates. The header's claim
+# «covers implicit deletes from --mirror» was a statement about git that no lane had run, and it was false.
+# So when the push is a mirror push, compute the deletions here: every remote ref that does not exist locally is
+# deleted by it. They join the same lists the verdict below already judges (merged branch = SAFE, unique work =
+# held, tags/notes = held). Cannot read the remote's refs → cannot classify → block (irreversible surface).
+# Mirror detection: `remote.<name>.mirror` config, or `--mirror` on the `git push` command line of an ancestor
+# process (the hook may sit behind a wrapper, so walk up to 4 levels). Named residual: with `ps` unavailable and no
+# mirror config, a mirror push is not detected — server-side branch protection stays the hard floor (header).
+# Second named residual (cross-family R1): `ls-remote` reads the upload-pack advertisement; a server that hides refs
+# from upload-pack (uploadpack.hideRefs) but not from receive-pack can omit a ref the mirror deletes. Same hard floor.
+MIRROR_UNREADABLE=""
+_fh_cfg=0
+[ "$(git config --bool "remote.${PUSH_REMOTE}.mirror" 2>/dev/null)" = true ] && _fh_cfg=1
+# A mirror config makes the push a mirror push (git refuses `--no-mirror <refspec>` against it — measured: «--mirror
+# can't be combined with refspecs» — so the config is not overridden here; fail-closed). The command line is read from the
+# nearest ancestor whose EXECUTABLE is git (the hook may sit behind a wrapper; an unrelated shell whose text merely
+# contains «push --mirror» is not git and is skipped — cross-family R1). argv is split without globbing (read -a).
+# git accepts unambiguous abbreviations, so every prefix of --mirror down to --mi counts (cross-family R1: `--mir`).
+_fh_cli=""
+_fh_pid=$PPID
+for _fh_i in 1 2 3 4 5; do
+  case "${_fh_pid:-}" in ''|0|1) break ;; esac
+  _fh_comm=$(ps -o comm= -p "$_fh_pid" 2>/dev/null) || break
+  case "${_fh_comm##*/}" in
+    git|git-push)
+      _fh_args=$(ps -o args= -p "$_fh_pid" 2>/dev/null) || break
+      read -r -a _fh_av <<< "$_fh_args"
+      for _fh_w in "${_fh_av[@]}"; do
+        case "$_fh_w" in
+          --mi|--mir|--mirr|--mirro|--mirror|--mirror=*)          _fh_cli=mirror ;;
+        esac
+      done
+      break ;;
+  esac
+  _fh_pid=$(ps -o ppid= -p "$_fh_pid" 2>/dev/null | tr -d ' ')
+done
+case "$_fh_cli" in mirror) _fh_mirror=1 ;; *) _fh_mirror=$_fh_cfg ;; esac
+if [ "$_fh_mirror" = 1 ]; then
+  # bounded and non-interactive (cross-family R1): a stalled transport or an auth prompt must end as «unreadable» → block
+  # The deadline covers the whole transport process group (cross-family R2: `alarm; exec` killed git but an ssh/helper
+  # child holding stdout kept a $(...) waiting past it). Output goes to a file, not a command substitution.
+  _fh_lr_out=$(mktemp "${TMPDIR:-/tmp}/fh-mirror-lsr.XXXXXX") || _fh_lr_out=""
+  if [ -n "$_fh_lr_out" ]; then
+    GIT_TERMINAL_PROMPT=0 GIT_ASKPASS=/usr/bin/false perl -e '
+      my $p = fork; die "fork" unless defined $p;
+      if (!$p) { setpgrp(0, 0); exec @ARGV; exit 127 }
+      $SIG{ALRM} = sub { kill "KILL", -$p; exit 124 };
+      alarm 30; waitpid($p, 0); exit($? >> 8)' git ls-remote "${2:-$PUSH_REMOTE}" >"$_fh_lr_out" 2>/dev/null; _fh_rc=$?
+    _fh_remote_refs=$(cat "$_fh_lr_out" 2>/dev/null); rm -f "$_fh_lr_out"
+  else
+    _fh_rc=1
+  fi
+  if [ "$_fh_rc" -ne 0 ]; then
+    MIRROR_UNREADABLE="${2:-$PUSH_REMOTE}"
+  else
+    while read -r _fh_sha _fh_ref; do
+      case "$_fh_ref" in ''|HEAD|*'^{}') continue ;; esac
+      git show-ref --verify -q "$_fh_ref" 2>/dev/null && continue        # exists locally → the mirror keeps it
+      case " $DEL_BRANCHES $DEL_OTHER " in *"|${_fh_ref} "*|*" ${_fh_ref} "*) continue ;; esac   # stdin already named it
+      case "$_fh_ref" in
+        refs/heads/*) DEL_BRANCHES="$DEL_BRANCHES ${_fh_sha}|${_fh_ref}" ;;
+        *)            DEL_OTHER="$DEL_OTHER $_fh_ref" ;;
+      esac
+    done <<< "$_fh_remote_refs"
+  fi
+fi
 
 # ── Confidentiality at the PUBLISH boundary — instrument completeness + content ───
 # Pattern loading and matching come from scripts/psa_scan_lib.sh, the single implementation shared
@@ -663,7 +736,7 @@ fi
 # push. Running AFTER classification removes the hazard structurally (the refs are already read
 # into variables); the `< /dev/null` guard is kept as defense in depth, not as the fix.
 # Nothing destructive and nothing unclassifiable → ordinary ff push / new branch → allow.
-if [ -z "$DEL_BRANCHES$DEL_OTHER$FORCED_REFS$UNCLASSIFIED" ]; then
+if [ -z "$DEL_BRANCHES$DEL_OTHER$FORCED_REFS$UNCLASSIFIED$MIRROR_UNREADABLE" ]; then
   exit 0
 fi
 
@@ -694,6 +767,14 @@ for r in $FORCED_REFS; do
   echo "    → take a bundle backup first:  git bundle create backup.bundle --all"
   BLOCK=1
 done
+
+# ── Mirror push whose remote refs could not be read: the deletions are unknown → fail-closed ──
+if [ -n "$MIRROR_UNREADABLE" ]; then
+  echo "  CANNOT CLASSIFY (mirror push, remote refs unreadable): $MIRROR_UNREADABLE"
+  echo "    → a --mirror push deletes every remote ref missing locally; git does not list those deletes for this hook."
+  echo "      Make the remote readable (git ls-remote) and re-push, or push explicit refspecs instead of --mirror."
+  BLOCK=1
+fi
 
 # ── Unclassifiable (remote tip not fetched): fail-closed, accurate message ──
 for r in $UNCLASSIFIED; do
