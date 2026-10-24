@@ -79,6 +79,22 @@ When persisting new assets (memory · feedback · patterns · rules) during a se
 
 When the judgment is ambiguous, the AI **states synergy potential first** then delegates the location decision to the user.
 
+## When this file and the code disagree
+
+- When this file states a convention (naming, structure, error types, module style) that the existing code does not follow, follow the established convention of the code nearest to your change (the same package or module) and say that you found the conflict. Do not rewrite unrelated existing code to match this file; changes the requested task needs are fine. A rule this file explicitly scopes to new or changed code (a migration, or "new X must ...") wins within that scope, and its security, privacy, safety and gate rules always win, whatever form they take.
+
+<!-- Measured 2026-10-24, Sonnet 5.5, small synthetic fixtures, 4 runs per cell (arXiv:2610.30571 shape). Three batches:
+     (1) 3 stale-convention fixtures, no line: the stale file line was followed in 10/12 runs, existing definitions rewritten
+         to match it in 4/12. An early wording without the "scoped to new code" exception then overrode an explicit
+         migration line 4/4. Keep that exception.
+     (2) 8 fixtures (the 3 above + migration + 4 written later: rule for new code, security rule phrased as an error rule,
+         monorepo nearest package, unseen stale rule), no line vs a near-final wording: right 24/32 vs 32/32, detected
+         definition rewrites 2 runs vs 0. On the 4 later fixtures both arms were right 16/16, so no regression was observed
+         there and no benefit was shown either.
+     (3) This wording ("wins within that scope"), 4 core fixtures: right 16/16, 0 rewrites. Every diff in (2)-(3) read by hand.
+     Not measured: a stale convention dressed as a gate rule ("gate: reject camelCase") would now always win. -->
+
+
 ## Knowledge Hub (forge-harness)
 
 Persistent knowledge for this project is stored at `~/projects/forge-harness/`.
