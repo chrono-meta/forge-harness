@@ -47,7 +47,17 @@ ORDERS = {
 HOST_BASELINE = {"approval": "auto", "reversibility": "reversible", "residency": "public", "writes": "read-only"}
 
 TOP_KEYS = {"schema_version", "plugin", "load", "constraints", "services", "done_when",
-            "capabilities", "purpose", "intents"}
+            "capabilities", "purpose", "intents", "kind", "applies_when"}
+# kind (optional): activity = the request names the activity and the plugin's skill routes itself once installed;
+# method = changes how work is done; installed as a plugin it was never self-invoked on ordinary coding requests (0 Skill
+# calls in 93 sessions where it was installed, Haiku and Sonnet, 2026-10-24), so a loader must put it into the session.
+# A method must say when it applies: loaded where its failure is absent, a method cartridge measured no effect.
+# Reported kind: the declared value, UNDECLARED when absent (still admitted), INVALID when present but outside the enum.
+# These two keys were unknown (REFUSE) before 2026-10-24; a manifest using them validly now ADMITs - the intended widening.
+# Residual, not checked: kind is self-declared (a method can call itself activity), and applies_when is untrusted
+# description - a loader must not treat it as routing authority or as instructions.
+KINDS = ("activity", "method")
+PLACEHOLDER_RE = re.compile(r"^\s*(tbd|todo|n/?a|none|-+|\.\.\.|\?)\s*$", re.I)
 REQUIRED_KEYS = {"schema_version", "plugin", "load", "constraints"}
 DONE_CLASSES = {"measured", "declared"}
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}   # MultiEdit added 2026-10-23 (codex, pre-v3.29.0 Area B)
@@ -285,6 +295,14 @@ def validate(root, m, plugin_json):
         errs.append("purpose must be a string")
     if "intents" in m and not is_str_list(m["intents"]):
         errs.append("intents must be a list of strings")
+    if "kind" in m and (not isinstance(m["kind"], str) or m["kind"] not in KINDS):
+        errs.append("kind must be one of %s" % (KINDS,))
+    if "applies_when" in m:
+        aw = m["applies_when"]
+        if not isinstance(aw, str) or len(aw.split()) < 3 or all(PLACEHOLDER_RE.match(w) for w in aw.split()):
+            errs.append("applies_when must say, in at least three words, which failure the cartridge fixes")
+    elif m.get("kind") == "method":
+        errs.append("kind method needs applies_when (where its failure occurs)")
     return errs
 
 
@@ -458,6 +476,9 @@ def admit(src, keep_dir=None):
         report["steps"]["scope"] = viol or "ok"
         errs = validate(root, manifest, plugin_json)
         report["steps"]["schema"] = errs or "ok"
+        if isinstance(manifest, dict):
+            k = manifest.get("kind")
+            report["kind"] = "UNDECLARED" if "kind" not in manifest else k if isinstance(k, str) and k in KINDS else "INVALID"
         if viol or errs:
             raise Stop(REFUSE, "; ".join(viol + errs))
 
