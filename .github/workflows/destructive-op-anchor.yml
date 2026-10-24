@@ -82,6 +82,7 @@ jobs:
           # and it is the cheapest place for it to reappear.
           missing=0
           for f in scripts/test_prepush_destructive_lanes.sh \
+                   scripts/test_prepush_real_fire_lanes.sh \
                    scripts/prepush_guard_check.sh \
                    templates/predelete_check.test.sh \
                    templates/.git-hooks/pre-push \
@@ -103,6 +104,13 @@ jobs:
           # blanket-deny gate would pass every positive lane and be useless, and over-blocking
           # trains the override that disarms the gate.
           bash scripts/test_prepush_destructive_lanes.sh
+
+      - name: 'Anchor 1b — pre-push fires on REAL pushes (delete · tag · notes · force · --prune · --mirror)'
+        run: |
+          # The verdict lanes above feed synthetic stdin. This one runs real `git push` against a bare remote and
+          # asserts the hook fired, received the ref line its header claims, and left the remote unchanged.
+          # --mirror deletes are not passed on stdin by git (measured 2026-10-24) — the hook computes them.
+          bash scripts/test_prepush_real_fire_lanes.sh
 
       - name: 'Anchor 2/3 — pre-push publish-boundary guards (20 known pairs)'
         run: |

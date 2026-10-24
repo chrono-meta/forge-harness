@@ -1014,6 +1014,8 @@ for _pair in \
   "scripts/destructive_pre_gate.sh|scripts/test_destructive_pre_gate_lanes.sh" \
   "templates/.git-hooks/pre-push|scripts/test_prepush_destructive_lanes.sh" \
   "templates/.git-hooks/pre-push|scripts/test_prepush_destructive_liveness.sh" \
+  `# 실제 git push 발화 레인 (2026-10-24, 형제 하네스 회신). 합성 stdin 레인은 «판정» 만 잰다 — 이 레인은 git 이 그 동작에서 훅을 «부르는가 · 그 줄을 넘기는가» 를 잰다. --mirror 는 삭제 줄을 안 넘긴다(실측).` \
+  "templates/.git-hooks/pre-push|scripts/test_prepush_real_fire_lanes.sh" \
   `# ── 증거 vs 판정 토큰 충돌(2026-09-19). SUBJECT 는 훅이 아니라 «되돌림 프로브 자신»이다 — 이 레인이 재는 것은 게이트의 동작이 아니라 그 프로브의 «출력 계약»(자기가 authored 한 줄에만 ❌ 를 쓴다)이고, 이 집계기가 ❌ 로 실패를 판정하므로 둘이 같은 채널을 공유한다. 실측: run 35426860480 의 로그를 사람이 두 번 연속 오귀속했다 ──` \
   "scripts/test_prepush_destructive_liveness.sh|scripts/test_liveness_echo_token_lanes.sh" \
   "templates/.git-hooks/pre-push|scripts/test_push_zone_lanes.sh" \
