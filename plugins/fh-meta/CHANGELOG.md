@@ -6,6 +6,8 @@
 
 BREAKING (gate): `sim_isolated_run.sh` 는 `--out` 의 조상 어디에든 `CLAUDE.md` · `CLAUDE.local.md` · `.claude/CLAUDE(.local).md` · `AGENTS.md` · `.claude/AGENTS.md` · `.claude/rules/*.md` 가 있으면 **어떤 팔도 돌리기 전에 종료 2 로 거부한다** — 예전엔 그대로 돌았고, `claude -p` 가 조상 지침을 전부 실어 팔마다 실제 레포 지침이 섞였다(2026-10-23 짝 실측: 체크아웃 아래 지침 3개 로드 · `/private/tmp` 아래 0개). 처방: `--out` 을 레포 밖(기본 mktemp 또는 `/private/tmp/...`)에 둔다. 섞여도 된다고 판단하면 `FH_SIM_ALLOW_INHERIT=1`(출력에 한 번 남는다). `$HOME/.claude` 안의 사용자 전역 지침은 모든 팔에 똑같이 실리므로 거부 사유가 아니다(#940 · #942).
 
+BREAKING (gate): pre-push 훅이 **`git push --mirror`**(명령줄 · `--mir` 같은 축약 · `remote.<name>.mirror` 설정)를 감지해, 원격에서 지워질 ref 를 `git ls-remote` 로 스스로 계산하고 기존 판정에 넣는다 — 예전엔 git 이 미러 삭제를 훅 stdin 에 **넘기지 않아**(git 2.50.1 실측) 병합 안 된 원격 브랜치가 막힘 없이 지워졌다. 이제 병합된 브랜치는 그대로 지나가고, 고유 작업이 있는 브랜치 · 태그 · notes 삭제는 멈춘다. 원격 ref 를 못 읽으면(30초 제한 · 대화형 인증 없음) 멈춘다. 처방: 미러 대신 명시적 refspec 으로 푸시하거나, 확인을 마친 뒤 `DESTRUCTIVE_OP_OK=1`. 실제 `git push` 로 재는 레인 `scripts/test_prepush_real_fire_lanes.sh` 신설(#948).
+
 소비자에게 닿는 작은 변화:
 - `pr_merge_verified.sh`: GitHub 가 머지 요청을 받은 뒤 로컬 영수증 한 줄(pr · head · merge · outcome · actor · lease) 기록을 **시도한다** — 기본 경로 `<git-common-dir>/fh-merge-receipts.jsonl`, `PMV_RECEIPTS` 로 바꿀 수 있다. 쓰기에 실패하면 경고만 하고 종료 코드는 그대로다. 거절된 머지엔 안 남긴다. `--lease '<label>'` 로 어떤 승인 아래 머지했는지 적는다(기록만, 강제 아님)(#937). `--rerun` 의 낱말 어디에도(그리고 그 낱말이 가리키는 스크립트 본문에도) PR 이 바꾼 파일이 안 나오면 stderr 에 경고 한 줄 — 종료 코드와 머지는 그대로다(#945).
 - `session_checklist.py unblocked`: 상태 칸이 빈 결과서에서 `TypeError` 로 죽던 것을 고쳤다 · N/A 행을 «아직 열림» 으로 보고하던 것도 고쳤다(#945).
