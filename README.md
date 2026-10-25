@@ -3,13 +3,13 @@
 </p>
 
 <p align="center">
-  <a href="https://arxiv.org/abs/2609.04218"><img src="https://img.shields.io/badge/arXiv-2609.04218-b31b1b.svg" alt="arXiv:2609.04218 — the FH governance paper"></a>
+  <a href="https://arxiv.org/abs/2609.04218"><img src="https://img.shields.io/badge/arXiv-2609.04218-b31b1b.svg?logo=arxiv" alt="arXiv:2609.04218 — the FH governance paper"></a>
   <a href="https://github.com/walkinglabs/awesome-harness-engineering#coding-agent-harnesses"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Harness Engineering"></a>
-  <a href="https://github.com/VoltAgent/awesome-agent-skills#community-skills"><img src="https://img.shields.io/badge/listed_in-awesome--agent--skills-0ea5e9.svg" alt="Listed in awesome-agent-skills"></a>
-  <a href="https://github.com/marketplace/actions/fh-gate-typed-ai-code-review-verdict"><img src="https://img.shields.io/badge/GitHub_Action-marketplace-2088FF.svg" alt="GitHub Actions Marketplace — fh-gate"></a>
-  <a href="https://www.npmjs.com/package/@chrono-meta/fh-gate"><img src="https://img.shields.io/npm/v/@chrono-meta/fh-gate.svg?color=cb3837" alt="npm"></a>
+  <a href="https://github.com/VoltAgent/awesome-agent-skills#community-skills"><img src="https://img.shields.io/badge/listed_in-awesome--agent--skills-0ea5e9.svg?logo=awesomelists" alt="Listed in awesome-agent-skills"></a>
+  <a href="https://github.com/marketplace/actions/fh-gate-typed-ai-code-review-verdict"><img src="https://img.shields.io/badge/GitHub_Action-marketplace-2088FF.svg?logo=githubactions" alt="GitHub Actions Marketplace — fh-gate"></a>
+  <a href="https://www.npmjs.com/package/@chrono-meta/fh-gate"><img src="https://img.shields.io/npm/v/@chrono-meta/fh-gate.svg?color=cb3837&logo=npm" alt="npm"></a>
   <a href="https://www.npmjs.com/package/@chrono-meta/fh-gate"><img src="https://img.shields.io/npm/dt/@chrono-meta/fh-gate.svg?color=3fb950&logo=npm&label=downloads" alt="npm total downloads"></a>
-  <a href="https://github.com/chrono-meta/homebrew-forge-harness"><img src="https://img.shields.io/badge/homebrew-tap-FBB040.svg" alt="Homebrew tap"></a>
+  <a href="https://github.com/chrono-meta/homebrew-forge-harness"><img src="https://img.shields.io/badge/homebrew-tap-FBB040.svg?logo=homebrew" alt="Homebrew tap"></a>
 </p>
 
 <p align="center">
