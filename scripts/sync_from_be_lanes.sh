@@ -516,6 +516,45 @@ L26="$(mktemp -d)"
 rm -rf "$L26"
 [ "$l26" -eq 0 ]; chk $? "loader: shipped list has .pending · 2-entry fixture loads · inner-slash fixture refused with a reason (rc=$l26)"
 
+echo "── L27 completed-pass stamp: skip only what neither side wrote since a clean pass ──"
+new_env l27
+ST="$HUB/tracks/_meta/.sync_from_be_stamp.marker"
+printf 'same\n' > "$HUB/tracks/_meta/s1.md"; printf 'same\n' > "$BEX/tracks-meta/s1.md"
+printf 'hub\n'  > "$HUB/tracks/_meta/s2.md"; printf 'hub\n'  > "$BEX/tracks-meta/s2.md"
+run --dry-run >/dev/null 2>&1
+[ ! -e "$ST" ]; chk $? "dry-run leaves no stamp"
+sleep 1   # the stamp takes the run's start second; files written in that same second are not "older"
+out="$(run 2>&1)"; rc=$?
+[ "$rc" = "0" ] && [ -f "$ST" ]; chk $? "first clean pass writes the stamp (rc=$rc)"
+printf '%s' "$out" | grep -q 'compare skipped'; [ $? -ne 0 ]; chk $? "first pass skipped nothing (no stamp to trust yet)"
+ls "$HUB/tracks/_meta"/.sync_from_be_stamp.next.* >/dev/null 2>&1; [ $? -ne 0 ]; chk $? "no candidate stamp left behind"
+sleep 2
+out="$(run 2>&1)"
+printf '%s' "$out" | grep -q '2 file(s) unchanged on both sides'; chk $? "second pass skips the two untouched pairs"
+# known-positive in the same env: a companion write AFTER the stamp is still pulled
+sleep 1; printf 'hub\nmore\n' > "$BEX/tracks-meta/s2.md"
+run >/dev/null 2>&1
+[ "$(cat "$HUB/tracks/_meta/s2.md")" = "$(printf 'hub\nmore')" ]; chk $? "positive: companion written after the stamp is compared and pulled"
+# named residual, pinned so a change to it is seen: content changed but an OLD mtime restored
+sleep 1; printf 'same\nsneaky\n' > "$BEX/tracks-meta/s1.md"; touch -r "$HUB/tracks/_meta/s1.md" "$BEX/tracks-meta/s1.md"
+touch -r "$HUB/tracks/_meta/s1.md" "$ST" 2>/dev/null; touch "$ST"
+run >/dev/null 2>&1
+[ "$(cat "$HUB/tracks/_meta/s1.md")" = "same" ]; chk $? "residual: old-mtime rewrite is skipped under the stamp (documented)"
+run --full >/dev/null 2>&1
+[ "$(cat "$HUB/tracks/_meta/s1.md")" = "$(printf 'same\nsneaky')" ]; chk $? "--full rechecks and pulls it"
+# a failed run must not advance the stamp
+before="$(ls -l -T "$ST" 2>/dev/null || stat -c %y "$ST")"
+sleep 1; printf 'x\n' > "$BEX/tracks-meta/s3.md"; ln -s /dev/null "$HUB/tracks/_meta/s3.md"
+run >/dev/null 2>&1; rc=$?
+after="$(ls -l -T "$ST" 2>/dev/null || stat -c %y "$ST")"
+[ "$rc" = "10" ] && [ "$before" = "$after" ]; chk $? "a run with errors (rc=$rc) leaves the stamp where it was"
+ls "$HUB/tracks/_meta"/.sync_from_be_stamp.next.* >/dev/null 2>&1; [ $? -ne 0 ]; chk $? "and drops its candidate"
+rm -f "$HUB/tracks/_meta/s3.md"
+# --quiet with no stamp says so (the hook context is where a full pass gets killed)
+rm -f "$ST"
+qout="$(run --quiet 2>/dev/null)"   # captured, not piped: grep -q closing early is SIGPIPE under pipefail
+printf '%s\n' "$qout" | grep -q 'no completed-pass stamp yet'; chk $? "--quiet without a stamp announces the full pass"
+
 echo ""
 echo "════ lanes: $PASS passed · $FAIL failed ════"
 [ "$FAIL" -eq 0 ] || exit 1
