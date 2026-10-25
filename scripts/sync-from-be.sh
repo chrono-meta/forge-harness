@@ -46,7 +46,19 @@
 #     companion holds the only copy, and excluding the tree wholesale stranded them there.
 #   - CLAUDE.local.md is never pulled — it is this operator's local binding for THIS machine.
 #
-# USAGE: sync-from-be.sh [--dry-run] [--include-new] [--quiet] [--no-git]
+# USAGE: sync-from-be.sh [--dry-run] [--include-new] [--quiet] [--no-git] [--full]
+#   --full (or FH_SYNC_FROM_BE_FULL=1): compare every file, ignoring the completed-pass stamp below.
+#
+# COMPLETED-PASS STAMP (2026-10-25). A healthy mirror sits at EQUAL mtimes (see `! -ot` below), so
+# every file used to reach the debanner+cmp pair: two forks per file. At 70k companion files that
+# was 355 s on the operator machine, while the SessionStart hook's timeout is 45 s, so the hook was
+# killed on every session start and the return sync never once finished. Now a run that ends with
+# exit 0 (not --dry-run) leaves tracks/_meta/.sync_from_be_stamp.marker, with the mtime of the
+# moment that run STARTED. The next run skips the content compare for a file only when the stamp is
+# strictly newer than BOTH copies: neither side has been written since a pass that already compared
+# them, so the earlier decision still holds. New, missing and symlinked files are decided before
+# this skip and are untouched by it. Named residual: a copy rewritten with an OLD mtime preserved
+# (cp -p / tar / touch -r from a backup) looks unchanged; --full rechecks everything.
 # EXIT:  0 = clean (nothing to do, or applied)   10 = harness error (never a silent pass)
 
 set -uo pipefail
@@ -54,7 +66,7 @@ set -uo pipefail
 FH="${HUB_DIR:-${CLAUDE_PROJECT_DIR:-$HOME/projects/forge-harness}}"
 BE="${BE_DIR:-$FH/../fh-be}"
 
-DRY=0; INCLUDE_NEW=0; NEW_SCOPE=""; QUIET=0; DO_GIT=1
+DRY=0; INCLUDE_NEW=0; NEW_SCOPE=""; QUIET=0; DO_GIT=1; FULL="${FH_SYNC_FROM_BE_FULL:-0}"
 for a in "$@"; do
   case "$a" in
     --dry-run) DRY=1 ;;
@@ -67,6 +79,7 @@ for a in "$@"; do
     --include-new=*) INCLUDE_NEW=1; NEW_SCOPE="${a#--include-new=}" ;;
     --quiet) QUIET=1 ;;
     --no-git) DO_GIT=0 ;;
+    --full) FULL=1 ;;
     *) echo "sync-from-be: unknown arg: $a" >&2; exit 10 ;;
   esac
 done
@@ -267,7 +280,12 @@ _debanner() {
 # mid-write. Belt and braces on purpose: a leaked temp that propagates to the companion store would
 # be a defect created by the fix for S3. (self-caught 2026-08-02, before the round-2 audit.)
 _TMP_INFLIGHT=""
-_sfb_cleanup() { [ -n "$_TMP_INFLIGHT" ] && rm -f "$_TMP_INFLIGHT" 2>/dev/null; }
+_STAMP_NEXT=""
+_sfb_cleanup() {
+  [ -n "$_TMP_INFLIGHT" ] && rm -f "$_TMP_INFLIGHT" 2>/dev/null
+  [ -n "$_STAMP_NEXT" ] && rm -f "$_STAMP_NEXT" 2>/dev/null
+  return 0
+}
 trap '_sfb_cleanup' EXIT HUP INT TERM
 
 _write_atomic() {   # $1 = source file, $2 = destination path  → 0 ok, 1 failed (dest untouched)
@@ -496,6 +514,10 @@ pull_dir() {   # $1 = companion (source) dir, $2 = hub (destination) dir, $3 = l
     # clock skew between machines, another `touch -r`) would be silently and PERMANENTLY unpullable.
     # Equality is decided by content on the next line, so widening here costs a cmp, not a wrong
     # overwrite; a genuinely hub-newer file is still excluded. (cross-family L1, 2026-08-02.)
+    # Completed-pass stamp (header): neither copy written since a pass that compared them.
+    if [ "$USE_STAMP" = "1" ] && [ "$PASS_STAMP" -nt "$f" ] && [ "$PASS_STAMP" -nt "$h" ]; then
+      N_STAMP_SKIP=$((N_STAMP_SKIP+1)); continue
+    fi
     [ ! "$f" -ot "$h" ] || continue
     _debanner "$f" | cmp -s - "$h" && continue
     # Classify for the OPERATOR'S EYE, not for the control flow: pure-addition (the companion only
@@ -668,6 +690,21 @@ MEM="$(resolve_mem_dir "$FH")"
 #   edit_manifest.yaml, MEMORY.md  : machine-scoped by content. They DO get a return leg, but a
 #                                    same-machine one only — see pull_machine_scoped() below.
 # Keep the shared pairs in step: an outward pair with no return leg is the gap this script closes.
+# Completed-pass stamp (header). The candidate is created BEFORE the first compare, so its mtime is
+# this run's start: a file written while the run is going is newer than it and is compared next time.
+PASS_STAMP="$FH/tracks/_meta/.sync_from_be_stamp.marker"   # *.marker = excluded from forward sync
+USE_STAMP=0; N_STAMP_SKIP=0
+case "$FULL" in 1) ;; *) [ -f "$PASS_STAMP" ] && [ ! -L "$PASS_STAMP" ] && USE_STAMP=1 ;; esac
+if [ "$DRY" = "0" ] && [ -d "$FH/tracks/_meta" ]; then
+  # Not mktemp: BSD mktemp only fills TRAILING X's, and the name must end in .marker to stay out of
+  # the forward sync. The pid keeps two concurrent runs from sharing one candidate.
+  _STAMP_NEXT="$FH/tracks/_meta/.sync_from_be_stamp.next.$$.marker"
+  : > "$_STAMP_NEXT" 2>/dev/null || _STAMP_NEXT=""
+fi
+if [ "$USE_STAMP" = "0" ] && [ "$QUIET" = "1" ] && [ "$FULL" != "1" ]; then
+  say "ℹ️  no completed-pass stamp yet — this run compares every file and can outlast a SessionStart hook's timeout."
+  say "    Run it once by hand to finish a full pass: bash scripts/sync-from-be.sh"
+fi
 pull_dir "$BE/$TM"    "$FH/tracks/_meta"     "tracks/_meta"
 pull_dir "$BE/$TA"   "$FH/tracks/_audit"    "tracks/_audit"
 pull_dir "$BE/$TCH" "$FH/tracks/_chamber"  "tracks/_chamber"
@@ -744,6 +781,7 @@ else
   fi
   [ "$TOTAL" -gt 0 ] && [ "$DRY" = "0" ] && log "backups: ${RESTORE_ROOT#$FH/}/"
 fi
+[ "$N_STAMP_SKIP" -gt 0 ] && log "${PFX}$N_STAMP_SKIP file(s) unchanged on both sides since the last completed pass — compare skipped (--full rechecks)"
 
 if [ "$ERRORS" -gt 0 ]; then
   # Say what is TRUE of every error path, not what is true of the convenient one. Each failure above
@@ -755,4 +793,6 @@ if [ "$ERRORS" -gt 0 ]; then
   warn "  was left partially written — writes go through a temp file and an atomic rename."
   exit 10
 fi
+# Only a run that reached here without errors earns the stamp; every other exit drops the candidate.
+if [ -n "$_STAMP_NEXT" ] && mv -f "$_STAMP_NEXT" "$PASS_STAMP" 2>/dev/null; then _STAMP_NEXT=""; fi
 exit 0
