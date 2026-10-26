@@ -2274,6 +2274,19 @@ else
   fail=1
 fi
 
+# 떼기 — install-wizard 가 쓴 흔적만 되돌린다. 레인은 마법사 문서의 설치 블록을 그대로 뽑아 임시 HOME 에서 돌리고,
+# 떼기 뒤 트리가 설치 전과 바이트까지 같은지 본다(사용자 자기 훅 · 고친 복사본 · 옛 판 훅은 남기고 LEFT).
+if [ ! -f scripts/fh_detach.py ]; then
+  _absent_subject_verdict "test_fh_detach_lanes.sh" "scripts/fh_detach.py" || fail=1
+elif [ -f scripts/test_fh_detach_lanes.sh ]; then
+  if ! bash scripts/test_fh_detach_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_fh_detach_lanes.sh: fh_detach.py present but its anchor is missing"
+  fail=1
+fi
+
 # outbound-query PreToolUse 훅 — 위 CLI 가드의 **배선**(WebSearch|WebFetch). 레인이 두 층 판정
 # (override→deny · defaults→advisory), 미측정 4가지→deny, N/A 무음, 그리고 🟥 «출력에 토큰 값이
 # 없다»(H10)를 각각 짝으로 잡는다. 마지막 것이 이 훅의 존재 이유를 지키는 레인이다.

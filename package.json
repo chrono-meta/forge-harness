@@ -217,6 +217,8 @@
     "scripts/outbound_pr_gate.sh",
     "scripts/outbound_query_guard.sh",
     "scripts/abstract_consult_check.py",
+    "scripts/fh_detach.py",
+    "scripts/test_fh_detach_lanes.sh",
     "scripts/test_abstract_consult_check_lanes.sh",
     "scripts/outbound_query_hook.sh",
     "scripts/package_coverage_check.sh",

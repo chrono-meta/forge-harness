@@ -564,11 +564,16 @@ elif [ "${FH_WIZARD_ZSHRC_CONSENT:-N}" != "Y" ]; then
 elif grep -q "fh_audit_check.zsh" "$ZSHRC" 2>/dev/null; then
   echo "zshrc hook: already present — no change"
 else
+  # Begin/end markers let scripts/fh_detach.py remove exactly this block and nothing else.
+  # A file without a trailing newline would glue our first line onto the user's last one.
+  [ -s "$ZSHRC" ] && [ -n "$(tail -c1 "$ZSHRC")" ] && printf '\n' >> "$ZSHRC"
   cat >> "$ZSHRC" <<EOF
+# >>> forge-harness (install-wizard) >>>
 export FH_DIR="$FH_DIR"
 export CC_HUB_DIR="$CC_HUB_DIR"
 export CC_SENTINELS_DIR="\$HOME/.cc_sentinels"
 source "\$FH_DIR/templates/fh_audit_check.zsh"
+# <<< forge-harness (install-wizard) <<<
 EOF
   echo "zshrc hook: appended"
 fi
@@ -665,8 +670,16 @@ for snip in snippets:
         # the loss: [my_telemetry.sh, fh_session_load.sh] lost my_telemetry.sh entirely).
         kept = []
         for g in hooks.get(event, []):
+            # A hook is FH's only when it names one of the snippet's scripts AND points into an FH hub
+            # ($CLAUDE_PROJECT_DIR or forge-harness). The path-form key alone still matched a user's own
+            # ~/tools/scripts/fh_node_check.sh and deleted it (scripts/test_fh_detach_lanes.sh D5b, 2026-10-26).
+            # A command byte-equal to one this snippet is about to write is ours whatever it points at — that keeps a
+            # re-run idempotent (scripts/test_wizard_snippet_merge_lanes.sh MS-4).
+            own = {h.get("command") for eg in entry for h in eg.get("hooks", [])}
             survivors = [h for h in g.get("hooks", [])
-                         if not any(k in h.get("command", "") for k in keys)]
+                         if not (h.get("command", "") in own
+                                 or (any(k in h.get("command", "") for k in keys)
+                                     and re.search(r"CLAUDE_PROJECT_DIR|forge-harness", h.get("command", ""))))]
             if survivors:
                 g = dict(g); g["hooks"] = survivors
                 # `"matcher": ""` and an omitted matcher are the same thing in Claude Code (hooks doc,
@@ -737,10 +750,14 @@ FH_NODE_STATE="$_T" bash "$FH_DIR/scripts/fh_node_check.sh"; rm -f "$_T"
 #   NEVER installed into field projects (see auto_project_mapping.md §6). Skip unless you develop FH itself.
 # Per Core Principles (Per-item approval + Double-confirm irreversible changes): this is NOT auto-run —
 #   it is a separate explicit Y/N, not folded into the baseline-setup batch.
-if [ -d "$FH_DIR/templates/.git-hooks" ]; then
-  echo "Enable the 4-axis pre-commit gate on your FH clone ($FH_DIR)? It will block commits there until"
-  echo "markers pass (Mode D / FH-development only). Skip if you are not developing FH itself. (Y/N)"
-  # → On explicit Y only:
+# The Y/N used to be a COMMENT («On explicit Y only») — pasted or scripted, the block set hooksPath
+# unconditionally, the same defect the zshrc block above had until 2026-08-12. Now a real conditional on
+# FH_WIZARD_GATE_CONSENT, default N (fail-closed). Lane: scripts/test_fh_detach_lanes.sh (G1/G2).
+if [ -d "$FH_DIR/templates/.git-hooks" ] && [ "${FH_WIZARD_GATE_CONSENT:-N}" != "Y" ]; then
+  echo "4-axis pre-commit gate: SKIPPED (no explicit Y) — set FH_WIZARD_GATE_CONSENT=Y after the user answers Y to:"
+  echo "  Enable the 4-axis pre-commit gate on your FH clone ($FH_DIR)? It will block commits there until"
+  echo "  markers pass (Mode D / FH-development only). Skip if you are not developing FH itself. (Y/N)"
+elif [ -d "$FH_DIR/templates/.git-hooks" ]; then
   git -C "$FH_DIR" config core.hooksPath templates/.git-hooks
   chmod +x "$FH_DIR/templates/.git-hooks/pre-commit" 2>/dev/null
   echo "4-axis pre-commit gate: installed (core.hooksPath -> templates/.git-hooks)"
@@ -748,7 +765,8 @@ fi
 
 # sentinel initialization (per-project independent — prevent conflicts with other projects on same machine)
 mkdir -p ~/.cc_sentinels
-touch ~/.cc_sentinels/$(basename "$(pwd)")_wizard_done
+# quoted: a project folder named «my project» used to create ~/.cc_sentinels/my and ./project_wizard_done (codex R2)
+touch ~/.cc_sentinels/"$(basename "$(pwd)")"_wizard_done
 
 # Weekly audit cadence — NO cron needed (a session-scoped scheduler cannot fire on a later day).
 # Durable mechanism = the zshrc hook above (fh_audit_check.zsh warns on terminal start when 7+ days

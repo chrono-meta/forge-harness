@@ -287,6 +287,28 @@ When run again in an environment that has already passed the wizard (`~/.cc_sent
 - Proposes only newly found MISS/FAIL items
 - No full reinstall
 
+## Detach (undo the wizard)
+
+Everything this wizard writes can be taken back with one command, and only what it wrote:
+
+```bash
+python3 "$FH_DIR/scripts/fh_detach.py" --project .            # dry run — prints the plan, changes nothing
+python3 "$FH_DIR/scripts/fh_detach.py" --project . --apply    # carry it out (add --plugin to also uninstall fh-meta)
+```
+
+It removes the zshrc block, the FH hook entries (byte-equal to the shipped snippets only), the companion
+section in `CLAUDE.local.md`, the gate's `core.hooksPath`, this project's `~/.cc_sentinels/*_wizard_*` files and
+unchanged template copies. A user's own hook is never removed, even one sharing a script name or a group with FH.
+Anything FH-like that is not an exact match (an older snippet version, a copy you edited) is listed as `LEFT` and
+the exit code is 1 — look at it by hand. When the wizard's `.prewizard` backup still matches, your original
+settings bytes come back. Lanes: `scripts/test_fh_detach_lanes.sh` (install with this wizard's own blocks → detach →
+byte-equal tree).
+
+Named residuals: a hook for a script FH no longer ships is not recognised (neither removed nor listed); the installer
+treats a command that runs the hub's own `$CLAUDE_PROJECT_DIR/scripts/<name>.sh` as FH's, so it replaces such a command
+on re-install; a `~/.zshrc` that had no final newline keeps the one newline the wizard added; settings rewritten
+without a matching `.prewizard` come back as indent-2 JSON (same content, not the same bytes).
+
 ## External User Environment Adaptation
 
 | Mode | Environment | Action |
