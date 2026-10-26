@@ -159,6 +159,17 @@ procs_matching() {  # count live processes whose WHOLE cmdline is $1 — /proc, 
   for c in /proc/[0-9]*/cmdline; do [ -e "$c" ] || continue; [ "$(tr '\0' ' ' < "$c" 2>/dev/null)" = "$1 " ] && n=$((n+1)); done
   echo "$n"
 }
+# The counter is exact per cmdline but its SCOPE is the whole machine: /proc is not scoped to a
+# checkout, so a fixture named `sleep 4747` is a name two runs can both claim. Measured 2026-10-26:
+# this suite and three others went red only under concurrent load and passed 3/3 standalone in both
+# trees — two copies in DIFFERENT trees each counted the other's live fixtures, so N6/S7-5 ("no
+# orphan is left running") saw the sibling's healthy, about-to-be-killed sleep and called it an
+# orphan. Nothing was broken in the subject; the lanes were reading each other.
+# The fix is to make the fixture's name unique to THIS run. A fractional suffix keeps the cmdline
+# exactly matchable (`sleep 4747.12345` is one argv word) while making the token un-shareable.
+# $$ is unique among live processes and $RANDOM breaks the PID-reuse case; digits only, one dot.
+_PSFX="$$${RANDOM}"
+TOK_N6="4747.$_PSFX"; TOK_K0="4646.$_PSFX"; TOK_S75="4848.$_PSFX"
 if [ -d /proc/self ]; then HAVE_PROC=1; else HAVE_PROC=0; fi
 
 # B4 — the baseline lane writes its own subject: refuse, and leave the ORIGINAL bytes
@@ -227,12 +238,12 @@ out=$(python3 "$PROBE" lat.sh lane_weak.sh 2>&1); rc=$?
 [ "$rc" -eq 2 ] && grep -q 'not UTF-8' <<<"$out" ; chk $? "N5 non-UTF-8 subject → 2 with the reason (v1: traceback rc 1)"
 
 # N6 — no orphan keeps running a mutant after a timeout
-printf '. ./n1.sh\nis_adult 19 && exit 0\n( touch n6.started; exec sleep 4747 ) &\nwait\n' > lane_n6.sh
+printf '. ./n1.sh\nis_adult 19 && exit 0\n( touch n6.started; exec sleep %s ) &\nwait\n' "$TOK_N6" > lane_n6.sh
 rm -f n6.started
 out=$(python3 "$PROBE" n1.sh lane_n6.sh --timeout 2 2>&1)
 sleep 0.5
 if [ "$HAVE_PROC" -eq 1 ]; then
-  [ -e n6.started ] && grep -q 'TIMEOUT' <<<"$out" && [ "$(procs_matching 'sleep 4747')" -eq 0 ] ; chk $? "N6 the timed-out lane's grandchildren are killed with its process group (counted via /proc — v6 used pgrep, vacuous when absent)"
+  [ -e n6.started ] && grep -q 'TIMEOUT' <<<"$out" && [ "$(procs_matching "sleep $TOK_N6")" -eq 0 ] ; chk $? "N6 the timed-out lane's grandchildren are killed with its process group (counted via /proc — v6 used pgrep, vacuous when absent)"
 else
   echo "  ⚠️  N6 UNMEASURED — no /proc"; UNMEASURED=$((UNMEASURED+1))
 fi
@@ -554,8 +565,16 @@ out=$(python3 "$PROBE" z28.sh --list 2>&1)
 ! grep -qF '==' <<<"$out" && grep -qF '[=→!=]' <<<"$out" ; chk $? "Z28 #!/bin/sh: '!=' is not flipped to the non-POSIX '==' (= → != still is)"
 
 if [ "$HAVE_PROC" -eq 1 ]; then   # the process counter itself, on a known pair, before any lane trusts it
-  sleep 4646 & kp=$!; sleep 0.1; k1=$(procs_matching 'sleep 4646'); kill "$kp"; wait "$kp" 2>/dev/null; k0=$(procs_matching 'sleep 4646')
+  sleep "$TOK_K0" & kp=$!; sleep 0.1; k1=$(procs_matching "sleep $TOK_K0"); kill "$kp"; wait "$kp" 2>/dev/null; k0=$(procs_matching "sleep $TOK_K0")
   [ "$k1" -eq 1 ] && [ "$k0" -eq 0 ] ; chk $? "K0 the /proc process counter sees a live sleep (1) and not a dead one (0) — and not itself"
+  # K1 (2026-10-26) — the token must be unique to this run, not merely exact. Known pair against a
+  # live FOREIGN process carrying the old shared name: the thing a concurrent sibling used to be.
+  sleep 4747 & kf=$!; sleep 0.1
+  [ "$(procs_matching 'sleep 4747')" -ge 1 ] ; chk $? "K1a known-POSITIVE: the OLD shared token does count a foreign process (the collision was real)"
+  [ "$(procs_matching "sleep $TOK_N6")" -eq 0 ] ; chk $? "K1b known-NEGATIVE: this run's unique token does not count it — N6/S7-5 cannot read a sibling's fixtures"
+  kill "$kf" 2>/dev/null; wait "$kf" 2>/dev/null
+  # And the three tokens must differ from each other, or one lane's fixture answers another's count.
+  [ "$TOK_N6" != "$TOK_K0" ] && [ "$TOK_K0" != "$TOK_S75" ] && [ "$TOK_N6" != "$TOK_S75" ] ; chk $? "K1c the three fixture tokens are distinct within a run"
 fi
 echo "── S7: v7 safety contract — each lane red on v6 (2026-10-08, from the v6 capture-recapture detectors)"
 
@@ -592,10 +611,10 @@ out=$(python3 "$PROBE" s74.sh lane_s74.sh --timeout 30 2>&1); rc=$?
 # S7-5 — a setsid escapee is killed (Linux subreaper); unmeasurable without /proc → UNMEASURED, never PASS
 if [ "$HAVE_PROC" -eq 1 ] && command -v setsid >/dev/null 2>&1; then
   cp age.sh s75.sh; rm -f s75.started
-  printf '. ./s75.sh\nsetsid sh -c "touch s75.started; exec sleep 4848" </dev/null >/dev/null 2>&1 &\nsleep 0.3\nis_adult 20 || exit 1\nis_adult 19 || exit 1\nexit 0\n' > lane_s75.sh
+  printf '. ./s75.sh\nsetsid sh -c "touch s75.started; exec sleep %s" </dev/null >/dev/null 2>&1 &\nsleep 0.3\nis_adult 20 || exit 1\nis_adult 19 || exit 1\nexit 0\n' "$TOK_S75" > lane_s75.sh
   out=$(python3 "$PROBE" s75.sh lane_s75.sh --timeout 30 2>&1)
   sleep 0.3
-  [ -e s75.started ] && grep -qE 'mutants=1 ' <<<"$out" && [ "$(procs_matching 'sleep 4848')" -eq 0 ] ; chk $? "S7-5 a setsid descendant of the lane does not outlive the probe (v6: it kept running with the mutant)"
+  [ -e s75.started ] && grep -qE 'mutants=1 ' <<<"$out" && [ "$(procs_matching "sleep $TOK_S75")" -eq 0 ] ; chk $? "S7-5 a setsid descendant of the lane does not outlive the probe (v6: it kept running with the mutant)"
 else
   echo "  ⚠️  S7-5 UNMEASURED — no /proc or no setsid"; UNMEASURED=$((UNMEASURED+1))
 fi
@@ -679,13 +698,32 @@ for k in $(seq 2 12000); do printf '[ "$a" -eq %d ] && echo x%d\n' "$k" "$k"; do
 printf 'grep -q "exit 113" r71.sh && exit 1\nexit 0\n' > lane_r71.sh
 cp r71.orig r71.sh
 _ms(){ python3 -c 'import time; print(int(time.time() * 1000))'; }   # BSD date has no %N
-c71=$(_ms); h71=""
+c71=$(_ms); h71=""; _c71out=""
 while IFS= read -r l; do
+  _c71out="$_c71out$l
+"
   case "$l" in subject:*) [ -n "$h71" ] || h71=$(( $(_ms) - c71 )) ;; esac
 done < <(python3 "$PROBE" r71.sh lane_r71.sh --max 1 --timeout 30 2>&1)
 cmp -s r71.sh r71.orig || cp r71.orig r71.sh
-# no header = the calibration run never reached the lock: the delay is unknown, so the lane fails below
-# (d71 stays 0 → the restore lands before the read → no refusal) rather than guessing a number.
+# no header = the calibration run never reached the lock: the delay is unknown.
+# 🟥 2026-10-26: that used to be ONE outcome — the lane ran anyway with d71=0 and went red. Measured
+# here, the common cause is not a defect in the probe at all: the probe's state directory
+# /tmp/mutation_probe-$uid is MACHINE-GLOBAL and its inode key is (st_dev, st_ino), so a fixture this
+# suite creates fresh can land on an inode whose backup an EARLIER run left behind (the suite's own
+# kill/timeout lanes leave backups by design — 26 of them after one round of runs in this container).
+# The probe then answers `CANNOT JUDGE: a previous run left a backup …` BEFORE printing the header,
+# the calibration is unknown, and this lane called that a FAILURE. It is not: it is UNMEASURED, which
+# is neither a pass nor a fail, and the suite already has that counter. Any OTHER reason for a
+# missing header still falls through to the old behaviour — the point is a typed verdict, not a
+# looser one. The aliasing itself lives in scripts/mutation_probe.py (the subject, and the recovery
+# path for a subject's original bytes) and is a NAMED RESIDUAL here, not something a lane may patch.
+if [ -z "$h71" ] && grep -q 'a previous run left a backup' <<<"$_c71out"; then
+  echo "  ⚠️  R7-1 UNMEASURED — the probe refused the calibration run: a previous run's backup is still in"
+  echo "      the machine-global state dir and its inode key aliases this fixture. Not a pass, not a failure."
+  printf '      %s\n' "$(grep -m1 'a previous run left a backup' <<<"$_c71out")"
+  echo "      Inspect those backups, restore anything real by hand, remove them, then re-run."
+  UNMEASURED=$((UNMEASURED+1))
+else
 [ -n "$h71" ] || echo "  ⚠️  R7-1 calibration: no «subject:» header — time-to-lock unknown on this machine"
 d71=$(awk -v ms="${h71:-0}" 'BEGIN { printf "%.3f", ms / 2000 }')
 sed '2s/-ne 1/-eq 1/' r71.orig > r71.sh            # the other probe's mutant is live
@@ -693,6 +731,28 @@ python3 "$PROBE" r71.sh lane_r71.sh --max 1 --timeout 30 > r71.out 2>&1 & pb=$!
 sleep "$d71"; cat r71.orig > r71.sh                 # … and now it restores (same inode)
 wait "$pb"; rc=$?
 grep -q 'changed between reading it and locking it' r71.out && [ "$rc" -eq 2 ] && cmp -s r71.sh r71.orig && [ ! -e "$(bkpath r71.sh)" ] ; chk $? "R7-1 a subject that changed between read and lock → 2, the original stays (fbfe773: the stale mutant was backed up as «original» and written back)"
+fi
+
+# R7-1b (2026-10-26) — the known pair for the UNMEASURED arm above. The claim it rests on is that a
+# leftover backup under either key makes the probe refuse BEFORE it prints its header; if that is not
+# true, the arm above is an excuse rather than a verdict. Measured both ways on a throwaway subject,
+# and the planted file is removed in the same lane (it is a 52-byte fixture, not anyone's recovery data).
+cp age.sh r71b.sh
+_r71b_bk="$(ibkpath r71b.sh)"
+mkdir -p "$(dirname "$_r71b_bk")" 2>/dev/null
+if [ -e "$_r71b_bk" ]; then
+  echo "  ⚠️  R7-1b UNMEASURED — a backup is already at $_r71b_bk; this lane will not touch someone else's"
+  UNMEASURED=$((UNMEASURED+1))
+else
+  cp age.sh "$_r71b_bk"
+  out=$(python3 "$PROBE" r71b.sh lane_weak.sh --max 1 --timeout 30 2>&1); rc=$?
+  [ "$rc" -eq 2 ] && grep -q 'a previous run left a backup' <<<"$out" && ! grep -q '^subject:' <<<"$out"
+  chk $? "R7-1b known-POSITIVE: a leftover backup at the INODE key makes the probe refuse before its header (so a missing header is UNMEASURED, not a lane failure)"
+  rm -f "$_r71b_bk"
+  out=$(python3 "$PROBE" r71b.sh lane_weak.sh --max 1 --timeout 30 2>&1); rc=$?
+  grep -q '^subject:' <<<"$out"
+  chk $? "R7-1b known-NEGATIVE: with the leftover gone, the same subject reaches the header (the refusal was the backup, not the subject)"
+fi
 cp r71.orig r71.sh
 
 # R7-2 — the lane hard-links an unrelated file to the subject's path: that file is never written

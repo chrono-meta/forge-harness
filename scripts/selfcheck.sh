@@ -970,8 +970,12 @@ fi
 # `SELFCHECK: FAIL` with no FAIL line in 6,236 lines — the killed suite fell into a bare `*)`
 # that set fail and printed nothing (fh_signal_2026-10-18_selfcheck-timeout-unlabelled). The
 # catch-all now names the suite and its rc, so no exit code can fail without a line.
-_pair_rc_verdict() { # $1=label $2=subject $3=rc · return 1 = counts as a failure
-  local _lbl="$1" _subj="$2" _rc="$3"
+_pair_rc_verdict() { # $1=label $2=subject $3=rc $4=budget seconds (optional) · return 1 = counts as a failure
+  # $4 defaults to the table's default rather than being required: the lane suite lifts this
+  # function and calls it with three arguments, and so does any future caller that has no budget
+  # of its own. A hardcoded "300" in the message below was wrong the moment budgets stopped being
+  # one number — a verdict line that names a limit the run did not use is a confident wrong fact.
+  local _lbl="$1" _subj="$2" _rc="$3" _bud="${4:-${_LANE_BUDGET_DEFAULT:-300}}"
   case "$_rc" in
     0) ;;
     # The suite could not MEASURE. Distinguished from "the lane failed" because the two send a
@@ -990,9 +994,11 @@ _pair_rc_verdict() { # $1=label $2=subject $3=rc · return 1 = counts as a failu
       echo "      prove nothing about $_subj. Not a lane failure, and not a pass either."
       return 1 ;;
     124)
-      echo "TIMEOUT  $_lbl: exited 124, the code \`timeout\` uses when it kills a suite (limit 300 s) —"
+      echo "TIMEOUT  $_lbl: exited 124, the code \`timeout\` uses when it kills a suite (budget ${_bud} s) —"
       echo "      not measured, not a pass. A suite that itself exits 124 lands here too."
       echo "      Re-run that suite alone to see whether it hangs or is only slow under load."
+      echo "      If it needs longer than ${_bud} s on a healthy host, raise ITS budget in"
+      echo "      _lane_budget() with the measurement that set the number — do not raise the default."
       return 1 ;;
     *)
       echo "FAIL  $_lbl (rc=$_rc) — see that suite's output above; subject: $_subj"
@@ -1000,7 +1006,44 @@ _pair_rc_verdict() { # $1=label $2=subject $3=rc · return 1 = counts as a failu
   esac
   return 0
 }
-_LANE_TO=""; command -v timeout >/dev/null 2>&1 && _LANE_TO="timeout 300"
+# Per-suite lane budget (2026-10-26). Until today every suite in the loop below ran under one
+# global `timeout 300`, and that number was invisible: nothing printed how long a suite took, so
+# the only way to learn a suite was near the limit was for it to cross it.
+#
+# MEASURED, in a clean cloud container on 2026-10-26: test_mutation_probe_lanes.sh takes 318–322 s
+# standalone (3 reps, 122 lanes, all green) and selfcheck killed it at 300. Neither the suite nor
+# its subject (scripts/mutation_probe.py) had changed since the run where it last passed — the host
+# got slower, the margin was never managed, and the result was one TIMEOUT line standing in for 122
+# known-pair lanes that went UNMEASURED. Timestamping the suite showed the cost is spread across it
+# (largest single block +40 s), so "make it faster" is not a small fix and would not be this one.
+#
+# So: the budget is per suite, declared next to the measurement that set it, and the loop prints an
+# advisory line BEFORE the kill when a run eats most of its budget. The default stays 300 — a suite
+# that needs more says so by name, which is the record a reader can argue with.
+_LANE_BUDGET_DEFAULT=300
+_LANE_BUDGET_WARN_PCT=80   # advisory at ≥80% of budget; advisory only, never a verdict
+_lane_budget() { # $1=label → budget in seconds
+  case "$1" in
+    # 318–322 s measured standalone (above). 600 is ~1.9× the measured cost: enough head-room for a
+    # host slower than this one, and still a bound — not "no timeout", which is how the suite that
+    # detects a broken watchdog would inherit a hang (see the loop's own comment below).
+    test_mutation_probe_lanes.sh) echo 600 ;;
+    *) echo "${_LANE_BUDGET_DEFAULT}" ;;
+  esac
+}
+# A run that finished INSIDE its budget but close to it is the state nobody saw last week. It is an
+# advisory, printed and not counted: a suite at 85% of budget has measured everything it claims to,
+# and folding "nearly ran out" into FAIL would be the same untyped-verdict defect in the other
+# direction. `date` only — /usr/bin/time is absent in some containers (measured rc=127 here).
+_lane_margin_note() { # $1=label $2=elapsed s $3=budget s
+  local _lbl="$1" _el="$2" _bud="$3" _pct
+  [ "$_bud" -gt 0 ] 2>/dev/null || return 0
+  _pct=$(( _el * 100 / _bud ))
+  [ "$_pct" -ge "${_LANE_BUDGET_WARN_PCT:-80}" ] || return 0
+  echo "NOTE  $_lbl took ${_el} s of its ${_bud} s budget (${_pct}%) — it PASSED; this is margin,"
+  echo "      not a failure. A slower host crosses the limit and the suite's lanes go UNMEASURED."
+}
+_LANE_TO=""; command -v timeout >/dev/null 2>&1 && _LANE_TO="timeout ${_LANE_BUDGET_DEFAULT}"
 for _pair in \
   `# 사용 원장 (2026-09-13 신설). SUBJECT 를 원장 모듈로 잡는다 — 배선이 끊기는 자리는 preprep.py 의 __main__ 한 줄이 아니라 모듈이 사라지는 쪽이고, import 가 try/except 라 모듈이 없으면 조용히 무동작으로 돌아간다. 그 무음이 이 레인이 잡을 것이다.` \
   "plugins/fh-preprep/skills/preprep/usage_ledger.py|scripts/test_usage_ledger_lanes.sh" \
@@ -1153,8 +1196,16 @@ do
     # --self-test loop below, because `timeout` is GNU coreutils and stock macOS has neither it nor
     # a substitute; without it `< /dev/null` is the whole defence and a suite that reads stdin ends
     # immediately instead of waiting forever.
-    $_LANE_TO bash "$_anc" < /dev/null; _rc=$?
-    _pair_rc_verdict "$_lbl" "$_subj" "$_rc" || fail=1
+    # The budget is resolved per suite into a LOCAL variable; `$_LANE_TO` keeps the default and is
+    # read again by two blocks far below this loop (relay_channel, directional_diff_gate), so
+    # reassigning it here would silently hand one suite's budget to unrelated dispatches.
+    _bud="$(_lane_budget "$_lbl")"
+    _lane_to=""; command -v timeout >/dev/null 2>&1 && _lane_to="timeout $_bud"
+    _t0=$(date +%s 2>/dev/null || echo 0)
+    $_lane_to bash "$_anc" < /dev/null; _rc=$?
+    _t1=$(date +%s 2>/dev/null || echo 0)
+    [ "$_t0" -gt 0 ] 2>/dev/null && _lane_margin_note "$_lbl" "$(( _t1 - _t0 ))" "$_bud"
+    _pair_rc_verdict "$_lbl" "$_subj" "$_rc" "$_bud" || fail=1
   elif _pkg_accepted_absent "$_anc"; then
     # DECLARED legitimately unshipped — the single source for that answer, not a guess from the
     # environment. The first draft printed "this package predates it", which is a WRONG DIAGNOSIS
