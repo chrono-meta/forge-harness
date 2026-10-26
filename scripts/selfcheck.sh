@@ -2261,6 +2261,19 @@ else
   fail=1
 fi
 
+# 가린 질문 송신 전 검사(거주 원칙 세 번째 길, D1) — 레포 식별자 · 작성자 · 원문 조각 · 운영자 리터럴(위 가드 재사용).
+# 레인이 걸림/통과 아는 쌍과 미측정 6갈래(사전 · 가드 · 레포 · 빈 목록 · 빈 질문 · 공개 말뭉치)를 같이 잰다. 호출자 0 — 기본 꺼짐.
+if [ ! -f scripts/abstract_consult_check.py ]; then
+  _absent_subject_verdict "test_abstract_consult_check_lanes.sh" "scripts/abstract_consult_check.py" || fail=1
+elif [ -f scripts/test_abstract_consult_check_lanes.sh ]; then
+  if ! bash scripts/test_abstract_consult_check_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_abstract_consult_check_lanes.sh: abstract_consult_check.py present but its anchor is missing"
+  fail=1
+fi
+
 # outbound-query PreToolUse 훅 — 위 CLI 가드의 **배선**(WebSearch|WebFetch). 레인이 두 층 판정
 # (override→deny · defaults→advisory), 미측정 4가지→deny, N/A 무음, 그리고 🟥 «출력에 토큰 값이
 # 없다»(H10)를 각각 짝으로 잡는다. 마지막 것이 이 훅의 존재 이유를 지키는 레인이다.
