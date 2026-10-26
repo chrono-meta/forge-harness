@@ -84,6 +84,11 @@ cd ~/projects/forge-harness && claude          # then type: hi   (or 안녕 · �
    «run /context-doctor» (token-waste scan). For full setup, run `/install-wizard`: every item is
    approved one by one and a decline is recorded.
 
+Taking it off again. `python3 scripts/fh_detach.py --project .` prints what the wizard wrote; add `--apply` to
+undo exactly that (and `--plugin` to uninstall fh-meta). Your own hooks and edited files are never removed;
+anything FH-like it cannot match exactly is listed for you to look at. Door ① leaves only its verdict records
+in `~/.fh/logs/` (delete the folder when you no longer want them) and npm's own `npx` cache.
+
 Requirements. Door ② needs the Claude Code CLI (`claude --version`). Door ① needs Node and a `claude` or
 `codex` CLI, not a Claude Code session. One of FH's own gates (the test suite in a clone) additionally
 needs Python + PyYAML (`python3 -m pip install --user pyyaml`) and fails closed without it.
