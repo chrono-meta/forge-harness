@@ -111,6 +111,13 @@ a known-pair on that runtime, not a claim about it.
   day. Structure-enforcing checks are tier-blind by construction — so the harness raises the floor
   for weak models *and* guards the ceiling for strong ones. Weak-model benefit is the larger term
   (H1), top-tier benefit is the existence proof that the harness is not scaffolding-only.
+  **Scope of «guards the ceiling», measured 2026-10-27 (S1 — the first strong-tier A/B):** the
+  full-mode contract arm on Opus 5.5, 11 tasks where Opus without it already split, off vs full × 3
+  reps: full − off +27.3pp, 1 task harmed vs 7 helped ⇒ it **does not hold a strong model back**
+  (measured, pre-registered non-inferiority). Whether it **lifts** one is **not established** — 11
+  tasks is under the pre-registered 12, sign test p 0.070 — and it costs ×2.7 median wall time.
+  Say «does not bottleneck strong models; lifting them is unproven», never «amplifies strong
+  models». Record: `tracks/_meta/p3_contract_ab/s1/RESULTS_S1.md` (operator-local).
 - **External academic grounding (arXiv:2605.30621, "Harness Updating Is Not Harness Benefit,"
   May 2026 — surfaced via issue #102 Frontier Digest, 2026-08-15)**: the paper separates the
   *evolver* role (writes harness updates) from the *beneficiary* role (runs on the updated
