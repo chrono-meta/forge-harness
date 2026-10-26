@@ -673,9 +673,13 @@ for snip in snippets:
             # A hook is FH's only when it names one of the snippet's scripts AND points into an FH hub
             # ($CLAUDE_PROJECT_DIR or forge-harness). The path-form key alone still matched a user's own
             # ~/tools/scripts/fh_node_check.sh and deleted it (scripts/test_fh_detach_lanes.sh D5b, 2026-10-26).
+            # A command byte-equal to one this snippet is about to write is ours whatever it points at — that keeps a
+            # re-run idempotent (scripts/test_wizard_snippet_merge_lanes.sh MS-4).
+            own = {h.get("command") for eg in entry for h in eg.get("hooks", [])}
             survivors = [h for h in g.get("hooks", [])
-                         if not (any(k in h.get("command", "") for k in keys)
-                                 and re.search(r"CLAUDE_PROJECT_DIR|forge-harness", h.get("command", "")))]
+                         if not (h.get("command", "") in own
+                                 or (any(k in h.get("command", "") for k in keys)
+                                     and re.search(r"CLAUDE_PROJECT_DIR|forge-harness", h.get("command", ""))))]
             if survivors:
                 g = dict(g); g["hooks"] = survivors
                 # `"matcher": ""` and an omitted matcher are the same thing in Claude Code (hooks doc,
