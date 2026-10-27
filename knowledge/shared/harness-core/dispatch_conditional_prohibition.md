@@ -309,3 +309,45 @@ repository says. rc=1 means the claim and the change differ (named both ways) or
 «not closed», never as a small discrepancy. «0 files» with a non-empty claim is rc=1, not a pass. The receipt says what
 changed, not whether it is right: tests and review still decide that. Outside anchors: `arXiv:2610.15459`, «report ≠
 change» (frontier digest 2026-10-20). Lanes: `scripts/test_dispatch_receipt_lanes.sh` (wired in selfcheck).
+
+## §Two-Purposes — a dispatch serves independence, permission or context, and only context can be folded (2026-10-27)
+
+Anthropic's «Building agents: When to fold subagents into your main agent loop» (claude.com, 2026-10-22,
+https://claude.com/blog/building-agents-when-to-fold-subagents-into-your-main-agent-loop) reports that a
+single loop with skills and progressive disclosure often beat a subagent design on quality, cost and
+latency across customer deployments, and keeps subagents for three cases: measured context bloat,
+fresh-context parallel or throwaway work, and tool-selection failure or conflicting instructions. It warns
+against one subagent per team (the org chart as architecture), and reports a fold that cut latency but
+flipped a passing task in one of two runs — so it asks for repeated runs and a per-task flip check.
+No scores are published; it is a vendor's account of customer cases and the balance may move with the model.
+
+The article also says subagents are effective at «verification, parallel work, and modular permissioning»,
+and names black-box verification and a generator-verifier pattern as split candidates — work that needs
+little information from the rest of the system. What it does not explicitly establish is FH's stronger
+requirement: **the reader must not be the author.** That requirement is why FH dispatches most often, so it
+is written down here rather than inferred. FH sends work out for three purposes, and the fold advice
+applies to only one:
+
+| purpose | examples here | fold into the main loop? |
+|---|---|---|
+| **independence** — evidence from a reader who is not the author | blind evaluation · cross-review · a known-pair sim · a verifier that must not see the governor's conclusion | **never** |
+| **permission** — a narrower authority boundary than the governor's | a read-only auditor · a sidecar that must not write the target tree | **never while the boundary matters** — folding hands the work the governor's write access |
+| **context** — keep the main window small or run work in parallel | context-flooding search · parallel builders · throwaway exploration | **only after a measured fold** — repeated runs with a per-task flip check show no loss, and no independence or permission need applies |
+
+How to apply:
+- **The test is functional, not the label.** If the dispatch is asked to *judge* work the governor (or an
+  agent it directed) produced — a review, a second opinion, a pass/fail verdict, a blind score — it is
+  **independence**, whatever else it also does and whatever the card calls it. Calling a second-pass checker
+  «fresh-context exploration» does not make it foldable. Not independence: fetching facts the governor will
+  judge with (docs, a grep sweep, a list of call sites), and a builder running its own tests — those report,
+  they do not judge, and stay **context**.
+- **Purposes can coexist; the strictest wins.** A blind evaluator that also reads a large corpus serves
+  independence and context at once — keep it one dispatch and do not fold it. Precedence:
+  independence > permission > context.
+- Name the purpose(s) in the Context Card's first line («purpose: independence — …»).
+- Do not cite the article as grounds to fold a reviewer, a blind sim or a cross-family check. Its fold
+  advice compares task quality, cost and latency; its own text keeps verification as a split candidate.
+- Tool-count side note from the same article: «once you exceed 30-50 tool definitions in the system
+  prompt, tool choice tends to degrade», with grouping by user intent as the remedy. The quantity is tool
+  definitions **loaded into the prompt** (deferred tools not yet loaded do not count) — not installed skills
+  or MCP inventory. FH's loaded count per session is `UNMEASURED`, not «fine».
