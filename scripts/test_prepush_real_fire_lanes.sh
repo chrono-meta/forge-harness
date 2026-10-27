@@ -77,7 +77,7 @@ EOF
 }
 remote_ref() { git -C "$1/remote.git" rev-parse -q --verify "$2" 2>/dev/null || echo ABSENT; }
 fired()      { wc -l < "$1/fired" | tr -d ' '; }
-stdin_has()  { cat "$1"/stdin.* 2>/dev/null | grep -qE "$2"; }
+stdin_has()  { grep -qE "$2" "$1"/stdin.* 2>/dev/null; }   # no pipe: grep -q exiting early cannot SIGPIPE a producer (downstream report 2026-10-27)
 
 # run_lane <name> <ref-to-watch> <stdin-regex> <push args...>
 run_lane() {

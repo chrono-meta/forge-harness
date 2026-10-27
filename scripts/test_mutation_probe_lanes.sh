@@ -693,45 +693,27 @@ echo "── R7: blind review of v7 (2026-10-08) — each lane red on fbfe773"
 #        lane wrote the subject during the control run) and this lane went red on a correct probe. Now the
 #        delay is measured on this machine: one undisturbed run times its «subject:» header (printed after
 #        the lock), and the restore fires at half of that. Twice the lines makes that window seconds wide.
+#        🟥 2026-10-28 (downstream report 2026-10-27): the measured half-time window was still a timed guess — on another
+#        downstream runner the second run was faster than the calibration run and the restore landed after
+#        the lock. Now the window is OBSERVED: MUTATION_PROBE_TEST_AFTER_READ makes the probe touch
+#        <seam>.read right after it reads the subject and wait for <seam>.go before it goes on to lock, so the
+#        restore lands inside the window on any runner. No timing, no calibration run, no UNMEASURED arm.
 printf '#!/usr/bin/env bash\n[ "$a" -ne 1 ] && echo x1\n' > r71.orig
-for k in $(seq 2 12000); do printf '[ "$a" -eq %d ] && echo x%d\n' "$k" "$k"; done >> r71.orig
 printf 'grep -q "exit 113" r71.sh && exit 1\nexit 0\n' > lane_r71.sh
-cp r71.orig r71.sh
-_ms(){ python3 -c 'import time; print(int(time.time() * 1000))'; }   # BSD date has no %N
-c71=$(_ms); h71=""; _c71out=""
-while IFS= read -r l; do
-  _c71out="$_c71out$l
-"
-  case "$l" in subject:*) [ -n "$h71" ] || h71=$(( $(_ms) - c71 )) ;; esac
-done < <(python3 "$PROBE" r71.sh lane_r71.sh --max 1 --timeout 30 2>&1)
-cmp -s r71.sh r71.orig || cp r71.orig r71.sh
-# no header = the calibration run never reached the lock: the delay is unknown.
-# 🟥 2026-10-26: that used to be ONE outcome — the lane ran anyway with d71=0 and went red. Measured
-# here, the common cause is not a defect in the probe at all: the probe's state directory
-# /tmp/mutation_probe-$uid is MACHINE-GLOBAL and its inode key is (st_dev, st_ino), so a fixture this
-# suite creates fresh can land on an inode whose backup an EARLIER run left behind (the suite's own
-# kill/timeout lanes leave backups by design — 26 of them after one round of runs in this container).
-# The probe then answers `CANNOT JUDGE: a previous run left a backup …` BEFORE printing the header,
-# the calibration is unknown, and this lane called that a FAILURE. It is not: it is UNMEASURED, which
-# is neither a pass nor a fail, and the suite already has that counter. Any OTHER reason for a
-# missing header still falls through to the old behaviour — the point is a typed verdict, not a
-# looser one. The aliasing itself lives in scripts/mutation_probe.py (the subject, and the recovery
-# path for a subject's original bytes) and is a NAMED RESIDUAL here, not something a lane may patch.
-if [ -z "$h71" ] && grep -q 'a previous run left a backup' <<<"$_c71out"; then
-  echo "  ⚠️  R7-1 UNMEASURED — the probe refused the calibration run: a previous run's backup is still in"
-  echo "      the machine-global state dir and its inode key aliases this fixture. Not a pass, not a failure."
-  printf '      %s\n' "$(grep -m1 'a previous run left a backup' <<<"$_c71out")"
-  echo "      Inspect those backups, restore anything real by hand, remove them, then re-run."
-  UNMEASURED=$((UNMEASURED+1))
-else
-[ -n "$h71" ] || echo "  ⚠️  R7-1 calibration: no «subject:» header — time-to-lock unknown on this machine"
-d71=$(awk -v ms="${h71:-0}" 'BEGIN { printf "%.3f", ms / 2000 }')
 sed '2s/-ne 1/-eq 1/' r71.orig > r71.sh            # the other probe's mutant is live
-python3 "$PROBE" r71.sh lane_r71.sh --max 1 --timeout 30 > r71.out 2>&1 & pb=$!
-sleep "$d71"; cat r71.orig > r71.sh                 # … and now it restores (same inode)
+_r71s="$PWD/r71.seam"; rm -f "$_r71s.read" "$_r71s.go"
+MUTATION_PROBE_TEST_AFTER_READ="$_r71s" python3 "$PROBE" r71.sh lane_r71.sh --max 1 --timeout 30 > r71.out 2>&1 & pb=$!
+_r71w=0; while [ ! -e "$_r71s.read" ] && kill -0 "$pb" 2>/dev/null && [ "$_r71w" -lt 600 ]; do sleep 0.1; _r71w=$((_r71w+1)); done
+_r71seen=no; [ -e "$_r71s.read" ] && _r71seen=yes
+cat r71.orig > r71.sh                               # … the other probe restores (same inode) — after the read
+: > "$_r71s.go"                                     # … and only now may this probe go on to lock
 wait "$pb"; rc=$?
-grep -q 'changed between reading it and locking it' r71.out && [ "$rc" -eq 2 ] && cmp -s r71.sh r71.orig && [ ! -e "$(bkpath r71.sh)" ] ; chk $? "R7-1 a subject that changed between read and lock → 2, the original stays (fbfe773: the stale mutant was backed up as «original» and written back)"
-fi
+[ "$_r71seen" = yes ] && grep -q 'changed between reading it and locking it' r71.out && [ "$rc" -eq 2 ] && cmp -s r71.sh r71.orig && [ ! -e "$(bkpath r71.sh)" ] ; chk $? "R7-1 a subject that changed between read and lock → 2, the original stays (fbfe773: the stale mutant was backed up as «original» and written back)"
+[ "$_r71seen" = yes ] || printf '      R7-1: the probe never signalled «read» (exit before reading?): %s\n' "$(head -2 r71.out | tr '\n' ' ')"
+# R7-1c (codex R1) — the seam never writes through something already at <seam>.read: a link there → 2, target intact
+printf 'keep\n' > r71c.target; ln -sf "$PWD/r71c.target" r71c.seam.read; cp r71.orig r71c.sh
+MUTATION_PROBE_TEST_AFTER_READ="$PWD/r71c.seam" python3 "$PROBE" r71c.sh lane_r71.sh --max 1 --timeout 30 > r71c.out 2>&1; rc=$?
+[ "$rc" -eq 2 ] && grep -q 'test seam .*cannot be created' r71c.out && [ "$(cat r71c.target)" = keep ] && cmp -s r71c.sh r71.orig ; chk $? "R7-1c a link already at <seam>.read → 2, the link's target is not truncated, the subject untouched"
 
 # R7-1b (2026-10-26) — the known pair for the UNMEASURED arm above. The claim it rests on is that a
 # leftover backup under either key makes the probe refuse BEFORE it prints its header; if that is not

@@ -261,7 +261,49 @@ _l12_out="$(bash "$SCAN" changed 2>&1)"; _l12_rc=$?
 case "$_l12_rc" in
   0) ok "L12c 실물 델타 — 지금 작업트리에서 rc=0 (기존 부채가 잠금을 막지 않는다)" ;;
   1) no "L12c 실물 델타" "rc=1 — 새 취약형이 들어왔거나 폴백 회귀가 돌아왔다: $(printf '%s' "$_l12_out" | head -2 | tr '\n' ' ')" ;;
-  *) um "L12c 실물 델타" "rc=$_l12_rc (계기 오류 — 예: git 부재로 base 미정). «통과»도 «발견»도 아니다: $(printf '%s' "$_l12_out" | head -1)" ;;
+  *) if [ "${GITHUB_ACTIONS:-}" = true ]; then
+       # CI exists to run this lock; «could not run» there is the downstream-reported hole (codex R1), so it fails.
+       no "L12c 실물 델타 (CI)" "rc=$_l12_rc — CI 에서 델타를 못 돌렸다(기준 없음?): $(printf '%s' "$_l12_out" | head -1)"
+     else
+       um "L12c 실물 델타" "rc=$_l12_rc (계기 오류 — 예: git 부재로 base 미정). «통과»도 «발견»도 아니다: $(printf '%s' "$_l12_out" | head -1)"
+     fi ;;
+esac
+
+# L13/L14 (2026-10-28, downstream report 2026-10-27) — the delta lock needs a base. A shallow CI checkout had no origin/main;
+# the scanner fell back to HEAD, diffed nothing and said «SKIP» rc=0 on every PR, so a new suite shipped a
+# VULN line. L13 checks CI gives it a base; L14 checks «no base» is rc 2 (not measured), with the known pair.
+if grep -A8 'uses: actions/checkout@' "$REPO/.github/workflows/validate.yml" 2>/dev/null | grep -qE '^[[:space:]]+fetch-depth:[[:space:]]*0[[:space:]]*$'; then
+  ok "L13 validate.yml checks out full history (the delta lock has origin/main in CI)"
+else
+  no "L13 validate.yml checkout" "no fetch-depth: 0 — the class-lock delta cannot find a base in CI"
+fi
+_L14="$(mktemp -d)"
+mkdir -p "$_L14/r/scripts"
+cp "$SCAN" "$_L14/r/scripts/pipefail_earlyexit_scan.sh"
+printf '#!/usr/bin/env bash\nset -o pipefail\necho ok\n' > "$_L14/r/scripts/a.sh"
+git -C "$_L14/r" init -q && git -C "$_L14/r" add -A && git -C "$_L14/r" -c user.email=t@t -c user.name=t commit -qm base
+_l14base="$(git -C "$_L14/r" rev-parse HEAD)"
+# a change that introduces a VULN line, COMMITTED — the shape a CI checkout of a PR has (the change is in HEAD)
+printf '#!/usr/bin/env bash\nset -o pipefail\nf(){ cat "$1"/x.* 2>/dev/null | grep -qE "$2"; }\n' > "$_L14/r/scripts/a.sh"
+git -C "$_L14/r" -c user.email=t@t -c user.name=t commit -qam change
+_l14a_out="$(env -u ONLY -u PIPESCAN_BASE PIPESCAN_REPO="$_L14/r" bash "$_L14/r/scripts/pipefail_earlyexit_scan.sh" changed 2>&1)"; _l14a=$?
+# push-to-main shape (codex R1): no usable merge-base, the base comes from the event's «before»
+_l14c_out="$(env -u ONLY PIPESCAN_BASE="$_l14base" PIPESCAN_REPO="$_L14/r" bash "$_L14/r/scripts/pipefail_earlyexit_scan.sh" changed 2>&1)"; _l14c=$?
+_l14d_out="$(env -u ONLY PIPESCAN_BASE=0000000000000000000000000000000000000000 PIPESCAN_REPO="$_L14/r" bash "$_L14/r/scripts/pipefail_earlyexit_scan.sh" changed 2>&1)"; _l14d=$?
+git -C "$_L14/r" update-ref refs/remotes/origin/main "$_l14base"
+_l14b_out="$(env -u ONLY -u PIPESCAN_BASE PIPESCAN_REPO="$_L14/r" bash "$_L14/r/scripts/pipefail_earlyexit_scan.sh" changed 2>&1)"; _l14b=$?
+/bin/rm -rf "$_L14"
+case "$_l14a" in
+  2) ok "L14 no origin/main → rc 2 (not measured), never «SKIP» rc 0" ;;
+  *) no "L14 no origin/main" "rc=$_l14a — $(printf '%s' "$_l14a_out" | tail -1)" ;;
+esac
+case "$_l14c/$_l14d" in
+  1/2) ok "L14c PIPESCAN_BASE=<push before> finds the new VULN (rc 1) · an all-zero before is unset (rc 2)" ;;
+  *)   no "L14c PIPESCAN_BASE" "rc=$_l14c/$_l14d — $(printf '%s' "$_l14c_out" | tail -1)" ;;
+esac
+case "$_l14b" in
+  1) ok "L14b known-positive: the same change WITH origin/main → rc 1 (the new VULN line is found)" ;;
+  *) no "L14b with origin/main" "rc=$_l14b — $(printf '%s' "$_l14b_out" | tail -1)" ;;
 esac
 
 echo "PASS=$PASS FAIL=$FAIL UNMEASURED=$UNMEASURED"
