@@ -5030,3 +5030,45 @@
   outcome: "codex 5/5 VALID (2 wrong, one with a false source claim); Gemini found both defects; governor confirmed in source — the H-blind-spot reading was withdrawn"
   evidence: "tracks/_meta/p3_contract_ab/p11/RESULTS_P11.md"
   tokens: UNMEASURED
+- date: 2026-10-25
+  agent: "general-purpose (sonnet) ×8 — P16 task builders (Python ×4 · JS ×4, isolated /private/tmp)"
+  task: "held-out fix tasks by domain for the P16 full-mode A/B"
+  trigger: "RESULTS_P15 «(experimental)» condition — new held-out tasks ≥ 20"
+  outcome: "accepted after governor fail-before/fix checks and calibration"
+  evidence: "tracks/_meta/p3_contract_ab/ (P16)"
+  tokens: UNMEASURED
+- date: 2026-10-25
+  agent: "general-purpose (sonnet) ×2 — S4 / S4b non-developer scenario writers"
+  task: "headless non-developer persona scenarios; hidden-risk variants"
+  trigger: "operator KCDA sim order «확인 필요 없는 것 먼저»"
+  outcome: "accepted as scenario input; S4b drove the FoD copy/move/redirect realpath reinforcement"
+  evidence: "FoD gate reinforcement PR (10-26)"
+  tokens: UNMEASURED
+- date: 2026-10-26
+  agent: "general-purpose (sonnet) ×10 — P19 task builders (PA–PE · JA–JE) + Explore (sonnet) ×1 install-trace survey"
+  task: "P19 held-out tasks; list every place FoD install leaves traces (for the detach lane)"
+  trigger: "B full-mode official conditions · A clean-detach lane"
+  outcome: "accepted with governor re-verification; trace list fed the detach home-diff lane (#958)"
+  evidence: "FH #958 · tracks/_meta/p3_contract_ab/ (P19)"
+  tokens: UNMEASURED
+- date: 2026-10-26
+  agent: "general-purpose (sonnet) ×7 — detach-guide blind sim + blind spec sets B–G"
+  task: "cold-read the detach guide; write blind specs for the residency D2A/D2A2 measurement (public repos + canaries, no company data)"
+  trigger: "Done = fires at the floor tier · D2 preregistration"
+  outcome: "accepted; spec sets used as D2A/D2A2 inputs"
+  evidence: "tracks/_meta/residency_d2/RESULTS_D2A.md · RESULTS_D2A2.md"
+  tokens: UNMEASURED
+- date: 2026-10-27
+  agent: "general-purpose (sonnet) ×2 — D2 loss-transcript reader · FoD Windows packaging/install scripts"
+  task: "read transcripts of tasks the reviewed arm lost; port Windows packaging + install.ps1/install.sh"
+  trigger: "D2 operator decision · «윈도우용과 맥용 둘다 잘 준비해두자»"
+  outcome: "transcript read accepted (D2_loss_transcripts); packaging accepted after codex R1 7 findings fixed, R2 residuals closed"
+  evidence: "tracks/_meta/p3_contract_ab/D2_loss_transcripts_2026-10-27.md · FoD #159"
+  tokens: UNMEASURED
+- date: 2026-10-27
+  agent: "codex (gpt) ×4 + agy gemini-3.8-flash-high ×1 — read-only reviews"
+  task: "FoD #158 settings UI (Gemini R1) · #159 Windows port (codex R1 · R2) · #162 issue-161 inline-python proof (codex R1 cut by content filter · R2)"
+  trigger: "load-bearing gate / installer code"
+  outcome: "#158 1 of 5 accepted (others excerpt artifacts); #159 7 fixed; #162 both rounds found new bypasses of the proof → narrowing withdrawn, fail-closed kept with a known-false-positive reason. Lesson: an R1 refused by a filter is not zero findings — its partial line matched the governor's own catch"
+  evidence: "FoD #158 · #159 · #162"
+  tokens: UNMEASURED
