@@ -289,16 +289,20 @@ When run again in an environment that has already passed the wizard (`~/.cc_sent
 
 ## Detach (undo the wizard)
 
-What this wizard writes can be taken back with one command (the named residuals below are the exceptions). It
-takes FH off the machine setup, not one project — the zshrc block and the FH clone's hooks and `core.hooksPath`
-go too. With no clone (plugin only), use `claude plugin uninstall fh-meta@forge-harness` instead:
+What this wizard writes can be taken back with one command (the named residuals below are the exceptions). By
+default it takes FH off **one project** — that project's hooks, companion section, sentinels and template copies.
+`--machine` also removes what every project shares: the zshrc block, the FH clone's own hooks and `core.hooksPath`;
+without it those are listed as `kept (machine-wide …)` and left alone. Neither touches another project the wizard
+ran in — detach each one with its own `--project`. With no clone (plugin only), use
+`claude plugin uninstall fh-meta@forge-harness` instead:
 
 ```bash
 python3 "$FH_DIR/scripts/fh_detach.py" --project .            # dry run — prints the plan, changes nothing
-python3 "$FH_DIR/scripts/fh_detach.py" --project . --apply    # carry it out (--plugin also uninstalls fh-meta and removes the forge-harness marketplace entry)
+python3 "$FH_DIR/scripts/fh_detach.py" --project . --apply    # carry it out for this project
+python3 "$FH_DIR/scripts/fh_detach.py" --project . --machine --apply   # this project + what every project shares (--plugin also uninstalls fh-meta and removes the forge-harness marketplace entry)
 ```
 
-It removes the zshrc block, the FH hook entries (every field equal to a shipped snippet entry, key order ignored),
+Together (with `--machine`) they remove the zshrc block, the FH hook entries (every field equal to a shipped snippet entry, key order ignored),
 the companion section in `CLAUDE.local.md`, the gate's `core.hooksPath`, this project's `~/.cc_sentinels/*_wizard_*`
 files and unchanged template copies. A user's own hook survives, even one sharing a script name or a group with FH —
 unless it is identical to FH's shipped entry, which the tool cannot tell apart.

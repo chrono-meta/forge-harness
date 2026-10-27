@@ -112,9 +112,14 @@ install() { # install <world> [gate-consent | unset]
   mkdir -p "$W/hub/.claude/rules" && cp "$W/hub/templates/local_fh_context.md" "$W/hub/.claude/rules/"
   echo ".claude/rules/local_fh_context.md" >> "$W/hub/.git/info/exclude"
 }
-detach() { # detach <world> [args…] → rc
+detach() { # detach <world> [args…] → rc   (machine-wide: the lanes below check the whole install comes off)
   local W="$1"; shift
-  ( cd "$W/hub" && python3 "$DETACH" --project "$W/hub" --fh-dir "$W/hub" --home "$W/home" "$@" ) > "$W/detach.out" 2>&1
+  ( cd "$W/hub" && python3 "$DETACH" --project "$W/hub" --fh-dir "$W/hub" --home "$W/home" --machine "$@" ) > "$W/detach.out" 2>&1
+  echo $?
+}
+detach_p() { # detach_p <world> <project> [args…] → rc   (default scope: the project only)
+  local W="$1" P="$2"; shift 2
+  ( cd "$P" && python3 "$DETACH" --project "$P" --fh-dir "$W/hub" --home "$W/home" "$@" ) > "$W/detach.out" 2>&1
   echo $?
 }
 fhhooks() { python3 -c '
@@ -232,6 +237,46 @@ chk "Q4b … and detach removes it"  "$([ -d "$W/home/.cc_sentinels" ] && echo p
 W="$T/w13"; mkworld "$W"; install "$W"
 chk "Q5 a write between plan and apply is not overwritten (LEFT instead)"  "$(python3 "$T/race.py" "$DETACH" "$W")" "late=1 left=1"
 
+echo "── M: default scope is the project; --machine adds what every project shares ──"
+W="$T/w14"; mkworld "$W"
+PRE="$(snap "$W/home" "$W/hub")"
+install "$W"
+ZB="$(shasum "$W/home/.zshrc")"
+chk "M0 the install wrote the companion section (known-positive)"  "$(grep -c 'Companion-store session-start read' "$W/hub/CLAUDE.local.md")" 1
+chk "M1 project-only --apply: rc 0"  "$(detach_p "$W" "$W/hub" --apply)" 0
+chk "M1a … the project's companion section is gone"  "$(cat "$W/hub/CLAUDE.local.md" 2>/dev/null | grep -c 'Companion-store session-start read')" 0
+chk "M1f … ~/.zshrc is byte-for-byte untouched"  "$([ "$(shasum "$W/home/.zshrc")" = "$ZB" ] && echo same)" same
+chk "M1b … the project's FH hooks are gone"  "$(fhhooks "$W/hub/.claude/settings.json" 2>/dev/null || echo 0)" 0
+chk "M1c … the zshrc block stays"  "$(grep -c 'forge-harness (install-wizard)' "$W/home/.zshrc")" 2
+chk "M1d … core.hooksPath stays"  "$(git -C "$W/hub" config --get core.hooksPath)" "templates/.git-hooks"
+chk "M1e … and both are named as kept (machine-wide)"  "$(grep -c '^  kept (machine-wide' "$W/detach.out")" 2
+chk "M2 then --machine --apply: rc 0"  "$(detach "$W" --apply)" 0
+chk "M2b … tree is byte-equal to before install"  "$([ "$(snap "$W/home" "$W/hub")" = "$PRE" ] && echo equal)" equal
+W="$T/w15"; mkworld "$W"; install "$W"
+mkdir -p "$W/proj/.claude" && git -C "$W/proj" init -q && cp "$W/hub/.claude/settings.json" "$W/proj/.claude/settings.json"
+cp "$W/hub/CLAUDE.local.md" "$W/proj/CLAUDE.local.md"
+echo '{"hooks": {}, "mine": 1}' > "$W/hub/.claude/settings.local.json"
+HUBN="$(fhhooks "$W/hub/.claude/settings.json")"; HUBS="$(snap "$W/hub")"; ZB="$(shasum "$W/home/.zshrc")"
+chk "M3 another project: rc 0"  "$(detach_p "$W" "$W/proj" --apply)" 0
+chk "M3b … its FH hooks go (file held only FH hooks + user keys)"  "$(fhhooks "$W/proj/.claude/settings.json" 2>/dev/null || echo 0)" 0
+chk "M3c … the FH clone's own hooks are untouched"  "$(fhhooks "$W/hub/.claude/settings.json")" "$HUBN"
+chk "M3e … its companion section goes"  "$(cat "$W/proj/CLAUDE.local.md" 2>/dev/null | grep -c 'Companion-store session-start read')" 0
+chk "M3f … the FH clone's tree is byte-for-byte untouched (settings · settings.local · CLAUDE.local.md · config)"  "$([ "$(snap "$W/hub")" = "$HUBS" ] && echo same)/$([ "$(shasum "$W/home/.zshrc")" = "$ZB" ] && echo same)" "same/same"
+chk "M3d … and the clone's settings are named as kept"  "$(grep -c "^  kept (machine-wide.*$W/hub/.claude/settings.json" "$W/detach.out")" 1
+chk "M4 dry run with --machine lists the zshrc step; without it, does not"  "$(detach "$W" >/dev/null; grep -c '^  - ~/.zshrc' "$W/detach.out")/$(detach_p "$W" "$W/proj" >/dev/null; grep -c '^  - ~/.zshrc' "$W/detach.out")" "1/0"
+
+W="$T/w16"; mkworld "$W"; install "$W"
+mkdir -p "$W/proj/.claude" && git -C "$W/proj" init -q && cp "$W/hub/.claude/settings.json" "$W/proj/.claude/settings.json"
+printf '{ "hooks": ' > "$W/hub/.claude/settings.local.json"
+chk "M5 a broken FH-clone settings file does not stop a project detach (rc 0)"  "$(detach_p "$W" "$W/proj" --apply)" 0
+chk "M5b … the project is cleaned and the broken file is named as kept"  "$(fhhooks "$W/proj/.claude/settings.json" 2>/dev/null || echo 0)/$(grep -c '^  kept (machine-wide, not an exact.*settings.local.json' "$W/detach.out")" "0/1"
+chk "M5c … with --machine the same file is an error (rc 10)"  "$(detach_p "$W" "$W/proj" --machine)" 10
+W="$T/w17"; mkworld "$W"; install "$W"
+mkdir -p "$W/proj/.claude" && git -C "$W/proj" init -q && cp "$W/hub/.claude/settings.json" "$W/proj/.claude/settings.json"
+chmod 000 "$W/hub/.claude/settings.json"
+chk "M5d an unreadable FH-clone settings file: project detach rc 0 · --machine rc 10"  "$(detach_p "$W" "$W/proj" --apply)/$(detach_p "$W" "$W/proj" --machine)" "0/10"
+chmod 644 "$W/hub/.claude/settings.json"
+
 echo "── G: the wizard's 4-axis gate block needs explicit consent ──"
 W="$T/w5"; mkworld "$W"; install "$W" unset
 chk "G1 FH_WIZARD_GATE_CONSENT unset → hooksPath not set"  "$(git -C "$W/hub" config --get core.hooksPath || echo unset)" unset
@@ -245,6 +290,7 @@ chk "P1 --plugin uninstalls fh-meta and removes the marketplace"  "$(cat "$T/cla
 
 echo "── W: wiring ──"
 chk "W1 package.json ships fh_detach.py"  "$(grep -c '"scripts/fh_detach.py"' "$ROOT/package.json")" 1
+chk "W3 install-wizard SKILL.md names --machine"  "$(grep -c 'fh_detach.py" --project . --machine' "$ROOT/plugins/fh-meta/skills/install-wizard/SKILL.md")" 1
 chk "W2 install-wizard SKILL.md points at the detach command"  "$(grep -q 'scripts/fh_detach.py" --project . --apply' "$ROOT/plugins/fh-meta/skills/install-wizard/SKILL.md" && echo yes)" yes
 
 echo
