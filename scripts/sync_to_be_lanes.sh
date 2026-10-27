@@ -160,7 +160,15 @@ printf '%s' "$out" | grep -q 'tracks-meta/exp9/out'; chk $? "the refusal names t
 printf 'later\n' > "$HUB/tracks/_meta/exp9/LATER.md"
 out="$(FH_SYNC_BULK_MAX=5 MID=lanea run 2>&1)"; rc=$?
 [ "$rc" -eq 14 ]; chk $? "the next sync with anything to commit refuses again (the mirrored files are still there) — got $rc"
+[ -f "$HUB/tracks/_meta/logs/.sync_bulk_refused" ] && grep -q "$(printf '\t')10$(printf '\t')5$(printf '\t')" "$HUB/tracks/_meta/logs/.sync_bulk_refused" && [ "$(cut -f4 "$HUB/tracks/_meta/logs/.sync_bulk_refused")" = "$(cd "$BEX" && pwd -P)" ]
+chk $? "the refusal leaves a marker (time · 10 added · limit 5 · this store) for the next session start"
+LOAD="$(dirname "$SCRIPT")/fh_session_load.sh"
+sl="$(printf '{"source":"startup"}' | HOME="$ENV_DIR/home" HUB_DIR="$HUB" BE_DIR="$BEX" bash "$LOAD" 2>&1)"
+printf '%s' "$sl" | grep -q '동기화가 멈춰 있다'; chk $? "session start prints the stopped-sync warning while the marker is there"
 FH_SYNC_BULK_OK=1 FH_SYNC_BULK_MAX=5 MID=lanea run >/dev/null 2>&1; rc=$?
+[ ! -e "$HUB/tracks/_meta/logs/.sync_bulk_refused" ]; chk $? "a committed sync clears the marker"
+sl="$(printf '{"source":"startup"}' | HOME="$ENV_DIR/home" HUB_DIR="$HUB" BE_DIR="$BEX" bash "$LOAD" 2>&1)"
+printf '%s' "$sl" | grep -q '동기화가 멈춰 있다'; [ $? -ne 0 ]; chk $? "CONTROL: no warning once the marker is gone (the session-start run itself executed: $(printf '%s' "$sl" | grep -c .) lines)"
 [ "$rc" -eq 0 ] && [ -f "$BEX/tracks-meta/exp9/out/run1/f8.txt" ] && git -C "$BEX" ls-files --error-unmatch tracks-meta/exp9/out/run1/f8.txt >/dev/null 2>&1
 chk $? "FH_SYNC_BULK_OK=1 commits the same volume once (rc=$rc)"
 new_env l4h3
@@ -177,6 +185,19 @@ i=0; while [ $i -lt 3001 ]; do mkdir -p "$HUB/tracks/_meta/exp9/out/d$i"; printf
 out="$(FH_SYNC_BULK_MAX=99999999999999999999 MID=lanea run 2>&1)"; rc=$?
 [ "$rc" -eq 14 ]; chk $? "an overflowing FH_SYNC_BULK_MAX falls back to 3000 and 3001 adds in 3001 dirs still refuse with rc=14, not 141 (got $rc)"
 printf '%s' "$out" | grep -q 'integer expression'; [ $? -ne 0 ]; chk $? "no 'integer expression expected' from the limit comparison"
+new_env l4h5
+mkdir -p "$HUB/tracks/_meta/exp9/out"
+for i in 1 2 3 4 5 6 7 8; do printf 'x\n' > "$HUB/tracks/_meta/exp9/out/f$i.txt"; done
+FH_SYNC_BULK_MAX=5 MID=lanea run >/dev/null 2>&1
+[ -f "$HUB/tracks/_meta/logs/.sync_bulk_refused" ]; chk $? "CONTROL: recovery lane starts from a refusal marker"
+rm -rf "$HUB/tracks/_meta/exp9/out" "$BEX/tracks-meta/exp9/out"
+FH_SYNC_BULK_MAX=5 MID=lanea run >/dev/null 2>&1; rc=$?
+[ ! -e "$HUB/tracks/_meta/logs/.sync_bulk_refused" ]; chk $? "recovery with nothing to commit (leak removed) still clears the marker (rc=$rc)"
+printf '2026-01-01 00:00\t9999\t3000\t/somewhere/else/store\n' > "$HUB/tracks/_meta/logs/.sync_bulk_refused"
+sl="$(printf '{"source":"startup"}' | HOME="$ENV_DIR/home" HUB_DIR="$HUB" BE_DIR="$BEX" bash "$(dirname "$SCRIPT")/fh_session_load.sh" 2>&1)"
+printf '%s' "$sl" | grep -q '동기화가 멈춰 있다'; [ $? -ne 0 ]; chk $? "a marker for ANOTHER store does not warn about this one"
+MID=lanea run >/dev/null 2>&1
+[ -f "$HUB/tracks/_meta/logs/.sync_bulk_refused" ]; chk $? "…and a sync to this store does not clear another store's marker"
 new_env l4h2
 mkdir -p "$HUB/tracks/_meta/exp9"
 for i in 1 2 3; do printf 'x\n' > "$HUB/tracks/_meta/exp9/f$i.md"; done

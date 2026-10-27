@@ -1007,7 +1007,12 @@ maybe_push() {
 
 # FH_SYNC_BULK_OK=1 skips this exit: after a bulk refusal (rc=14, below) the files are already in the
 # store's work tree, so the override run transfers nothing and would otherwise never reach the commit.
-if [ "$TOTAL" -eq 0 ] && [ "$DIRTY" -eq 0 ] && [ "${FH_SYNC_BULK_OK:-}" != "1" ]; then
+# A bulk-refusal marker for THIS store also skips it: after the person removed or excluded the leaked
+# directory nothing is transferred, and only the git stage below can confirm the intake is gone and clear it.
+_SBR="$FH/tracks/_meta/logs/.sync_bulk_refused"
+_bulk_marker_here() { [ -f "$_SBR" ] && [ "$(cut -f4 "$_SBR" 2>/dev/null)" = "$BE" ]; }
+_clear_bulk_marker() { _bulk_marker_here && rm -f "$_SBR" 2>/dev/null; return 0; }
+if [ "$TOTAL" -eq 0 ] && [ "$DIRTY" -eq 0 ] && [ "${FH_SYNC_BULK_OK:-}" != "1" ] && ! _bulk_marker_here; then
   log "already up to date"
   maybe_push   # flush any commits a previous run couldn't push
   exit 0
@@ -1036,6 +1041,7 @@ find "$TM" "$TA" "$TCH" "$TR" "$MMD" "$HO" -name '*.md.tmp[0-9]*' -delete 2>/dev
 git add "$TM/" "$TA/" "$TCH/" "$TR/" "$MMD/" "$HO/"
 if git diff --cached --quiet; then
   log "nothing new to commit in companion store"
+  _clear_bulk_marker   # the intake is gone (excluded or removed): nothing left to refuse
   maybe_push
   exit 0
 fi
@@ -1063,6 +1069,11 @@ if [ "${_bulk_added:-0}" -gt "$_bulk_max" ] && [ "${FH_SYNC_BULK_OK:-}" != "1" ]
   # Un-stage only the files this guard counted, so staging the store already held (a hand edit, a
   # partial add) survives the refusal — a whole-index reset cannot be undone by the next `git add`.
   git diff --cached --diff-filter=A --name-only -z | xargs -0 git reset -q --
+  # Leave a marker the next session start prints (fh_session_load.sh) — under launchd this message
+  # otherwise lands only in sync_to_be_launchd_err.log, which nothing reads. logs/ is never mirrored.
+  { mkdir -p "$FH/tracks/_meta/logs" && printf '%s\t%s\t%s\t%s\n' "$(date '+%Y-%m-%d %H:%M')" "$_bulk_added" "$_bulk_max" "$BE" \
+      > "$FH/tracks/_meta/logs/.sync_bulk_refused"; } 2>/dev/null \
+    || echo "   ⚠️  could not write $FH/tracks/_meta/logs/.sync_bulk_refused — the next session start will NOT warn about this refusal" >&2
   exit 14
 fi
 [ "${_bulk_added:-0}" -gt "$_bulk_max" ] && echo "[sync-to-be] FH_SYNC_BULK_OK=1 — committing $_bulk_added added files (limit $_bulk_max)" >&2
@@ -1072,4 +1083,5 @@ MSG="sync: $HUB_NAME private half → companion store ($DATE)"
 git commit -m "$MSG" --no-gpg-sign 2>/dev/null || git commit -m "$MSG"
 
 log "companion store committed"
+_clear_bulk_marker   # a committed sync clears the bulk-refusal marker
 maybe_push
