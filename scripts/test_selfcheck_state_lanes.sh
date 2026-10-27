@@ -474,7 +474,79 @@ else
   # The loop must route through the function — a lifted function with no caller is decoration.
   # Uncommented line only (codex review 2026-10-19: a commented-out call passed the first form).
   # Still a text check — it cannot prove the line is reached; that residual is named, not closed.
-  grep -qE '^[[:space:]]+_pair_rc_verdict "\$_lbl" "\$_subj" "\$_rc" \|\| fail=1' "$SELFCHECK"; chk $? "pair loop calls _pair_rc_verdict (uncommented) and sets fail on it"
+  grep -qE '^[[:space:]]+_pair_rc_verdict "\$_lbl" "\$_subj" "\$_rc" "\$_bud" \|\| fail=1' "$SELFCHECK"; chk $? "pair loop calls _pair_rc_verdict (uncommented, with the budget) and sets fail on it"
+  # The TIMEOUT line must name the budget the run actually used. Before 2026-10-26 it printed a
+  # hardcoded "limit 300 s"; once budgets differ per suite, that line is a wrong fact in the one
+  # place a reader greps. Known pair: a non-default budget must appear, and the default must not.
+  _o=$(_pair_rc_verdict lane_x.sh subj_x 124 600)
+  printf '%s' "$_o" | grep -q 'budget 600 s' && ! printf '%s' "$_o" | grep -q 'budget 300 s'
+  chk $? "rc=124 with a 600 s budget → the line names 600, not the default"
+  _o=$(_pair_rc_verdict lane_x.sh subj_x 124)
+  printf '%s' "$_o" | grep -q 'budget 300 s'; chk $? "rc=124 with no budget argument → falls back to the default, still named"
+fi
+
+# ── Per-suite lane budget (2026-10-26) ────────────────────────────────────────
+# fh_signal_2026-10-26_mutation-probe-budget-cliff: test_mutation_probe_lanes.sh takes 318–322 s
+# standalone and the loop's single global `timeout 300` killed it, so 122 known-pair lanes reported
+# as one TIMEOUT line and went UNMEASURED. Nothing in the suite or its subject had changed. The
+# repair is a per-suite budget plus an advisory margin line; these lanes pin BOTH halves, because a
+# budget with no margin warning reproduces the same blindness one host-slowdown later.
+echo ""
+echo "── per-suite lane budget (_lane_budget · _lane_margin_note) ──"
+_BUDFN=$(sed -n '/^_lane_budget() {/,/^}/p' "$SELFCHECK")
+_MARGINFN=$(sed -n '/^_lane_margin_note() {/,/^}/p' "$SELFCHECK")
+# `grep -m1 FILE` rather than `grep … | head -1`: under `set -o pipefail` (line 23) an early-exit
+# consumer SIGPIPEs the producer and the residual rc becomes the pipeline's — the defect class
+# scripts/pipefail_earlyexit_scan.sh locks at zero NEW sites. Measured here: the first draft of
+# these lanes added three such sites and selfcheck's class-lock lane went red on my own commit.
+_BUDDEF=$(grep -m1 -E '^_LANE_BUDGET_DEFAULT=[0-9]+$' "$SELFCHECK")
+if [ -z "$_BUDFN" ] || [ -z "$_MARGINFN" ] || [ -z "$_BUDDEF" ]; then
+  chk 1 "_lane_budget / _lane_margin_note / _LANE_BUDGET_DEFAULT found in selfcheck.sh (lane would test nothing)"
+else
+  eval "$_BUDDEF"; eval "$_BUDFN"; eval "$_MARGINFN"
+  _WARNLINE=$(grep -m1 -E '^_LANE_BUDGET_WARN_PCT=[0-9]+' "$SELFCHECK")
+  _WARNPCT=$(sed -E 's/[^0-9]*([0-9]*).*/\1/' <<<"$_WARNLINE")
+  [ -n "$_WARNPCT" ] && eval "_LANE_BUDGET_WARN_PCT=$_WARNPCT"
+
+  [ "$(_lane_budget some_other_suite.sh)" = "$_LANE_BUDGET_DEFAULT" ]
+  chk $? "an undeclared suite gets the default budget ($_LANE_BUDGET_DEFAULT s) — the table is an exception list, not a rewrite"
+  # known-POSITIVE for the defect: the measured suite's budget must EXCEED its measured cost, or
+  # the repair changed nothing. 322 s is the slowest of the three reps taken on 2026-10-26.
+  [ "$(_lane_budget test_mutation_probe_lanes.sh)" -gt 322 ]
+  chk $? "test_mutation_probe_lanes.sh's budget exceeds its measured 322 s — the kill that started this cannot recur at the same cost"
+  # known-NEGATIVE: the default does NOT, which is why the suite died. If someone "fixes" this by
+  # raising the default instead, this lane goes red and says so.
+  [ "$_LANE_BUDGET_DEFAULT" -lt 322 ]
+  chk $? "known-NEGATIVE: the default budget is still below that cost (the repair is per-suite, not a global raise)"
+  # A budget with no bound is the other wrong repair: it turns a killed suite into a hung CI job.
+  [ "$(_lane_budget test_mutation_probe_lanes.sh)" -gt 0 ] && [ "$(_lane_budget test_mutation_probe_lanes.sh)" -le 1800 ]
+  chk $? "the raised budget is still a BOUND (>0 and ≤1800 s), not an absent timeout"
+
+  # The margin note: fires close to the budget, silent well inside it, and says PASSED either way.
+  _o=$(_lane_margin_note lane_x.sh 290 300)
+  printf '%s' "$_o" | grep -q '^NOTE ' && printf '%s' "$_o" | grep -q 'PASSED'
+  chk $? "known-POSITIVE: 290 s of a 300 s budget → an advisory NOTE that says the suite passed"
+  _o=$(_lane_margin_note lane_x.sh 290 300)
+  ! printf '%s' "$_o" | grep -qE '^(FAIL|TIMEOUT|HARNESS ERROR|❌)'
+  chk $? "the advisory is not a verdict — no FAIL/TIMEOUT/HARNESS ERROR vocabulary in it"
+  _o=$(_lane_margin_note lane_x.sh 30 300); [ -z "$_o" ]
+  chk $? "known-NEGATIVE: 30 s of a 300 s budget → silent (a note on every suite is a note nobody reads)"
+  _lane_margin_note lane_x.sh 290 300 >/dev/null; chk $? "the advisory returns 0 — it can never set fail"
+  _o=$(_lane_margin_note lane_x.sh 5 0); [ -z "$_o" ]
+  chk $? "a zero budget → silent, no division by zero"
+  # It must be WIRED into the loop. A margin function nobody calls is the decoration this repo
+  # names built-but-not-wired; text check only, same residual as the _pair_rc_verdict grep above.
+  grep -qE '^[[:space:]]+\[ "\$_t0" -gt 0 \].*_lane_margin_note "\$_lbl"' "$SELFCHECK"
+  chk $? "the pair loop calls _lane_margin_note (uncommented)"
+  grep -qE '^[[:space:]]+_lane_to=""; command -v timeout' "$SELFCHECK"
+  chk $? "the loop installs a PER-SUITE timeout var (not reassigning the shared \$_LANE_TO)"
+  # Why that last lane exists: $_LANE_TO is read again by two dispatches hundreds of lines below the
+  # loop. Reassigning it per suite would hand one suite's budget to unrelated blocks, silently.
+  # Ends in `wc -l`, which reads to EOF: `| grep -q .` here would kill awk mid-stream and hand the
+  # pipeline a SIGPIPE rc under pipefail. Same reason as the two greps above.
+  _lto_below=$(grep -n '\$_LANE_TO' "$SELFCHECK" | awk -F: '$1>1200' | wc -l)
+  [ "$_lto_below" -ge 1 ]
+  chk $? "known-POSITIVE for that risk: \$_LANE_TO really is still read below the loop ($_lto_below sites)"
 fi
 
 echo ""
