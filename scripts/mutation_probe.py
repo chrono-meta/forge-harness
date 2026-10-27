@@ -1102,6 +1102,22 @@ def main():
         say('CANNOT JUDGE: subject not found or not a regular file: %s' % a.subject, err=True)
         return 2
     orig = read_bytes(subj)
+    # Test seam (lane R7-1 only; unset = no effect): announce «read» and wait for «go» so a lane can change the
+    # subject between this read and the lock below by OBSERVATION, not a timed guess that one runner's speed
+    # breaks (downstream report 2026-10-27: a measured half-time window landed after the lock on another runner).
+    seam = os.environ.get('MUTATION_PROBE_TEST_AFTER_READ')
+    if seam:
+        try:        # exclusive + no-follow: a pre-existing file or link at <seam>.read is never written (codex R1)
+            os.close(os.open(seam + '.read', os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_NOFOLLOW', 0), 0o600))
+        except OSError as exc:
+            say('CANNOT JUDGE: test seam %s.read cannot be created (%s)' % (seam, exc), err=True)
+            return 2
+        deadline = time.time() + 60
+        while not os.path.exists(seam + '.go'):
+            if time.time() > deadline:
+                say('CANNOT JUDGE: test seam %s.go never appeared' % seam, err=True)
+                return 2
+            time.sleep(0.02)
     try:
         text = orig.decode('utf-8')
     except UnicodeDecodeError:

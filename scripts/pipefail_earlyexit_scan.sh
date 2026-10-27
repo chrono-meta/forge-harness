@@ -464,12 +464,19 @@ case "$MODE" in
     if ! selftest >/dev/null 2>&1; then
       echo "🟥 INSTRUMENT ERROR — known-pair 실패. 델타 판정을 내지 않는다." >&2; exit 2
     fi
-    BASE="${ONLY:-}"
-    if [ -z "$BASE" ]; then
-      BASE="$(git -C "$REPO" merge-base HEAD origin/main 2>/dev/null \
-              || git -C "$REPO" rev-parse HEAD 2>/dev/null)" || BASE=""
+    BASE="${ONLY:-${PIPESCAN_BASE:-}}"           # arg 2, else env (CI push: the event's «before»)
+    case "$BASE" in *[!0]*) ;; *) BASE="" ;; esac   # all-zero sha (a new branch) = unset
+    if [ -n "$BASE" ] && ! git -C "$REPO" rev-parse -q --verify "$BASE^{commit}" >/dev/null 2>&1; then
+      echo "🟥 INSTRUMENT ERROR — base $BASE 가 이 체크아웃에 없다" >&2; exit 2
     fi
-    [ -n "$BASE" ] || { echo "🟥 INSTRUMENT ERROR — base 를 못 정했다" >&2; exit 2; }
+    if [ -z "$BASE" ]; then
+      # 🟥 2026-10-28 (downstream report 2026-10-27): this used to fall back to `rev-parse HEAD` when origin/main was absent.
+      #    A shallow CI checkout has no origin/main, so the base became HEAD, the diff was empty, and the
+      #    lock printed «SKIP» rc=0 on every PR — a new suite shipped a VULN line through it. No base is
+      #    «not measured» (rc 2), never «nothing changed».
+      BASE="$(git -C "$REPO" merge-base HEAD origin/main 2>/dev/null)" || BASE=""
+    fi
+    [ -n "$BASE" ] || { echo "🟥 INSTRUMENT ERROR — base 를 못 정했다 (origin/main 없음 — 얕은 체크아웃이면 fetch-depth: 0, 아니면 `changed <base>` 또는 PIPESCAN_BASE=<base>)" >&2; exit 2; }
     CH="$(git -C "$REPO" diff --name-only "$BASE" -- 'scripts/*.sh' 'templates/.git-hooks/*' 'plugins/**' 2>/dev/null; \
           git -C "$REPO" diff --cached --name-only -- 'scripts/*.sh' 'templates/.git-hooks/*' 'plugins/**' 2>/dev/null)"
     CH="$(printf '%s\n' "$CH" | /usr/bin/grep -v '^$' | sort -u || true)"

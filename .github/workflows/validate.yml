@@ -37,6 +37,11 @@ jobs:
     # reproduction, not another guess.
     steps:
       - uses: actions/checkout@v4
+        with:
+          # fetch-depth: 0 is load-bearing (downstream report 2026-10-27): the pipefail class-lock delta in selfcheck diffs
+          # against merge-base(HEAD, origin/main). A shallow checkout has no origin/main, so the lock could
+          # not run on any PR. Lane L13 in scripts/test_pipefail_class_lock_lanes.sh checks this line.
+          fetch-depth: 0
 
 
       # 🟥 zsh 를 설치한다 — 장식이 아니라 **커버리지 구멍을 닫는 것**이다.
@@ -212,6 +217,11 @@ jobs:
           bash scripts/validate_yaml.sh
 
       - name: Selfcheck (mandatory-pass surface + every wired lane suite)
+        env:
+          # The class-lock delta's base on a push (downstream report 2026-10-27, codex R1): there merge-base(HEAD, origin/main)
+          # is HEAD itself, so the delta would SKIP. A PR leaves this empty and uses merge-base.
+          # All-zero «before» (a new branch) is treated as unset by the scanner.
+          PIPESCAN_BASE: ${{ github.event_name == 'push' && github.event.before || '' }}
         run: |
           echo "=== scripts/selfcheck.sh — the same command npm test and prepublishOnly run ==="
           # THE ANCHOR THIS WORKFLOW WAS MISSING. selfcheck is FH's mandatory-pass surface: it
