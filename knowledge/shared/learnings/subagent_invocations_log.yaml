@@ -5072,3 +5072,17 @@
   outcome: "#158 1 of 5 accepted (others excerpt artifacts); #159 7 fixed; #162 both rounds found new bypasses of the proof → narrowing withdrawn, fail-closed kept with a known-false-positive reason. Lesson: an R1 refused by a filter is not zero findings — its partial line matched the governor's own catch"
   evidence: "FoD #158 · #159 · #162"
   tokens: UNMEASURED
+- date: 2026-10-27
+  agent: "general-purpose (sonnet) ×3 — FoD quota-ring builder · FoD Windows exe icon builder · FH weekly audit"
+  task: "FoD #164 stale age + extra CODEX_HOME · FoD #165 exe icon via resedit · weekly_audit_2026-10-27.md (Phase 1.5)"
+  trigger: "운영자 2026-10-27 «자체개발 자율주행하주고 주간감사도 해줘 fod쪽도 해주고 … 병렬로 거버너 모드로»"
+  outcome: "#164 accepted after codex R1 4 fixes (2 A verified by governor), R2 4 B residuals named · #165 accepted after R1 1 fix, R2 2 B residuals · audit accepted, 🟥 claims spot-checked against gh/below_floor_scan; Q1 led to FH #962"
+  evidence: "FoD #164 · #165 · tracks/_audit/weekly_audit_2026-10-27.md · FH #962"
+  tokens: UNMEASURED
+- date: 2026-10-27
+  agent: "codex (gpt) ×7 — read-only reviews"
+  task: "FoD #164 R1·R2 · #165 R1·R2 · FH #961 R1·R2 · FH #962 R1"
+  trigger: "load-bearing installer / sync channel / resident rule"
+  outcome: "all A findings taken; FH #961 R1 caught a missing permission purpose and a label loophole; FH #962 R1 caught SIGPIPE→141 before the refusal"
+  evidence: "FoD #164 · #165 · FH #961 · #962"
+  tokens: UNMEASURED
