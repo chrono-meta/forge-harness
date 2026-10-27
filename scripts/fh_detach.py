@@ -9,8 +9,8 @@ Default is a dry run: it prints the plan and changes nothing. `--apply` carries 
 What counts as FH's (each is removed only on an EXACT match with what the wizard writes today):
   ① ~/.zshrc            the wizard's block (marked `# >>> forge-harness >>>` … or the older unmarked 4 lines)
   ② <dir>/.claude/settings.json · settings.local.json
-                        hook entries whose command is byte-equal to a shipped templates/settings.*.snippet.json
-                        command, or to the Mode-D companion hook form. A file the wizard created is deleted when
+                        hook entries equal in every field (key order ignored) to an entry in a shipped
+                        templates/settings.*.snippet.json, or to the Mode-D companion hook form. A file the wizard created is deleted when
                         nothing else is left in it; if a .prewizard backup equals the stripped file, its bytes are
                         put back (so the user's own formatting returns).
   ③ <dir>/CLAUDE.local.md  the «Companion-store session-start read» section the wizard appended
@@ -20,10 +20,12 @@ What counts as FH's (each is removed only on an EXACT match with what the wizard
                         plus their exact lines in .git/info/exclude
   ⑦ --plugin            also runs `claude plugin uninstall` / `marketplace remove` for fh-meta@forge-harness
 
-What it never does: delete a user's own hook (even one sharing a group or a script name with FH), edit a line
-it did not write, or touch a file it cannot parse (that is exit 10, file untouched).
+What it never does: delete a user's own hook (even one sharing a group or a script name with FH — a hook identical
+to FH's shipped entry cannot be told apart and is treated as FH's), edit a line it did not write, or touch a file
+it cannot parse (that is exit 10, file untouched). Scope: ① and ④ are machine/clone-wide, so this takes FH off the
+whole setup, not one project.
 
-Exit: 0 = no FH trace left · 1 = something FH-like is left that needs a human look (listed) ·
+Exit: 0 = no recognised FH trace left · 1 = something FH-like is left that needs a human look (listed) ·
       10 = could not read something it needed (nothing changed past that point) · 11 = bad arguments.
 """
 import argparse
@@ -375,13 +377,18 @@ def plan_plugin(plan):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="Undo what /install-wizard wrote (dry run unless --apply).")
+    ap = argparse.ArgumentParser(
+        description="Undo what /install-wizard wrote (dry run unless --apply). Machine-wide: the ~/.zshrc block and "
+                    "the FH clone's hooks and core.hooksPath go too, not only --project.",
+        epilog="exit: 0 no recognised FH trace left · 1 something FH-like is LEFT (listed) for a human look · "
+               "10 could not read something it needed · 11 bad arguments")
     ap.add_argument("--project", default=os.getcwd(), help="project the wizard ran in (default: cwd)")
     ap.add_argument("--fh-dir", default=os.environ.get("FH_DIR") or os.path.dirname(os.path.dirname(
         os.path.abspath(__file__))), help="FH clone/package (default: $FH_DIR, else this script's repo)")
-    ap.add_argument("--home", default=os.path.expanduser("~"))
-    ap.add_argument("--apply", action="store_true")
-    ap.add_argument("--plugin", action="store_true", help="also uninstall the Claude Code plugin")
+    ap.add_argument("--home", default=os.path.expanduser("~"), help="home directory to clean (default: ~)")
+    ap.add_argument("--apply", action="store_true", help="carry out the plan (default: print it, change nothing)")
+    ap.add_argument("--plugin", action="store_true",
+                    help="also uninstall fh-meta@forge-harness and remove the forge-harness marketplace entry")
     try:
         a = ap.parse_args(argv)
     except SystemExit as e:

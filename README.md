@@ -84,9 +84,13 @@ cd ~/projects/forge-harness && claude          # then type: hi   (or 안녕 · �
    «run /context-doctor» (token-waste scan). For full setup, run `/install-wizard`: every item is
    approved one by one and a decline is recorded.
 
-Taking it off again. `python3 scripts/fh_detach.py --project .` prints what the wizard wrote; add `--apply` to
-undo exactly that (and `--plugin` to uninstall fh-meta). Your own hooks and edited files are never removed;
-anything FH-like it cannot match exactly is listed for you to look at. Door ① leaves only its verdict records
+**Taking it off again.** From the FH clone, `python3 scripts/fh_detach.py --project <the project you ran the
+wizard in>` prints what the wizard wrote; add `--apply` to undo it. It takes FH off the machine setup, not one
+project: the `~/.zshrc` block and the FH clone's own hooks and `core.hooksPath` go too. `--plugin` also runs
+`claude plugin uninstall fh-meta@forge-harness` and removes the `forge-harness` marketplace entry. A hook counts
+as FH's only when every field equals a shipped snippet entry — so one you wrote yourself survives unless it is
+identical to FH's — and anything FH-like that does not match is listed for you to look at (exit 1). Installed
+the plugin only, with no clone? Run `claude plugin uninstall fh-meta@forge-harness`. Door ① leaves only its verdict records
 in `~/.fh/logs/` (delete the folder when you no longer want them) and npm's own `npx` cache.
 
 Requirements. Door ② needs the Claude Code CLI (`claude --version`). Door ① needs Node and a `claude` or
