@@ -2,19 +2,22 @@
 """fh_detach.py — undo what /install-wizard wrote, and nothing else.
 
 Usage:
-  python3 scripts/fh_detach.py [--project DIR] [--fh-dir DIR] [--home DIR] [--apply] [--plugin]
+  python3 scripts/fh_detach.py [--project DIR] [--machine] [--fh-dir DIR] [--home DIR] [--apply] [--plugin]
 
 Default is a dry run: it prints the plan and changes nothing. `--apply` carries it out.
 
+Scope: by default only the project — ②(the project's files) ③ ⑤ ⑥. `--machine` adds what every project shares:
+① ~/.zshrc, ② and ③ in the FH clone itself, and ④. Without it, those are listed as kept, never touched.
+
 What counts as FH's (each is removed only on an EXACT match with what the wizard writes today):
-  ① ~/.zshrc            the wizard's block (marked `# >>> forge-harness >>>` … or the older unmarked 4 lines)
+  ① ~/.zshrc            [--machine] the wizard's block (marked `# >>> forge-harness >>>` … or the older unmarked 4 lines)
   ② <dir>/.claude/settings.json · settings.local.json
                         hook entries equal in every field (key order ignored) to an entry in a shipped
                         templates/settings.*.snippet.json, or to the Mode-D companion hook form. A file the wizard created is deleted when
                         nothing else is left in it; if a .prewizard backup equals the stripped file, its bytes are
                         put back (so the user's own formatting returns).
   ③ <dir>/CLAUDE.local.md  the «Companion-store session-start read» section the wizard appended
-  ④ git core.hooksPath  only when it is `templates/.git-hooks` (the wizard's value) in the FH clone
+  ④ git core.hooksPath  [--machine] only when it is `templates/.git-hooks` (the wizard's value) in the FH clone
   ⑤ ~/.cc_sentinels/<project>_wizard_*  (and the folder, when that leaves it empty)
   ⑥ .claude/rules/local_fh_context.md · fh_env_context.jsonc  only when byte-equal to the shipped template,
                         plus their exact lines in .git/info/exclude
@@ -22,10 +25,9 @@ What counts as FH's (each is removed only on an EXACT match with what the wizard
 
 What it never does: delete a user's own hook (even one sharing a group or a script name with FH — a hook identical
 to FH's shipped entry cannot be told apart and is treated as FH's), edit a line it did not write, or touch a file
-it cannot parse (that is exit 10, file untouched). Scope: ① and ④ are machine/clone-wide, so this takes FH off the
-whole setup, not one project.
+it cannot parse (that is exit 10, file untouched).
 
-Exit: 0 = no recognised FH trace left · 1 = something FH-like is left that needs a human look (listed) ·
+Exit: 0 = no recognised FH trace left in the chosen scope (machine-wide ones kept without --machine are listed) · 1 = something FH-like is left that needs a human look (listed) ·
       10 = could not read something it needed (nothing changed past that point) · 11 = bad arguments.
 """
 import argparse
@@ -378,11 +380,14 @@ def plan_plugin(plan):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(
-        description="Undo what /install-wizard wrote (dry run unless --apply). Machine-wide: the ~/.zshrc block and "
-                    "the FH clone's hooks and core.hooksPath go too, not only --project.",
+        description="Undo what /install-wizard wrote (dry run unless --apply). Default: only --project. "
+                    "--machine also takes the ~/.zshrc block, the FH clone's hooks and core.hooksPath.",
         epilog="exit: 0 no recognised FH trace left · 1 something FH-like is LEFT (listed) for a human look · "
                "10 could not read something it needed · 11 bad arguments")
     ap.add_argument("--project", default=os.getcwd(), help="project the wizard ran in (default: cwd)")
+    ap.add_argument("--machine", action="store_true",
+                    help="also remove what every project shares: the ~/.zshrc block, the FH clone's own hooks and "
+                         "companion section, and core.hooksPath (default: only --project)")
     ap.add_argument("--fh-dir", default=os.environ.get("FH_DIR") or os.path.dirname(os.path.dirname(
         os.path.abspath(__file__))), help="FH clone/package (default: $FH_DIR, else this script's repo)")
     ap.add_argument("--home", default=os.path.expanduser("~"), help="home directory to clean (default: ~)")
@@ -396,18 +401,28 @@ def main(argv=None):
     proj = os.path.abspath(a.project)
     fh = os.path.abspath(a.fh_dir)
     plan = Plan(a.apply)
+    # machine-wide steps go to their own plan; without --machine they are only reported, never run
+    shared = plan if a.machine else Plan(False)
+    unread = []         # without --machine an unreadable shared file is reported, never a reason to stop (codex R1)
+
+    def plan_shared(fn, *args):
+        try:
+            fn(shared, *args)
+        except (HarnessError, OSError, UnicodeDecodeError) as e:     # a read failure, not only a parse one (codex R2)
+            if a.machine:
+                raise e if isinstance(e, HarnessError) else HarnessError(str(e))
+            unread.append(str(e))
     try:
         cmds, keys = snippet_commands(fh)
-        plan_zshrc(plan, a.home)
-        seen = set()
-        for d in (proj, fh):
-            if d in seen:
-                continue
-            seen.add(d)
+        plan_shared(plan_zshrc, a.home)
+        for name in ("settings.json", "settings.local.json"):
+            plan_settings(plan, os.path.join(proj, ".claude", name), cmds, keys)
+        plan_claude_local(plan, proj)
+        if fh != proj:          # fh == proj: the clone is the project, already planned above
             for name in ("settings.json", "settings.local.json"):
-                plan_settings(plan, os.path.join(d, ".claude", name), cmds, keys)
-            plan_claude_local(plan, d)
-        plan_hookspath(plan, fh)
+                plan_shared(plan_settings, os.path.join(fh, ".claude", name), cmds, keys)
+            plan_shared(plan_claude_local, fh)
+        plan_shared(plan_hookspath, fh)
         plan_sentinels(plan, a.home, os.path.basename(proj))
         plan_copies(plan, fh, proj)
         plan_rules_dir(plan, proj)
@@ -427,6 +442,11 @@ def main(argv=None):
             except (OSError, subprocess.CalledProcessError) as e:
                 print("fh-detach: HARNESS-ERROR at «%s»: %s" % (label, e), file=sys.stderr)
                 return 10
+    if shared is not plan:
+        for l in [l for l, _ in shared.actions if l]:
+            print("  kept (machine-wide — every project shares it; --machine removes it): " + l)
+        for l in shared.left + unread:
+            print("  kept (machine-wide, not an exact FH match — --machine would leave it too; look at it): " + l)
     for n in plan.notes:
         print("  note: " + n)
     for l in plan.left:

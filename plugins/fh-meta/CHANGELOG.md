@@ -1,5 +1,10 @@
 # forge-harness (fh-meta) Changelog
 
+### [Unreleased]
+
+소비자에게 닿는 변화:
+- `scripts/fh_detach.py`: 기본 범위가 **그 프로젝트 하나**로 바뀌었다 — 프로젝트의 `.claude/settings*.json` FH 훅 · `CLAUDE.local.md` 동반 절 · 그 프로젝트의 `~/.cc_sentinels` 이름 · 안 고친 템플릿 사본. 모든 프로젝트가 같이 쓰는 것(`~/.zshrc` 블록 · FH 클론 자신의 훅과 동반 절 · `core.hooksPath`)은 새 플래그 `--machine` 을 줄 때만 지우고, 안 주면 `kept (machine-wide …)` 줄로 보여 주기만 한다. 🟥 3.31.0 에서 `--apply` 로 머신 전체를 떼던 사람은 이제 `--machine` 을 더해야 같은 결과다. 공유 파일을 못 읽어도(깨진 JSON · 읽기 권한 없음) 프로젝트 떼기는 계속된다 — `--machine` 일 때만 종료 10. 마법사를 돌린 다른 프로젝트는 각자 `--project` 로 뗀다. install-wizard SKILL.md §Detach · README · USER_GUIDE.
+
 ### [3.31.0] — 2026-10-27 — 설치 마법사 되돌리기(fh_detach) · 디스패치마다 목적 적기 · selfcheck 시간 상한 · 바깥 질문 검사기(실험 종료 · 호출부 없음)
 
 **minor.** In short (for upgraders): one new tool takes off what `/install-wizard` put on (`scripts/fh_detach.py`, dry run by default), one new checker screens a question before it goes to an outside model (`scripts/abstract_consult_check.py`, nothing calls it — off by default), and `selfcheck.sh` gives the mutation-probe lane suite a longer time budget. `fh_detach.py` takes FH off the whole machine setup (the `~/.zshrc` block and the FH clone's hooks go too), not one project — run the dry run first. The pre-send checker is an ended experiment (it missed its pre-registered bar) kept as an inert tool: it sends nothing and nothing calls it. For npm consumers nothing that passed before is refused now; upgrading from 3.30.0 needs no action. The one `BREAKING (gate)` line below applies only if you run the companion-store sync script (`scripts/sync-to-be.sh`) from a clone of this repository — that script is not in the npm package.
