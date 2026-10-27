@@ -1005,7 +1005,9 @@ maybe_push() {
   fi
 }
 
-if [ "$TOTAL" -eq 0 ] && [ "$DIRTY" -eq 0 ]; then
+# FH_SYNC_BULK_OK=1 skips this exit: after a bulk refusal (rc=14, below) the files are already in the
+# store's work tree, so the override run transfers nothing and would otherwise never reach the commit.
+if [ "$TOTAL" -eq 0 ] && [ "$DIRTY" -eq 0 ] && [ "${FH_SYNC_BULK_OK:-}" != "1" ]; then
   log "already up to date"
   maybe_push   # flush any commits a previous run couldn't push
   exit 0
@@ -1037,6 +1039,33 @@ if git diff --cached --quiet; then
   maybe_push
   exit 0
 fi
+
+# Bulk-intake guard (2026-10-27, weekly audit Q1 — S-tier, 4+ recurrences). Name-level excludes
+# (work/ · repo/ · home/ above) chase each experiment directory AFTER it leaked; the next name leaks
+# again. Measured in the companion store (1,887 commits since 2026-08-01, files ADDED per commit):
+# p50 1 · p90 24 · p99 617 · largest ordinary sync 1,475 — and then 8,430 … 149,815 in eight syncs,
+# every one an experiment tree (claude200/out ×2 · p3_contract_ab/out_p7 · the 10-23 work/ · repo/
+# runs), three of them under names the exclude list still does not carry. So the guard counts, it
+# does not name: more than FH_SYNC_BULK_MAX newly ADDED files in one sync (default 3000 — the gap
+# between 1,475 and 8,430) un-stages everything, commits nothing, names the largest directories and
+# exits 14. The mirrored files stay in the store's work tree, so the next sync that has anything to commit
+# refuses again until a person acts: exclude the directory, delete it there, or set FH_SYNC_BULK_OK=1 once.
+_bulk_max="${FH_SYNC_BULK_MAX:-3000}"
+case "$_bulk_max" in ''|*[!0-9]*|??????????*) _bulk_max=3000 ;; esac   # 10+ digits overflow `test -gt` → guard off
+_bulk_added="$(git diff --cached --diff-filter=A --name-only | grep -c . || true)"
+if [ "${_bulk_added:-0}" -gt "$_bulk_max" ] && [ "${FH_SYNC_BULK_OK:-}" != "1" ]; then
+  echo "🚫 sync-to-be rc=14 — this sync would ADD $_bulk_added files (limit $_bulk_max). Nothing was committed or pushed." >&2
+  echo "   largest new directories (files added):" >&2
+  git diff --cached --diff-filter=A --name-only | awk -F/ '{d=$1; for(i=2;i<NF && i<=4;i++) d=d"/"$i; print d}' \
+    | sort | uniq -c | sort -rn | sed -n '1,5s/^/     /p' >&2   # sed drains its input: head would SIGPIPE sort → 141 under pipefail
+  echo "   an experiment tree is the usual cause. Exclude it (scripts/sync_excludes.txt) or remove it from the store's work tree;" >&2
+  echo "   if this volume is intended, re-run once with FH_SYNC_BULK_OK=1." >&2
+  # Un-stage only the files this guard counted, so staging the store already held (a hand edit, a
+  # partial add) survives the refusal — a whole-index reset cannot be undone by the next `git add`.
+  git diff --cached --diff-filter=A --name-only -z | xargs -0 git reset -q --
+  exit 14
+fi
+[ "${_bulk_added:-0}" -gt "$_bulk_max" ] && echo "[sync-to-be] FH_SYNC_BULK_OK=1 — committing $_bulk_added added files (limit $_bulk_max)" >&2
 
 DATE=$(date +"%Y-%m-%d %H:%M")
 MSG="sync: $HUB_NAME private half → companion store ($DATE)"

@@ -145,6 +145,45 @@ MID=lanea run >/dev/null 2>&1
 [ ! -e "$BEX/tracks-meta/exp/runs/r1/home/Library/Caches/tool/c.json" ]; chk $? "a run's temp home/ (caches) never landed in the store"
 [ ! -e "$BEX/tracks-meta/exp/probe/home/cfg/.claude.json" ]; chk $? "a probe's temp home/ (login-config copy) never landed in the store"
 
+echo "── L4h bulk intake: more than FH_SYNC_BULK_MAX added files commits nothing (rc=14) until excluded or FH_SYNC_BULK_OK=1 (2026-10-27) ──"
+# Weekly audit 2026-10-27 Q1: name-level excludes leaked again under names they do not carry
+# (claude200/out 16k+29k · p3_contract_ab/out_p7 24k). The guard counts instead of naming.
+new_env l4h
+mkdir -p "$HUB/tracks/_meta/exp9/out/run1"
+for i in 1 2 3 4 5 6 7 8; do printf 'x\n' > "$HUB/tracks/_meta/exp9/out/run1/f$i.txt"; done
+printf 'note\n' > "$HUB/tracks/_meta/exp9/NOTE.md"
+out="$(FH_SYNC_BULK_MAX=5 MID=lanea run 2>&1)"; rc=$?
+[ "$rc" -eq 14 ]; chk $? "9 added files over a limit of 5 → rc=14 (got $rc)"
+[ "$(git -C "$BEX" log --oneline 2>/dev/null | grep -c .)" -eq 0 ]; chk $? "nothing was committed on the refusal"
+[ -z "$(git -C "$BEX" diff --cached --name-only)" ]; chk $? "the refusal un-staged every file it counted (nothing of the intake left staged)"
+printf '%s' "$out" | grep -q 'tracks-meta/exp9/out'; chk $? "the refusal names the largest new directory"
+printf 'later\n' > "$HUB/tracks/_meta/exp9/LATER.md"
+out="$(FH_SYNC_BULK_MAX=5 MID=lanea run 2>&1)"; rc=$?
+[ "$rc" -eq 14 ]; chk $? "the next sync with anything to commit refuses again (the mirrored files are still there) — got $rc"
+FH_SYNC_BULK_OK=1 FH_SYNC_BULK_MAX=5 MID=lanea run >/dev/null 2>&1; rc=$?
+[ "$rc" -eq 0 ] && [ -f "$BEX/tracks-meta/exp9/out/run1/f8.txt" ] && git -C "$BEX" ls-files --error-unmatch tracks-meta/exp9/out/run1/f8.txt >/dev/null 2>&1
+chk $? "FH_SYNC_BULK_OK=1 commits the same volume once (rc=$rc)"
+new_env l4h3
+printf 'base\n' > "$BEX/hand.txt"; git -C "$BEX" add hand.txt; git -C "$BEX" commit -qm base
+printf 'hand edit\n' > "$BEX/hand.txt"; git -C "$BEX" add hand.txt
+mkdir -p "$HUB/tracks/_meta/exp9/out"
+for i in 1 2 3 4 5 6 7 8; do printf 'x\n' > "$HUB/tracks/_meta/exp9/out/f$i.txt"; done
+FH_SYNC_BULK_MAX=5 MID=lanea run >/dev/null 2>&1; rc=$?
+[ "$rc" -eq 14 ] && git -C "$BEX" diff --cached --name-only | grep -qx hand.txt
+chk $? "a hand edit already staged in the store survives the refusal (rc=$rc; only the counted adds are un-staged)"
+new_env l4h4
+mkdir -p "$HUB/tracks/_meta/exp9/out"
+i=0; while [ $i -lt 3001 ]; do mkdir -p "$HUB/tracks/_meta/exp9/out/d$i"; printf 'x\n' > "$HUB/tracks/_meta/exp9/out/d$i/f.txt"; i=$((i+1)); done
+out="$(FH_SYNC_BULK_MAX=99999999999999999999 MID=lanea run 2>&1)"; rc=$?
+[ "$rc" -eq 14 ]; chk $? "an overflowing FH_SYNC_BULK_MAX falls back to 3000 and 3001 adds in 3001 dirs still refuse with rc=14, not 141 (got $rc)"
+printf '%s' "$out" | grep -q 'integer expression'; [ $? -ne 0 ]; chk $? "no 'integer expression expected' from the limit comparison"
+new_env l4h2
+mkdir -p "$HUB/tracks/_meta/exp9"
+for i in 1 2 3; do printf 'x\n' > "$HUB/tracks/_meta/exp9/f$i.md"; done
+FH_SYNC_BULK_MAX=5 MID=lanea run >/dev/null 2>&1; rc=$?
+[ "$rc" -eq 0 ] && git -C "$BEX" ls-files --error-unmatch tracks-meta/exp9/f3.md >/dev/null 2>&1
+chk $? "CONTROL: 3 added files under the limit of 5 commit as usual (rc=$rc)"
+
 echo "── L4e compaction session markers (.pending · .pending_* · .last_payload) never leave the hub; seals do (2026-10-03) ──"
 # fh_signal_2026-09-30_compaction-digest-stale: a legacy `.pending` mirrored into the store became a
 # tracked file, survived the digest's own consume-and-delete, and was restored by the return path —
