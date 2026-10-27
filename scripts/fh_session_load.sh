@@ -644,6 +644,23 @@ if [ -x "$FH/scripts/mapped_tracks.sh" ]; then
   esac
 fi
 
+# 5b) Companion-store sync refused a bulk intake (sync-to-be.sh rc=14). Under launchd that refusal is
+#     written only to a log nothing reads, and every later sync with changes refuses again — so the store
+#     silently stops receiving anything until a person acts. The marker is cleared by the next committed sync.
+_SBR="$FH/tracks/_meta/logs/.sync_bulk_refused"
+if [ -f "$_SBR" ]; then
+  IFS="$(printf '\t')" read -r _sbr_at _sbr_n _sbr_max _sbr_be < "$_SBR" 2>/dev/null || true
+  # Only for the store this session syncs to (a refusal against another store is not this store's state).
+  _sbr_here=1
+  if [ -n "${_sbr_be:-}" ] && [ -n "${BE:-}" ]; then
+    [ "$(cd "$_sbr_be" 2>/dev/null && pwd -P)" = "$(cd "$BE" 2>/dev/null && pwd -P)" ] || _sbr_here=0
+  fi
+fi
+if [ -f "$_SBR" ] && [ "${_sbr_here:-1}" = 1 ]; then
+  echo "🚫 [sync] 컴패니언 스토어 동기화가 멈춰 있다 — ${_sbr_at:-?} 에 새 파일 ${_sbr_n:-?}개(한도 ${_sbr_max:-?})를 거부(rc 14). 그 뒤 변화가 있는 동기화는 계속 거부된다."
+  echo "   → bash scripts/sync-to-be.sh 로 가장 큰 폴더를 보고: 제외(scripts/sync_excludes.txt) · 스토어에서 삭제 · 의도한 양이면 FH_SYNC_BULK_OK=1 로 한 번."
+fi
+
 # 6) Substrate-jump detection (structure-enforcing — version drift lives outside any session's
 #    context boundary; silent when nothing changed). Detector, never a gate.
 [ -x "$FH/scripts/substrate_jump_detector.sh" ] && bash "$FH/scripts/substrate_jump_detector.sh" "$FH" 2>/dev/null
