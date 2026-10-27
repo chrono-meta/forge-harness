@@ -123,6 +123,9 @@ FH 자산(규칙·스킬·스크립트 등)을 고치면 4축 검증 마커를 �
 **Q. 토큰이 너무 든다.**
 `/context-doctor` 를 불러라. 무엇이 상주 중이고 무엇을 뺄 수 있는지 진단한다.
 
+**Q. FH 를 떼고 싶다.**
+FH 클론에서 `python3 scripts/fh_detach.py --project <마법사를 돌린 프로젝트>` — 먼저 무엇을 지울지 보여 주고 아무것도 안 바꾼다. 맞으면 `--apply`. 프로젝트 하나가 아니라 머신 설정 전체(`~/.zshrc` 블록 · FH 클론의 훅)를 떼는 명령이다. `--plugin` 은 fh-meta 플러그인과 forge-harness 마켓플레이스 등록까지 지운다. 클론 없이 플러그인만 깔았으면 `claude plugin uninstall fh-meta@forge-harness`.
+
 ---
 
 ## 4. 더 읽을 것

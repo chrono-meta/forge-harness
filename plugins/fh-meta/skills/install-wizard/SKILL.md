@@ -289,16 +289,19 @@ When run again in an environment that has already passed the wizard (`~/.cc_sent
 
 ## Detach (undo the wizard)
 
-Everything this wizard writes can be taken back with one command, and only what it wrote:
+What this wizard writes can be taken back with one command (the named residuals below are the exceptions). It
+takes FH off the machine setup, not one project — the zshrc block and the FH clone's hooks and `core.hooksPath`
+go too. With no clone (plugin only), use `claude plugin uninstall fh-meta@forge-harness` instead:
 
 ```bash
 python3 "$FH_DIR/scripts/fh_detach.py" --project .            # dry run — prints the plan, changes nothing
-python3 "$FH_DIR/scripts/fh_detach.py" --project . --apply    # carry it out (add --plugin to also uninstall fh-meta)
+python3 "$FH_DIR/scripts/fh_detach.py" --project . --apply    # carry it out (--plugin also uninstalls fh-meta and removes the forge-harness marketplace entry)
 ```
 
-It removes the zshrc block, the FH hook entries (byte-equal to the shipped snippets only), the companion
-section in `CLAUDE.local.md`, the gate's `core.hooksPath`, this project's `~/.cc_sentinels/*_wizard_*` files and
-unchanged template copies. A user's own hook is never removed, even one sharing a script name or a group with FH.
+It removes the zshrc block, the FH hook entries (every field equal to a shipped snippet entry, key order ignored),
+the companion section in `CLAUDE.local.md`, the gate's `core.hooksPath`, this project's `~/.cc_sentinels/*_wizard_*`
+files and unchanged template copies. A user's own hook survives, even one sharing a script name or a group with FH —
+unless it is identical to FH's shipped entry, which the tool cannot tell apart.
 Anything FH-like that is not an exact match (an older snippet version, a copy you edited) is listed as `LEFT` and
 the exit code is 1 — look at it by hand. When the wizard's `.prewizard` backup still matches, your original
 settings bytes come back. Lanes: `scripts/test_fh_detach_lanes.sh` (install with this wizard's own blocks → detach →
