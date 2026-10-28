@@ -87,9 +87,11 @@ cd ~/projects/forge-harness && claude          # then type: hi   (or 안녕 · �
 **Taking it off again.** From the FH clone, `python3 scripts/fh_detach.py --project <the project you ran the
 wizard in>` prints what the wizard wrote for that project; add `--apply` to undo it. Other projects keep FH. Add
 `--machine` to also remove what every project shares: the `~/.zshrc` block and the FH clone's own hooks and
-`core.hooksPath` (without it they are listed as kept). Another project you ran the wizard in needs its own `--project`. `--plugin` also runs
+`core.hooksPath` (without it they are listed as kept). Another project you ran the wizard in needs its own `--project` — detach those
+first and run `--machine` last. Changed in 3.32.0: before that, `--apply` removed the shared setup too. If `--project`
+is the FH clone itself, its own hooks count as that project's and go without `--machine`. `--plugin` also runs
 `claude plugin uninstall fh-meta@forge-harness` and removes the `forge-harness` marketplace entry. A hook counts
-as FH's only when every field equals a shipped snippet entry — so one you wrote yourself survives unless it is
+as FH's only when every field equals a shipped snippet entry (or the wizard's companion-store hook form) — so one you wrote yourself survives unless it is
 identical to FH's — and anything FH-like that does not match is listed for you to look at (exit 1). Installed
 the plugin only, with no clone? Run `claude plugin uninstall fh-meta@forge-harness`. Door ① leaves only its verdict records
 in `~/.fh/logs/` (delete the folder when you no longer want them) and npm's own `npx` cache.
