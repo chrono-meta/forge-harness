@@ -9,6 +9,18 @@ When a **sister asset** (another team in the organization · external frontier �
 ## When to activate
 
 - During work, a **sense of deja vu** arises: "I feel like this topic was covered somewhere"
+- 🟥 **The operator hands in outside material to improve something** — a link, talk notes, a repo,
+  an article. Alongside the work (bookkeeping, never a precondition — a queue error, a
+  match that finds nothing, or open rows must not stop the requested work): put it in the absorption queue
+  (`python3 scripts/absorption_queue.py add --source <link or "operator notes YYYY-MM-DD"> --item "<one line>"`)
+  and run `python3 scripts/absorption_queue.py match "<the material's key terms, in English too>"` to
+  name which of our assets it touches (skills, agents, field harnesses) — open the hits, the match is a
+  lexical selector. When the work lands, close the row with
+  `python3 scripts/absorption_queue.py close <ID> --status landed --evidence "PR #N"`, or
+  `--status deferred` / `--status declined` with `--evidence "<reason>"` for the parts you did not take. Material the operator brings is
+  a claim about *their* setting: re-measure before writing its numbers as ours. Measured 2026-10-28: a talk
+  summary plus a repo link handed in by the operator drove the largest ko-tech-writer change of the week, and
+  which asset it belonged to was decided by recall alone.
 - An external resource with **similar scope but different resolution** from a `knowledge/shared/` asset is found
 - An external reference URL repeatedly appears in the weekly audit scanner aggregation
 - User mentions "that other project/team also did this"

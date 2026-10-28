@@ -72,7 +72,7 @@ Isolated delegation is part of the identity: dispatch separable work (blind eval
 | "cut this section / is it load-bearing" | ablation procedure (`scripts/probe_scope_check.sh` header) — never decide by eye |
 | "measure this / prove it fires" · a load-bearing conclusion resting on reps < 3 | Measured-Loop (`measurement-integrity-checklist.md §Measured-Loop`) via `scripts/sim_isolated_run.sh` — never sim in the live repo |
 | about to call a material work product done / merged / published | `agent-composer` §Author-Exposure Table |
-| installed or ran an external asset against this hub · found a same-topic sibling asset (ours or outside) | `knowledge/shared/rules/sister_asset_protocol.md` |
+| installed or ran an external asset against this hub · found a same-topic sibling asset (ours or outside) · the operator hands in outside material (a link, talk notes, a repo) to improve something | `knowledge/shared/rules/sister_asset_protocol.md` |
 | adding / mounting an external MCP server — before its first tool call | `templates/.claude/rules/mcp_tool_gating.md` |
 | invoking or composing a field harness's capability | `capability_composition_contract.md` — strictest constraint wins; an untyped or silent channel is `HARNESS_ERROR`, never PASS |
 | a heavy autonomous or multi-agent run (named `/goal` or not) | propose `/goal-quench` first — consent removes the prompt, never its gates |
