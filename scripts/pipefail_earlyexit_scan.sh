@@ -467,7 +467,13 @@ case "$MODE" in
     BASE="${ONLY:-${PIPESCAN_BASE:-}}"           # arg 2, else env (CI push: the event's «before»)
     case "$BASE" in *[!0]*) ;; *) BASE="" ;; esac   # all-zero sha (a new branch) = unset
     if [ -n "$BASE" ] && ! git -C "$REPO" rev-parse -q --verify "$BASE^{commit}" >/dev/null 2>&1; then
-      echo "🟥 INSTRUMENT ERROR — base $BASE 가 이 체크아웃에 없다" >&2; exit 2
+      if [ -n "${ONLY:-}" ]; then
+        echo "🟥 INSTRUMENT ERROR — base $BASE 가 이 체크아웃에 없다" >&2; exit 2
+      fi
+      # PIPESCAN_BASE from a push event: after a force-push the old «before» is gone from the checkout. Fall back to
+      # merge-base(HEAD, origin/main) below — a real base, said aloud — instead of failing CI (release review 2026-10-28).
+      echo "⚠️  PIPESCAN_BASE $BASE 가 이 체크아웃에 없다(강제 푸시?) — merge-base(HEAD, origin/main) 로 잰다" >&2
+      BASE=""; _base_fellback=1
     fi
     if [ -z "$BASE" ]; then
       # 🟥 2026-10-28 (downstream report 2026-10-27): this used to fall back to `rev-parse HEAD` when origin/main was absent.
@@ -475,6 +481,11 @@ case "$MODE" in
       #    lock printed «SKIP» rc=0 on every PR — a new suite shipped a VULN line through it. No base is
       #    «not measured» (rc 2), never «nothing changed».
       BASE="$(git -C "$REPO" merge-base HEAD origin/main 2>/dev/null)" || BASE=""
+      # a fallen-back push base that lands on HEAD itself (force-push to main, a fork's main) would diff nothing
+      # and say SKIP — the hole this mode exists to close. That is «not measured», not «nothing changed» (codex).
+      if [ "${_base_fellback:-0}" = 1 ] && [ -n "$BASE" ] && [ "$BASE" = "$(git -C "$REPO" rev-parse HEAD 2>/dev/null)" ]; then
+        echo "🟥 INSTRUMENT ERROR — 푸시 기준이 없고 merge-base 가 HEAD 자신이다(main 강제 푸시?) — 잴 기준이 없다" >&2; exit 2
+      fi
     fi
     [ -n "$BASE" ] || { echo "🟥 INSTRUMENT ERROR — base 를 못 정했다 (origin/main 없음 — 얕은 체크아웃이면 fetch-depth: 0, 아니면 `changed <base>` 또는 PIPESCAN_BASE=<base>)" >&2; exit 2; }
     CH="$(git -C "$REPO" diff --name-only "$BASE" -- 'scripts/*.sh' 'templates/.git-hooks/*' 'plugins/**' 2>/dev/null; \

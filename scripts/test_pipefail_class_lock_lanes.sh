@@ -292,6 +292,13 @@ _l14c_out="$(env -u ONLY PIPESCAN_BASE="$_l14base" PIPESCAN_REPO="$_L14/r" bash 
 _l14d_out="$(env -u ONLY PIPESCAN_BASE=0000000000000000000000000000000000000000 PIPESCAN_REPO="$_L14/r" bash "$_L14/r/scripts/pipefail_earlyexit_scan.sh" changed 2>&1)"; _l14d=$?
 git -C "$_L14/r" update-ref refs/remotes/origin/main "$_l14base"
 _l14b_out="$(env -u ONLY -u PIPESCAN_BASE PIPESCAN_REPO="$_L14/r" bash "$_L14/r/scripts/pipefail_earlyexit_scan.sh" changed 2>&1)"; _l14b=$?
+# force-pushed branch shape (release review 2026-10-28): the push event's «before» is not in the checkout
+_gone=1111111111111111111111111111111111111111
+_l14e_out="$(env -u ONLY PIPESCAN_BASE=$_gone PIPESCAN_REPO="$_L14/r" bash "$_L14/r/scripts/pipefail_earlyexit_scan.sh" changed 2>&1)"; _l14e=$?
+_l14f_out="$(env -u PIPESCAN_BASE PIPESCAN_REPO="$_L14/r" bash "$_L14/r/scripts/pipefail_earlyexit_scan.sh" changed $_gone 2>&1)"; _l14f=$?
+# force-push to main shape (codex): origin/main IS HEAD, so the fallen-back merge-base is HEAD → must not say SKIP
+git -C "$_L14/r" update-ref refs/remotes/origin/main HEAD
+_l14g_out="$(env -u ONLY PIPESCAN_BASE=$_gone PIPESCAN_REPO="$_L14/r" bash "$_L14/r/scripts/pipefail_earlyexit_scan.sh" changed 2>&1)"; _l14g=$?
 /bin/rm -rf "$_L14"
 case "$_l14a" in
   2) ok "L14 no origin/main → rc 2 (not measured), never «SKIP» rc 0" ;;
@@ -300,6 +307,14 @@ esac
 case "$_l14c/$_l14d" in
   1/2) ok "L14c PIPESCAN_BASE=<push before> finds the new VULN (rc 1) · an all-zero before is unset (rc 2)" ;;
   *)   no "L14c PIPESCAN_BASE" "rc=$_l14c/$_l14d — $(printf '%s' "$_l14c_out" | tail -1)" ;;
+esac
+case "$_l14e/$_l14f/$(printf '%s' "$_l14e_out" | /usr/bin/grep -c 'merge-base(HEAD, origin/main) 로 잰다')" in
+  1/2/1) ok "L14e a push «before» missing from the checkout → said aloud, measured from merge-base (rc 1) · an explicit missing base argument stays rc 2" ;;
+  *)     no "L14e missing push base" "rc=$_l14e/$_l14f — $(printf '%s' "$_l14e_out" | tail -1)" ;;
+esac
+case "$_l14g" in
+  2) ok "L14g a missing push base whose fallback lands on HEAD (force-push to main) → rc 2, not «SKIP» rc 0" ;;
+  *) no "L14g missing push base on main" "rc=$_l14g — $(printf '%s' "$_l14g_out" | tail -1)" ;;
 esac
 case "$_l14b" in
   1) ok "L14b known-positive: the same change WITH origin/main → rc 1 (the new VULN line is found)" ;;

@@ -269,13 +269,17 @@ W="$T/w16"; mkworld "$W"; install "$W"
 mkdir -p "$W/proj/.claude" && git -C "$W/proj" init -q && cp "$W/hub/.claude/settings.json" "$W/proj/.claude/settings.json"
 printf '{ "hooks": ' > "$W/hub/.claude/settings.local.json"
 chk "M5 a broken FH-clone settings file does not stop a project detach (rc 0)"  "$(detach_p "$W" "$W/proj" --apply)" 0
-chk "M5b … the project is cleaned and the broken file is named as kept"  "$(fhhooks "$W/proj/.claude/settings.json" 2>/dev/null || echo 0)/$(grep -c '^  kept (machine-wide, not an exact.*settings.local.json' "$W/detach.out")" "0/1"
+chk "M5b … the project is cleaned and the broken file is named as kept"  "$(fhhooks "$W/proj/.claude/settings.json" 2>/dev/null || echo 0)/$(grep -c '^  kept (machine-wide, could not be read.*settings.local.json' "$W/detach.out")" "0/1"
 chk "M5c … with --machine the same file is an error (rc 10)"  "$(detach_p "$W" "$W/proj" --machine)" 10
 W="$T/w17"; mkworld "$W"; install "$W"
 mkdir -p "$W/proj/.claude" && git -C "$W/proj" init -q && cp "$W/hub/.claude/settings.json" "$W/proj/.claude/settings.json"
 chmod 000 "$W/hub/.claude/settings.json"
 chk "M5d an unreadable FH-clone settings file: project detach rc 0 · --machine rc 10"  "$(detach_p "$W" "$W/proj" --apply)/$(detach_p "$W" "$W/proj" --machine)" "0/10"
 chmod 644 "$W/hub/.claude/settings.json"
+W="$T/w18"; mkworld "$W"; install "$W"
+mkdir -p "$W/proj/.claude" && git -C "$W/proj" init -q && cp "$W/hub/CLAUDE.local.md" "$W/proj/CLAUDE.local.md"
+printf '\xff\xfe not utf-8\n' >> "$W/proj/CLAUDE.local.md"     # deterministic read failure (chmod 000 does not bind root — codex)
+chk "M6 an unreadable PROJECT file (invalid UTF-8) → exit 10 with HARNESS-ERROR, not a traceback"  "$(detach_p "$W" "$W/proj" --apply)/$(grep -c 'HARNESS-ERROR' "$W/detach.out")/$(grep -c 'Traceback' "$W/detach.out")" "10/1/0"
 
 echo "── G: the wizard's 4-axis gate block needs explicit consent ──"
 W="$T/w5"; mkworld "$W"; install "$W" unset

@@ -428,10 +428,10 @@ def main(argv=None):
         plan_rules_dir(plan, proj)
         if a.plugin:
             plan_plugin(plan)
-    except HarnessError as e:
+    except (HarnessError, OSError, UnicodeDecodeError) as e:    # a project file that cannot be READ is exit 10 too, not a traceback
         print("fh-detach: HARNESS-ERROR — %s" % e, file=sys.stderr)
         return 10
-    steps = [l for l, _ in plan.actions if l]
+    steps =[l for l, _ in plan.actions if l]
     print("fh-detach %s — %d step(s)" % ("APPLY" if a.apply else "DRY RUN (nothing changed; add --apply)", len(steps)))
     for l in steps:
         print("  - " + l)
@@ -445,8 +445,10 @@ def main(argv=None):
     if shared is not plan:
         for l in [l for l, _ in shared.actions if l]:
             print("  kept (machine-wide — every project shares it; --machine removes it): " + l)
-        for l in shared.left + unread:
+        for l in shared.left:
             print("  kept (machine-wide, not an exact FH match — --machine would leave it too; look at it): " + l)
+        for l in unread:
+            print("  kept (machine-wide, could not be read — not checked; --machine would stop with exit 10): " + l)
     for n in plan.notes:
         print("  note: " + n)
     for l in plan.left:
