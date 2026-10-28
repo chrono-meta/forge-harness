@@ -234,7 +234,9 @@ fi
 # 파일이 없거나 열린 항목이 0 이면 아무것도 안 찍는다(새 클론을 조르지 않는다).
 _AQ="$FH/scripts/absorption_queue.py"
 if [ -f "$_AQ" ] && fh_cadence_due "$_FH_HOOK_SRC"; then
-  CLAUDE_PROJECT_DIR="$FH" python3 "$_AQ" summary 2>&1 | head -2
+  # 출력을 받아서 찍는다 — `| head` 는 pipefail 아래 조기종료 소비자 취약형이다(class-lock 레인).
+  _AQ_OUT="$(CLAUDE_PROJECT_DIR="$FH" python3 "$_AQ" summary 2>&1)"
+  if [ -n "$_AQ_OUT" ]; then printf '%s\n' "$_AQ_OUT"; fi
 fi
 
 # 1-c) harness-doctor cadence — 위 1-b 와 같은 이유로, 같은 훅에서, 한 블록 더.
