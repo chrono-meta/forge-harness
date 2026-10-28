@@ -2,11 +2,18 @@
 
 ### [Unreleased]
 
+### [3.33.0] — 2026-10-28 — 빌더에게 일을 넘길 때 카드 두 줄(CC · Codex 진입점 둘 다) · 주간 감사 앵커 되돌림 표본
+
+코드 · 훅 · 스크립트 변경은 없다. 바뀐 것은 문서뿐이지만, 빌더에게 일을 넘기는 방식을 바꾸는 규칙이라 버전 정책상 minor 다(블라인드 sim, 팔당 n=3).
+
 소비자에게 닿는 변화:
-- `CLAUDE.md §Agent Dispatch`: 코드를 고치는 빌더를 보낼 때 Context Card 에 두 줄을 더한다 — «최소 수리부터, 새 장치(캐시 · 예산 · 새 규칙)가 필요하면 짓기 전에 멈추고 보고» · «작업 트리를 덮는 git 명령(`stash` · `checkout --` · `reset` · `clean`) 금지, 썼으면 바로 보고». 블라인드 Sonnet sim(팔당 3회): 규칙 없음 0/3 · 세부 문서에만 0/3·약 1.5/3 · 상주 한 줄 추가 뒤 3/3·3/3. 상세 `claude_md_full_reference.md §Context Card`.
-- `knowledge/shared/rules/operations.md` 주간 감사 2b: «앵커 되돌림 표본» — 창 안에 머지된 변경 3개의 앵커 레인을 임시 워크트리에서 수리 줄만 되돌려 빨개지는지 본다.
-- `AGENTS.md §Before dispatching without being asked`: 같은 빌더 두 줄을 Codex 진입점에도 런타임 무관 문장으로 옮겼다(그동안 CC 쪽에만 있었다). 블라인드 Sonnet sim(CLAUDE.md 없이 AGENTS.md 만, 팔당 3회): 줄 1 0/3 → 3/3 · 줄 2 0/3 → 3/3.
-- `dispatch_conditional_prohibition.md §Two-Purposes`: FH 허브의 첫 호출 입력 토큰 실측(빈 폴더 대비 +62,600~64,800, 이 6회에서) — 줄일 후보 지렛대로 기록, 절감은 다이어트 뒤 같은 두 팔 실행으로만 확정.
+- `CLAUDE.md §Agent Dispatch Operation`: 코드나 파일을 고치는 빌더를 보낼 때 Context Card(목적 · 한 일 · 이번 일 · 제약을 적은 위임 요청서)에 두 줄을 더한다 — «최소 수리부터, 새 장치(캐시 · 예산 · 새 규칙)가 필요하면 짓기 전에 보낸 쪽에 멈추고 보고» · «작업 트리의 미커밋 작업을 버리는 git 명령(`stash` · `checkout --` · `restore` · `reset` · `clean` 류) 금지, 썼으면 작업을 되돌려 놓은 뒤 같은 답에서 바로 보고». 🟥 «멈춤» 만 쓰면 `stash` 직후에 멈춰 작업이 숨은 채 끝날 수 있어 «되돌린 뒤 보고» 로 정했다(Area B 지적). 블라인드 sim(Sonnet, 허브 CLAUDE.md 를 싣고, 팔당 3회, 줄 1 · 줄 2 순): 규칙 없음 0/3 · 0/3 · 세부 문서에만 0/3 · 부분(부분 기재를 반으로 세어 약 1.5/3) · 상주 한 줄 추가 뒤 3/3 · 3/3. 상세 `claude_md_full_reference.md §Context Card`.
+- `AGENTS.md §Builder dispatch brief`(새 절 — 요청을 받았든 아니든 모든 빌더): 같은 두 줄을 Codex 진입점에 런타임 무관 문장으로 옮겼다(그동안 CC 쪽에만 있었다). 블라인드 sim(Sonnet, CLAUDE.md 없이 AGENTS.md 만, 팔당 3회): 줄 1 0/3 → 3/3 · 줄 2 0/3 → 3/3. 실제 Codex 런타임에서는 안 쟀다.
+- `knowledge/shared/rules/operations.md` 주간 감사 2b: «앵커 되돌림 표본» — 창 안에 머지된 변경 3개의 앵커 레인을 일회용 워크트리에서 수리 줄만 `git apply -R` 로 되돌려 빨개지는지 본다(그 워크트리는 빌더 줄 2 의 «받은 트리» 가 아니다). 첫 실행은 n=2.
+
+허브 운영자 참고(소비자 설치본과 다름):
+- `dispatch_conditional_prohibition.md §Two-Purposes`: 저자 체크아웃(운영자 전용 CLAUDE.local.md · 메모리 색인 포함)의 첫 호출 입력 토큰이 빈 폴더보다 +62,600~64,800(haiku · 한 낱말 과제 · 팔당 3회). npm 설치본에는 그 두 파일이 없으니 이 숫자를 자기 설치의 비용으로 읽지 말 것.
+- 바깥 근거로 든 arXiv 수치(2610.34491 · 2610.34167)는 그날 frontier digest 요약 기준이고 원문은 열지 않았다.
 
 ### [3.32.0] — 2026-10-28 — fh_detach 기본 = 프로젝트 하나 · CI 에서 pipefail 델타 잠금이 실제로 돈다 · 레인 앵커 보강
 

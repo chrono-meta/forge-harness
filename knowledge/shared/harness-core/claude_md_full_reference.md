@@ -1083,15 +1083,20 @@ Simple file-lookup agents may omit. Agent dispatch works from any mapped project
 
 **A builder dispatch (an agent that edits code or files) adds two lines to `Note`** (2026-10-28):
 1. «Smallest fix first. If the fix needs a new mechanism (a cache, a budget, a new rule), stop and report why before
-   building it.» Measured the same day: a builder told to fix six review findings built a per-file cache and a read
+   building it — in your reply to whoever dispatched you, with no code change for the new mechanism.» Measured the same day: a builder told to fix six review findings built a per-file cache and a read
    budget, which drew five new findings in the next cross-family round and was reduced back to the original envelope.
    Outside: starting at the lowest effort and moving up only after a verified failure matched or beat a fixed high
-   effort at lower cost (arXiv:2610.34491 — effort levels; whether the same holds for model tiers is a proposal, not
-   a measurement, and existing model floors and routing rules still apply).
-2. «Do not run commands that overwrite the working tree (`git stash`, `git checkout -- …`, `git reset`, `git clean`);
-   if you ran one anyway, stop and report it right away — not only in the final report.» Measured the same day: a builder used `git stash` + `git checkout -- .` to
-   debug and restored correctly, but it surfaced only in the hand-back. Successful runs still carry unauthorised side
-   effects (arXiv:2610.34167: 12.8 % of goal-achieving runs).
+   effort at lower cost (arXiv:2610.34491 — effort levels; taken from the 2026-10-28 frontier digest summary, the
+   paper itself not opened; whether the same holds for model tiers is a proposal, not a measurement, and existing
+   model floors and routing rules still apply).
+2. «Do not run commands that discard uncommitted work in the tree you were given (`git stash`, `git checkout -- …`,
+   `git restore`, `git reset`, `git clean`, or the like). If you ran one anyway, put the work back first, then report it
+   in the same reply — not only at the end. If you cannot put it back, stop and say where it is (stash ref, reflog).»
+   «Stop» alone would be wrong here: a builder that stops right after `git stash` leaves the work hidden.
+   Measured the same day: a builder used `git stash` + `git checkout -- .` to debug and restored correctly, but it
+   surfaced only in the hand-back. Successful runs still carry unauthorised side effects (arXiv:2610.34167: 12.8 % of
+   goal-achieving runs — digest summary, paper not opened). A disposable worktree the builder created for a revert
+   probe is not «the tree you were given»; reverse a fix there with `git apply -R` (`operations.md` 2b).
 The governor still checks the result with `scripts/dispatch_receipt.py` — which sees only the final tree, so a
 stash-and-restore that leaves no difference is visible only through line 2.
 

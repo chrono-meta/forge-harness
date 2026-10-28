@@ -30,11 +30,11 @@ The hub audits and improves itself weekly.
 2. `bash scripts/below_floor_scan.sh` — below-floor marker re-run queue (the standing consumer §Floor governance promises: exit 1 = pending floor-tier re-validations, treat as S-tier; resolve via `floor-rerun:` / `floor-writeoff:` appended to the marker)
 2b. **Anchor revert sample (2026-10-28).** Pick 3 changes merged in the window whose Axes 2–3 marker names an
    `axis2-anchor:` lane. For each: a temp worktree at the merge commit (never the shared checkout) · run the anchor lane
-   once and require green (the baseline) · reverse only the fix hunks, keeping the test · run the same lane · red means
+   once and require green (the baseline) · reverse only the fix hunks with `git apply -R`, keeping the test (this disposable worktree is not the tree the builder no-overwrite line protects) · run the same lane · red means
    the anchor's own assertion failed because the fix is gone (not a timeout, a missing tool or an unrelated case) ·
    reclaim with `scripts/worktree_reclaim.sh <worktree> --apply` before removing it. A lane that stays green is a
    surviving mutation: record 🟥 «anchor does not exercise its fix — investigate» until a later equivalent fix, a
-   skipped case or the wrong hunks are ruled out. First run: 1 of 2 sampled anchors never exercised its fix
+   skipped case or the wrong hunks are ruled out. First run (n=2 — the window had two qualifying changes, the rule asks for 3): 1 of 2 sampled anchors never exercised its fix
    (reverting kept it at PASS 7) → FH #967.
    Outside: of the harness changes a retro skill proposed and could be re-measured, 2 of 7 removed the behaviour
    they targeted, counting only cases where the unchanged arm met that behaviour (arXiv:2610.34938) — recording a fix

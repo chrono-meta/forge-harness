@@ -361,10 +361,10 @@ How to apply:
   `claude -p … --output-format stream-json --verbose` and read the `init` line.
   **The cost FH does add is resident text, not tools — measured 2026-10-28** (same one-word task, haiku, 3 runs per
   arm, first assistant message `usage` = input + cache-create + cache-read): an empty folder 35,770–37,675 tokens, the
-  FH hub 100,307–100,563 — **+62,600 to +64,800 tokens (2.7–2.8×) on the first call in these six runs**, before any
+  FH hub as the author's checkout 100,307–100,563 — **+62,600 to +64,800 tokens (2.7–2.8×) on the first call in these six runs**, before any
   work. The contrast is the whole project configuration, not separate components; what differs is CLAUDE.md (16.5k chars), CLAUDE.local.md (47.3k chars, mostly expired one-time lease blocks),
-  the project memory index (19.4k chars) and the session-start hook output. User-level plugins and MCP load in both
+  the project memory index (19.4k chars) and the session-start hook output — an npm install carries neither CLAUDE.local.md nor this memory index, so read this as the author's configuration, not an install's cost. User-level plugins and MCP load in both
   arms, so their share is `UNMEASURED` here. Related outside evidence: fixed context at the first call was where a
-  cost spread of up to 3× between harnesses began, with no consistent accuracy advantage (arXiv:2610.04433). Tokens
+  cost spread of up to 3× between harnesses began, with no consistent accuracy advantage (arXiv:2610.04433 — digest summary, paper not opened). Tokens
   are not cost (cache reads and writes bill differently). Shrinking resident text is a candidate lever; its saving is
   established only by the same two-arm run after a diet.
