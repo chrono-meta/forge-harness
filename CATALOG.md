@@ -4,6 +4,34 @@ AI reads this file first when searching past work. Open individual files for det
 
 ---
 
+## 2026-10-28 — Five more `knowledge/` docs were missing from this index
+
+Found by the `harness-doctor` run of 2026-10-28 (CATALOG last committed 2026-09-26; newest session entry
+2026-09-21). Checked by basename grep against `git ls-files knowledge`: five tracked docs had zero
+entries. Same class as the 2026-08-20 entry below (index drift on `knowledge/`); the open item there
+(no `knowledge/**` → CATALOG coverage check) still stands.
+
+- `knowledge/shared/harness-core/claude_md_full_reference.md` — #claude-md, #ruleset, #reference.
+  The full ruleset `CLAUDE.md` carried until 2026-10-16. Not auto-loaded; `CLAUDE.md` keeps a resident
+  core and points here, section names unchanged — a `CLAUDE.md §X` reference whose §X is not a
+  `CLAUDE.md` heading means this file's §X.
+- `knowledge/shared/harness-core/builtin_capability_map.md` — #builtins, #no-reinvention, #routing.
+  Claude Code features to reach for before an FH skill: the routing surface for the no-reinvention rule.
+  Verified 2026-10-15; re-verify when the CLI version changes.
+- `knowledge/shared/harness-core/fh_module_contract.md` — #module, #manifest, #core-floor. FH module
+  contract v0: a module is a cartridge that plugs into FH and can be pulled out; it may add constraints
+  but never weaken the core floor. Closed-enum manifest (`fh-module.yaml`), install-time check, removal
+  rule. Checker: `scripts/fh_module_check.py`.
+- `knowledge/shared/harness-core/governance_engineering_definition.md` — #governance-engineering,
+  #identity, #naming. Names the discipline this hub practices: moving an error rate toward 0.x% and
+  blocking at the surfaces where that number may not buy passage. Distinct from harness engineering
+  (the artifact) — this is the objective.
+- `knowledge/shared/harness-core/claim_provenance_absorption.md` — #provenance, #claim-identity,
+  #known-pair. Linking one claim's origin across a multi-stage verdict pipeline: two existing lineages,
+  their measurement, and why matching does not close it (2026-09-13).
+
+---
+
 ## 2026-08-20 — Seven canonical `knowledge/` docs were missing from this index
 
 Found by the 30-day `harness-doctor` cadence run. Seven files under `knowledge/` had **zero**
@@ -158,6 +186,22 @@ is, for any session that does not already know its filename, indistinguishable f
 ## Sessions
 
 <!-- Add entries in reverse date order (newest at top) -->
+
+### 2026-10-28 | forge-harness | #releases, #v3.22-v3.32, #catalog-drift
+**File:** `package.json`
+No session entry was written between 2026-09-21 and today; this one is a release ledger, not a session, so the gap is visible instead of silent. Source: `git log --first-parent main` release commits.
+- v3.22.x (09-27/28): session-start warnings for clone users removed; sidecar verdict vocabulary split; companion-store mirror stops carrying third-party clones.
+- v3.23.0/1 (09-29/30): local `main` refuses direct FH-asset commits; installed `npm test` runs a consumer profile and names what it could not measure.
+- v3.24.0 (10-01): `resident_cost.py` — measure resident cost before cutting.
+- v3.25.x (10-09/10): 4-axis marker `diff-sha:` fingerprint (optional); mutation probe wired to local safety regressions.
+- v3.26.0-2 (10-12/14): permission check · light gate · onboarding on other runtimes; README trim; Windows self-test fix.
+- v3.27.0 (10-16): `CLAUDE.md` cut to a resident core with the full text in `claude_md_full_reference.md`; built-in capability map; memory lifetime GC.
+- v3.28.0 (10-18): utterance-checklist hook; FH module contract v0; ko-tech-writer rules from real corrections.
+- v3.29.0 (10-22): `fh-gate` fails closed (exit 10; cross single-family ESCALATE); GitHub release page after publish; dispatch receipt.
+- v3.30.0 (10-23): sim runner refuses an `--out` under instruction files; merge receipt; memory evidence anchors.
+- v3.31.0/v3.32.0 (10-28): `fh_detach` (default scope is the project, `--machine` also removes the shared setup); pre-send check (off by default); dispatch purposes; the pipefail delta lock runs in CI.
+- Not covered: individual feature PRs (188 first-parent commits since 2026-09-21); release commit messages (`git log --first-parent main`) are the per-release source.
+- Tags: `releases` `catalog-drift`
 
 ### 2026-09-21 (4) | forge-harness | #gate-wiring, #ephemeral-clone, #floor-vs-equality, #instrument-tracks-subject
 **File:** `scripts/gate_bootstrap_ephemeral.sh` · `scripts/test_gate_bootstrap_ephemeral_lanes.sh` · `knowledge/shared/harness-core/checkout_layer_drift.md` · `scripts/selfcheck.sh` · `package.json`
