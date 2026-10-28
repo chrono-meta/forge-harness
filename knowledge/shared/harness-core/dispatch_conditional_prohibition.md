@@ -351,3 +351,11 @@ How to apply:
   prompt, tool choice tends to degrade», with grouping by user intent as the remedy. The quantity is tool
   definitions **loaded into the prompt** (deferred tools not yet loaded do not count) — not installed skills
   or MCP inventory. FH's loaded count per session is `UNMEASURED`, not «fine».
+  **Measured 2026-10-28** (one headless session in the hub, the `init` event's lists; one machine, one config —
+  a reading, not a distribution): tools **available** 112 = 29 built-in + 83 MCP (two desktop/browser
+  automation servers alone carry 64), skills 82 (FH plugins 41), agents 19 (FH 14). FH itself adds **0 tool
+  definitions** — its weight is skill and agent descriptions, which the quote does not count. How many of the
+  112 are **loaded** depends on the runtime's deferred-tool loading and is still not read from this event —
+  so whether any session crosses the quoted threshold stays `UNMEASURED`; what is measured is that the extra
+  *available* definitions come from the operator's MCP servers, not from FH. Re-measure with
+  `claude -p … --output-format stream-json --verbose` and read the `init` line.
