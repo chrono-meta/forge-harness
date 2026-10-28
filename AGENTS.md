@@ -393,20 +393,28 @@ The Claude-side rationale — including why the boundary is phrased around a *co
 than a prohibition — lives in `CLAUDE.md §Agent Dispatch Operation` and is specific to that runtime.
 The constraint above is not.
 
-**A builder dispatch** (the delegated agent edits code or files) carries two more lines in its
-brief, whatever runtime launches it:
+### Builder dispatch brief — every builder, asked for or not
+
+A brief (FH calls it a *Context Card*: purpose · done so far · this task · constraints) for a
+**builder** — a delegated agent that edits code or files — carries two more lines, whatever runtime
+launches it:
 
 ```
 1. Smallest fix first. If the fix needs a new mechanism (a cache, a budget, a new rule),
-   stop and report why before building it.
-2. Do not run commands that overwrite the working tree (git stash · git checkout -- … ·
-   git reset · git clean). If you ran one anyway, stop and report it right away —
-   not only in the final report.
+   stop and report why before building it — in your reply to whoever dispatched you,
+   with no code change for the new mechanism.
+2. Do not run commands that discard uncommitted work in the tree you were given
+   (git stash · git checkout -- … · git restore · git reset · git clean, or the like).
+   If you ran one anyway, put the work back first, then report it in the same reply —
+   not only at the end. If you cannot put it back, stop and say where it is (stash ref, reflog).
 ```
 
-Both come from one day's measured builder runs (2026-10-28): an unrequested cache and read budget
-that drew five new review findings, and a `git stash` + `checkout --` that surfaced only in the
-hand-back. Canonical text and evidence: `claude_md_full_reference.md §Context Card`.
+A disposable worktree you created yourself for a revert probe is not «the tree you were given»;
+reverse a fix there with `git apply -R`.
+
+Both lines come from one day's measured builder runs (2026-10-28): an unrequested cache and read
+budget that drew five new review findings, and a `git stash` + `checkout --` that was restored but
+surfaced only in the hand-back. Canonical text and evidence: `claude_md_full_reference.md §Context Card`.
 
 > **Detail**: See `knowledge/shared/harness-core/agents_md_runtime_details.md §Codex-entry-points`
 > — runnable `fh-run` and `codex exec` forms — read before invoking FH from Codex.
