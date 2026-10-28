@@ -167,6 +167,8 @@
     "scripts/degrade_probe_capability.sh",
     "scripts/destructive_pre_gate.sh",
     "scripts/digest_landing_check.sh",
+    "scripts/absorption_queue.py",
+    "scripts/test_absorption_queue_lanes.sh",
     "scripts/directional_diff_gate.sh",
     "scripts/doc_claim_triad_scan.py",
     "scripts/env_layer_fingerprint.sh",

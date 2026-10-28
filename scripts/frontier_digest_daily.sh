@@ -400,6 +400,29 @@ landing_witness() {
     return 0   # 🟥 항상 0 — 계측이 러너의 종료 의미를 바꾸면 안 된다
 }
 
+# ── 흡수 대기열 (2026-10-28) — 오늘 후보를 대기열에 넣는다. 위 증언은 «착지했나» 를 어휘로
+#    추정하고 로그에만 남긴다. 대기열은 닫는 사람이 근거(PR · 커밋 · 사유)를 적어야 닫히고,
+#    세션 시작(fh_session_load.sh)이 열린 수를 한 줄로 보여 준다. 추출은 같은 체커의 --extract.
+# 🟥 landing_witness 안에 두지 않는다 — 그 함수는 직전 digest 가 없으면 일찍 돌아가서, 첫 digest
+#    가 영영 안 들어갔다(codex R1). 🟥 FH 자신을 돌릴 때만 넣는다 — 위성 대상은 세션 시작이 그
+#    대기열을 안 읽으니 엉뚱한 레포에 파일만 생긴다. 경로는 명시해서 물려받은 값을 쓰지 않는다.
+queue_import() {
+    local aq="${ENGINE_DIR}/scripts/absorption_queue.py" cur aqo rc
+    if [ "$(cd "$FH_DIR" 2>/dev/null && pwd -P)" != "$(cd "$ENGINE_DIR" 2>/dev/null && pwd -P)" ]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] absorption queue: 위성 대상($FH_DIR) — 넣지 않는다(FH 세션 시작이 읽는 대기열이 아니다)" >> "$LOG_FILE"
+        return 0
+    fi
+    cur=$(find "${OUT_ABS}" -maxdepth 1 -name "frontier_digest_${TODAY}*.md" -size +1k 2>/dev/null | LC_ALL=C sort | tail -1)
+    if [ ! -f "$aq" ] || [ -z "$cur" ]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] absorption queue: 도구 또는 오늘 digest 없음 — SKIPPED (not a pass)" >> "$LOG_FILE"
+        return 0
+    fi
+    aqo=$( export CLAUDE_PROJECT_DIR="$FH_DIR" FH_ABSORPTION_QUEUE="$FH_DIR/tracks/_meta/absorption_queue.tsv"
+           python3 "$aq" import-digest "$cur" 2>&1 ); rc=$?
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] absorption queue [$(basename "$cur")]: rc=$rc $aqo" >> "$LOG_FILE"
+    return 0   # 🟥 항상 0 — 계측이 러너의 종료 의미를 바꾸면 안 된다
+}
+
 # 프롬프트는 프로필 유무로 **형태가 갈린다**. 미설정이면 종전 문자열 그대로(FH 경로 무변경).
 _build_prompt() {
     local base="[automated-run: launchd] Run /frontier-digest for today (${HUMAN_DATE}). Fetch latest signals from every channel in the skill's Step 1 source list (HN, arXiv, TLDR, The Batch, GeekNews, Launch YC, Product Hunt, Show HN, vendor changelogs)."
@@ -419,7 +442,7 @@ _build_prompt() {
 # Skip if already ran today
 if digest_ready; then
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Already ran today — skipping" >> "$LOG_FILE"
-    publish_gate; _pg=$?; [ "$_pg" -eq 0 ] && landing_witness; exit "$_pg"
+    publish_gate; _pg=$?; [ "$_pg" -eq 0 ] && { landing_witness; queue_import; }; exit "$_pg"
 fi
 
 # Single-instance lock (mkdir = atomic on bash 3.2). Guards launchd-vs-manual double dispatch:
@@ -502,7 +525,7 @@ for ATTEMPT in $(seq 1 $MAX_ATTEMPTS); do
     # Re-check before spending an attempt (a manual run may have landed the digest during the sleep)
     if digest_ready; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Digest appeared externally before attempt ${ATTEMPT} — success" >> "$LOG_FILE"
-        publish_gate; _pg=$?; [ "$_pg" -eq 0 ] && landing_witness; exit "$_pg"
+        publish_gate; _pg=$?; [ "$_pg" -eq 0 ] && { landing_witness; queue_import; }; exit "$_pg"
     fi
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Attempt ${ATTEMPT}/${MAX_ATTEMPTS}" >> "$LOG_FILE"
     # 🟥 `Skill(...)` needs an explicit allow rule in headless -p — without one the Skill tool is
@@ -544,6 +567,7 @@ for ATTEMPT in $(seq 1 $MAX_ATTEMPTS); do
         publish_gate; _pg=$?
         [ "$_pg" -eq 0 ] || exit "$_pg"
         landing_witness
+        queue_import
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Digest file present after attempt ${ATTEMPT} (claude exit ${EXIT_CODE}) — success" >> "$LOG_FILE"
         exit 0
     fi

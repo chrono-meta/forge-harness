@@ -30,7 +30,8 @@ When a **sister asset** (another team in the organization · external frontier �
 If step 1 (asset identity) shows the territory is **already covered** — dedup hit on the source, or
 a prior cross-audit of the same claims, with no new increment — do **not** write a full cross-audit:
 record a **one-paragraph entry** (source · dedup verdict · the one-line increment if any · pointer to
-the prior audit) in the ledger/log used for speculative intake. Full steps 2–3 are reserved for
+the prior audit) in the ledger/log used for speculative intake; a one-line increment worth taking also
+goes in the absorption queue (`scripts/absorption_queue.py add`). Full steps 2–3 are reserved for
 A/B-tier sources (new territory or a real increment). Keeps intake cheap — the discipline that lets
 the wide net stay wide.
 
@@ -41,7 +42,13 @@ the wide net stay wide.
 2. **Cross-audit session creation** — Record comparison in `tracks/_audit/session_YYYY_MM_DD_{slug}.md`. Minimum contents:
    - Position comparison table of the two assets (perspective · axis basis · conclusion method)
    - Overlap area (value if combined)
-   - List of **items to import** from the other side
+   - List of **items to import** from the other side — and **put each one in the absorption queue**
+     too: `python3 scripts/absorption_queue.py add --source <this audit file>#<n> --item "<one line>"`.
+     The audit file has no reader; the queue is shown when a session starts or resumes
+     (`fh_session_load.sh`, one line: open count · oldest age — not repeated after `/clear` or
+     compaction) and closes only with evidence (`landed` needs a PR number or a
+     commit; `declined`/`deferred` need a reason). Measured 2026-10-28: an audit's five import items
+     sat a day untouched until the operator brought the source material in by hand.
    - List of **items the hub can propagate**
    - Cognitive gap facts (independent work interval, mutual unaware period)
 

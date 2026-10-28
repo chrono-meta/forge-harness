@@ -227,6 +227,16 @@ if [ -d "$_AUDIT_DIR" ] && fh_cadence_due "$_FH_HOOK_SRC"; then
   fi
 fi
 
+# 1-b2) 흡수 대기열 (2026-10-28) — 바깥에서 온 «가져올 것» (digest 후보 · 외부 자산 감사의 가져올
+# 목록 · 운영자가 건넨 링크) 이 열린 채 남아 있으면 한 줄. MEASURED: techwriting 감사의 «가져올 것 5»
+# 가 하루 동안 아무도 안 집었고, 다음 날 운영자가 직접 발표 요약을 들고 와서야 ko-tech-writer 가
+# 고쳐졌다 — 목록은 있었고 읽는 쪽이 없었다. 위 1-b 와 같은 성격: 알리기만 하고 막지 않는다.
+# 파일이 없거나 열린 항목이 0 이면 아무것도 안 찍는다(새 클론을 조르지 않는다).
+_AQ="$FH/scripts/absorption_queue.py"
+if [ -f "$_AQ" ] && fh_cadence_due "$_FH_HOOK_SRC"; then
+  CLAUDE_PROJECT_DIR="$FH" python3 "$_AQ" summary 2>&1 | head -2
+fi
+
 # 1-c) harness-doctor cadence — 위 1-b 와 같은 이유로, 같은 훅에서, 한 블록 더.
 # MEASURED 2026-08-16 (weekly_audit_2026-08-16.md 🟥-3): 직전 감사(07-31)가 «산문 캐던스 미이행»을
 # N=2 로 집계하면서 **주간감사(50일)와 harness-doctor(당시 ~49일) 둘을 함께** 지목했다. 그 뒤 16일
