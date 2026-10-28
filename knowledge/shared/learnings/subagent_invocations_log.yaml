@@ -5114,3 +5114,17 @@
   outcome: "M findings: BREAKING audience, clone-as-project exception, read-error scope, ordering advice, 3.31.0 change notice; two code defects → FH #968; all doc items folded into the release"
   evidence: "FH #968 · release PR v3.32.0"
   tokens: UNMEASURED
+- date: 2026-10-28
+  agent: "general-purpose (sonnet) — FoD builder, public-edge gate layer 3 (purpose: context + parallel)"
+  task: "implement design_2026-10-28_fod-fullmode-judgment-edge §3 in a /private/tmp FoD worktree"
+  trigger: "운영자 2026-10-28 «자체개발이랑 fod 작업 병렬로 가자»"
+  outcome: "stopped before building, as the card's builder line asked: no existing convention for where check records live; gh pr create / gh release create have no public-edge class to reuse (pr create deliberately exempt pending operator). Governor confirmed both against gate_hook.py. Options A/B/C returned to operator"
+  evidence: "/private/tmp/fod-wt-pubedge (clean, no commits)"
+  tokens: "subagent_tokens 98314"
+- date: 2026-10-28
+  agent: "general-purpose (sonnet) — harness-doctor run (purpose: context)"
+  task: "structural diagnosis vs 2026-09-24 report, read-only, report to scratchpad"
+  trigger: "운영자 2026-10-28 «하네스닥터 해주고»"
+  outcome: "FAIL (M 1, was M 3 on 09-24): M-3 five dormant skills persists · new S: CATALOG stale since 09-26 (governor re-measured) · new S: expired 10-27 lease block still in CLAUDE.local.md · CLAUDE.md 16,647 chars (governor re-measured) · --lint 49 hits UNCALIBRATED"
+  evidence: "scratchpad doctor/harness_doctor_2026-10-28.md"
+  tokens: "subagent_tokens 128867"
