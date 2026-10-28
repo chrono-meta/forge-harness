@@ -3,6 +3,7 @@
 ### [Unreleased]
 
 소비자에게 닿는 변화:
+- `scripts/test_fh_run_resolver_lanes.sh` F8: `package.json` 없는 트리에서 `fh-run.sh` 가 경고를 내고 버전을 `UNKNOWN-no-package-json` 으로 적고 계속 가는지 직접 돈다. 3.6 대의 «무음 사망» 수리(#715)가 이 파일을 앵커로 적었지만 그 경우를 한 번도 안 돌렸다(수리 전 코드로 되돌려도 초록이었다 — 2026-10-28 플로어 재검). `dispatch_conditional_prohibition.md §Two-Purposes`: 도구 정의 개수를 한 번 실측해 적었다(쓸 수 있는 도구 112 · FH 가 더하는 도구 0) — 로드된 개수는 여전히 `UNMEASURED`.
 - `scripts/pipefail_earlyexit_scan.sh changed`(새 pipefail 조기종료 줄을 막는 델타 잠금): 기준(`merge-base HEAD origin/main`)을 못 구하면 HEAD 로 떨어져 «변경 없음 SKIP» rc 0 을 내던 폴백을 없앴다 — 이제 rc 2(측정 못 함). 얕은 CI 체크아웃에서 이 잠금이 한 번도 물지 않았다(하류 실측 2026-10-27). 기준은 두 번째 인자 또는 새 환경변수 `PIPESCAN_BASE`(0 으로만 된 sha 는 미설정)로 줄 수 있다. selfcheck 의 이 레인은 CI(`GITHUB_ACTIONS=true`)에서 측정 못 하면 실패한다(로컬은 종전대로 경고). `scripts/mutation_probe.py` 에 테스트 전용 환경변수 `MUTATION_PROBE_TEST_AFTER_READ` — 설정하지 않으면 효과 없음.
 - `scripts/fh_detach.py`: 기본 범위가 **그 프로젝트 하나**로 바뀌었다 — 프로젝트의 `.claude/settings*.json` FH 훅 · `CLAUDE.local.md` 동반 절 · 그 프로젝트의 `~/.cc_sentinels` 이름 · 안 고친 템플릿 사본. 모든 프로젝트가 같이 쓰는 것(`~/.zshrc` 블록 · FH 클론 자신의 훅과 동반 절 · `core.hooksPath`)은 새 플래그 `--machine` 을 줄 때만 지우고, 안 주면 `kept (machine-wide …)` 줄로 보여 주기만 한다. 🟥 3.31.0 에서 `--apply` 로 머신 전체를 떼던 사람은 이제 `--machine` 을 더해야 같은 결과다. 공유 파일을 못 읽어도(깨진 JSON · 읽기 권한 없음) 프로젝트 떼기는 계속된다 — `--machine` 일 때만 종료 10. 마법사를 돌린 다른 프로젝트는 각자 `--project` 로 뗀다. install-wizard SKILL.md §Detach · README · USER_GUIDE.
 

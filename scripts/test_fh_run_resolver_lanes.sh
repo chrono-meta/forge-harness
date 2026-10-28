@@ -126,6 +126,22 @@ case "${R7}" in
   *)  ng "F7 엉뚱한 곳으로: ${R7}" ;;
 esac
 
+echo "== package.json 없는 트리에서도 말하고 계속 가나 (7a9f701 의 수리 — 2026-10-28 전까지 앵커 0) =="
+# 🟥 7a9f701 은 «package.json 없는 트리 → 출력 0줄 · rc=1» 무음 사망을 고쳤고 이 파일을 앵커로 적었는데,
+#    이 파일은 그 경우를 한 번도 안 돌렸다 — 2026-10-28 플로어 재검에서 수리 전 두 줄로 되돌려도 PASS 7 였다.
+#    여기서 그 경우를 직접 돈다: 스크립트 사본만 두고 package.json 은 두지 않는다(plugins 는 링크로 빌린다).
+_F8=$(mktemp -d)
+mkdir -p "$_F8/scripts" && cp "$HERE/scripts/fh-run.sh" "$_F8/scripts/" && ln -s "$HERE/plugins" "$_F8/plugins"
+R8=$(_ttl 60 env FH_DRY_RUN=1 bash "$_F8/scripts/fh-run.sh" --backend codex --skill preprep 2>&1); R8rc=$?
+/bin/rm -rf "$_F8"
+if [ "$R8rc" -eq 0 ] && /usr/bin/grep -q 'WARN: package.json not readable at .* — version reported as UNKNOWN-no-package-json' <<<"$R8" \
+   && /usr/bin/grep -qx 'FH RUNTIME ADAPTER vUNKNOWN-no-package-json' <<<"$R8" \
+   && /usr/bin/grep -q 'plugins/fh-preprep/skills/preprep/SKILL.md' <<<"$R8"; then
+  ok "F8 package.json 없음 → 경고 한 줄 · 버전 UNKNOWN-no-package-json · 해석은 계속 (rc 0)"
+else
+  ng "F8 package.json 없는 트리: rc=$R8rc · 출력 $(printf '%s' "$R8" | wc -l | tr -d ' ')줄 (수리 전 = 0줄 · rc 1)"
+fi
+
 echo
 echo "════════════════════════════════════════"
 printf '  PASS %s   FAIL %s\n' "$PASS" "$FAIL"
