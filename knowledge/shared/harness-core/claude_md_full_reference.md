@@ -1081,6 +1081,20 @@ This agent's task: {specific task + target files/paths}  |  Note: {constraints/h
 ```
 Simple file-lookup agents may omit. Agent dispatch works from any mapped project cwd — for FH skills, specify `~/projects/forge-harness/` explicitly.
 
+**A builder dispatch (an agent that edits code or files) adds two lines to `Note`** (2026-10-28):
+1. «Smallest fix first. If the fix needs a new mechanism (a cache, a budget, a new rule), stop and report why before
+   building it.» Measured the same day: a builder told to fix six review findings built a per-file cache and a read
+   budget, which drew five new findings in the next cross-family round and was reduced back to the original envelope.
+   Outside: starting at the lowest effort and moving up only after a verified failure matched or beat a fixed high
+   effort at lower cost (arXiv:2610.34491 — effort levels; whether the same holds for model tiers is a proposal, not
+   a measurement, and existing model floors and routing rules still apply).
+2. «Do not run commands that overwrite the working tree (`git stash`, `git checkout -- …`, `git reset`, `git clean`);
+   if you ran one anyway, stop and report it right away — not only in the final report.» Measured the same day: a builder used `git stash` + `git checkout -- .` to
+   debug and restored correctly, but it surfaced only in the hand-back. Successful runs still carry unauthorised side
+   effects (arXiv:2610.34167: 12.8 % of goal-achieving runs).
+The governor still checks the result with `scripts/dispatch_receipt.py` — which sees only the final tree, so a
+stash-and-restore that leaves no difference is visible only through line 2.
+
 ---
 
 ## Intent Marshaling — General-Work Serving (runtime default)

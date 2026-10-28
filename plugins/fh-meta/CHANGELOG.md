@@ -1,5 +1,12 @@
 # forge-harness (fh-meta) Changelog
 
+### [Unreleased]
+
+소비자에게 닿는 변화:
+- `CLAUDE.md §Agent Dispatch`: 코드를 고치는 빌더를 보낼 때 Context Card 에 두 줄을 더한다 — «최소 수리부터, 새 장치(캐시 · 예산 · 새 규칙)가 필요하면 짓기 전에 멈추고 보고» · «작업 트리를 덮는 git 명령(`stash` · `checkout --` · `reset` · `clean`) 금지, 썼으면 바로 보고». 블라인드 Sonnet sim(팔당 3회): 규칙 없음 0/3 · 세부 문서에만 0/3·약 1.5/3 · 상주 한 줄 추가 뒤 3/3·3/3. 상세 `claude_md_full_reference.md §Context Card`.
+- `knowledge/shared/rules/operations.md` 주간 감사 2b: «앵커 되돌림 표본» — 창 안에 머지된 변경 3개의 앵커 레인을 임시 워크트리에서 수리 줄만 되돌려 빨개지는지 본다.
+- `dispatch_conditional_prohibition.md §Two-Purposes`: FH 허브의 첫 호출 입력 토큰 실측(빈 폴더 대비 +62,600~64,800, 이 6회에서) — 줄일 후보 지렛대로 기록, 절감은 다이어트 뒤 같은 두 팔 실행으로만 확정.
+
 ### [3.32.0] — 2026-10-28 — fh_detach 기본 = 프로젝트 하나 · CI 에서 pipefail 델타 잠금이 실제로 돈다 · 레인 앵커 보강
 
 **minor.** In short (for upgraders): `scripts/fh_detach.py` (still a dry run unless `--apply`) now takes off only the named project by default; add `--machine` to also remove what every project shares (`~/.zshrc` block, the FH clone's own hooks, `core.hooksPath`). In 3.31.0, `--apply` removed those too — if you relied on that, add `--machine`. Detach your other projects first and run `--machine` last. The pipefail class-lock delta no longer reports «SKIP» when it cannot find a base; the one `BREAKING (gate)` line below applies only to a clone of this repository running its own CI — the scanner and that lane are not in the npm package, so this change does not reach npm consumers.

@@ -28,6 +28,17 @@ The hub audits and improves itself weekly.
 **Phase 1.5 (manual):**
 1. Gather window data by hand — `git log --since="{window}" --oneline` (+ count), `git tag --sort=-creatordate`, tail of `knowledge/shared/learnings/subagent_invocations_log.yaml`, stale-file spot checks. (No `_scanner.sh` exists — a prior reference here was a phantom, fixed 2026-06-11; the automation path is Phase 2 harvest-loop, a standalone scanner script is deliberately not built.)
 2. `bash scripts/below_floor_scan.sh` — below-floor marker re-run queue (the standing consumer §Floor governance promises: exit 1 = pending floor-tier re-validations, treat as S-tier; resolve via `floor-rerun:` / `floor-writeoff:` appended to the marker)
+2b. **Anchor revert sample (2026-10-28).** Pick 3 changes merged in the window whose Axes 2–3 marker names an
+   `axis2-anchor:` lane. For each: a temp worktree at the merge commit (never the shared checkout) · run the anchor lane
+   once and require green (the baseline) · reverse only the fix hunks, keeping the test · run the same lane · red means
+   the anchor's own assertion failed because the fix is gone (not a timeout, a missing tool or an unrelated case) ·
+   reclaim with `scripts/worktree_reclaim.sh <worktree> --apply` before removing it. A lane that stays green is a
+   surviving mutation: record 🟥 «anchor does not exercise its fix — investigate» until a later equivalent fix, a
+   skipped case or the wrong hunks are ruled out. First run: 1 of 2 sampled anchors never exercised its fix
+   (reverting kept it at PASS 7) → FH #967.
+   Outside: of the harness changes a retro skill proposed and could be re-measured, 2 of 7 removed the behaviour
+   they targeted, counting only cases where the unchanged arm met that behaviour (arXiv:2610.34938) — recording a fix
+   and its anchor is not evidence that either works.
 3. **Carry-over re-check before copying.** Every carried-over / unresolved item from the previous audit is re-confirmed against a primary source (`gh pr view` · `git log -S` · a grep of the file it names) *before* it is copied forward, and the command used is written next to it together with what it returned for the current state (a `git log -S` hit shows history, not current status). Cannot confirm → mark `UNVERIFIED`; never promote it to "awaiting operator decision". (2026-10-11: a Haiku arm copied the 09-24 carry-over list without checking current state and re-reported an already-closed awesome-list PR and a nested-repo gitlink as pending; the governor corrected both.)
 4. Write `tracks/_audit/weekly_audit_YYYY-MM-DD.md` mirroring the previous audit file's format (frontmatter + activity table + 🟥🟧🟩 + pattern table — no separate template file exists)
 5. Propose 3-tier improvements (🟥mandatory/🟧strong/🟩recommended)
