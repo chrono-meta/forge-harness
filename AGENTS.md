@@ -393,6 +393,21 @@ The Claude-side rationale — including why the boundary is phrased around a *co
 than a prohibition — lives in `CLAUDE.md §Agent Dispatch Operation` and is specific to that runtime.
 The constraint above is not.
 
+**A builder dispatch** (the delegated agent edits code or files) carries two more lines in its
+brief, whatever runtime launches it:
+
+```
+1. Smallest fix first. If the fix needs a new mechanism (a cache, a budget, a new rule),
+   stop and report why before building it.
+2. Do not run commands that overwrite the working tree (git stash · git checkout -- … ·
+   git reset · git clean). If you ran one anyway, stop and report it right away —
+   not only in the final report.
+```
+
+Both come from one day's measured builder runs (2026-10-28): an unrequested cache and read budget
+that drew five new review findings, and a `git stash` + `checkout --` that surfaced only in the
+hand-back. Canonical text and evidence: `claude_md_full_reference.md §Context Card`.
+
 > **Detail**: See `knowledge/shared/harness-core/agents_md_runtime_details.md §Codex-entry-points`
 > — runnable `fh-run` and `codex exec` forms — read before invoking FH from Codex.
 
