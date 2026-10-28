@@ -293,7 +293,9 @@ What this wizard writes can be taken back with one command (the named residuals 
 default it takes FH off **one project** — that project's hooks, companion section, sentinels and template copies.
 `--machine` also removes what every project shares: the zshrc block, the FH clone's own hooks and `core.hooksPath`;
 without it those are listed as `kept (machine-wide …)` and left alone. Neither touches another project the wizard
-ran in — detach each one with its own `--project`. With no clone (plugin only), use
+ran in — detach each one with its own `--project`, and run `--machine` last. Changed in 3.32.0 (before, `--apply` also
+removed the shared setup). When `--project` is the FH clone itself, its own hooks and companion section are that
+project's and go without `--machine`. With no clone (plugin only), use
 `claude plugin uninstall fh-meta@forge-harness` instead:
 
 ```bash

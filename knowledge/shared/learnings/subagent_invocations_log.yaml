@@ -5086,3 +5086,31 @@
   outcome: "all A findings taken; FH #961 R1 caught a missing permission purpose and a label loophole; FH #962 R1 caught SIGPIPE→141 before the refusal"
   evidence: "FoD #164 · #165 · FH #961 · #962"
   tokens: UNMEASURED
+- date: 2026-10-28
+  agent: "general-purpose (sonnet) — below-floor marker re-check (purpose: independence)"
+  task: "4 pending markers of below_floor_scan.sh — verdict a/b/c each"
+  trigger: "운영자 2026-10-28 «추천대로 7까지 모두 … 병렬로» (weekly audit 🟥 below-floor 4)"
+  outcome: "scanner right on all 4; governor re-ran items 3·4 with revert probes — item 4's named anchor lane did NOT exercise the fix (reverted code stayed PASS 7) → FH #967 F8"
+  evidence: "FH #967 · tracks/_meta markers (local)"
+  tokens: UNMEASURED
+- date: 2026-10-28
+  agent: "codex (gpt) ×7 — read-only reviews"
+  task: "FH #965 R1·R2 · FH #966 R1·R2 · FH #967 R1 · (FoD gate / R2 residual reviews pending)"
+  trigger: "load-bearing installer undo · CI lock base · lane anchors"
+  outcome: "#965 R1 4 + R2 1 taken · #966 R1 4 + R2 1 taken (PIPESCAN_BASE leaked into fixtures under push) · #967 R1 2 C taken"
+  evidence: "FH #965 · #966 · #967"
+  tokens: UNMEASURED
+- date: 2026-10-28
+  agent: "general-purpose (sonnet) ×2 — FoD builders (purpose: context)"
+  task: "FoD gate inline-data false positive (#36 family) · FoD #164/#165 R2 residuals"
+  trigger: "운영자 2026-10-28 «추천대로 7까지 모두 … 병렬로»"
+  outcome: "residuals: first design (cache + budget) drew 5 new defects in codex R1 → governor ordered a reduction, R2 1 B named as residual, merged FoD #167 · gate: two rounds of governor-directed extension (in-order names; codex R1 receiver/open/replace fixes in progress)"
+  evidence: "FoD #167 · FoD branch fix/gate-inline-data-mention"
+  tokens: UNMEASURED
+- date: 2026-10-28
+  agent: "fh-meta:beginner (sonnet) + fh-meta:challenger (sonnet) — scoped Area B for v3.32.0 (purpose: independence)"
+  task: "cold read and claim attack of the 3.32.0 changelog and detach docs"
+  trigger: "version policy: minor needs Area B since the previous minor (7-day interval conflict recorded)"
+  outcome: "M findings: BREAKING audience, clone-as-project exception, read-error scope, ordering advice, 3.31.0 change notice; two code defects → FH #968; all doc items folded into the release"
+  evidence: "FH #968 · release PR v3.32.0"
+  tokens: UNMEASURED
