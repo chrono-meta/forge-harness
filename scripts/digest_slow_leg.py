@@ -42,7 +42,7 @@ exit (run): 0 every source read · 4 ran, but at least one source UNREACHABLE/PA
 exit (due): 0 due · 3 not due · 2 state file invalid (read as UNMEASURED, never as not-due)
 exit (self-test): 0 pass · 1 fail
 """
-import copy, json, os, shutil, subprocess, sys, tempfile, time, urllib.error, urllib.request
+import copy, json, math, os, shutil, subprocess, sys, tempfile, time, urllib.error, urllib.request
 import xml.etree.ElementTree as ET
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -88,7 +88,7 @@ def load_state(path):
         if not isinstance(st, dict):
             raise ValueError("not an object")
         lr = st.get("last_run", 0)
-        if isinstance(lr, bool) or not isinstance(lr, (int, float)) or lr < 0:
+        if isinstance(lr, bool) or not isinstance(lr, (int, float)) or not math.isfinite(lr) or lr < 0:
             raise ValueError(f"last_run is {lr!r}")
         seen = st.get("seen", {})
         if not isinstance(seen, dict) or not all(isinstance(v, list) and all(isinstance(k, str) for k in v) for v in seen.values()):
@@ -437,7 +437,7 @@ def _self_test_body(d, saved_env):
         check("corrupt state: due exits 2, not 3", main(["due", "--state", stp]) == 2)
         check("corrupt state: run exits 2", main(["run", "--sources", good, "--state", stp, "--out", outp]) == 2)
         check("comments-only sources -> 2", main(["run", "--sources", W("c.tsv", "# none\n"), "--state", os.path.join(d, "s4.json"), "--dry-run"]) == 2)
-        for bad_state in ('{"last_run": 9999999999, "seen": null}', '{"last_run": "x"}', '{"seen": {"r": [1]}}', '{"via": {"y": "rss"}}'):
+        for bad_state in ('{"last_run": 9999999999, "seen": null}', '{"last_run": "x"}', '{"last_run": NaN}', '{"last_run": 1e400}', '{"seen": {"r": [1]}}', '{"via": {"y": "rss"}}'):
             open(stp, "w").write(bad_state)
             check(f"shallow-valid but broken state -> due 2: {bad_state[:28]}", main(["due", "--state", stp]) == 2)
         check("missing sources -> 2", main(["run", "--sources", os.path.join(d, "nope.tsv"), "--state", os.path.join(d, "s3.json"), "--dry-run"]) == 2)
