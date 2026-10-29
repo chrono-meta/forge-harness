@@ -6,7 +6,7 @@ never reach conference talk archives or company tech blogs, and SKILL.md filed Y
 channel. A channel's upload list is a plain Atom feed (youtube.com/feeds/videos.xml?channel_id=…),
 so listing new talks needs no video access; reading a talk is video-ingest's job, not this script's.
 Measured the same day: that feed answered 404 for every channel tried, including a well-known control
-channel, so a youtube row falls back to `yt-dlp --flat-playlist` (public listing, no download) and
+channel, and answered again a few hours later — intermittent, so a youtube row falls back to `yt-dlp --flat-playlist` (public listing, no download) and
 the output names which transport produced the list. Neither works -> UNREACHABLE, not 0. The fallback
 fires on 404 only: a 403/429 is a refusal, and a refusal is never retried another way.
 Talks come out yearly and run 30-40 minutes, so this leg is weekly and lists, it does not summarize.
