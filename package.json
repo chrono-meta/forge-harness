@@ -169,6 +169,8 @@
     "scripts/digest_landing_check.sh",
     "scripts/absorption_queue.py",
     "scripts/test_absorption_queue_lanes.sh",
+    "scripts/digest_slow_leg.py",
+    "scripts/test_digest_slow_leg_lanes.sh",
     "scripts/directional_diff_gate.sh",
     "scripts/doc_claim_triad_scan.py",
     "scripts/env_layer_fingerprint.sh",
