@@ -169,16 +169,70 @@ def extract_digest(digest):
     p = subprocess.run(["bash", checker, "--extract", digest], capture_output=True, text=True)
     if p.returncode != 0:
         return None, "추출기 rc=%d: %s" % (p.returncode, (p.stderr or p.stdout).strip()[:200])
-    items = []
+    labels = []
     for line in p.stdout.splitlines():
         parts = line.split("\t")
         if parts[0] == "TARGET" and len(parts) >= 3:
-            items.append(re.sub(r"^후보\s*", "", parts[2]))
+            labels.append(re.sub(r"^후보\s*", "", parts[2]))
         elif parts[0] == "# UNCHECKABLE" and len(parts) >= 2:
-            items.append(parts[1])
-    if not items:
+            labels.append(parts[1])
+    if not labels:
         return None, "후보 0개 — 절을 못 찾았거나 비었다(0 이 아니라 미측정)"
+    heads = digest_heads(digest)
+    items = []
+    for lab in labels:
+        full = heads.get(lab)
+        # 원문을 못 찾으면 이름표를 쓰되 그 사실을 항목에 남긴다 — 잘린 줄이 «전체» 처럼 보이지 않게(AQ-20261029-4)
+        items.append(full if full else lab + " [이름표만 — 다이제스트 원문 못 찾음]")
     return items, None
+
+
+_HEAD_RE = re.compile(r"^(###+ |\*\*|[0-9]+\. |- \*\*)")
+
+
+def digest_heads(digest):
+    """다이제스트 후보 절의 머리 줄 → {검증기 이름표: 머리 문장 전체}.
+    이름표는 digest_landing_check.sh 의 awk 와 같은 규칙으로 만든다(머리 표기 떼기 · 첫 굵은 글씨까지 · 공백 기준 앞 6낱말).
+    그 규칙이 갈리면 원문을 못 찾고 import-digest 가 «이름표만» 을 붙인다 — 조용히 잘리지 않고 보인다.
+    표 행(첫 칸이 id)은 이 대응에 없다 — 그 경우도 «이름표만» 으로 보인다."""
+    try:
+        lines = open(digest, encoding="utf-8").read().splitlines()
+    except Exception:
+        return {}
+    sec = re.compile(os.environ.get("DLC_SECTION_RE") or r"^## .*Immediate Application Candidates")
+    out, inblk = {}, False
+    for line in lines:
+        if sec.search(line):
+            inblk = True
+            continue
+        if inblk and line.startswith("## "):
+            break
+        if not inblk:
+            continue
+        if line.startswith("|"):
+            # 표 행 — 검증기는 첫 칸(굵은 글씨 · 공백을 뗀 것)을 이름표로 낸다. 원문은 마지막 칸의 굵은 머리 문장(없으면 칸 전체)
+            cells = line.split("|")
+            if len(cells) < 4 or re.match(r"^\|[\s]*#", line) or re.match(r"^\|[-:| ]+\|$", line):
+                continue
+            tid = re.sub(r"[*\s]", "", cells[1])
+            body = next((c.strip() for c in reversed(cells[2:]) if c.strip()), "")
+            m = re.match(r"^\*\*(.+?)\*\*", body)
+            text = (m.group(1) if m else body).strip()
+            if tid and text and tid not in out:
+                out[tid] = text
+            continue
+        if not _HEAD_RE.match(line):
+            continue
+        pid = re.sub(r"^###+ ", "", line)
+        pid = re.sub(r"^[0-9]+\. ", "", pid)
+        pid = re.sub(r"^- ", "", pid)
+        pid = re.sub(r"^\*\*", "", pid)
+        pid = re.sub(r"\*\*.*$", "", pid).strip()
+        words = pid.split()
+        label = " ".join(words[:6]) if len(words) > 6 else pid
+        if label and label not in out:
+            out[label] = pid
+    return out
 
 
 def skill_index():
@@ -384,6 +438,28 @@ def self_test():
             f.write("# d\n\n## Warning Signals\n\n- 무관\n")
         rc, out = run("import-digest", e, env={"CLAUDE_PROJECT_DIR": ROOT})
         res.append(("D2 digest without the section is an error (rc 10), not 0 candidates", rc == 10 and len(load(q)) == n1))
+        # AQ-20261029-4 — 항목은 검증기의 6낱말 이름표가 아니라 머리 문장 전체다(목록 · 표 두 형식)
+        lg = os.path.join(td, "frontier_digest_2026_10_29.md")
+        long_head = "교차 계열 검증 집계에서 «같은 근거의 재전달» 을 한 표로 센다 (`arXiv:2610.36151`)."
+        with open(lg, "w", encoding="utf-8") as f:
+            f.write("# d\n\n## FH Immediate Application Candidates\n\n- **" + long_head + "** 본문.\n\n"
+                    "| # | 티어 | 내용 |\n|---|---|---|\n| **M1** | **M** | **표 후보의 머리 문장 (`gate_locality_principle`)** — 설명 |\n\n"
+                    "## Warning Signals\n\n- 무관\n")
+        rc, out = run("import-digest", lg, env={"CLAUDE_PROJECT_DIR": ROOT})
+        got = [r["item"] for r in load(q) if r["source"] == "digest:frontier_digest_2026_10_29.md"]
+        res.append(("D3 a head longer than six words is stored whole, not cut at the display label",
+                    rc == 0 and long_head in got and not any(g.endswith("«같은 근거의") for g in got)))
+        res.append(("D4 a table candidate is stored by its body head, not by its id cell («M1»)",
+                    "표 후보의 머리 문장 (`gate_locality_principle`)" in got and "M1" not in got))
+        # 대응을 못 하면(두 규칙이 갈림) 이름표를 쓰되 그 사실이 항목에 보인다 — 조용한 절단 금지
+        saved = digest_heads
+        try:
+            globals()["digest_heads"] = lambda _d: {}
+            items, err = extract_digest(lg)
+        finally:
+            globals()["digest_heads"] = saved
+        res.append(("D5 an unmatched label is marked «이름표만», not passed off as the full item",
+                    err is None and items and all("[이름표만" in i for i in items)))
         # 동시 쓰기 — 잠금이 없으면 늦게 쓴 쪽이 앞의 행을 지운다
         procs = [subprocess.Popen([sys.executable, os.path.abspath(__file__), "add", "--source", "par", "--item", "p%d" % i],
                                   env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for i in range(12)]
