@@ -247,15 +247,7 @@ Add the following condition to the agent-composer Step 4-b state transition gate
 
 ## Design Principle — Why This Skill Exists
 
-It is a **rope** for those who have not yet dared to challenge.
-
-Thinking alone traps you in a single perspective. Only the courageous construct counterarguments themselves.
-deliberation provides that counterargument as structure — even those afraid of conflict can start a battle, because the Mediator will synthesize it for them.
-
-The Mediator's conditional verdict creates a safe entry point: "this is okay if you do it this way."
-The jury fills the domain blind spots that no single person can see on their own.
-
-**What the forge creates is not a winner — it is a new alloy.**
+> **Detail**: See `SKILL_detail.md §Design-Principle` — why the skill exists (a structured counterargument for people who would not start one themselves, and the conditional verdict as a safe entry point) — read when deciding whether a design question deserves a deliberation at all.
 
 ---
 
