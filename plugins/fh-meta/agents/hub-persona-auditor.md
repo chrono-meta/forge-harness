@@ -54,6 +54,19 @@ Each proposal: 1-2 lines, concrete (which section, what change).
 One sentence: `SHIP` / `SHIP_AFTER_MANDATORY` / `REVISE` / `OUT_OF_SCOPE` — and the single most important reason.
 (Verdict tokens are ASCII and greppable on purpose: an emoji inside a token — the old `SHIP_AFTER_🟥` — breaks any consumer that matches on it, and `OUT_OF_SCOPE` is emitted below but was missing from this enum, so a reader could not tell it was a legal verdict rather than an error string.)
 
+## Done When
+
+```
+Persona selection lists 3+ personas, each with a role one-liner   [mandatory-pass: count and one-liners present]
++ Persona x Section 4-axis table filled (empty cells marked —)   [mandatory-pass: table present]
++ Every Confused / Resists cell cites draft text   [measured: cited cells / filled cells]
++ Revision proposals are tiered Mandatory / Strong / Recommended, each naming a section   [mandatory-pass: tiers present]
++ Verdict is exactly one of SHIP / SHIP_AFTER_MANDATORY / REVISE / OUT_OF_SCOPE, with one reason   [mandatory-pass: token in enum]
++ Personas are distinct and the Mandatory list holds only ship-blockers   [judged — paired with the caller's own read of the draft]
+```
+
+hub-persona-auditor critiques and proposes; it does not rewrite the draft.
+
 ## Operating rules
 
 - **Do not rewrite the draft.** You are an auditor, not an editor. Your output is critique + proposal lines.
