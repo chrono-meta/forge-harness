@@ -63,8 +63,8 @@ Please provide the deliberation topic.
 Upon completing Step 0, include the following in the output:
 ```
 [DELIBERATION START] Topic: {topic} | Layer: {layer} | {timestamp}
-  → WORKER_CALL: Innovator (isolated instance)
-  → WORKER_CALL: Devil-Advocate (isolated instance)
+  → WORKER_CALL: Innovator (no isolation — proposal generator, see Step 1)
+  → WORKER_CALL: Devil-Advocate (no isolation — see Step 2)
   → WORKER_CALL: Mediator (isolated instance — Cost of Consensus prevention)
 ```
 
