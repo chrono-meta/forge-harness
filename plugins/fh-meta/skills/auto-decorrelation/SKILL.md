@@ -164,18 +164,7 @@ diversity vs the orchestrator** (orchestrator = Claude/opus → recruit GPT or G
   nothing" becomes unsayable until it has actually exited. Grep the typed `SIDECAR_VERDICT=` line;
   never judge by looking at the output file.
 
-  **Why this is mechanical rather than a habit** — the bullets below already described bounding a
-  sidecar, and a session that had them loaded still got it wrong on 2026-07-29: it backgrounded
-  `codex exec` and `agy -p`, read the output files after **1 s and 30 s**, found them empty, and
-  recorded *"both sidecars returned 0-output"* into a gate marker, a PR body, a session card, a
-  memory file and a handoff. Both were running normally and both answered — codex with 48 KB and
-  three findings, agy with a further HIGH, and **all four were real**; one of them showed the change
-  under review was over-applied. So the measurement error nearly retired a working mechanism.
-
-  **That is a second failure mode this section did not cover.** The bullets below describe a *hung*
-  sidecar. An impatient read of a *healthy* one produces the identical observation — zero bytes —
-  and only one of the two is a fault. Distinguishing them requires process state, which is exactly
-  what a human eye on an output file cannot see and the runner always reports.
+> **Detail**: See `SKILL_detail.md §Sidecar-Wait-Rationale` — why mechanical waiting replaced habit (2026-07-29 miss) and the healthy-vs-hung second failure mode — read when a sidecar output looks empty.
 
 - **Liveness / hang-catch (the runner does the waiting; this is how to read a `TIMEOUT`).** A backgrounded CLI that hangs
   (stuck on a sandbox/file-tool prompt, auth, or network) **does not exit**, so the background-completion
@@ -214,29 +203,11 @@ sending**, not this skill's own dependency graph. Read the exit code, not the wo
 | 1 | TAINTED — at least one payload file matched a residency pattern | Do not send as-is. Either strip/redact the tainted file(s) from the payload and re-scan, or route to an in-boundary panel member. If it truly cannot be cleaned, record `residency=TAINTED(N files, stripped=no)` and do NOT dispatch — the crossfamily value becomes a `DEGRADED_*` rung, never `panel(...)`. |
 | 10 | HARNESS_ERROR — the scan itself could not run (commonly: no operator-private `.claude/rules/.residency-patterns` override on this machine — the shipped `.defaults` file alone is deliberately insufficient to claim CLEAN, per the scanner's own header) | Do not send. Record `residency=NOT_SCANNED(<reason>)` — same as exit 1's outcome (no dispatch), different reason (*could not screen* vs *screened and found something*). |
 
-🟥 **On a fresh install with no operator pattern file, this WILL be exit 10 every time** — that is
-the scanner's own documented fail-closed default (`residency_closure_scan.py`'s header: "오버라이드
-파일이 없으면 exit 10 이다"), not a bug introduced here. It means: until an operator configures
-their own residency patterns, this skill cannot claim a panel dispatch was screened, so it honestly
-degrades to a `DEGRADED_*` rung with `residency=NOT_SCANNED(...)` instead of silently sending. That
-is not a new block on fresh installs — the crossfamily field already tolerates `DEGRADED_*` without
-hard-failing the commit; it is one more honest reason to be in that state, not a novel one.
-
-**Where the result lands**: `templates/.git-hooks/pre-commit`'s `validate_crossfamily_leg` now
-requires a `residency=CLEAN(...)` token inside the grounds of any `panel(...)` value (grace date
-`RESIDENCY_TOKEN_GRACE_DATE`, no retroactivity on markers dated earlier), and accepts an optional,
-format-checked `residency=(CLEAN|TAINTED|NOT_SCANNED)(...)` token on `DEGRADED_*`/`UNKNOWN`/
-`declined`. Fixtures: `scripts/test_marker_crossfamily_lanes.sh` (`r1`–`r13`). This is the SAME
-typed field Step 6 already emits into — one channel, not a second marker line.
+> **Detail**: See `SKILL_detail.md §Residency-Notes` — fresh-install exit-10 behavior and where the residency token lands in pre-commit — read when a scan returns 10 or when writing the `crossfamily:` grounds.
 
 ## Step 4.6 — `evidence=` : say WHAT the panel received (mandatory with `panel(...)`, 2026-09-12)
 
-`residency=` says the payload was safe to send. `evidence=` says **what was sent** — and that is the
-axis the outside world just measured as the dominant one. `arXiv:2609.10969` (48 task templates →
-2,880 scenarios, **fixed call budget** so the comparison is about the axis and not about spending
-more): a cross-model vote over **shared** evidence approved **62.9 %** of unsafe proposals against
-**22.9 %** with an **independent source** — source effect **40.9 pp** vs **11.3 pp** for model
-diversity, i.e. **3.6×**.
+> **Detail**: See `SKILL_detail.md §Evidence-Rationale` — arXiv evidence-axis rationale, the SHARED-by-default note, the named independent-source gap, and the CLEAN-scope caveat — read when deciding or defending an `evidence=` token.
 
 Decide it from **how this run actually dispatched**, not from intent:
 
@@ -246,28 +217,12 @@ Decide it from **how this run actually dispatched**, not from intent:
 | Each member produced its **own** evidence — own checkout, own run, own extraction | `evidence=INDEPENDENT(<what each got>)` |
 | Some of each | `evidence=MIXED(<which member got which>)` |
 
-🟥 **This skill's default flow is `SHARED`, by construction.** Step 4 builds **one** payload and fans
-it out, so a panel dispatched the ordinary way through this skill is the **62.9 % arm** — the axis it
-raises is model family, which the paper prices at 11.3 pp. That is not a reason to stop using it: a
-finder is worth its recall, and this skill's value was never precision
-(`[[feedback_decorrelation_is_a_cheap_finder]]`). It **is** a reason to stop recording that run as if
-it carried the stronger axis. Write `SHARED` and mean it.
-
-🟢 **`SHARED` is a legal, expected answer.** The hook does not block it; it blocks a `panel(...)` that
-does not say which it was, a value outside the closed three, a malformed or duplicated token, and a
-**vacuous body** on `SHARED`/`MIXED` (name the artifact — *"same staged diff"*, *"one findings.jsonl"*,
-*"identical prompt file"*). `INDEPENDENT` is self-describing and is not body-checked, deliberately:
-over-blocking the honest strong answer would train the override.
 
 **Where it lands**: the same grounds line as `residency=`, in the same `crossfamily:` field —
 `crossfamily: panel(codex) — residency=CLEAN(files=3) · evidence=SHARED(same staged diff to both) · R1, 3 findings`.
 Hook: `validate_crossfamily_leg` (grace `EVIDENCE_TOKEN_GRACE_DATE`, no retroactivity).
 Fixtures: `scripts/test_marker_crossfamily_lanes.sh` `e1`–`e10`.
 
-⚠️ **Named gap, not built today**: this skill has **no independent-source mode**. Giving it one
-(each member reconstructs the evidence itself rather than reading the author's payload) is the change
-that would move it onto the 40.9 pp axis; it is a design question, not a wiring one, and it is
-recorded as a signal rather than improvised here.
 
 🟥 **A stripped file is invisible to the reviewer, and a reviewer's default read of invisible is
 "absent," not "redacted"** (governor dogfood, 2026-09-05, same-day live use of this Step): two
@@ -285,10 +240,6 @@ reviewer`. This is evidence-of-doing, not proof — same shape as Step 5's "quot
 checked," and it does not become a new hard-blocking hook check (channel discipline stays a
 grounds phrase here, per the same Mechanization Boundary this whole field already respects).
 
-⚠️ **Scope, same as everywhere else in this file**: CLEAN is a screening result, not a safety
-guarantee (dynamic imports, non-Python artifacts, encoding tricks, and TOCTOU are named, unclosed
-gaps in the scanner's own header). Recording `residency=CLEAN(...)` asserts the scan ran and found
-nothing **within those limits** — it does not assert the payload is safe in some absolute sense.
 
 ## Step 5 — Role split + source-grounded acceptance (S-2)
 
@@ -299,10 +250,7 @@ re-checks** it against the artifact (phantom-quench back-trace) before accepting
 source-grounded is **dropped, not judged**. No sidecar-only verdict (no weak-local-judge regression).
 Local 4090 = **canary tier** (evidence-of, never terminal verdict).
 
-**Report shape (2026-09-05)**: when the findings are written up (PR body · marker `crossfamily:` expansion · chamber record),
-use `templates/RED_TEAM_REPORT.md` — the five sections mirror ISO/IEC AWI TS 42119-7 (risk identification · objectives & attack
-vectors · method · findings with reproducing input · life-cycle integration). It is a name tag on what this skill already
-produces, not a new check; crosswalk: `knowledge/shared/harness-core/iso_ai_standards_crosswalk.md §2`.
+> **Detail**: See `SKILL_detail.md §Step5-Notes` — RED_TEAM_REPORT report shape and the harness-evolver origin note — read when writing up findings.
 
 🟥 **What you SEND decides which axis you get — put the MARKER in the payload, not just the diff**
 (2026-08-19). Sidecars have been receiving the *diff* only. That buys a review of the **code** and
@@ -345,10 +293,6 @@ marker file too, not just the diff — the marker is not exempt because it is me
 pure prose until 2026-09-05; Step 4.5 above is what closes it — the scan itself still carries the
 named, unclosed gaps in its own header, so "screened" is not "guaranteed safe".)
 
-*Origin*: sister-asset read of `raphaelchristi/harness-evolver`'s `harness-critic` agent, whose whole
-role is auditing the **evaluator** rather than the artifact. Its detection signatures (score jumps,
-suspiciously fast convergence) do **not** port — FH markers carry no score — but the *target* does.
-Full assessment incl. what was deliberately not imported: `tracks/_audit/proposal_2026-08-19_sister_harness-evolver.md`.
 
 **Target freeze — a prior drop reason, checked before any of the above (2026-08-17).** Grounding a
 finding against *today's* tree proves nothing if the sidecar reviewed *yesterday's*. Pin before
@@ -410,16 +354,7 @@ those rungs never claimed anything left the boundary, so nothing to require) and
 contradiction** if `panel(...)` carries `residency=TAINTED(` or `residency=NOT_SCANNED(` on the same
 line — a sent payload and an unscreened/tainted one cannot both be true.
 
-**The three degrade values are the load-bearing split**: *could not* (`DEGRADED_SINGLE_FAMILY`) ·
-*did not* (`DEGRADED_PANEL_UNUSED`) · *did not look* (`UNKNOWN`). Free prose merges all three, and
-each merge hides a different thing — an unrun probe renders as a zero finding
-(`[[feedback_not_found_is_not_zero_family]]`), and an unused panel renders as an unavailable one.
-The sibling-harness signal that motivated this field said it in its own words about itself:
-*"못 한 것이 아니라 안 한 것이다."* All three require an ack naming *what was probed and what it
-returned*. **`DEGRADED_PANEL_UNUSED` was added by dogfooding**: the first real marker written under
-this lane found the panel reachable (codex · agy · gemini) and no cross-family review run — a state
-the original five-value enum could not express without lying
-(`[[feedback_adversarial_review_not_substitute_for_first_use]]`).
+> **Detail**: See `SKILL_detail.md §Degrade-Rationale` — why the three degrade values are kept apart (could not / did not / did not look) — read when choosing or defending a degrade value.
 
 **Panel membership is capability-gated, and ineligibility is tested FIRST.** A runtime `/models`
 list is a **serving** list, not a generative one. Measured in a sibling harness (2026-08-08): 6 of
@@ -444,39 +379,7 @@ Distinguish the **unavailable-but-wanted** case (consent given, panel down → `
 **pmh-repo-local and unreadable from an FH session**, so on this side the typed value + ack is the
 enforceable layer) from the **declined** case above (chosen floor, first-class, no degrade framing).
 
-**Step 6.5 — Standpoint axis (2026-08-14, orthogonal to the family ladder above)**: for a
-**shared-body / cross-harness-boundary** change — scoped by *effect* (alters another harness's
-behavior, gate outcome, or interaction contract), not merely by touching a synced file path — also
-emit `standpoint:` alongside `crossfamily:` in the same marker — recruiting family diversity here
-does not substitute for it. Values: `tier1` (content-only, the default) · **`tier1b(<harness>)`
-(STATIC read of the target's own files — executed nothing)** · `tier2(<harness>)`
-(peer-simulated — **EXECUTED CODE in** the target's own repo and observed the result.
-🟥 **Reading the target's real files, however cold, is `tier1b`, not this.** The discriminator is
-mechanical: *name the command you ran and the output you saw*; cannot name one → `tier1b`, always.
-This line said **"ran the target's own repo, content only"** until 2026-08-17 — actively teaching
-the opposite of the canon it summarizes. 🟥 **RETRACTED (2026-08-17)**: this passage used to add
-that blind Sonnet sims *"STILL graded a pure cold-read `tier2`, both quoting this phrasing"* after
-the other two copies were fixed. Those runs had **`tool_uses: 0`** — nothing was read, so nothing
-was measured, and the claim that the sims "reached for this copy" was itself unfounded
-(`tracks/_meta/fh_completed_2026-08-16.md:690`; the live re-run inverted the grade at reps=1, below
-bar). **The reason to fix this copy needs no sim**: a summary that states the opposite of its canon
-teaches the opposite to whoever reads only the summary, and **two of three copies fixed is a fix
-that does not exist** — that is gate-locality, not a measurement. See `§7` for the canon) · `tier2b(<harness>)` (same operator,
-target's real runtime — local wiring visible, but not an independent reviewer) · `tier3(<harness>)`
-(a *different* operator of the target harness ran it — the only fully independent + local-wiring
-rung) · `not-applicable` (no target-harness standpoint exists — most same-repo dispatches) ·
-`DEGRADED_NO_TARGET_ACCESS` / `DEGRADED_NOT_RUN` / `UNKNOWN` (own literals, not crossfamily's). Note
-the naming collision with this session's own persona/viewpoint sense of "standpoint" (the `beginner`/
-`main-player`/`expert` agent roster) — different axis, same English word; do not conflate.
-**Prose-only** — no hook or fixture validates this field yet, unlike `crossfamily:`, and
-mechanizing it is FH's own job (a syncing sibling harness cannot add the check locally without its
-own sync process rejecting the divergence). **Timing — same moment as Axis 2/3
-(steel-quench/phantom-quench), not a follow-up**: run on the local diff before the first push to
-any remote (public or private — no visibility judgment to make), one unconditional rule regardless
-of perceived risk — see `field_verdict_crossfamily_gate.md §7 Sequencing` for why (a real PR pushed
-this exact field to a public repo with two residency leaks in view, caught only after the PR was
-already open). Full field spec, trigger scope, and evidence:
-`knowledge/shared/harness-core/field_verdict_crossfamily_gate.md §7`.
+> **Detail**: See `SKILL_detail.md §Step-6-5-Standpoint` — the full `standpoint:` axis spec (values tier1..tier3, not-applicable, DEGRADED_*; tier1b-vs-tier2 discriminator; timing rule) — read when the change is a shared-body / cross-harness-boundary change.
 
 **Done When** (Step 6.5): `standpoint:` is emitted whenever the change is a shared-body/
 cross-harness-boundary change by the effect-based trigger above; `not-applicable` carries grounds
