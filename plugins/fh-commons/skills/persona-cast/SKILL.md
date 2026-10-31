@@ -71,7 +71,12 @@ artifact paths + the stance + *nothing else*. Lenses run in parallel; none sees 
 Each returns the parallax block including its `Unique-to-this-seat` self-tag.
 
 ### Step 4 — Merge with the marginal-coverage stop (anti-decorative)
-Normalize Concerns by `[location]` + first noun phrase. For each lens compute
+First drop every Concern that carries no `[location]` — the lens files promise this («A concern
+without a location is dropped by the dispatcher»), and this step is where it happens. Count what you
+drop per lens and print it (`no-loc` column below); a dropped concern is never silently lost, and a
+lens whose concerns are mostly `no-loc` read the artifact loosely. From here on `total` counts only
+the concerns kept after this drop. Then normalize the rest by
+`[location]` + first noun phrase. For each lens compute
 `unique = concerns raised by this lens and no other`. Report per lens: `total / unique / self-tagged
 unique that were actually unique`. **A lens with `unique = 0` is reported as `decorative on this
 artifact`** — not deleted from the cast, but named, so the next run (or the cast maintainer) can drop
@@ -80,10 +85,10 @@ or merge it. Self-tag accuracy is the lens's own calibration score.
 ### Step 5 — Output
 ```
 persona-cast · cast=web-review · stance=neutral · artifact=<path> sha256=<12>
-lens          total  unique  self-tag-hit   verdict
-designer        4      2        2/3          earned
-ux-writer       3      3        3/3          earned
-a11y            2      0        0/1          decorative on this artifact
+lens          total  no-loc  unique  self-tag-hit   verdict
+designer        4      0       2        2/3          earned
+ux-writer       3      1       3        3/3          earned
+a11y            2      0       0        0/1          decorative on this artifact
 ...
 Critical (merged, deduped, with the seats that raised each) …
 Important …
@@ -138,7 +143,8 @@ MTM 미귀속 비율           (높으면 소스·기획서 접근이 부족한 
   context, no operator summary)                                          — mandatory-pass
 + per-lens total/unique/self-tag table emitted; unique=0 lenses are
   labelled decorative, never padded                                      — measured (unique count)
-+ merged Concerns carry [location] and the raising seats                 — mandatory-pass
++ merged Concerns carry [location] and the raising seats; concerns
+  without one were dropped and counted per lens (no-loc), never merged    — mandatory-pass
 
 explore mode adds:
 + every seat's stop rule evaluated; an unfinished seat says 미완주 with
