@@ -203,7 +203,7 @@ cl_lines() { [ -f "$(cl_file "$1")" ] && grep -c '^- .* PR #7 ' "$(cl_file "$1")
 # L26 merged + verified → exactly one line, says verified, carries title and short merge sha
 cl_setup c1; run "$T/c1" 7 --rerun "$GOOD"
 { [ "$RC" -eq 0 ] && [ "$(cl_lines c1)" -eq 1 ] && grep -q 'PR #7 Fake PR title → merged '"$(cut -c1-7 "$T/c1/merge.oid")"' (verified) — auto$' "$(cl_file c1)" \
-  && head -1 "$(cl_file c1)" | grep -q '^# '; } \
+  && awk 'NR==1{exit !/^# /}' "$(cl_file c1)"; } \
   && ok "L26 merged+verified → one completion line (verified · sha · title) + header" || { bad "L26 rc=$RC"; cat "$(cl_file c1)" 2>/dev/null; }
 # L27 merged + verification failed → one line saying verify-failed, rc unchanged (1)
 cl_setup c2; : > "$T/c2/drop_b"; run "$T/c2" 7 --rerun 'grep -q a2 a && echo a-ok'
