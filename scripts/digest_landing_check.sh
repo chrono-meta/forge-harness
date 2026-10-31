@@ -114,7 +114,7 @@ SECTION_RE="${DLC_SECTION_RE:-^## .*Immediate Application Candidates}"
 _extract() { # $1 = digest path
   awk -v sec="$SECTION_RE" '
     # 판별자 추출 — 표/문단 **두 경로가 공유**한다(중복 정규화기 방지).
-    function harvest(body, toks,   tmp, w, t) {
+    function harvest(body, toks,   tmp, w, t, idk) {
       tmp=body
       while (match(tmp, /\[\[[^]]+\]\]/)) {
         w=substr(tmp, RSTART+2, RLENGTH-4); tmp=substr(tmp, RSTART+RLENGTH)
@@ -123,11 +123,19 @@ _extract() { # $1 = digest path
       tmp=body
       while (match(tmp, /`[^`]+`/)) {
         t=substr(tmp, RSTART+1, RLENGTH-2); tmp=substr(tmp, RSTART+RLENGTH)
-        sub(/[: ].*$/, "", t)
+        # 출처 ID 는 콜론에서 자르지 않는다 — 자르면 `arXiv` · `HN` 한 낱말만 남아 레포 어디에나 맞거나
+        # 버려진다(AQ-20261028-9). `arXiv:NNNN.NNNNN` 은 번호만 남긴다(번호 자체가 고유하고, 착지문은
+        # `arXiv:2610.x` · `arXiv 2610.x` 둘 다 쓴다). `HN:` · `GN:` 은 접두어째 둔다 — 번호만 남기면 다른
+        # 출처의 같은 번호에 맞는다. 그 밖의 `이름:값`(timeout:10000 · localhost:8080)은 종전대로 자른다
+        # (cross-family codex R1 이 넓은 «접두어:숫자» 조건의 세 오착지를 지목).
+        idk = (t ~ /^arXiv:[0-9][0-9][0-9][0-9]\.[0-9][0-9][0-9][0-9]+$/ || t ~ /^(HN|GN):[0-9]+$/)
+        if (t ~ /^arXiv:/ && idk) sub(/^arXiv:/, "", t); else if (!idk) sub(/[: ].*$/, "", t)
         gsub(/^[[:space:]]+|[[:space:]]+$/, "", t)
         if (length(t) < 5) continue
         if (t ~ /[][(){}.*+?^$\\|]/) { if (t ~ /^[A-Za-z0-9_.-]+$/) { } else continue }
         gsub(/\./, "\\.", t)
+        # 출처 ID 는 숫자 경계로 감싼다 — `HN:123` 이 `HN:12345` 에 맞지 않게(codex R2). 검사기는 grep -E
+        if (idk) t = "(^|[^0-9])" t "([^0-9]|$)"
         toks = (toks == "" ? t : toks "|" t)
       }
       return toks
@@ -193,7 +201,10 @@ _extract() { # $1 = digest path
         tmp=substr(tmp, RSTART+RLENGTH)
         # ⚠️ 콜론/공백 뒤를 자른다. `allow_force_pushes: true` 를 통째로 걸면 실제 착지문
         # (`allow_force_pushes` 만 쓴 카드)을 **놓친다** — 실측으로 확인된 오검출 방향.
-        sub(/[: ].*$/, "", t)
+        # 단, 출처 ID 는 예외(AQ-20261028-9, 10-26 digest 후보 셋 다 ALL-LANDED): `arXiv:NNNN.NNNNN` 은
+        # 번호만, `HN:` · `GN:` 은 접두어째. 그 밖의 `이름:값` 은 종전대로 자른다(codex R1).
+        idk = (t ~ /^arXiv:[0-9][0-9][0-9][0-9]\.[0-9][0-9][0-9][0-9]+$/ || t ~ /^(HN|GN):[0-9]+$/)
+        if (t ~ /^arXiv:/ && idk) sub(/^arXiv:/, "", t); else if (!idk) sub(/[: ].*$/, "", t)
         gsub(/^[[:space:]]+|[[:space:]]+$/, "", t)
         # 판별력 없는 짧은/일반 토큰은 버린다
         if (length(t) < 5) continue
@@ -203,6 +214,8 @@ _extract() { # $1 = digest path
           if (t ~ /^[A-Za-z0-9_.-]+$/) { } else continue
         }
         gsub(/\./, "\\.", t)
+        # 출처 ID 는 숫자 경계로 감싼다 — `HN:123` 이 `HN:12345` 에 맞지 않게(codex R2). 검사기는 grep -E
+        if (idk) t = "(^|[^0-9])" t "([^0-9]|$)"
         toks = (toks == "" ? t : toks "|" t)
       }
       print id "\t" toks
@@ -478,6 +491,30 @@ EOF
   printf 'prime_agent_sister_asset 도 기록했다\n' >> "$T/tgt/card.md"
   rc=0; DLC_CONTROLS="forge-harness session" bash "$SELF_DIR/$(basename "${BASH_SOURCE[0]}")" "$T/digest.md" "$T/tgt/card.md" >/dev/null 2>&1 || rc=$?
   _t "둘 다 착지 → 전건 착지(0)" 0 "$rc"
+
+  # P3 — «접두어:번호» ID (AQ-20261028-9). 다른 arXiv 번호만 있는 타깃에서 착지로 읽히면 안 되고
+  #      (옛 추출은 토큰이 `arXiv` 하나라 rc=0), 공백 표기 `arXiv 2610.x` 착지문은 잡아야 한다.
+  printf '# digest\n## 📌 FH Immediate Application Candidates\n\n- **Q1** — `arXiv:2610.99999` 를 게이트에\n\n## ⚠️ Warning Signals\n' > "$T/digest_id.md"
+  printf 'forge-harness session card\narXiv:2610.11111 은 다른 논문이다\n' > "$T/tgt/idcard.md"
+  rc=0; DLC_CONTROLS="forge-harness session" bash "$SELF_DIR/$(basename "${BASH_SOURCE[0]}")" "$T/digest_id.md" "$T/tgt/idcard.md" >/dev/null 2>&1 || rc=$?
+  _t "다른 arXiv 번호만 있음 → 미착지(1), 접두어로 착지 안 읽는다" 1 "$rc"
+  printf '설계 근거 arXiv 2610.99999 (공백 표기)\n' >> "$T/tgt/idcard.md"
+  rc=0; DLC_CONTROLS="forge-harness session" bash "$SELF_DIR/$(basename "${BASH_SOURCE[0]}")" "$T/digest_id.md" "$T/tgt/idcard.md" >/dev/null 2>&1 || rc=$?
+  _t "같은 번호 공백 표기 → 착지(0)" 0 "$rc"
+  # P3-b — 출처 아닌 `이름:값` 은 종전대로 이름을 건다, 출처 접두어는 지운 채 맞추지 않는다(codex R1)
+  printf '# digest\n## 📌 FH Immediate Application Candidates\n\n- **Q2** — `timeout:10000` 로 늘린다\n- **Q3** — `GN:36254` 글을 근거로\n- **Q4** — `HN:123` 스레드\n\n## ⚠️ Warning Signals\n' > "$T/digest_kv.md"
+  printf 'forge-harness session card\n대기 10000ms 와 HN:36254 는 다른 이야기다 · HN:12345 도 다르다\n' > "$T/tgt/kvcard.md"
+  # 후보별로 본다 — rc=1 은 «하나라도 미착지» 라 한쪽만 오착지해도 통과한다
+  local kvout; kvout="$(DLC_CONTROLS="forge-harness session" bash "$SELF_DIR/$(basename "${BASH_SOURCE[0]}")" "$T/digest_kv.md" "$T/tgt/kvcard.md" 2>&1)"
+  rc=0; printf '%s\n' "$kvout" | grep -qE '후보 Q2[[:space:]]+미착지' || rc=1
+  _t "값만(10000) → Q2 미착지" 0 "$rc"
+  rc=0; printf '%s\n' "$kvout" | grep -qE '후보 Q3[[:space:]]+미착지' || rc=1
+  _t "다른 출처 같은 번호(HN:36254) → Q3 미착지" 0 "$rc"
+  rc=0; printf '%s\n' "$kvout" | grep -qE '후보 Q4[[:space:]]+미착지' || rc=1
+  _t "번호 접두 일치(HN:123 vs HN:12345) → Q4 미착지" 0 "$rc"
+  printf 'timeout 을 올렸고 GN:36254 를 인용했다 · HN:123 도 봤다\n' >> "$T/tgt/kvcard.md"
+  rc=0; DLC_CONTROLS="forge-harness session" bash "$SELF_DIR/$(basename "${BASH_SOURCE[0]}")" "$T/digest_kv.md" "$T/tgt/kvcard.md" >/dev/null 2>&1 || rc=$?
+  _t "이름(timeout) · 같은 출처 ID(GN:36254) → 착지(0)" 0 "$rc"
 
   # N1 — 컨트롤 사망(타깃에 컨트롤 토큰이 없다) → HARNESS-ERROR(10), PASS 도 FAIL 도 아님
   printf 'allow_force_pushes\nprime_agent_sister_asset\n' > "$T/tgt/nocontrol.md"

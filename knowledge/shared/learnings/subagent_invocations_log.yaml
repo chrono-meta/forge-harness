@@ -5212,3 +5212,10 @@
   outcome: "the planted contradiction caught; 4 findings applied"
   evidence: "FoD #182 (e484deba)"
   tokens: "not recorded"
+- date: 2026-10-31
+  agent: "general-purpose (sonnet) — blind run of persona-cast Step 4–5 (purpose: independence)"
+  task: "merge three given lens outputs with the edited Step 4, not told what was tested"
+  trigger: "operator «추천대로 고고» (absorption-queue triage, AQ-20261028-10)"
+  outcome: "both location-less concerns dropped and counted (no-loc 1/1/0); flagged that the example row left `total` undefined (raised vs kept) — fixed in the same change"
+  evidence: "branch fix/absorption-triage-defects"
+  tokens: "115326"

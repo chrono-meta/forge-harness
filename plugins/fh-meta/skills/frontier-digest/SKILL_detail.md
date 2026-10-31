@@ -21,6 +21,18 @@ load: on-demand
 > through WebFetch on the same URLs. If an environment *does* allow the curl form, it is equivalent —
 > the transport is not the contract, the endpoints and criteria are.
 >
+> 🟥 **A refused or empty response is a result, never a reason to change who you say you are
+> (2026-10-31, AQ-20261030-4 — the slow leg already had this rule; the daily legs did not).** The
+> 10-30 unattended run got 0 B from GeekNews, retried with a User-Agent it made up, and succeeded —
+> and which UA it sent was not logged, so whether that was a browser disguise is `UNMEASURED`. The
+> rule for every daily leg: a block, a 403/429, a captcha page or 0 B is written into the digest as
+> `UNREACHABLE(<code or reason>)`, and a page that came back but parsed to nothing as `PARSE-ZERO` —
+> both are `not found ≠ 0`, never «0 items». **Do not retry with a different client identity**
+> (another browser's User-Agent, a spoofed referrer, a headless-browser fetch to get past a bot
+> check). An honest identifying UA (`forge-harness-digest/<version>`) on the first request is fine;
+> swapping it after a refusal is not. If a refused source matters that day, it goes to Step 0.5 as an
+> operator hand-in. When the curl form is used, the progress line names the UA the leg sent.
+>
 > **arXiv HTTP 429 — fallback is a TRANSPORT change, never a channel change (revised 2026-09-04).**
 > The export API rate-limits this runner (N=11 consecutive by 08-10; 3 consecutive days 09-02·03·04
 > = past the `N≥3` mechanization bar). The 08-10 prescription («fall back to per-item `abs/{id}`
