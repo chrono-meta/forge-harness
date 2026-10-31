@@ -343,8 +343,12 @@ do_check() {
         esac
       done
       local _ign; _ign="$(find "$FH/$DLC_IGNORED_DIR" -maxdepth "${DLC_IGNORED_DEPTH:-2}" -name '*.md' -type f -newer "$d" 2>/dev/null)"
-      IGNORED_FOUND="$(printf '%s\n' "$_ign" | grep -c .)" || true
-      while IFS= read -r f; do [ -n "$f" ] && targets+=("$f"); done < <(printf '%s\n' "$_ign" | head -"${DLC_IGNORED_CAP:-400}")
+      # 세기와 자르기를 한 루프에서 — `| head` 는 조기 종료로 앞 단계를 SIGPIPE 로 죽인다(pipefail 잠금)
+      while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        IGNORED_FOUND=$((IGNORED_FOUND+1))
+        [ "$IGNORED_FOUND" -le "${DLC_IGNORED_CAP:-400}" ] && targets+=("$f")
+      done <<< "$_ign"
     fi
     # dirty tracked — 커밋 안 된 수정본엔 git 시각 증거가 없다. 초록으로 만들지 않고 셈에 남긴다.
     DIRTY_TRACKED="$(git -C "$FH" diff --name-only -- $DLC_TRACKED_PATHS 2>/dev/null | grep -c '[.]md$')" || true
