@@ -51,12 +51,7 @@ doubt at all — it is a **standing rule being handed over**, stated as fact or 
 | *"isn't this too late / wrong-ordered?"* (rhetorical, expects agreement) | *"이 실패가 CI 확인 단계에서야 발견되는 건 매우 **늦은 게 아닐까**"* |
 | *"from now on, do W at Z"* | *"앞으로도 마감할 때 그 갈래로 이어갈 수 있게 **알아서 정리해줘**"* |
 
-**Why these were missed 4 times out of 4** — they sit in the blind spot between the triggers (which
-expect a *challenge*) and the Exceptions below (which release a *simple correction* with "no
-review"). A doctrine statement is neither: it does not dispute a claim, and it is not a one-off fix
-to apply and forget. Treated as the exception, it gets a verbal acknowledgment and evaporates at
-session end. **Measured**: four such statements in one session, all acknowledged in conversation,
-**zero landed in any file** until a later review grepped for them and found nothing.
+> **Detail**: See `SKILL_detail.md §Doctrine-Miss-Measurement` — why category 5 was missed 4 of 4 and the measured result (zero landed in any file) — read when judging whether an utterance is a doctrine statement or when defending the Required action.
 
 **The tell is grammatical, and it is language-independent** — the listed phrases above are all
 English interrogatives, which is why a Korean declarative (`~해야 할 거야` · `~인 거야` · `~아닐까`)
@@ -153,9 +148,7 @@ First identify the list of affected assets. Actual file modification is performe
 > not a style preference. If a full rewrite is genuinely unavoidable, `Read` the file first, then
 > verify immediately with `git diff` and report what changed.
 
-(Previously cited as `feedback_markdown_edit_discipline` — that memory key is **absent, verified
-2026-08-12**. The rule is live; only the pointer was dead, so it is written out here. A prohibition
-that rests on a file nobody can open is not enforceable.)
+> **Detail**: See `SKILL_detail.md §Dead-Key-History` — the dead `feedback_markdown_edit_discipline` pointer note (verified 2026-08-12) — read when a citation of that key surfaces.
 
 ### Step 4.5. Change `diff` Review (User Gate Required)
 
@@ -216,7 +209,7 @@ This skill's essence = user ↔ this harness AI bidirectional self-validation. T
 This skill's existing flow = **reactive** — user refinement challenge → AI baseline update.
 **Active** addition — AI proactively speaks up about premise errors or directional risks without user asking.
 
-Background: If the user proceeds without detecting a wrong direction or without being able to express doubt, it comes back at a much greater cost later. Waiting for the back-and-forth build-up transfers the responsibility of detecting premise errors to the user.
+> **Detail**: See `SKILL_detail.md §Proactive-Concern-Background` — why unspoken premise errors cost more later — read when deciding whether to speak up.
 
 ### Activation Conditions
 
@@ -253,38 +246,14 @@ Speak up **before** entering implementation if any of these apply:
 
 - **This skill = validation and recording automation. Core decisions belong to the user** — this harness AI has no independent decision authority
 - **This harness AI self-catch cannot be applied alone** — follow `fact-checker` rule (narrow 1 / broad N+1)
-- **Simplification guard compliance** — when creating or modifying this skill, update SKILL.md only. Do not spawn auxiliary files; a change that needs a new file needs a reason stated in the same edit. (Formerly cited `feedback_simplification_evidence` — **absent, verified 2026-08-12**)
+- **Simplification guard compliance** — when creating or modifying this skill, update SKILL.md only. Do not spawn auxiliary files; a change that needs a new file needs a reason stated in the same edit. (2026-10-31: `SKILL_detail.md` added for that reason — harness-doctor S-3 salience split; it holds rationale and history only, every step stays here.) (Formerly cited `feedback_simplification_evidence` — **absent, verified 2026-08-12**)
 - **Markdown editing discipline obligation** — `Edit` on existing `.md`; `Write` only after reading the file, and verified with `git diff` (full statement in Step 4 above). (Formerly cited `feedback_markdown_edit_discipline` — **absent, verified 2026-08-12**)
 
 ## External User Environment Adaptation
 
 This skill's core essence = "channel for updating baseline when user refinement challenge occurs after AI recommendation/agreement is committed" — cross-applicable to all user environments.
 
-### Fallback Matrix (origin environment → external environment replacement)
-
-| Origin Environment Dependency | External User Environment Fallback |
-|---|---|
-| Rule body — **this SKILL.md itself** (the origin environment's `memory feedback_bidirectional_self_validation.md` is **absent, verified 2026-08-12**; there is no origin-side file to fall back from) | User environment's own `memory/` or `notes/` bidirectional validation rule / if absent, this skill's own rule baseline — which is now the only baseline in either environment |
-| `memory feedback_*.md` grep scope (Step 2 priority 1) | User environment's own `learnings/` · `docs/` · `CLAUDE.md` grep (user's own baseline) |
-| `tracks/*/learnings/feedback_*.md` (Step 2 priority 2) | User environment's own learnings area (auto-detect naming variations) |
-| `knowledge/shared/harness-core/*.md` (Step 2 priority 4) | User environment's own `docs/` or `knowledge/` grep |
-| `CATALOG.md` entry addition (Step 4) | User environment's own history archive (skip if absent) |
-| `reference_next_session_starter.md §1` (Step 4) | User environment's own next-session material (skip if absent) |
-| Mandatory grep keywords ("drift", asset ownership, etc.) | User environment's own baseline keywords (prioritize asset names, abbreviations, identifiers from user's message) |
-
-### External User Scenarios
-
-1. **General bidirectional validation**: AI recommendation → user refinement challenge → this skill auto-activates → 6-step processing (Step 1 immediate baseline update / Step 2 consistency grep / Step 3 fact-checker self-catch / Step 4 immediate patch / Step 4.5 diff gate / Step 5 compatibility enhancement / Step 6 update trigger count)
-2. **User's own baseline cross-ref**: Generalize Step 2 grep scope to user environment's own assets
-3. **Fact-checker count generalization**: Start user's own self-catch count from 0 (narrow 1 / broad N+1)
-4. **Same user approval gate**: Step 4.5 diff review / Step 4 major decision cascading / Step 6 Skill v0.x update
-
-### Limits
-
-- **External users can use their own model cross-check channel** (e.g., other LLM API, other in-house model)
-- **Accumulated validation history** = accumulates from origin for the original developer / external users start their own count from 0
-- **Autonomous activation baseline examples** (harvest-loop + hub-persona-auditor) = origin environment baseline / external users can also trigger autonomous activation on their own natural cadence
-- External users also follow same user approval gate (Human-in-the-loop principle baseline)
+> **Detail**: See `SKILL_detail.md §External-User-Adaptation` — external-environment fallback matrix, scenarios and limits — read when running outside the origin environment (no tracks/ · memory/ · CATALOG.md).
 
 ## Done When
 
@@ -318,26 +287,13 @@ This skill's core essence = "channel for updating baseline when user refinement 
                                                                  this session's context)
 ```
 
-> **Why the last two are judged, and paired.** This skill fires when the user pushes back, which is
-> precisely the moment agreement is cheapest. A Done When that only counts steps is satisfied by a
-> run that folded immediately. The pairing is the whole check: an isolated re-grep, and an isolated
-> critic — neither of which has seen this session's reasoning.
+> **Detail**: See `SKILL_detail.md §Why-Judged-And-Paired` — why the last two Done When items are judged and paired — read when scoring or defending the Done When.
 
 Verdict: PASS (Step 4.5 diff gate confirmed, baseline updated) | CONDITIONAL_PASS (update applied, external validation still pending) | FAIL (counter-argument confirmed — AI recommendation was wrong, baseline requires redesign) | ESCALATE (counter-argument ambiguous, human judgment required)
 
 ## References
 
-> **All memory keys below were checked on 2026-08-12 and every one is absent** (same-run
-> known-positive control: `feedback_verify_before_downgrade.md` and `memory_intent_recall.md`
-> both resolve, so the check is not misreporting). A struck entry here is not a fix if the same
-> name is still load-bearing above — the rules those keys carried have been written into the body
-> of this skill (Step 4 markdown discipline, §Constraints, §Validation Ledger), which is why the
-> strikethroughs below are safe to leave as history.
-
-- ~~Rule body: `memory feedback_bidirectional_self_validation.md`~~ — **absent (verified 2026-08-12)**. The rule body is **this file**; the cumulative count lives in §Validation Ledger.
-- ~~Operating model text: `memory feedback_hub_cc_operating_model.md §2.5·§2.6`~~ — **absent (verified 2026-08-12)**. The live equivalent is `CLAUDE.md §Identity`; cite that, not this filename.
-- ~~Consistency rules: `feedback_external_ai_github_recommendation_verification` · `feedback_reference_own_hub_assets_first` · `feedback_simplification_evidence` · `feedback_markdown_edit_discipline` · `feedback_impact_first_then_tune`~~ — **absent (verified 2026-08-12)**. The two that this skill actually depends on are restated in §Constraints above.
-- Live, verified references (these resolve): `tracks/_meta/reference_next_session_starter.md` (session card, Step 4) · `CATALOG.md` · the `fact-checker` agent (Step 3).
+> **Detail**: See `SKILL_detail.md §References` — absent-memory-key audit and the live verified references — read when a memory key or reference of this skill is cited.
 
 ## Validation Ledger
 

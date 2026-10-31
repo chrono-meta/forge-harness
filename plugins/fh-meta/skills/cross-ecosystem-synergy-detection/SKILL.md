@@ -132,12 +132,7 @@ codes, persona systems — and finds pairs where one harness's mechanism is tran
 > **Boundary with Step 7**: Step 7 (proactive) may *trigger* Step 3-b; it does not replace its scan.
 > Step 7 decides *when to offer*, Step 3-b decides *what to read and which transplant pairs come out*.
 >
-> **Why this is a default and not an extra**: door ④ was run live on 2026-08-21 and 2026-08-22 and both
-> times produced only the skill/agent layer, while the operator was asking for this one. The wiring
-> existed; its target was pinned to the old object. Provenance: `tracks/_meta/fh_signal_2026-08-21_unused-skills-are-unwired.md`
-> (cause ⓓ) and `tracks/_meta/fh_signal_2026-08-22_operator.md`.
-> ⚠️ **Mechanized at N=2 by explicit operator instruction; do not count as threshold-triggered
-> mechanization** (`[[feedback_mechanize_at_repetition_prose_before]]`).
+> **Detail**: See `SKILL_detail.md §Step3b-Provenance` — why Step 3-b is a default (2026-08-21/22 live door-④ runs) and its provenance signals — read when questioning why Step 3-b runs unasked.
 
 ### Step 3-c. Outward pass — strengthen the pairs (identity ④ loop)
 
@@ -243,10 +238,7 @@ When risk found → user explicit decision gate (no automatic patching)
 tracks/_meta/synergy_scan_{YYYY-MM-DD}.md      # local, gitignored by design
 ```
 
-Verified 2026-08-11 against the two on-disk candidates:
-`tracks/_meta/synergy_scan_2026-07-31.md` **is** a synergy-pair ranking record and is the canon;
-`knowledge/shared/harness-core/fh_synergy_playbook.md` is **not** — it is a tracked, public
-integration playbook (FH × OpenCode / Hermes / OpenHuman workflows) with no pair registry.
+> **Detail**: See `SKILL_detail.md §Step6-Canon-Verification` — the 2026-08-11 check that picked the canonical result file over the playbook — read when doubting which file is the result canon.
 
 **Residency**: a scan output enumerates the operator's installed components and mapped field
 harnesses, which can carry company asset names. It belongs on a gitignored path only —
@@ -351,16 +343,7 @@ Compare domain of new skill/project against entire existing registry:
 
 ---
 
-## External Environment Adaptation
-
-The internal GHE org inventory and cluster classifications shown in original developer environment are organization-specific examples.  
-External users automatically derive their own inventory via Step 1 `installed_plugins.json` inspection alone.
-
-| Original developer environment | External environment fallback |
-|---|---|
-| Internal GHE org inventory | Direct inspection of user's install ecosystem |
-| Cluster classification | Auto-clustering by `keywords` distribution |
-| Synergy grade baseline (8 items) | Auto-accumulated from user environment simulation results |
+> **Detail**: See `SKILL_detail.md §External-Environment-Adaptation` — original-environment vs external-environment fallback table — read when running outside the original developer environment.
 
 ## Done When
 
