@@ -3120,7 +3120,7 @@ if [ -n "$LOADBEARING" ]; then
     # advisory result, :542) and for "files could not be measured" (_FORCE_NONCLEAN=2, :548) —
     # codex cross-family catch on the first draft of this fix, which printed "DID NOT complete"
     # for a completed scan that merely found smells. Discriminate by the output markers.
-    _dd_raw=$(bash "$DDSCAN" "${_dd_targets[@]}" 2>/dev/null); _dd_rc=$?
+    _dd_raw=$(bash "$DDSCAN" --staged "${_dd_targets[@]}" 2>/dev/null); _dd_rc=$?
     _dd=$(printf '%s\n' "$_dd_raw" | grep -Ff <(printf '%s\n' "$LOADBEARING") 2>/dev/null | head -5 || true)
     _dd_unm=$(printf '%s\n' "$_dd_raw" | grep -c "COULD NOT BE MEASURED" || true); _dd_unm=${_dd_unm:-0}
     if [ "$_dd_unm" -gt 0 ]; then

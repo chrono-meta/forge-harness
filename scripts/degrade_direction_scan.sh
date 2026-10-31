@@ -26,11 +26,97 @@
 #
 # Usage:
 #   bash scripts/degrade_direction_scan.sh [path ...]        # scan dirs/files (default: .)
+#   bash scripts/degrade_direction_scan.sh --staged [path ...] # scan the INDEX content (commit-time callers)
 #   git diff --name-only main..HEAD -- '*.py' | xargs bash scripts/degrade_direction_scan.sh
 # Exit:  0 = no smells found; 2 = smells found (ADVISORY signal — do not hard-block on it)
 set -uo pipefail
 
+# --staged (2026-10-31, harness-doctor S-4): scan the INDEX content, not the working tree. A commit-time
+# caller (templates/.git-hooks/pre-commit) must judge what will be committed; `git add` then an edit
+# leaves the two different, and a working-tree read lets a staged smell pass (or flags a fixed one).
+# Targets, if given, narrow the staged set (exact path or directory prefix). Default behaviour is unchanged.
+STAGED=0
+if [ "${1:-}" = "--staged" ]; then STAGED=1; shift; fi
 TARGETS=("$@")
+if [ "$STAGED" -eq 1 ]; then
+  _sroot=$(git rev-parse --show-toplevel 2>/dev/null); _src=$?
+  if [ "$_src" -ne 0 ] || [ -z "$_sroot" ]; then
+    echo "degrade-scan: --staged needs a git work tree — NOT measured, not clean"; exit 2
+  fi
+  _stmp=$(mktemp -d) || { echo "degrade-scan: mktemp failed — NOT measured, not clean"; exit 2; }
+  trap 'rm -rf "$_stmp"' EXIT
+  # -z: without it git quotes non-ASCII / tab / quote names ("\355\225\234.sh"), which then match no
+  # target and fail `git show` (codex R1 #1). NUL list goes to a file so the git exit code survives.
+  git -C "$_sroot" diff --cached --name-only -z --diff-filter=ACMR > "$_stmp/.staged_list" 2>/dev/null; _src=$?
+  if [ "$_src" -ne 0 ]; then
+    echo "degrade-scan: could not list staged files (git exit $_src) — NOT measured, not clean"; exit 2
+  fi
+  # Targets are normalised to repo-relative paths the way a filesystem target would resolve
+  # (codex R1 #3): absolute paths under the repo root, `./` and `.`, and paths relative to a subdir cwd.
+  _spfx=$(git rev-parse --show-prefix 2>/dev/null)
+  _ntg=()
+  for _tg in ${TARGETS[@]+"${TARGETS[@]}"}; do
+    # An existing path is resolved physically first (macOS /tmp -> /private/tmp, `..`, `sub/./a`,
+    # `a//b` — codex R2 #2 #3); a path that does not exist on disk is normalised as a string only.
+    if [ -e "$_tg" ]; then
+      if [ -d "$_tg" ]; then _tg=$(cd "$_tg" 2>/dev/null && pwd -P)
+      else _tg="$(cd "$(dirname "$_tg")" 2>/dev/null && pwd -P)/$(basename "$_tg")"; fi
+    fi
+    case "$_tg" in
+      "$_sroot") _tg="." ;;
+      "$_sroot"/*) _tg="${_tg#"$_sroot"/}" ;;
+      /*) _tg="//outside//" ;;                       # absolute path outside the repo: matches nothing
+      *) _tg="${_spfx}${_tg}" ;;
+    esac
+    while [ "${_tg#./}" != "$_tg" ]; do _tg="${_tg#./}"; done
+    _tg="${_tg%/}"; _tg="${_tg%/.}"
+    [ -z "$_tg" ] && _tg="."
+    _ntg+=("$_tg")
+  done
+  _tmatch=()
+  for _tg in ${_ntg[@]+"${_ntg[@]}"}; do _tmatch+=(0); done
+  _copied=()
+  _sn=0
+  mkdir -p "$_stmp/t"
+  while IFS= read -r -d '' _sp; do
+    [ -z "$_sp" ] && continue
+    if [ ${#_ntg[@]} -gt 0 ]; then
+      _hit=0; _ti=0
+      for _tg in "${_ntg[@]}"; do
+        case "$_sp" in "$_tg"|"$_tg"/*) _hit=1; _tmatch[$_ti]=1 ;; esac
+        [ "$_tg" = "." ] && { _hit=1; _tmatch[$_ti]=1; }
+        _ti=$((_ti+1))
+      done
+      [ "$_hit" -eq 1 ] || continue
+    fi
+    mkdir -p "$_stmp/t/$(dirname "$_sp")"
+    if ! git -C "$_sroot" show ":$_sp" > "$_stmp/t/$_sp" 2>/dev/null; then
+      echo "degrade-scan: could not read staged content of $_sp — NOT measured, not clean"; exit 2
+    fi
+    _sn=$((_sn+1)); _copied+=("$_sp")
+  done < "$_stmp/.staged_list"
+  # Every NAMED target must select at least one staged file — one unmatched target among matched ones
+  # is still an omission, and the aggregate count cannot see it (codex R2 #3).
+  _ti=0
+  for _tg in ${_ntg[@]+"${_ntg[@]}"}; do
+    if [ "${_tmatch[$_ti]}" -eq 0 ]; then
+      echo "degrade-scan: target '$_tg' matched no staged file — COULD NOT BE MEASURED, not clean"; exit 2
+    fi
+    _ti=$((_ti+1))
+  done
+  if [ "$_sn" -eq 0 ]; then
+    if [ ${#_ntg[@]} -gt 0 ]; then
+      # Named targets that select no staged file are a caller/path mismatch, not a clean result —
+      # the hook must not print its clean checkmark here (codex R1 #2).
+      echo "degrade-scan: ${#_ntg[@]} target(s) matched no staged file — COULD NOT BE MEASURED, not clean"; exit 2
+    fi
+    echo "degrade-scan: no staged files — nothing measured (exit 0 = no input, not a verdict)"; exit 0
+  fi
+  cd "$_stmp/t" || exit 2   # relative paths in output = real repo paths
+  # Pass the copied FILES, not ".": directory discovery silently drops unsupported file types, while an
+  # explicit file target reports them as OUTSIDE the scannable set (codex R2 #1).
+  TARGETS=("${_copied[@]}")
+fi
 [ ${#TARGETS[@]} -eq 0 ] && TARGETS=(".")
 
 # Permissive values a verdict/gate surface must never land on by *default* / fall-through.
@@ -96,7 +182,7 @@ command -v awk >/dev/null 2>&1 || { _S1B_OK=0; _FORCE_NONCLEAN=2; }
 # 하지 않아 정상 폴백은 100% 실패하고, 반대로 공격자가 그 이름에 심링크를 심어두면 **성공해서
 # 레포 밖에 쓴다**(실증됨). 즉 "공격받을 때만 동작하는 코드" 였다.
 _MD_TMP="$(mktemp -d 2>/dev/null)" || { _MD_TMP=""; _MD_OK=0; }
-trap '[ -n "$_MD_TMP" ] && rm -rf "$_MD_TMP"' EXIT
+trap '[ -n "$_MD_TMP" ] && rm -rf "$_MD_TMP"; [ -n "${_stmp:-}" ] && rm -rf "$_stmp"' EXIT   # also the --staged copy (this trap replaces the one set above)
 # LANGUAGE-SPLIT shadows (2026-08-12). The first version extracted only ```bash-family fences, and
 # extending it to ```python by widening the same regex would have written python source into a `.sh`
 # shadow — where `is_sh` is decided by the extension, so the SHELL probes would run on python and the

@@ -916,5 +916,68 @@ else
 fi
 rm -rf "$_s7"
 
+# ── --staged: the scanner reads the INDEX, not the working tree (harness-doctor S-4, 2026-10-31) ──
+# Known pair in a throwaway repo. A: smell STAGED, working tree fixed -> must be found.
+# B: staged clean, working tree dirtied afterwards -> must NOT be found. Default mode keeps reading the tree.
+_stg=$(mktemp -d)
+(
+  cd "$_stg" && git init -q . && git config user.email t@t && git config user.name t
+  printf '#!/usr/bin/env bash\nr=$(run_scan) || return 0\n' > a.sh
+  printf '#!/usr/bin/env bash\nexit 1\n' > b.sh
+  git add a.sh b.sh
+  printf '#!/usr/bin/env bash\nexit 1\n' > a.sh                          # worktree fixed, index still smelly
+  printf '#!/usr/bin/env bash\nr=$(run_scan) || return 0\n' > b.sh      # worktree smelly, index clean
+)
+_sa=$(cd "$_stg" && bash "$SCAN" --staged a.sh 2>&1 | grep -cE '\[S1:')
+_sb=$(cd "$_stg" && bash "$SCAN" --staged b.sh 2>&1 | grep -cE '\[S1:')
+_sd=$(cd "$_stg" && bash "$SCAN" b.sh 2>&1 | grep -cE '\[S1:')
+if [ "$_sa" -eq 1 ]; then ok "STAGED POS: smell only in the index is found"; else bad "STAGED POS: index smell missed ($_sa)"; fi
+if [ "$_sb" -eq 0 ]; then ok "STAGED NEG: smell only in the working tree is not reported"; else bad "STAGED NEG: read the working tree ($_sb)"; fi
+if [ "$_sd" -eq 1 ]; then ok "STAGED CTL: default mode still reads the working tree (control for NEG)"; else bad "STAGED CTL: default mode changed ($_sd) — NEG UNINTERPRETABLE"; fi
+rm -rf "$_stg"
+# codex R1 (2026-10-31): quoted names, «nothing measured» read as clean, and target spellings.
+_stg2=$(mktemp -d); _stg2=$(cd "$_stg2" && pwd -P)
+(
+  cd "$_stg2" && git init -q . && git config user.email t@t && git config user.name t
+  mkdir sub
+  printf '#!/usr/bin/env bash\nr=$(run_scan) || return 0\n' > "한글.sh"
+  printf '#!/usr/bin/env bash\nr=$(run_scan) || return 0\n' > sub/c.sh
+  git add "한글.sh" sub/c.sh
+)
+_q=$(cd "$_stg2" && bash "$SCAN" --staged "한글.sh" 2>&1 | grep -cE '\[S1:')
+_qa=$(cd "$_stg2" && bash "$SCAN" --staged 2>&1 | grep -cE '\[S1:')
+_m=$(cd "$_stg2" && bash "$SCAN" --staged missing.sh 2>&1); _mrc=$?
+_d=$(cd "$_stg2" && bash "$SCAN" --staged ./ 2>&1 | grep -cE '\[S1:')
+_ab=$(cd "$_stg2" && bash "$SCAN" --staged "$_stg2/sub/c.sh" 2>&1 | grep -cE '\[S1:')
+_sd2=$(cd "$_stg2/sub" && bash "$SCAN" --staged c.sh 2>&1 | grep -cE '\[S1:')
+if [ "$_q" -eq 1 ]; then ok "STAGED Q1: non-ASCII staged name given as target is scanned"; else bad "STAGED Q1: non-ASCII name missed ($_q)"; fi
+if [ "$_qa" -eq 2 ]; then ok "STAGED Q2: no targets reads every staged file incl. non-ASCII (2)"; else bad "STAGED Q2: expected 2 smells, got $_qa"; fi
+if [ "$_mrc" -eq 2 ] && printf '%s' "$_m" | grep -q "COULD NOT BE MEASURED"; then ok "STAGED M1: a target matching no staged file is NOT clean (rc 2 + marker)"; else bad "STAGED M1: rc=${_mrc} «${_m}»"; fi
+if [ "$_d" -eq 2 ]; then ok "STAGED P1: './' selects the whole index"; else bad "STAGED P1: './' gave $_d"; fi
+if [ "$_ab" -eq 1 ]; then ok "STAGED P2: absolute path under the repo resolves"; else bad "STAGED P2: absolute path gave $_ab"; fi
+if [ "$_sd2" -eq 1 ]; then ok "STAGED P3: path relative to a subdir cwd resolves"; else bad "STAGED P3: subdir-relative gave $_sd2"; fi
+rm -rf "$_stg2"
+# codex R2 (2026-10-31): unsupported types, symlinked absolute paths, one unmatched target among matched.
+_stg3=$(mktemp -d); _stg3p=$(cd "$_stg3" && pwd -P)
+(
+  cd "$_stg3" && git init -q . && git config user.email t@t && git config user.name t
+  mkdir sub
+  printf 'x\n' > gate.js
+  printf '#!/usr/bin/env bash\nr=$(run_scan) || return 0\n' > sub/a.sh
+  printf '#!/usr/bin/env bash\nexit 1\n' > clean.sh
+  git add gate.js sub/a.sh clean.sh
+)
+_js=$(cd "$_stg3" && bash "$SCAN" --staged gate.js 2>&1); _jsrc=$?
+_jsd=$(cd "$_stg3" && bash "$SCAN" gate.js 2>&1); _jsdrc=$?
+_ln=""; [ "$_stg3" != "$_stg3p" ] && _ln="$_stg3"; [ -z "$_ln" ] && { ln -s "$_stg3p" "$_stg3p.lnk"; _ln="$_stg3p.lnk"; }
+_sy=$(cd "$_stg3p" && bash "$SCAN" --staged "$_ln/sub/a.sh" clean.sh 2>&1 | grep -cE '\[S1:')
+_dt=$(cd "$_stg3p" && bash "$SCAN" --staged sub/./a.sh clean.sh 2>&1 | grep -cE '\[S1:')
+_um=$(cd "$_stg3p" && bash "$SCAN" --staged clean.sh nope.sh 2>&1); _umrc=$?
+if [ "$_jsrc" -eq "$_jsdrc" ] && [ "$_jsrc" -ne 0 ]; then ok "STAGED U1: unsupported staged file exits like the default mode (rc ${_jsrc}, not 0)"; else bad "STAGED U1: staged rc=${_jsrc} default rc=${_jsdrc}"; fi
+if [ "$_sy" -eq 1 ]; then ok "STAGED S1: symlinked absolute path resolves to the physical repo path"; else bad "STAGED S1: symlinked path gave ${_sy}"; fi
+if [ "$_dt" -eq 1 ]; then ok "STAGED S2: sub/./a.sh resolves"; else bad "STAGED S2: sub/./a.sh gave ${_dt}"; fi
+if [ "$_umrc" -eq 2 ] && printf '%s' "$_um" | grep -q "COULD NOT BE MEASURED"; then ok "STAGED S3: one unmatched target among matched ones is NOT clean"; else bad "STAGED S3: rc=${_umrc}"; fi
+rm -rf "$_stg3" "$_stg3p.lnk"
+
 echo "degrade-scan shell probes: $pass passed, $fail failed"
 
