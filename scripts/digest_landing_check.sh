@@ -284,6 +284,8 @@ do_check() {
   #    실측: forge-wiki 대상 첫 런이 정확히 그렇게 «SOME-UNLANDED (rc=1)» 을 남겼고 본문은 없었다.
   #    올바른 값은 rc=10(타깃 0건 = HARNESS-ERROR)이다. 빈 배열 확장을 전부 방어한다.
   local -a targets=()
+  # 잘림 판정의 근거 — 이 호출에서 센 값만 쓴다(전역이라 상속값 · 앞선 호출값이 새면 rc=1 이 10 으로 바뀐다, codex R2)
+  IGNORED_FOUND=0
   if [ "$#" -gt 0 ]; then targets=("$@")
   else
     # 기본 스코프 = 공개 FH 자산 + tracks. **비공개 store 제외**(운영자 결정).
@@ -329,8 +331,20 @@ do_check() {
       [ -f "$FH/$f" ] && targets+=("$FH/$f")
     done < <(git -C "$FH" log --since="@$_dts" --name-only --pretty=format: -- $DLC_TRACKED_PATHS 2>/dev/null | sort -u)
     if [ -n "$DLC_IGNORED_DIR" ] && [ -d "$FH/$DLC_IGNORED_DIR" ]; then
-      while IFS= read -r f; do targets+=("$f"); done < <(
-        find "$FH/$DLC_IGNORED_DIR" -name '*.md' -type f -newer "$d" 2>/dev/null | head -400)
+      # 깊이 2 까지만(최상위 기록 + 한 단계 하위의 REPORT · RESULT) — 그 아래는 실험 클론 안의 FH
+      # 사본이라 착지 기록이 아니고, 어휘가 겹쳐 가짜 착지를 만든다. 깊이 제한 없이 `head -400` 만
+      # 두었을 때 10-20 digest 의 첫 400 중 148 이 실험 클론(p3_contract_ab) 안 파일이었다
+      # (AQ-20261031-4). 상한은 남기되 잘리면 그 수를 출력한다 — 조용히 덜 읽지 않는다.
+      # 숫자가 아닌 깊이 · 상한은 설정 오류다 — find/head 가 조용히 실패하면 이 축이 꺼진 채 판정이 나온다(codex R1)
+      local _v
+      for _v in "${DLC_IGNORED_DEPTH:-2}" "${DLC_IGNORED_CAP:-400}"; do
+        case "$_v" in
+          *[!0-9]*|0*) echo "❌ DLC_IGNORED_DEPTH / DLC_IGNORED_CAP 는 1 이상의 정수여야 한다(받은 값: '${DLC_IGNORED_DEPTH-}' '${DLC_IGNORED_CAP-}')" >&2; return 10 ;;
+        esac
+      done
+      local _ign; _ign="$(find "$FH/$DLC_IGNORED_DIR" -maxdepth "${DLC_IGNORED_DEPTH:-2}" -name '*.md' -type f -newer "$d" 2>/dev/null)"
+      IGNORED_FOUND="$(printf '%s\n' "$_ign" | grep -c .)" || true
+      while IFS= read -r f; do [ -n "$f" ] && targets+=("$f"); done < <(printf '%s\n' "$_ign" | head -"${DLC_IGNORED_CAP:-400}")
     fi
     # dirty tracked — 커밋 안 된 수정본엔 git 시각 증거가 없다. 초록으로 만들지 않고 셈에 남긴다.
     DIRTY_TRACKED="$(git -C "$FH" diff --name-only -- $DLC_TRACKED_PATHS 2>/dev/null | grep -c '[.]md$')" || true
@@ -431,6 +445,9 @@ do_check() {
   echo "── digest 착지 검증: $(basename "$d") ──"
   echo "   스코프: git추적[${DLC_TRACKED_PATHS}] + ignored[${DLC_IGNORED_DIR:-없음}] (비공개 companion store 제외 — '조직 전파'가 아니라 '레포 내부 착지')"
   echo "   타깃 파일 ${#targets[@]}건 (digest 이후 수정분만) · 판별불가 후보 ${unchk}건"
+  if [ "${IGNORED_FOUND:-0}" -gt "${DLC_IGNORED_CAP:-400}" ]; then
+    echo "   ⚠️ ignored 축 ${IGNORED_FOUND}건 중 ${DLC_IGNORED_CAP:-400}건만 읽었다 — 미착지 판정은 덜 읽은 결과일 수 있다(DLC_IGNORED_CAP 로 올려라)"
+  fi
   echo "   축: git추적=커밋시각 · gitignored=mtime · dirty tracked ${DIRTY_TRACKED:-0}건=UNMEASURED"
   echo "   ⚠️ 이 계기는 **선후**를 잰다. 인과가 아니다 — 히트는 열어서 확인하라"
   echo
@@ -439,6 +456,13 @@ do_check() {
   local rc=$?
   rm -f "$probes"
 
+  # ⚠️ ignored 축이 잘렸으면 «미착지» 는 확정이 아니다 — 안 읽은 파일에 근거가 있을 수 있다.
+  #    본 착지(양성)는 그대로 유효하지만 부재 주장은 못 한다 ⇒ 미측정(10)(codex R1).
+  if [ "$rc" -eq 1 ] && [ "${IGNORED_FOUND:-0}" -gt "${DLC_IGNORED_CAP:-400}" ]; then
+    echo
+    echo "🟡 미착지 후보가 있지만 ignored 축을 ${IGNORED_FOUND}건 중 ${DLC_IGNORED_CAP:-400}건만 읽었다 — 미착지를 확정하지 않는다. rc=10"
+    return 10
+  fi
   # ⚠️ 재지 못한 후보가 있으면 전건 착지라도 0 을 내지 않는다.
   if [ "$rc" -eq 0 ] && [ "${unchk:-0}" -gt 0 ]; then
     echo
@@ -512,6 +536,46 @@ EOF
   _t "다른 출처 같은 번호(HN:36254) → Q3 미착지" 0 "$rc"
   rc=0; printf '%s\n' "$kvout" | grep -qE '후보 Q4[[:space:]]+미착지' || rc=1
   _t "번호 접두 일치(HN:123 vs HN:12345) → Q4 미착지" 0 "$rc"
+
+  # P4 — ignored 축 깊이와 상한(AQ-20261031-4). 깊이 3 의 사본은 착지가 아니고, 상한을 넘으면 그 수를 말한다
+  local IG2; IG2="$(mktemp -d -t dlc_d.XXXXXX)" || return 10
+  (
+    mkdir -p "$IG2/wiki" "$IG2/meta/a/b" && cd "$IG2" && git init -q . && git config user.email t@t && git config user.name t
+    printf '# d\n## 📌 FH Immediate Application Candidates\n\n- **D1** — `zzz_top` 반영\n- **D2** — `zzz_deep` 반영\n- **D3** — `zzz_mid` 반영\n\n## end\n' > wiki/digest.md
+    touch -t 200101010000 wiki/digest.md
+    git add -A && git commit -qm d
+    # 컨트롤은 추적 축에도 둔다 — ignored 축이 꺼져도 컨트롤이 살아 있어야 «축이 조용히 꺼짐» 이 10 이 아닌 값으로 드러난다
+    printf 'zzz_ctl 추적 축 컨트롤\n' > wiki/ctl.md && git add wiki/ctl.md && git commit -qm c
+    printf 'zzz_top 을 반영했다 · zzz_ctl\n' > meta/top.md
+    printf 'zzz_deep 이 사본 안에 있다 · zzz_ctl\n' > meta/a/b/deep.md
+    printf 'zzz_mid 을 반영한 보고서 · zzz_ctl\n' > meta/a/report.md
+  ) >/dev/null 2>&1
+  local p4out; p4out="$(cd "$IG2" && CLAUDE_PROJECT_DIR="$IG2" DLC_TRACKED_PATHS="wiki" DLC_IGNORED_DIR="meta" DLC_CONTROLS="zzz_ctl" \
+      bash "$SELF_DIR/$(basename "${BASH_SOURCE[0]}")" "$IG2/wiki/digest.md" 2>&1)"
+  rc=0; printf '%s\n' "$p4out" | grep -qE '후보 D1[[:space:]]+[0-9]+파일' || rc=1
+  _t "ignored 축 깊이 1 기록 → D1 착지" 0 "$rc"
+  rc=0; printf '%s\n' "$p4out" | grep -qE '후보 D2[[:space:]]+미착지' || rc=1
+  _t "ignored 축 깊이 3 사본 → D2 미착지(사본은 착지가 아니다)" 0 "$rc"
+  rc=0; printf '%s\n' "$p4out" | grep -qE '후보 D3[[:space:]]+[0-9]+파일' || rc=1
+  _t "ignored 축 깊이 2 보고서 → D3 착지(기본 깊이 경계)" 0 "$rc"
+  printf 'zzz_top 두 번째 기록 · zzz_ctl\n' > "$IG2/meta/top2.md"
+  p4out="$(cd "$IG2" && CLAUDE_PROJECT_DIR="$IG2" DLC_TRACKED_PATHS="wiki" DLC_IGNORED_DIR="meta" DLC_CONTROLS="zzz_ctl" DLC_IGNORED_CAP=1 \
+      bash "$SELF_DIR/$(basename "${BASH_SOURCE[0]}")" "$IG2/wiki/digest.md" 2>&1)"
+  rc=0; printf '%s\n' "$p4out" | grep -qF 'ignored 축 3건 중 1건만 읽었다' || rc=1
+  _t "상한을 넘으면 잘린 수를 말한다(3건 중 1건)" 0 "$rc"
+  rc=0; (cd "$IG2" && CLAUDE_PROJECT_DIR="$IG2" DLC_TRACKED_PATHS="wiki" DLC_IGNORED_DIR="meta" DLC_CONTROLS="zzz_ctl" DLC_IGNORED_CAP=1 \
+      bash "$SELF_DIR/$(basename "${BASH_SOURCE[0]}")" "$IG2/wiki/digest.md") >/dev/null 2>&1 || rc=$?
+  _t "잘린 채 미착지(D2) → 확정 안 함, 미측정(10)" 10 "$rc"
+  rc=0; (cd "$IG2" && CLAUDE_PROJECT_DIR="$IG2" DLC_TRACKED_PATHS="wiki" DLC_IGNORED_DIR="meta" DLC_CONTROLS="zzz_ctl" DLC_IGNORED_DEPTH=abc \
+      bash "$SELF_DIR/$(basename "${BASH_SOURCE[0]}")" "$IG2/wiki/digest.md") >/dev/null 2>&1 || rc=$?
+  _t "깊이 설정이 숫자가 아니면 → HARNESS-ERROR(10), 축을 조용히 끄지 않는다" 10 "$rc"
+  rc=0; (cd "$IG2" && CLAUDE_PROJECT_DIR="$IG2" DLC_TRACKED_PATHS="wiki" DLC_IGNORED_DIR="meta" DLC_CONTROLS="zzz_ctl" DLC_IGNORED_DEPTH=0 \
+      bash "$SELF_DIR/$(basename "${BASH_SOURCE[0]}")" "$IG2/wiki/digest.md") >/dev/null 2>&1 || rc=$?
+  _t "깊이 0 → HARNESS-ERROR(10)(숫자지만 아무것도 안 읽는다)" 10 "$rc"
+  rc=0; (cd "$IG2" && CLAUDE_PROJECT_DIR="$IG2" DLC_TRACKED_PATHS="wiki" DLC_IGNORED_DIR="" DLC_CONTROLS="zzz_ctl" IGNORED_FOUND=999 \
+      bash "$SELF_DIR/$(basename "${BASH_SOURCE[0]}")" "$IG2/wiki/digest.md") >/dev/null 2>&1 || rc=$?
+  _t "상속된 IGNORED_FOUND 는 무시 — ignored 축이 꺼져 있으면 미착지 그대로(1)" 1 "$rc"
+  rm -rf "$IG2"
   printf 'timeout 을 올렸고 GN:36254 를 인용했다 · HN:123 도 봤다\n' >> "$T/tgt/kvcard.md"
   rc=0; DLC_CONTROLS="forge-harness session" bash "$SELF_DIR/$(basename "${BASH_SOURCE[0]}")" "$T/digest_kv.md" "$T/tgt/kvcard.md" >/dev/null 2>&1 || rc=$?
   _t "이름(timeout) · 같은 출처 ID(GN:36254) → 착지(0)" 0 "$rc"
