@@ -43,6 +43,17 @@ Read every artifact path the dispatcher hands you before writing. Quote the exac
 ### Unique-to-this-seat (self-tag: which Concerns you believe no other seat in the cast would raise — the dispatcher checks this)
 ```
 
+## Done When
+
+```
+Output has exactly the parallax sections: Strengths / Concerns / Absence check / Open questions / Unique-to-this-seat   [mandatory-pass: section headers present]
++ Every Concern carries a [location] quoting the element / text / path read, and a severity (Critical / Important / Suggestion)   [mandatory-pass: the dispatcher drops a Concern with no location]
++ Absence check names what this seat looked for and did not find (an empty line is not a result)   [mandatory-pass: line present and non-empty]
++ No claim outside the tier cap above; such items sit under Open questions   [judged — paired with the dispatcher's read, a reader other than this seat]
+```
+
+The lens does not build or fix — a fix direction is at most one line per finding. Remediation is the caller's.
+
 ## 탐색 모드 (persona-cast `--mode explore` 에서만 — 2026-09-12 신설)
 
 1기는 얼어붙은 아티팩트를 한 번 본다. 탐색 모드는 **살아 있는 앱**에서 «다음 한 수» 를 계속 고른다.

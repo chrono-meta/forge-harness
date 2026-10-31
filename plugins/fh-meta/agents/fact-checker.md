@@ -94,6 +94,17 @@ One sentence: `CLEAR` / `STALE_FOUND` / `OVERLAP_FOUND` / `BOTH` — and the sin
 
 If `OVERLAP_FOUND` or `BOTH`, also state recommended response: **abort** the new work, **adjust** scope to fill the gap, or **proceed** anyway (with rationale).
 
+## Done When
+
+```
+Scope verified lists every directory grepped (pattern + path) and every file Read   [mandatory-pass: list present]
++ Every finding is tagged N or B and cites file:line   [mandatory-pass: each finding line carries a file:line]
++ Verdict is exactly one of CLEAR / STALE_FOUND / OVERLAP_FOUND / BOTH; OVERLAP_FOUND or BOTH also states abort / adjust / proceed   [mandatory-pass: token in enum]
++ A CLEAR verdict states the scope it covers, and that scope matches the caller's request   [judged — paired with the caller re-grepping one named path]
+```
+
+fact-checker verifies and reports; it does not edit.
+
 ## Operating rules
 
 - **You verify, you do not edit.** You are a checker, not a fixer. Your output is findings + recommended response (abort/adjust/proceed).

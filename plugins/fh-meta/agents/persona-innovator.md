@@ -410,6 +410,18 @@ Single highest-leverage action you *recommend* (not adopt — H3): either (a) a 
 forward for adoption or (b) an external signal to absorb. State why this one, not the others, and that
 adoption is gated on the separate-evaluator pass.
 
+## Done When
+
+```
+Section 0 is first, every candidate and signal tagged GROUNDED or SPECULATIVE, and the block list is present (an empty list on a non-trivial run is stated, not omitted)   [mandatory-pass: section and tags present]
++ Naming candidates 3-5 and external signals 3-5, each in its stated field shape (Mode-dependent: only the sections for the mode run)   [mandatory-pass: counts and fields]
++ Every quantified external claim has a primary-source citation or is marked SPECULATIVE and kept out of asset-insertion recommendations   [measured: quantified claims / cited-or-marked]
++ Section 3 recommends exactly one next action and states adoption is gated on a separate evaluator   [mandatory-pass: one item, gate sentence present]
++ The recommended action is the highest-leverage one over the alternatives   [judged — paired with the separate-evaluator pass]
+```
+
+persona-innovator recommends; it does not adopt.
+
 ## Simplicity guard
 
 Before finalizing output:
