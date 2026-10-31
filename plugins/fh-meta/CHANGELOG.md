@@ -2,6 +2,24 @@
 
 ### [Unreleased]
 
+### [3.34.0] — 2026-10-31 — 다이제스트 주간 느린 갈래 · 흡수 대기열이 원문 문장을 담는다 · 착지 증언이 출처 ID 로 가르고 덜 읽은 «미착지» 를 확정하지 않는다 · persona-cast 위치 없는 지적 버리기
+
+훅 변경은 없다. 스크립트가 하나 늘었다(`scripts/digest_slow_leg.py`). 새 자산이 들어가서 버전 정책상 minor 다.
+
+소비자에게 닿는 변화:
+- `frontier-digest`(fh-meta) 주 1회 느린 갈래(#978): 컨퍼런스 채널과 기술 블로그의 새 글 · 새 발표 목록을 일주일에 한 번 모은다. 소스 목록은 운영자 로컬의 gitignored 파일(`$FH_DIGEST_SLOW_SOURCES`, 기본 `tracks/_meta/digest_slow_sources.tsv`)에만 둔다 — 누가 어느 회사를 구독하는지가 소속을 드러낼 수 있어서 공개 파일에는 소스 이름이 0 이다. RSS/Atom 과 YouTube 채널(Atom 피드 → 404 일 때만 `yt-dlp --flat-playlist`). 못 읽은 소스는 `UNREACHABLE` · `PARSE-ZERO` · `PARSE-ERROR` 로 적고 0 으로 세지 않는다. 403/429 는 거절이라 다른 방법으로 다시 시도하지 않는다. self-test 41레인(오프라인).
+- `frontier-digest` `SKILL_detail.md §Collection-Bash`(#981): 매일 도는 갈래에도 같은 규칙 — 거절되거나 빈 응답은 `UNREACHABLE(…)` · `PARSE-ZERO` 로 적고, **다른 클라이언트 신원(다른 브라우저 User-Agent · 위조 referrer · 봇 검사 우회용 헤드리스 브라우저)으로 재시도하지 않는다.** 정직하게 자신을 밝히는 UA 를 처음부터 쓰는 것은 괜찮다.
+- `scripts/digest_landing_check.sh`(착지 증언 — digest 후보가 레포에 반영됐는지 고르는 선별기)(#981 · #982):
+  - 출처 ID 로 가른다: 백틱 토큰을 첫 콜론에서 잘라 `arXiv:2610.34938` 이 `arXiv` 한 낱말이 되던 것을 고쳤다. 이제 `arXiv:NNNN.NNNN+` 은 번호만(착지문이 `arXiv:` · `arXiv ` 둘 다 써서), `HN:` · `GN:` 은 접두어째 남기고, 둘 다 숫자 경계로 감싼다(`HN:123` 이 `HN:12345` 에 맞지 않게). 그 밖의 `이름:값` 은 종전대로 자른다. 이 레포 전체 digest 에서 토큰이 접두어 하나뿐이던 후보 32/705 → 0.
+  - gitignored 축은 깊이 `DLC_IGNORED_DEPTH`(기본 2)까지만 읽는다 — 실험 클론 안의 레포 사본이 착지 근거가 되던 것을 막는다. 상한 `DLC_IGNORED_CAP`(기본 400)을 넘으면 몇 건을 읽었는지 출력하고, 잘린 상태의 «미착지» 는 확정하지 않고 종료 10(미측정)을 낸다. 두 값이 1 이상의 정수가 아니면 종료 10.
+  - self-test 25 → 39레인.
+- 흡수 대기열 `import-digest`(#979): 대기열 항목이 검증기의 6낱말 이름표 대신 digest 후보의 머리 문장 전체로 들어간다(표 후보는 본문 칸의 굵은 머리). 원문을 못 찾으면 `[이름표만 — 다이제스트 원문 못 찾음]` 을 붙여, 잘린 항목이 온전한 것처럼 보이지 않게 한다. 이 레포 digest 129개(후보 442개)에서 442/442 대응.
+- `persona-cast`(fh-commons) Step 4(#981): 렌즈 6개가 약속하던 «위치 없는 지적은 디스패처가 버린다» 를 병합 단계가 실제로 한다 — 먼저 버리고, 렌즈마다 버린 수를 `no-loc` 칸에 보인다. `total` 은 버린 뒤 남은 수다.
+
+허브 운영자 참고(소비자 설치본과 다름):
+- `knowledge/shared/learnings/subagent_invocations_log.yaml` 에 10-29 ~ 10-31 서브에이전트 호출 기록을 더했다(#980 · #981).
+- 맥에서 `selfcheck.sh` 는 `test_mutation_probe_lanes.sh` 의 두 레인(N6 · S7-5)을 `/proc` 이 없어 UNMEASURED 로 내고 전체를 FAIL 로 끝낸다 — 이 릴리스 전부터 그렇다(리눅스 CI 는 잰다).
+
 ### [3.33.0] — 2026-10-28 — 빌더에게 일을 넘길 때 카드 두 줄(CC · Codex 진입점 둘 다) · 주간 감사 앵커 되돌림 표본 · ko-tech-writer 개고 사후 검사 · 흡수 대기열
 
 훅 변경은 없다. 스크립트는 하나 늘고(`scripts/absorption_queue.py`) 하나에 검사 모드가 늘었다(`scripts/ko_tech_writer_calibrate.py`). 세션 시작 로더와 digest 러너에 대기열 줄이 하나씩 들어갔다. 나머지는 문서다. 빌더에게 일을 넘기는 방식을 바꾸는 규칙이 들어 있어 버전 정책상 minor 다(블라인드 sim, 팔당 n=3).
