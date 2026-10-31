@@ -48,6 +48,7 @@ case "\$1 \$2" in
           else echo "MERGED \$(cat "\$D/head.oid")"; fi
         elif [ -f "\$D/closed" ]; then echo "CLOSED \$(cat "\$D/head.oid")"
         else echo "OPEN \$(cat "\$D/head.oid")"; fi ;;
+      *title*) echo "Fake PR title" ;;
       *headRefOid*) cat "\$D/head.oid"; echo ;;
       *state*) if [ -f "\$D/merge.oid" ] && [ ! -f "\$D/queued" ]; then echo MERGED; else echo OPEN; fi ;;
       *mergeCommit*) if [ -f "\$D/queued" ]; then echo null; else cat "\$D/merge.oid" 2>/dev/null; echo; fi ;; esac ;;
@@ -193,6 +194,38 @@ SETUP_EXTRA=1 setup cvg; mkgh "$T/cvg"; run "$T/cvg" 7 --rerun 'git --version &&
 SETUP_EXTRA=1 setup cvd; mkgh "$T/cvd"; run "$T/cvd" 7 --rerun 'git --version && ls d'
 { [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q 'mentions none of this PR'; } \
   && ok "L25b --rerun naming a tracked dir → advisory still fires (blobs only)" || bad "L25b rc=$RC (dir listing counted as coverage?)"
+
+# ── completion record (tracks/_meta/fh_completed_<date>.md) ──
+# cl_setup <name> : a work clone that HAS a tracks/ dir (a consumer without one is skipped silently — L30)
+cl_setup() { setup "$1"; mkgh "$T/$1"; mkdir -p "$T/$1/work/tracks"; }
+cl_file() { echo "$T/$1/work/tracks/_meta/fh_completed_$(date +%F).md"; }
+cl_lines() { [ -f "$(cl_file "$1")" ] && grep -c '^- .* PR #7 ' "$(cl_file "$1")" || echo 0; }
+# L26 merged + verified → exactly one line, says verified, carries title and short merge sha
+cl_setup c1; run "$T/c1" 7 --rerun "$GOOD"
+{ [ "$RC" -eq 0 ] && [ "$(cl_lines c1)" -eq 1 ] && grep -q 'PR #7 Fake PR title → merged '"$(cut -c1-7 "$T/c1/merge.oid")"' (verified) — auto$' "$(cl_file c1)" \
+  && head -1 "$(cl_file c1)" | grep -q '^# '; } \
+  && ok "L26 merged+verified → one completion line (verified · sha · title) + header" || { bad "L26 rc=$RC"; cat "$(cl_file c1)" 2>/dev/null; }
+# L27 merged + verification failed → one line saying verify-failed, rc unchanged (1)
+cl_setup c2; : > "$T/c2/drop_b"; run "$T/c2" 7 --rerun 'grep -q a2 a && echo a-ok'
+{ [ "$RC" -eq 1 ] && [ "$(cl_lines c2)" -eq 1 ] && grep -q '(verify-failed rc=1)' "$(cl_file c2)"; } \
+  && ok "L27 merged+verify-failed → one line «verify-failed», rc=1" || { bad "L27 rc=$RC"; cat "$(cl_file c2)" 2>/dev/null; }
+# L28 merge refused (gh fails, PR stays OPEN) and queued (not completed) → no line
+cl_setup c3; : > "$T/c3/merge_fail"; run "$T/c3" 7 --rerun "$GOOD"; rc3=$RC
+cl_setup c3q; : > "$T/c3q/queued"; run "$T/c3q" 7 --rerun "$GOOD"; rc3q=$RC
+{ [ "$rc3" -eq 5 ] && [ "$rc3q" -eq 6 ] && [ ! -e "$(cl_file c3)" ] && [ ! -e "$(cl_file c3q)" ]; } \
+  && ok "L28 merge refused / queued → no completion line" || bad "L28 rc=$rc3/$rc3q file written for a merge that did not complete"
+# L29 opt-out FH_MERGE_NO_COMPLETED_LOG=1 → merge verified as usual, no line
+cl_setup c4; FH_MERGE_NO_COMPLETED_LOG=1 run "$T/c4" 7 --rerun "$GOOD"
+{ [ "$RC" -eq 0 ] && [ ! -e "$(cl_file c4)" ]; } && ok "L29 opt-out env → no line, rc=0" || bad "L29 rc=$RC"
+# L30 repo without tracks/ → silent skip (nothing created, no warning)
+setup c5; mkgh "$T/c5"; run "$T/c5" 7 --rerun "$GOOD"
+{ [ "$RC" -eq 0 ] && [ ! -e "$T/c5/work/tracks" ] && ! printf '%s' "$OUT" | grep -q 'completion record'; } \
+  && ok "L30 no tracks/ dir → skipped silently, tracks/ not created" || bad "L30 rc=$RC"
+# L31 unwritable tracks/_meta → one warning, same rc as without the feature (0), merge stands
+cl_setup c6; mkdir -p "$T/c6/work/tracks/_meta"; chmod 500 "$T/c6/work/tracks/_meta"; run "$T/c6" 7 --rerun "$GOOD"; chmod 700 "$T/c6/work/tracks/_meta"
+if [ "$(id -u)" -eq 0 ]; then ok "L31 SKIP (root can write anywhere) — not a pass"
+else { [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q 'WARNING: completion record NOT written' && printf '%s' "$OUT" | grep -q 'merged and verified'; } \
+  && ok "L31 unwritable tracks/_meta → warning, rc=0 unchanged" || { bad "L31 rc=$RC"; printf '%s\n' "$OUT" | tail -3; }; fi
 
 printf 'PASS %d · FAIL %d\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
