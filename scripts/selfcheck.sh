@@ -15,6 +15,124 @@ set -u
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 fail=0
 
+# ── --shard i/N (2026-10-31) — run one slice of the suite list so CI can fan out ─────────────────────
+# Without --shard NOTHING below is active: no function named `bash` exists, every helper is a no-op
+# that answers "run it", and the file behaves as it did before this section was added.
+# With --shard i/N, a lane suite runs only in the shard the plan assigns it to; everything that is not
+# a lane suite (syntax checks, count_check, ref-path scans, the `--self-test` entry points) runs in
+# shard 1 only. Sharding is by suite BASENAME, so a suite named by several rows still lands in one shard.
+# PLAN = greedy longest-first packing over scripts/selfcheck_shard_weights.txt ("<seconds> <suite>",
+# measured). Computed, not stored, so any N works and the weights file is the only data. A suite that
+# is not in the file is placed by cksum(name) mod N — deterministic, order-independent, so a new
+# suite is never lost, only possibly unbalanced until someone adds its row.
+# Why a shim named `bash` and not a call-site rewrite: test_selfcheck_state_lanes.sh greps this file
+# for the literal `bash scripts/<suite>.sh` (it asserts "executed exactly once"), so the call text is
+# an interface. The shim keeps that text and decides at call time. Calls that bypass a shell function
+# (`timeout N bash …`) do not pass through it; each of those sites carries its own `_shard_skip` /
+# `_shard_inline` arm — grep for them.
+# --shard-dry / FH_SHARD_DRY=1: do not execute suites or inline checks, only record the decision to
+# $FH_SHARD_TRACE as "RUN <name>" / "SKIP <name>" — what test_selfcheck_shard_lanes.sh asserts on.
+_SHARD_I=""; _SHARD_N=""; _SHARD_DRY="${FH_SHARD_DRY:-0}"; _SHARD_GIVEN=0; _SHARD_SPEC=""
+# FH_SELFCHECK_SHARD=i/N is the same switch as --shard (the flag wins). CI uses the env form because
+# test_remote_marker_gate_lanes.sh W1 matches the workflow line `bash scripts/selfcheck.sh` exactly.
+if [ -n "${FH_SELFCHECK_SHARD:-}" ]; then _SHARD_GIVEN=1; _SHARD_SPEC="$FH_SELFCHECK_SHARD"; fi
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --shard) _SHARD_GIVEN=1; shift; _SHARD_SPEC="${1:-}" ;;
+    --shard=*) _SHARD_GIVEN=1; _SHARD_SPEC="${1#--shard=}" ;;
+    --shard-dry) _SHARD_DRY=1 ;;
+    *) ;;   # unknown arguments were ignored before this section existed; they still are
+  esac
+  shift
+done
+if [ "$_SHARD_GIVEN" = 1 ]; then
+  _SHARD_I="${_SHARD_SPEC%%/*}"; _SHARD_N="${_SHARD_SPEC##*/}"
+  # each side must be a positive integer without a leading zero: «01» compares unequal to «1» and «/4» concatenates to digits
+  # — both ran no suite and printed PASS (codex R1 2026-10-31)
+  case "$_SHARD_I" in [1-9]|[1-9]*[0-9]) case "$_SHARD_I" in *[!0-9]*) _SHARD_I=bad ;; esac ;; *) _SHARD_I=bad ;; esac
+  case "$_SHARD_N" in [1-9]|[1-9]*[0-9]) case "$_SHARD_N" in *[!0-9]*) _SHARD_I=bad ;; esac ;; *) _SHARD_I=bad ;; esac
+  if [ "$_SHARD_I" = bad ] || [ "$_SHARD_SPEC" = "${_SHARD_SPEC#*/}" ] \
+     || [ "$_SHARD_I" -lt 1 ] || [ "$_SHARD_I" -gt "$_SHARD_N" ]; then
+    echo "HARNESS ERROR  --shard '$_SHARD_SPEC': expected i/N with 1 <= i <= N — nothing was run (not a pass)"
+    exit 2
+  fi
+fi
+[ -n "$_SHARD_N" ] && [ "$_SHARD_DRY" != 1 ] && echo "SHARD  this run covers shard $_SHARD_I of $_SHARD_N only — it is a slice of the suite list, not the whole of it"
+_SHARD_PLAN_TXT=""
+_shard_trace() { [ -n "${FH_SHARD_TRACE:-}" ] && printf '%s\n' "$1" >> "$FH_SHARD_TRACE"; return 0; }
+_shard_of() { # $1 = suite basename → its shard number (1..N)
+  local _hit
+  _hit=$(printf '%s\n' "$_SHARD_PLAN_TXT" | awk -v n="$1" '$1 == n { print $2; exit }')
+  if [ -n "$_hit" ]; then printf '%s\n' "$_hit"
+  else printf '%s\n' $(( $(printf '%s' "$1" | cksum | cut -d' ' -f1) % _SHARD_N + 1 )); fi
+}
+if [ -n "$_SHARD_N" ]; then
+  if [ -f scripts/selfcheck_shard_weights.txt ]; then
+    # LPT: heaviest first (ties by name, C locale), each into the currently lightest bin (ties: lowest index).
+    # `@inline` is not a suite: its seconds pre-load shard 1, which owns every non-suite check.
+    _SHARD_PRE=$(awk '$2 == "@inline" && $1 ~ /^[0-9.]+$/ { s += $1 } END { print s + 0 }' scripts/selfcheck_shard_weights.txt)
+    _SHARD_PLAN_TXT=$(LC_ALL=C sort -k1,1nr -k2,2 scripts/selfcheck_shard_weights.txt \
+      | awk -v n="$_SHARD_N" -v pre="$_SHARD_PRE" 'BEGIN { load[1] = pre + 0 } $2 != "@inline" && NF >= 2 && $1 ~ /^[0-9.]+$/ { b = 1; for (i = 2; i <= n; i++) if (load[i] + 0 < load[b] + 0) b = i; load[b] += $1; print $2, b }')
+  fi
+  # A shard that owns no suite would run nothing and still print PASS (codex R1: `--shard 999/1000`). Shard 1 always owns the
+  # inline checks; any other shard must own at least one weighted suite, or it is not a measurement.
+  if [ "$_SHARD_I" != 1 ] && [ -z "$(printf '%s\n' "$_SHARD_PLAN_TXT" | awk -v i="$_SHARD_I" '$2 == i { print; exit }')" ]; then
+    echo "HARNESS ERROR  --shard $_SHARD_I/$_SHARD_N owns no suite in the weights plan — nothing would run (not a pass)"
+    exit 2
+  fi
+  # shard 1 owns every non-suite check. In dry mode nobody executes them.
+  _shard_inline() {
+    [ "$_SHARD_DRY" = 1 ] && return 1
+    [ "$_SHARD_I" = 1 ]
+  }
+  _shard_mine() { [ "$(_shard_of "$1")" = "$_SHARD_I" ]; }
+  # rc 0 = this inline check is shard 1's, not ours (named, so the omission is visible); rc 1 = run it.
+  _shard_inline_skip() { # $1 = label
+    if _shard_inline; then _shard_trace "INLINE $1"; return 1; fi
+    _shard_trace "SKIPINLINE $1"
+    echo "SHARD-SKIP  $1 (inline check — runs in shard 1 only; this is $_SHARD_I/$_SHARD_N)"
+    return 0
+  }
+  # rc 0 = SKIP this suite here (it belongs to another shard, or this is a dry run); rc 1 = run it.
+  _shard_skip() {
+    if _shard_mine "$1"; then
+      _shard_trace "RUN $1"
+      [ "$_SHARD_DRY" = 1 ] && return 0
+      return 1
+    fi
+    _shard_trace "SKIP $1"
+    echo "SHARD-SKIP  $1 (shard $(_shard_of "$1")/$_SHARD_N, this is $_SHARD_I/$_SHARD_N)"
+    return 0
+  }
+  bash() {
+    local _a1="${1:-}" _nm _x _st=0
+    case "$_a1" in scripts/*.sh) ;; *) command bash "$@"; return $? ;; esac
+    _nm="${_a1##*/}"
+    for _x in "$@"; do case "$_x" in --self-test|--selftest) _st=1 ;; esac; done
+    if [ "$_st" = 1 ]; then      # an embedded self-test is an inline check: shard 1 only
+      if _shard_inline; then _shard_trace "INLINE $_nm"; command bash "$@"; return $?; fi
+      _shard_trace "SKIPINLINE $_nm"; return 0
+    fi
+    case "$_nm" in
+      test_*.sh|*_lanes.sh)
+        if _shard_skip "$_nm"; then return 0; fi
+        command bash "$@"; return $? ;;
+      # Non-suite checkers selfcheck runs once. `--list-accepted` is a data load every later block
+      # depends on (top of file), so it is never skipped.
+      count_check.sh|prepush_guard_check.sh|gate_anchor_check.sh|multibyte_bracket_lint.sh|package_coverage_check.sh|files_manifest_shipping_check.sh|lane_runner_check.sh|gate_pathspec_check.sh|sync_guard_check.sh)
+        case " $* " in *" --list-accepted "*) command bash "$@"; return $? ;; esac
+        if _shard_inline_skip "$_nm"; then return 0; fi
+        command bash "$@"; return $? ;;
+    esac
+    command bash "$@"
+  }
+else
+  _shard_inline() { return 0; }
+  _shard_mine() { return 0; }
+  _shard_skip() { return 1; }
+  _shard_inline_skip() { return 1; }
+fi
+
 # Single source of "declared legitimately unshipped" — package_coverage_check.sh's ACCEPTED_ABSENT,
 # read once via its --list-accepted flag. Two blocks below (ref-path, SessionStart anchor pairs) used
 # to each re-derive "is this absence OK" from an environment predicate (`.git` presence) instead of
@@ -72,7 +190,7 @@ if [ "${FH_SELFCHECK_PROFILE:-full}" = consumer ]; then
   if _package_mode; then _CONSUMER=1
   else echo "⚠️  FH_SELFCHECK_PROFILE=consumer IGNORED — this tree is a git checkout; running the full suite"; fi
 fi
-CHECKOUT_ONLY_SUITES="test_package_coverage_lanes.sh test_files_manifest_shipping_lanes.sh test_map_postprocess_lanes.sh test_remote_marker_gate_lanes.sh test_worktree_reclaim_lanes.sh test_sim_isolated_run_lanes.sh test_utterance_intake_lanes.sh test_precommit_pointer_index_lanes.sh"
+CHECKOUT_ONLY_SUITES="test_package_coverage_lanes.sh test_files_manifest_shipping_lanes.sh test_map_postprocess_lanes.sh test_remote_marker_gate_lanes.sh test_worktree_reclaim_lanes.sh test_sim_isolated_run_lanes.sh test_utterance_intake_lanes.sh test_precommit_pointer_index_lanes.sh test_selfcheck_shard_lanes.sh"
 CONSUMER_SKIPPED=""
 _consumer_skip() { # $1 = suite basename · rc 0 = skip it (and it has been named)
   [ "$_CONSUMER" -eq 1 ] || return 1
@@ -118,6 +236,7 @@ _absent_subject_verdict() {
 
 check() { # check <label> <cmd...>
   local label="$1"; shift
+  _shard_inline || return 0   # syntax checks are inline checks: shard 1 only (always true without --shard)
   if "$@" 2>/dev/null; then
     echo "PASS  $label"
   else
@@ -208,7 +327,8 @@ done
 # its drift diagnostics to stdout (measured 2026-08-05: 686 B stdout / 0 B stderr), so a failure
 # printed a bare `FAIL` line carrying no diagnosis at all — worse than the truncation this session
 # repaired in the lane blocks. Fixed at the call site; check() itself is a separate job (see above).
-if _out=$(node bin/fh-codex-doctor.js --strict 2>&1); then
+if _shard_inline_skip "fh-codex-doctor --strict"; then :
+elif _out=$(node bin/fh-codex-doctor.js --strict 2>&1); then
   echo "PASS  fh-codex-doctor --strict"
 else
   echo "FAIL  fh-codex-doctor --strict"
@@ -1187,6 +1307,8 @@ do
   _subj="${_pair%%|*}"; _anc="${_pair##*|}"; _lbl="${_anc##*/}"
   if [ ! -f "$_subj" ]; then
     _absent_subject_verdict "$_lbl" "$_subj" || fail=1
+  elif [ -f "$_anc" ] && _shard_skip "$_lbl"; then
+    :   # another shard's suite (or a dry run) — _shard_skip said so
   elif [ -f "$_anc" ] && _consumer_skip "$_lbl"; then
     :
   elif [ -f "$_anc" ]; then
@@ -1282,6 +1404,7 @@ for _subj in compaction_probe judgment_circuit_lint novelty_claim_check chamber_
     # printing in every run before that, unread, because stderr scrolls past a 240-second check.
     # ★ A guard that announces its own failure every single run is still a silent failure if
     # nothing reads the announcement. Fixed by deleting one word.
+    _shard_inline_skip "$_subj --self-test" && continue
     _to=""; command -v timeout >/dev/null 2>&1 && _to="timeout 120"
     _st_out="$($_to bash "scripts/$_subj.sh" --self-test < /dev/null 2>&1)"; _st_rc=$?
     # rc=10 (or the sibling harness-error codes) means the subject could not even set up its own
@@ -1459,6 +1582,7 @@ fi
 if [ ! -f scripts/cluster_capability_scan.sh ]; then
   echo "FAIL  cluster_capability_scan.sh: missing — it ships via package.json files[], so absence is deletion, not package mode"
   fail=1
+elif _shard_inline_skip "cluster_capability_scan.sh --self-test"; then :
 elif _out=$(bash scripts/cluster_capability_scan.sh --self-test < /dev/null 2>&1) \
      && printf '%s\n' "$_out" | grep -qE '캘리브레이션 통과: [1-9][0-9]* PASS / 0 FAIL'; then
   echo "PASS  cluster_capability_scan.sh --self-test ($(printf '%s\n' "$_out" | grep -oE '[0-9]+ PASS / [0-9]+ FAIL' | tail -1))"
@@ -1469,7 +1593,7 @@ else
 fi
 # 밀폐 레인(2026-10-02, pmh-dev #84) — 호출자 env 에 클러스터 변수가 살아 있어도 self-test 판정이 같아야 한다.
 # known-pair: 위 블록(env 없음)과 이 블록(env 있음)이 같은 «0 FAIL» 을 내고, 이 블록은 비운 사실을 이름으로 말한다.
-if [ -f scripts/cluster_capability_scan.sh ]; then
+if [ -f scripts/cluster_capability_scan.sh ] && ! _shard_inline_skip "cluster_capability_scan.sh --self-test (hermetic)"; then
   if _out=$(FH_CLUSTER_ROOTS=/nonexistent-fh-a:/nonexistent-fh-b FH_TRACKS_ROOT=/nonexistent-fh-tracks FH_PROJECTS_HOME=/nonexistent-fh-home \
             bash scripts/cluster_capability_scan.sh --self-test < /dev/null 2>&1) \
      && printf '%s\n' "$_out" | grep -qE '캘리브레이션 통과: [1-9][0-9]* PASS / 0 FAIL' \
@@ -1497,6 +1621,7 @@ fi
 if [ ! -f scripts/capability_effect_probe.sh ]; then
   echo "FAIL  capability_effect_probe.sh: missing — it ships via package.json files[], so absence is deletion, not package mode"
   fail=1
+elif _shard_inline_skip "capability_effect_probe.sh --self-test"; then :
 elif _out=$(bash scripts/capability_effect_probe.sh --self-test < /dev/null 2>&1) \
      && printf '%s\n' "$_out" | grep -qE '^── capability_effect_probe lanes: [1-9][0-9]* PASS / 0 FAIL ──$'; then
   echo "PASS  capability_effect_probe.sh --self-test ($(printf '%s\n' "$_out" | grep -oE '[0-9]+ PASS / [0-9]+ FAIL' | tail -1))"
@@ -1527,6 +1652,7 @@ fi
 if [ ! -f scripts/relay_channel.sh ] || [ ! -f scripts/test_relay_channel_lanes.sh ]; then
   echo "FAIL  relay_channel.sh: missing (relay_channel.sh or its sibling test_relay_channel_lanes.sh) — ships via package.json files[], so absence is deletion, not package mode"
   fail=1
+elif _shard_inline_skip "relay_channel.sh --self-test"; then :
 elif _out=$($_LANE_TO bash scripts/relay_channel.sh --self-test < /dev/null 2>&1); then
   echo "PASS  relay_channel.sh --self-test ($(printf '%s\n' "$_out" | grep -oE 'relay_channel lanes: [0-9]+ PASS / [0-9]+ FAIL' | tail -1))"
 else
@@ -1562,6 +1688,7 @@ fi
 if [ ! -f scripts/directional_diff_gate.sh ]; then
   echo "FAIL  directional_diff_gate.sh: missing — it ships via package.json files[], so absence is deletion, not package mode"
   fail=1
+elif _shard_inline_skip "directional_diff_gate.sh --self-test"; then :
 else
   _out=$($_LANE_TO bash scripts/directional_diff_gate.sh --self-test < /dev/null 2>&1); _dd_rc=$?
   case "$_dd_rc" in
@@ -1621,6 +1748,7 @@ fi
 if [ ! -f scripts/prepublish_scope_note.sh ]; then
   echo "FAIL  prepublish_scope_note.sh: missing — it ships via package.json files[], so absence is deletion, not package mode"
   fail=1
+elif _shard_inline_skip "prepublish_scope_note.sh --self-test"; then :
 elif _out=$(bash scripts/prepublish_scope_note.sh --self-test < /dev/null 2>&1) \
      && printf '%s\n' "$_out" | grep -qE '^  ── [1-9][0-9]* pass / 0 fail$'; then
   echo "PASS  prepublish_scope_note.sh --self-test ($(printf '%s\n' "$_out" | grep -oE '[0-9]+ pass / [0-9]+ fail' | tail -1))"
@@ -2627,6 +2755,24 @@ if [ -f scripts/test_selfcheck_state_lanes.sh ]; then
   fi
 fi
 
+# `--shard i/N` (2026-10-31): the plan must cover every suite exactly once, or a sharded CI run silently
+# drops (or doubles) a suite while every shard is green. Dry runs only — seconds, and it cannot recurse.
+if [ -f scripts/test_selfcheck_shard_lanes.sh ]; then
+  if _consumer_skip test_selfcheck_shard_lanes.sh; then :
+  elif _out=$(bash scripts/test_selfcheck_shard_lanes.sh 2>&1); then
+    echo "PASS  test_selfcheck_shard_lanes.sh (union == full plan · disjoint · known-negative · --shard absent = today)"
+  else
+    echo "FAIL  test_selfcheck_shard_lanes.sh: the shard plan would drop or double a suite"
+    _show_failure "$_out"
+    fail=1
+  fi
+elif _ships_per_files "scripts/test_selfcheck_shard_lanes.sh"; then
+  echo "FAIL  test_selfcheck_shard_lanes.sh: DECLARED SHIPPED (package.json files[]) but absent — deletion or broken install"
+  fail=1
+else
+  echo "SKIP  test_selfcheck_shard_lanes.sh (not in this package's files[], and absent)"
+fi
+
 # test_lane_runner_lanes.sh — the checker that finds unrun suites had no suite of its own until
 # 2026-08-13. It guarded its own WIRING (it fails when selfcheck stops calling it) and nothing
 # measured its BEHAVIOUR — the shape it exists to catch, one level up. Wired in the same change
@@ -2766,7 +2912,8 @@ fi
 # consults it before FAILing, so the two paths render SKIP regardless of how `.git` happens to be
 # shaped in the consumer's tree. `[ -e .git ]` still gates whether the SCAN runs at all (an installed
 # package with no tracked-refs source to lint), which is a real and unrelated question.
-if [ -e ".git" ]; then
+if _shard_inline_skip "ref-path"; then :
+elif [ -e ".git" ]; then
   # Backtick-quoted repo-relative file refs in the always-loaded governance surface
   # (CLAUDE.md + .claude/rules/*.md) must exist. Phantom-reference class recurred
   # N>=3 in the 2026-06-11 audit window — instrument-not-habit.
@@ -2837,7 +2984,8 @@ fi
 #   이고 package.json files[] 로 출하된다(소비자가 받는 기본 패턴). 초판은 «전부 ignored» 로
 #   썼고 깨끗한 트리에서 그 둘에 FAIL 을 냈다 — 과차단은 override 를 훈련시키므로 결함이다.
 #   남는 한 칸 «tracked 도 ignored 도 아님» 이 정확히 유출 상태다.
-if [ -e .git ]; then
+if _shard_inline_skip "rules-dotfile"; then :
+elif [ -e .git ]; then
   # 🟥 «디렉터리가 없다»와 «있는데 비었다»를 한 칸으로 접지 않는다 — find 는 둘 다 빈 출력이다.
   #    앞은 계기 오류(이 검사가 겨눌 자리가 없다), 뒤는 소비자 설치의 정상 상태다.
   if [ ! -d .claude/rules ]; then
@@ -2890,7 +3038,7 @@ if [ "$_CONSUMER" -eq 1 ]; then
   echo "CONSUMER PROFILE — $_n checkout-only suite(s) NOT measured here (not a pass):$CONSUMER_SKIPPED"
 fi
 if [ "$fail" -ne 0 ]; then
-  echo "SELFCHECK: FAIL"
+  echo "SELFCHECK: FAIL${_SHARD_N:+ (shard $_SHARD_I/$_SHARD_N)}"
   exit 1
 fi
-if [ "$_CONSUMER" -eq 1 ]; then echo "SELFCHECK: PASS (consumer profile)"; else echo "SELFCHECK: PASS"; fi
+if [ "$_CONSUMER" -eq 1 ]; then echo "SELFCHECK: PASS (consumer profile)"; else echo "SELFCHECK: PASS${_SHARD_N:+ (shard $_SHARD_I/$_SHARD_N)}"; fi

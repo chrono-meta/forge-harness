@@ -17,7 +17,21 @@ on:
     branches: [main]
 
 jobs:
-  validate:
+  # SHARDED (2026-10-31). `selfcheck` is one matrix job: each leg runs `selfcheck.sh --shard i/N`, i.e. its
+  # slice of the lane suites; everything that is not a lane suite (syntax checks, ref-path scans, embedded
+  # --self-test entry points) runs in leg 1 only. The metadata steps below that are NOT selfcheck
+  # (residue scan, plugin/marketplace JSON, skill count, frontmatter, floorless-channel marker) are also leg 1
+  # only — they are seconds, and running them in every leg would only repeat the same verdict.
+  # N is read from the matrix (`strategy.job-total`), so widening the matrix is a one-line edit.
+  # The plan (which suite lands in which leg) is scripts/selfcheck_shard_weights.txt — measured seconds,
+  # packed longest-first. scripts/test_selfcheck_shard_lanes.sh proves union == full list and no duplicate.
+  selfcheck:
+    name: selfcheck (shard ${{ matrix.shard }}/${{ strategy.job-total }})
+    strategy:
+      # false: one red leg must not cancel the others — a reader wants every red leg's evidence from one run.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     runs-on: ubuntu-24.04  # pinned 2026-10-20: ubuntu-latest moved to 26.04 and the locale-invariance lane could not measure there (rc=2), which turned main red
     # The cause was uutils `wc` (no locale split); the suite now builds its control from a GNU wc when one exists
     # (26.04 ships it as `gnuwc`). Keep this pin until newest-runner-canary.yml is green on the newest image — unpin from that run.
@@ -58,6 +72,7 @@ jobs:
           sudo apt-get install -y -qq zsh
           zsh --version
       - name: Check for operator-private token residue
+        if: matrix.shard == 1
         run: |
           # `set +e` is deliberate and load-bearing: every command below has its exit code read
           # EXPLICITLY. GitHub's default `bash -e` would abort the step on grep's legitimate
@@ -144,16 +159,19 @@ jobs:
           echo "PASS: no generic operator-private residue (control alive: $ctl hit(s))"
 
       - name: Validate plugin.json required fields
+        if: matrix.shard == 1
         run: |
           echo "=== Validating plugin.json files ==="
           python3 .github/scripts/validate_plugins.py
 
       - name: Validate marketplace.json structure
+        if: matrix.shard == 1
         run: |
           echo "=== Validating marketplace.json ==="
           python3 .github/scripts/validate_marketplace.py
 
       - name: Check skill count consistency
+        if: matrix.shard == 1
         run: |
           echo "=== Checking skill counts (merge-boundary gate) ==="
           # gate-locality close (fh_signal_2026-06-21): this step is the gate at the MERGE
@@ -213,6 +231,7 @@ jobs:
       # 안 보인다.** 즉 저자 머신이 구조적으로 못 잡는 결함이라 CI 가 맞는 자리다.
       # 배선 시점 실측: 41 skills + 8 agents 전부 파싱, rc=0 — 배선이 CI 를 적색으로 만들지 않는다.
       - name: SKILL/agent frontmatter parses (strict-runtime portability)
+        if: matrix.shard == 1
         run: |
           bash scripts/validate_yaml.sh
 
@@ -222,6 +241,7 @@ jobs:
           # is HEAD itself, so the delta would SKIP. A PR leaves this empty and uses merge-base.
           # All-zero «before» (a new branch) is treated as unset by the scanner.
           PIPESCAN_BASE: ${{ github.event_name == 'push' && github.event.before || '' }}
+          FH_SELFCHECK_SHARD: ${{ matrix.shard }}/${{ strategy.job-total }}
         run: |
           echo "=== scripts/selfcheck.sh — the same command npm test and prepublishOnly run ==="
           # THE ANCHOR THIS WORKFLOW WAS MISSING. selfcheck is FH's mandatory-pass surface: it
@@ -255,6 +275,10 @@ jobs:
           # direction, and it is written here so the next reader diagnoses it in one step instead
           # of trusting a claim of hermeticity this file used to make.
 
+          # Leg i of N via FH_SELFCHECK_SHARD (same switch as `--shard i/N`). Without it this line is the old
+          # whole-suite run; with it, a suite that belongs to another leg is skipped by name (SHARD-SKIP
+          # lines) and run there. The env form, not the flag, because test_remote_marker_gate_lanes.sh W1
+          # matches this line as exactly `bash scripts/selfcheck.sh`.
           bash scripts/selfcheck.sh
 
       # ── 플로어 없는 채널의 4축 마커 (2026-09-14 신설) ─────────────────────────
@@ -269,6 +293,7 @@ jobs:
       # 여기서 또 물으면 만족 불가능한 이중 요구가 되고, 그건 override 를 훈련시킨다.
       # 🟥 형식만 본다 — 값의 진위도 enum 멤버십도 안 본다(enum 정본은 저작 노드의 훅).
       - name: Floorless-channel 4-axis marker (claude/* branches touching FH assets)
+        if: matrix.shard == 1
         env:
           RMG_CHANNEL_NAME: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
           PR_BODY: ${{ github.event.pull_request.body }}
@@ -290,3 +315,32 @@ jobs:
             echo "::error::remote_marker_gate HARNESS-ERROR — 계기가 고장났다(미측정 ≠ 통과)"
           fi
           exit $rc
+
+  # The ONE required-check name. Branch protection used to require the single job called `validate`;
+  # splitting it into `selfcheck (shard i/N)` legs would leave that required name never reported (a PR then
+  # waits forever, or — worse — is mergeable if the rule is dropped to get unstuck). This job keeps the name
+  # and is green only when EVERY leg is: a skipped, cancelled or failed leg is red here (fail-closed).
+  validate:
+    needs: selfcheck
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Every selfcheck shard passed
+        env:
+          SHARDS_RESULT: ${{ needs.selfcheck.result }}
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHARDS: "4"   # keep equal to the matrix length above
+        run: |
+          echo "selfcheck shards: ${SHARDS_RESULT}"
+          [ "${SHARDS_RESULT}" = "success" ] || { echo "::error::at least one selfcheck shard did not succeed (${SHARDS_RESULT}) — not a pass"; exit 1; }
+          # `needs.<job>.result` can read success when a leg was cancelled before a runner took it (codex R1 2026-10-31):
+          # count the legs of THIS run attempt and require every one to have concluded success.
+          out=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}/jobs" --paginate \
+                  --jq '.jobs[] | select(.name | startswith("selfcheck (shard ")) | .conclusion'); rc=$?
+          [ "$rc" -eq 0 ] || { echo "::error::could not list this run's jobs (rc=$rc) — shards not verified, not a pass"; exit 1; }
+          total=$(printf '%s\n' "$out" | grep -c . ); ok=$(printf '%s\n' "$out" | grep -cx success)
+          echo "selfcheck legs: ${ok}/${total} success (expected ${EXPECTED_SHARDS})"
+          [ "$total" -eq "$EXPECTED_SHARDS" ] && [ "$ok" -eq "$EXPECTED_SHARDS" ] || { echo "::error::selfcheck legs ${ok}/${total}, expected ${EXPECTED_SHARDS}/${EXPECTED_SHARDS} — not a pass"; exit 1; }
