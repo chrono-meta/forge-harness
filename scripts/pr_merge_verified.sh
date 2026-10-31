@@ -73,6 +73,23 @@ print(json.dumps({"at":time.strftime("%Y-%m-%dT%H:%M:%S%z"),"pr":int(e["PMV_R_PR
   fi
 }
 
+# completion record: one line in tracks/_meta/fh_completed_<date>.md so a merge is never forgotten at session close. Called only
+# after the merge landed (verified · verify-failed · verify-incomplete). Local record (tracks/ is gitignored), best-effort: never changes rc. A repo with
+# no tracks/ dir (a consumer that does not use tracks) is skipped silently. Opt-out: FH_MERGE_NO_COMPLETED_LOG=1.
+_clog() { # outcome-label merge_oid
+  [ "${FH_MERGE_NO_COMPLETED_LOG:-}" = 1 ] && return 0
+  local root; root=$(git rev-parse --show-toplevel 2>/dev/null) || return 0
+  [ -d "$root/tracks" ] || return 0
+  local title; title=$(gh pr view "$PR" --json title -q .title < /dev/null 2>/dev/null) || title=""
+  title=$(printf '%s' "$title" | tr '\n' ' '); [ -n "$title" ] || title="(title unreadable)"
+  local d="$root/tracks/_meta" f; f="$d/fh_completed_$(date +%F).md"
+  if ! { mkdir -p "$d" && { [ -s "$f" ] || printf '# Completed %s\n\n' "$(date +%F)" > "$f"; } \
+         && printf -- '- %s PR #%s %s → merged %s (%s) — auto\n' "$(date +%H:%M)" "$PR" "$title" "$(printf '%s' "$2" | cut -c1-7)" "$1" >> "$f"; } 2>/dev/null; then
+    echo "WARNING: completion record NOT written ($f) - add by hand: PR #$PR merged ($1)" >&2
+  fi
+  return 0
+}
+
 # 1. head before merge
 HEAD_OID=$(gh pr view "$PR" --json headRefOid -q .headRefOid < /dev/null) || HEAD_OID=""
 [ -n "$HEAD_OID" ] || { echo "🟥 HARNESS-ERROR (before merge): could not read PR #$PR head" >&2; exit 4; }
@@ -154,7 +171,7 @@ echo "── merged as $MC"
 # 4. verify
 bash "$PSV" --repo . --tip "$HEAD_OID" --merge "$MC" --rerun "$RERUN"; rc=$?
 case "$rc" in
-  0) _receipt "verified" "$MC"; echo "✅ PR #$PR merged and verified"; exit 0 ;;
-  1) _receipt "verify-failed" "$MC"; echo "🟥 PR #$PR IS MERGED but verification FAILED — the merge stands; fix forward or revert" >&2; exit 1 ;;
-  *) _receipt "verify-incomplete" "$MC"; echo "🟥 HARNESS-ERROR (AFTER merge): post_squash_verify rc=$rc — PR #$PR is merged, verification did not complete" >&2; exit 4 ;;
+  0) _receipt "verified" "$MC"; _clog "verified" "$MC"; echo "✅ PR #$PR merged and verified"; exit 0 ;;
+  1) _receipt "verify-failed" "$MC"; _clog "verify-failed rc=1" "$MC"; echo "🟥 PR #$PR IS MERGED but verification FAILED — the merge stands; fix forward or revert" >&2; exit 1 ;;
+  *) _receipt "verify-incomplete" "$MC"; _clog "verify-incomplete rc=$rc" "$MC"; echo "🟥 HARNESS-ERROR (AFTER merge): post_squash_verify rc=$rc — PR #$PR is merged, verification did not complete" >&2; exit 4 ;;
 esac
