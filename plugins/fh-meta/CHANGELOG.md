@@ -2,20 +2,21 @@
 
 ### [Unreleased]
 
-### [3.35.0] — 2026-10-31 — degrade 검사가 스테이징된 내용을 본다 · 머지 기록 자동 한 줄 · selfcheck 샤드 · 스킬 6개 분리 · 에이전트 Done When
+### [3.35.0] — 2026-11-01 — degrade 검사가 스테이징된 내용을 본다 · 머지 기록 자동 한 줄 · selfcheck 샤드 · 스킬 7개 분리 · 에이전트 Done When
 
 훅 한 줄이 바뀌었다(`templates/.git-hooks/pre-commit` 이 degrade 검사에 `--staged` 를 넘긴다). 스크립트 옵션이 둘 늘었다(`degrade_direction_scan.sh --staged` · `selfcheck.sh --shard i/N`). 새 동작이 들어가서 버전 정책상 minor 다.
 
 소비자에게 닿는 변화:
 - `degrade_direction_scan.sh --staged [경로…]`(#987): 커밋 때 쓰는 degrade 검사가 작업 트리가 아니라 **스테이징된 내용(index)** 을 읽는다. 전에는 스테이징한 뒤 디스크에서만 고친 냄새가 훅을 통과했고, 디스크에서 고쳤지만 다시 스테이징하지 않은 것은 걸렸다. 이름을 준 대상이 스테이징된 파일을 하나도 안 고르면 «깨끗함» 이 아니라 «측정 못 함(rc 2)» 으로 끝난다. 옵션을 안 주면 종전 그대로다. pre-commit 템플릿이 이 옵션을 쓴다.
 - `pr_merge_verified.sh`(#989): 머지가 실제로 된 뒤 `tracks/_meta/fh_completed_<날짜>.md` 에 한 줄을 붙인다(`- HH:MM PR #n <제목> → merged <sha7> (verified | verify-failed rc=1 | verify-incomplete rc=N) — auto`). 머지가 안 됐으면 아무것도 안 쓴다. 쓰기에 실패하면 경고 한 줄만 내고 종료 코드와 판정은 바뀌지 않는다. `tracks/` 폴더가 없는 레포에서는 조용히 건너뛰고 폴더를 만들지 않는다. 끄려면 `FH_MERGE_NO_COMPLETED_LOG=1`.
-- 스킬 6개를 상주 층과 `SKILL_detail.md` 로 나눴다(#986 · #988 · #991): `auto-decorrelation` 551 → 454줄 · `ko-tech-writer` 591 → 519 · `cross-ecosystem-synergy-detection` 392 → 375 · `verify-bidirectional` 352 → 308 · `install-doctor` 331 → 310 · `preprep` 462 → 262. 근거 · 이력 블록만 원문 그대로 옮겼고, 절차 · 명령 · 단계가 쓰는 표는 상주에 남겼다. 옛 비어 있지 않은 줄은 전부 두 파일 중 하나에 있다(스킬마다 대조).
+- 스킬 7개를 상주 층과 `SKILL_detail.md` 로 나눴다(#986 · #988 · #991 · #994): `auto-decorrelation` 551 → 454줄 · `ko-tech-writer` 591 → 519 · `cross-ecosystem-synergy-detection` 392 → 375 · `verify-bidirectional` 352 → 308 · `install-doctor` 331 → 310 · `preprep` 462 → 262 · `deliberation`(fh-commons) 302 → 294. 근거 · 이력 블록만 원문 그대로 옮겼고, 절차 · 명령 · 단계가 쓰는 표는 상주에 남겼다. 옛 비어 있지 않은 줄은 전부 두 파일 중 하나에 있다(스킬마다 대조).
 - 에이전트 정의 9개에 Done When 을 넣었다(#985): 페르소나 렌즈 6개 · `fact-checker` · `hub-persona-auditor` · `persona-innovator`. 각 파일이 이미 적어 둔 출력 형식과 규칙만으로 지었고, 기존 문장은 바꾸지 않았다.
 - `docs/USER_GUIDE.md`(#984): M/S/R 풀이 한 줄 · «연결/매핑» 을 «매핑» 하나로 · 인사 뒤 목록은 «메뉴», 그 안의 선택지는 «문» 이라고 한 번 정의했다.
 
 허브 운영자 참고(소비자 설치본과 다름):
 - `selfcheck.sh --shard i/N`(또는 `FH_SELFCHECK_SHARD=i/N`)(#990): 레인 스위트를 N 조각으로 나눠 그중 하나만 돈다. 스위트가 아닌 검사는 1번 조각에서만 돈다. 옵션을 안 주면 종전처럼 전부 돈다. 잘못된 `i/N` 이나 스위트가 하나도 없는 조각은 PASS 가 아니라 HARNESS ERROR 다. 조각 배치에 쓰는 측정값 파일 `scripts/selfcheck_shard_weights.txt` 는 npm 패키지에 들어가지 않는다 — 설치본에서는 모든 스위트가 이름 해시로 자리를 정하므로 빠지는 스위트는 없지만 조각 크기는 고르지 않다.
 - CI `validate` 는 이제 4개 조각 행렬과, 그 넷이 모두 성공일 때만 초록인 `validate` 잡 하나다(#990). 브랜치 보호가 요구하는 검사 이름은 그대로 `validate` 다.
+- 조각 가중치를 CI 러너에서 다시 쟀다(#992): 가장 긴 조각 362~381초 → 314초 · 조각 간 차이 62~142초 → 39초(그 PR 자신의 CI 실측).
 
 ### [3.34.0] — 2026-10-31 — 다이제스트 주간 느린 갈래 · 흡수 대기열이 원문 문장을 담는다 · 착지 증언이 출처 ID 로 가르고 덜 읽은 «미착지» 를 확정하지 않는다 · persona-cast 위치 없는 지적 버리기
 
