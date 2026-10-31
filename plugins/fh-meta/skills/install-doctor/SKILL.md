@@ -115,13 +115,7 @@ else
 fi
 ```
 
-**Bootstrap note — honest scope**: `scripts/fh_node_check.sh` (the check that *reports* a missing
-floor at turn 0) ships with the clone, but its **registration does not**: every
-`.claude/settings*.json` path in this repo is gitignored (confirm with `git check-ignore -v
-.claude/settings.json` — don't trust a line number, they move), so no SessionStart entry can be
-tracked. The tracked artifact is `templates/settings.SessionStart.snippet.json`; `/install-wizard`
-merges it. A user who never runs the wizard still gets no turn-0 signal — that residual is reduced,
-not closed, and this check item is the backstop for it.
+> **Detail**: See `SKILL_detail.md §Bootstrap-Scope` — why the turn-0 reporter ships with the clone but its registration does not, and what the check item backstops — read when a user asks why the floor check exists or whether the turn-0 signal is guaranteed.
 
 **Emission model** (so the output is read correctly): a **missing floor is reported every session**
 until it is fixed — it is a persistent condition, not an event. A healthy machine is silent. So
@@ -131,10 +125,7 @@ line (identity change / infra delta), not a floor complaint.
 **Fix for either ❌**: re-run `/install-wizard` (it registers both — `install-wizard/SKILL_detail.md`
 §Mode-D-Companion-Setup step 3 and the 4-axis gate block), or apply the two commands it uses directly.
 
-**Why this is a check item and not a note** (measured 2026-07-30): a second machine held the full
-companion store and memory, yet ran with **both** SessionStart hooks absent. Nothing surfaced it —
-the miss was found by accident. A weak tier is where this bites hardest: a mechanized floor is
-tier-independent, while the prose it replaces is exactly what a weaker model drops first.
+> **Detail**: See `SKILL_detail.md §Node-Floor-Rationale` — the measured 2026-07-30 second-machine case behind making this a check item — read when defending or questioning the node floor check.
 
 ---
 
@@ -253,12 +244,7 @@ PY
 > truncated `.mcp.json` must yield `2`, and a config with one `transport: http` server must yield `1`.
 > If both print nothing, the check is dead.
 
-**Known MCP HTTP transport vulnerability patterns** (based on HTTP port exposure security principles): When MCP servers using HTTP/SSE transport expose ports without authentication, remote access risk within local networks may occur. stdio transport is not affected.
-
-| Transport | Risk |
-|---|---|
-| `stdio` (default) | Safe — not subject to vulnerability pattern |
-| `http` / `sse` | ⚠️ Risk if port exposed without authentication — verify firewall rules + access control |
+> **Detail**: See `SKILL_detail.md §MCP-Transport-Patterns` — the HTTP/SSE port-exposure pattern and the transport risk table — read when explaining why a non-stdio server is flagged.
 
 **Recommendation**: HTTP transport MCP servers must confirm localhost binding + access control.
 
@@ -315,14 +301,7 @@ Steps 0~4 completed                                              (mandatory-pass
                                                                    non-🟩 areas == 0)
 ```
 
-**Why `Steps 0~4`, not `1~4`**: Step 0 holds the only *mechanical floor* checks in this skill (hook
-exec-bit, SessionStart registration, Node floor). Leaving it outside the completion condition let a
-run report "done" having never touched the one part that is not judgement.
-
-**Why the verdict is counted, not stated**: the previous condition was `"Plugin install is safe in
-current environment" confirmed` — that measures whether a *sentence was printed*, which a run
-satisfies by printing it. An unmeasured area (e.g. an unparseable `.mcp.json`) must not be
-absorbed into 🟩; absence of a finding is not a finding of absence.
+> **Detail**: See `SKILL_detail.md §Done-When-Rationale` — why Done When covers Steps 0~4 and why the verdict is counted, not stated — read when editing or defending the Done When condition.
 
 ## Simplification Guard
 
