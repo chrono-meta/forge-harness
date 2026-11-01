@@ -5226,14 +5226,14 @@
   outcome: "its main hypothesis (scorer too narrow) was disproven by the governor opening the 10-17/18/19 reps it had not opened: those were real misroutes, already fixed by #917. Later flakes are lexical; preregistered A/B 11/12 vs 12/12, below threshold — no change"
   evidence: "tracks/_meta/g_trig04_ab_2026-10-31/RESULT.md"
   tokens: "not recorded"
-- date: 2026-10-31
+- date: 2026-11-01
   agent: "general-purpose (sonnet) — blind cold read of the deliberation split (purpose: independence)"
   task: "use the split deliberation SKILL.md + SKILL_detail.md cold, not told what was tested"
   trigger: "Done = fires at the floor tier, for a skill-text change (#994)"
   outcome: "0 split defects; it flagged the Step 0 sample log saying Innovator/Devil run isolated, contradicting Steps 1–2 — fixed separately in #995"
   evidence: "PR #994 (230642af)"
   tokens: "not recorded"
-- date: 2026-10-31
+- date: 2026-11-01
   agent: "general-purpose (sonnet) — blind cold read after the Step 0 isolation fix (purpose: independence)"
   task: "answer, from the edited SKILL.md alone, which deliberation roles run isolated"
   trigger: "Done = fires at the floor tier (#995)"
