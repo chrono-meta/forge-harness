@@ -5240,3 +5240,16 @@
   outcome: "answered inline / inline / isolated (Innovator / Devil / Mediator) — matches Steps 1–3; three open design questions listed in the PR body. Logged late (2026-11-01, first commit attempt auto-denied while the operator was away)"
   evidence: "PR #995"
   tokens: "not recorded"
+- date: 2026-11-01
+  agent: "general-purpose (sonnet) ×2 — blind execution sim of the new standpoint-review skill (purpose: independence)"
+  task: "follow the skill on a toy upstream/downstream pair with a planted ISO-date rule break"
+  trigger: "Done = fires at the floor tier, for a new skill (operator «4번은 넣자»)"
+  outcome: "both rounds isolated, ran the receiver's own checks with a baseline and caught the planted break (tier2(app)); R1 gap = no way to start a separate reviewer, R2 gap = variadic flag swallowed the prompt — both folded into Step 3. One false claim in R2's report (pre-existing __pycache__) — originals were verified clean by the governor"
+  evidence: "tracks/_meta/.axes_23_passed_feat_standpoint-review-skill_2026-11-01.marker"
+  tokens: "122832 + 126566"
+- date: 2026-11-01
+  agent: "fh-commons:quench-challenger (sonnet) ×2 — adversarial review of standpoint-review SKILL.md (purpose: independence)"
+  task: "attack the skill against field_verdict_crossfamily_gate.md §7"
+  outcome: "R1 1 S + 10 A/B (all verified against §7 before fixing); R2 all CLOSED + 2 new A fixed; cap 2"
+  evidence: "same marker"
+  tokens: "101215 + 97695"

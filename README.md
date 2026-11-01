@@ -163,8 +163,8 @@ back to it. Full map, every node a real path: [`docs/map/FH_MAP.md`](docs/map/FH
   missed the *same* two holes, and the second family caught both. Method in [`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md); more runs in [`docs/OUTPUT_EVIDENCE.md`](docs/OUTPUT_EVIDENCE.md).
 - Maturity is graded, not claimed. Each of the five identities named below carries a dated grade, with its grounds, in
   [`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md).
-- Counts on this page (46 skills · 14 agents) are the skill folders and agent files under `plugins/`
-  (`fh-meta`, `fh-commons`, `fh-qp`, `fh-preprep`), counted 2026-10-10. Phrasebook: [`CHEATSHEET.md` §12](CHEATSHEET.md#12-skills--agents--what-each-does-and-what-to-say).
+- Counts on this page (47 skills · 14 agents) are the skill folders and agent files under `plugins/`
+  (`fh-meta`, `fh-commons`, `fh-qp`, `fh-preprep`), counted 2026-11-01. Phrasebook: [`CHEATSHEET.md` §12](CHEATSHEET.md#12-skills--agents--what-each-does-and-what-to-say).
 
 ## Words you will meet once you use it
 

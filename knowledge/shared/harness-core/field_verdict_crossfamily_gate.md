@@ -204,6 +204,8 @@ CLAUDE.md §Floor governance).
 
 ## §7 Standpoint axis — orthogonal to family, formalized 2026-08-14
 
+> **Callable door (2026-11-01)**: `plugins/fh-commons/skills/standpoint-review/SKILL.md` runs this axis for installs without the hub repo — isolate the receiver, run its own checks, cold review against its own rules, verify every finding, grade Q1–Q3. This section stays the canon; the skill carries only the procedure and the tier questions.
+
 **The gap this closes**: §3 above establishes that cross-family review decorrelates the
 *reviewer's error distribution*. It does not decorrelate the *reviewer's ground-truth source*.
 Three families reviewing a shared-body change (code authored in one harness, consumed by or
