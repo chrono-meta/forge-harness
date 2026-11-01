@@ -5253,3 +5253,17 @@
   outcome: "R1 1 S + 10 A/B (all verified against §7 before fixing); R2 all CLOSED + 2 new A fixed; cap 2"
   evidence: "same marker"
   tokens: "101215 + 97695"
+- date: 2026-11-01
+  agent: "fh-meta:hub-persona-auditor (sonnet) — sim-conductor Area B reader audit of the v3.36.0 surface (purpose: independence)"
+  task: "read standpoint-review SKILL.md, CHANGELOG [3.36.0], README count lines and fh-commons plugin.json as outside readers"
+  trigger: "minor release before tag — Version-Digit-Policy Area B (operator «스킬 시뮬돌려보고 출하까지 가자»)"
+  outcome: "M 0 / S 6 / R 4. S1 (example reviewer command grants no Bash permission) confirmed by a known-pair probe and fixed; S2–S6 fixed (dependency install, plain intro, re-probe numbers, CHEATSHEET row, English summary)"
+  evidence: "release/v3.36.0 commit f2d60d96 · tracks/_meta/.axes_23_passed_release_v3.36.0_2026-11-01.marker"
+  tokens: "97086"
+- date: 2026-11-01
+  agent: "fh-meta:persona-innovator (sonnet) — Area B naming/structure review of standpoint-review (purpose: independence)"
+  task: "judge the name, role overlap with existing skills, and first-use structural gaps"
+  trigger: "same Area B run"
+  outcome: "M 0 / S 2 / R 3; no rename, no role collision (auto-decorrelation, persona-cast, harness-pr-reviewer distinct). S1 (intro jargon) and S2 (fallback bullet) and R3 (how to make the diff) fixed; R1 (version field) checked — persona-cast uses the same field"
+  evidence: "same commit and marker"
+  tokens: "103732"

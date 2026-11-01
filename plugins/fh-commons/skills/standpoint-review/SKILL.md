@@ -1,21 +1,24 @@
 ---
 name: standpoint-review
-description: 'Standpoint review — check a change from the side that RECEIVES it: copy the receiving repo (or a clean install of the package) into an isolated folder, apply the change there, run that repo''s OWN checks, have a reviewer judge the change against that repo''s OWN rules with none of the author''s explanation, then verify every finding against the source before acting on it. Use when a change alters how another repo, harness, plugin consumer or downstream project behaves. Triggers: "입장 리뷰", "받는 쪽에서 돌려 봐", "하위 레포에서 돌려 봐", "그 레포 규칙으로 검증해 줘", "standpoint review", "run it from the target", "check it from the downstream repo".'
+description: 'Standpoint review — check a change from the side that RECEIVES it: copy the receiving repo (or a clean install of the package) into an isolated folder, apply the change there, run that repo''s OWN checks, have a reviewer judge the change against that repo''s OWN rules with none of the author''s explanation, then verify every finding against the source before acting on it. Use when asked whether a change breaks, or still works with, another repo, app, harness or package consumer that depends on it. Triggers: "입장 리뷰", "받는 쪽에서 돌려 봐", "하위 레포에서 돌려 봐", "그 레포 규칙으로 검증해 줘", "standpoint review", "run it from the target", "check it from the downstream repo", "make sure it won''t break the repo that depends on it", "will this change break downstream users".'
 version: 0.1
 ---
 
 # standpoint-review — review a change from the side that receives it
+
+**Input**: the change (a diff such as `git diff <base>..HEAD > change.diff`, a dependency bump, or a
+package build) and the repo or package that receives it.
+
+**What it is, in one line**: family diversity (another model reads the diff) raises resolution
+*within one standpoint*. Standpoint review changes *which ground truth* the change is checked against:
+the receiving side's own rules, tests and conventions. A defect that only exists relative to the
+receiver's conventions is invisible from the author's repo however many models read it.
 
 **Why this exists (operator decision 2026-11-01)**: in forge-harness (FH) the standpoint axis runs as
 an engine — a rule (`knowledge/shared/harness-core/field_verdict_crossfamily_gate.md` §7) plus a
 commit-hook field (`standpoint:`) — for sessions running inside the harness repo. Someone who only
 installs the plugin gets neither. This skill is the same procedure as a doorway they can call.
 The rule file stays the canon; read it whenever it is present. This skill does not replace it.
-
-**What it is, in one line**: family diversity (another model reads the diff) raises resolution
-*within one standpoint*. Standpoint review changes *which ground truth* the change is checked against:
-the receiving side's own rules, tests and conventions. A defect that only exists relative to the
-receiver's conventions is invisible from the author's repo however many models read it.
 
 🚫 **Not role-play.** «Act as if you were repo X» is a prompt-level disguise, not a standpoint. The
 receiver has to actually run: its files, its checks, its rules loaded from its own tree.
@@ -55,11 +58,17 @@ second.
 3. Make a temporary `HOME` for this run (`mkdir <tmp>/home`). Run every receiver check in Steps 2–4
    with `HOME=<tmp>/home`. A receiver's own scripts may write to `~/…` or read real credentials.
 4. Find the receiver's checks (Step 2 says where) and run them once **before** applying the change.
-   That is the baseline for Step 2.
+   That is the baseline for Step 2. First install the receiver's dependencies inside the copy with
+   `HOME=<tmp>/home`: a clone has only committed files. Gitignored config or secrets the checks need
+   will be missing; if you cannot restore one, write the check it blocks as `UNMEASURED` in the Output.
 5. Apply the change to **the copy** as an uncommitted patch (`git -C <copy> apply <diff>`), or as a
    dependency bump or package install. Do not apply it as a branch with commits: commit messages
    carry the author's rationale into the copy's `git log`, where the reviewer can read it.
 6. 🟥 Never apply the change to the receiver's real checkout, and never push or publish from the copy.
+7. The copy and the temporary `HOME` are precautions, not a sandbox: a receiver script that uses an
+   absolute path can still reach the real checkout or real credentials. Record
+   `git -C <receiver> status --porcelain --ignored` and `git -C <receiver> worktree list` now, and
+   compare them at the end (Done When). A difference means the run touched the original — say so.
    The copy exists to be thrown away.
 
 (Confidential receivers were settled in Step 0. If you reached here with one, you are already in the
@@ -83,18 +92,30 @@ and its output.
 ## Step 3 — Cold standpoint review
 
 Start one reviewer whose working directory is the copy. A sub-agent spawned from your own session
-usually inherits your session's folder and instructions, so start a fresh one from the copy, for
-example `cd <copy> && claude -p --setting-sources user --strict-mcp-config < <task file>`, or open a
-new session in that folder. Pass the task on stdin from the saved file: a flag that takes several
-values (such as `--allowedTools`) swallows a prompt written after it. The two flags keep the receiver's own project hooks and MCP servers from
-starting with your real credentials when the reviewer opens the copy; the receiver's `CLAUDE.md` /
-`AGENTS.md` still load, which is the point. (Keep your real
-`HOME` for the reviewer process itself: a temporary `HOME` usually has no login. Tell it to run the
-receiver's checks with `HOME=<tmp>/home`.)
-User-level instructions and installed plugins may still load. If you could not use the two flags,
-the receiver's project hooks and MCP servers also ran with your real `HOME`. Both are named
-residuals: write them in the Output. If you cannot start a separate reviewer, do the review yourself in a separate pass and record
-`reviewer: self — not independent`. That review has no cold-read value.
+usually inherits your session's folder and instructions, so start a fresh one from the copy, or open a
+new session in that folder. For example:
+
+```
+cd <copy> && claude -p --setting-sources user --strict-mcp-config \
+  --allowedTools 'Bash(<the receiver check command>)' Read Grep Glob < <task file>
+```
+
+- **Let it run the checks.** Without `--allowedTools` (or a permission rule that allows the check
+  command), a headless reviewer cannot run anything: it reads files and asks for approval nobody gives,
+  and the review lands at tier1b, not tier2. Measured 2026-11-01: the same task with the flag pasted
+  the test output; without it the reviewer stopped at «approve the command when prompted».
+- **Pass the task on stdin** from the saved file. `--allowedTools` takes several values and swallows a
+  prompt written after it; with the task on stdin that cannot happen.
+- **Why the other two flags**: they keep the receiver's own project hooks and MCP servers from starting
+  with your real credentials when the reviewer opens the copy. The receiver's `CLAUDE.md` / `AGENTS.md`
+  still load, which is the point.
+- **Keep your real `HOME` for the reviewer process** (a temporary `HOME` usually has no login), and tell
+  it to run the receiver's checks with `HOME=<tmp>/home`.
+- **Two residuals to write in the Output**: ① your user-level instructions and installed plugins may
+  still load into the reviewer; ② if you could not use the two flags, the receiver's project hooks and
+  MCP servers ran with your real `HOME`.
+- **No separate reviewer possible?** Do the review yourself in a separate pass and record
+  `reviewer: self — not independent`. That review has no cold-read value.
 
 Give the reviewer exactly this:
 

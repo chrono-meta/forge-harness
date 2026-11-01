@@ -2,6 +2,20 @@
 
 ### [Unreleased]
 
+### [3.36.0] — 2026-11-01 — 새 스킬 standpoint-review(받는 쪽에서 변경 검토) · deliberation 예시 기록 수리
+
+훅 변경은 없다. 스크립트 변경도 없다. 새 스킬이 들어가서 버전 정책상 minor 다.
+
+In English: new fh-commons skill `standpoint-review` — apply a change inside an isolated copy of the repo or package that receives it, run that side's own checks, and have a reviewer with no author explanation judge it by that side's rules. No hook or script changes.
+
+소비자에게 닿는 변화:
+- 새 스킬 `standpoint-review`(fh-commons, #997): 다른 레포나 패키지를 받아 쓰는 쪽에 영향을 주는 변경을, **받는 쪽에서** 검토한다. 받는 쪽 레포(또는 패키지를 깨끗이 설치한 폴더)를 모든 레포 밖 임시 폴더에 복사하고, 거기에만 변경을 적용한 뒤, 받는 쪽이 원래 쓰는 검사를 돌린다. 그다음 작성자 설명 없이 diff · 검사 결과 · 과제만 받은 별도 리뷰어가 받는 쪽 규칙으로 판정하고, 지적마다 원문과 대조해 확인 / 근거 없음 / 원래 있던 문제로 가른다. 끝에 «리뷰어가 실제로 실행했나 · 실제 런타임이었나 · 다른 사람이 돌렸나» 세 질문으로 등급을 매긴다. 회사 기밀이 든 대상은 승인된 로컬 런타임이 없으면 돌리지 않고 `DEGRADED_NOT_RUN` 으로 적는다. 변경은 복사본에만 적용하고, 끝에 원래 레포의 상태가 전후로 같은지 확인한다. 복사본과 임시 `HOME` 은 예방 조치이지 샌드박스가 아니다 — 받는 쪽 검사가 절대 경로로 원본을 건드리는 것까지 막지는 못하고, 그 확인이 잡는다. 하네스 레포 안에서 돌리는 엔진(`field_verdict_crossfamily_gate.md §7`)과 같은 절차를, 플러그인만 깐 사용자도 부를 수 있게 따로 만든 것이다. fh-commons 스킬은 6개에서 7개가 됐다.
+- `standpoint-review` 출하 전 수리(이 릴리스):
+  - 트리거: 플러그인만 얹은 Sonnet 세션에 «받는 쪽이 안 깨지는지 봐 달라» 를 줬을 때 한글 문장은 4/4 스킬을 불렀고 영어 문장은 0/2 였다. 그 두 번은 스킬 없이 파일만 읽고 «테스트는 직접 못 돌렸다» 로 끝났다. 설명의 «Use when» 을 «다른 레포 · 앱 · 패키지 사용자를 깨뜨리나, 아직 되나» 라는 질문형으로 바꾸고 영어 트리거 둘을 더했다. 고친 뒤 처음 보는 영어 문장 둘은 합쳐 3/4, 한글은 2/2, 스킬이 뜨면 안 되는 대조 요청(코드 스타일 리뷰)은 고치기 전후 합쳐 0/4 였다. 표본이 작다.
+  - 리뷰어 실행 권한: 예시 명령에 `--allowedTools 'Bash(<검사 명령>)' …` 이 없어서, 문서대로 띄운 헤드리스 리뷰어는 검사를 못 돌리고 승인을 기다렸다(같은 과제로 대조: 플래그 있음 = 테스트 출력 붙임 · 없음 = 승인 요청에서 멈춤). 예시에 플래그를 넣고, 없으면 tier2 가 아니라 tier1b 라고 적었다.
+  - 복사본에서 의존성을 먼저 설치하라는 줄, 복원 못 하는 설정이 막는 검사는 `UNMEASURED` 로 적으라는 줄, 첫머리 «입력» 한 줄을 넣었다. `CHEATSHEET.md` §12 에 이 스킬 줄을 더했다.
+- `deliberation` Step 0 예시 기록(#995): Step 1–2 는 Innovator 와 Devil-Advocate 를 격리 없이 돌리고 Mediator 만 격리한다고 정하는데, Step 0 예시 기록 두 줄은 두 역할을 «isolated instance» 로 적고 있었다. 그 두 줄만 절차대로 고쳤다. 격리 규칙은 바뀌지 않았다.
+
 ### [3.35.0] — 2026-11-01 — degrade 검사가 스테이징된 내용을 본다 · 머지 기록 자동 한 줄 · selfcheck 샤드 · 스킬 7개 분리 · 에이전트 Done When
 
 훅 한 줄이 바뀌었다(`templates/.git-hooks/pre-commit` 이 degrade 검사에 `--staged` 를 넘긴다). 스크립트 옵션이 둘 늘었다(`degrade_direction_scan.sh --staged` · `selfcheck.sh --shard i/N`). 새 동작이 들어가서 버전 정책상 minor 다.

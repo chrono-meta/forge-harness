@@ -511,6 +511,7 @@ Claude agents feature
 | `goal-quench` | Adds a token-budget ceiling + quality gate on top of an autonomous `/goal` run | "run this autonomously but cap the budget", "gate the goal run" |
 | `meta-prompt-builder` | Designs *what to say* to each agent (pairs with agent-composer's *what to orchestrate*) | "help me write a prompt", "build a prompt for the agent" |
 | `deliberation` *(commons)* | Innovator → Devil → Mediator 3-role structured debate to a synthesis | "deliberate this", "argue both sides then synthesize" |
+| `standpoint-review` *(commons)* | Apply a change in an isolated copy of the repo or package that receives it, run that side's own checks, and have a reviewer with no author explanation judge it by that side's rules | "will this change break downstream users", "check it from the downstream repo", "받는 쪽에서 돌려 봐" |
 
 ### Diagnosis — *"something feels off"*
 
