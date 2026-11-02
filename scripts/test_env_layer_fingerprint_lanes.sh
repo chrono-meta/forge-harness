@@ -19,6 +19,11 @@ echo "── env-layer-fingerprint lanes ──"
 
 [ -x "$S" ] || { echo "FAIL  $S 가 없거나 실행 불가"; exit 1; }
 
+# evidence.marker 는 훅과 같은 `<브랜치>_<오늘>` 주소 하나만 읽는다. 그러니 픽스처도 그
+# 주소로 만들어야 하고, 25분짜리 selfcheck 안에서 자정을 넘겨도 흔들리지 않게 「오늘」을 여기서
+# 고정한다(계기가 그 목적으로 내놓은 이음새). 고정을 지우면 L3 은 적색이 된다 — 초록이 아니다.
+export FH_FP_TODAY=2026-01-02
+
 TMP="$(mktemp -d)" || exit 2
 trap 'rm -rf "$TMP"' EXIT
 
@@ -34,7 +39,7 @@ mk_hub() {  # mk_hub DIR [full] — READ 층만(=새 클론) 또는 로컬 층�
     : > "$d/.claude/registry/LOCAL_SKILL_REGISTRY.md"
     : > "$d/CLAUDE.local.md"
     : > "$d/tracks/_meta/edit_manifest.yaml"
-    : > "$d/tracks/_meta/.axes_23_passed_fixture.marker"
+    : > "$d/tracks/_meta/.axes_23_passed_fixture_${FH_FP_TODAY}.marker"
     : > "$d/tracks/_meta/reference_next_session_starter.md"
     : > "$d/tracks/_meta/session_fixture.md"
   fi

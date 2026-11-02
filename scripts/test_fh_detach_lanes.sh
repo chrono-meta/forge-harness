@@ -15,7 +15,12 @@ DETACH="$HERE/fh_detach.py"
 DETAIL="$ROOT/plugins/fh-meta/skills/install-wizard/SKILL_detail.md"
 T="$(mktemp -d)"
 trap 'rm -rf "$T"' EXIT
-pass=0; fail=0
+pass=0; fail=0; unmeas=0
+# 🟥 미측정은 통과도 실패도 아니다. 전제를 못 만든 레인을 ❌ 로 찍으면 주체를 의심하게
+#    만들고(실측: M5d, 아래), ✅ 로 찍으면 공허한 초록이 된다. 세 번째 칸을 둔다.
+unmeasured() { # unmeasured <name> <why>
+  unmeas=$((unmeas+1)); printf '  ⬜ %-58s %s\n' "$1" "$2 — 미측정, 통과 아님"
+}
 chk() { # chk <name> <got> <want>
   if [ "$2" = "$3" ]; then pass=$((pass+1)); printf '  ✅ %-58s %s\n' "$1" "$2"
   else fail=$((fail+1)); printf '  ❌ %-58s got=%s want=%s\n' "$1" "$2" "$3"; fi
@@ -274,7 +279,21 @@ chk "M5c … with --machine the same file is an error (rc 10)"  "$(detach_p "$W"
 W="$T/w17"; mkworld "$W"; install "$W"
 mkdir -p "$W/proj/.claude" && git -C "$W/proj" init -q && cp "$W/hub/.claude/settings.json" "$W/proj/.claude/settings.json"
 chmod 000 "$W/hub/.claude/settings.json"
-chk "M5d an unreadable FH-clone settings file: project detach rc 0 · --machine rc 10"  "$(detach_p "$W" "$W/proj" --apply)/$(detach_p "$W" "$W/proj" --machine)" "0/10"
+# 🟥 `chmod 000` 은 root 를 묶지 않는다 — **이 파일 자신이 그것을 이미 적는다**(아래 M6 줄의
+#    «chmod 000 does not bind root — codex»). 그 지적이 이웃 레인에만 반영되고 이 레인에는
+#    안 반영된 절반 수리였다. 전제가 안 걸리면 파일이 그냥 읽히고, 주체는 올바르게 rc 0 을
+#    내는데 레인은 `got=0/0 want=0/10` 을 찍는다 — 읽는 사람을 `fh_detach.py` 로 보낸다.
+#    실측 2026-11-02, 같은 트리·같은 스위트·uid 만 바꿈: root → 61 passed · 1 failed(M5d ❌)
+#    / `setpriv --reuid=65534` → **62 passed · 0 failed**(M5d ✅ `0/10`). 즉 주체는 성하다.
+#    그러니 이 자리는 수리할 결함이 아니라 **못 쟀다고 말해야 하는 칸**이다. CI 는 비-root 라
+#    거기서는 그대로 측정된다. ⚠️ 전제를 «얻는» 길(이 두 호출만 권한 내려 돌리기)은 택하지
+#    않았다 — `$T` 는 mktemp 의 0700 이라 통과 자체가 안 되고, 통과시키면 주체 프로세스의 uid
+#    가 바뀌어 레인이 재는 것이 달라진다. 이름으로 남기고 고치지 않는다.
+if cat "$W/hub/.claude/settings.json" >/dev/null 2>&1; then
+  unmeasured "M5d an unreadable FH-clone settings file" "chmod 000 이 이 uid($(id -u)) 를 묶지 않았다"
+else
+  chk "M5d an unreadable FH-clone settings file: project detach rc 0 · --machine rc 10"  "$(detach_p "$W" "$W/proj" --apply)/$(detach_p "$W" "$W/proj" --machine)" "0/10"
+fi
 chmod 644 "$W/hub/.claude/settings.json"
 W="$T/w18"; mkworld "$W"; install "$W"
 mkdir -p "$W/proj/.claude" && git -C "$W/proj" init -q && cp "$W/hub/CLAUDE.local.md" "$W/proj/CLAUDE.local.md"
@@ -298,5 +317,9 @@ chk "W3 install-wizard SKILL.md names --machine"  "$(grep -c 'fh_detach.py" --pr
 chk "W2 install-wizard SKILL.md points at the detach command"  "$(grep -q 'scripts/fh_detach.py" --project . --apply' "$ROOT/plugins/fh-meta/skills/install-wizard/SKILL.md" && echo yes)" yes
 
 echo
-echo "fh_detach lanes: $pass passed · $fail failed"
-[ "$fail" -eq 0 ]
+echo "fh_detach lanes: $pass passed · $fail failed · $unmeas unmeasured"
+if [ "$unmeas" -gt 0 ] && [ "$fail" -eq 0 ]; then
+  # 통과로 접지 않는다. 같은 판정을 test_mutation_probe_lanes.sh 가 쓰는 문구로 낸다.
+  echo "INCOMPLETE  fh_detach: $unmeas 레인이 전제를 못 만들어 안 돌았다 — 통과 아님"
+fi
+[ "$fail" -eq 0 ] && [ "$unmeas" -eq 0 ]

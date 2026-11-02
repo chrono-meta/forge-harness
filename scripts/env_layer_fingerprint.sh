@@ -68,6 +68,9 @@ add_row() { ROWS="${ROWS}${1}	${2}	${3}	${4}
 
 # _exists PATH → PRESENT|ABSENT   (파일이든 디렉터리든)
 _exists() { [ -e "$1" ] && printf 'PRESENT' || printf 'ABSENT'; }
+# 날짜 키 (evidence.marker). `FH_FP_TODAY` 는 레인이 날짜를 고정하기 위한 이음새다 —
+# 안 주면 실제 오늘이고, 운영 경로에서는 아무것도 바꾸지 않는다.
+_FP_TODAY="${FH_FP_TODAY:-$(date +%F)}"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # probe_hub HUB — 모든 행을 ROWS 에 채운다. 인자를 받으므로 selftest 가 픽스처에 겨눌 수 있다.
@@ -136,9 +139,25 @@ PY
   # ── EVIDENCE 층 — gitignored 기록. 게이트가 **읽는** 입력이다 ──────────────────
   add_row evidence.manifest EVIDENCE "$(_exists "$H/tracks/_meta/edit_manifest.yaml")" \
     "Axis 4 입력 — 없으면 훅이 배선된 쪽에서만 FAIL 이 뜬다"
+  # 🟥 **오늘 날짜로 키를 건다 (2026-11-02 실측).** 이 칸은 「마커 파일이 하나라도 있나」를 묻고
+  #    있었는데, 소비자는 그걸 안 읽는다: `templates/.git-hooks/pre-commit` 은
+  #    `.axes_23_passed_<브랜치슬러그>_<오늘>.marker` **하나만** 읽고(그 훅 자신의 주석이 2786
+  #    줄에서 그렇게 적는다), 이름이 다른 마커는 없는 것과 같이 취급한다. 그래서 지난 회차 마커가
+  #    디스크에 남은 체크아웃에서 이 칸이 `PRESENT` 를 찍었고, ① 판을 읽은 세션은 EVIDENCE 층이
+  #    충족됐다고 결론한 다음 **같은 변경이 커밋 게이트에서 막혔다**(같은 날 두 팔로 실측:
+  #    배선 없음 → rc=0 무음 통과 / 배선 → rc=1, Axis 2+3 NOT CONFIRMED). 즉 이 칸은 **쓸 수 없는
+  #    기록을 충족으로 접고 있었다** — 이 레포가 「미측정을 통과로 접는 채널」로 부르는 그 부류다.
+  #    날짜만으로 키를 건다(브랜치까지 거는 것은 아래 잔여). 훅 자신도 2794 줄에서 날짜만으로
+  #    목록을 뽑아 「오늘 썼는데 주소가 틀렸다」를 말하므로, 날짜 키는 그 훅의 어휘 안에 있다.
+  #    ⚠️ **남은 것, 고치지 않았다**: 오늘 날짜에 **다른 브랜치**의 마커만 있으면 이 칸은 여전히
+  #    PRESENT 다. 브랜치 슬러그를 키에 넣으려면 이 계기가 git 을 요구하게 되고, 그러면 비-깃
+  #    픽스처(아래 --selftest)와 깃 없는 소비자 트리에서 판정이 UNMEASURED 로 떨어진다 — 세 값
+  #    어휘에서 그건 드리프트로 집계되므로, 더 작은 수리를 택하고 이 잔여를 이름으로 남긴다.
+  #    ⚠️ 이 변경은 `--digest` 를 바꾼다. 이 줄 이전 회차의 지문과 이후 지문은 **비교 대상이
+  #    아니다**(회차 간 분리자로 지문을 쓰는 쪽은 그 경계를 알고 써야 한다).
   add_row evidence.marker EVIDENCE \
-    "$([ "$(find "$H/tracks/_meta" -maxdepth 1 -name '.axes_23_passed_*' 2>/dev/null | wc -l | tr -d ' ')" -gt 0 ] && printf 'PRESENT' || printf 'ABSENT')" \
-    "Axis 2+3 입력 — 마커는 브랜치·날짜별이라 한쪽에만 산다"
+    "$([ "$(find "$H/tracks/_meta" -maxdepth 1 -name ".axes_23_passed_*${_FP_TODAY}.marker" 2>/dev/null | wc -l | tr -d ' ')" -gt 0 ] && printf 'PRESENT' || printf 'ABSENT')" \
+    "Axis 2+3 입력 — 훅은 <브랜치>_<오늘> 한 이름만 읽는다. 어제 마커는 있어도 이 세션의 입력이 아니다"
   add_row evidence.card EVIDENCE "$(_exists "$H/tracks/_meta/reference_next_session_starter.md")" \
     "세션 카드 — 없으면 마감 ⑤ 와 온보딩 «returning» 판정의 입력이 없다"
   # 🟥 «tracks 에 파일이 있나» 로 세면 안 된다 — **두 방향으로** 틀린다.
@@ -283,7 +302,7 @@ if [ "$MODE" = "selftest" ]; then
   : > "$POS/.claude/registry/LOCAL_SKILL_REGISTRY.md"
   : > "$POS/CLAUDE.local.md"
   : > "$POS/tracks/_meta/edit_manifest.yaml"
-  : > "$POS/tracks/_meta/.axes_23_passed_fixture.marker"
+  : > "$POS/tracks/_meta/.axes_23_passed_fixture_${_FP_TODAY}.marker"
   : > "$POS/tracks/_meta/reference_next_session_starter.md"
   probe_hub "$POS"
   pos_absent="$(count_of ABSENT)"
@@ -295,6 +314,28 @@ if [ "$MODE" = "selftest" ]; then
   done
   pos_digest="$(digest_line)"
   [ "$neg_digest" = "$pos_digest" ] && { echo "FAIL  selftest: 두 픽스처의 digest 가 같다 — 지문이 상태를 안 나른다"; rc=1; }
+
+  # ── 묵은 마커 팔 (2026-11-02). 이 팔이 없으면 위의 known-positive 는 「마커 파일이 있다」만
+  #    보이고, 이 계기가 고치려는 바로 그 혼동(있다 ≠ 이 세션의 입력이다)을 못 가른다.
+  #    수리 전에 돌리면 이 팔이 PRESENT 를 받아 **빨강**이 된다 — 그래서 컨트롤이다.
+  STALE="$TMP/stale"
+  cp -R "$POS" "$STALE"
+  rm -f "$STALE"/tracks/_meta/.axes_23_passed_*.marker
+  #    묵은 날짜는 「오늘」과 반드시 달라야 한다 — `FH_FP_TODAY` 로 오늘을 고정한 호출자가
+  #    하필 이 날짜를 집으면 이 팔이 자기 주제를 잃는다. 겹치면 하루 뒤로 비킨다.
+  _FP_STALE=2000-01-01
+  [ "$_FP_STALE" = "$_FP_TODAY" ] && _FP_STALE=1999-01-01
+  : > "$STALE/tracks/_meta/.axes_23_passed_fixture_${_FP_STALE}.marker"
+  probe_hub "$STALE"
+  if [ "$(verdict_of evidence.marker)" = "PRESENT" ]; then
+    echo "FAIL  selftest: $_FP_STALE 마커 하나뿐인 허브가 evidence.marker=PRESENT — 훅은 그 이름을 안 읽는다"; rc=1
+  fi
+  # 같은 허브, 날짜만 오늘로 → PRESENT 로 돌아와야 한다(음성 팔이 늘 ABSENT 를 내는 계기와 구분)
+  : > "$STALE/tracks/_meta/.axes_23_passed_fixture_${_FP_TODAY}.marker"
+  probe_hub "$STALE"
+  if [ "$(verdict_of evidence.marker)" != "PRESENT" ]; then
+    echo "FAIL  selftest: 오늘 날짜 마커를 넣었는데 evidence.marker 가 PRESENT 가 아니다 — 과차단"; rc=1
+  fi
 
   # 계기-오류 팔: READ 층이 없는 디렉터리를 겨누면 rc=2 여야 한다
   probe_hub "$TMP/nonexistent-hub"
