@@ -260,7 +260,8 @@ fi
 # release chain) the old `exists and not covered` gate read them STALE while shipped docs still
 # named them. Three legs, one variable each: named+absent must NOT be stale (the fix), unnamed must
 # be stale (the advisory still fires), named+present must not be stale (old behaviour kept).
-ACC_ONE=$(bash "$SUBJECT" --list-accepted | grep -m1 '\.py$')
+_ACC_LIST=$(bash "$SUBJECT" --list-accepted)        # capture first: an early-exit grep in a pipe would SIGPIPE the producer
+ACC_ONE=$(printf '%s\n' "$_ACC_LIST" | grep '\.py$'); ACC_ONE=${ACC_ONE%%$'\n'*}
 l8_stale() { # l8_stale <named:yes|no> <present:yes|no> -> prints the STALE advisory lines
   local d="$TMP/l8_$1_$2"
   make_tree "$d" dir yes
