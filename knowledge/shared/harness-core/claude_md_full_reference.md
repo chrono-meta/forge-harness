@@ -692,7 +692,16 @@ not marketplace-gate alone:
    **genuinely not-applicable** (`skipped: docs-only repo` — surface ships no code). When code *does*
    ship, `skipped: built-in unavailable` is **not** a free skip: per the Surface-Class Degrade Invariant
    above this is an applicable-but-tooling-down case on an irreversible surface → **fail-CLOSED** (run a
-   manual security pass or take an explicit operator override before publishing; never silent-proceed)
+   manual security pass or take an explicit operator override before publishing; never silent-proceed).
+   **A pass is not coverage of every class.** The built-in's own policy leaves regular-expression
+   denial of service out and reports prototype pollution and open redirect only at very high
+   confidence; on a public benchmark the same model matched 9 of the 20 vulnerabilities in those classes
+   under `/security-review` and 16 with a plain audit prompt (arXiv:2610.38617, VulnBench 2.0 — a
+   supplementary run over 19 of 20 apps; the authors work for a SAST vendor). When the shipped code parses untrusted input
+   with regexes, merges objects, or redirects to a URL it was given, pair the pass with a check that
+   covers that class on that code — a scanner rule set that includes it, or a second review without
+   that policy pointed at those call sites — and name which one ran. If no such check can run, this is
+   the same applicable-but-tooling-down case as above: manual pass or explicit override, not a silent pass.
 
 > Routing vs the rows below: `/marketplace-gate` alone = "is this ready to **list on a marketplace**?";
 > `/public-surface-audit` alone = reactive "did I leak a token?"; **this gate** = the *act of going
