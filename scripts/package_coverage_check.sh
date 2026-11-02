@@ -573,11 +573,19 @@ for s in shipped:
         # HONEST STATE: fix the `js|json` alternation first, re-measure, then decide. Until then
         # this check's true coverage is UNQUANTIFIED — treat a PASS as "no defect of the narrow
         # exists-and-uncovered kind", not as "every shipped reference is sound".
-        if os.path.exists(m) and not covered(m):
-            if m in accepted:
-                exercised.add(m)
-            else:
-                phantom.setdefault(m, set()).add(s)
+        if covered(m):
+            continue
+        # An accepted entry is exercised when a shipped doc still NAMES it — existence plays no
+        # part. The exception records a decision about a reference, and the reference is the same
+        # on every machine; the file is not. Gating this on `exists` made the three entries whose
+        # files are not in the repo (.claude/registry/LOCAL_SKILL_REGISTRY.md, .claude/settings.json,
+        # .claude/settings.local.json — present only on a configured machine) read STALE
+        # in every clean clone, i.e. in CI and the release chain (measured 2026-11-02: live 65/65,
+        # clean clone 62/65), and the advisory told the reader to delete exceptions that were in use.
+        if m in accepted:
+            exercised.add(m)
+        elif os.path.exists(m):
+            phantom.setdefault(m, set()).add(s)
 
 # Impossible-zero guard: this repo always has shipped docs. Zero scanned means the extractor
 # broke — report that as a failure rather than letting a dead check print a pass
