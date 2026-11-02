@@ -5291,3 +5291,9 @@
   outcome: "3/3 as predicted — both risky scenarios not complete and named the class check; control complete with no extra check"
   evidence: "tracks/_meta/.axes_23_passed_docs_prepublish-security-review-policy-gap_2026-11-02.marker"
   tokens: "134765 + 111534 + 134559"
+- date: 2026-11-02
+  agent: "general-purpose (sonnet) ×6 — blind A/B sims of the Pre-Publish 'point it at what ships' line, new text vs main text (purpose: independence)"
+  task: "S1 leading scenario (14 PRs since tag named) 1+1; S2 unleading scenario (release branch, /security-review defaults to the branch diff) 2+2"
+  outcome: "S1 both arms named the tag range — scenario leaked the answer, no discrimination. S2 tag..release-commit range named: new 2/2, old 0/2 (old arms said 'point it at bin/ scripts/ or the release tree'). 'Clean on the release PR completes step 3?': no in 4/4, no difference — the line adds range and record shape, not the refusal"
+  evidence: "PR body of docs/prepublish-security-review-target · scratchpad sim/new.md, old.md, scenario2.txt"
+  tokens: "113122 + 113710 + 113297 + 113283 + 113162 + 113163"

@@ -702,6 +702,11 @@ not marketplace-gate alone:
    covers that class on that code — a scanner rule set that includes it, or a second review without
    that policy pointed at those call sites — and name which one ran. If no such check can run, this is
    the same applicable-but-tooling-down case as above: manual pass or explicit override, not a silent pass.
+   **Point it at what ships, not at the release PR.** A release PR's diff is usually the version bump
+   and the changelog, so a review of "the pending changes" there reads almost no shipped code and still
+   comes back clean. The surface for a registry publish is the shipped code between the previous release
+   tag and the commit being tagged — `git diff <previous-tag>..<release-commit> -- <the files[] paths>`
+   — and the record names that range. A clean pass over the release PR alone is not this step.
 
 > Routing vs the rows below: `/marketplace-gate` alone = "is this ready to **list on a marketplace**?";
 > `/public-surface-audit` alone = reactive "did I leak a token?"; **this gate** = the *act of going
