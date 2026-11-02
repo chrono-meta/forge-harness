@@ -66,6 +66,26 @@ to MP4 · a session-rail context card with per-category usage. (`/btw` opening a
 keyboard shortcut, and nested sessions, are also described by third-party write-ups of the 2026-10-14
 desktop update; a web search the same day found no source at all for the advisor.)
 
+### Desktop surfaces exercised — 2026-11-02 (one Code-tab session, CC 2.1.316, auto mode unless noted)
+
+The rows above were names only. These were run end to end, once each unless a count is given; read them as
+observations from one machine, not as documented behaviour.
+
+| Situation | What happened | So, in FH |
+|---|---|---|
+| a Bash `cd` that ends somewhere else | four paths tried, one call each: the repo's `scripts/` and a folder added to the session **persisted** into the next call and the app reported the session's primary working directory moved; the session scratchpad and the repo's parent folder were reset after the call | give later `git` commands an explicit directory (`git -C <repo>`, absolute paths) rather than relying on where the last call ended. In the same session the SubagentStop hook still wrote to the starting repo while the primary directory was moved, so hooks did not follow the `cd` there |
+| wait for a PR's CI, then merge | the app bound a PR opened from the session without being asked. Its tool description says the monitor wakes the session on CI failure, merge conflict or review comment; success is not in that list, and none arrived on success here. Turning the monitor on was refused twice by the auto-mode classifier; the operator turned it on in the PR bar. The app's cached check counts lagged `gh pr checks` once (13 passing + 1 pending vs 15/15) | «merge when green» waits for a person to continue the session or for another notification; then run one current-status check (`gh pr checks`) before the merge verdict. The app's instructions forbid polling CI from the session |
+| change this session's permission mode | lowering (bypass → auto) applied at once with no card (observed). Raising was not exercised; the tool description says it shows an approval card in every mode and is unavailable in unattended sessions | in this app a session can lower its own mode without a person; raising is documented as a person's step. That is an app behaviour to rely on only as far as its description, not a boundary FH has tested |
+| plan limits from inside a session | `get_usage` returned the 5-hour and weekly windows with percent and reset time | a pacing input for long runs. No status-line run was observed from these desktop sessions: a desktop pet fed only by the status line kept a Claude value last written by a terminal session ~20 h earlier, and took a new one only when the status-line program was fed by hand |
+| run a cross-family check from a desktop session | `codex` and `agy` resolved and ran from the desktop shell: one reader-doc review on each, one two-round code review on `codex` | those invocations work; the full `auto-decorrelation` skill (panel discovery, consent) was not exercised from a desktop session |
+| a nested session in its own worktree writing a report into the main checkout | a Write hook refused the main-checkout path; the session wrote inside its worktree and the governor copied the file across | brief side sessions to write in their own tree and say so, or have the governor collect — FH's rule against committing FH assets from a worktree already assumes this |
+| deny rules and PreToolUse hooks under `bypassPermissions` | in a scratch folder, headless, Bash tool only, 3 runs: a `permissions.deny` match, a hook exiting 2 and a hook returning `ask` each left the command unrun (marker files 0/3 each); an unmatched control ran 3/3 | in those runs, rules and exit-2 hooks stopped commands with no classifier in the loop — a result for that configuration, not a guarantee for other tools or setups. `destructive_pre_gate.sh` exits 2 only with `FH_DESTRUCTIVE_BLOCK=1`; unset, a forced branch delete went through in a bypass headless run (1 run per arm). The hook wiring lives in the gitignored project settings, so a fresh clone has none until it is installed |
+
+Also relevant from the [CLI changelog](https://code.claude.com/docs/en/changelog) (2.1.314, dated October 30, 2026, read
+2026-11-02): it added `permissions.blockWritesOutsideWorkingDirectories`, under which the Write, Edit and NotebookEdit tools
+reject paths outside the working directories in any permission mode. The scope is those three tools: it does not cover shell
+writes, and whether it is on by default was not checked.
+
 ## Skill frontmatter `context: fork` — what it is NOT
 
 `context: fork` runs a skill body as a prompt in a new subagent (general-purpose unless `agent:` says
@@ -93,7 +113,8 @@ summary, before concluding a fork did or did not happen.
   2026-10-15; the docs' skills and model-config pages were read up to 100,000 characters (their last
   ~9k / ~17k characters unread).
 - The exact text `ultrathink` injects is not documented.
-- The desktop rows rest on tool and skill *names* seen in one session, not on docs or on running them;
-  the app's surfaces roll out per account, so another install may show fewer.
+- The first desktop table rests on tool and skill *names* seen in one session, not on docs or on running them;
+  the app's surfaces roll out per account, so another install may show fewer. The «exercised — 2026-11-02»
+  table was run once on one machine (counts given where more); none of it was repeated on a second install.
 - This map routes; it does not prove a session follows it. Whether a floor-tier session reaches for the
   built-in first is a separate measurement (blind sim, isolated clone, with and without this map).
