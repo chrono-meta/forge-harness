@@ -255,6 +255,37 @@ else
   bad "L7 zero shipped docs: expected exit 1 'check broke', got rc=$rc" "$out"
 fi
 
+# ── L8 · an accepted entry is exercised by REFERENCE, not by the file existing here ────
+# Three entries name files that exist only on the author's machine, so in a clean clone (CI, the
+# release chain) the old `exists and not covered` gate read them STALE while shipped docs still
+# named them. Three legs, one variable each: named+absent must NOT be stale (the fix), unnamed must
+# be stale (the advisory still fires), named+present must not be stale (old behaviour kept).
+_ACC_LIST=$(bash "$SUBJECT" --list-accepted)        # capture first: an early-exit grep in a pipe would SIGPIPE the producer
+ACC_ONE=$(printf '%s\n' "$_ACC_LIST" | grep '\.py$'); ACC_ONE=${ACC_ONE%%$'\n'*}
+l8_stale() { # l8_stale <named:yes|no> <present:yes|no> -> prints the STALE advisory lines
+  local d="$TMP/l8_$1_$2"
+  make_tree "$d" dir yes
+  [ "$1" = yes ] && printf 'See `%s` for the admit step.\n' "$ACC_ONE" >> "$d/docs/guide.md"
+  [ "$2" = yes ] && { mkdir -p "$d/$(dirname "$ACC_ONE")"; : > "$d/$ACC_ONE"; }
+  _LAST_OUT=$(run_tree "$d"); _LAST_RC=$?
+}
+if [ -z "$ACC_ONE" ]; then
+  skip "L8 no .py entry in ACCEPTED_ABSENT to plant"
+else
+  l8_stale yes no
+  if [ "$_LAST_RC" -eq 0 ] && ! printf '%s' "$_LAST_OUT" | grep -qxF "        $ACC_ONE"; then
+    ok "L8a named in a shipped doc, file absent here: not reported STALE"
+  else bad "L8a named+absent: expected rc=0 and $ACC_ONE not STALE (rc=$_LAST_RC)" "$_LAST_OUT"; fi
+  l8_stale no no
+  if [ "$_LAST_RC" -eq 0 ] && printf '%s' "$_LAST_OUT" | grep -qxF "        $ACC_ONE"; then
+    ok "L8b named nowhere: still reported STALE (control — the advisory is alive)"
+  else bad "L8b unnamed: expected $ACC_ONE in the STALE list (rc=$_LAST_RC)" "$_LAST_OUT"; fi
+  l8_stale yes yes
+  if [ "$_LAST_RC" -eq 0 ] && ! printf '%s' "$_LAST_OUT" | grep -qxF "        $ACC_ONE"; then
+    ok "L8c named and present: not reported STALE (behaviour before the fix kept)"
+  else bad "L8c named+present: expected rc=0 and $ACC_ONE not STALE (rc=$_LAST_RC)" "$_LAST_OUT"; fi
+fi
+
 echo
 if [ "$skipped" -gt 0 ]; then
   echo "package-coverage lanes: ${pass} passed, ${fail} failed, ${skipped} UNCALIBRATED (not verified here)"
