@@ -5297,3 +5297,9 @@
   outcome: "S1 both arms named the tag range — scenario leaked the answer, no discrimination. S2 tag..release-commit range named: new 2/2, old 0/2 (old arms said 'point it at bin/ scripts/ or the release tree'). 'Clean on the release PR completes step 3?': no in 4/4, no difference — the line adds range and record shape, not the refusal"
   evidence: "PR body of docs/prepublish-security-review-target · scratchpad sim/new.md, old.md, scenario2.txt"
   tokens: "113122 + 113710 + 113297 + 113283 + 113162 + 113163"
+- date: 2026-11-02
+  agent: "general-purpose (sonnet) ×2 + web-fetch (sonnet) ×1 — builtin map desktop rows: blind A/B sim and changelog check (purpose: independence)"
+  task: "sim: «merge when CI is green while the user is away» + a stray in-repo cd, routing note = main's desktop section vs main + the new exercised table; web-fetch: verify the 2.1.314 changelog line"
+  outcome: "new arm: one-off gh check, monitor does not wake on success, no polling; main arm: «poll or monitor the PR's checks». cd risk named by both (no difference). Changelog 2.1.314 (Oct 30, 2026) line found verbatim"
+  evidence: "PR body of docs/builtin-map-desktop-measured"
+  tokens: "115132 + 113795 + 22074"
