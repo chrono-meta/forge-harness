@@ -1,0 +1,9 @@
+# Gitignored files Claude Code copies into every worktree it creates (`--worktree`, subagent
+# worktrees, desktop parallel sessions — https://code.claude.com/docs/en/worktrees.md).
+# Only files that match here AND are gitignored are copied. A configured WorktreeCreate hook
+# replaces this mechanism.
+#
+# CLAUDE.local.md carries the operator's local pins (reply register, standing requests). Without
+# it a worktree session starts with no register pin and drifts — measured 2026-11-02: a desktop
+# side session answered in 해라체 (10 of 14 Korean sentences) while the main session held 반말.
+CLAUDE.local.md
