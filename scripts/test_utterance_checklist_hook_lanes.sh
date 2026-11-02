@@ -146,6 +146,15 @@ OUT=$(mk "홈 변수가 없어도 죽으면 안 된다" "0123abcd-0000-4000-8000
 S5="0123abcd-0000-4000-8000-0000000000a8"
 for i in $(seq 1 10); do (mk "동시에 들어온 요청 번호 $i 입니다 길게" "$S5" | CLAUDE_PROJECT_DIR="$T" bash "$HOOK" >/dev/null) & done; wait
 python3 -c 'import json,sys;r=[json.loads(l)["n"] for l in open(sys.argv[1])];s=json.load(open(sys.argv[2]));assert sorted(r)==list(range(1,11)) and s["rows"]==10,(sorted(r),s)' "$D/$S5.jsonl" "$D/$S5.state.json" && ok "U15 10 concurrent prompts → rows 1..10, state 10 (locked)" || no U15 "race"
+# U15b the deterministic half of U15 (2026-11-02): U15 loses a row only ~1% of runs, so reverting the fix leaves it green.
+# Another holder keeps the session lock for 2.0 s; the prompt must still be written down once the lock frees.
+# With the old 0.3 s wait this row is skipped in silence unless the hook starts >1.7 s late (2.0 s, not 1.0 s:
+# at 1.0 s a 0.7 s scheduling delay was enough to turn the reverted code green — codex review 2026-11-02).
+S5b="0123abcd-0000-4000-8000-0000000000a9"
+python3 -c 'import fcntl,os,sys,time;fd=os.open(sys.argv[1],os.O_RDWR|os.O_CREAT,0o600);fcntl.flock(fd,fcntl.LOCK_EX);open(sys.argv[2],"w").close();time.sleep(2.0)' "$D/$S5b.lock" "$T/u15b.ready" &
+HOLD=$!; for _ in $(seq 1 100); do [ -f "$T/u15b.ready" ] && break; sleep 0.02; done
+mk "다른 쪽이 잠금을 쥐고 있는 동안 들어온 요청" "$S5b" | CLAUDE_PROJECT_DIR="$T" bash "$HOOK" >/dev/null; wait "$HOLD"
+[ -f "$T/u15b.ready" ] && [ "$(wc -l < "$D/$S5b.jsonl" 2>/dev/null | tr -d ' ')" = 1 ] && ok "U15b prompt arriving while the lock is held 2.0 s is still written (no silent skip)" || no U15b "row skipped while lock held (ready=$([ -f "$T/u15b.ready" ] && echo y || echo n))"
 rm -rf "$T2" "$T3"
 
 # ── codex R2 (final round) cases ──

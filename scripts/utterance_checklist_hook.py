@@ -102,13 +102,22 @@ def main():
             d = None
     if d:
         lock_p = sid + ".lock"
-        try:
-            lfd = open_regular(lock_p, os.O_RDWR | os.O_CREAT)
-        except OSError:
-            lfd = None
+        lfd = None
+        for _ in range(50):                                  # concurrent O_CREAT of one name fails transiently (ENOENT, measured on macOS) — a single try dropped the row
+            try:
+                lfd = open_regular(lock_p, os.O_RDWR | os.O_CREAT); break
+            except OSError as e:
+                if e.errno not in (errno.ENOENT, errno.EEXIST):
+                    break
+                time.sleep(0.01)
         if lfd is not None:
             locked = False
-            deadline = time.monotonic() + 0.3                # never hold the operator's prompt on a lock for long (codex R2)
+            # 3.0 s, not 0.3 s (operator decision 2026-11-02): a lock timeout skips the row in silence, and losing what
+            # the operator asked for is worse than a pause under contention. codex R2's «never hold the prompt long»
+            # still bounds it: the lock is held for milliseconds, so the wait only grows when many prompts land at once.
+            # The intended waits (0.5 s of open retries + 3.0 s) sit under the 5 s hook timeout in .claude/settings.json;
+            # scheduling and I/O are outside that sum. Residual: a holder past 3.0 s still skips the row in silence.
+            deadline = time.monotonic() + 3.0
             while time.monotonic() < deadline:
                 try:
                     fcntl.flock(lfd, fcntl.LOCK_EX | fcntl.LOCK_NB); locked = True; break
