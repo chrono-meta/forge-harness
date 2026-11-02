@@ -2,6 +2,18 @@
 
 ### [Unreleased]
 
+### [3.36.1] — 2026-11-02 — 발화 기록 훅이 행을 조용히 잃던 것 · package-coverage 가 쓰이는 예외를 «안 쓰임» 으로 읽던 것 · Pre-Publish 보안 단계 한 문단 · 기능 지도 데스크톱 줄
+
+새 스킬 · 새 게이트 레인 · 새 행동 규칙은 없다. 수정과 문서라 버전 정책상 patch 다. 훅 설정은 바뀌지 않았고, 훅이 부르는 스크립트 한 개의 대기 동작이 바뀌었다.
+
+In English: the utterance checklist hook no longer drops a prompt row in silence when two prompts land at once; `package_coverage_check.sh` no longer reports in-use exceptions as stale in a clean clone; the Pre-Publish reference says a `/security-review` pass does not cover its policy-excluded classes; the built-in capability map routes desktop Code-tab surfaces.
+
+소비자에게 닿는 변화:
+- `utterance_checklist_hook.py`(#1000): 같은 세션에 프롬프트가 겹쳐 들어오면 잠금 파일 열기가 `ENOENT` 로 실패하거나 0.3초 잠금 대기가 끝나서, 운영자 발화 한 줄이 기록 없이 사라질 수 있었다(부하 실측 원본 3/200 · 10/150 유실). 열기를 10ms 간격으로 50번까지 다시 하고, 잠금은 3.0초까지 기다린다(고친 뒤 0/100). 한 세션이 자기 자신과 겹치지는 않으므로 평소 프롬프트에는 대기가 생기지 않는다. 남는 것: 잠금을 3초 넘게 쥔 쪽이 있으면 여전히 그 행을 건너뛴다. 레인 U15b 가 대기를 0.3초로 되돌리면 빨개진다.
+- `package_coverage_check.sh`(#1002): `ACCEPTED_ABSENT` 예외를 «쓰이는 중» 으로 세는 조건이 «출하 문서가 가리키고 **그 파일이 이 머신에 있을 때**» 였다. 그래서 git 에 없는 파일을 가리키는 예외 셋이 깨끗한 클론(CI · 릴리스 사슬)에서 늘 «안 쓰임 — 지워라» 로 떴다(62/65). 이제 출하 문서가 가리키기만 하면 쓰이는 걸로 센다(65/65). 출하 누락을 잡는 FAIL 경로는 그대로다. 레인 L8a/b/c.
+- `claude_md_full_reference.md` Pre-Publish 3단계(#1003): `/security-review` 통과가 모든 부류를 본 것은 아니라는 문단. 내장 정책이 정규식 DoS 를 빼고 prototype pollution · open redirect 는 확신이 매우 높을 때만 보고한다 — 공개 벤치마크(arXiv:2610.38617)에서 그 부류 20건 중 9건(`/security-review`) 대 16건(같은 모델, 일반 감사 프롬프트). 출하 코드가 신뢰 못 할 입력으로 정규식을 만들거나 객체를 병합하거나 받은 URL 로 리다이렉트하면, 그 부류를 그 코드에서 보는 검사를 하나 더 붙이고 무엇을 돌렸는지 적는다. 못 돌리면 기존의 수동 점검 · 명시적 오버라이드 경로로 간다.
+- `builtin_capability_map.md`(#999): 데스크톱 앱 Code 탭 기능 8줄(별도 세션에 맡기기 · 같은 폴더에 세션 하나 더 · 답을 기다리는 세션 모으기와 세션 간 메시지 · 사이드바 정리 · 잠들지 않게와 원격 제어 · 앱 모드 · `/skill-doctor` · 출력 스타일)에 길을 냈다. 근거는 한 세션에서 보인 도구 · 스킬 이름뿐이고 끝까지 실행해 본 줄은 없다. 영상에만 나오고 그 세션에서 보이지 않은 넷(어드바이저 · 클라우드 Projects · Motion 내보내기 · 컨텍스트 카드)은 표 밖에 `UNVERIFIED` 로 적었다.
+
 ### [3.36.0] — 2026-11-01 — 새 스킬 standpoint-review(받는 쪽에서 변경 검토) · deliberation 예시 기록 수리
 
 훅 변경은 없다. 스크립트 변경도 없다. 새 스킬이 들어가서 버전 정책상 minor 다.
