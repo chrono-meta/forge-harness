@@ -5267,3 +5267,27 @@
   outcome: "M 0 / S 2 / R 3; no rename, no role collision (auto-decorrelation, persona-cast, harness-pr-reviewer distinct). S1 (intro jargon) and S2 (fallback bullet) and R3 (how to make the diff) fixed; R1 (version field) checked — persona-cast uses the same field"
   evidence: "same commit and marker"
   tokens: "103732"
+- date: 2026-11-02
+  agent: "general-purpose (sonnet) ×3 — session-card 🔧 item investigation, one item each (purpose: context)"
+  task: "4b package-coverage exceptions · 5/5b tilde reason text and U15 race · 6c mutation probe and G-TRIG-04"
+  outcome: "4b «delete the 3 exceptions» prescription was WRONG (live 65/65, clean clone 62/65) — governor re-measured; fixed by changing the STALE predicate (PR #1002). 5 = FoD gate, not FH. U15 race reproduced (fixed in PR #1000). 6c designed UNMEASURED"
+  evidence: "tracks/_meta/fh_completed_2026-11-02.md · PR #1000 · PR #1002"
+  tokens: "not recorded"
+- date: 2026-11-02
+  agent: "general-purpose (sonnet) — U15 lock-contention arm measurement (purpose: context)"
+  task: "measure row loss under load for original / retry-only / retry+3.0 s"
+  outcome: "0/300 on the fixed arm; its trace.log held no ENOENT evidence — governor re-grounded the cause by errno trace before citing it"
+  evidence: "tracks/_meta/.axes_23_passed_fix_utterance-hook-lock-drop_2026-11-02.marker"
+  tokens: "not recorded"
+- date: 2026-11-02
+  agent: "web-fetch (sonnet) ×2 — read arXiv:2610.38617 and arXiv:2610.39884 (purpose: context)"
+  task: "extract the /security-review policy-excluded classes and numbers; KARMA's acceptance gate, revert and success/failure ablation"
+  outcome: "both HTML pages truncated at ~39k chars; abstract/introduction verbatim, rest tool-summarised. One summarised claim («one run per arm») dropped from the rule before commit"
+  evidence: "PR #1003 · tracks/_meta/memo_2026-11-02_edit_manifest_vs_karma.md"
+  tokens: "31536 + 31558"
+- date: 2026-11-02
+  agent: "general-purpose (sonnet) ×3 — blind floor-tier sims of the Pre-Publish /security-review paragraph (purpose: independence)"
+  task: "two risky scenarios (RegExp from user input + deep merge; next= redirect) and one control (fixed-template copy)"
+  outcome: "3/3 as predicted — both risky scenarios not complete and named the class check; control complete with no extra check"
+  evidence: "tracks/_meta/.axes_23_passed_docs_prepublish-security-review-policy-gap_2026-11-02.marker"
+  tokens: "134765 + 111534 + 134559"
