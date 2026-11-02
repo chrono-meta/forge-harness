@@ -14,6 +14,9 @@
 #       answers "run it".
 #   S7  every shard owns at least one suite for N in 2..4 (an empty shard is a wasted runner and a
 #       sign the plan collapsed).
+#   S8  shard 1 ACTUALLY runs the inline checks (the ~39 non-suite decisions it alone owns).
+#       S1..S7 are dry runs and `_shard_inline` answers "skip" in dry mode, so none of them can
+#       see this axis; breaking it leaves every leg green with those 39 checks run nowhere.
 # The runs are DRY (`--shard-dry`): nothing is executed, the decision is appended to $FH_SHARD_TRACE.
 # So this suite costs seconds, and it cannot recurse into itself (a dry run never runs a suite).
 set -u
@@ -119,6 +122,47 @@ else
   printf '%s' "$res" | grep -qx 'mine=0'; chk $? "S6 without --shard every suite is mine"
   printf '%s' "$res" | grep -qx 'skip=1'; chk $? "S6 without --shard nothing is skipped"
   printf '%s' "$res" | grep -qx 'inlineskip=1'; chk $? "S6 without --shard no inline check is skipped"
+fi
+
+# ── S8 shard 1 ACTUALLY runs the inline checks ───────────────────────────────────────────────
+# WHY THIS LANE EXISTS (measured 2026-11-02, weekly clean-room audit). S1..S7 all run with
+# `--shard-dry`, and in dry mode `_shard_inline` returns 1 BY CONSTRUCTION — so every lane above
+# holds the SUITE assignment and none of them can say anything about the inline checks that
+# shard 1 alone owns: the syntax scans, the nine named checkers routed through the `bash` shim
+# (count_check · prepush_guard_check · gate_anchor_check · multibyte_bracket_lint ·
+# package_coverage_check · files_manifest_shipping_check · lane_runner_check · gate_pathspec_check
+# · sync_guard_check) and every `--self-test` entry point — 39 decisions in the dry trace.
+# The hole is silent in the direction this repo calls hollow green: 8 of the 11 `_shard_inline_skip`
+# call sites are `then :`, so a skipped inline check never sets `fail=1`. Measured with the mutant
+# below: with `_shard_inline` answering "skip" always, EVERY leg SHARD-SKIPs all 39, no leg runs
+# them, selfcheck exits 0, and this suite reported 31 passed / 0 failed. Nothing was red anywhere.
+# S6 does not cover it either: S6 asks the no-`--shard` case, which is `npm test`, not a CI leg.
+if [ ! -f "$T/block.sh" ]; then
+  chk 1 "S8 the lifted shard block is available (S6 did not produce it — lane would test nothing)"
+else
+  # one answer pair from the lifted block, run with the given arguments: "<_shard_inline rc> <_shard_inline_skip rc>"
+  inline_answer() { # $1 = block file, $2.. = arguments as selfcheck would receive them
+    local _bf="$1"; shift
+    ( cd "$ROOT" && env -u FH_SELFCHECK_SHARD bash -c '
+        f="$1"; shift
+        . "$f"
+        _shard_inline; a=$?
+        _shard_inline_skip LBL >/dev/null 2>&1; b=$?
+        echo "$a $b"' _ "$_bf" "$@" 2>/dev/null | tail -1 )
+  }
+  a_leg1=$(inline_answer "$T/block.sh" --shard 1/4)
+  a_leg2=$(inline_answer "$T/block.sh" --shard 2/4)
+  a_dry1=$(inline_answer "$T/block.sh" --shard 1/4 --shard-dry)
+  [ "$a_leg1" = "0 1" ]; chk $? "S8 --shard 1/4 (not dry): the inline checks RUN here (got '$a_leg1', want '0 1')"
+  [ "$a_leg2" = "1 0" ]; chk $? "S8 known-negative: --shard 2/4 skips them, so S8 is not a lane that always passes (got '$a_leg2', want '1 0')"
+  [ "$a_dry1" = "1 0" ]; chk $? "S8 control: the DRY form every lane above uses answers 'skip' even for shard 1 (got '$a_dry1') — that is why S1..S7 cannot hold this axis"
+
+  # KNOWN-NEGATIVE on the detector itself: break inline dispatch with one line. If S8 cannot go
+  # red on this, it proves nothing about the subject (same construction as S5).
+  sed 's|^    \[ "\$_SHARD_I" = 1 \]$|    false|' "$T/block.sh" > "$T/block_mut.sh"
+  cmp -s "$T/block.sh" "$T/block_mut.sh"; chk $((1 - $?)) "S8 control: the mutation APPLIED — if this is red the \$_SHARD_I line moved, so S8's known-negative below is VOID, not the subject's fault"
+  a_mut=$(inline_answer "$T/block_mut.sh" --shard 1/4)
+  [ "$a_mut" != "0 1" ]; chk $? "S8 known-negative: with inline dispatch broken, shard 1 no longer runs them (got '$a_mut') — the detector can fail"
 fi
 
 # ── notes (printed, never a verdict) ────────────────────────────────────────────────────────
