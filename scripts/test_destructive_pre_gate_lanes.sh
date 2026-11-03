@@ -208,6 +208,42 @@ else
   printf '  ❌ %-52s rc=%s out=%s err=%s\n' "C2 block: exit 2, stderr carries the reason" "$c_rc" "$c_out" "$c_err"; fail=$((fail+1))
 fi
 
+# B — permission_mode default (2026-11-03): unset + bypassPermissions blocks; explicit 0 restores
+#     advisory; every other mode keeps advisory. The decision reads the payload field, so each lane
+#     sends a full payload with permission_mode set.
+payload_mode() { python3 -c 'import json,sys; print(json.dumps({"tool_name":"Bash","permission_mode":sys.argv[2],"tool_input":{"command":sys.argv[1]}}))' "$1" "$2"; }
+b_lane() {   # name, expected rc, command, mode, env-assignment-or-empty, stderr needle (block) or "-"
+  local name=$1 want=$2 cmd=$3 mode=$4 envv=$5 needle=$6 o e r
+  if [ -n "$envv" ]; then
+    o=$(payload_mode "$cmd" "$mode" | env "$envv" bash "$G" 2>"$c_errf"); r=$?
+  else
+    o=$(payload_mode "$cmd" "$mode" | env -u FH_DESTRUCTIVE_BLOCK bash "$G" 2>"$c_errf"); r=$?
+  fi
+  e=$(cat "$c_errf")
+  if [ "$r" -eq "$want" ] && { [ "$needle" = "-" ] || printf '%s' "$e" | grep -q "$needle"; }; then
+    printf '  ✅ %-52s %s\n' "$name" OK; pass=$((pass+1))
+  else
+    printf '  ❌ %-52s rc=%s out=%s err=%s\n' "$name" "$r" "$o" "$e"; fail=$((fail+1))
+  fi
+}
+b_lane "B1 bypass + unset: blocks (exit 2)"        2 "$HIT_CMD" bypassPermissions "" "permission_mode=bypassPermissions"
+b_lane "B2 bypass + BLOCK=0: advisory (exit 0)"    0 "$HIT_CMD" bypassPermissions "FH_DESTRUCTIVE_BLOCK=0" "-"
+b_lane "B3 default + unset: advisory (exit 0)"     0 "$HIT_CMD" default "" "-"
+b_lane "B4 auto + unset: advisory (exit 0)"        0 "$HIT_CMD" auto "" "-"
+b_lane "B5 bypass + clean cmd: silent (exit 0)"    0 "git status" bypassPermissions "" "-"
+b_lane "B6 bypass + noqa: exempt (exit 0)"         0 "$HIT_CMD  # noqa: destructive-op" bypassPermissions "" "-"
+b_lane "B7 default + BLOCK=1: still blocks"        2 "$HIT_CMD" default "FH_DESTRUCTIVE_BLOCK=1" "FH_DESTRUCTIVE_BLOCK=1"
+b_lane "B8 bypass + BLOCK=2: advisory as before"   0 "$HIT_CMD" bypassPermissions "FH_DESTRUCTIVE_BLOCK=2" "-"
+b_lane "B9 bypass + BLOCK= (empty): blocks"        2 "$HIT_CMD" bypassPermissions "FH_DESTRUCTIVE_BLOCK=" "permission_mode=bypassPermissions"
+b_lane "B10 BLOCK=1 message no longer says unset"  2 "$HIT_CMD" bypassPermissions "FH_DESTRUCTIVE_BLOCK=1" "set FH_DESTRUCTIVE_BLOCK=0"
+# B2 must also deliver the advisory, not just exit 0 silently.
+o=$(payload_mode "$HIT_CMD" bypassPermissions | FH_DESTRUCTIVE_BLOCK=0 bash "$G" 2>/dev/null)
+if printf '%s' "$o" | grep -q 'DESTRUCTIVE-OP'; then
+  printf '  ✅ %-52s %s\n' "B2b bypass + BLOCK=0 still emits the advisory" OK; pass=$((pass+1))
+else
+  printf '  ❌ %-52s out=%s\n' "B2b bypass + BLOCK=0 still emits the advisory" "$o"; fail=$((fail+1))
+fi
+
 # C3 — clean command: NO emission at all (silence must stay silent).
 c_out=$(payload 'git status' | bash "$G" 2>"$c_errf"); c_rc=$?
 rm -f "$c_errf"

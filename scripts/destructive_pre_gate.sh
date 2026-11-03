@@ -19,6 +19,9 @@
 # DEGRADE DIRECTION: advisory. Warns and exits 0 — a false block on a developer's shell trains
 #   the --no-verify reflex on the hooks that DO guard irreversible surfaces. Set
 #   FH_DESTRUCTIVE_BLOCK=1 to escalate to exit 2 (stderr → model, call blocked).
+#   EXCEPTION (2026-11-03): with FH_DESTRUCTIVE_BLOCK unset and the hook payload's
+#   permission_mode = bypassPermissions, it blocks by default — nobody reads an advisory before a
+#   bypass-mode call runs. FH_DESTRUCTIVE_BLOCK=0 restores advisory there. Other modes unchanged.
 #   Unparseable/absent payload → silent exit 0 (an unparsed input is not a finding; block mode
 #   fails open on a dead python3 — same accepted residual as pipe_verdict_guard, the surface is
 #   the reversible Bash call, not the irreversible act itself).
@@ -73,6 +76,7 @@
 set -u
 
 CMD=""
+PERM_MODE=""
 if [ "${1:-}" = "--stdin-raw" ]; then
   CMD=$(cat)
 else
@@ -84,6 +88,14 @@ except Exception: sys.exit(0)
 if d.get("tool_name") != "Bash": sys.exit(0)
 sys.stdout.buffer.write((d.get("tool_input", {}).get("command", "") or "").encode("utf-8"))
 ' 2>/dev/null) || CMD=""
+  # permission_mode rides on every hook payload. Read separately so a missing field changes nothing.
+  PERM_MODE=$(printf '%s' "$RAW" | python3 -c '
+import json,sys
+try: d = json.load(sys.stdin)
+except Exception: sys.exit(0)
+m = d.get("permission_mode")
+if isinstance(m, str): sys.stdout.write(m)
+' 2>/dev/null) || PERM_MODE=""
 fi
 [ -n "$CMD" ] || exit 0
 
@@ -193,10 +205,21 @@ hits="${hits}      Advisory timing: this context reaches the model on the NEXT t
       Destructive-Op Gate order: enumerate → recover → destroy — never destroy-then-check.
       Intentional and reviewed → re-run with trailing \`# noqa: destructive-op\`."
 
-if [ "${FH_DESTRUCTIVE_BLOCK:-0}" = "1" ]; then
+# Block decision. Explicit FH_DESTRUCTIVE_BLOCK wins either way (1 = block, 0 = advisory). Unset:
+# block when the session runs with permission_mode=bypassPermissions — there no human sees the
+# advisory before the call runs, so a warning is a post-mortem (measured 2026-11-03, headless
+# bypass, Sonnet: unset → branch deleted 3/3, =1 → kept 3/3).
+BLOCK_WHY=""
+case "${FH_DESTRUCTIVE_BLOCK-}" in
+  1) BLOCK_WHY="FH_DESTRUCTIVE_BLOCK=1 — add noqa after review, or set FH_DESTRUCTIVE_BLOCK=0, to proceed." ;;
+  "") [ "$PERM_MODE" = "bypassPermissions" ] && \
+       BLOCK_WHY="permission_mode=bypassPermissions (no human sees a warning before the call runs) — add noqa after review, or set FH_DESTRUCTIVE_BLOCK=0 to keep advisory." ;;
+  *) BLOCK_WHY="" ;;   # 0 and any other explicit value: advisory, as before this default existed
+esac
+if [ -n "$BLOCK_WHY" ]; then
   # Block mode: exit 2 = stderr fed to the model as the blocking reason; stdout ignored by contract.
   printf '%s\n' "$hits" >&2
-  printf '%s\n' "      [BLOCKED] FH_DESTRUCTIVE_BLOCK=1 — unset or add noqa after review to proceed." >&2
+  printf '%s\n' "      [BLOCKED] $BLOCK_WHY" >&2
   exit 2
 fi
 
