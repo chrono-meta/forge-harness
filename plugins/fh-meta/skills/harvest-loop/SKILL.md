@@ -124,6 +124,7 @@ Output final proposal list → Y: PR creation / N: persist to tracks/_meta/fh_si
 
 ### Step 1 — field-harvest
 `/field-harvest --since 1d` — Fewer than 3 patterns → auto-skip + output "no session harvest targets".
+**Weekly / period runs also read the operator's corrections**: `python3 scripts/correction_moments.py --since <period start>` lists correction moments from the utterance ledgers and pairs the ones that came back on a different day — a returning correction is a rule the harness has not learned yet, so each pair goes to Step 2 as a pattern. Its header prints what it excluded and its recall limit (cue words only); «0 pairs» means none found by cue words, not that none recurred. The ledgers can hold in-house context — read the output yourself, never hand it to another model.
 
 ### Step 2 — contention-layer
 `/contention-layer [field-harvest output patterns]`

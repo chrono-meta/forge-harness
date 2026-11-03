@@ -5315,3 +5315,15 @@
   outcome: "S1: no discrimination — the answer was in today's git log, all 4 checked the repo (one old arm also dropped the item for the missing identifier, a scenario defect). S2: new 2/2 grepped and closed it as already covered (prepublishOnly blocks); old 0/2 opened the repo, both left «check whether our scan blocks publish» as the candidate"
   evidence: "PR body of docs/frontier-digest-prior-art-line"
   tokens: "122609 + 122589 + 124646 + 122885 + 125135 + 125191 + 123237 + 123368"
+- date: 2026-11-03
+  agent: "general-purpose (sonnet) ×4 — blind A/B sims of the card status-tag rule, excerpt with vs without the line (purpose: independence)"
+  task: "write the newest card block's «🌅 다음에 볼 것» section from an 8-fact scenario (merged · open PR · uncommitted · planned · operator · reverted · held)"
+  outcome: "new 2/2 tagged all 7 items with the right state; old 0/2 tagged (0/6 each). Side effect: new arms kept merged/reverted facts in 🌅 where old arms moved them to a removed-items note — folded back into the rule"
+  evidence: "PR #1010 body"
+  tokens: "117295 + 117327 + 118690 + 118423"
+- date: 2026-11-03
+  agent: "general-purpose (sonnet) ×3 — blind A/B sims of the harvest-loop correction_moments line, new excerpt ×2 vs main excerpt ×1 (purpose: independence)"
+  task: "plan a weekly harvest-loop retro (10-27..11-03) up to Step 2: commands in order and what to do with each output; nothing run"
+  outcome: "new 2/2 planned correction_moments.py --since 2026-10-27, read the header limits, kept the output local, and stated «0 pairs = none found by cue words»; old 0/1 had no correction step. Contamination: arms ran git status and saw the branch and the untracked script (the old arm named «correction-moments work» from the branch) — still did not plan the step"
+  evidence: "PR body of feat/correction-moments"
+  tokens: "119563 + 119731 + 121067"
