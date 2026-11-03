@@ -134,6 +134,8 @@
     "scripts/fixtures/frontier_digest_recall.tsv",
     "scripts/pr_merge_verified.sh",
     "scripts/test_pr_merge_verified_lanes.sh",
+    "scripts/card_status_tags.sh",
+    "scripts/test_card_status_tags_lanes.sh",
     "scripts/adapters/fixtures/mate_agent_boundary_known_negative.md",
     "scripts/adapters/fixtures/mate_agent_boundary_known_positive.md",
     "scripts/adapters/fixtures/qasp_web_rules_known_negative.json",
