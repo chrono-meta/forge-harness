@@ -5327,3 +5327,15 @@
   outcome: "new 2/2 planned correction_moments.py --since 2026-10-27, read the header limits, kept the output local, and stated «0 pairs = none found by cue words»; old 0/1 had no correction step. Contamination: arms ran git status and saw the branch and the untracked script (the old arm named «correction-moments work» from the branch) — still did not plan the step"
   evidence: "PR body of feat/correction-moments"
   tokens: "119563 + 119731 + 121067"
+- date: 2026-11-03
+  agent: "general-purpose (sonnet) ×1 — today's frontier digest application candidates, read-only (purpose: context)"
+  task: "read frontier_digest_2026_11_03.md, check each Immediate Application Candidate against the repo with grep, rank uncovered ones"
+  outcome: "3 uncovered: live-eval transition list on by default (extend split_by_target) · harness-doctor «called but content-blind» row · Gemini 2.5 Pro re-route sweep (0 hits, doc only)"
+  evidence: "tracks/_meta/morning_report_2026-11-04.md"
+  tokens: "128752"
+- date: 2026-11-03
+  agent: "general-purpose (sonnet) ×3 — blind A/B sims of the harness-doctor «called but content-blind» row, new excerpt ×2 vs main ×1 (purpose: independence)"
+  task: "audit a toy project with two registered PreToolUse hooks (one always allows despite its comment, one really blocks force push) against the checklist excerpt"
+  outcome: "new 2/2 fired the row at S-tier for the always-allow hook after feeding a known-positive and known-negative input, and passed the real guard; old 0/1 fired no row (it noticed the no-op in prose but had no row to grade it)"
+  evidence: "PR body of docs/harness-doctor-content-blind"
+  tokens: "118926 + 119003 + 119166"
