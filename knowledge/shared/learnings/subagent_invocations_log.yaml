@@ -5327,3 +5327,9 @@
   outcome: "new 2/2 planned correction_moments.py --since 2026-10-27, read the header limits, kept the output local, and stated «0 pairs = none found by cue words»; old 0/1 had no correction step. Contamination: arms ran git status and saw the branch and the untracked script (the old arm named «correction-moments work» from the branch) — still did not plan the step"
   evidence: "PR body of feat/correction-moments"
   tokens: "119563 + 119731 + 121067"
+- date: 2026-11-03
+  agent: "general-purpose (sonnet) ×2 — blind reader A/B of the live-eval «moved since previous» section (purpose: independence)"
+  task: "read one nightly report (pass rate flat at 0.70, one probe regressed and one recovered) and say whether anything regressed since last night"
+  outcome: "with the section: named G-TRIG-05 PASS->FAIL and G-TRIG-02 FAIL->PASS and said the flat rate hides it; without: «can't tell from this file»"
+  evidence: "PR body of feat/live-eval-moved-since-previous"
+  tokens: "115131 + 115035"
