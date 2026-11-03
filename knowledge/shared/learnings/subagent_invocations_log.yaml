@@ -5339,3 +5339,9 @@
   outcome: "new 2/2 fired the row at S-tier for the always-allow hook after feeding a known-positive and known-negative input, and passed the real guard; old 0/1 fired no row (it noticed the no-op in prose but had no row to grade it)"
   evidence: "PR body of docs/harness-doctor-content-blind"
   tokens: "118926 + 119003 + 119166"
+- date: 2026-11-03
+  agent: "general-purpose (sonnet) ×2 — blind reader A/B of the live-eval «moved since previous» section (purpose: independence)"
+  task: "read one nightly report (pass rate flat at 0.70, one probe regressed and one recovered) and say whether anything regressed since last night"
+  outcome: "with the section: named G-TRIG-05 PASS->FAIL and G-TRIG-02 FAIL->PASS and said the flat rate hides it; without: «can't tell from this file»"
+  evidence: "PR body of feat/live-eval-moved-since-previous"
+  tokens: "115131 + 115035"

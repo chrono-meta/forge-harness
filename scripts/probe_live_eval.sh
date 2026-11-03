@@ -354,6 +354,15 @@ REPORT_PATH="${REPORT_OUT:-$REPO_ROOT/tracks/_meta/live_eval_${RUN_DATE}.md}"
 SCORE_EXTRA=()
 [ -n "$TARGET" ] && SCORE_EXTRA+=(--target "$TARGET")
 [ -n "$BEFORE" ] && SCORE_EXTRA+=(--before "$BEFORE")
+# «Moved since previous» (2026-11-03, record only): the newest live_eval_<date>.md dated before this run. None found -> "" and
+# the report says «not supplied», never «none». FH_LIVE_EVAL_PREV_DIR lets lanes point at a fixture folder.
+PREV=""
+for f in "${FH_LIVE_EVAL_PREV_DIR:-$REPO_ROOT/tracks/_meta}"/live_eval_[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].md; do
+  [ -e "$f" ] || continue
+  b=$(basename "$f" .md); d=${b#live_eval_}
+  [[ "$d" < "$RUN_DATE" ]] && PREV="$f"
+done
+SCORE_EXTRA+=(--prev "$PREV")
 python3 "$LIB" score ${SCORE_EXTRA[@]+"${SCORE_EXTRA[@]}"} \
   --probes-live "$PROBES_LIVE" \
   --select-json "$SELECT_JSON" \

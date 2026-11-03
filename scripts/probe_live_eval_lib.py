@@ -675,6 +675,30 @@ def split_by_target(rows, target, before=None):
     return res
 
 
+def transitions(rows, before):
+    """Every probe's verdict now vs the previous nightly report (2026-11-03, frontier digest: arXiv:2610.41130 — a flat pass rate
+    can hide many per-probe flips). Record only: no verdict, no exit code reads this.
+    status: 'moved' (some id changed) · 'none' (every current id is in before and none changed) · 'not-comparable' (nothing moved
+    among the comparable ids but some current ids are absent from before — «none» would overclaim) · 'not-supplied'."""
+    if before is None:
+        return {'status': 'not-supplied', 'moved': [], 'missing': []}
+    ids = [r['id'] for r in rows]
+    missing = [i for i in ids if i not in before]
+    moved = ['%s %s->%s' % (r['id'], before[r['id']], r['verdict']) for r in rows
+             if r['id'] in before and before[r['id']] != r['verdict']]
+    status = 'moved' if moved else ('not-comparable' if missing else 'none')
+    return {'status': status, 'moved': moved, 'missing': missing}
+
+
+def render_transitions_line(tr, prev_name):
+    if tr['status'] == 'not-supplied':
+        return 'moved since previous: not supplied (%s)' % (prev_name or 'no prior report found')
+    body = ', '.join(tr['moved']) if tr['moved'] else ('not comparable (%d probes absent from previous)' % len(tr['missing'])
+                                                       if tr['status'] == 'not-comparable' else 'none')
+    extra = ('  (absent from previous: %s)' % ','.join(tr['missing'])) if tr['moved'] and tr['missing'] else ''
+    return 'moved since previous (%s): %s%s' % (prev_name, body, extra)
+
+
 def _fmt_pr(g):
     return ('%d/%d pass_rate=%s failed_to_run=%d uncalibrated=%d' % (
         g['passed'], g['ran'], ('%.2f' % g['pass_rate']) if g['pass_rate'] is not None else 'n/a',
@@ -772,6 +796,11 @@ def render_report_md(select_result, score_result, run_date):
         lines.append("")
     if score_result is not None and score_result.get('target'):
         lines.extend(render_target_md(score_result['target']))
+    if score_result is not None and score_result.get('transitions'):
+        tr = score_result['transitions']
+        lines.extend(['## Moved since previous', '',
+                      'Record only (no verdict depends on this): per-probe verdict changes against the previous nightly report.',
+                      '', '- ' + render_transitions_line(tr, tr.get('prev')), ''])
     lines.append("## Excluded (from probes.md, 32-row snapshot)")
     lines.append("")
     lines.append("| Probe | Reason |")
@@ -874,6 +903,16 @@ def _cmd_score(args):
         for l in render_target_lines(t):
             print(l)
         print("")
+    prev_arg = getattr(args, 'prev', None)
+    if prev_arg is not None:
+        prev = parse_prev_report(prev_arg) if prev_arg else None
+        tr = transitions(score_result['rows'], prev)
+        name = os.path.basename(prev_arg) if prev_arg else ''
+        if prev_arg and prev is None:
+            name += ' — unreadable or no run table'
+        score_result['transitions'] = dict(tr, prev=name)
+        print(render_transitions_line(tr, name))
+        print("")
     pr = score_result['pass_rate']
     pr_s = ("%.2f" % pr) if pr is not None else "n/a"
     print("total=%d ran=%d failed_to_run=%d uncalibrated=%d passed=%d pass_rate=%s threshold=%.2f"
@@ -927,6 +966,7 @@ def main():
     sc.add_argument('--reps', type=int, default=1)
     sc.add_argument('--target')
     sc.add_argument('--before')
+    sc.add_argument('--prev')   # previous nightly report for the «moved since previous» record ('' = none found)
 
     args = ap.parse_args()
     if args.cmd == 'select':

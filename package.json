@@ -134,6 +134,7 @@
     "scripts/fixtures/frontier_digest_recall.tsv",
     "scripts/pr_merge_verified.sh",
     "scripts/test_pr_merge_verified_lanes.sh",
+    "scripts/test_live_eval_transitions_lanes.sh",
     "scripts/correction_moments.py",
     "scripts/test_correction_moments_lanes.sh",
     "scripts/card_status_tags.sh",

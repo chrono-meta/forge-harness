@@ -1175,6 +1175,7 @@ for _pair in \
   "scripts/chamber_run.sh|scripts/test_chamber_run_lanes.sh" \
   "scripts/chamber_candidate_collect.sh|scripts/test_chamber_sig_lanes.sh" \
   "scripts/destructive_pre_gate.sh|scripts/test_destructive_pre_gate_lanes.sh" \
+  "scripts/probe_live_eval_lib.py|scripts/test_live_eval_transitions_lanes.sh" \
   "scripts/correction_moments.py|scripts/test_correction_moments_lanes.sh" \
   "scripts/card_status_tags.sh|scripts/test_card_status_tags_lanes.sh" \
   "templates/.git-hooks/pre-push|scripts/test_prepush_destructive_lanes.sh" \
