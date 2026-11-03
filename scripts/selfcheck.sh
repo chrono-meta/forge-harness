@@ -1175,6 +1175,7 @@ for _pair in \
   "scripts/chamber_run.sh|scripts/test_chamber_run_lanes.sh" \
   "scripts/chamber_candidate_collect.sh|scripts/test_chamber_sig_lanes.sh" \
   "scripts/destructive_pre_gate.sh|scripts/test_destructive_pre_gate_lanes.sh" \
+  "scripts/correction_moments.py|scripts/test_correction_moments_lanes.sh" \
   "templates/.git-hooks/pre-push|scripts/test_prepush_destructive_lanes.sh" \
   "templates/.git-hooks/pre-push|scripts/test_prepush_destructive_liveness.sh" \
   `# 실제 git push 발화 레인 (2026-10-24, 형제 하네스 회신). 합성 stdin 레인은 «판정» 만 잰다 — 이 레인은 git 이 그 동작에서 훅을 «부르는가 · 그 줄을 넘기는가» 를 잰다. --mirror 는 삭제 줄을 안 넘긴다(실측).` \
