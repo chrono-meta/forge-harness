@@ -775,6 +775,17 @@ CARD_LINE_EOF
   [ "$DRIFT_HITS" -eq 0 ] && echo "✅ ⑤-b no card absence-claim contradicted by on-disk artifacts"
 fi
 
+# ⑤-S STATUS-TAG probe (ADVISORY — never sets FAIL). Each «🌅 다음에 볼 것» item in the newest card
+# block should open with one tag from a closed set, so the next session reads state instead of
+# re-deriving it. Presence/type only; whether the tag is true stays judgment. Anchor: card_status_tags.sh.
+if [ -f "$FH/scripts/card_status_tags.sh" ]; then
+  bash "$FH/scripts/card_status_tags.sh" "$CARD"
+  _ST_RC=$?
+  [ "$_ST_RC" = 0 ] || [ "$_ST_RC" = 3 ] || echo "⚠️  ⑤-S status tags NOT MEASURED — checker exited $_ST_RC (instrument error)"
+else
+  echo "⚠️  ⑤-S status tags NOT MEASURED — scripts/card_status_tags.sh missing"
+fi
+
 # ⑤-C CARRY-OVER probe — 카드 재작성이 «아직 안 온 기한» 을 날렸는가.
 # WHY (2026-08-24, 실측 손실 1건): ⑤ 재작성이 delta update 가 아니라 새로 쓰기가 되어 미완·
 # 시각박힌 항목이 통째로 사라졌다 — 그날 저녁 19:00 게시, 다음날 GeekNews, 14일 referrer 측정,
