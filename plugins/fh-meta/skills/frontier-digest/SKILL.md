@@ -102,6 +102,8 @@ Report progress: `📡 HN 15 items · arxiv 5 items · TLDR 5 items · Batch 5 i
 
 Print the synthesis result in the conversation (format in §Output-Formats): engine line + Highlights + Immediate Application Candidates + Warning Signals + collection stats.
 
+**Prior-art line (interactive session only — the API-mode synthesis has no repo access, so it cannot write this).** Before an Immediate Application Candidate is printed or queued, grep the repo for its own token (backticked span / script name / rule name) and end the candidate with `이미 있나: <hit path:line | 0 hits in <dirs searched>>`. A hit is opened, not counted. A 0 with no named scope is not «absent» (not searched ≠ not there). Measured 2026-11-02: candidate «증거 빈 완료 행 세기» already existed as `session_checklist.py check`; the grep before building caught it.
+
 **With `--save` flag**: save to **`{FH}/tracks/_meta/frontier_digest_{YYYY_MM_DD}.md`** — underscores in
 the date, matching `date +%Y_%m_%d`. Fallback when no FH install is resolvable:
 `~/.claude/forge-harness/tracks/_meta/` → cwd `tracks/_meta/`, same filename either way. After saving:
