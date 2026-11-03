@@ -5303,3 +5303,15 @@
   outcome: "new arm: one-off gh check, monitor does not wake on success, no polling; main arm: «poll or monitor the PR's checks». cd risk named by both (no difference). Changelog 2.1.314 (Oct 30, 2026) line found verbatim"
   evidence: "PR body of docs/builtin-map-desktop-measured"
   tokens: "115132 + 113795 + 22074"
+- date: 2026-11-03
+  agent: "general-purpose (sonnet) ×2 — FoD audits on a frozen export of 96d66a9: autopilot «safer bypass» promise, and full mode «FH plugged in» (purpose: independence)"
+  task: "A: map autopilot/gate paths, check irreversible classes, fail direction, ledger counts. B: what full mode injects vs FH, prior P-series evidence, cheapest decisive next measurement"
+  outcome: "A: Bash-path git/publish holds; MCP outside hook matchers; gate is a no-op when the app is not running; launcher-form publish (npx … npm publish) and local data-loss git commands not flagged. B: full mode carries a few FH lines + a diff-only second opinion; capability SUGGESTIVE (+8–12pp, no pre-registered threshold met), thinking style NOT MEASURED. Three claims source-grounded by the governor (matcher list, _app_running return 0, publish head match)"
+  evidence: "tracks/_meta/fod_audit_2026-11-03.md"
+  tokens: "244195 + 225116"
+- date: 2026-11-03
+  agent: "general-purpose (sonnet) ×8 — blind A/B sims of the frontier-digest prior-art line, new SKILL vs main SKILL (purpose: independence)"
+  task: "S1 .worktreeinclude item, no identifier given (2+2); S2 leakcheck item with HN id, existing asset = public-surface-audit + prepublishOnly scan (2+2)"
+  outcome: "S1: no discrimination — the answer was in today's git log, all 4 checked the repo (one old arm also dropped the item for the missing identifier, a scenario defect). S2: new 2/2 grepped and closed it as already covered (prepublishOnly blocks); old 0/2 opened the repo, both left «check whether our scan blocks publish» as the candidate"
+  evidence: "PR body of docs/frontier-digest-prior-art-line"
+  tokens: "122609 + 122589 + 124646 + 122885 + 125135 + 125191 + 123237 + 123368"
