@@ -251,7 +251,7 @@ do_digest() {
   [ -n "$_cp_git" ] && printf '%s\n' "$_cp_git"
   echo
   echo "── 운영자 발화 (앞 25건) ──"
-  awk '/^## 운영자 발화/{f=1;next} /^## /{f=0} f' "$sealfile" 2>/dev/null | grep -E '^[0-9]+\.|^제외:|^합계:' | head -25
+  awk '/^## 운영자 발화/{f=1;next} /^## /{f=0} f' "$sealfile" 2>/dev/null | grep -E '^[0-9]+\.|^제외:|^합계:' | sed -n '1,25p'
   echo
   echo "   ⚠️ 이 원장은 **축자 기록**이다. 여기 있는 발화가 기록에 착지했는지는 별도 검증이다"
   echo "      (scripts/utterance_landing_check.sh)."
@@ -265,7 +265,7 @@ do_digest() {
 # ─────────────────────────────────────────────────────────────────────────────
 do_score() {
   local transcript="$1" outdir="$2"
-  local latest; latest="$(ls -t "$outdir"/seal_*.md 2>/dev/null | head -1)"
+  local latest; latest="$(ls -t "$outdir"/seal_*.md 2>/dev/null | sed -n 1p)"
   echo "🟥 REFUTED — 전사본 grep 채점은 성립하지 않는다. 아무 판정도 여기에 의존하지 않는다."
   echo "   실측(2026-08-08 첫 실압축): 압축 후에도 전사본이 전 레코드를 보존한다(ⓐ)."
   echo "   → grep 은 손실 0 을 영원히 보고한다 = fail-open 계기. 캘리브레이션 부족이 아니라 가정 오류."
@@ -298,7 +298,7 @@ self_test() {
   do_seal "$T/tr.jsonl" "$T/out" "sess1" >/dev/null 2>&1; rc=$?
   t "seal 정상 종료" 0 "$rc"
 
-  local sf; sf="$(ls "$T/out"/seal_*.md 2>/dev/null | head -1)"
+  local sf; sf="$(ls "$T/out"/seal_*.md 2>/dev/null | sed -n 1p)"
   [ -n "$sf" ] && r=YES || r=NO
   t "봉인 파일 생성" YES "$r"
 
@@ -332,7 +332,7 @@ self_test() {
   # ── 회귀 레인: SIGPIPE 소비 누락 (2026-08-08 실측 재현) ──
   # 소비자가 파이프를 먼저 닫아도 마커는 소비돼야 한다. 인쇄 뒤에 rm 을 두면 여기서 되돌아온다.
   do_seal "$T/tr.jsonl" "$T/out3" "sess3" >/dev/null 2>&1
-  do_digest "$T/out3" "sess3" 2>/dev/null | head -1 >/dev/null 2>&1
+  do_digest "$T/out3" "sess3" 2>/dev/null | head -1 >/dev/null 2>&1   # pipefail-intentional: 이 레인의 자극이다 — 소비자가 파이프를 먼저 닫는 상황을 일부러 만든다(codex R1 지목)
   d2="$(do_digest "$T/out3" "sess3" 2>/dev/null | wc -c | tr -d ' ')"
   t "파이프 조기 종료 후에도 소비됨 (무한 재주입 방지)" 0 "$d2"
 
@@ -349,7 +349,7 @@ self_test() {
   t "빈 페이로드에도 봉인은 생성된다" YES "$rc"
   [ -f "$T/pl/.last_payload" ] && rc=YES || rc=NO
   t "원본 페이로드가 기록된다 (원인 추적 가능)" YES "$rc"
-  local sf2; sf2="$(ls -t "$T/pl"/seal_*.md 2>/dev/null | head -1)"
+  local sf2; sf2="$(ls -t "$T/pl"/seal_*.md 2>/dev/null | sed -n 1p)"
   grep -qE 'payload: (fallback-session|fallback-mtime-UNVERIFIED|unresolved)' "$sf2" 2>/dev/null && rc=YES || rc=NO
   t "payload 상태가 typed 로 남는다 (무음 아님)" YES "$rc"
 
@@ -406,7 +406,7 @@ self_test() {
   # #11 신선도 가드가 **구형식 pending(경로 한 줄)** 에서 무음으로 꺼지지 않는다.
   # 실측 2026-08-13: 이 경로로 5일 묵은 봉인이 "직전 압축"이라고 주장하며 실제 세션에 주입됐다.
   do_seal "$T/tr.jsonl" "$T/out11" "SESSA" >/dev/null 2>&1
-  local p11; p11="$(ls "$T/out11"/.pending_* 2>/dev/null | head -1)"
+  local p11; p11="$(ls "$T/out11"/.pending_* 2>/dev/null | sed -n 1p)"
   cut -f1 "$p11" > "$p11.t" 2>/dev/null && mv "$p11.t" "$p11"    # 구형식으로 강등 = 봉인 시각 소실
   local d11; d11="$(do_digest "$T/out11" "SESSA" 2>/dev/null)"
   case "$d11" in *"직전 압축 전에"*) rc=YES ;; *) rc=NO ;; esac
@@ -425,7 +425,7 @@ self_test() {
   # #11c **미래 시각**도 신선도 판정 불가다 — 음수 _age 는 `-gt 43200` 을 통과 못 해서
   # 가드가 또 조용히 꺼진다. cross-family(codex/gpt-5.5)가 이번 수리 안에서 지목한 세 번째 얼굴.
   do_seal "$T/tr.jsonl" "$T/out11c" "SESSA" >/dev/null 2>&1
-  local p11c; p11c="$(ls "$T/out11c"/.pending_* 2>/dev/null | head -1)"
+  local p11c; p11c="$(ls "$T/out11c"/.pending_* 2>/dev/null | sed -n 1p)"
   awk -v ts="$(( $(date +%s) + 86400 ))" 'BEGIN{FS=OFS="\t"}{$3=ts;print}' "$p11c" > "$p11c.t" \
     && mv "$p11c.t" "$p11c"
   local d11c; d11c="$(do_digest "$T/out11c" "SESSA" 2>/dev/null)"
@@ -441,7 +441,7 @@ self_test() {
   # 검증: 이 레인 없이 `elif [ "$_age" -gt 43200 ]` 가지를 통째로 지워도 39쌍 전부 초록이었다.
   # (Axis 2 M-3 지목. 세션 일치 케이스라 주장은 유지되고 나이는 부가정보로 붙는다 — M-4)
   do_seal "$T/tr.jsonl" "$T/out11d" "SESSA" >/dev/null 2>&1
-  local p11d; p11d="$(ls "$T/out11d"/.pending_* 2>/dev/null | head -1)"
+  local p11d; p11d="$(ls "$T/out11d"/.pending_* 2>/dev/null | sed -n 1p)"
   awk -v ts="$(( $(date +%s) - 432000 ))" 'BEGIN{FS=OFS="\t"}{$3=ts;print}' "$p11d" > "$p11d.t" \
     && mv "$p11d.t" "$p11d"
   local d11d; d11d="$(do_digest "$T/out11d" "SESSA" 2>/dev/null)"
@@ -456,7 +456,7 @@ self_test() {
   # 셸 즉시 종료 → exit 0 미도달 → stdout 통째 폐기. 이 파일의 「훅은 절대 비영 종료 안 한다」
   # 불변식이 입력 하나로 깨지던 자리다(Axis 2 M-1, 실측 재현).
   do_seal "$T/tr.jsonl" "$T/out11e" "SESSA" >/dev/null 2>&1
-  local p11e; p11e="$(ls "$T/out11e"/.pending_* 2>/dev/null | head -1)"
+  local p11e; p11e="$(ls "$T/out11e"/.pending_* 2>/dev/null | sed -n 1p)"
   awk 'BEGIN{FS=OFS="\t"}{$3="08123456";print}' "$p11e" > "$p11e.t" && mv "$p11e.t" "$p11e"
   local d11e d11e_rc
   d11e="$(do_digest "$T/out11e" "SESSA" 2>&1)"; d11e_rc=$?
@@ -473,7 +473,7 @@ self_test() {
   #    막는 마지막 층이고, 지우면 그 경우가 조용히 「일치」로 렌더된다. 이 레인은 회귀 앵커가 아니라
   #    **방어 가지가 살아 있다는 증명**이다 — 도달 경로가 있는 척하지 않으려고 여기 적는다.
   do_seal "$T/tr.jsonl" "$T/out13" "SESSX" >/dev/null 2>&1
-  local sf13; sf13="$(ls -t "$T/out13"/seal_*.md 2>/dev/null | head -1)"
+  local sf13; sf13="$(ls -t "$T/out13"/seal_*.md 2>/dev/null | sed -n 1p)"
   printf '%s\t%s\t%s\n' "$sf13" "SESSX" "$(( $(date +%s) - 432000 ))" > "$T/out13/.pending_SESSA"
   local d13; d13="$(do_digest "$T/out13" "SESSA" 2>/dev/null)"
   case "$d13" in *"다른 세션(SESSX)"*) rc=YES ;; *) rc=NO ;; esac
@@ -501,7 +501,7 @@ self_test() {
   # 남의 봉인을 09-30 두 세션 · 10-03 한 세션에 주입했다. 구형식은 아무도 더 이상 쓰지 않으므로
   # 거기 남은 것은 정의상 낡다. 컨트롤: 같은 디렉터리에 내 마커를 넣으면 주입된다(계기 살아 있음).
   do_seal "$T/tr.jsonl" "$T/out14" "SESSOLD" >/dev/null 2>&1
-  local sf14; sf14="$(ls -t "$T/out14"/seal_*.md 2>/dev/null | head -1)"
+  local sf14; sf14="$(ls -t "$T/out14"/seal_*.md 2>/dev/null | sed -n 1p)"
   rm -f "$T/out14"/.pending_* 2>/dev/null
   printf '%s\n' "$sf14" > "$T/out14/.pending"          # 08-08 이전 모양 — 경로 한 줄
   local d14; d14="$(do_digest "$T/out14" "SESSNEW" 2>/dev/null | wc -c | tr -d ' ')"
@@ -558,7 +558,7 @@ self_test() {
   # #5 세션 미상 폴백은 **미검증으로 라벨**돼야 한다 (침묵 추정 금지)
   local sf5
   printf '%s' '{}' | bash "$0" seal --dir "$T/out5" >/dev/null 2>&1
-  sf5="$(ls -t "$T/out5"/seal_*.md 2>/dev/null | head -1)"
+  sf5="$(ls -t "$T/out5"/seal_*.md 2>/dev/null | sed -n 1p)"
   # ⚠️ 성질은 "세션 미상 폴백이 **타입으로 남는다**" 이지 특정 값 하나가 아니다. 특정 값으로
   # 과대명세했더니 **저자 머신의 전사본이 있어야만 통과**하는 레인이 됐고, selfcheck 에 배선하자
   # CI 가 82db426 부터 빨개졌다(로컬 초록 ≠ CI 초록, 실측). 전사본이 없는 러너에서는 `unresolved`
@@ -638,11 +638,11 @@ if [ "$MODE" != "digest" ] && { [ -z "$TRANSCRIPT" ] || [ ! -f "$TRANSCRIPT" ]; 
   # 세션 id 를 알면 **그 세션의 전사본**을 고른다. mtime 최신을 고르면 같은 레포에 세션이 둘 열려
   # 있을 때 **남의 발화를 이 세션 것으로 봉인**한다(high 리뷰 #5, 이 디렉토리에 전사본 125개).
   if [ "$SESSION" != "unknown" ] && [ -n "$SESSION" ]; then
-    _cand="$(ls "$_dir"/"$SESSION"*.jsonl 2>/dev/null | head -1)"
+    _cand="$(ls "$_dir"/"$SESSION"*.jsonl 2>/dev/null | sed -n 1p)"
     [ -n "$_cand" ] && PAYLOAD_STATUS="fallback-session"
   fi
   if [ -z "$_cand" ]; then
-    _cand="$(ls -t "$_dir"/*.jsonl 2>/dev/null | head -1)"
+    _cand="$(ls -t "$_dir"/*.jsonl 2>/dev/null | sed -n 1p)"
     # 세션 미상 → 최신을 쓰되 **검증 불가임을 타입으로 남긴다.** 침묵 추정 금지.
     [ -n "$_cand" ] && PAYLOAD_STATUS="fallback-mtime-UNVERIFIED"
   fi
