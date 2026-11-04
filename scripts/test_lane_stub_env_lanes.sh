@@ -24,7 +24,7 @@ leaks() {  # $1=검색 루트 → 허용 목록·예외 밖에서 lane_stub_env 
     /usr/bin/grep -qxF "$rel" "$ALLOW" && continue
     if [ "$rel" = scripts/selfcheck.sh ] || [ "$b" = selfcheck.sh ]; then   # 레인 등록부 줄만 허용
       # 줄 «전체» 가 등록부 문법이어야 한다 — 뒤에 `; . lane_stub_env.sh` 를 붙인 줄은 누출 (codex 구현 R2 A2)
-      /usr/bin/grep 'lane_stub_env' "$f" | /usr/bin/grep -vqE '^[[:space:]]*"scripts/lane_(stub_env\.(sh|allow)|onoff_compare\.py)\|scripts/test_lane_stub_env_lanes\.sh"[[:space:]]*\\?$' || continue
+      [ "$(/usr/bin/grep 'lane_stub_env' "$f" | /usr/bin/grep -vcE '^[[:space:]]*"scripts/lane_(stub_env\.(sh|allow)|onoff_compare\.py)\|scripts/test_lane_stub_env_lanes\.sh"[[:space:]]*\\?$')" -ge 1 ] || continue   # count, not -q: pipefail early-exit (class-lock)
     fi
     echo "$f"
   done
@@ -176,7 +176,7 @@ printf '✅ premise: card.md=2026-10-12 14:38:18 vs log.md=2000-01-01 00:00:00\n
 printf '✅ premise: card.md=2026-10-13 09:01:40 vs log.md=2000-01-01 00:00:00\n' > "$T/c_on"
 [ "$(cmpf)" = 1 ] && ok "C13 정규화 없음: 픽스처 파일 시각이 다르면 선언 없이는 DIFFERENT" || ng "C13 계기가 스스로 정규화한다"
 [ "$(cmpf --volatile '^✅ premise:')" = 0 ] && ok "C13b 휘발 선언(--volatile)한 줄만 빼고 SAME" || ng "C13b 휘발 선언이 안 듣는다"
-python3 "$CMP" files "$T/c_off" "$T/c_rcoff" "$T/c_on" "$T/c_rcon" --volatile '^✅ premise:' 2>&1 | /usr/bin/grep -q '^UNMEASURED  휘발 선언 줄 off×1 on×1' \
+[ "$(python3 "$CMP" files "$T/c_off" "$T/c_rcoff" "$T/c_on" "$T/c_rcon" --volatile '^✅ premise:' 2>&1 | /usr/bin/grep -c '^UNMEASURED  휘발 선언 줄 off×1 on×1')" -ge 1 ] \
   && ok "C13c 휘발 선언 줄은 UNMEASURED 로 보고된다(조용히 같다고 하지 않는다)" || ng "C13c 휘발 줄이 보고되지 않는다"
 printf '✅ x\n✅ premise: a=2026-10-12 14:38:18\n' > "$T/c_off"   # 휘발 줄 «수» 만 다르다 — 나머지 줄은 같게
 printf '✅ x\n✅ premise: a=2026-10-12 14:38:18\n✅ premise: b=2026-10-12 14:38:19\n' > "$T/c_on"

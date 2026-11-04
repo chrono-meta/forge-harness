@@ -563,7 +563,7 @@ fh_sim_instr_hits() { # $1=absolute dir → prints instruction sources in $1 and
       case "$n" in .claude/*) [ "$skipclaude" = 1 ] && continue ;; esac
       [ -e "$d/$n" ] && hits="$hits $d/$n"
     done
-    if [ "$skipclaude" = 0 ] && [ -d "$d/.claude/rules" ] && [ -n "$(find -L "$d/.claude/rules" -name '*.md' -print 2>/dev/null | head -1)" ]; then   # -L: symlinked rules dirs load too (codex R2)
+    if [ "$skipclaude" = 0 ] && [ -d "$d/.claude/rules" ] && [ -n "$(find -L "$d/.claude/rules" -name '*.md' -print 2>/dev/null | sed -n 1p)" ]; then   # -L: symlinked rules dirs load too (codex R2)
       hits="$hits $d/.claude/rules/"
     fi
     [ "$d" = "/" ] && break
@@ -590,7 +590,7 @@ fh_sim_refuse_inherit "$OUTDIR" "--out"
 # but printed so a reader of the run knows they were there (codex R1).
 _user_instr=""
 [ -e "$_user_cfg/CLAUDE.md" ] && _user_instr="$_user_instr $_user_cfg/CLAUDE.md"
-[ -d "$_user_cfg/rules" ] && [ -n "$(find -L "$_user_cfg/rules" -name '*.md' -print 2>/dev/null | head -1)" ] && _user_instr="$_user_instr $_user_cfg/rules/"
+[ -d "$_user_cfg/rules" ] && [ -n "$(find -L "$_user_cfg/rules" -name '*.md' -print 2>/dev/null | sed -n 1p)" ] && _user_instr="$_user_instr $_user_cfg/rules/"
 [ -n "$_user_instr" ] && echo "ℹ️  user-level instructions load in every arm (same for all, not refused):$_user_instr" >&2
 
 # ── machine-surface snapshot ──────────────────────────────────────────────────────────────────

@@ -123,7 +123,7 @@ lane "control: optional service admits" 0 "$tmp/svc_opt"
 outlane "no --keep-snapshot: discard notice" 0 "$FIX/minimal_ok" "not an install token"
 keep="$tmp/kept"
 outlane "--keep-snapshot prints digest" 0 "$FIX/minimal_ok" "snapshot_sha256" --keep-snapshot "$keep"
-snap="$(ls -d "$keep"/snapshot-* 2>/dev/null | head -1)"
+snap="$(ls -d "$keep"/snapshot-* 2>/dev/null | sed -n 1p)"
 if [ -n "$snap" ] && [ -f "$snap/cartridge.yaml" ] && [ ! -w "$snap" ] && [ ! -w "$snap/skills" ] && [ ! -w "$snap/cartridge.yaml" ]; then echo "PASS kept snapshot present and read-only"; else echo "FAIL kept snapshot missing or writable: '$snap'"; fail=1; fi
 d1="$("$PY" "$ADMIT" "$FIX/minimal_ok" --json | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["snapshot_sha256"])')"
 if [ -n "$snap" ] && [ "$(basename "$snap")" = "snapshot-${d1:0:12}" ]; then echo "PASS kept snapshot named by digest"; else echo "FAIL kept snapshot name vs digest $d1: '$snap'"; fail=1; fi

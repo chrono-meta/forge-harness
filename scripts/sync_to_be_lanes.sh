@@ -177,7 +177,7 @@ printf 'hand edit\n' > "$BEX/hand.txt"; git -C "$BEX" add hand.txt
 mkdir -p "$HUB/tracks/_meta/exp9/out"
 for i in 1 2 3 4 5 6 7 8; do printf 'x\n' > "$HUB/tracks/_meta/exp9/out/f$i.txt"; done
 FH_SYNC_BULK_MAX=5 MID=lanea run >/dev/null 2>&1; rc=$?
-[ "$rc" -eq 14 ] && git -C "$BEX" diff --cached --name-only | grep -qx hand.txt
+[ "$rc" -eq 14 ] && [ "$(git -C "$BEX" diff --cached --name-only | grep -cx hand.txt)" -ge 1 ]
 chk $? "a hand edit already staged in the store survives the refusal (rc=$rc; only the counted adds are un-staged)"
 new_env l4h4
 mkdir -p "$HUB/tracks/_meta/exp9/out"
@@ -301,7 +301,7 @@ MID=lanea run >/dev/null 2>&1
 # break the lane on any other operator's layout.
 [ -n "$(find "$BEX" -name CLAUDE.local.md 2>/dev/null)" ]
 chk $? "CONTROL: CLAUDE.local.md went through the file-level path at all"
-lf="$(find "$BEX" -name CLAUDE.local.md | head -1)"
+lf="$(find "$BEX" -name CLAUDE.local.md | sed -n 1p)"
 sleep 2
 printf 'peer-edit\n' >> "$lf"
 out="$(MID=lanea run 2>&1)"
@@ -749,7 +749,7 @@ else
   #    손목록으로 되돌려도 C 는 자기 합성 서브셸만 돌아 **통과했다** — A 만 빨개졌다.
   #    앵커가 대상을 안 보면 그것은 앵커가 아니다([[feedback_anchor_can_be_decorative]]).
   #    ⇒ 변환 줄을 **대상 소스에서 추출해서** 쓴다. 손목록으로 돌아가면 추출이 실패하고 C 가 적색.
-  _tex_line="$(_sync_src | grep -m1 'tex+=("--exclude=')"
+  _tex_line="$(_sync_src | grep 'tex+=("--exclude=' | sed -n 1p)"
   if [ -z "$_tex_line" ]; then
     FAIL=$((FAIL+1)); printf '  ❌ %s\n' "C: tar 폴백에 배열 변환 줄이 없다 — 목록이 갈라졌다(클래스 열림)"
   else
