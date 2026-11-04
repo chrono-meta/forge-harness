@@ -5363,3 +5363,9 @@
   outcome: "28,635 B · 20 entries · «GeekNews 5 items» — matched the governor's same-minute measurement; old command (no -L) was 0 B"
   evidence: "PR #1015 body · marker .axes_23_passed_fix_digest-geeknews-redirect_2026-11-04"
   tokens: "122365"
+- date: 2026-11-04
+  agent: "fh-meta:beginner (sonnet) ×1 — blind cold-read of a public FoD guide draft as a non-developer and a skeptical developer (purpose: independence)"
+  task: "read only docs/WHY_GATE.md (cross-refs GUIDE/README allowed) and report where a non-developer stops, claims stronger than their own evidence, open developer questions, top 3 edits"
+  outcome: "flagged undefined terms (hook/MCP/PR/corpus/p) and 9 over-strong claims (unqualified 100%, «won't happen», unmeasured «continues the work») — all applied: glossary, limits beside summary numbers, «미측정» marks, softened wording"
+  evidence: "FoD PR #214 body (Review section)"
+  tokens: "77735"
