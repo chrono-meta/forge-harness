@@ -227,5 +227,13 @@ if [ "$(id -u)" -eq 0 ]; then ok "L31 SKIP (root can write anywhere) — not a p
 else { [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q 'WARNING: completion record NOT written' && printf '%s' "$OUT" | grep -q 'merged and verified'; } \
   && ok "L31 unwritable tracks/_meta → warning, rc=0 unchanged" || { bad "L31 rc=$RC"; printf '%s\n' "$OUT" | tail -3; }; fi
 
+# L32 --expect-head (selfdev_loop.sh, 2026-11-04): a head other than the one the caller checked → rc=2 BEFORE
+#   the merge; the matching head (control) merges as usual
+setup eh; mkgh "$T/eh"; run "$T/eh" 7 --rerun "$GOOD" --expect-head 0000000000000000000000000000000000000000
+{ [ "$RC" -eq 2 ] && ! merged "$T/eh" && printf '%s' "$OUT" | grep -q 'not the checked'; } \
+  && ok "L32a --expect-head mismatch → rc=2, merge never called" || { bad "L32a rc=$RC merged=$(merged "$T/eh" && echo yes || echo no)"; printf '%s\n' "$OUT" | tail -3; }
+setup eh2; mkgh "$T/eh2"; run "$T/eh2" 7 --rerun "$GOOD" --expect-head "$(cat "$T/eh2/head.oid")"
+{ [ "$RC" -eq 0 ] && merged "$T/eh2"; } && ok "L32b --expect-head matching → merged and verified" || { bad "L32b rc=$RC"; printf '%s\n' "$OUT" | tail -3; }
+
 printf 'PASS %d · FAIL %d\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

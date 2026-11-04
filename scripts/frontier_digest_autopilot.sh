@@ -119,6 +119,16 @@ _log "Stage 1 (digest) OK for ${HUMAN_DATE}."
 
 cd "$FH_DIR" || { _log "cannot cd to \$FH_DIR ($FH_DIR)"; exit 1; }
 
+# ── Stage 2 retired here (2026-11-04) → scripts/selfdev_loop.sh ─────────────
+# Measured: 25 consecutive daily runs (2026-10-11 → 2026-11-04) logged «Stage 2 SKIPPED: working tree
+# is dirty» — the shared checkout always carries untracked experiment trees, so rail ① below made the
+# stage permanently dead. The self-dev loop now runs in its own clone (selfdev_loop.sh, nightly), which
+# has no shared-tree reason to skip. Set FD_AUTOPILOT_STAGE2=1 to run the old in-checkout stage anyway.
+if [ "${FD_AUTOPILOT_STAGE2:-0}" != 1 ]; then
+  _log "Stage 2 retired — self-dev runs in its own clone via scripts/selfdev_loop.sh (FD_AUTOPILOT_STAGE2=1 to force the old path)."
+  exit 0
+fi
+
 # ── Stage 2 preconditions (rails ① ② ③) ─────────────────────────────────────
 if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
   _log "Stage 2 SKIPPED: working tree is dirty (another session's uncommitted work may be live) — never touching it unattended."
