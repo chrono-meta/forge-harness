@@ -138,7 +138,7 @@ OUT5e=$(bash "$SUT" "$TARGET" "$REAL_SUITE" --baseline totally-bogus-ref 2>&1); 
 ( cd "$SRC" && git diff --cached --quiet ) \
   && ok "L6 no staged changes left in the index after any probe run" \
   || no "L6 the index has staged changes — a checkout-based restore would do this"
-( cd "$SRC" && git status --porcelain ) | grep -q . \
+( cd "$SRC" && git status --porcelain ) | grep -c . >/dev/null \
   && no "L6b working tree not clean after probes (git status is non-empty)" \
   || ok "L6b working tree clean after all probes (file content == committed HEAD)"
 

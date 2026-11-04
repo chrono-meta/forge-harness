@@ -48,7 +48,7 @@ elif diff -q "$F/runs_round1/SCORES.tsv" "$T/now.tsv" >/dev/null 2>&1; then
   ok "P2 1차 기록(SCORES.tsv)을 바이트 동일하게 재현한다"
 else
   bad "P2 1차 기록과 어긋난다 — VOID 문서의 수치가 지금 채점기로는 다른 뜻이다"
-  diff -u "$F/runs_round1/SCORES.tsv" "$T/now.tsv" | head -12
+  diff -u "$F/runs_round1/SCORES.tsv" "$T/now.tsv" | sed -n '1,12p'
 fi
 
 # P3 — P2 의 컨트롤. 대조가 «살아 있나». 한 줄만 흔들어도 P2 가 적색이 되어야 한다.
@@ -116,7 +116,7 @@ _bl=$(bash "$SC" --key "$G/blank.tsv" --runs "$G" 2>&1 | awk -F'\t' '$1=="ARM-G_
 #      이 결함 계열(PR #780 `wc -w` · #784 `${#var}` 에 이어 세 번째)을 구조적으로 못 본다.
 # 🟥 UTF-8 팔은 **찾아서** 쓴다(codex 교차 검토 2026-09-29). `C.UTF-8` 을 박으면 그 로케일이 없는 머신에서
 #    대조 팔이 결함이 아니라 «로케일 부재」를 잰다. 없으면 이름 붙은 미측정 — PASS 로 접지 않는다.
-UTF8_LOC=$(locale -a 2>/dev/null | grep -iE '^(C|en_US)\.utf-?8$' | head -1)
+UTF8_LOC=$(locale -a 2>/dev/null | grep -iE '^(C|en_US)\.utf-?8$' | sed -n 1p)
 [ -n "$UTF8_LOC" ] || echo "  ⏭️  UNMEASURED (PASS 아님) — 이 머신에 UTF-8 로케일(C.UTF-8 · en_US.UTF-8)이 없다: P9 UTF-8 팔 · P9-rev control 미측정"
 for _loc in POSIX C ${UTF8_LOC:+"$UTF8_LOC"}; do
   _so="$(LC_ALL="$_loc" bash "$SC" --selftest 2>&1)"

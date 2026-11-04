@@ -419,7 +419,7 @@ bash "$PIPE" "$D/s4.py" --out "$D/o34" --fleet "$D/fleet.tbl" >/dev/null 2>&1; R
 # L35 (A7) — 프롬프트 파일은 소스 전문을 담는다. 다른 계정이 읽으면 안 된다
 printf 'x = 1\n' > "$D/s7.py"
 FH_CODEX_BIN=/bin/true bash "$HERE/finding_fleet.sh" "$D/s7.py" --out "$D/o35" --fleet "$D/fleetS1.tbl" >/dev/null 2>&1
-PF=$(ls "$D/o35"/prompt_*.txt 2>/dev/null | head -1)
+PF=$(ls "$D/o35"/prompt_*.txt 2>/dev/null | sed -n 1p)
 if [ -n "$PF" ]; then
   MODE=$(/usr/bin/stat -f "%OLp" "$PF" 2>/dev/null || /usr/bin/stat -c "%a" "$PF" 2>/dev/null)
   case "$MODE" in *[04]|*[04][04]) OTHERS_R=1;; *) OTHERS_R=0;; esac
@@ -531,7 +531,7 @@ else
   # 🟥 «coverage= 가 없다» 만 보면 **크래시한 뮤턴트도 통과**한다 — 없는 이유가 «지웠기 때문» 인지
   #    «안 돌았기 때문» 인지 안 갈린다(cross-family 지적 2026-09-09, 항목 5). 그래서 뮤턴트가
   #    «정상 종료 + FINDINGS 줄을 냈다» 를 먼저 요구하고, 그 다음에 coverage 부재를 본다.
-  if [ "$MRC" -ne 0 ] || ! printf '%s' "$MO" | /usr/bin/grep -q '^FINDINGS '; then
+  if [ "$MRC" -ne 0 ] || ! printf '%s' "$MO" | /usr/bin/grep -c '^FINDINGS ' >/dev/null; then
     no "L44 되돌림" "뮤턴트가 정상 실행되지 않았다(rc=$MRC) — coverage 부재를 «지웠기 때문» 으로 읽을 수 없다"
   elif printf '%s' "$MO" | /usr/bin/grep -q 'coverage='; then
     no "L44 되돌림" "coverage 를 지웠는데도 출력에 남아 있다 — 앵커가 다른 곳을 잰다"
@@ -899,7 +899,7 @@ else
   no "L60 종단간 씨앗" "rc=$R60 want=5 · $(grep -m1 '^PIPELINE ' "$D/pSEED") · $(tail -2 "$D/pSEED")"
 fi
 # L61 배선 검사(행동 아님, 그렇게 라벨한다) — COUNT_ERR 이 실제로 소비되나
-if /usr/bin/grep -q 'COUNT_ERR' "$PIPE" && /usr/bin/grep -A6 'if \[ "\$COUNT_ERR" -ne 0 \]' "$PIPE" | /usr/bin/grep -q 'note_rc'; then
+if /usr/bin/grep -q 'COUNT_ERR' "$PIPE" && /usr/bin/grep -A6 'if \[ "\$COUNT_ERR" -ne 0 \]' "$PIPE" | /usr/bin/grep -c 'note_rc' >/dev/null; then
   ok "L61 배선: 계측 오류 플래그가 실제로 note_rc 로 소비된다 (🟡 배선 검사지 행동 검사가 아니다)"
 else
   no "L61 배선" "COUNT_ERR 이 설정만 되고 rc 에 반영되지 않는다 — 조용한 계측 실패다"
@@ -1237,7 +1237,7 @@ if /usr/bin/grep -q '_ROSTER_N=$(/usr/bin/grep -c . "$ROSTER"' "$PIPE" \
    && ! /usr/bin/grep -q '! -s "$ROSTER"' "$PIPE"; then
   ok "L75b 드라이버가 명부를 «계열 수» 로 판정한다 (-s 가 사라졌다 — 🟡 배선 검사)"
 else
-  no "L75b 명부 판정 배선" "$(/usr/bin/grep -n 'ROSTER_N\|-s \"\$ROSTER\"' "$PIPE" | head -3)"
+  no "L75b 명부 판정 배선" "$(/usr/bin/grep -n 'ROSTER_N\|-s \"\$ROSTER\"' "$PIPE" | sed -n '1,3p')"
 fi
 
 # L76 🟥 «전부 스스로 내림» 은 계약 준수지 «차단» 이 아니다
@@ -1292,7 +1292,7 @@ _K79=$(for d in "$D"/pk/split_*; do /usr/bin/grep -lq 'tokens used' "$d"/err.txt
 if [ "$_N79" -ge 2 ] && [ "$_K79" = "$_N79" ]; then
   ok "L79 검증 패스 stderr 가 «split 마다» 남는다 ($_K79/$_N79 — 첫 디렉터리로 몰리지 않는다)"
 else
-  no "L79 검증 stderr 보존" "split=$_N79 keep=$_K79 · $(ls "$D"/pk/split_* 2>/dev/null | head -3)"
+  no "L79 검증 stderr 보존" "split=$_N79 keep=$_K79 · $(ls "$D"/pk/split_* 2>/dev/null | sed -n '1,3p')"
 fi
 
 # ── L80~L84 cross-family R2 (codex, 2026-09-10 21:45) — 2차 병합·명부 파서의 남은 구멍 ─────────
@@ -1390,7 +1390,7 @@ A84=$(/usr/bin/grep -l 'tokens used AUDIT'  "$D"/f84/split_*/keep_audit/err.txt 
 if [ "$V84" -ge 1 ] && [ "$A84" -ge 1 ]; then
   ok "L84 🟥 검증 keep($V84) 과 감사 keep($A84) 이 갈라져 있다 — 드롭 런에서 검증 토큰 회계가 살아남는다"
 else
-  no "L84 keep 분리" "verify=$V84 audit=$A84 · $(ls -d "$D"/f84/split_*/keep_* 2>/dev/null | head -3)"
+  no "L84 keep 분리" "verify=$V84 audit=$A84 · $(ls -d "$D"/f84/split_*/keep_* 2>/dev/null | sed -n '1,3p')"
 fi
 
 # ══ R3 (cross-family, codex 2026-09-11 03:00) — 9 findings, each with a known pair ══
@@ -1741,7 +1741,7 @@ printf 'codex|logic|sh %s\n' "$D/m_alias_only.sh" > "$D/f107.tbl"; bash "$FL" "$
 if [ -s "$D/f107/findings.jsonl" ] && ! /usr/bin/grep -q 'seed-never-emitted' "$D/f107/findings.jsonl"; then
   ok "L107 🟥 R6#4 응답의 member_id 는 버려진다(발견은 살아 있음)"
 else
-  no "L107 member_id 신뢰" "$(cat "$D/f107/findings.jsonl" 2>/dev/null | head -1 | cut -c1-120)"
+  no "L107 member_id 신뢰" "$(cat "$D/f107/findings.jsonl" 2>/dev/null | sed -n 1p | cut -c1-120)"
 fi
 # L108 🟥 R6 #5: keep 루트 `link/.` · `link//.` 도 거부
 E108=$(bash "$VERIFIER" --family codex --target "$D/x_t.py" --keep "$D/keep_link/." 2>&1 </dev/null); R108=$?

@@ -64,7 +64,7 @@ o=$(staged_worktree_drift "" "a.sh")
 
 # L5 — THE GATE MUST NOT BLOCK. Pinned as a lane because the whole design rests on it: a blocking
 # version would fire on legitimate hunk staging and train `--no-verify`.
-if grep -A14 '^_DRIFT=' "$HOOK" | grep -qE 'FAILED=1|exit 1'; then
+if grep -A14 '^_DRIFT=' "$HOOK" | grep -cE 'FAILED=1|exit 1' >/dev/null; then
   no "L5 the drift gate sets FAILED/exit — it must stay advisory"
 else
   ok "L5 the drift gate never blocks (advisory by construction)"

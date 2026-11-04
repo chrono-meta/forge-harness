@@ -662,7 +662,7 @@ b="$(rget base)"; req="$(rget require)"
 # THREE assertions, because "it exited nonzero" is not the claim. The claim is that it refused AND
 # published nothing usable: a resolver that exited 3 while still writing base=HEAD~1 would leave
 # the substitution live for any caller that ignores the exit code.
-if [ "$rc" = "3" ] && [ -z "$b" ] && [ -z "$req" ] && rlog | grep -q 'does not resolve in this checkout'; then
+if [ "$rc" = "3" ] && [ -z "$b" ] && [ -z "$req" ] && rlog | grep -c 'does not resolve in this checkout' >/dev/null; then
   ok "L24 named-but-gone — exit 3, no base emitted, and the run SAYS the comparison was refused"
 else
   no "L24 named-but-gone — the force-push shape still substitutes; exit $rc base='$b' require='$req'" "$(rlog)"
@@ -719,7 +719,7 @@ d="$(gitfix3)"
 h1="$(git -C "$d" rev-parse HEAD~1)"
 rc="$(resolve "$d")"
 b="$(rget base)"; req="$(rget require)"
-if [ "$rc" = "0" ] && [ "$b" = "$h1" ] && [ "$req" = "1" ] && rlog | grep -q 'ONE-COMMIT window'; then
+if [ "$rc" = "0" ] && [ "$b" = "$h1" ] && [ "$req" = "1" ] && rlog | grep -c 'ONE-COMMIT window' >/dev/null; then
   ok "L25 nothing named — HEAD~1 is used and the narrow window is stated, not implied"
 else
   no "L25 nothing named — expected HEAD~1 plus an announcement; exit $rc base='$b'" "$(rlog)"
@@ -733,7 +733,7 @@ rm -rf "$d"
 d="$(gitfix)"
 rc="$(resolve "$d")"
 b="$(rget base)"; req="$(rget require)"
-if [ "$rc" = "0" ] && [ -z "$b" ] && [ "$req" = "0" ] && rlog | grep -q 'BOOTSTRAP'; then
+if [ "$rc" = "0" ] && [ -z "$b" ] && [ "$req" = "0" ] && rlog | grep -c 'BOOTSTRAP' >/dev/null; then
   ok "L26 empty input — one commit gives base='' require=0 (bootstrap), not a satisfiable-by-nobody gate"
 else
   no "L26 empty input — expected an empty base with require=0; exit $rc base='$b' require='$req'" "$(rlog)"

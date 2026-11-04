@@ -118,7 +118,7 @@ else
 fi
 # and that the call is gated on the floor tiers the doc claims — not on load-bearing, which is
 # where it was first (wrongly) wired.
-if grep -B4 'validate_defense_leg "\$MARKER"' "$HOOK" | grep -qE 'floor-status:.*sonnet-floor\|below-floor'; then
+if grep -B4 'validate_defense_leg "\$MARKER"' "$HOOK" | grep -cE 'floor-status:.*sonnet-floor\|below-floor' >/dev/null; then
   printf '  ✅ %-6s %s\n' "call" "call is gated on floor-status (sonnet-floor|below-floor)"; pass=$((pass+1))
 else
   printf '  ❌ %-6s %s\n' "call" "call is NOT gated on floor-status — scope drifted from the doc"; fail=$((fail+1))

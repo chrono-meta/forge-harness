@@ -155,7 +155,7 @@ while IFS= read -r f; do
   [ -n "$f" ] || continue
   [ -f "$f" ] && [ -r "$f" ] || continue
   LC_ALL=C grep -Iq . "$f" 2>/dev/null || continue          # 바이너리는 대상이 아니다
-  [ -n "$(tr -d '[:space:]' < "$f" 2>/dev/null | head -c 1)" ] || continue   # 공백뿐 = 내용 없음
+  [ -n "$(tr -d '[:space:]' < "$f" 2>/dev/null | cut -c1-1)" ] || continue   # 공백뿐 = 내용 없음
 
   # 판정은 파이프를 통과시키지 않는다(PIPE-VERDICT).
   out=$(cd "$PEER_ROOT" && bun "$CLI" --from-file "$f" 2>&1); rc=$?

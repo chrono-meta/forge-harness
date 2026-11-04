@@ -677,7 +677,7 @@ EVROOT="$T/evidence_root"
     FH_LIVE_EVAL_EVIDENCE_ROOT="$EVROOT" \
     bash "$RUNNER" --ids "G-GREET-01,G-TRIG-07" --report-out "$T/ev_report.md" ) >"$T/ev.log" 2>&1
 
-ev_day="$(find "$EVROOT" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -1)"
+ev_day="$(find "$EVROOT" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sed -n 1p)"
 _lane EV1 evidence "a run creates a dated evidence dir under the evidence root" \
   "yes" "$([ -n "$ev_day" ] && echo yes || echo no)"
 

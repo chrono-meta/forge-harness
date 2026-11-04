@@ -285,7 +285,7 @@ _hd_latest() {  # stdout: 가장 최근 리포트의 mtime (없으면 빈 문자
 _hd_has_history() {  # «굴러가는 설치인가» — 이것도 합집합으로 본다
   for _d in "$FH/tracks/_meta" ${BE:+"$BE/$TM"}; do
     [ -d "$_d" ] || continue
-    find "$_d" -maxdepth 1 -name 'fh_completed_*.md' -print 2>/dev/null | grep -q . && return 0
+    find "$_d" -maxdepth 1 -name 'fh_completed_*.md' -print 2>/dev/null | grep -c . >/dev/null && return 0
   done
   return 1
 }
@@ -569,7 +569,7 @@ done
 # here either (unlike tracks-meta above, which pmh-dev#68 PR #368 review flagged for exactly this).
 INDEX_HEAD=""
 if [ -f "$BE/INDEX.md" ]; then
-  INDEX_HEAD="$(grep -iE 'live pointer|Live pointers' -A 8 "$BE/INDEX.md" 2>/dev/null | head -10)"
+  INDEX_HEAD="$(grep -iE 'live pointer|Live pointers' -A 8 "$BE/INDEX.md" 2>/dev/null | sed -n '1,10p')"
 fi
 
 # 5) Emit the freshness block (short + imperative). Only speak if there is something to say.

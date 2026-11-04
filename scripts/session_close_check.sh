@@ -187,7 +187,7 @@ done
 _peer_cwd() { # $1=pid → cwd on stdout, empty if unresolvable
   if [ -r "/proc/$1/cwd" ]; then readlink "/proc/$1/cwd" 2>/dev/null; return; fi
   command -v lsof >/dev/null 2>&1 || return 0
-  lsof -a -p "$1" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1
+  lsof -a -p "$1" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | sed -n 1p
 }
 # Repo identity, NOT directory prefix. Measured 2026-08-22 (probe_2026-08-22_A2_replication.md):
 # `--show-toplevel` yields the WORKTREE's own path, and a worktree by definition lives outside the
@@ -321,7 +321,7 @@ if [ -f "$_UI_SUT" ]; then
   _UI_SID=""
   if [ -f "$FH/scripts/branch_claim.sh" ]; then
     _UI_SID=$(LC_ALL=C bash "$FH/scripts/branch_claim.sh" show 2>/dev/null \
-              | LC_ALL=C sed -n 's/^세션ID[[:space:]][[:space:]]*//p' | head -1)
+              | LC_ALL=C sed -n 's/^세션ID[[:space:]][[:space:]]*//p' | sed -n 1p)
   fi
   case "$_UI_SID" in pid-*|'') _UI_SID="" ;; esac
   # 전사본 slug = 프로젝트 절대경로에서 `/` `.` `_` 를 `-` 로 (실측 2026-09-05, ~/.claude/projects 대조)

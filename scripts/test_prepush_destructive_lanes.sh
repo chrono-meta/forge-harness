@@ -86,7 +86,7 @@ WORK="$(fh_fixture_root "$(mktemp -d)")" || exit 1
 : "${WORK:?fixture root unset — refusing to run git in cwd}"
 trap 'rm -rf "$WORK"' EXIT
 _status=$(git -C "$REPO_ROOT" -c core.quotePath=false diff --cached --name-status --no-renames 2>/dev/null \
-          | awk -F'\t' '$2 == "templates/.git-hooks/pre-push" { print $1; exit }')
+          | awk -F'\t' '$2 == "templates/.git-hooks/pre-push" && !d { print $1; d = 1 }')   # reads to EOF (pipefail-safe)
 case "$_status" in
   D)  echo "❌ FAIL — pre-push is being DELETED from the index — fail-closed."; exit 1 ;;
   '') cp "$HOOK_SRC" "$WORK/hook" ;;

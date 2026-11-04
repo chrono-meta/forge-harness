@@ -385,7 +385,7 @@ rm -f "$_ISN"
 
 # The note must fire on the FAIL path — a function nothing calls is the very defect this file names.
 if sed -n '/lane suite(s) with no runner and no declaration/,/Fix by ONE of/p' "$CHECK" \
-     | grep -q 'index_source_note'; then
+     | grep -c 'index_source_note' >/dev/null; then
   ok "IDX6 the note is CALLED on the FAIL path (not just defined)"
 else
   bad "IDX6 index_source_note is defined but the FAIL path does not call it"

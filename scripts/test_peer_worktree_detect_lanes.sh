@@ -55,7 +55,7 @@ for p in $PIDS; do touch "$TMP/socks/$p.sock"; done
 _cwd_of() {
   if [ -r "/proc/$1/cwd" ]; then readlink "/proc/$1/cwd" 2>/dev/null; return; fi
   command -v lsof >/dev/null 2>&1 || return 0
-  lsof -a -p "$1" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1
+  lsof -a -p "$1" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | sed -n 1p
 }
 C_MAIN=$(_cwd_of "$P_MAIN"); C_WT=$(_cwd_of "$P_WT"); C_OTHER=$(_cwd_of "$N_OTHER")
 if [ -z "$C_MAIN" ] || [ -z "$C_WT" ] || [ -z "$C_OTHER" ]; then

@@ -51,7 +51,7 @@ ng(){ printf '  ❌ %s\n' "$1"; FAIL=$((FAIL+1)); }
 #    더 쓸모 있는 순서는 해석이 먼저지만, 그건 이 PR 의 범위가 아니라 별건이다.
 resolve(){
   FH_DRY_RUN=1 _ttl 60 bash "$HERE/scripts/fh-run.sh" --backend codex --skill "$1" 2>&1 \
-    | /usr/bin/grep -oE 'plugins/[A-Za-z0-9_-]+/skills/[A-Za-z0-9_.-]+/SKILL\.md' | head -1
+    | /usr/bin/grep -oE 'plugins/[A-Za-z0-9_-]+/skills/[A-Za-z0-9_.-]+/SKILL\.md' | sed -n 1p
 }
 
 echo "== 이름만으로 어느 플러그인이든 닿나 =="
@@ -81,7 +81,7 @@ fi
 echo
 echo "== 우선순위가 안 뒤집혔나 (일반화의 대가) =="
 # fh-meta 에 실재하는 이름은 여전히 fh-meta 로 가야 한다.
-M=$(ls plugins/fh-meta/skills 2>/dev/null | head -1)
+M=$(ls plugins/fh-meta/skills 2>/dev/null | sed -n 1p)
 if [ -n "$M" ]; then
   R=$(resolve "$M")
   case "$R" in
@@ -91,7 +91,7 @@ if [ -n "$M" ]; then
 else
   ng "F4 fh-meta 스킬을 못 찾았다 — 계기 오류(레포가 헐었거나 경로가 틀렸다)"
 fi
-C=$(ls plugins/fh-commons/skills 2>/dev/null | head -1)
+C=$(ls plugins/fh-commons/skills 2>/dev/null | sed -n 1p)
 if [ -n "$C" ]; then
   R=$(resolve "$C")
   case "$R" in
@@ -119,7 +119,7 @@ echo "== 백엔드 바이너리가 없는 환경에서도 같은 답인가 (CI �
 #    로컬에서도 빨갰고, 그게 사실은 «이 레인이 계기 고장을 잡았다»는 증거다.
 R7=$(_ttl 60 env PATH=/usr/bin:/bin FH_DRY_RUN=1 bash "$HERE/scripts/fh-run.sh" \
        --backend codex --skill preprep 2>&1 \
-     | /usr/bin/grep -oE 'plugins/[A-Za-z0-9_-]+/skills/[A-Za-z0-9_.-]+/SKILL\.md' | head -1)
+     | /usr/bin/grep -oE 'plugins/[A-Za-z0-9_-]+/skills/[A-Za-z0-9_.-]+/SKILL\.md' | sed -n 1p)
 case "${R7}" in
   plugins/fh-preprep/skills/preprep/SKILL.md) ok "F7 백엔드 바이너리 0개인 환경에서도 해석된다 (CI 와 같은 답)" ;;
   "") ng "F7 백엔드 없는 환경에서 해석 실패 — 이 레인은 로컬 전용이다(= CI 에서 빨개진다)" ;;

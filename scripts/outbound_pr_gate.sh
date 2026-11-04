@@ -215,7 +215,7 @@ _add() { REASONS="${REASONS}  - $1
 _field() { # $1 = field name; echoes the value line or nothing
   ls -1 "$RECDIR"/outbound_pr_"$TODAY"_*.md 2>/dev/null | while read -r f; do
     grep -m1 -E "^[[:space:]]*$1:" "$f" 2>/dev/null
-  done | head -1
+  done | sed -n 1p
 }
 _records=$(ls -1 "$RECDIR"/outbound_pr_"$TODAY"_*.md 2>/dev/null | wc -l | tr -d ' ')
 

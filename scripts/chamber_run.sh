@@ -111,7 +111,7 @@ if grep -q '<one line: the capability' "$WS/INTENT.md"; then
 fi
 # gate (a) is "artifact exists WITH real content", not just "placeholder removed" (Axis-2 LOW-6): require
 # at least one non-empty numbered success condition so a gutted INTENT.md doesn't pass.
-if ! awk '/^## Success conditions/{f=1;next} /^## /{f=0} f && /^[0-9]+\.[[:space:]]*[^[:space:]]/{print; exit}' "$WS/INTENT.md" | grep -q .; then
+if ! awk '/^## Success conditions/{f=1;next} /^## /{f=0} f && /^[0-9]+\.[[:space:]]*[^[:space:]]/{print; exit}' "$WS/INTENT.md" | grep -c . >/dev/null; then
   # 계약을 **에러 메시지가 가르친다.** 이 형식은 CHAMBER_RUN_SKELETON.md 에 한 글자도 없어서,
   # 스켈레톤만 읽고 쓴 INTENT 가 반려됐다 — gate-locality(계약이 게이트 구현에만 산다).
   # 같은 런에서 step 6 도 같은 이유로 막혔다(N=2). 문서는 드리프트하지만 에러는 코드와 같이 산다.
@@ -190,7 +190,7 @@ fi
 # PARTIAL-EMIT listed FIRST in every alternation so it is never mis-extracted as its EMIT substring.
 VERDICT=$(grep -ioE '^VERDICT:[[:space:]]*(PARTIAL-EMIT|EMIT|KILL|CURATED|NOT-APPLICABLE)' "$WS/EMISSION_VERDICT.md" 2>/dev/null | head -1 | grep -ioE 'PARTIAL-EMIT|EMIT|KILL|CURATED|NOT-APPLICABLE' | head -1 | tr 'a-z' 'A-Z')
 # a bare "## Verdict:" prose line (run #3 style) also counts if it names KILL/EMIT
-[ -z "$VERDICT" ] && VERDICT=$(grep -ioE 'VERDICT[: *]+\**(PARTIAL-EMIT|EMIT|KILL|CURATED|NOT-APPLICABLE)' "$WS/EMISSION_VERDICT.md" 2>/dev/null | grep -ioE 'PARTIAL-EMIT|EMIT|KILL|CURATED|NOT-APPLICABLE' | head -1 | tr 'a-z' 'A-Z')
+[ -z "$VERDICT" ] && VERDICT=$(grep -ioE 'VERDICT[: *]+\**(PARTIAL-EMIT|EMIT|KILL|CURATED|NOT-APPLICABLE)' "$WS/EMISSION_VERDICT.md" 2>/dev/null | grep -ioE 'PARTIAL-EMIT|EMIT|KILL|CURATED|NOT-APPLICABLE' | sed -n 1p | tr 'a-z' 'A-Z')
 if [ -z "$VERDICT" ]; then
   echo "  ⛔ step 5 BLOCKED: no VERDICT (EMIT|PARTIAL-EMIT|KILL|CURATED|NOT-APPLICABLE) found in $WS/EMISSION_VERDICT.md, re-run."; exit 1
 fi

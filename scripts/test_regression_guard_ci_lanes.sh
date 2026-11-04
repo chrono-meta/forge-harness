@@ -217,7 +217,7 @@ EOF
     local r rc msg ok=1
     r=$(grun "$4"); rc="${r%%|*}"; msg="${r#*|}"
     [ "$rc" = "$2" ] || ok=0
-    [ -z "$3" ] || printf '%s' "$msg" | grep -qF -- "$3" || ok=0
+    [ -z "$3" ] || printf '%s' "$msg" | grep -cF -- "$3" >/dev/null || ok=0
     if [ "$ok" -eq 1 ]; then
       printf '  ✅ %-28s rc=%s  %s\n' "$1" "$rc" "$(printf '%s' "$msg" | cut -c1-56)"
     else

@@ -84,7 +84,7 @@ _sut_verdict(){  # FIXED | VULNERABLE | MISSING
   [ -f "$1" ] || { echo MISSING; return; }
   # 🟥 주석 줄은 뺀다 — 수리 자리의 «왜» 주석이 그 형태를 **인용**하고 있어서, 안 빼면
   #    자기 근거 문장에 걸려 빨개진다(초판이 실제로 그랬다). 코드 줄만 본다.
-  if /usr/bin/grep -n '_sync_src | grep -q' "$1" | /usr/bin/grep -qv ':[[:space:]]*#'; then
+  if /usr/bin/grep -n '_sync_src | grep -q' "$1" | /usr/bin/grep -cv ':[[:space:]]*#' >/dev/null; then
     echo VULNERABLE; return
   fi
   /usr/bin/grep -q 'if grep -q .tar cf - ' "$1" && echo FIXED || echo VULNERABLE
@@ -101,7 +101,7 @@ if [ "$_V" = MISSING ]; then
 else
   sed 's/^  if grep -q .tar cf - .*$/  if _sync_src | grep -q '"'"'tar cf - "\\${tex\\[@\\]}"'"'"'; then/' \
     "$SUT" > "$D/sut_reverted.sh"
-  if /usr/bin/grep -n '_sync_src | grep -q' "$D/sut_reverted.sh" | /usr/bin/grep -qv ':[[:space:]]*#'; then
+  if /usr/bin/grep -n '_sync_src | grep -q' "$D/sut_reverted.sh" | /usr/bin/grep -cv ':[[:space:]]*#' >/dev/null; then
     ok "L6a 되돌림 적용됨 (수리 자리를 옛 파이프 형태로)"
     [ "$(_sut_verdict "$D/sut_reverted.sh")" = VULNERABLE ] \
       && ok "L6b 되돌린 사본은 VULNERABLE 로 판정된다 (L5 가 장식이 아니다)" \

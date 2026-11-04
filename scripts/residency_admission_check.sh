@@ -113,7 +113,7 @@ if [ ! -d "$ROOT/tracks/_meta" ]; then
 fi
 
 today=$(date +%Y-%m-%d)
-marker=$(ls -t "$ROOT"/tracks/_meta/.axes_23_passed_*_"$today".marker 2>/dev/null | head -1)
+marker=$(ls -t "$ROOT"/tracks/_meta/.axes_23_passed_*_"$today".marker 2>/dev/null | sed -n 1p)
 if [ -z "$marker" ]; then
   cat >&2 <<MSG
 ❌ 상주 순증(+$net 줄)인데 오늘자 마커가 없다.

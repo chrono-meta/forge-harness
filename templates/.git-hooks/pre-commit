@@ -128,7 +128,7 @@ readme_first_screen_touched() { # $1 = staged README path
     # 🟥 No hunks is NOT "nothing changed above the fold". `git diff -U0` prints no @@ for a
     # binary blob or a pure rename, so returning false here renders UNMEASURED as none — the
     # exact family this repo keeps closing. Measure whether the file is staged at all first.
-    git diff --cached --name-only -- "$file" 2>/dev/null | grep -q . || return 1  # genuinely unstaged
+    git diff --cached --name-only -- "$file" 2>/dev/null | grep -c . >/dev/null || return 1  # genuinely unstaged
     return 0                                                                      # staged but unreadable → fail closed
   fi
   while IFS= read -r h; do
@@ -641,7 +641,7 @@ else
   GUARD_RESULT_FILE=$(mktemp "${TMPDIR:-/tmp}/fh_guard_result.XXXXXX")
   GUARD_OUT="$(REGRESSION_GUARD_RESULT_FILE="$GUARD_RESULT_FILE" bash "$GUARD" --staged 2>&1)" || GUARD_EXIT=$?
   printf '%s\n' "$GUARD_OUT"
-  GUARD_VERDICT=$(sed -n 's/^result=//p' "$GUARD_RESULT_FILE" 2>/dev/null | head -1)
+  GUARD_VERDICT=$(sed -n 's/^result=//p' "$GUARD_RESULT_FILE" 2>/dev/null | sed -n 1p)
   rm -f "$GUARD_RESULT_FILE"
   # 일관성 검사 (challenger C-1): exit 코드와 typed verdict 가 어긋나면 게이트 계기 오류다 —
   # 특히 중도 crash(exit 1, 파일 미작성)가 "S-tier 경고, 커밋 허용"으로 렌더되던 구멍.

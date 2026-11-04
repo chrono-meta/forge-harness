@@ -47,7 +47,7 @@ g(){ python3 -c "import json,sys;d=json.loads(sys.argv[1]);print(d[sys.argv[2]][
 # 🟥 J4 의 초판은 glob `*%*자*` 였는데 **되돌림 프로브가 그걸 뚫었다** — 숫자를 지워도 남은
 #    문자열에 «자» 와 «%» 가 우연히 들어 있어 통과했다. 장식 앵커였다.
 #    지금은 «숫자 + 단위» 를 정규식으로 요구한다: `NN자` 와 `NN%` 가 둘 다 있어야 한다.
-if printf '%s' "$(g pos msg)" | grep -qE '[0-9]+자' && printf '%s' "$(g pos msg)" | grep -qE '[0-9]+%'; then
+if printf '%s' "$(g pos msg)" | grep -cE '[0-9]+자' >/dev/null && printf '%s' "$(g pos msg)" | grep -cE '[0-9]+%' >/dev/null; then
   ok "J4 처방: «NN자»·«NN%» 를 실제 숫자로 낸다"
 else
   ng "J4 실패 — 숫자 없는 지적은 처방이 아니다: $(g pos msg)"

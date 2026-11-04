@@ -81,7 +81,7 @@ if [ -f "$FH/scripts/residency_closure_scan.py" ]; then
   out="$(cd "$FH" && python3 scripts/residency_closure_scan.py --files $FILES 2>&1)"; rc=$?
   case "$rc" in
     0)  PASS=$((PASS+1)); echo "  ✅ RES-closure-scan CLEAN ($(printf '%s' "$FILES" | wc -l | tr -d ' ') files)" ;;
-    10) if printf '%s' "$out" | grep -q '운영자 패턴 파일이 없다'; then
+    10) if printf '%s' "$out" | grep -c '운영자 패턴 파일이 없다' >/dev/null; then
           # CI and consumer clones structurally lack the operator override (gitignored). That is
           # UNMEASURED, not a failure of the shipped files — the generic RES-zero-constant-grep lane
           # below is the guarantee that travels; this lane measures only where the override exists.

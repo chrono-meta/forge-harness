@@ -43,7 +43,7 @@ COMMENT_RE='^[[:space:]]*(#|//|\*([[:space:]]|$)|/\*|--([[:space:]]|$)|;|"""|'"'
 scan_one() { # $1=file → prints hits, returns 0 hit / 1 none / 3 unscannable
   local f="$1" body v e r hits
   [ -r "$f" ] || { echo "UNSCANNABLE  $f (unreadable)"; return 3; }
-  if /usr/bin/file -b --mime-encoding "$f" 2>/dev/null | /usr/bin/grep -q '^binary$'; then
+  if /usr/bin/file -b --mime-encoding "$f" 2>/dev/null | /usr/bin/grep -c '^binary$' >/dev/null; then
     echo "UNSCANNABLE  $f (binary)"; return 3; fi
   # one pass: drop comment-led lines, then classify (VERDICT wins over EXPOSURE over IRREV per line)
   # 🟥 pmh-dev #76 (2026-09-11): 여러 줄 docstring 의 «안쪽» 줄은 줄머리가 따옴표가 아니라 COMMENT_RE 를 통과했다 —

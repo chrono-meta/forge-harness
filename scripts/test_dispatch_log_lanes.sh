@@ -153,7 +153,7 @@ new_form=$(bash -c 'set -uo pipefail; _int() { case "${1:-}" in (""|*[!0-9]*) ec
 # "needle matching unrelated text"). Extract the subject's OWN assignment lines and evaluate them.
 _eval_subject_assign() {  # $1 = variable name; echoes what the SUBJECT computes for a zero match
   local var="$1" line
-  line=$(grep -E "^${var}=" "$CHECK" | head -1)
+  line=$(grep -E "^${var}=" "$CHECK" | sed -n 1p)
   [ -n "$line" ] || { echo "NOLINE"; return; }
   bash -c "set -uo pipefail
     _int() { case \"\${1:-}\" in (''|*[!0-9]*) echo 0 ;; (*) echo \"\$1\" ;; esac; }
@@ -173,7 +173,7 @@ done
 echo ""
 echo "── 전환 설계 레인: 레거시 단일 파일 ∪ 세션별 디렉터리 ──"
 # 주어의 _cat_logs + LOGGED 를 그대로 들어와 4가지 상태에서 센다.
-LOGGED_LINE=$(grep -E "^LOGGED=" "$CHECK" | head -1)
+LOGGED_LINE=$(grep -E "^LOGGED=" "$CHECK" | sed -n 1p)
 _count_in() {  # $1=LOG 경로(없으면 빈문자) $2=LOGDIR 경로(없으면 빈문자)
   bash -c "set -uo pipefail
     _int() { case \"\${1:-}\" in (''|*[!0-9]*) echo 0 ;; (*) echo \"\$1\" ;; esac; }
@@ -198,7 +198,7 @@ echo ""
 echo "── read-error ≠ zero 레인 (2026-08-26, cross-family/codex) ──"
 # 주어가 «0건» 과 «못 읽었다» 를 가르는가. 가르기 전에는 읽기 실패가 0 으로 접혀
 # "✅ ④-e no sub-agent dispatches tallied today" 라는 **안 잰 초록**이 나갔다.
-DISP_LINE=$(grep -E "^DISPATCHED=" "$CHECK" | head -1)
+DISP_LINE=$(grep -E "^DISPATCHED=" "$CHECK" | sed -n 1p)
 _disp_with() {  # $1 = TALLY 로 쓸 경로
   bash -c "set -uo pipefail
     _int() { case \"\${1:-}\" in (''|*[!0-9]*) echo 0 ;; (*) echo \"\$1\" ;; esac; }

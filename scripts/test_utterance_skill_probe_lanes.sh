@@ -120,8 +120,8 @@ grep -q -- '--task route' "$CALLS" 2>/dev/null && grep -q '|stdin=그래프 루�
   && ok "R-ON route task · utterance on stdin" || no "R-ON task/stdin wrong: $(cat "$CALLS" 2>/dev/null)"
 
 call rOn s_joined >/dev/null
-_id=$(grep -o -- '--id rOn:[0-9T:.-]*' "$CALLS" 2>/dev/null | head -1); _id=${_id#--id rOn:}
-_mk=$(grep 'skill=s_joined ' "$LOG" 2>/dev/null | grep -o 'mark=[0-9T:.-]*' | head -1); _mk=${_mk#mark=}
+_id=$(grep -o -- '--id rOn:[0-9T:.-]*' "$CALLS" 2>/dev/null | sed -n 1p); _id=${_id#--id rOn:}
+_mk=$(grep 'skill=s_joined ' "$LOG" 2>/dev/null | grep -o 'mark=[0-9T:.-]*' | sed -n 1p); _mk=${_mk#mark=}
 { [ -n "$_id" ] && [ "$_id" = "$_mk" ]; } && ok "R-JOIN check row mark= equals the decider id time ($_mk)" \
   || no "R-JOIN join key broken: id=[$_id] mark=[$_mk]"
 
