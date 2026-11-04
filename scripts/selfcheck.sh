@@ -1177,6 +1177,10 @@ for _pair in \
   "scripts/destructive_pre_gate.sh|scripts/test_destructive_pre_gate_lanes.sh" \
   "scripts/probe_live_eval_lib.py|scripts/test_live_eval_transitions_lanes.sh" \
   "scripts/correction_moments.py|scripts/test_correction_moments_lanes.sh" \
+  `# 무인 자체개발 루프(2026-11-04, 운영자 상시 요청). 자동 머지 등급은 모델이 아니라 경로 허용 목록이 정한다 — 빈 목록은 AUTO 가 아니라 HARNESS-ERROR(실측: 가드를 지우면 빈 목록이 AUTO 로 통과).` \
+  "scripts/selfdev_merge_tier.sh|scripts/test_selfdev_merge_tier_lanes.sh" \
+  "scripts/selfdev_queue.py|scripts/test_selfdev_queue_lanes.sh" \
+  "scripts/selfdev_loop.sh|scripts/test_selfdev_loop_lanes.sh" \
   "scripts/card_status_tags.sh|scripts/test_card_status_tags_lanes.sh" \
   "templates/.git-hooks/pre-push|scripts/test_prepush_destructive_lanes.sh" \
   "templates/.git-hooks/pre-push|scripts/test_prepush_destructive_liveness.sh" \

@@ -33,12 +33,13 @@
 #         (gh non-zero but GitHub says MERGED → continue to verify; state unreadable → 4, outcome UNKNOWN)
 
 set -uo pipefail
-PR=""; RERUN=""; RERUN_SET=0; REPO="."; LEASE="NONE"
+PR=""; RERUN=""; RERUN_SET=0; REPO="."; LEASE="NONE"; EXPECT_HEAD=""
 _need() { [ $# -ge 2 ] || { echo "🟥 $1 needs a value" >&2; exit 2; }; }
 while [ $# -gt 0 ]; do
   case "$1" in
     --rerun) _need "$@"; RERUN="${2-}"; RERUN_SET=1; shift 2 ;;
     --repo)  _need "$@"; REPO="${2:-}"; shift 2 ;;
+    --expect-head) _need "$@"; EXPECT_HEAD="${2-}"; shift 2 ;;
     --lease) _need "$@"; LEASE="${2-}"; [ -n "$LEASE" ] || { echo "🟥 --lease needs a non-empty label" >&2; exit 2; }; shift 2 ;;
     -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
     -*) echo "unknown arg: $1" >&2; exit 2 ;;
@@ -96,6 +97,12 @@ HEAD_OID=$(gh pr view "$PR" --json headRefOid -q .headRefOid < /dev/null) || HEA
 git fetch -q origin "pull/$PR/head" < /dev/null 2>/dev/null || git fetch -q origin "$HEAD_OID" < /dev/null 2>/dev/null || true
 git cat-file -e "$HEAD_OID^{commit}" 2>/dev/null \
   || { echo "🟥 HARNESS-ERROR (before merge): PR head $HEAD_OID not fetchable — not merging" >&2; exit 4; }
+# --expect-head: the caller already judged ONE commit; merging any other is refused before the merge
+# (selfdev_loop.sh, codex R2 2026-11-04 — without it the head this script records could be a commit
+# pushed after the caller's checks, and --match-head-commit would then bind to the unchecked one).
+if [ -n "$EXPECT_HEAD" ] && [ "$HEAD_OID" != "$EXPECT_HEAD" ]; then
+  echo "🟥 PR #$PR head is $HEAD_OID, not the checked $EXPECT_HEAD — not merging" >&2; exit 2
+fi
 echo "── PR #$PR head recorded: $HEAD_OID"
 
 # 1b. coverage advisory — WARNING ONLY (never changes rc, never merges or refuses). post_squash_verify's precheck rejects a

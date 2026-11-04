@@ -39,6 +39,16 @@ cd "$REPO_ROOT" || exit 1
 #   scripts/sync_to_be_lanes.sh             — forward-path lane suite for sync-to-be.sh, itself
 #       ACCEPTED_ABSENT above; added 2026-08-14, pmh-dev#69.
 ACCEPTED_ABSENT=(
+  # 2026-11-04 — unattended self-dev loop. Operator-machine only, by the operator's own scope
+  #    (CLAUDE.local.md §FH 자체개발 자율화: «일반 사용자는 이슈/PR 제안»): shipping it would put an
+  #    auto-merging loop into every consumer install. self_evolution_routine.md §3b names these files to
+  #    say exactly that; selfcheck resolves their rows as SKIP on a consumer tree.
+  "scripts/selfdev_loop.sh"
+  "scripts/selfdev_merge_tier.sh"
+  "scripts/selfdev_queue.py"
+  "scripts/test_selfdev_merge_tier_lanes.sh"
+  "scripts/test_selfdev_queue_lanes.sh"
+  "scripts/test_selfdev_loop_lanes.sh"
   # 2026-10-19 — cartridge admission checker and its lanes. Not shipped yet on purpose: publishing cartridges
   #    (fh-cartridges) is an open operator decision, and shipping the checker would put it in the next npm
   #    release by default. selfcheck resolves its row as SKIP («not in files[], and absent») on a consumer tree.

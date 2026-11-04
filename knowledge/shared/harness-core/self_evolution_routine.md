@@ -56,6 +56,28 @@ cheap signal accumulation; weekly = one considered proposal.
 - **`claude/` branch prefix only.** Do not enable "unrestricted branch pushes" for this routine.
 - **Methodology mirror stays clean.** Daily digests live on the GitHub Issue, never in `tracks/**`
   (gitignored) and never committed to the methodology tree.
+
+### 3b. The operator's own machine — a narrower auto-merge (2026-11-04)
+
+The remote routine above is unchanged. **On the hub operator's machine only**, a RECORDED standing
+request (quoted words · dated lease · scope — `CLAUDE.local.md`, never a session's own initiative)
+lets `scripts/selfdev_loop.sh` merge a self-dev PR unattended when **all** of these hold, each
+checked mechanically after the builder has finished (the builder never grades its own merge):
+
+1. **Direction was human** — the PR's `request: «…»` equals, character for character, an open
+   operator request from a session checklist (`seed=human` in `scripts/selfdev_queue.py`).
+   Machine-proposed candidates (digest, absorption queue, correction moments, card `[planned]`)
+   open a PR and wait. This keeps goal-quench §Autonomy Ladder's «direction is always human».
+2. **Reversible by path** — every changed file is on `scripts/selfdev_merge_tier.sh`'s allow-list
+   (docs, knowledge outside rules/gate docs, skill docs, CATALOG, an *added* lane), ≤ 300 lines.
+3. **CI green**, and the branch's 4-axis marker carries `crossfamily: panel(…)`.
+4. **Not demoted** — an operator `Revert "selfdev: …"` on main in the last 30 days holds everything
+   (goal-quench §Autonomy Ladder (d), rollback feeds demotion).
+
+What this gives up, by the operator's choice: goal-quench Path 2's «review before consumption» for
+that narrow class — the review moves to the morning report (`tracks/_meta/selfdev/report_<date>.md`)
+and to revert. Publish · delete · tag · history rewrite stay human on every path. A plugin user's
+install does not ship this behaviour: for them the same records become an issue or PR *proposal*.
 - **Cost ceiling.** Both arms run `WebSearch`/`WebFetch`. Daily draws subscription usage and counts
   against the per-account routine daily cap; keep the daily prompt to collection-only.
 - **Cite-verify (PR #112 lesson, 2026-06-22) — do not weaken.** Any citation / source / version claim

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Replace every /path/to/... below with your own absolute paths before installing.
+         Same template shape as scripts/com.forge-harness.live-eval.plist. -->
+    <key>Label</key>
+    <string>com.forge-harness.selfdev-loop</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/path/to/forge-harness/scripts/selfdev_loop.sh</string>
+    </array>
+
+    <!-- 매일 03:30 — live-eval(02:30) 뒤, cc-socks GC(04:10)·scout4090(04:30) 앞. 운영자가 FH 를
+         쓰는 낮 시간과 분리한다(«쓰는 시간과 자체개발 시간의 분리», 2026-11-04). -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key><integer>3</integer>
+        <key>Minute</key><integer>30</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/path/to/forge-harness/tracks/_meta/logs/selfdev_loop_out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/path/to/forge-harness/tracks/_meta/logs/selfdev_loop_err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <!-- must resolve claude, gh, git, python3 for this user -->
+        <string>/path/to/home/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>HOME</key>
+        <string>/path/to/home</string>
+        <!-- the unattended builder's model is pinned here, not inherited from /model -->
+        <key>FD_MODEL</key>
+        <string>opus</string>
+        <!-- 🟥 first nights: keep SELFDEV_DRY_RUN=1 until a dry report reads right, then remove it -->
+        <key>SELFDEV_DRY_RUN</key>
+        <string>1</string>
+    </dict>
+</dict>
+</plist>
+
+<!--
+WHO THIS IS FOR: the hub operator's own machine, under a RECORDED standing request (quoted words ·
+dated lease · scope). It merges reversible self-dev PRs unattended. A plugin user does NOT install
+this — for them the same records become an issue or PR proposal to the FH repo, opt-in.
+
+INSTALL (manual):
+  1. cp scripts/com.forge-harness.selfdev-loop.plist ~/Library/LaunchAgents/
+  2. Edit every /path/to/... to this checkout and your $HOME.
+  3. mkdir -p tracks/_meta/logs
+  4. launchctl load ~/Library/LaunchAgents/com.forge-harness.selfdev-loop.plist
+  5. Verify: launchctl list | grep com.forge-harness.selfdev-loop
+UNINSTALL:
+  launchctl unload ~/Library/LaunchAgents/com.forge-harness.selfdev-loop.plist && rm ~/Library/LaunchAgents/com.forge-harness.selfdev-loop.plist
+Report: tracks/_meta/selfdev/report_<date>.md · log: tracks/_meta/logs/selfdev_loop_<date>.log
+-->
