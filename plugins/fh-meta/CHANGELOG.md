@@ -2,6 +2,24 @@
 
 ### [Unreleased]
 
+### [3.37.0] — 2026-11-04 — 권한 무시 모드에서 파괴 명령 기본 차단 · 카드 상태 태그 · 정정 순간 마이닝 · live-eval 직전 밤 대비 변화 · «측정 못 함» 을 판정으로 내던 채널 여섯
+
+새 스크립트와 새 레인이 들어가고 게이트 하나의 기본 동작이 조여져서 버전 정책상 minor 다.
+
+**BREAKING (gate): `destructive_pre_gate.sh` 가 `permission_mode=bypassPermissions` 에서 `FH_DESTRUCTIVE_BLOCK` 이 비어 있으면 파괴 명령(`git branch -D` 등)을 경고가 아니라 차단한다 — 권한 무시 모드로 무인 실행하면서 그 명령을 의도한 경우 `FH_DESTRUCTIVE_BLOCK=0` 으로 종전 경고 동작을 고른다.** 다른 권한 모드와 `--stdin-raw`(페이로드 없음) 경로는 바뀌지 않았다.
+
+In English: under `bypassPermissions` the destructive-op hook now blocks by default (set `FH_DESTRUCTIVE_BLOCK=0` to keep the old advisory behaviour); session cards get a per-item status tag with an advisory close check; a period retrospective can mine operator correction moments from the utterance ledgers; the nightly live-eval report records which probes flipped since the previous night; harness-doctor gains a «called but content-blind» row; six channels that rendered an unmeasured result as a verdict now say what they measured.
+
+소비자에게 닿는 변화:
+- `destructive_pre_gate.sh`(#1008): 위 BREAKING 줄. 근거 실측 — 헤드리스 `--dangerously-skip-permissions` Sonnet 에 버릴 브랜치 `git branch -D` 를 시켰을 때 옛 훅(스위치 비움)은 0/3 보존(삭제됨), 새 훅은 3/3 보존이고 차단 사유가 `permission_mode=bypassPermissions` 를 말한다. 권한 무시 모드에선 경고를 읽는 사람이 실행 전에 없다는 게 이유다. `templates/settings.PreToolUse.snippet.json` 은 설명 문구만 바뀌었다.
+- `card_status_tags.sh` · `session_close_check.sh ⑤-S`(#1010): 다음 세션 카드의 «다음에 볼 것» 항목마다 상태 태그 하나(`merged|open-pr|in-flight|uncommitted|reverted|planned|operator|held`)를 붙이는 규칙과, 태그 없는 항목을 나열하는 마감 점검(권고 — 막지 않는다). 태그가 참인지는 판단으로 남긴다.
+- `correction_moments.py` + harvest-loop Step 1 한 줄(#1011): 발화 원장에서 운영자의 정정 낱말이 든 발화를 추리고, 다른 날 다시 나온 정정을 «아직 못 배운 규칙» 후보로 짝짓는다. 로컬 전용이며 원장 내용을 다른 모델에 보내지 않는다. 짝 0 은 «재발 없음» 이 아니다 — 정정 낱말 없는 정정은 못 잡는다(재현율 미보정, 머리말에 적음).
+- `probe_live_eval.sh` · `probe_live_eval_lib.py`(#1013): 밤마다 내는 live-eval 보고서에 «Moved since previous» 절 — 직전 보고서 대비 판정이 바뀐 프로브를 적는다(통과율이 그대로여도 회귀 하나와 회복 하나가 상쇄되는 경우를 드러낸다). 직전 보고서가 없으면 «not supplied», 프로브 집합이 다르면 «not comparable» 로 적고 변화 없음과 섞지 않는다. `--prev` 와 `FH_LIVE_EVAL_PREV_DIR` 로 지정할 수 있다.
+- `harness-doctor` SKILL(#1012): «호출은 되지만 입력과 무관하게 같은 판정을 내는» 게이트를 S등급 장식으로 판정하는 줄. 판정은 코드 읽기가 아니라 known-positive / known-negative 입력 두 개로 낸다.
+- `frontier-digest` SKILL(#1009): 대화형 실행에서 «FH 적용 후보» 마다 레포를 grep 해 «이미 있나» 줄로 끝낸다.
+- `claude_md_full_reference.md`(#1005 · #1010): Pre-Publish 3단계 보안 점검은 릴리스 PR 이 아니라 «지난 태그 → 릴리스 커밋» 출하 범위를 대상으로 한다는 문단 · 카드 상태 태그 규칙. `builtin_capability_map.md`(#1007): 데스크톱 Code 탭에서 실제로 써 본 표면 기록.
+- 측정 채널 여섯(#1001): `selfcheck --shard` 의 인라인 검사 39개를 지키는 레인(S8) · `env_layer_fingerprint.sh` 의 마커 판정이 훅이 실제로 읽는 이름 하나만 본다 · detach 레인이 `chmod 000` 이 안 먹는 환경(root)에서 통과가 아니라 UNMEASURED · npm 설치본에 빠져 있던 `templates/fh_audit_check.zsh`(install-wizard 의 zshrc 단계가 늘 거절되던 원인)와 `scripts/selfcheck_shard_weights.txt` 를 `files[]` 에 넣었다.
+
 ### [3.36.1] — 2026-11-02 — 발화 기록 훅이 행을 조용히 잃던 것 · package-coverage 가 쓰이는 예외를 «안 쓰임» 으로 읽던 것 · Pre-Publish 보안 단계 한 문단 · 기능 지도 데스크톱 줄
 
 새 스킬 · 새 게이트 레인 · 새 행동 규칙은 없다. 수정과 문서라 버전 정책상 patch 다. 훅 설정은 바뀌지 않았고, 훅이 부르는 스크립트 한 개의 대기 동작이 바뀌었다.
