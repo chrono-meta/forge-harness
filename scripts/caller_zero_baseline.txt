@@ -35,6 +35,7 @@
 # 36 → 13 is a repair of the instrument, not of the tree.
 
 exempt:
+  - scripts/selfdev_loop.sh   # entry point run by launchd (scripts/com.forge-harness.selfdev-loop.plist, operator machine only) — its merge pass is executed by test_selfdev_loop_lanes.sh
   - scripts/worktree_reclaim.sh   # human-run enumerate/reclaim tool, same class as templates/predelete_check.sh: "run it BEFORE git worktree remove" — its lane suite is the auto caller
   - scripts/activity_log.sh   # on-demand chronological assembler, invoked by an operator/session when a trail is wanted — its own header says on-demand
   - scripts/governor_board.sh   # on-demand governor/worktree/family board, same class as activity_log.sh: a human or a session runs it when they want to SEE the fleet — its --self-test is wired into selfcheck.sh, but the render path itself has no automatic caller by design

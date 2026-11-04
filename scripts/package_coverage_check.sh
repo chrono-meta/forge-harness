@@ -48,6 +48,7 @@ ACCEPTED_ABSENT=(
   "scripts/selfdev_queue.py"
   "scripts/test_selfdev_merge_tier_lanes.sh"
   "scripts/test_selfdev_queue_lanes.sh"
+  "scripts/test_selfdev_loop_lanes.sh"
   # 2026-10-19 — cartridge admission checker and its lanes. Not shipped yet on purpose: publishing cartridges
   #    (fh-cartridges) is an open operator decision, and shipping the checker would put it in the next npm
   #    release by default. selfcheck resolves its row as SKIP («not in files[], and absent») on a consumer tree.
