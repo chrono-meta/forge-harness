@@ -66,12 +66,12 @@ fi
 verdict() { # $1=exit_code $2=scanned ; echoes rc + first line
   local out rc
   out=$(EXIT_IN="$1" SCANNED_IN="$2" bash "$T/eval.sh" 2>&1); rc=$?
-  printf '%s|%s' "$rc" "$(printf '%s' "$out" | head -1)"
+  printf '%s|%s' "$rc" "$(printf '%s' "$out" | sed -n 1p)"
 }
 lane() { # $1=id $2=exit $3=scanned $4=expect(ok|fail) $5=substring
   local r; r=$(verdict "$2" "$3"); local rc="${r%%|*}" msg="${r#*|}"
   local got=ok; [ "$rc" -ne 0 ] && got=fail
-  if [ "$got" = "$4" ] && printf '%s' "$msg" | grep -q "$5"; then
+  if [ "$got" = "$4" ] && printf '%s' "$msg" | grep -c "$5" >/dev/null; then
     printf '  ✅ %-30s rc=%s  %s\n' "$1" "$rc" "$(printf '%s' "$msg" | cut -c1-58)"
   else
     printf '  ❌ %-30s expected %s+/%s/, got rc=%s %s\n' "$1" "$4" "$5" "$rc" "$msg"; FAIL=1
@@ -137,18 +137,18 @@ if git -C "$REPO_ROOT" clone -q --no-local "$REPO_ROOT" "$CL" 2>/dev/null; then
   # L8a — a bare NAME must be REFUSED. Name-guessing is what let a fork PR branch called `main`
   # resolve to this repo's main and compare it to itself.
   out=$(cd "$CL" && bash templates/regression_guard.sh --pr "$BR" "$BASE_SHA" 2>&1); rc=$?
-  if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q "head='$BR'->'<none>'"; then
+  if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -c "head='$BR'->'<none>'" >/dev/null; then
     printf '  ✅ %-30s fork-collision name '"'"'%s'"'"' refused, attributed to HEAD (local refs: %s)\n' "L8a-name-refused" "$BR" "$_left"
   else
-    printf '  ❌ %-30s expected exit 3 naming head=%s, got rc=%s: %s\n' "L8a-name-refused" "$BR" "$rc" "$(printf '%s' "$out" | head -1)"; FAIL=1
+    printf '  ❌ %-30s expected exit 3 naming head=%s, got rc=%s: %s\n' "L8a-name-refused" "$BR" "$rc" "$(printf '%s' "$out" | sed -n 1p)"; FAIL=1
   fi
 
   # L8b — unambiguous SHAs on both sides must resolve and compute a merge-base.
   out=$(cd "$CL" && bash templates/regression_guard.sh --pr "$SHA" "$BASE_SHA" 2>&1); rc=$?
-  if printf '%s' "$out" | grep -q 'PR MODE: merge-base='; then
+  if printf '%s' "$out" | grep -c 'PR MODE: merge-base=' >/dev/null; then
     printf '  ✅ %-30s %s\n' "L8b-sha-resolves" "$(printf '%s' "$out" | grep -o 'merge-base=[^ ]*')"
   else
-    printf '  ❌ %-30s SHA did not resolve (rc=%s): %s\n' "L8b-sha-resolves" "$rc" "$(printf '%s' "$out" | head -1)"; FAIL=1
+    printf '  ❌ %-30s SHA did not resolve (rc=%s): %s\n' "L8b-sha-resolves" "$rc" "$(printf '%s' "$out" | sed -n 1p)"; FAIL=1
   fi
 
 else
@@ -211,7 +211,7 @@ EOF
   grun() { # $1=guard path ; echoes "rc|<matched verdict line>"
     local out rc
     out=$(cd "$G" && bash "$1" --staged 2>&1); rc=$?
-    printf '%s|%s' "$rc" "$(printf '%s\n' "$out" | grep -E 'M-TIER|S-TIER' | head -1)"
+    printf '%s|%s' "$rc" "$(printf '%s\n' "$out" | grep -E 'M-TIER|S-TIER' | sed -n 1p)"
   }
   glane() { # $1=id $2=expected rc $3=substring('' = none) $4=guard path
     local r rc msg ok=1
