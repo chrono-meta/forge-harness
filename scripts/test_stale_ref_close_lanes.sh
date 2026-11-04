@@ -32,7 +32,7 @@ if [ ! -f "$SUBJECT" ]; then
 fi
 
 BLOCK=$(awk '/^# ── ①-g STALE REF \(advisory\)/,/^echo "── close check:/' "$SUBJECT" | sed '$d')
-if [ -z "$BLOCK" ] || ! printf '%s' "$BLOCK" | grep -q '_SR_SCAN'; then
+if [ -z "$BLOCK" ] || ! printf '%s' "$BLOCK" | grep -c '_SR_SCAN' >/dev/null; then
   bad "①-g 블록을 subject 에서 못 찾았다 — 못 찾는 것을 검증할 수는 없다"
   echo "----"; echo "stale-ref close lanes: $pass passed, $fail failed"; exit 1
 fi

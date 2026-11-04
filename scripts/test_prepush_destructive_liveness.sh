@@ -676,7 +676,7 @@ elif [ "$_before" != "$_after" ]; then
   echo "   \"a peer session or the operator wrote during the run\". To attribute it, freeze the tree"
   echo "   and re-run this probe alone. Fixtures must live only under mktemp — in a shared checkout a"
   echo "   staged fixture file is committed by whoever commits next. Diff of git state (before → after):"
-  diff <(printf '%s\n' "$_before") <(printf '%s\n' "$_after") | _echo_evidence | head -20
+  diff <(printf '%s\n' "$_before") <(printf '%s\n' "$_after") | _echo_evidence | sed -n '1,20p'
   exit 1
 else
   echo "⑦ containment: real repo byte-identical across a full suite run (status·HEAD·refs·tags·index)"

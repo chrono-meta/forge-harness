@@ -87,7 +87,7 @@ lane L9b-tier-paren-kept  "standpoint: tier2(qasp) — 명령과 출력" "standp
 
 # L8b 잘린 값이 «그대로» 새어나오지 않는지 직접 확인 (needle 부재를 단언)
 printf 'thirdparty: checked(확인한 것 = x)\n' > "$T/p.marker"
-if run "$T/p.marker" | grep -qF 'checked(확인한'; then
+if run "$T/p.marker" | grep -cF 'checked(확인한' >/dev/null; then
   echo "  ❌ L8b 잘린 괄호 문자열이 아직 출력에 있다"; FAIL=1
 else
   echo "  ✅ L8b 잘린 괄호 문자열은 출력에 없다"

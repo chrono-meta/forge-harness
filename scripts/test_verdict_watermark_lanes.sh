@@ -379,7 +379,7 @@ rm -rf "$_L25"
 if grep -q 'TYPED_N=' "$S"; then
   # 🟥 초판 정규식은 `$TYPED_N / $TOTAL_N` 이라는 **표시용 구분자**를 나눗셈으로 오탐했다.
   #    (오늘 그 축: 계기가 «형태»만 보고 «문맥»을 안 봤다.) ⇒ 산술 문맥 `$((…))` 안만 본다.
-  if grep -oE '\$\(\([^)]*\)\)' "$S" 2>/dev/null | grep -E '(TYPED_N|FALLBACK_N)' | grep -qE '[*/]'; then
+  if grep -oE '\$\(\([^)]*\)\)' "$S" 2>/dev/null | grep -E '(TYPED_N|FALLBACK_N)' | grep -cE '[*/]' >/dev/null; then
     no "L26a 두 숫자를 결합하는 식이 있다 — 곱하면 어느 쪽이 나빠졌는지 못 본다"
   else ok "L26a 두 숫자 결합식 없음 (곱한 값이 소스에 없다)"; fi
   grep -q '② 규약 준수' "$S" && grep -q '① 폴백 도달' "$S" \
@@ -388,7 +388,7 @@ if grep -q 'TYPED_N=' "$S"; then
   cp "$S" "$S.l26bak"
   printf '\nBAD_RATIO=$((TYPED_N * 100))\n' >> "$S"
   if grep -q 'TYPED_N \* 100' "$S"; then
-    if grep -oE '\$\(\([^)]*\)\)' "$S" 2>/dev/null | grep -E 'TYPED_N' | grep -qE '[*/]'; then ok "L26c [되돌림] 결합식을 넣으면 검사가 문다"
+    if grep -oE '\$\(\([^)]*\)\)' "$S" 2>/dev/null | grep -E 'TYPED_N' | grep -cE '[*/]' >/dev/null; then ok "L26c [되돌림] 결합식을 넣으면 검사가 문다"
     else no "L26c 결합식을 넣었는데 검사가 안 문다 — L26a 는 장식이다"; fi
   else no "L26c 되돌림 적용 실패"; fi
   mv -f "$S.l26bak" "$S"
@@ -408,7 +408,7 @@ else no "L27 프로브 없음 — 검사 못 함(스킵 아님)"; fi
 #    「deliver 가 규약 준수를 죽인다」는 «발견» 으로 낼 뻔했다.
 #    🟥 known-pair 를 «한 인자씩» 만 돌리면 조합이 여는 경로를 구조적으로 못 본다.
 if grep -q 'DELIVER" = 1 \] && \[ "$arm" = ARM' "$S"; then
-  _dl=$(grep -n 'DELIVER" = 1 \] && \[ "$arm" = ARM' "$S" | head -1 | cut -d: -f1)
+  _dl=$(grep -n 'DELIVER" = 1 \] && \[ "$arm" = ARM' "$S" | sed -n 1p | cut -d: -f1)
   _blk=$(sed -n "${_dl},$((_dl+4))p" "$S")
   if printf '%s' "$_blk" | grep -q '^\$question"$'; then
     no "L28 deliver 분기가 \$question 을 다시 읽는다 — 규약이 버려진다"

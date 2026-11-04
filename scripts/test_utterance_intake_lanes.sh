@@ -186,7 +186,7 @@ grep -qE $'^1\t2026-09-05T01:00:00' <<<"${_L9C_OUT%%$'\n'*}" \
 
 # ── L10 seal 출력 골든 — 공용화가 기존 원장을 바꾸지 않았다 ─────────────────
 bash "$PROBE" seal --transcript "$T/tr.jsonl" --dir "$T/seal" >/dev/null 2>&1
-SF="$(ls "$T/seal"/seal_*.md 2>/dev/null | head -1)"
+SF="$(ls "$T/seal"/seal_*.md 2>/dev/null | sed -n 1p)"
 if [ -n "$SF" ]; then
   sed -n '/^## 운영자 발화/,/^## 이 세션이 건드린/p' "$SF" | sed '$d' > "$T/seal_block.txt"
   cat > "$T/seal_expect.txt" <<'GOLD'
@@ -203,7 +203,7 @@ GOLD
   if diff -u "$T/seal_expect.txt" "$T/seal_block.txt" >"$T/seal_diff.txt" 2>&1; then
     ok "L10 seal 발화 블록이 골든과 바이트 동일"
   else
-    ng "L10 seal 발화 블록이 골든과 다르다"; sed 's/^/     /' "$T/seal_diff.txt" | head -20
+    ng "L10 seal 발화 블록이 골든과 다르다"; sed 's/^/     /' "$T/seal_diff.txt" | sed -n '1,20p'
   fi
 else
   ng "L10 seal 파일이 안 생겼다"
@@ -218,7 +218,7 @@ if bash "$PROBE" --self-test >/dev/null 2>&1; then ok "L11 compaction_probe --se
 mkdir -p "$T/mirror/scripts"
 cp "$PROBE" "$T/mirror/scripts/compaction_probe.sh"
 bash "$T/mirror/scripts/compaction_probe.sh" seal --transcript "$T/tr.jsonl" --dir "$T/seal_rv" >/dev/null 2>&1
-SFR="$(ls "$T/seal_rv"/seal_*.md 2>/dev/null | head -1)"
+SFR="$(ls "$T/seal_rv"/seal_*.md 2>/dev/null | sed -n 1p)"
 if [ -n "$SFR" ] && grep -q "앞으로 무인 잡은 plist" "$SFR"; then
   ng "L12 추출기가 없는데도 발화가 실렸다 — seal 이 그 파일을 통해 돌지 않는다(배선 장식)"
 else
@@ -227,7 +227,7 @@ fi
 # known-positive 짝: 같은 미러에 추출기를 넣으면 살아난다
 cp "$EXTRACT" "$T/mirror/scripts/transcript_utterances.py"
 bash "$T/mirror/scripts/compaction_probe.sh" seal --transcript "$T/tr.jsonl" --dir "$T/seal_rv2" >/dev/null 2>&1
-SFR2="$(ls "$T/seal_rv2"/seal_*.md 2>/dev/null | head -1)"
+SFR2="$(ls "$T/seal_rv2"/seal_*.md 2>/dev/null | sed -n 1p)"
 if [ -n "$SFR2" ] && grep -q "앞으로 무인 잡은 plist" "$SFR2"; then
   ok "L12b 추출기 복원 → 발화가 다시 실린다 (복원 확인 — L12 가 미러 자체의 사망이 아님)"
 else
@@ -314,9 +314,9 @@ NS_ON=$(python3 "$EXTRACT" "$T/tr_slash.jsonl" --min-chars 20 --strip-system-mar
 [ "$NS_OFF" -eq 0 ] && ok "L16 플래그 없으면 셋 다 커맨드로 제외 (옛 규칙 = seal 경로, 컨트롤)" \
                     || ng "L16 플래그 없이 $NS_OFF 건 남았다 (기대 0) — seal 행동이 바뀌었다"
 [ "$NS_ON" -eq 1 ] && ok "L16b 플래그를 주면 경로형 실발화 1 건만 살아난다" || ng "L16b 플래그 켜고 $NS_ON 건 (기대 1)"
-python3 "$EXTRACT" "$T/tr_slash.jsonl" --min-chars 20 --strip-system-markers 2>/dev/null | grep -q "발표자 오티" \
+python3 "$EXTRACT" "$T/tr_slash.jsonl" --min-chars 20 --strip-system-markers 2>/dev/null | grep -c "발표자 오티" >/dev/null \
   && ok "L16c 살아난 것이 **경로형 실발화** 다 (known-positive)" || ng "L16c 엉뚱한 것이 살아났다"
-python3 "$EXTRACT" "$T/tr_slash.jsonl" --min-chars 20 --strip-system-markers 2>/dev/null | grep -q "install-wizard" \
+python3 "$EXTRACT" "$T/tr_slash.jsonl" --min-chars 20 --strip-system-markers 2>/dev/null | grep -c "install-wizard" >/dev/null \
   && ng "L16d 진짜 슬래시 커맨드가 살아남았다" || ok "L16d 진짜 슬래시 커맨드는 여전히 제외 (known-negative)"
 
 # ── L17 압축 이어붙임 프리앰블 (첫 실사용이 잡은 다섯째) ────────────────────
@@ -329,7 +329,7 @@ NC_ON=$(python3 "$EXTRACT" "$T/tr_cont.jsonl" --min-chars 20 --strip-system-mark
 NC_OFF=$(python3 "$EXTRACT" "$T/tr_cont.jsonl" --min-chars 20 2>/dev/null | grep -c .); case "$NC_OFF" in ''|*[!0-9]*) NC_OFF=0 ;; esac
 [ "$NC_ON" -eq 1 ] && ok "L17 압축 프리앰블 제외 · 실발화 1 건만 남는다" || ng "L17 플래그 켜고 $NC_ON 건 (기대 1)"
 [ "$NC_OFF" -eq 2 ] && ok "L17b 플래그 없으면 둘 다 통과 (컨트롤 — seal 행동 불변)" || ng "L17b 플래그 없이 $NC_OFF 건 (기대 2)"
-python3 "$EXTRACT" "$T/tr_cont.jsonl" --min-chars 20 --strip-system-markers 2>/dev/null | grep -q "등급 기댓값" \
+python3 "$EXTRACT" "$T/tr_cont.jsonl" --min-chars 20 --strip-system-markers 2>/dev/null | grep -c "등급 기댓값" >/dev/null \
   && ok "L17c 남은 것이 실발화다 (known-positive)" || ng "L17c 실발화까지 버렸다"
 
 # ── L18 ①-f **행복 경로** — 전사본과 기록이 다 있을 때 실제로 판정까지 간다 ────
@@ -421,8 +421,8 @@ cat > "$T/tr23.jsonl" <<'JSONL'
 JSONL
 N23=$(python3 "$EXTRACT" "$T/tr23.jsonl" --min-chars 20 2>/dev/null | grep -c .); case "$N23" in ''|*[!0-9]*) N23=0 ;; esac
 [ "$N23" -eq 1 ] && ok "L23 isMeta·isSidechain 레코드 제외 · 표시 없는 1 건만 남는다" || ng "L23 $N23 건 (기대 1)"
-python3 "$EXTRACT" "$T/tr23.jsonl" --min-chars 20 2>/dev/null | grep -q "표시가 없는" && ok "L23b known-positive: 남은 것이 표시 없는 발화다" || ng "L23b 표시 없는 발화까지 버렸다"
-python3 "$EXTRACT" "$T/tr23.jsonl" --min-chars 20 2>/dev/null | grep -q "메타표시레코드\|사이드체인" && ng "L23c 표시된 레코드가 살아남았다" || ok "L23c 표시된 레코드는 없다 (known-negative)"
+python3 "$EXTRACT" "$T/tr23.jsonl" --min-chars 20 2>/dev/null | grep -c "표시가 없는" >/dev/null && ok "L23b known-positive: 남은 것이 표시 없는 발화다" || ng "L23b 표시 없는 발화까지 버렸다"
+python3 "$EXTRACT" "$T/tr23.jsonl" --min-chars 20 2>/dev/null | grep -c "메타표시레코드\|사이드체인" >/dev/null && ng "L23c 표시된 레코드가 살아남았다" || ok "L23c 표시된 레코드는 없다 (known-negative)"
 
 # ── L24  키 선택: 별칭 + 길이 대역 (2026-09-16) ──────────────────────────────
 # WHY. 「가장 긴 토큰 3 개」 휴리스틱이 **붙여쓴 절**을 키로 고른다 — 절은 정의상 가장 길고

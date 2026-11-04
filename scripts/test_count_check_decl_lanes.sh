@@ -73,7 +73,7 @@ json.dump(d,open(sys.argv[1],"w",encoding="utf-8"),ensure_ascii=False,indent=2)
 PY
 }
 # verdict — echoes the single fh-qp skills sweep line from a real count_check run
-verdict() { ( cd "$FX" && bash scripts/count_check.sh 2>&1 ) | grep -E "sweep: fh-qp skills" | head -1; }
+verdict() { ( cd "$FX" && bash scripts/count_check.sh 2>&1 ) | grep -E "sweep: fh-qp skills" | sed -n 1p; }
 
 DECL_OK="QP (Quality Platform) — 4 skills (qp · qp-plan · qp-run · qp-regress)."
 DECL_STALE="QP (Quality Platform) — 3 skills (qp · qp-plan · qp-run · qp-regress)."

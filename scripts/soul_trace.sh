@@ -199,7 +199,7 @@ for u in "${UNITS[@]}"; do
     hook) # 🟥 선언 헤더는 정의 **앞** 주석 블록에 사는 경우가 있다(`validate_soul_tenet_refs` 가
           #    그 형태다). 본문만 보면 그 선언을 못 읽는다 — `validate_defeater_leg` 가 잡혔던 것은
           #    그것이 헤더를 본문 안에 **한 번 더 복제**해 뒀기 때문이지 규약 덕이 아니었다.
-          _ln=$(grep -nE "^${name}\(\)" "$HOOK" | head -1 | cut -d: -f1)
+          _ln=$(grep -nE "^${name}\(\)" "$HOOK" | sed -n 1p | cut -d: -f1)
           _from=$(( _ln > 14 ? _ln - 14 : 1 ))
           blob=$(sed -n "${_from},$(( _ln - 1 ))p" "$HOOK"; sed -n "/^${name}()/,/^}/p" "$HOOK") ;;
     lane) blob=$(cat "$REPO_ROOT/$name" 2>/dev/null) ;;

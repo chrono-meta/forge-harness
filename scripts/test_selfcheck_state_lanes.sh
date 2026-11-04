@@ -405,7 +405,7 @@ if [ "$(printf '%s\n' "$DD_ARM" | wc -l)" -gt 15 ]; then
 fi
 dd_arm_says() { # $1 = the subject's stdout; echoes PASS or FAIL
   ( _out="$1"; fail=0; _show_failure() { :; }
-    eval "$DD_ARM" ) | grep -oE '^(PASS|FAIL)' | head -1
+    eval "$DD_ARM" ) | grep -oE '^(PASS|FAIL)' | sed -n 1p
 }
 
 [ "$(dd_arm_says '✅ calibration passed (28 pairs)')" = PASS ]

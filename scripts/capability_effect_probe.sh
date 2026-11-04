@@ -80,7 +80,7 @@ ORDER_writes="read-only write-local write-remote"
 _idx() { local v="$1" i=0 x; for x in $ORDER_writes; do [ "$x" = "$v" ] && { printf '%d' "$i"; return; }; i=$((i+1)); done; printf '%d' -1; }
 
 _key() {  # $1=capfile $2=key
-  sed -n "s/^[[:space:]]*$2:[[:space:]]*//p" "$1" 2>/dev/null | head -1 \
+  sed -n "s/^[[:space:]]*$2:[[:space:]]*//p" "$1" 2>/dev/null | sed -n 1p \
     | sed 's/[[:space:]]*$//'
 }
 
@@ -416,7 +416,7 @@ $out2"
   # 조용히 실패한다. 그 실패를 「안 썼다」로 렌더하면 [S] 를 고치면서 같은 얼굴의 결함을
   # 새로 만드는 것이다 — 실측: `core.pager` 를 심으려던 capability 가 수리 직후
   # **VERIFIED** 를 받았다(실물 레포는 깨끗해졌지만 판정이 거짓). 미측정은 미측정으로 낸다.
-  if [ "$rc" -ge 10 ] || printf '%s' "$out" | grep -qiE 'command not found|no such file|not a git repository'; then
+  if [ "$rc" -ge 10 ] || printf '%s' "$out" | grep -ciE 'command not found|no such file|not a git repository' >/dev/null; then
     printf '⚠️  UNVERIFIABLE %s — 진입점이 이 샌드박스에서 못 돌았다(rc=%s). 미측정이지 통과 아님\n' "$cap" "$rc"
     return "$RC_UNVERIFIABLE"
   fi

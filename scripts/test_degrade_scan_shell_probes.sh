@@ -688,7 +688,7 @@ fi
 # flips to a hit — proves the exclusion is load-bearing for this specific fixture, not just
 # present somewhere in the file.
 _scan_reverted="$TMP/scan_reverted.sh"
-_excl_line=$(grep -n "grep -vE 'in \[A-Z_\]" "$SCAN" | head -1 | cut -d: -f1)  # portability-noqa: this file has no `set -e` (top line 22 is `set -uo pipefail` only) and the next line already guards empty via -z
+_excl_line=$(grep -n "grep -vE 'in \[A-Z_\]" "$SCAN" | sed -n 1p | cut -d: -f1)  # portability-noqa: this file has no `set -e` (top line 22 is `set -uo pipefail` only) and the next line already guards empty via -z
 if [ -z "$_excl_line" ]; then
   bad "C2-REVERT could not locate the exclusion line by its known text — fixture cannot run"
 else

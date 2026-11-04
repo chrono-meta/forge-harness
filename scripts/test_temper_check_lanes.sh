@@ -261,7 +261,7 @@ else
   CHANGED="$(git -C "$REPO_ROOT" diff --name-only "$BASEREF" HEAD -- '*.md')"
   # L1 — 그 구간에 «안 변한» 실물 md → 6지표 전부 +0
   UNCH=""
-  for f in $(git -C "$REPO_ROOT" ls-tree -r --name-only HEAD | grep '\.md$' | head -60); do
+  for f in $(git -C "$REPO_ROOT" ls-tree -r --name-only HEAD | grep '\.md$' | sed -n '1,60p'); do
     printf '%s\n' "$CHANGED" | grep -Fxq "$f" && continue
     git -C "$REPO_ROOT" cat-file -e "$BASEREF:$f" 2>/dev/null || continue
     UNCH="$f"; break

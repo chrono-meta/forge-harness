@@ -147,7 +147,7 @@ for f in docs/map/*.html; do
   [ -f "$f" ] || continue
   case "$f" in *.visual-check.html) continue;; esac
   SHIPPED_N=$((SHIPPED_N+1))
-  python3 "$S" --check "$f" 2>/dev/null | /usr/bin/grep -q '^PATCHED' || { SHIPPED_OK=0; echo "   ✗ $f not patched"; }
+  python3 "$S" --check "$f" 2>/dev/null | /usr/bin/grep -c '^PATCHED' >/dev/null || { SHIPPED_OK=0; echo "   ✗ $f not patched"; }
 done
 if [ "$SHIPPED_N" -eq 0 ]; then
   ng "L9 no docs/map/*.html found — nothing measured (NOT a pass)"

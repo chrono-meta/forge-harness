@@ -304,7 +304,7 @@ CLOSED_CHANNELS=""
 _closed() { CLOSED_CHANNELS="$CLOSED_CHANNELS
   - $1"; }
 
-_field() { sed -n "s/^$2=//p" "$1" 2>/dev/null | head -1; }
+_field() { sed -n "s/^$2=//p" "$1" 2>/dev/null | sed -n 1p; }
 
 # crossfamily 값 → 판에 찍을 계열 토큰. **enum 을 다시 판정하지 않는다** — 정본은
 # `templates/.git-hooks/pre-commit` 의 validate_crossfamily_leg 이고, 여기서 그 로직을 다시
@@ -507,7 +507,7 @@ EOF
       case "$n" in ''|*[!0-9]*) prog='미측정' ;; *) prog="+$n" ;; esac
     fi
     if [ "$prog" != "미측정" ] && [ -d "$p" ]; then
-      [ -n "$(git -C "$p" status --porcelain 2>/dev/null | head -1)" ] && prog="$prog*"
+      [ -n "$(git -C "$p" status --porcelain 2>/dev/null | sed -n 1p)" ] && prog="$prog*"
     fi
 
     # 마지막 움직임 — 커밋 시각과 claim 시각 중 **늦은 쪽**. 둘 다 없으면 빈칸(0 아님).

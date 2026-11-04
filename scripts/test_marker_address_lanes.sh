@@ -57,7 +57,7 @@ o=$(unread_markers "" "$ADDR")
 
 # L4 — THE ADVISORY MUST NOT BLOCK. Pinned in the source, because the whole design rests on it:
 # a blocking version would push authors to write FEWER records, inverting the intent.
-if sed -n '/_MK_UNREAD=/,/^    fi$/p' "$HOOK" | grep -qE 'FAILED=1|exit 1'; then
+if sed -n '/_MK_UNREAD=/,/^    fi$/p' "$HOOK" | grep -cE 'FAILED=1|exit 1' >/dev/null; then
   no "L4 the unread-marker advisory sets FAILED/exit — it must stay advisory"
 else
   ok "L4 the unread-marker advisory never blocks"

@@ -166,7 +166,7 @@ mk_pair "$T/m"; M="$T/m/main"; W="$T/m/wt"; mkdir -p "$W/tracks/_meta" "$W/node_
 printf 'tracks/\nnode_modules/\n' > "$W/.gitignore"    # 🟥 ignored 여야 SKIP (B-7: untracked 는 막는다)
 echo j > "$W/node_modules/x/p.js"
 OUT="$(bash "$SUT" "$W" 2>&1)"; RC=$?
-L="$(ls -t "$M"/tracks/_meta/dispatch/reclaim_wt_*.txt 2>/dev/null | head -1)"
+L="$(ls -t "$M"/tracks/_meta/dispatch/reclaim_wt_*.txt 2>/dev/null | sed -n 1p)"
 if [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q "non-blocking: skipped 1" \
    && [ -n "$L" ] && grep -q "^SKIP	node_modules/x/p.js" "$L"; then
   ok "W7e 제외분은 «버리는» 게 아니라 «세고 목록에 남긴다» — 과소차단 방향이 더는 무음이 아니다"

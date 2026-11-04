@@ -213,7 +213,7 @@ ENUM2=$(awk '/^validate_standpoint_leg\(\)/{f=1} f&&/^}/{f=0} f' "$FAKEPC" 2>/de
        | grep -E '^[A-Za-z]' | sort -u)
 DECLARED2=$( { grep -m1 '^STRONG_RUNGS=' "$GATE"; grep -m1 '^WEAK_RUNGS=' "$GATE"; } \
             | sed -E 's/^[A-Z_]+="//; s/"$//' | tr ' ' '\n' | grep -E '^[A-Za-z]' | sort -u)
-if printf '%s\n' "$(comm -23 <(printf '%s\n' "$ENUM2") <(printf '%s\n' "$DECLARED2"))" | grep -qx 'tier4'; then
+if printf '%s\n' "$(comm -23 <(printf '%s\n' "$ENUM2") <(printf '%s\n' "$DECLARED2"))" | grep -cx 'tier4' >/dev/null; then
   echo "PASS  L8b class-closing arm goes RED when an enum member is added"
 else
   echo "FAIL  L8b class-closing arm did NOT notice an added enum member — L8 green means nothing"

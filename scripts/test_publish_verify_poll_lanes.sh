@@ -162,7 +162,7 @@ if [ "$rc_f" = "2" ]; then
   echo "PASS F (조회기 부재 -> exit 2, 계기 오류)"; PASS=$((PASS + 1))
 else
   echo "FAIL F: 조회기가 없는데 rc=$rc_f 였다 (2 를 기대) — 계기 오류가 전파 지연으로 접혔다"
-  sed 's/^/        /' "$WORK/f.log" | head -5; FAIL=$((FAIL + 1))
+  sed 's/^/        /' "$WORK/f.log" | sed -n '1,5p'; FAIL=$((FAIL + 1))
 fi
 if grep -q "outcome=not_yet_visible" "$_of" 2>/dev/null; then
   echo "FAIL F: 계기 오류인데 outcome=not_yet_visible 을 적었다 — 판정을 내지 말아야 한다"
@@ -185,7 +185,7 @@ if [ "$rc_g" = "0" ] && grep -q "PUBLISH_VERIFY_OUTCOME=not_yet_visible" "$WORK/
   echo "PASS G (채널 부재에서도 stdout 에 기계가독 판정이 있다)"; PASS=$((PASS + 1))
 else
   echo "FAIL G: rc=$rc_g · stdout 에 PUBLISH_VERIFY_OUTCOME 이 없다 — 판정이 조용히 사라졌다"
-  sed 's/^/        /' "$WORK/g.log" | head -8; FAIL=$((FAIL + 1))
+  sed 's/^/        /' "$WORK/g.log" | sed -n '1,8p'; FAIL=$((FAIL + 1))
 fi
 if grep -q "no output channel" "$WORK/g.log"; then
   echo "PASS G (채널 부재를 stderr 로 시끄럽게 알린다)"; PASS=$((PASS + 1))

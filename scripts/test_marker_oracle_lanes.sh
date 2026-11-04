@@ -124,7 +124,7 @@ echo
 echo "== 실물 코퍼스 대조 (있으면) =="
 # 실물 마커에 oracle: 가 아직 없는 것이 정상이다 — 이 필드는 오늘 신설이다. 부재 마커도 여전히
 # PASS 여야 한다는 것을 실물로도 한 번 더 확인한다(계기가 실물 코퍼스에서도 안 죽는가).
-_real=$(ls -t "$REPO_ROOT"/tracks/_meta/.axes_23_passed_*.marker 2>/dev/null | head -1)
+_real=$(ls -t "$REPO_ROOT"/tracks/_meta/.axes_23_passed_*.marker 2>/dev/null | sed -n 1p)
 if [ -n "$_real" ] && [ -f "$_real" ]; then
   lane "R1-real-corpus-$(basename "$_real" | cut -c1-24)" PASS "$(cat "$_real")"
 else
