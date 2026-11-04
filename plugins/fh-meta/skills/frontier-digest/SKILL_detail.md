@@ -179,10 +179,14 @@ row today; known-negative = an empty body yields the UNMEASURED line, not `0`.
 ### GeekNews — news.hada.io (RSS)
 
 ```bash
-curl -s --max-time 8 "https://news.hada.io/rss/news"
+curl -sL --max-time 8 "https://news.hada.io/rss/news"
 ```
 
-Korean dev-news aggregator (HN-equivalent), AI-heavy. **The `/rss/news` path serves an Atom feed** (`<feed>`/`<entry>`, NOT RSS `<item>` — verified 2026-06-20: 50 `<entry>` elements, 0 `<item>`). Parse `<entry>` → `<title>` + `<link href>`; keep AI/agent/LLM/harness-relevant items only. `/rss/news` is a *general* dev-news feed, so if 0 AI-relevant items remain after filtering, **drop GeekNews from this run's progress line rather than padding to 5**. Endpoint verified HTTP 200 (2026-06-20); `/rss/new` and `/rss/topics` 404 — use `/rss/news`. Max 5 items.
+🟥 **`-L` is load-bearing (2026-11-04).** `/rss/news` now answers `302 → feeds.feedburner.com/geeknews-feed`;
+without `-L` the body is **0 bytes**, with `-L` it was 28,635 B / 20 `<entry>` (same run). A 0-byte body is
+`UNMEASURED (empty body)`, never `0 items`.
+
+Korean dev-news aggregator (HN-equivalent), AI-heavy. **The `/rss/news` path serves an Atom feed** (`<feed>`/`<entry>`, NOT RSS `<item>` — verified 2026-06-20: 50 `<entry>` elements, 0 `<item>`; 2026-11-04 after the redirect: 20 `<entry>`, 0 `<item>`). Parse `<entry>` → `<title>` + `<link href>`; keep AI/agent/LLM/harness-relevant items only. `/rss/news` is a *general* dev-news feed, so if 0 AI-relevant items remain after filtering, **drop GeekNews from this run's progress line rather than padding to 5**. Endpoint verified HTTP 200 (2026-06-20); `/rss/new` and `/rss/topics` 404 — use `/rss/news`. Max 5 items.
 
 ### Launch channels and vendor feeds (added 2026-10-17; ids match SKILL.md Step 1)
 
@@ -196,7 +200,7 @@ were live-checked once on 2026-10-17 (HTTP status · entries counted by `<entry`
 - **Product Hunt (`product-hunt`)**: official Atom feed `https://www.producthunt.com/feed` (2026-10-17: 200, 50 `<entry>`). ⚠️ the `?category=` parameter returned a byte-near-identical feed, so it is not shown to filter — filter by keyword yourself. Parse `<entry>` title + link.
 - **Show HN (`show-hn`)**: `'https://hn.algolia.com/api/v1/search_by_date?tags=show_hn&query=<KW>&hitsPerPage=8&numericFilters=points%3E10'` (quoted; 2026-10-17: 200, 8 hits for «agent») for the same keywords as the HN leg. Cite the HN item id.
 - **GeekNews (`geeknews`)**: unchanged section above (still wired).
-- **Vendor changelogs/blogs (`vendor-changelogs`)**: Feeds: OpenAI `https://openai.com/news/rss.xml` (200, RSS) · Google DeepMind `https://deepmind.google/blog/rss.xml` (200, RSS). HTML pages, no feed found (200, parse with WebFetch): Anthropic `https://www.anthropic.com/news` · Gemini API changelog `https://ai.google.dev/gemini-api/docs/changelog` · Meta AI `https://ai.meta.com/blog/` · Cursor `https://cursor.com/changelog`. Keep entries newer than the previous digest; cite the entry URL.
+- **Vendor changelogs/blogs (`vendor-changelogs`)**: Feeds: OpenAI `https://openai.com/news/rss.xml` (200, RSS) · Google DeepMind `https://deepmind.google/blog/rss.xml` (200, RSS). HTML pages, no feed found (200, parse with WebFetch): Anthropic `https://www.anthropic.com/news` · Gemini API changelog `https://ai.google.dev/gemini-api/docs/changelog` (⚠️ 2026-11-04: `301 → https://aistudio.google.com/docs/changelog`, a JS shell to curl — read it with WebFetch or report `UNMEASURED (js shell)`) · Meta AI `https://ai.meta.com/blog/` · Cursor `https://cursor.com/changelog`. Keep entries newer than the previous digest; cite the entry URL.
 
 Recall regression: `scripts/test_frontier_digest_recall.sh` against `scripts/fixtures/frontier_digest_recall.tsv` (structural only: each known item must have a channel in the Step 1 list; the channel assignments are expectations, not announcement evidence — do not cite the lane as measured recall).
 
