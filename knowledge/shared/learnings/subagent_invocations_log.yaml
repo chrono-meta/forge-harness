@@ -5345,3 +5345,21 @@
   outcome: "with the section: named G-TRIG-05 PASS->FAIL and G-TRIG-02 FAIL->PASS and said the flat rate hides it; without: «can't tell from this file»"
   evidence: "PR body of feat/live-eval-moved-since-previous"
   tokens: "115131 + 115035"
+- date: 2026-11-04
+  agent: "general-purpose (sonnet) ×1 — consumer-side measurement of the published 3.37.0 destructive-op hook (purpose: independence)"
+  task: "npm pack the published package into an empty /private/tmp dir (no install scripts, no ~/.claude), feed the hook synthetic PreToolUse JSON for bypass/default modes and FH_DESTRUCTIVE_BLOCK=0, compare its sha with main"
+  outcome: "5/5 as designed — bypass force-push exit 2 · FH_DESTRUCTIVE_BLOCK=0 advisory · default advisory · git status allowed · rm -rf on an arbitrary absolute path allowed (documented residual); hook sha equals main. Caught the governor's wrong package name in the card (forge-harness → @chrono-meta/fh-gate)"
+  evidence: "fh_completed_2026-11-04.md «세션 bebe7abb» · /private/tmp/fh-3370-consumer.LG6V"
+  tokens: "134376"
+- date: 2026-11-04
+  agent: "general-purpose (sonnet) ×1 — diagnosis of a suspected double count in .subagent_dispatch_tally.detail (purpose: context)"
+  task: "find every writer of the tally/detail rows, reproduce one SubagentStop on a scratch copy, compare live counts"
+  outcome: "suspicion refuted — one writer, one row per event; 2026-11-03 tally 37 = detail count 37 (governor re-checked); the «two rows» were internal-agent rows mixed into detail"
+  evidence: "fh_completed_2026-11-04.md «세션 bebe7abb»"
+  tokens: "129495"
+- date: 2026-11-04
+  agent: "general-purpose (sonnet) ×1 — blind run of the edited frontier-digest GeekNews section (purpose: independence, floor-tier first use)"
+  task: "follow only the edited section (curl -sL …/rss/news) and report bytes, entries, items and the progress fragment"
+  outcome: "28,635 B · 20 entries · «GeekNews 5 items» — matched the governor's same-minute measurement; old command (no -L) was 0 B"
+  evidence: "PR #1015 body · marker .axes_23_passed_fix_digest-geeknews-redirect_2026-11-04"
+  tokens: "122365"
