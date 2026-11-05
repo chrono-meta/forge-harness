@@ -5375,3 +5375,27 @@
   outcome: "1 MED (sim runner not fingerprinted — fixed, IF4 added) · 3 LOW (wording, IF1 skip reason, IF3 fixture path — fixed; reader negative fixture left out of scope) · verdict path confirmed untouched"
   evidence: "selfdev PR auto/selfdev-2026-11-05-1 body · marker .axes_23_passed_auto_selfdev-2026-11-05-1_2026-11-05"
   tokens: "47401"
+- date: 2026-11-05
+  agent: "web-fetch (sonnet) ×1 — summary of a public engineering blog post (purpose: context)"
+  task: "read the Kurly QA AI Hub post (spec → TC → execution → defect) and return a faithful structured summary with exact numbers"
+  outcome: "5-stage pipeline, server+per-PC worker architecture, golden-TC effect (95/26/15) and measured results; used for the QASP comparison note"
+  evidence: "tracks/_meta/insight_kurly_qa_hub_vs_qasp_2026-11-05.md"
+  tokens: "24220"
+- date: 2026-11-05
+  agent: "general-purpose (sonnet) ×2 — source reading of a TC generator (CaseCraft V6.2) and of QASP's quality mechanisms (purpose: context)"
+  task: "inventory each tool's pipeline, noise/error mechanisms (enforced vs prose), blind spots, with file:line"
+  outcome: "governor re-checked the three key CaseCraft claims in source (verify_reorder_integrity has no caller · @skip_on_error on redefine/reorder · subject overwritten by label) and two QASP claims (tc_final_gate and context_checker not called from the generation path) — all held; basis of docs/report/casecraft_parity_2026-11-05.md"
+  evidence: "qasp-dev #381 body · fh_completed_2026-11-05.md"
+  tokens: "279610 + 244051"
+- date: 2026-11-05
+  agent: "Explore (sonnet) ×2 — FoD approval-flow map and Clawd naming inventory (purpose: context)"
+  task: "map gate decision → once-pass → card → Stop path; classify every clawd occurrence (rename / migrate / keep / dead)"
+  outcome: "🟥 both read a STALE checkout (fod-v1-src sat on an old branch at 1.0.16) — caught by the governor from the report's own first line; the builder was told to re-verify everything against 1.0.60, and the rename brief carries a stale-inventory warning (current main: 187 files / 786 lines)"
+  evidence: "tracks/_meta/fod_checkpoint_approval_brief_2026-11-05.md · fod_clawd_rename_brief_2026-11-05.md"
+  tokens: "286835 + 147956"
+- date: 2026-11-05
+  agent: "general-purpose (sonnet) ×1 — builder for FoD checkpoint batch approval (purpose: context; an Opus launch was stopped at once with zero changes — subagents are Sonnet/Haiku only)"
+  task: "queue irreversible commands in autopilot, one card at Stop, batch confirm, passes, Stop decision:block telling the agent; lanes + revert probes + full suite"
+  outcome: "CK1–CK8 and full suite 5516/0/4 reported; governor re-ran the suite, measured the desktop entrypoint (claude-desktop), and fixed two cross-family findings (no card → no queue; card must really show) as CK9–CK11; final 5519/0/4; merged as FoD #222"
+  evidence: "FoD PR #222 body"
+  tokens: "300317"
