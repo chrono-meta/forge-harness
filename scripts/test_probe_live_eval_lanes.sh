@@ -839,6 +839,73 @@ PY
 _lane TG6 target "narrower --before -> 'not comparable', never 'none'" \
   "others moved: not comparable (2 others absent from before)" "$r"
 
+# ── instrument lanes (2026-11-05, AQ-20261105-1) ─────────────────────────────────────────────
+# The report's «Instrument» line carries git blob ids of runner · scorer · probes_live.yaml so two
+# dated reports can be told apart mechanically: «did the target move, or did the instrument?».
+# Record only — no verdict reads it. Known pair: IF1 (real files → equals `git hash-object`) vs
+# IF2 (unreadable file → UNKNOWN, never dropped). IF3: the run-table reader still ignores it.
+# IF4: an FH_SIM_RUNNER_BIN stub is fingerprinted as sim_runner(override), never as the live runner.
+if [ -e "$REPO_ROOT/.git" ] && command -v git >/dev/null 2>&1; then
+  r="$(env -u FH_SIM_RUNNER_BIN python3 - "$REPO_ROOT" "$PROBES_LIVE" <<'PY'
+import sys, os, subprocess
+sys.path.insert(0, os.path.join(sys.argv[1], 'scripts'))
+from probe_live_eval_lib import instrument_fingerprint
+paths = {'runner': os.path.join(sys.argv[1], 'scripts', 'probe_live_eval.sh'),
+         'scorer': os.path.join(sys.argv[1], 'scripts', 'probe_live_eval_lib.py'),
+         'probes': sys.argv[2],
+         'sim_runner': os.path.join(sys.argv[1], 'scripts', 'sim_isolated_run.sh')}
+fp = instrument_fingerprint(sys.argv[2])
+names = [n for n, _ in fp]
+if names != ['runner', 'scorer', 'probes', 'sim_runner']:   # an empty/partial list must not read as «match»
+    print('names:' + ','.join(names)); sys.exit(0)
+bad = [n for n, s in fp
+       if s != subprocess.check_output(['git', 'hash-object', '--no-filters', paths[n]]).decode().strip()]
+print('match' if not bad else 'mismatch:' + ','.join(bad))
+PY
+)"
+  _lane IF1 instrument "fingerprint == git hash-object for runner/scorer/probes/sim_runner" "match" "$r"
+else
+  printf '  ⏭️  SKIP (PASS 아님 · no .git or no git binary — nothing to compare against) — IF1\n'
+  SKIPPED_BLOCKS="$SKIPPED_BLOCKS [IF1 no-git]"
+fi
+r="$(env -u FH_SIM_RUNNER_BIN python3 - "$REPO_ROOT" <<'PY'
+import sys, os, re
+sys.path.insert(0, os.path.join(sys.argv[1], 'scripts'))
+from probe_live_eval_lib import instrument_fingerprint, render_instrument_line
+l = render_instrument_line(instrument_fingerprint('/nonexistent/probes_live.yaml'))
+# the readable neighbours must still carry a real 40-hex id — a blanket UNKNOWN must not pass
+ok = ('probes=UNKNOWN(unreadable)' in l and re.search(r'runner=[0-9a-f]{40} ', l)
+      and re.search(r'scorer=[0-9a-f]{40} ', l) and re.search(r'sim_runner=[0-9a-f]{40} ', l))
+print('unknown' if ok else 'dropped:' + l)
+PY
+)"
+_lane IF2 instrument "KNOWN-NEGATIVE — unreadable probes file -> UNKNOWN(unreadable), not omitted" "unknown" "$r"
+r="$(python3 - "$REPO_ROOT" "$T/if3.md" "$PROBES_LIVE" <<'PY'
+import sys, os
+sys.path.insert(0, os.path.join(sys.argv[1], 'scripts'))
+from probe_live_eval_lib import render_report_md, parse_prev_report, instrument_fingerprint
+sr = {'model': 'm', 'threshold': 0.5, 'rows': [{'id': 'G-X-01', 'verdict': 'PASS'}], 'pass_rate': 1.0,
+      'overall': 'PASS', 'ran': 1, 'failed_to_run': 0, 'uncalibrated': 0, 'passed': 1}
+md = render_report_md({'selected': [], 'excluded': [], 'warnings': []}, sr, 'd',
+                      instrument=instrument_fingerprint(sys.argv[3]))
+open(sys.argv[2], 'w').write(md)
+print('%s|%s' % (md.splitlines()[4].startswith('- Instrument (git blob ids'), parse_prev_report(sys.argv[2])))
+PY
+)"
+_lane IF3 instrument "line sits at the top; run-table reader unchanged by it" "True|{'G-X-01': 'PASS'}" "$r"
+printf '#!/usr/bin/env bash\necho stub\n' > "$T/if4_stub.sh"
+r="$(FH_SIM_RUNNER_BIN="$T/if4_stub.sh" python3 - "$REPO_ROOT" "$PROBES_LIVE" "$T/if4_stub.sh" <<'PY'
+import sys, os
+sys.path.insert(0, os.path.join(sys.argv[1], 'scripts'))
+from probe_live_eval_lib import instrument_fingerprint, _git_blob_sha
+fp = dict(instrument_fingerprint(sys.argv[2]))
+live = _git_blob_sha(os.path.join(sys.argv[1], 'scripts', 'sim_isolated_run.sh'))
+print('override' if fp.get('sim_runner(override)') == _git_blob_sha(sys.argv[3]) != live
+      and 'sim_runner' not in fp else 'leak:%r' % sorted(fp))
+PY
+)"
+_lane IF4 instrument "KNOWN-NEGATIVE — stub sim runner is fingerprinted as sim_runner(override)" "override" "$r"
+
 echo ""
 echo "── summary ──────────────────────────────────────────────────────"
 echo "lanes: $N   failed: $([ "$FAIL" -eq 0 ] && echo 0 || echo '>=1')"
