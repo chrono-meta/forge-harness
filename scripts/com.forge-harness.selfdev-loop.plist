@@ -36,6 +36,9 @@
         <string>/path/to/home/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
         <key>HOME</key>
         <string>/path/to/home</string>
+        <!-- claude -p finds its keychain login through USER; without it the builder prints «Not logged in» -->
+        <key>USER</key>
+        <string>your-user-name</string>
         <!-- the unattended builder's model is pinned here, not inherited from /model -->
         <key>FD_MODEL</key>
         <string>opus</string>

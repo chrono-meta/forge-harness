@@ -159,6 +159,7 @@ request: «<the row's 발화 text exactly as it appears in the queue>»
 — or seed: candidate (with the source) for anything else. Then what changed, what was measured, what was not.
 
 Never run gh pr merge, never push to main, never force-push, never tag. The merge decision is made after you, mechanically, not by you."
+  blog0=$(wc -c < "$LOG" 2>/dev/null || echo 0)   # only lines this build appends are its evidence
   say "build start (timeout ${BUILD_TIMEOUT}s, model ${FD_MODEL:-default})"
   ( cd "$CLONE" && "$CLAUDE_BIN" -p "$PROMPT" --permission-mode bypassPermissions ${FD_MODEL:+--model "$FD_MODEL"} ) >> "$LOG" 2>&1 &
   pid=$!; deadline=$((SECONDS + BUILD_TIMEOUT))
@@ -167,7 +168,12 @@ Never run gh pr merge, never push to main, never force-push, never tag. The merg
     pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
     rep "- build killed by watchdog (${BUILD_TIMEOUT}s)"
   else
-    wait "$pid"; rep "- build finished (rc=$?)"
+    wait "$pid"; brc=$?; rep "- build finished (rc=$brc)"
+    # a builder that never logged in finishes fast and quietly — name it, it is not «nothing to do»
+    # (2026-11-05 supervised run: env without USER → keychain lookup failed → «Not logged in»)
+    if tail -c +"$((blog0 + 1))" "$LOG" 2>/dev/null | grep -c 'Not logged in' >/dev/null; then
+      rep "- HARNESS-ERROR: builder not logged in (claude -p printed «Not logged in» — check USER/HOME in the plist)"
+    fi
   fi
   git -C "$CLONE" switch -q main 2>/dev/null
 elif [ "$DRY" = 1 ]; then

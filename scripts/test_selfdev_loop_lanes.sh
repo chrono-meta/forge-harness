@@ -125,6 +125,26 @@ setup p16; realrun p16 SELFDEV_NO_MERGE=yes
 if printf '%s\n' "$REP" | grep -qF '#5 ELIGIBLE (no-merge mode' && [ ! -e "$W/p16/merge_called" ]; then ok "LP16 any value other than 0 means no-merge (yes)"
 else bad "LP16"; fi
 
-[ $((pass+fail)) -eq 16 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 16"; exit 2; }
+# LP17: a clean clone lets the build start; a builder that is not logged in must be NAMED in the report
+setup p17; D17="$W/p17"; rm -rf "$D17/clone"; git clone -q "$D17/origin.git" "$D17/clone" 2>/dev/null
+printf '#!/usr/bin/env bash\necho "Not logged in · Please run /login"; exit 1\n' > "$D17/bin/claude-stub"; chmod +x "$D17/bin/claude-stub"
+for authed in 0 1; do
+  [ "$authed" = 1 ] && printf '#!/usr/bin/env bash\necho "built nothing"; exit 0\n' > "$D17/bin/claude-stub"
+  rm -f "$D17/live/tracks/_meta/selfdev/report_$DATE.md"
+  rm -rf "$D17/clone"; git clone -q "$D17/origin.git" "$D17/clone" 2>/dev/null   # fresh clone: the fixture has no .gitignore, so the first run's queue copy would leave it dirty
+  OUT=$(cd "$D17/live" && env PATH="$D17/bin:$PATH" SELFDEV_DRY_RUN=0 SELFDEV_NO_MERGE=1 FH_SELFDEV_DIR="$D17/clone" FD_CLAUDE_BIN="$D17/bin/claude-stub" \
+        bash scripts/selfdev_loop.sh 2>&1); RC=$?
+  REP="$(cat "$D17/live/tracks/_meta/selfdev/report_$DATE.md" 2>/dev/null)"
+  if [ "$authed" = 0 ]; then
+    if printf '%s\n' "$REP" | grep -q 'build finished' && printf '%s\n' "$REP" | grep -q 'builder not logged in'; then a17=1; else a17=0; printf '%s\n' "$REP" "$OUT" | tail -5 | sed 's/^/       /'; fi
+  else
+    if printf '%s\n' "$REP" | grep -q 'build finished' && ! printf '%s\n' "$REP" | grep -q 'builder not logged in'; then b17=1; else b17=0; fi
+  fi
+done
+rm -f "$D17/live/tracks/_meta/logs/selfdev_loop_$DATE.log"
+if [ "${a17:-0}" = 1 ] && [ "${b17:-0}" = 1 ]; then ok "LP17 «Not logged in» builder is named HARNESS-ERROR; a builder that ran is not (control)"
+else bad "LP17 (not-logged-in named=${a17:-?} · control clean=${b17:-?})"; fi
+
+[ $((pass+fail)) -eq 17 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 17"; exit 2; }
 echo "selfdev_loop lanes: $pass passed · $fail failed"
 [ "$fail" -eq 0 ]
