@@ -5,7 +5,8 @@
 # Why this file exists: the loop's merge pass is the one place an unattended change can reach main;
 # until 2026-11-04 it had only been dry-run by hand with no open PR, i.e. never exercised at all
 # (CI new-code-anchor: «MENTION_ONLY»). Each lane is one condition the policy says must HOLD,
-# with LP1 as the positive control that the same fixture CAN reach WOULD MERGE.
+# with LP1 as the positive control that the same fixture CAN reach WOULD MERGE. LP12/LP13: SELFDEV_NO_MERGE=1
+# stops a passing PR at ELIGIBLE and still holds a failing one.
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 for f in selfdev_loop.sh selfdev_queue.py selfdev_merge_tier.sh; do
@@ -59,9 +60,9 @@ esac
 GH
   chmod +x "$D/bin/gh"
 }
-run() { # <id> → $RC, $REP (report text)
-  local D="$W/$1"
-  OUT=$(cd "$D/live" && env PATH="$D/bin:$PATH" SELFDEV_DRY_RUN=1 FH_SELFDEV_DIR="$D/clone" \
+run() { # <id> [VAR=value ...] → $RC, $REP (report text)
+  local D="$W/$1"; shift
+  OUT=$(cd "$D/live" && env PATH="$D/bin:$PATH" SELFDEV_DRY_RUN=1 FH_SELFDEV_DIR="$D/clone" "$@" \
         bash scripts/selfdev_loop.sh 2>&1); RC=$?
   REP="$(cat "$D/live/tracks/_meta/selfdev/report_$DATE.md" 2>/dev/null)"
 }
@@ -96,6 +97,34 @@ cp "$W/p11/b2" "$W/p11/knobs/body2"; sed -i.bak 's#"pr view|headRefOid,body") ca
 grep -q 'body2' "$W/p11/bin/gh" || { echo "HARNESS-ERROR: LP11 fixture edit did not apply"; exit 2; }
 run p11; expect "LP11 request changed at the final snapshot → HOLD" "request changed or unauthorized"
 
-[ $((pass+fail)) -eq 11 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 11"; exit 2; }
+setup p12; run p12 SELFDEV_NO_MERGE=1
+if [ "$RC" -eq 0 ] && printf '%s\n' "$REP" | grep -qF '#5 ELIGIBLE (no-merge mode' && ! printf '%s\n' "$REP" | grep -qE 'WOULD MERGE|MERGED'; then
+  ok "LP12 no-merge mode: the same fixture as LP1 stops at ELIGIBLE, never WOULD MERGE"
+else bad "LP12 (rc=$RC)"; printf '%s\n' "$REP" | tail -4 | sed 's/^/       /'; fi
+setup p13; printf 'seed: candidate\n' > "$W/p13/knobs/body"; run p13 SELFDEV_NO_MERGE=1
+expect "LP13 no-merge mode does not skip the checks: a candidate is still HOLD, not ELIGIBLE" "seed-candidate"
+
+# real-run lanes (DRY=0): the merge helper is a stub that records its call. The clone is a git dir with an
+# untracked marker, i.e. dirty → the loop skips the build (no claude call) and still runs the merge pass.
+realrun() { # <id> [VAR=value ...]
+  local D="$W/$1"; shift
+  git -C "$D/clone" init -q
+  printf '#!/usr/bin/env bash\necho called >> "%s/merge_called"; echo "stub merge"\n' "$D" > "$D/live/scripts/pr_merge_verified.sh"
+  OUT=$(cd "$D/live" && env PATH="$D/bin:$PATH" SELFDEV_DRY_RUN=0 FH_SELFDEV_DIR="$D/clone" "$@" \
+        bash scripts/selfdev_loop.sh 2>&1); RC=$?
+  REP="$(cat "$D/live/tracks/_meta/selfdev/report_$DATE.md" 2>/dev/null)"
+}
+setup p14; realrun p14 SELFDEV_NO_MERGE=1
+if [ "$RC" -eq 0 ] && printf '%s\n' "$REP" | grep -qF '#5 ELIGIBLE (no-merge mode' && [ ! -e "$W/p14/merge_called" ]; then
+  ok "LP14 real run, no-merge: ELIGIBLE and the merge helper is never called"
+else bad "LP14 (rc=$RC, called=$([ -e "$W/p14/merge_called" ] && echo yes || echo no))"; printf '%s\n' "$REP" "$OUT" | tail -5 | sed 's/^/       /'; fi
+setup p15; realrun p15
+if [ -e "$W/p15/merge_called" ]; then ok "LP15 control: the same real run without the switch DOES call the merge helper (LP14 can see a call)"
+else bad "LP15 (merge helper not called — LP14 would be blind)"; printf '%s\n' "$REP" | tail -4 | sed 's/^/       /'; fi
+setup p16; realrun p16 SELFDEV_NO_MERGE=yes
+if printf '%s\n' "$REP" | grep -qF '#5 ELIGIBLE (no-merge mode' && [ ! -e "$W/p16/merge_called" ]; then ok "LP16 any value other than 0 means no-merge (yes)"
+else bad "LP16"; fi
+
+[ $((pass+fail)) -eq 16 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 16"; exit 2; }
 echo "selfdev_loop lanes: $pass passed · $fail failed"
 [ "$fail" -eq 0 ]

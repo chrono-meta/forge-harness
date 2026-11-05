@@ -42,6 +42,9 @@
         <!-- 🟥 first nights: keep SELFDEV_DRY_RUN=1 until a dry report reads right, then remove it -->
         <key>SELFDEV_DRY_RUN</key>
         <string>1</string>
+    <!-- PR-only: the loop opens PRs but never merges until this key is removed or set to 0 -->
+    <key>SELFDEV_NO_MERGE</key>
+    <string>1</string>
     </dict>
 </dict>
 </plist>

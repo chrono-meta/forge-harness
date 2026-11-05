@@ -39,7 +39,9 @@
 #
 # ENV  FH_SELFDEV_DIR · SELFDEV_MAX_ITEMS(2) · SELFDEV_MAX_OPEN(2) · SELFDEV_CI_WAIT(1800s)
 #      SELFDEV_BUILD_TIMEOUT(2700s) · SELFDEV_DEMOTE_DAYS(30) · SELFDEV_DRY_RUN(0: 1 = no build, no
-#      merge — print what would happen) · FD_MODEL (pinned by the plist) · FD_CLAUDE_BIN
+#      merge — print what would happen) · SELFDEV_NO_MERGE(0: any other value = build and open PRs as
+#      usual, but never merge — a PR that passes every check is reported ELIGIBLE for the operator to merge) ·
+#      FD_MODEL (pinned by the plist) · FD_CLAUDE_BIN
 # RC   0 run completed (HOLDs are normal outcomes) · 2 HARNESS-ERROR (could not set up / read state)
 
 set -u
@@ -51,6 +53,9 @@ CI_WAIT="${SELFDEV_CI_WAIT:-1800}"
 BUILD_TIMEOUT="${SELFDEV_BUILD_TIMEOUT:-2700}"
 DEMOTE_DAYS="${SELFDEV_DEMOTE_DAYS:-30}"
 DRY="${SELFDEV_DRY_RUN:-0}"
+# fail-closed: only an unset/empty value or a literal 0 allows merging — «true», «yes», « 1» all mean
+# no-merge (codex R1: a typo must never turn merging back on)
+case "${SELFDEV_NO_MERGE:-0}" in 0|'') NO_MERGE=0 ;; *) NO_MERGE=1 ;; esac
 CLAUDE_BIN="${FD_CLAUDE_BIN:-$(command -v claude || echo "$HOME/.local/bin/claude")}"
 REPO_SLUG="chrono-meta/forge-harness"
 DATE="$(date +%Y-%m-%d)"
@@ -79,7 +84,7 @@ echo $$ > "$LOCK/pid"
 trap 'rm -f "$LOCK/pid"; rmdir "$LOCK" 2>/dev/null' EXIT
 
 [ -f "$REPORT" ] || printf '# self-dev loop — %s\n\n' "$DATE" > "$REPORT"
-rep "## run $(date '+%H:%M') · clone=$CLONE · dry=$DRY"
+rep "## run $(date '+%H:%M') · clone=$CLONE · dry=$DRY · no_merge=$NO_MERGE"
 
 # ── ① clone ───────────────────────────────────────────────────────────────
 BUILD=1
@@ -224,6 +229,8 @@ for pr in $MERGE_LIST; do
   if [ "$now_oid" != "$head_oid" ]; then rep "- #$pr HOLD: head moved during checks ($head_oid → ${now_oid:-?})"; continue; fi
   req2="$(printf '%s\n' "$snap" | sed -nE 's/^request: «(.*)»[[:space:]]*$/\1/p' | head -1)"
   if [ "$req2" != "$req" ] || ! printf '%s\n' "$human_rows" | grep -qxF -- "$req2"; then rep "- #$pr HOLD: request changed or unauthorized at final snapshot"; continue; fi
+  # PR-only mode: the first real nights open PRs and stop here; the operator picks merges in the morning
+  if [ "$NO_MERGE" = 1 ]; then rep "- #$pr ELIGIBLE (no-merge mode — every check passed; operator merges, head $head_oid)"; continue; fi
   if [ "$DRY" = 1 ]; then rep "- #$pr WOULD MERGE (dry-run, head $head_oid)"; continue; fi
   added_lanes="$(gh pr view "$pr" -R "$REPO_SLUG" --json files -q '.files[] | select(.changeType=="ADDED") | .path' 2>/dev/null | grep -E '^scripts/test_.*\.sh$')"
   if [ -n "$added_lanes" ]; then rerun="for l in $(echo $added_lanes); do bash \$l || exit 1; done"
