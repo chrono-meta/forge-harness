@@ -25,10 +25,22 @@ OPEN_MARKS = ("🟡", "⬜", "🔴", "⏸", "❌")
 
 
 def src_checklists(live, n):
-    files = sorted(glob.glob(os.path.join(live, "tracks/_meta/session_checklist_*.md")),
-                   key=os.path.getmtime, reverse=True)[:n]
-    if not files:
+    # Order by the session date in the file name, not by mtime: a later one-line edit to an old
+    # checklist must not make it «newest» (cross-family codex — that turned stale rows back into
+    # auto-merge seeds). mtime only breaks ties between sessions of the same day.
+    def day(f):
+        m = re.search(r"session_checklist_(\d{4}-\d{2}-\d{2})", os.path.basename(f))
+        return m.group(1) if m else ""
+    every = sorted(glob.glob(os.path.join(live, "tracks/_meta/session_checklist_*.md")),
+                   key=lambda f: (day(f), os.path.getmtime(f)), reverse=True)
+    if not every:
         return None, "no session_checklist_*.md"
+    top = day(every[0])
+    # every session of the latest dated day is «newest» and is always read (the [:n] cut must not drop
+    # one of them); a file with no date in its name is never newest (codex R2, both findings)
+    newest = [f for f in every if top and day(f) == top]
+    files = newest + [f for f in every if f not in newest][:max(0, n - len(newest))]
+    newest = set(newest)
     items, seen = [], set()
     for f in files:  # newest first — a row a later checklist inherited is kept once, newest
         for line in open(f, encoding="utf-8", errors="replace"):
@@ -45,7 +57,11 @@ def src_checklists(live, n):
             if not status.startswith(OPEN_MARKS):
                 continue
             owner_operator = bool(re.search(r"운영자|operator", cells[6] + " " + cells[7]))
-            items.append({"seed": "human", "src": os.path.basename(f), "status": status,
+            # A row still open only in an OLDER checklist is often finished by a later session that did
+            # not carry it over — the old file is never re-edited. Such a row is a «recheck»: shown, but
+            # not an operator request the loop may auto-merge on (--emit-human leaves it out).
+            seed = "human" if f in newest else "recheck"
+            items.append({"seed": seed, "src": os.path.basename(f), "status": status,
                           "text": cells[3][:200], "left": cells[6][:200],
                           "owner": "operator" if owner_operator else "session"})
     return items, None
@@ -77,14 +93,21 @@ def src_card(live):
 
 
 def src_digest(live, date):
+    # The loop runs before the day's digest is written (launchd 03:30 vs 09:00), so «today» alone was
+    # UNMEASURED every run. Fall back to the previous day's digest and say so in the item source.
     p = os.path.join(live, "tracks/_meta/frontier_digest_%s.md" % date.replace("-", "_"))
+    note = ""
     if not os.path.exists(p):
-        return None, "no digest for %s (%s)" % (date, os.path.basename(p))
+        prev = (datetime.date.fromisoformat(date) - datetime.timedelta(days=1)).isoformat()
+        q = os.path.join(live, "tracks/_meta/frontier_digest_%s.md" % prev.replace("-", "_"))
+        if not os.path.exists(q):
+            return None, "no digest for %s or %s (%s)" % (date, prev, os.path.basename(p))
+        p, note = q, " — fallback: %s's digest is not written yet" % date
     text = open(p, encoding="utf-8").read()
     m = re.search(r"^## FH Immediate Application Candidates\s*$(.*?)(?=^## )", text, flags=re.M | re.S)
     if not m:
         return None, "digest has no «FH Immediate Application Candidates» section"
-    items = [{"seed": "candidate", "src": os.path.basename(p), "text": b.strip()[:240]}
+    items = [{"seed": "candidate", "src": os.path.basename(p) + note, "text": b.strip()[:240]}
              for b in re.findall(r"^- (.+)$", m.group(1), flags=re.M)]
     return items, None
 
@@ -121,7 +144,8 @@ def main(argv):
             print("UNMEASURED: %s" % err, file=sys.stderr)
             return 3
         for it in items:
-            print(it["text"])
+            if it["seed"] == "human":
+                print(it["text"])
         return 0
     sources = [
         ("checklist open rows (operator requests)", src_checklists(live, a.checklists)),
@@ -133,7 +157,9 @@ def main(argv):
     unmeasured = 0
     print("# self-dev queue — %s\n" % a.date)
     print("seed=human → auto-merge eligible (still subject to selfdev_merge_tier.sh) · "
-          "seed=candidate → PR at most, operator confirms · owner=operator rows are the "
+          "seed=candidate → PR at most, operator confirms · seed=recheck → open only in an older "
+          "checklist, may already be done by a later session: verify it is still open first, never "
+          "auto-merge · owner=operator rows are the "
           "operator's to do, not the loop's.\n")
     for name, (items, err) in sources:
         if err:
