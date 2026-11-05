@@ -2,7 +2,19 @@
 
 ### [Unreleased]
 
-### [3.37.0] — 2026-11-04 — 권한 무시 모드에서 파괴 명령 기본 차단 · 카드 상태 태그 · 정정 순간 마이닝 · live-eval 직전 밤 대비 변화 · «측정 못 함» 을 판정으로 내던 채널 여섯
+### [3.38.0] — 2026-11-05
+
+### Added
+- Self-dev loop (`scripts/selfdev_loop.sh`): an unattended loop in its own clone, with a path-tier auto-merge (#1016). `SELFDEV_NO_MERGE` opens PRs but never merges; its parsing is fail-closed, and the template plist ships it set (#1024). A builder that is not logged in is reported as a HARNESS-ERROR, and the template plist sets `USER` (#1024).
+- Queue builder (`scripts/selfdev_queue.py`): a row open only in an older checklist is `seed=recheck` and cannot authorize an auto-merge. If today's frontier digest is not yet written, yesterday's is used and labelled (#1023).
+- live-eval reports carry an Instrument line: git blob ids of the runner, scorer, probes and sim runner (#1025).
+
+### Fixed
+- Regression guard F4 no longer counts Python comments as operational tokens. Only the comment text is removed, after its position is verified; any mismatch or parse failure counts unfiltered. Shell is not filtered (#1022).
+- pipefail early-exit pipelines across 100+ lines (#1019, #1020) and a SIGPIPE race in a regression-guard CI lane (#1021).
+- frontier-digest follows the GeekNews feedburner redirect (#1015).
+
+## [3.37.0] — 2026-11-04 — 권한 무시 모드에서 파괴 명령 기본 차단 · 카드 상태 태그 · 정정 순간 마이닝 · live-eval 직전 밤 대비 변화 · «측정 못 함» 을 판정으로 내던 채널 여섯
 
 새 스크립트와 새 레인이 들어가고 게이트 하나의 기본 동작이 조여져서 버전 정책상 minor 다.
 
