@@ -16,6 +16,7 @@ import re
 import sys
 import os
 import glob
+import hashlib
 from datetime import date
 
 ID_RE = re.compile(r'^[A-Z][A-Z0-9]*-[A-Z0-9]+-[0-9]+$')
@@ -744,13 +745,58 @@ def render_target_md(t):
     return out
 
 
-def render_report_md(select_result, score_result, run_date):
+def _git_blob_sha(path):
+    """git's blob id for the file's CURRENT bytes (identical to `git hash-object <path>`), computed
+    in-process: no git binary needed, and an uncommitted edit still gets its own id. A commit SHA
+    would say nothing about a dirty tree, which is exactly the run this line must not mislabel.
+    A symlink is FOLLOWED (the bytes that ran are hashed, not the link path git would hash for a
+    mode-120000 entry) — none of the four instrument files is a symlink today. None when unreadable."""
+    try:
+        with open(path, 'rb') as f:
+            data = f.read()
+    except (OSError, TypeError):
+        return None
+    return hashlib.sha1(b'blob %d\0' % len(data) + data).hexdigest()
+
+
+def instrument_fingerprint(probes_live_path):
+    """[(name, blob_sha_or_None)] for the four files that make up the INSTRUMENT of a live run:
+    the runner, this scorer, the probe definitions (their expect patterns are scoring rules) and
+    the sim runner that produced the response bodies — `FH_SIM_RUNNER_BIN` when set (the same
+    override probe_live_eval.sh reads; a stub-driven run must not print a live run's fingerprint),
+    named `sim_runner(override)` so the swap is visible, else scripts/sim_isolated_run.sh.
+    The target — CLAUDE.md, rules, skills — is deliberately not here: two reports with the same
+    fingerprint and a different verdict moved because of the target or the model, not the scorer."""
+    me = os.path.realpath(__file__)   # realpath, not abspath: a symlinked import must still find
+    here = os.path.dirname(me)        # the runner beside the REAL scorer file
+    return [('runner', _git_blob_sha(os.path.join(here, 'probe_live_eval.sh'))),
+            ('scorer', _git_blob_sha(me)),
+            ('probes', _git_blob_sha(probes_live_path)),
+            ('sim_runner(override)' if os.environ.get('FH_SIM_RUNNER_BIN') else 'sim_runner',
+             _git_blob_sha(os.environ.get('FH_SIM_RUNNER_BIN')
+                           or os.path.join(here, 'sim_isolated_run.sh')))]
+
+
+def render_instrument_line(fp):
+    """Record only — no verdict reads it. Unreadable files are written UNKNOWN, never dropped."""
+    if fp is None:
+        return "- Instrument: not supplied by the caller"
+    return ("- Instrument (git blob ids, `git hash-object --no-filters <file>`, SHA-1 object format): "
+            + " · ".join("%s=%s" % (n, s if s else 'UNKNOWN(unreadable)') for n, s in fp)
+            + " — the same id in two reports = the same bytes; UNKNOWN on either side = not "
+              "comparable, never «same». NOT covered: the `claude` CLI version and the model "
+              "(the Run heading names the model)")
+
+
+def render_report_md(select_result, score_result, run_date, instrument=None):
     lines = []
     lines.append("# live_eval — %s" % run_date)
     lines.append("")
     lines.append("Live (behavioral) probe run — see `.claude/regression/probes_live.yaml` for what "
                   "each probe checks and why. Static-only coverage lives in `/prompt-regression`; "
                   "this file is its live twin's record.")
+    lines.append("")
+    lines.append(render_instrument_line(instrument))
     lines.append("")
     lines.append("## Selection")
     lines.append("- Selected: %d" % len(select_result['selected']))
@@ -932,7 +978,8 @@ def _cmd_score(args):
     print("OVERALL: %s (rc=%d)" % (score_result['overall'], score_result['rc']))
 
     if args.report_out:
-        md = render_report_md(select_result, score_result, args.run_date or str(date.today()))
+        md = render_report_md(select_result, score_result, args.run_date or str(date.today()),
+                              instrument=instrument_fingerprint(args.probes_live))
         os.makedirs(os.path.dirname(args.report_out), exist_ok=True)
         with open(args.report_out, 'w', encoding='utf-8') as f:
             f.write(md)

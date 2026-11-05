@@ -5369,3 +5369,9 @@
   outcome: "flagged undefined terms (hook/MCP/PR/corpus/p) and 9 over-strong claims (unqualified 100%, «won't happen», unmeasured «continues the work») — all applied: glossary, limits beside summary numbers, «미측정» marks, softened wording"
   evidence: "FoD PR #214 body (Review section)"
   tokens: "77735"
+- date: 2026-11-05
+  agent: "fh-commons:quench-challenger (opus) ×1 — Axis 2 adversarial pass on the live-eval Instrument line (purpose: independence)"
+  task: "attack the staged diff of probe_live_eval_lib.py + test_probe_live_eval_lanes.sh: verdict/rc movement, previous-report reader, false claims, lane discrimination, npm-install behaviour"
+  outcome: "1 MED (sim runner not fingerprinted — fixed, IF4 added) · 3 LOW (wording, IF1 skip reason, IF3 fixture path — fixed; reader negative fixture left out of scope) · verdict path confirmed untouched"
+  evidence: "selfdev PR auto/selfdev-2026-11-05-1 body · marker .axes_23_passed_auto_selfdev-2026-11-05-1_2026-11-05"
+  tokens: "47401"
