@@ -600,10 +600,40 @@ print('OK')
   # NOTE: combined-count is a PRESENCE heuristic, not semantic equivalence — an
   # unrelated detail-file line can absorb the count. True equivalence is owned by
   # F2 (critical sections) + the Axis 2/3 review, not this counter.
+  # Python files: real comments are prose, not verdict surface. A `PASS` that lived only in a
+  # comment was counted as an operational token, so rewording one comment read as 100% loss and
+  # hard-blocked an otherwise clean port (measured 2026-11-04: a downstream harness's
+  # utterance_checklist_hook.py, `PASS` 1 -> 0, the only hit a comment). Comments are found by
+  # Python's own tokenizer, not by a `^#` line match: a `#` line inside a string or heredoc is
+  # data and keeps counting (cross-family review showed the line match erased it). If the
+  # tokenizer cannot run or parse either side, both sides are counted unfiltered — the stricter
+  # direction. Only the comment token's own text is removed, and only after checking that exactly
+  # that text sits at the tokenizer's reported position; any mismatch exits non-zero, which falls
+  # back to unfiltered counting. (Rebuilding lines from row numbers was tried first and was wrong
+  # twice under cross-family review: form feeds and lone CRs shift rows.) Shell files are deliberately NOT filtered: heredocs and multi-line strings make
+  # a `#` line ambiguous there, and no shell false positive has been observed.
+  f4_before=$before_content; f4_after=$after_content
+  case "$f" in
+    *.py)
+      _f4_strip='import sys,io,tokenize
+lines=io.StringIO(sys.stdin.read()).readlines(); it=iter(lines); out=list(lines)
+for t in tokenize.generate_tokens(lambda: next(it, "")):
+    if t.type!=tokenize.COMMENT: continue
+    r,c=t.start
+    if r>len(out) or out[r-1][c:c+len(t.string)]!=t.string: sys.exit(3)
+    out[r-1]=out[r-1][:c]+out[r-1][c+len(t.string):]
+sys.stdout.write("".join(out))'
+      if _f4b=$(printf '%s\n' "$before_content" | python3 -c "$_f4_strip" 2>/dev/null) \
+         && _f4a=$(printf '%s\n' "$after_content" | python3 -c "$_f4_strip" 2>/dev/null); then
+        f4_before=$_f4b; f4_after=$_f4a
+      else
+        verbose "F4: python tokenizer unavailable or failed on $f — counting comments too (stricter)"
+      fi ;;
+  esac
   if [ "$is_deprecated" -eq 0 ]; then
   for token in "M-tier" "S-tier" "R-tier" "PASS" "BLOCK" "Wave 0" "Wave 1" "Wave 4" "Step 0" "Step 1" "Step 2" "Step 3" "Step 4" "fan-in" "Done When"; do
-    before=$(count_in "$before_content" "$token")
-    after=$(count_in "$after_content" "$token")
+    before=$(count_in "$f4_before" "$token")
+    after=$(count_in "$f4_after" "$token")
     if [ "$before" -gt 0 ] && [ "$after" -lt "$before" ]; then
       if [ -n "$detail_content" ]; then
         in_detail=$(_gain count_in "$token")
