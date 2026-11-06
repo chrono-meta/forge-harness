@@ -362,7 +362,7 @@ implementation, not the maximum capabilities of the Codex host.
 | Tier | Definition | Skills |
 |---|---|---|
 | **M1 — Full** | No Claude-native dependency | `token-budget-gate`, `asset-placement-gate`, `phantom-quench`, `deep-clarify`, `convergence-loop`, `ko-tech-writer` (visual-QA degrades to text-only; the spoken register's Step 5-s renders audio through a shell TTS call — available here — but its **listening** pass is human in every runtime, so it degrades to declared-unmet, not to a Codex-specific gap) |
-| **M2 — Partial** | Core works; native agent or slash-command steps need adaptation | `deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop` |
+| **M2 — Partial** | Core works; native agent or slash-command steps need adaptation | `deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop`, `persona-cast` (its Step 4 merge engine `scripts/persona_cast_merge.py` runs as is; dispatching the six lens agents needs the adapter) |
 | **M3 — Claude-bound implementation** | Shipped workflow requires Claude-specific hook/configuration or session context | `goal-quench`, `harness-pr-reviewer`, `install-wizard` |
 
 > **Detail**: See `knowledge/shared/harness-core/agents_md_runtime_details.md §Invocation-patterns`

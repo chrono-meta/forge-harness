@@ -136,7 +136,7 @@ configuration/trust contract (see §Current host capability); FH's Claude config
 automatic substitute.
 
 ### 2. M2 skills need explicit dispatch substitution
-M2 skills (`deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop`) have a core workflow that runs under Codex, but any step that dispatches `Agent(subagent_type=...)` or a slash command needs an explicit equivalent: a permitted native agent reading the spec, `fh-run`, or direct `codex exec`, preserving isolation, tool limits, model floor, consent, and return gate — same workflow, different runtime (the "M2 adaptation pattern" in `AGENTS.md`). Example: `steel-quench` Waves 1–3 run; the `quench-challenger` agent step becomes `fh-run --agent fh-commons:quench-challenger`.
+M2 skills (`deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop`, `persona-cast` — its merge engine runs as is, the lens dispatch needs the adapter) have a core workflow that runs under Codex, but any step that dispatches `Agent(subagent_type=...)` or a slash command needs an explicit equivalent: a permitted native agent reading the spec, `fh-run`, or direct `codex exec`, preserving isolation, tool limits, model floor, consent, and return gate — same workflow, different runtime (the "M2 adaptation pattern" in `AGENTS.md`). Example: `steel-quench` Waves 1–3 run; the `quench-challenger` agent step becomes `fh-run --agent fh-commons:quench-challenger`.
 
 ### 3. M3 skills do not run automatically under Codex
 M3 skills (`goal-quench` Phase-3 Stop hook, `harness-pr-reviewer` CC session context, `install-wizard` settings.json write) require Claude-Code-native runtime and are **methodology reference only** under Codex unless a dedicated adapter exists. Use Codex's native goal/session features for goal control, and use `fh-gate` after completion for FH quality gating.
@@ -177,7 +177,7 @@ The sibling pattern for Gemini is `gemini -p "$(cat <skill+artifact>)"`. Outside
 | Tier | Under Codex | Action |
 |---|---|---|
 | **M1** | Runs fully (`token-budget-gate`, `asset-placement-gate`, `phantom-quench`, `deep-clarify`, `convergence-loop`, `ko-tech-writer` (visual-QA degrades to text-only; the spoken register's Step 5-s renders audio through a shell TTS call — available here — but its **listening** pass is human in every runtime, so it degrades to declared-unmet, not to a Codex-specific gap)) | `cat SKILL.md artifact \| codex exec -m gpt-5.5 -` |
-| **M2** | Core runs; agent/slash steps via adapter (`deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop`) | Use a permitted native agent, `fh-run`, or direct `codex exec` reading the spec; preserve dispatch constraints |
+| **M2** | Core runs; agent/slash steps via adapter (`deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop`, `persona-cast` — its merge engine runs as is, the lens dispatch needs the adapter) | Use a permitted native agent, `fh-run`, or direct `codex exec` reading the spec; preserve dispatch constraints |
 | **M3** | Does not run automatically | Use native Codex session features where available; otherwise read as methodology reference or use a dedicated adapter |
 
 ## Beta removal — remaining (external-blocked)

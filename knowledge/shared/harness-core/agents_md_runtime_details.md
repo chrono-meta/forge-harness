@@ -220,7 +220,7 @@ is not the headless substitute.
 | Tier | Definition | Examples |
 |---|---|---|
 | **M1 — Full** | No Claude-native dependency | `token-budget-gate`, `asset-placement-gate`, `phantom-quench`, `deep-clarify`, `convergence-loop` |
-| **M2 — Partial** | Core works; native agent/slash-command steps need adaptation | `deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop` |
+| **M2 — Partial** | Core works; native agent/slash-command steps need adaptation | `deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop`, `persona-cast` (merge engine runs as is; lens dispatch needs the adapter) |
 | **M3 — Claude-bound implementation** | Shipped workflow requires Claude-specific hook/configuration or session context | `goal-quench`, `harness-pr-reviewer`, `install-wizard` |
 
 **Which phase needs adapting** — the operative half of the M2/M3 rows. Without this a tier label
