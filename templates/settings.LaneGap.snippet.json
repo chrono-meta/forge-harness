@@ -16,7 +16,7 @@
           "hooks": [
             {
               "type": "command",
-              "command": "bash -c '[ \"${FH_LANE_GAP_HINT:-1}\" = 0 ] && exit 0; HUB=\"${CLAUDE_PROJECT_DIR:-$HOME/projects/forge-harness}\"; S=\"$HUB/scripts/lane_gap_hint.py\"; if [ -f \"$S\" ]; then python3 \"$S\"; else echo \"⚠️ [lane-gap] 안내 훅 스크립트가 없다 — 체크아웃이 옛 브랜치이거나 설치가 불완전할 수 있다(안내가 꺼져 있다).\"; fi; exit 0'",
+              "command": "bash -c '[ \"${FH_LANE_GAP_HINT:-1}\" = 0 ] && exit 0; HUB=\"${CLAUDE_PROJECT_DIR:-$HOME/projects/forge-harness}\"; S=\"$HUB/scripts/lane_gap_hint.sh\"; if [ -f \"$S\" ]; then bash \"$S\"; else echo \"⚠️ [lane-gap] 안내 훅 스크립트가 없다 — 체크아웃이 옛 브랜치이거나 설치가 불완전할 수 있다(안내가 꺼져 있다).\"; fi; exit 0'",
               "timeout": 10
             }
           ]

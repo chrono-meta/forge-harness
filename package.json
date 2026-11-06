@@ -190,6 +190,7 @@
     "scripts/fh_track_resolve.sh",
     "scripts/field_canon_preload.sh",
     "scripts/lane_gap_hint.py",
+    "scripts/lane_gap_hint.sh",
     "scripts/files_manifest_shipping_check.sh",
     "scripts/finding_fleet.sh",
     "scripts/finding_pipeline.sh",

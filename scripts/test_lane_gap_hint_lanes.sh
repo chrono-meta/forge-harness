@@ -81,6 +81,11 @@ mk cm "Edit|/r/scripts/a.sh" "Bash|echo done # note; pytest -q" "Bash|cat <<EOF
 pytest -q
 EOF"; run "$W/cm.jsonl"
 say && ok "G15 a test named inside a comment or a heredoc body is text, not a run (codex R2)" || bad "G15 silent"
-[ $((pass+fail)) -eq 15 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 15"; exit 2; }
+# G16: the .sh entry point the snippet calls passes stdin through and keeps the opt-out (install-wizard keys on scripts/<name>.sh)
+O3=$(printf '{"transcript_path":"%s"}' "$W/gap.jsonl" | bash "$HERE/lane_gap_hint.sh"); R3=$?
+O4=$(printf '{"transcript_path":"%s"}' "$W/gap.jsonl" | FH_LANE_GAP_HINT=0 bash "$HERE/lane_gap_hint.sh")
+[ "$R3" = 0 ] && printf '%s' "$O3" | grep -q 'lane-gap' && [ -z "$O4" ] && grep -q 'scripts/lane_gap_hint.sh' "$HERE/../templates/settings.LaneGap.snippet.json" \
+  && ok "G16 the snippet calls the .sh wrapper, which passes stdin to the hint and honours the opt-out" || bad "G16 (rc=$R3 · on=«$O3» · off=«$O4»)"
+[ $((pass+fail)) -eq 16 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 16"; exit 2; }
 echo "lane_gap_hint lanes: $pass passed · $fail failed"
 [ "$fail" -eq 0 ]
