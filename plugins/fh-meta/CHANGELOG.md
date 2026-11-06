@@ -2,6 +2,14 @@
 
 ### [Unreleased]
 
+### [3.38.1] — 2026-11-06
+
+Documentation-only patch.
+
+### Changed
+- `knowledge/shared/harness-core/governance_engineering_definition.md` gains a section that maps the doctrine to outside terms: execution-layer guardrail, action-class/risk-tier gating, error budget, approval fatigue, policies on paths, approval-layer bypass, harness as a runtime object, classifier FP/FN by workload. Each row has a source and a same/partial/different verdict; unread source bodies are marked unverified. No doctrine sentence changes (#1029).
+- Sub-agent invocation log entries for 2026-11-05 (#1028).
+
 ### [3.38.0] — 2026-11-05
 
 ### Added
