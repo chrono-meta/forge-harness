@@ -5399,3 +5399,15 @@
   outcome: "CK1–CK8 and full suite 5516/0/4 reported; governor re-ran the suite, measured the desktop entrypoint (claude-desktop), and fixed two cross-family findings (no card → no queue; card must really show) as CK9–CK11; final 5519/0/4; merged as FoD #222"
   evidence: "FoD PR #222 body"
   tokens: "300317"
+- date: 2026-11-06
+  agent: "general-purpose (sonnet) ×3 — blind floor-tier sim of persona-cast Step 4 (purpose: independence)"
+  task: "given only plugins/fh-commons/skills/persona-cast/SKILL.md and three fixture lens replies, do Step 4 and print Step 5; list commands run"
+  outcome: "3/3 ran python3 scripts/persona_cast_merge.py (0/3 counted by hand); 3/3 independently reported location truncation at nested «]» and inner quotes — governor confirmed in source and fixed with lane M11 before commit"
+  evidence: "FH PR #1033 body · marker feat/cartridge-persona-cast"
+  tokens: "165886 + 166187 + 166137"
+- date: 2026-11-06
+  agent: "general-purpose (sonnet) ×3 — blind floor-tier sim of convergence-loop's Judgment step (purpose: independence)"
+  task: "given only plugins/fh-commons/skills/convergence-loop/SKILL.md and a prose review log (R1 3 found / 3 fixed, R2 0 new + one wording fix), decide convergence; list commands run"
+  outcome: "3/3 wrote the vector R1 [new=3, fixed=3] → R2 [new=0, fixed=1] and ran scripts/convergence_verdict.py; 3/3 NOT-CONVERGED (correct — the R2 fix is unverified)"
+  evidence: "FH PR #1034 body · marker feat/cartridge-convergence-verdict"
+  tokens: "162938 + 162872 + 163094"
