@@ -194,6 +194,9 @@ def classify(id_, input_pat, class_tok):
     return 'SELECTABLE', None
 
 
+CONSTRUCT_VALUES = ('same', 'partial', 'proxy')
+
+
 def build_selection(probes_md_rows, live_rows):
     """Cross-reference probes.md (source of truth for WHICH probes exist and their class) against
     probes_live.yaml (source of truth for HOW to score the selected ones).
@@ -256,6 +259,23 @@ def build_selection(probes_md_rows, live_rows):
         # row green does not also erase the residual the widening stopped seeing.
         if spec.get('advisory_re'):
             entry['advisory_re'] = spec['advisory_re']
+        # Construct validity — RECORD ONLY, never scored (2026-11-06, frontier digest arXiv:2611.05665):
+        # what the probe CLAIMS to measure vs what its pattern can actually SEE. A probe whose pattern
+        # reads a mention while it claims an order or a proposal is a proxy, and the report says so.
+        c = spec.get('construct')
+        if c is None:
+            entry['construct'] = 'UNDECLARED'
+            warnings.append("UNDECLARED-CONSTRUCT: %s has no construct/claims/unseen — the report cannot say "
+                            "what its pattern misses" % row['id'])
+        elif c not in CONSTRUCT_VALUES:
+            entry['construct'] = 'UNDECLARED'
+            warnings.append("BAD-CONSTRUCT: %s declares construct=%r (must be %s) — recorded as UNDECLARED"
+                            % (row['id'], c, '|'.join(CONSTRUCT_VALUES)))
+        else:
+            entry['construct'] = c
+        for k in ('claims', 'unseen'):
+            if spec.get(k):
+                entry[k] = spec[k]
         selected.append(entry)
 
     # Dead-pointer guard: an id in probes_live.yaml that does not exist in probes.md AT ALL.
@@ -788,6 +808,26 @@ def render_instrument_line(fp):
               "(the Run heading names the model)")
 
 
+def render_construct_md(selected):
+    """Record only: per selected probe, construct (same|partial|proxy|UNDECLARED), its claim, and what
+    its pattern cannot see. An undeclared probe is counted, never read as «same»."""
+    if not selected:
+        return []
+    tally = {}
+    for e in selected:
+        tally[e.get('construct', 'UNDECLARED')] = tally.get(e.get('construct', 'UNDECLARED'), 0) + 1
+    out = ["## Construct validity (record only — no verdict depends on this)", "",
+           "A PASS says the pattern matched; this table says what the pattern can and cannot see. "
+           "`proxy` = the pattern reads a mention while the probe claims a behavior (an order, a proposal, a read).", "",
+           "- " + " · ".join("%s %d" % (k, tally[k]) for k in ('same', 'partial', 'proxy', 'UNDECLARED') if k in tally), "",
+           "| Probe | construct | claims | cannot see |", "|---|---|---|---|"]
+    for e in selected:
+        out.append("| %s | %s | %s | %s |" % (e['id'], e.get('construct', 'UNDECLARED'),
+                                              _md_escape(e.get('claims', '—')), _md_escape(e.get('unseen', '—'))))
+    out.append("")
+    return out
+
+
 def render_report_md(select_result, score_result, run_date, instrument=None):
     lines = []
     lines.append("# live_eval — %s" % run_date)
@@ -840,6 +880,7 @@ def render_report_md(select_result, score_result, run_date, instrument=None):
                           "instrument failure produce this shape, and this file cannot tell them "
                           "apart; the preserved response bodies can.")
         lines.append("")
+    lines.extend(render_construct_md(select_result['selected']))
     if score_result is not None and score_result.get('target'):
         lines.extend(render_target_md(score_result['target']))
     if score_result is not None and score_result.get('transitions'):
