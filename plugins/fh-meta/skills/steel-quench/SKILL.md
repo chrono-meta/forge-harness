@@ -523,10 +523,15 @@ over **unchanged** code:
    this round") while the invariant it certifies — the shipped artifact is the audited one — is
    false. Either ship the τ-FAIL as a **named** τ-FAIL (the pipeline table's own alternative, and
    terminal) or run one more round over the trimmed artifact before declaring Done.
-2. **Record the per-round yield vector** in the Axis-2 marker — `axis2-rounds: 4A / 3A+1B / 2A /
-   0A+3B / 1A+2B`. It is what makes the stop decision auditable afterwards, and a flat or rising
+2. **Record the per-round yield vector** in the Axis-2 marker, every round with BOTH counts —
+   `axis2-rounds: R1 [new=4, fixed=4] → R2 [new=3 (A3 B1), fixed=3] → R3 [new=0, fixed=0]`
+   (`new` = new S/A findings that round; `fixed` = repairs made in response to it, B included; a note
+   goes in parentheses). It is what makes the stop decision auditable afterwards, and a flat or rising
    vector is the input to criterion 4's reduce-the-design branch (its premise-attack branch fires on
-   shared assumptions, whatever the vector).
+   shared assumptions, whatever the vector). Check it before writing «converged»:
+   `python3 scripts/convergence_verdict.py --rounds "<vector>"` (0 CONVERGED · 1 not yet — one clean
+   round is PROVISIONAL · 2 unreadable). The older `4A / 3A+1B / …` shape has no repair count, so no
+   tool can tell «clean» from «clean but repaired» in it (2026-11-06: 290 of 314 markers unreadable).
 
    **PIN THE TARGET — mandatory on every dispatched Wave, and the reason criterion 1 can be trusted
    at all.** The dispatch prompt carries a measured fingerprint and orders the agent to report
