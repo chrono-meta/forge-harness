@@ -1,0 +1,22 @@
+# FH module manifest (contract v0). Spec: knowledge/shared/harness-core/fh_module_contract.md
+# A cartridge: the convergence-loop skill and its verdict engine — the first module with a verdict entry point.
+id: convergence-loop
+version: 0.1.0
+provides:
+  skills: [convergence-loop]
+  agents: []
+  hooks: []
+  verdicts:
+    - entry: convergence-verdict
+      command: python3 scripts/convergence_verdict.py
+      exit_codes: {pass: 0, block: 1, unmeasured: 2}
+adds_constraints: []
+touches_irreversible: none
+data_class: public
+requires:
+  modules: []
+  core_min: 3.0.0
+calibration:
+  command: bash scripts/test_convergence_verdict_lanes.sh
+files:
+  - scripts/convergence_verdict.py

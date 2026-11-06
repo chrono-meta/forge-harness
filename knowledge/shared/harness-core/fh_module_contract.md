@@ -89,6 +89,8 @@ Measured on the pilot: without `files:` the export failed with «missing scripts
 `bash scripts/test_fh_module_check_lanes.sh` - known-positive (valid module), known-negatives (disable, override, shadow, reorder, unknown enum, unknown key, unrouted publish, garbage / empty / missing manifest, removal with dependant, merge in both orders). `FH_MODULE_PROBE=<name>` neuters one check in a temp copy; the matching lane must go red.
 
 Pilot: `plugins/fh-commons/skills/ko-tech-writer/fh-module.yaml`.
+Second module (2026-11-06): `plugins/fh-commons/skills/persona-cast/fh-module.yaml` — the doorway skill, its six lens agents and the Step 4 merge engine `scripts/persona_cast_merge.py`; `export` is STANDALONE with 10 files.
+Convergence-loop module (2026-11-06): `plugins/fh-commons/skills/convergence-loop/fh-module.yaml` — the first with a **verdict entry point** (`convergence-verdict`, exit 0/1/2; PROVISIONAL «one clean round» maps to 1, never 0).
 
 ## 7. Not in v0
 

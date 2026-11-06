@@ -231,6 +231,7 @@
     "scripts/test_abstract_consult_check_lanes.sh",
     "scripts/outbound_query_hook.sh",
     "scripts/package_coverage_check.sh",
+    "scripts/persona_cast_merge.py",
     "scripts/pipe_verdict_guard.sh",
     "scripts/portability_lint.sh",
     "scripts/postinstall_notice.js",
@@ -258,6 +259,7 @@
     "scripts/selfcheck_shard_weights.txt",
     "scripts/session_checklist.py",
     "scripts/checklist_unblocked_hook.sh",
+    "scripts/convergence_verdict.py",
     "scripts/session_close_check.sh",
     "scripts/shell_name_boundary_scan.sh",
     "scripts/sidecar_calibrate.sh",
@@ -346,6 +348,7 @@
     "scripts/test_package_coverage_lanes.sh",
     "scripts/test_paper_integrity_lanes.sh",
     "scripts/test_peer_worktree_detect_lanes.sh",
+    "scripts/test_persona_cast_merge_lanes.sh",
     "scripts/test_pipe_verdict_guard_lanes.sh",
     "scripts/test_precommit_gitlink_lanes.sh",
     "scripts/test_precommit_pointer_index_lanes.sh",
@@ -442,6 +445,7 @@
     "templates/temper_check.sh",
     "tests/seam_absence_probes.md",
     "scripts/marker_diff_sha.sh",
+    "scripts/test_convergence_verdict_lanes.sh",
     "scripts/test_marker_diff_sha_lanes.sh",
     "scripts/test_preprep_speech_coach_lanes.sh"
   ]
