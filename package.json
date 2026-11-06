@@ -367,6 +367,7 @@
     "scripts/test_prepush_stdin_integrity.sh",
     "scripts/test_prior_art_prompt_lanes.sh",
     "scripts/test_probe_live_eval_lanes.sh",
+    "scripts/test_live_eval_construct_lanes.sh",
     "scripts/test_proposal_hook_lanes.sh",
     "scripts/test_psa_singlefile_lanes.sh",
     "scripts/test_push_zone_lanes.sh",

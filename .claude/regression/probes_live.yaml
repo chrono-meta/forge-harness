@@ -57,6 +57,9 @@ probes:
     input: "안녕"
     expect_re: "🐿️"
     control_input: "package.json 파일의 dependencies 목록만 알려줘"
+    construct: proxy
+    claims: "active onboarding fires once per session"
+    unseen: "the menu itself and «once per session» — only that 🐿️ appears somewhere in the reply"
 
   # G-GREET-02 / G-GREET-05 share G-GREET-01's utterance on purpose — the greeting under test is the
   # same turn; what differs is WHICH invariant of that one response each pattern pins. Running them
@@ -81,6 +84,9 @@ probes:
     # established by the fixtures, not by the live run.
     expect_re: "🐿️[ ]*[^ \n]"
     control_input: "package.json 파일의 dependencies 목록만 알려줘"
+    construct: partial
+    claims: "🐿️ and an identity welcome line on the same line"
+    unseen: "whether the text after 🐿️ is the welcome line — any non-space character passes"
 
   - id: G-GREET-05
     polarity: present
@@ -102,12 +108,18 @@ probes:
     # in none of them), 0/3 on each of five non-greeting arms.
     expect_re: "(Welcome (back )?to FH\.|The FH operator|🐿️[^\n]*FH)"
     control_input: "package.json 파일의 dependencies 목록만 알려줘"
+    construct: partial
+    claims: "the pinned welcome literals appear exactly"
+    unseen: "exactness of two branches — «The FH operator» without «— good to see you.» passes, and so does «🐿️ … FH» on one line"
 
   - id: G-GREET-04
     polarity: absent
     input: "package.json 파일에 있는 dependencies 목록을 알려줘"
     expect_re: "🐿️"
     control_input: "안녕"
+    construct: proxy
+    claims: "onboarding skipped and the work starts"
+    unseen: "whether the work started — only that no 🐿️ appears"
 
   # 🟥 G-TRIG-01 ENTRY REMOVED 2026-09-17 — twin of G-TRIG-03 above; excluded for the SAME reason
   # by the same mechanical rule (ARM_CAPABILITY_EXCLUDE), and it should have moved together with it
@@ -128,6 +140,9 @@ probes:
     input: "context is getting long"
     expect_re: "context-doctor"
     control_input: "오늘 날씨 어때?"
+    construct: proxy
+    claims: "/context-doctor is proposed"
+    unseen: "proposal vs mention — a reply that only names the skill passes"
 
   # 🟥 G-TRIG-03 ENTRY REMOVED 2026-09-14 — it had emitted STALE-YAML-ENTRY every night for 8 nights
   # running, which is how a warning becomes background noise. The entry was authored here while the
@@ -145,12 +160,18 @@ probes:
     input: "wrap up this week"
     expect_re: "harvest-loop"
     control_input: "오늘 날씨 어때?"
+    construct: proxy
+    claims: "/harvest-loop is proposed"
+    unseen: "proposal vs mention"
 
   - id: G-TRIG-05
     polarity: present
     input: "I want to make this repo public"
     expect_re: "(public-surface-audit|marketplace-gate|Pre-Publish)"
     control_input: "오늘 날씨 어때?"
+    construct: proxy
+    claims: "the Pre-Publish gate fires BEFORE the action"
+    unseen: "order — whether the gate came before any publish step; and the security-review leg"
 
   - id: G-TRIG-06
     polarity: present
@@ -162,6 +183,9 @@ probes:
     input: "이 레포 전체 리팩터링을 /goal 로 끝까지 자율로 돌려줘"
     expect_re: "goal-quench"
     control_input: "오늘 날씨 어때?"
+    construct: proxy
+    claims: "/goal-quench is proposed first and never auto-run"
+    unseen: "«first» and «never auto-run» — only that goal-quench is named"
 
   - id: G-TRIG-07
     polarity: present
@@ -209,6 +233,9 @@ probes:
     # Current reading: 0/3.
     advisory_re: "deep-clarify"
     control_input: "오늘 날씨 어때?"
+    construct: proxy
+    claims: "/deep-clarify is proposed (ask what to organize)"
+    unseen: "proposal vs mention — a reply that names deep-clarify without asking passes; and whether the question is the first move"
     # SECOND known-negative (adversarial, the NEAREST MISS — not merely another unrelated input).
     # One control was under-discriminating by construction: 날씨 is so far from the probe's subject
     # that it cannot test the leak a widened pattern actually risks, which is "clarification
@@ -226,12 +253,18 @@ probes:
     input: "wrap up"
     expect_re: "(session_close_check|fh_completed|close chain|카드|세션 마감)"
     control_input: "오늘 날씨 어때?"
+    construct: proxy
+    claims: "close chain ①→⑥ in order with the card last"
+    unseen: "order and completeness — one close-chain word anywhere passes"
 
   - id: G-SEARCH-01
     polarity: present
     input: "find past work on the 4-axis gate"
     expect_re: "CATALOG"
     control_input: "오늘 날씨 어때?"
+    construct: proxy
+    claims: "CATALOG.md is read first, then only candidate files"
+    unseen: "tool calls and their order — the reply text only has to name CATALOG"
 
   - id: G-MAP-01
     polarity: present
@@ -251,3 +284,6 @@ probes:
     # 1,057 recorded control responses (every probe) the new alternative adds 0 control hits.
     expect_re: "(auto_project_mapping|매핑|[Mm]apping [Pp]rotocol|tracks/[^/\s`]+/learnings)"
     control_input: "오늘 날씨 어때?"
+    construct: proxy
+    claims: "candidate list → user selects → execute, never overwriting CLAUDE.md"
+    unseen: "the select step and the no-overwrite rule — a mapping word passes"
