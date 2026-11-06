@@ -1,0 +1,20 @@
+# FH module manifest (contract v0). Spec: knowledge/shared/harness-core/fh_module_contract.md
+# A cartridge: the persona-cast doorway, its six review lenses, and the Step 4 merge engine (marginal-coverage stop).
+id: persona-cast
+version: 0.1.0
+provides:
+  skills: [persona-cast]
+  agents: [designer-lens, ux-writer-lens, fe-dev-lens, be-dev-lens, qa-lens, a11y-lens]
+  hooks: []
+  verdicts: []
+adds_constraints: []
+touches_irreversible: none
+data_class: public
+requires:
+  modules: []
+  core_min: 3.0.0
+calibration:
+  command: bash scripts/test_persona_cast_merge_lanes.sh
+# what export copies besides the skill/agent files and the command file: the merge engine the lane runs
+files:
+  - scripts/persona_cast_merge.py
