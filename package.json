@@ -258,6 +258,7 @@
     "scripts/selfcheck_shard_weights.txt",
     "scripts/session_checklist.py",
     "scripts/checklist_unblocked_hook.sh",
+    "scripts/convergence_verdict.py",
     "scripts/session_close_check.sh",
     "scripts/shell_name_boundary_scan.sh",
     "scripts/sidecar_calibrate.sh",
@@ -442,6 +443,7 @@
     "templates/temper_check.sh",
     "tests/seam_absence_probes.md",
     "scripts/marker_diff_sha.sh",
+    "scripts/test_convergence_verdict_lanes.sh",
     "scripts/test_marker_diff_sha_lanes.sh",
     "scripts/test_preprep_speech_coach_lanes.sh"
   ]

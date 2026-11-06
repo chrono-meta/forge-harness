@@ -102,6 +102,14 @@ Escalation:      [who to escalate to / how, if not converged within N rounds]
 
 ### Convergence Judgment
 
+**Judge with the engine, not by eye** (2026-11-06): write the round vector as
+`R1 [new=<n>, fixed=<n>] → R2 [new=<n>, fixed=<n>] …` (every round both counts) and run
+`python3 scripts/convergence_verdict.py --rounds "<vector>"` — exit 0 CONVERGED · 1 NOT-CONVERGED or
+PROVISIONAL (one clean round) · 2 UNMEASURED (a shape it cannot read, or a round missing a count — never
+guessed). `--scan-markers tracks/_meta` audits every marker's `axis2-rounds:` line for «converged» written
+where the vector says otherwise (first run: 6 markers wrote «R1 [new=0, fixed=0] → converged» — one round).
+Calibration: `bash scripts/test_convergence_verdict_lanes.sh`. The rule it applies:
+
 ```
 Convergence = a round returns 0 new FAILs AND no FIX was applied in response to it
 Conditions to declare truly passed:
