@@ -116,7 +116,12 @@ FH asset modified → Axis 1 (templates/regression_guard.sh --pr {BRANCH})
       steel-quench §Convergence Criteria consumes it, and a hook check for it was built and then
       REMOVED the same day for firing on 100% of markers. The convergence claim it supports is
       self-attested; that residual is named in §Convergence Criteria, not hidden. Mechanize on the
-      first recurrence of a false convergence claim, not before;
+      first recurrence of a false convergence claim, not before — **that recurrence was measured
+      2026-11-06** (5 markers wrote «R1 [new=0, fixed=0] → converged», one round), so the vector now has
+      a canonical shape `R1 [new=, fixed=] → R2 …` (steel-quench §Convergence Criteria step 2) and an
+      **advisory** audit, `python3 scripts/convergence_verdict.py --scan-markers tracks/_meta`. The hook
+      still does not check it (a hook check fired on 100% of markers once — form first, enforcement only
+      if false claims keep appearing in the readable shape);
       hook validates mechanically: below-floor blocks without below-floor-ack, and axis2-evidence
       must be non-vacuous — a recorded verdict/count, not "it ran". Marker scope is form +
       non-vacuity + auditability, NOT provenance — a fabricated marker is the weekly-audit + operator
