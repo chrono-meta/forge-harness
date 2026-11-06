@@ -1182,6 +1182,7 @@ for _pair in \
   "scripts/selfdev_merge_tier.sh|scripts/test_selfdev_merge_tier_lanes.sh" \
   "scripts/selfdev_queue.py|scripts/test_selfdev_queue_lanes.sh" \
   "scripts/selfdev_loop.sh|scripts/test_selfdev_loop_lanes.sh" \
+  "scripts/lane_gap_hint.py|scripts/test_lane_gap_hint_lanes.sh" \
   "scripts/persona_cast_merge.py|scripts/test_persona_cast_merge_lanes.sh" \
   "scripts/convergence_verdict.py|scripts/test_convergence_verdict_lanes.sh" \
   ".github/workflows/validate.yml|scripts/test_ci_validate_shard_count_lanes.sh" \

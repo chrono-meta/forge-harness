@@ -1,0 +1,27 @@
+{
+  "_README": [
+    "lane-gap 안내 훅 스니펫 — TRACKED 라 clone 과 함께 도착한다. .claude/settings*.json 은 gitignored 라 훅 등록은",
+    "install-wizard 가 이 스니펫을 사용자 로컬 설정에 머지할 때만 생긴다 (스크립트 출하 ≠ 배선).",
+    "",
+    "무엇을 하나 (2026-11-06, 운영자 «추천대로» — tracks/_meta/video_stophook_review_2026-11-06.md 후보 ④):",
+    "지난 턴에 코드 파일을 바꿨는데 테스트·레인 실행 기록이 0 이면 다음 프롬프트에 한 줄을 붙인다.",
+    "FH 는 Stop 에서 막지 않는다 — 막는 자리는 비가역 가장자리(pre-push · 세션 마감)뿐이고, 이건 기록이다.",
+    "끄기: FH_LANE_GAP_HINT=0. 레인: scripts/test_lane_gap_hint_lanes.sh.",
+    "스크립트가 없으면 조용히 꺼지지 않고 한 줄 경보를 낸다(field-canon 스니펫과 같은 이유)."
+  ],
+  "project_settings_json": {
+    "hooks": {
+      "UserPromptSubmit": [
+        {
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bash -c '[ \"${FH_LANE_GAP_HINT:-1}\" = 0 ] && exit 0; HUB=\"${CLAUDE_PROJECT_DIR:-$HOME/projects/forge-harness}\"; S=\"$HUB/scripts/lane_gap_hint.py\"; if [ -f \"$S\" ]; then python3 \"$S\"; else echo \"⚠️ [lane-gap] 안내 훅 스크립트가 없다 — 체크아웃이 옛 브랜치이거나 설치가 불완전할 수 있다(안내가 꺼져 있다).\"; fi; exit 0'",
+              "timeout": 10
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
