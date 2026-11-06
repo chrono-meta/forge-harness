@@ -71,6 +71,16 @@ artifact paths + the stance + *nothing else*. Lenses run in parallel; none sees 
 Each returns the parallax block including its `Unique-to-this-seat` self-tag.
 
 ### Step 4 — Merge with the marginal-coverage stop (anti-decorative)
+**Run the engine — do not count by hand** (2026-11-06): save each lens's reply to a file, then
+```
+python3 scripts/persona_cast_merge.py --artifact <path> --lens designer=<file> --lens qa=<file> … [--stance neutral]
+```
+It prints the Step 5 table and the merged Concerns. Exit 0 = every lens measured; **exit 2 = a lens
+could not be read (no `### Concerns` section, missing file) or no artifact was given — that lens is
+UNMEASURED, never «decorative» and never «earned»**. It keys Concerns by the normalized `[location]`
+alone (stricter than «location + first noun phrase»: it can only under-count unique, never pad a lens
+into «earned»). Calibration: `bash scripts/test_persona_cast_merge_lanes.sh`. The rules it applies:
+
 First drop every Concern that carries no `[location]` — the lens files promise this («A concern
 without a location is dropped by the dispatcher»), and this step is where it happens. Count what you
 drop per lens and print it (`no-loc` column below); a dropped concern is never silently lost, and a
