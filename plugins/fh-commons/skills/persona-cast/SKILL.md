@@ -19,9 +19,9 @@ doorway, the same shape as `harness-pr-reviewer` (a standalone way in to one FH 
 
 ## Casts (shipped in `plugins/fh-commons/agents/*-lens.md`)
 
-| cast | lenses | for |
-|---|---|---|
-| `web-review` (default) | designer-lens · ux-writer-lens · fe-dev-lens · be-dev-lens · qa-lens · a11y-lens | a screen, a flow, a web/mobile spec, a page (review mode) **or a live app (explore mode)** |
+| cast | lenses | for | status |
+|---|---|---|---|
+| `web-review` (default) | designer-lens · ux-writer-lens · fe-dev-lens · be-dev-lens · qa-lens · a11y-lens | a screen, a flow, a web/mobile spec, a page (review mode) **or a live app (explore mode)** | **validated** (review mode, 2026-11-07 — first field run on a desktop app's approval-card UI, 6 source files: every lens `unique ≥ 1`, 0 decorative; one finding dropped after a source check). Explore mode: still `synthesized` |
 
 A cast is a list, not a promise: every run measures which lenses earned their seat (Step 4).
 
@@ -169,7 +169,13 @@ explore mode adds:
 ```
 **First-use gate (graduation)**: a cast graduates from *synthesized* to *validated* only when, on a
 real artifact, every lens has `unique ≥ 1` at least once across runs. Until then the cast row above
-says `synthesized`. Measured, not asserted.
+says `synthesized`. Measured, not asserted. The graduation is per mode: a review-mode run does not
+validate explore mode (it never drove a live app). On the first field run `scripts/persona_cast_merge.py`
+read all six reports (exit 0) but keyed on exact location strings, so it found **0** concerns shared
+by two seats where a hand merge by location + noun phrase found **9** groups — each lens names the same
+spot differently (the engine's named residual, now measured on real output: it over-counts `unique`).
+Its self-tag column read 0/0 because the lenses' «Unique-to-this-seat» bullets carry no `[location]`.
+The `earned` verdicts held either way; cross-seat convergence needs the hand pass until the key is fixed.
 
 ## Constraints
 - Review-shaped only. A lens that starts redesigning or rewriting has left its cap — drop that part.
