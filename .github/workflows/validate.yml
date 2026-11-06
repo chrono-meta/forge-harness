@@ -338,9 +338,27 @@ jobs:
           [ "${SHARDS_RESULT}" = "success" ] || { echo "::error::at least one selfcheck shard did not succeed (${SHARDS_RESULT}) — not a pass"; exit 1; }
           # `needs.<job>.result` can read success when a leg was cancelled before a runner took it (codex R1 2026-10-31):
           # count the legs of THIS run attempt and require every one to have concluded success.
-          out=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}/jobs" --paginate \
-                  --jq '.jobs[] | select(.name | startswith("selfcheck (shard ")) | .conclusion'); rc=$?
-          [ "$rc" -eq 0 ] || { echo "::error::could not list this run's jobs (rc=$rc) — shards not verified, not a pass"; exit 1; }
-          total=$(printf '%s\n' "$out" | grep -c . ); ok=$(printf '%s\n' "$out" | grep -cx success)
+          # The jobs listing can lag behind `needs`: right after the last leg ends it may still be short or carry a
+          # null conclusion (#1029: «legs 3/3 → 2/2, expected 4» while all 4 legs had succeeded). Re-query ONLY while
+          # the listing is incomplete (fewer legs than expected, or a null conclusion) — never on a recorded
+          # failure — at most SHARD_REQUERY_MAX times, then judge exactly as before (fail-closed).
+          tries=0
+          while :; do
+            out=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}/jobs" --paginate \
+                    --jq '.jobs[] | select(.name | startswith("selfcheck (shard ")) | .conclusion'); rc=$?
+            [ "$rc" -eq 0 ] || { echo "::error::could not list this run's jobs (rc=$rc) — shards not verified, not a pass"; exit 1; }
+            # grep -c exits 1 on 0 matches and the step runs under bash -e — every count needs «|| true»
+            total=$(printf '%s\n' "$out" | grep -c . || true); ok=$(printf '%s\n' "$out" | grep -cx success || true)
+            pending=$(printf '%s\n' "$out" | grep -cx null || true)
+            recorded_bad=$(printf '%s\n' "$out" | grep . | grep -cvxE 'success|null' || true)
+            # a recorded failure/cancel/skip is judged now — a later listing must never wash it out (codex R1)
+            if [ "$recorded_bad" -eq 0 ] && { [ "$total" -lt "$EXPECTED_SHARDS" ] || [ "$pending" -gt 0 ]; } \
+               && [ "$tries" -lt "${SHARD_REQUERY_MAX:-6}" ]; then
+              tries=$((tries + 1))
+              echo "selfcheck legs listed ${total}/${EXPECTED_SHARDS} (${pending} without a conclusion) — listing incomplete, re-query ${tries}/${SHARD_REQUERY_MAX:-6}"
+              sleep "${SHARD_REQUERY_SLEEP:-5}"; continue
+            fi
+            break
+          done
           echo "selfcheck legs: ${ok}/${total} success (expected ${EXPECTED_SHARDS})"
           [ "$total" -eq "$EXPECTED_SHARDS" ] && [ "$ok" -eq "$EXPECTED_SHARDS" ] || { echo "::error::selfcheck legs ${ok}/${total}, expected ${EXPECTED_SHARDS}/${EXPECTED_SHARDS} — not a pass"; exit 1; }
