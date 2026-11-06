@@ -145,6 +145,40 @@ rm -f "$D17/live/tracks/_meta/logs/selfdev_loop_$DATE.log"
 if [ "${a17:-0}" = 1 ] && [ "${b17:-0}" = 1 ]; then ok "LP17 «Not logged in» builder is named HARNESS-ERROR; a builder that ran is not (control)"
 else bad "LP17 (not-logged-in named=${a17:-?} · control clean=${b17:-?})"; fi
 
-[ $((pass+fail)) -eq 17 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 17"; exit 2; }
+# LP18: a build that opens no PR must say WHY in the report (the builder's own words); a build that
+# opens one reports its number and no «no PR» block (control). The fake gh lists from a knob file the
+# builder stub may rewrite — the before/after listings are what the loop compares.
+setup p18; D18="$W/p18"
+#   the post-build count asks for number,headRefName,createdAt (all states); the fake answers from a knob
+#   the builder stub may rewrite (it ignores -q, so the knob holds the already-filtered numbers)
+sed -i.bak 's#"pr list|number,headRefName") echo 5 ;;#"pr list|number,headRefName") echo 5 ;;\
+  "pr list|number,headRefName,createdAt") cat "$K/list" 2>/dev/null ;;#' "$D18/bin/gh"
+grep -q 'createdAt") cat' "$D18/bin/gh" || { echo "HARNESS-ERROR: LP18 fixture edit did not apply"; exit 2; }
+for opens in 0 1; do
+  : > "$D18/knobs/list"
+  if [ "$opens" = 0 ]; then
+    printf '#!/usr/bin/env bash\necho "[02:30:01] timestamped builder line"\necho "No PR this run. AQ-9 is already shipped in #1025."\nexit 0\n' > "$D18/bin/claude-stub"
+  else
+    printf '#!/usr/bin/env bash\necho 77 > "%s/knobs/list"\necho "opened one"\nexit 0\n' "$D18" > "$D18/bin/claude-stub"
+  fi
+  chmod +x "$D18/bin/claude-stub"
+  rm -f "$D18/live/tracks/_meta/selfdev/report_$DATE.md" "$D18/live/tracks/_meta/logs/selfdev_loop_$DATE.log"
+  rm -rf "$D18/clone"; git clone -q "$D18/origin.git" "$D18/clone" 2>/dev/null
+  OUT=$(cd "$D18/live" && env PATH="$D18/bin:$PATH" SELFDEV_DRY_RUN=0 SELFDEV_NO_MERGE=1 FH_SELFDEV_DIR="$D18/clone" FD_CLAUDE_BIN="$D18/bin/claude-stub" \
+        bash scripts/selfdev_loop.sh 2>&1); RC=$?
+  REP="$(cat "$D18/live/tracks/_meta/selfdev/report_$DATE.md" 2>/dev/null)"
+  if [ "$opens" = 0 ]; then
+    if printf '%s\n' "$REP" | grep -qF -- '- PRs opened this run: 0' && printf '%s\n' "$REP" | grep -qF '  > No PR this run. AQ-9 is already shipped in #1025.' \
+       && printf '%s\n' "$REP" | grep -qF '  > [02:30:01] timestamped builder line'; then a18=1
+    else a18=0; printf '%s\n' "$REP" "$OUT" | tail -6 | sed 's/^/       /'; fi
+  else
+    if printf '%s\n' "$REP" | grep -qF -- '- PRs opened this run: 1 (#77 )' && ! printf '%s\n' "$REP" | grep -qF 'no PR —'; then b18=1
+    else b18=0; printf '%s\n' "$REP" "$OUT" | tail -6 | sed 's/^/       /'; fi
+  fi
+done
+if [ "${a18:-0}" = 1 ] && [ "${b18:-0}" = 1 ]; then ok "LP18 a quiet build carries the builder's reason into the report; a build that opened #77 is counted, no «no PR» block (control)"
+else bad "LP18 (reason carried=${a18:-?} · control=${b18:-?})"; fi
+
+[ $((pass+fail)) -eq 18 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 18"; exit 2; }
 echo "selfdev_loop lanes: $pass passed · $fail failed"
 [ "$fail" -eq 0 ]

@@ -135,7 +135,7 @@ rep "- queue: $(grep -E '^## ' "$QUEUE" | sed 's/^## //' | tr '\n' ';') (rc=$qrc
 
 # ── ③ build ───────────────────────────────────────────────────────────────
 open_auto() {
-  gh pr list -R "$REPO_SLUG" --state open --json number,headRefName \
+  gh pr list -R "$REPO_SLUG" --state open --limit 200 --json number,headRefName \
     -q '[.[] | select(.headRefName | startswith("auto/selfdev-"))] | .[].number' 2>/dev/null
 }
 OPEN_NOW="$(open_auto)"; orc=$?
@@ -159,20 +159,53 @@ request: «<the row's 발화 text exactly as it appears in the queue>»
 — or seed: candidate (with the source) for anything else. Then what changed, what was measured, what was not.
 
 Never run gh pr merge, never push to main, never force-push, never tag. The merge decision is made after you, mechanically, not by you."
-  blog0=$(wc -c < "$LOG" 2>/dev/null || echo 0)   # only lines this build appends are its evidence
+  # the builder's output goes to its own file first (its evidence, not mixed with the loop's [hh:mm:ss]
+  # lines), then is appended to the log once the build ends
+  BOUT="$OUT/build_${DATE}_$(date +%H%M%S).out"; : > "$BOUT"   # per run: a same-day rerun must not overwrite an earlier report's evidence (codex R2)
+  # cutoff 5 min before the build: the host clock vs GitHub's createdAt may disagree (codex R2); the
+  # selfdev-<date> branch prefix below keeps an earlier day's PR out of the window
+  bstart="$(python3 -c 'import datetime as d;print((d.datetime.now(d.timezone.utc)-d.timedelta(minutes=5)).strftime("%Y-%m-%dT%H:%M:%SZ"))' 2>/dev/null)" \
+    || bstart="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   say "build start (timeout ${BUILD_TIMEOUT}s, model ${FD_MODEL:-default})"
-  ( cd "$CLONE" && "$CLAUDE_BIN" -p "$PROMPT" --permission-mode bypassPermissions ${FD_MODEL:+--model "$FD_MODEL"} ) >> "$LOG" 2>&1 &
+  ( cd "$CLONE" && "$CLAUDE_BIN" -p "$PROMPT" --permission-mode bypassPermissions ${FD_MODEL:+--model "$FD_MODEL"} ) > "$BOUT" 2>&1 &
   pid=$!; deadline=$((SECONDS + BUILD_TIMEOUT))
   while kill -0 "$pid" 2>/dev/null && [ "$SECONDS" -lt "$deadline" ]; do sleep 20 & wait $!; done
   if kill -0 "$pid" 2>/dev/null; then
     pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
+    cat "$BOUT" >> "$LOG" 2>/dev/null
     rep "- build killed by watchdog (${BUILD_TIMEOUT}s)"
   else
     wait "$pid"; brc=$?; rep "- build finished (rc=$brc)"
+    cat "$BOUT" >> "$LOG" 2>/dev/null
     # a builder that never logged in finishes fast and quietly — name it, it is not «nothing to do»
     # (2026-11-05 supervised run: env without USER → keychain lookup failed → «Not logged in»)
-    if tail -c +"$((blog0 + 1))" "$LOG" 2>/dev/null | grep -c 'Not logged in' >/dev/null; then
+    if grep -q 'Not logged in' "$BOUT" 2>/dev/null; then
       rep "- HARNESS-ERROR: builder not logged in (claude -p printed «Not logged in» — check USER/HOME in the plist)"
+    fi
+  fi
+  # How many PRs did this build open, and if none, WHY — in the builder's own words.
+  # 2026-11-06: the first real night opened 0 PRs and the report said only «build finished (rc=0)»;
+  # the builder's reasons (nothing eligible, item by item) sat in the log alone. A quiet night is a
+  # correct outcome, but the report must say which kind of quiet it was.
+  # count by creation time across ALL states (a PR opened then closed during the build still counts),
+  # selfdev branches only (codex R1: an open-only before/after diff misses those and miscounts reopens)
+  created="$(gh pr list -R "$REPO_SLUG" --state all --limit 200 --json number,headRefName,createdAt \
+    -q "[.[] | select((.headRefName | startswith(\"auto/selfdev-$DATE\")) and .createdAt >= \"$bstart\")] | .[].number" 2>/dev/null)"; crc=$?
+  if [ $crc -ne 0 ]; then
+    rep "- PRs opened this run: UNMEASURED (gh pr list failed after the build)"
+  else
+    opened="$(printf '%s\n' "$created" | grep . | sed 's/^/#/' | tr '\n' ' ')"
+    nopen="$(printf '%s' "$opened" | wc -w | tr -d ' ')"
+    rep "- PRs opened this run: $nopen${opened:+ ($opened)}"
+    if [ "$nopen" = 0 ]; then
+      # the builder's account = everything it printed during this build, last 40 non-blank lines, each ≤ 300 chars
+      acct="$(grep -v '^[[:space:]]*$' "$BOUT" 2>/dev/null | tail -40 | cut -c1-300)"
+      if [ -n "$acct" ]; then
+        rep "- no PR — the builder's own account (last 40 lines of $BOUT):"
+        printf '%s\n' "$acct" | sed 's/^/  > /' >> "$REPORT"
+      else
+        rep "- no PR — the builder printed nothing: reason UNMEASURED (check $LOG)"
+      fi
     fi
   fi
   git -C "$CLONE" switch -q main 2>/dev/null
