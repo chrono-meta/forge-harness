@@ -190,6 +190,32 @@ B-1 은 타입된 주장을 생산한 적이 없다. **실측 2026-09-17, 재현
 셋은 층이 달라서 서로를 대체하지 않는다. 하네스는 거버넌스 엔지니어링의 **도구**이고,
 거버넌스 엔지니어링은 하네스가 **무엇을 위해** 있는지를 말한다.
 
+## 바깥 용어 대응 — 번역이지 개정이 아니다 (2026-11-06)
+
+바깥 글(에이전트 가드레일 · 승인 UX · 경로 정책 연구)을 읽는 사람이 이 교리를 **자기 분야 낱말로**
+찾게 하는 표다. 🟥 **방향은 한쪽이다** — 바깥 낱말이 FH 교리를 넓히거나 바꾸지 않는다. 대응이 어긋나면
+고치는 쪽은 이 표이지 교리가 아니다. 출처는 2026-11-05 야간 웹 검색(세션 fa277252 기획서
+`PLAN_2026-11-05_governance_ultimate.md` §2, gitignored)에서 열어 본 것만 적고, 본문을 다 확인하지 못한 것은 그렇게 표시한다.
+
+| 바깥 용어 | 바깥에서 하는 말 | FH 쪽 이름 | 판정 |
+|---|---|---|---|
+| **execution-layer guardrail** | 비가역 행동은 실행 층에서 막아야 한다 — 프롬프트 지시로는 못 멈춘다 ([Vercel](https://vercel.com/i/five-ai-agent-guardrails-production) · [AWS](https://aws.amazon.com/blogs/security/balancing-speed-and-safety-a-control-framework-for-ai-coding-agents/) · [iii.dev](https://iii.dev/blog/what-stops-your-coding-agent-doing-something-it-cant-undo/)) | Gate-locality(게이트는 행위자가 지나가는 자리에) · FoD PreToolUse 훅 | **같다** |
+| **action-class / risk-tier gating** | 되돌릴 수 있는 행동은 자동 정책, 위험한 부류만 사람 (같은 출처) | **표면 등급**(공개 · 삭제 · 이력 재작성) — 판별자는 «위험도» 가 아니라 **T1~T3**(되돌림 · 동의하지 않은 제3자 관측 · 손실 귀속과 동의, 아래 §명명된 잔여), 종단은 **사람 또는 기록된 override** | **부분**: «행동을 부류로 갈라 다르게 다룬다» 까지 같다. 판별자가 다르다 — 바깥의 위험 등급은 T1 쪽(행위의 성질)에 가깝고 T3(누가 손실을 지나)는 행위의 함수가 아니다. 그리고 둘째 동사(정확도가 좋아져도 경계가 안 움직인다)를 위 출처가 명시하는지는 **본문 미확인** |
+| **error budget** (SRE) | SLO 가 허용하는 실패량으로 변경 속도를 조절한다 — 예산이 남으면 출시한다 ([Google SRE — Embracing Risk](https://sre.google/sre-book/embracing-risk/)) | — (대응 개념 없음) | **다르다 — 대비로만 쓴다**: 오류 예산은 «허용 실패량» 이고 첫째 동사는 «오차율을 낮추는 목표» 라 대상이 다르다. 대비점은 하나다 — 오류 예산은 **숫자가 문을 여는** 구조이고, 둘째 동사는 비가역 표면에서 그것을 금지한다. 이 줄은 SRE 개념에 FH 제약을 덧붙이지 않는다 |
+| **human-in-the-loop · approval fatigue / habituation** | 전부 막으면 승인 피로로 게이트가 무력해진다 · 고위험 부류 승인율 100% 는 사고로 본다 ([approval fatigue UX](https://www.buildmvpfast.com/blog/approval-fatigue-agent-permission-ux-2026) · [habituation curve](https://tianpan.co/blog/2026-04-28-agent-permission-prompt-habituation-curve) — 실무 블로그) | 둘째 동사의 비용 · FoD `gate_ledger.py --fatigue`(FoD #225 — 부류별 사람 승인율 · 결정 시간, «고무도장 의심» 표시) | **부분**: 승인 피로를 문제로 보는 데까지 같다. FH 는 «승인율 100% = 사고» 보다 **약하게** 둔다 — 승인율 100% 는 정당한 요청만 있었어도 나오므로 **의심 표시**일 뿐 사고의 증거가 아니다. 경보는 기록의 성질만 말하고 게이트를 여닫지 않는다. 문턱은 UNCALIBRATED |
+| **policies on paths** | 정책 위반이 앞선 단계에 의존하면 실행 시점(경로 위)에서만 강제할 수 있다 ([arXiv 2603.16586](https://arxiv.org/abs/2603.16586)) | 단건 판정 + FoD #222 체크포인트(사이클 끝 일괄 승인) | **부분**: 같은 세션 경로 위의 규칙(예: 테스트 실패 직후 비가역)은 없다 — 판정 enum 을 건드리는 설계라 운영자 결정 대기 |
+| **approval-layer bypass** | 일괄 · 관리자 · 백엔드 직접 호출은 승인 층을 통째로 건너뛴다 ([iii.dev](https://iii.dev/blog/what-stops-your-coding-agent-doing-something-it-cant-undo/)) | 채널 일가(«읽는 쪽이 안 연 채널») · `scripts/channel_inventory.sh` | **같은 결** |
+| **harness as an auditable runtime object** | 하네스를 문서화 · 감사 가능한 런타임 층으로, 모델×하네스 쌍으로 평가 ([UNU 2026-07](https://unu.edu/publication/engineering-and-governing-agent-harness-technology-and-policy-framework-runtime-layer)) | live-eval(모델×하네스 2팔) | **부분**: «모델×하네스 쌍으로 평가» 만 대응한다. 문서화 · 감사 가능성 요구는 2팔 평가로 충족되지 않고, 보고서의 권고 본문은 **미확인**이라 그 이상은 주장하지 않는다 |
+| **classifier FP / FN by workload** | 같은 자동 모드 분류기가 실운영과 통제 과제에서 전혀 다른 FN 을 낸다 ([arXiv 2604.04978](https://arxiv.org/abs/2604.04978) — 숫자는 2차 출처로 읽음) | «잰 범위 ≠ 주장 범위» | **같은 교훈** |
+
+**남는 델타 한 줄**(논문·발표에서 쓸 때): 위 출처 **일부는** «비가역 행동은 실행 층에서 막는다» 와
+«되돌릴 수 있는 행동은 자동 정책으로» 를 권한다(합의라고 쓰지 않는다 — 본문을 다 확인하지 않았다). 🟥 FH 교리는
+비가역 표면만 말하고, 그 밖의 자동화를 보장하지 않는다. FH 가 더하는 것은 **그 경계가 숫자로 옮겨지지
+않는다는 고정**(둘째 동사)과, 그 고정에 쓰이는 **기록 장치들**(표면 등급 · 승인 피로 원장 · 마커)이다.
+🟥 그 장치들은 고정이 실제로 지켜졌는지(준수)를 재지 않는다 — 마커 검사는 기록의 **형식과 비공허성**만
+보고(§Mechanization Boundary 와 같은 경계), 승인 피로 원장은 승인 **패턴**(부류별 승인율 · 결정 시간)을 셀 뿐이다.
+🟥 «바깥은 이걸 모른다» 로 쓰지 않는다 — 위 출처의 본문 전부를 확인하지 않았다(§명명된 잔여의 «델타 진술» 요구와 같은 경계).
+
 ## 왜 이 이름이 지금 필요했나 — 측정된 공백
 
 낱말 실측(2026-09-09, 컨트롤 동반): 「거버넌스 엔지니어링 / governance engineering」은 이 레포
