@@ -37,7 +37,7 @@
 #   rails ⑤ ⑥): bypassPermissions is not a sandbox, and digest text is untrusted input to the builder.
 #   The merge decision is NOT the builder's — it is ④, mechanical, after the fact.
 #
-# ENV  FH_SELFDEV_DIR · SELFDEV_MAX_ITEMS(2) · SELFDEV_MAX_OPEN(2) · SELFDEV_CI_WAIT(1800s)
+# ENV  SELFDEV_ALLOW_API_KEY(unset = the builder runs without ANTHROPIC_API_KEY) · FH_SELFDEV_DIR · SELFDEV_MAX_ITEMS(2) · SELFDEV_MAX_OPEN(2) · SELFDEV_CI_WAIT(1800s)
 #      SELFDEV_BUILD_TIMEOUT(2700s) · SELFDEV_DEMOTE_DAYS(30) · SELFDEV_DRY_RUN(0: 1 = no build, no
 #      merge — print what would happen) · SELFDEV_NO_MERGE(0: any other value = build and open PRs as
 #      usual, but never merge — a PR that passes every check is reported ELIGIBLE for the operator to merge) ·
@@ -67,6 +67,24 @@ LOG="$LIVE/tracks/_meta/logs/selfdev_loop_$DATE.log"
 
 say() { echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG"; }
 rep() { echo "$*" >> "$REPORT"; }
+# replace the value of any paid-access variable the builder was given with *** in its output file, so
+# the log and the report never carry it (only reachable with SELFDEV_ALLOW_API_KEY=1 — otherwise the
+# builder never had the value). Every non-empty value, longest first (an overlapping shorter one must not
+# leave the rest of a longer one behind); a redaction that cannot run withholds the output (codex R2).
+redact_bout() {
+  [ -s "$BOUT" ] || return 0
+  python3 - "$BOUT" ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN <<'PY' || { echo "[builder output withheld — redaction failed]" > "$BOUT"; say "WARN: could not redact the builder output — withheld"; }
+import os, sys
+p = sys.argv[1]
+vals = [os.environ.get(n, "") for n in sys.argv[2:]]
+vals = sorted({v for v in vals if v}, key=len, reverse=True)
+if vals:
+    t = open(p, encoding="utf-8", errors="replace").read()
+    for v in vals:
+        t = t.replace(v, "***")
+    open(p, "w", encoding="utf-8").write(t)
+PY
+}
 
 LOCK="$OUT/.lock"
 # lock = a dir holding the owner's PID. A lock whose PID is gone (SIGKILL, reboot) is reclaimed —
@@ -167,15 +185,35 @@ Never run gh pr merge, never push to main, never force-push, never tag. The merg
   bstart="$(python3 -c 'import datetime as d;print((d.datetime.now(d.timezone.utc)-d.timedelta(minutes=5)).strftime("%Y-%m-%dT%H:%M:%SZ"))' 2>/dev/null)" \
     || bstart="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   say "build start (timeout ${BUILD_TIMEOUT}s, model ${FD_MODEL:-default})"
-  ( cd "$CLONE" && "$CLAUDE_BIN" -p "$PROMPT" --permission-mode bypassPermissions ${FD_MODEL:+--model "$FD_MODEL"} ) > "$BOUT" 2>&1 &
+  # Subscription only (2026-11-07, video digest _dN-RMh0Tl0 candidate 3): launchd hands the builder no
+  # ANTHROPIC_API_KEY, so spend 0 held — but only by accident of the environment. A manual run from a
+  # shell that exports the key would bill the API. Unset it for the builder unless the operator says
+  # otherwise, and say which happened. The value itself is never printed.
+  # codex R1: the key is not the only paid path — a bearer token and the cloud-provider selectors are too.
+  PAID_VARS="ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN CLAUDE_CODE_USE_BEDROCK CLAUDE_CODE_USE_VERTEX CLAUDE_CODE_USE_FOUNDRY"
+  STRIP_KEY=1; [ "${SELFDEV_ALLOW_API_KEY:-}" = 1 ] && STRIP_KEY=
+  paid_set=""; unset_args=""
+  for v in $PAID_VARS; do
+    [ -n "$(printenv "$v" 2>/dev/null)" ] && paid_set="$paid_set $v"
+    unset_args="$unset_args -u $v"
+  done
+  if [ -n "$paid_set" ]; then
+    if [ -n "$STRIP_KEY" ]; then rep "- NOTE:${paid_set} was set in the caller's env — unset for the builder (subscription only; SELFDEV_ALLOW_API_KEY=1 keeps it)"
+    else rep "- NOTE:${paid_set} kept (SELFDEV_ALLOW_API_KEY=1) — this build bills the API, not the subscription"; fi
+  fi
+  # names only, never values; with the switch on, the builder's own output is redacted below (codex R1)
+  # shellcheck disable=SC2086  # unset_args is a fixed list of «-u NAME» pairs, split on purpose
+  ( cd "$CLONE" && env ${STRIP_KEY:+$unset_args} "$CLAUDE_BIN" -p "$PROMPT" --permission-mode bypassPermissions ${FD_MODEL:+--model "$FD_MODEL"} ) > "$BOUT" 2>&1 &
   pid=$!; deadline=$((SECONDS + BUILD_TIMEOUT))
   while kill -0 "$pid" 2>/dev/null && [ "$SECONDS" -lt "$deadline" ]; do sleep 20 & wait $!; done
   if kill -0 "$pid" 2>/dev/null; then
     pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
+    redact_bout
     cat "$BOUT" >> "$LOG" 2>/dev/null
     rep "- build killed by watchdog (${BUILD_TIMEOUT}s)"
   else
     wait "$pid"; brc=$?; rep "- build finished (rc=$brc)"
+    redact_bout
     cat "$BOUT" >> "$LOG" 2>/dev/null
     # a builder that never logged in finishes fast and quietly — name it, it is not «nothing to do»
     # (2026-11-05 supervised run: env without USER → keychain lookup failed → «Not logged in»)
