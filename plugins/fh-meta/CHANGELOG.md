@@ -2,6 +2,24 @@
 
 ### [Unreleased]
 
+### [3.39.0] — 2026-11-07
+
+New scripts and lanes ship, so this is a minor by the version policy. No existing gate tightens. The new hook is not wired by default. The `persona-cast` and `convergence-loop` skills now tell the agent to run their engines instead of counting by hand, so a session that uses those skills runs the scripts.
+
+### Added
+- Two skills get an FH module manifest (`fh-module.yaml`, manifest v0.1.0) under `fh_module_contract.md` v0. A module (FH also says cartridge) is a skill or agent packaged with a manifest that says what it provides and promises not to weaken the core floor (`adds_constraints: []`, `touches_irreversible: none`). v0 is a manifest and a checker; it does not install anything (contract §7 «Not in v0»).
+  - `persona-cast` with its Step 4 merge as a program, `scripts/persona_cast_merge.py`: drops concerns without a location, counts them per lens, and names a lens with no unique concern «decorative on this artifact». It is a **measurement, not a verdict entry point**: it exits 0 when the artifact and every lens were read — a decorative lens included — and 2 when something could not be read (a missing artifact, a missing or malformed lens). Do not gate on its exit code (#1033).
+  - `convergence-loop` with a verdict entry point, `scripts/convergence_verdict.py` (exit 0 pass · 1 block · 2 unmeasured, as the contract requires). With `--rounds`: CONVERGED (0) only when the last round found nothing new, fixed nothing, and at least two rounds ran. Exit 1 covers both NOT-CONVERGED and PROVISIONAL — PROVISIONAL is one clean round, «run one more», not a rejected change. An unreadable round is UNMEASURED (2). `--scan-markers` audits recorded vectors instead: 1 when a marker claims convergence its vector contradicts, 2 when a line could not be read, else 0 (#1034).
+- `scripts/lane_gap_hint.py` / `.sh`: a UserPromptSubmit hook that adds one line to the next prompt when the last turn changed code files and ran no test. It never blocks. Opt-in: the install wizard adds it from the hub clone's settings snippet (clone installs only); `FH_LANE_GAP_HINT=0` turns it off (#1039).
+- live-eval probes declare what they claim and what their pattern cannot see (`construct` · `claims` · `unseen` in `.claude/regression/probes_live.yaml`). Record only — no verdict, selection or score changes (#1036).
+- `knowledge/shared/harness-core/governor_landing_before_compact.md`: «land, then compact» — when a governed session nears auto-compact, the governor asks it to write down its state first, and that session then asks the operator whether to compact now. Its 90% threshold is UNCALIBRATED (one observation) and its measurement plan has not run; reading context usage needs the desktop app's session tools, and its checker (`scripts/governor_landing_check.py`) ships in the hub clone only, not in the npm package (#1047).
+
+### Changed
+- `steel-quench`: the axis-2 convergence vector gets a readable shape (`R1 [new=, fixed=] → R2 …`) in the marker guidance. Guidance only; the commit hook's verdict is unchanged (#1038).
+- persona-cast is listed as M2 in every Codex runtime tier table (`AGENTS.md`, `docs/codex-compat.md`, `agents_md_runtime_details.md`) (#1037). Its web-review cast is marked validated in review mode after its first field run (#1040).
+- README (all four languages): the «the gates catch you, not only your agent» line moves from the slogan spot into «Who it is for», with its evidence (one day of gate blocks, `docs/GATE_DAY.md`) (#1046).
+- Sub-agent invocation log entries for 2026-11-06 and 2026-11-07 (#1035, #1043).
+
 ### [3.38.1] — 2026-11-06
 
 Documentation-only patch.
