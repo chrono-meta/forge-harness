@@ -1182,6 +1182,9 @@ for _pair in \
   "scripts/selfdev_merge_tier.sh|scripts/test_selfdev_merge_tier_lanes.sh" \
   "scripts/selfdev_queue.py|scripts/test_selfdev_queue_lanes.sh" \
   "scripts/ablation_nominate.py|scripts/test_ablation_nominate_lanes.sh" \
+  `# 맥락 유지 읽는 절반(2026-11-07). 상태 주장 뒤 리스 줄 한 줄 · 착지 판정 — 못 읽음은 OK 가 아니다.` \
+  "scripts/state_claim_recheck_hook.sh|scripts/test_state_claim_recheck_lanes.sh" \
+  "scripts/governor_landing_check.py|scripts/test_governor_landing_check_lanes.sh" \
   "scripts/selfdev_loop.sh|scripts/test_selfdev_loop_lanes.sh" \
   "scripts/lane_gap_hint.py|scripts/test_lane_gap_hint_lanes.sh" \
   "scripts/persona_cast_merge.py|scripts/test_persona_cast_merge_lanes.sh" \
