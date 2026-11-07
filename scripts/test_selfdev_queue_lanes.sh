@@ -12,6 +12,7 @@
 #   Q11 a checklist file with no date in its name is never newest: its rows are seed=recheck
 #   Q12-Q14 absorption rows carry their source text (digest bullet) or say why not
 #   Q15-Q18 exact top-level title only · symlink refused · cut counted · quoted lines are data
+#   Q20-Q22 file-path sources (tracks/_audit/x.md#N-M) carry the anchored part, or say why not
 #   Q9 a later edit (newer mtime) to the OLDER checklist does not make it newest: its rows stay recheck and the newer DONE still wins
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -122,6 +123,56 @@ if [ "$(printf '%s\n' "$q6" | grep -A1 'AQ-D' | grep '  > ')" = '  > - **cache**
    && printf '%s\n' "$q6" | grep -qF '(cut: 6 more lines and cut at 1500 chars'; then ok "Q19 exact section bounds (a near-miss heading above and a level-one heading inside do not move them); a double cut names both limits"
 else bad "Q19"; printf '%s\n' "$q6" | grep -E 'AQ-[DEF]|cut:|  > - ' | cut -c1-120 | sed 's/^/     /'; fi
 
-[ $((pass+fail)) -eq 19 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 19"; exit 2; }
+# Q20-Q22 (2026-11-07, operator «ㄱㄱㄱ» via session fa277252): a row whose source is a FILE path in this checkout
+# (tracks/_audit/x.md#3-1 — gitignored, absent from the clone) carries the anchored part. Q20 «N-M» = item M of
+# section N, its continuation included, the next item not; «N» = section N. Q21 controls: a missing anchor, a missing
+# file, «..», a tracked path (the clone has it: pointer only) and a non-file source each say so and carry nothing.
+# Q22 the real tsv shape: «operator:…» and «session …» sources are named «not a file».
+L7="$W/live7"; M7="$L7/tracks/_meta"; A7="$L7/tracks/_audit"; mkdir -p "$M7" "$A7" "$L7/docs"
+printf '# audit\n## 2. other\n1. not this\n## 3. take these\n1. **first item** — body one\n   continued line\n2. **second item** — must not ride along\n## 4. after\n- x\n' > "$A7/a.md"
+printf 'tracked\n' > "$L7/docs/t.md"
+git -C "$L7" init -q && git -C "$L7" -c user.email=t@t -c user.name=t add docs/t.md && git -C "$L7" -c user.email=t@t -c user.name=t commit -q -m t   # «tracked» is decided by git, not by the path
+printf 'id\tadded\tsource\titem\tassets\tstatus\tclosed\tevidence\nAQ-P1\t2026-11-07\ttracks/_audit/a.md#3-1\tfirst\t\topen\t\t\nAQ-P2\t2026-11-07\ttracks/_audit/a.md#3\tsection\t\topen\t\t\nAQ-N1\t2026-11-07\ttracks/_audit/a.md#9-1\tno anchor\t\topen\t\t\nAQ-N2\t2026-11-07\ttracks/_audit/gone.md#1\tno file\t\topen\t\t\nAQ-N3\t2026-11-07\ttracks/../../etc/passwd\tescape\t\topen\t\t\nAQ-N4\t2026-11-07\tdocs/t.md#1\ttracked\t\topen\t\t\nAQ-N5\t2026-11-07\toperator:2026-11-07 session x\tchat\t\topen\t\t\nAQ-N6\t2026-11-07\tsession 2026-10-31 AQ-1 fix\tsession\t\topen\t\t\n' > "$M7/absorption_queue.tsv"
+q7="$(python3 "$Q" --live "$L7" 2>&1)"
+blk(){ printf '%s\n' "$q7" | awk -v id="($1)" 'index($0,id){f=1;next} /^- \[seed=/{f=0} f'; }
+p1="$(blk AQ-P1)"; p2="$(blk AQ-P2)"
+if printf '%s\n' "$p1" | grep -qF '  > 1. **first item** — body one' && printf '%s\n' "$p1" | grep -qF '  >    continued line' && ! printf '%s\n' "$p1" | grep -qF 'second item' \
+   && printf '%s\n' "$p2" | grep -qF 'second item' && ! printf '%s\n' "$p2" | grep -qF 'not this'; then ok "Q20 «3-1» carries item 1 of section 3 with its continuation, not item 2; «3» carries the section, not section 2"
+else bad "Q20"; printf '%s\n---\n%s\n' "$p1" "$p2" | sed 's/^/     /'; fi
+if blk AQ-N1 | grep -qF 'anchor «9-1» not found' && blk AQ-N2 | grep -qF '(source not found: tracks/_audit/gone.md)' && blk AQ-N3 | grep -qF 'source refused' \
+   && blk AQ-N4 | grep -qF 'read docs/t.md#1 in the clone' && [ "$(blk AQ-N4 | wc -l | tr -d ' ')" -eq 1 ] && ! printf '%s\n' "$q7" | grep -qF 'root:'; then ok "Q21 missing anchor · missing file · «..» · tracked path each say so and carry nothing"
+else bad "Q21"; printf '%s\n' "$q7" | grep -A1 -E 'AQ-N[1-4]' | sed 's/^/     /'; fi
+if blk AQ-N5 | grep -qF 'not a file' && blk AQ-N6 | grep -qF 'not a file'; then ok "Q22 operator:/session sources are «not a file — must not guess»"; else bad "Q22"; printf '%s\n' "$q7" | grep -A1 -E 'AQ-N[56]' | sed 's/^/     /'; fi
+
+# Q23 the two escape checks, each alone: a link inside tracks/ to an outside file (only the realpath check sees it) and a
+# «..» that resolves back inside (only the «..» check refuses it — conservative on purpose).
+printf '## 1. outside\n1. **secret** — from outside\n' > "$W/outside7.md"; ln -s "$W/outside7.md" "$A7/link.md"
+printf 'id\tadded\tsource\titem\tassets\tstatus\tclosed\tevidence\nAQ-L1\t2026-11-07\ttracks/_audit/link.md#1-1\tlink\t\topen\t\t\nAQ-L2\t2026-11-07\ttracks/_audit/../_audit/a.md#3-1\tdotdot\t\topen\t\t\n' > "$M7/absorption_queue.tsv"
+q7="$(python3 "$Q" --live "$L7" 2>&1)"
+if blk AQ-L1 | grep -qF 'is a link or resolves outside' && ! printf '%s\n' "$q7" | grep -qF 'from outside' && blk AQ-L2 | grep -qF 'not a relative path inside' && ! blk AQ-L2 | grep -qF 'first item'; then ok "Q23 a link out of tracks/ and a «..» path are refused, nothing carried"
+else bad "Q23"; printf '%s\n' "$q7" | grep -A1 -E 'AQ-L[12]' | sed 's/^/     /'; fi
+
+# Q24-Q26 codex R1: Q24 a nested «2.» before the section's own item 2 is not taken, and a continuation across one blank
+# line is kept; Q25 an ancestor-directory link is refused, and «./tracks/…» is the same untracked file (carried, never
+# «in the clone»); Q26 an untracked file outside tracks/ is carried, never claimed to be in the clone.
+printf '## 3. sec\n1. **one** — first\n   - sub\n     2. nested two\n\n   still item one after a blank\n2. **two** — the real item two\n## 4. next\n' > "$A7/n.md"
+mkdir -p "$W/outdir7"; printf '## 1. x\n1. **far** — through an ancestor link\n' > "$W/outdir7/f.md"; ln -s "$W/outdir7" "$L7/tracks/linkdir"
+printf 'untracked local\n' > "$L7/docs/local.md"
+printf 'id\tadded\tsource\titem\tassets\tstatus\tclosed\tevidence\nAQ-T1\t2026-11-07\ttracks/_audit/n.md#3-2\ttwo\t\topen\t\t\nAQ-T2\t2026-11-07\ttracks/_audit/n.md#3-1\tone\t\topen\t\t\nAQ-T3\t2026-11-07\ttracks/linkdir/f.md#1-1\tfar\t\topen\t\t\nAQ-T4\t2026-11-07\t./tracks/_audit/a.md#3-1\tdot\t\topen\t\t\nAQ-T5\t2026-11-07\tdocs/local.md\tlocal\t\topen\t\t\n' > "$M7/absorption_queue.tsv"
+q7="$(python3 "$Q" --live "$L7" 2>&1)"
+if blk AQ-T1 | grep -qF 'the real item two' && ! blk AQ-T1 | grep -qF 'nested two' && blk AQ-T2 | grep -qF 'still item one after a blank' && ! blk AQ-T2 | grep -qF 'real item two'; then ok "Q24 a nested «2.» never wins over item 2; a continuation across one blank line is kept"
+else bad "Q24"; printf '%s\n' "$q7" | grep -A6 -E 'AQ-T[12]' | sed 's/^/     /'; fi
+if blk AQ-T3 | grep -qF 'is a link or resolves outside' && ! printf '%s\n' "$q7" | grep -qF 'through an ancestor link' && blk AQ-T4 | grep -qF 'first item' && ! blk AQ-T4 | grep -qF 'in the clone'; then ok "Q25 an ancestor-directory link is refused; «./tracks/…» is carried, not «in the clone»"
+else bad "Q25"; printf '%s\n' "$q7" | grep -A3 -E 'AQ-T[34]' | sed 's/^/     /'; fi
+if blk AQ-T5 | grep -qF 'untracked local' && ! blk AQ-T5 | grep -qF 'in the clone' && printf '%s\n' "$q7" | grep -qF 'never paste it into a commit'; then ok "Q26 an untracked file outside tracks/ is carried, never claimed to be in the clone; the header says quoted text stays out of commits and PRs"
+else bad "Q26"; printf '%s\n' "$q7" | grep -A2 'AQ-T5' | sed 's/^/     /'; fi
+
+# Q27 an ancestor-directory link that resolves INSIDE the checkout — only the every-component link check refuses it
+ln -s _audit "$L7/tracks/alias7"
+printf 'id\tadded\tsource\titem\tassets\tstatus\tclosed\tevidence\nAQ-A1\t2026-11-07\ttracks/alias7/a.md#3-1\talias\t\topen\t\t\n' > "$M7/absorption_queue.tsv"
+q7="$(python3 "$Q" --live "$L7" 2>&1)"
+if blk AQ-A1 | grep -qF 'is a link or resolves outside' && ! blk AQ-A1 | grep -qF 'first item'; then ok "Q27 a link in an ancestor directory is refused even when it resolves inside"; else bad "Q27"; blk AQ-A1 | sed 's/^/     /'; fi
+
+[ $((pass+fail)) -eq 27 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 27"; exit 2; }
 echo "selfdev_queue lanes: $pass passed · $fail failed"
 [ "$fail" -eq 0 ]
