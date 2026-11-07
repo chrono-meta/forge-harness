@@ -57,6 +57,10 @@ ACCEPTED_ABSENT=(
   "scripts/ablation_nominate.py"
   "scripts/test_ablation_nominate_lanes.sh"
   "docs/ABLATION_CYCLE.md"
+  # 2026-11-07 — lease-record channel (AQ-20261107-11). It writes this hub's operator-local lease file; a consumer
+  #    has no such file and no such convention, so shipping it would ship a tool with nothing to act on.
+  "scripts/lease_line_apply.sh"
+  "scripts/test_lease_line_apply_lanes.sh"
   # 2026-11-07 — context-continuity read half (AQ-20261107-10/-12). Governor tools for this hub: the hook reads the
   #    hub's lease-file convention (CLAUDE.local.md «utterance» lines) and its snippet is not shipped either, so
   #    shipping the script alone would hand consumers a hook nothing calls. Ship both together, or neither.

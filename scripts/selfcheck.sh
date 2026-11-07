@@ -1182,6 +1182,8 @@ for _pair in \
   "scripts/selfdev_merge_tier.sh|scripts/test_selfdev_merge_tier_lanes.sh" \
   "scripts/selfdev_queue.py|scripts/test_selfdev_queue_lanes.sh" \
   "scripts/ablation_nominate.py|scripts/test_ablation_nominate_lanes.sh" \
+  `# 리스 기록 채널(2026-11-07). 세션은 초안, 기록은 운영자 — 에이전트 셸 거부 · 코드 불일치 무기록 · 원자적 교체.` \
+  "scripts/lease_line_apply.sh|scripts/test_lease_line_apply_lanes.sh" \
   `# 맥락 유지 읽는 절반(2026-11-07). 상태 주장 뒤 리스 줄 한 줄 · 착지 판정 — 못 읽음은 OK 가 아니다.` \
   "scripts/state_claim_recheck_hook.sh|scripts/test_state_claim_recheck_lanes.sh" \
   "scripts/governor_landing_check.py|scripts/test_governor_landing_check_lanes.sh" \
