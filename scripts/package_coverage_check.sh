@@ -61,6 +61,13 @@ ACCEPTED_ABSENT=(
   #    has no such file and no such convention, so shipping it would ship a tool with nothing to act on.
   "scripts/lease_line_apply.sh"
   "scripts/test_lease_line_apply_lanes.sh"
+  # 2026-11-07 — context-continuity read half (AQ-20261107-10/-12). Governor tools for this hub: the hook reads the
+  #    hub's lease-file convention (CLAUDE.local.md «utterance» lines) and its snippet is not shipped either, so
+  #    shipping the script alone would hand consumers a hook nothing calls. Ship both together, or neither.
+  "scripts/state_claim_recheck_hook.sh"
+  "scripts/test_state_claim_recheck_lanes.sh"
+  "scripts/governor_landing_check.py"
+  "scripts/test_governor_landing_check_lanes.sh"
   # 2026-10-19 — cartridge admission checker and its lanes. Not shipped yet on purpose: publishing cartridges
   #    (fh-cartridges) is an open operator decision, and shipping the checker would put it in the next npm
   #    release by default. selfcheck resolves its row as SKIP («not in files[], and absent») on a consumer tree.

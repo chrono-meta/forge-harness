@@ -625,6 +625,13 @@ zsh·ksh는 다른 문법으로 거부한다. Mac에서는 Linux 전용 프로�
 - **질문하기 ↔ external-grounding 은 같은 것의 양면**이다: 밖에 묻는다 = 밖에 근거를 둔다.
   ⚠️ 이 엔진의 **수용 절반이 비어 있다** — 묻는 경로는 있고 *들어온 통찰을 자산화하는*
   경로가 약하다(`[[feedback_operator_insight_must_become_asset]]`).
+- **맥락 유지 ↔ 쓰기와 읽기의 양면**이다. ⚠️ 이 엔진은 **쓰는 절반은 있고, 읽는 절반과 시점이 약하다** —
+  발화 기록 · 체크리스트 · 압축 봉인 · 카드 · 리스 기록은 쌓이는데, 판단 순간에 그것을 안 연다(격리 실측
+  2026-11-07: 기록이 있어도 지시가 없으면 0/5 열람 · 5/5 낡은 주장, `tracks/_meta/measure_reread_before_state_claim_2026-11-07.md`),
+  압축이 착지 전에 온다, 상위가 하위 원문을 안 읽는다. 보강 넷(AQ-20261107-9~12): 상태 주장 사후 대조 훅
+  `scripts/state_claim_recheck_hook.sh` · 착지 후 압축 `governor_landing_before_compact.md` · 주간 감사의 하위 세션
+  원문 감사(`operations.md` §Weekly Improvement Cycle 3b) · 리스 기록은 세션이 초안만 내고 운영자가 넣는 채널
+  (AQ-20261107-11 — 리스/권한 경로라 별도 PR, 머지는 운영자).
 
 ---
 

@@ -29,7 +29,7 @@ LINE="추가 utterance 2026-11-07 «머지해» (물음: #2 머지할까) ⇒ #2
 echo "D1 draft"
 mk; before="$(h)"
 out="$(bash "$S" draft --block "2026-11-07 세션" --line "$LINE" --why "q")"; rc=$?
-DR="$(ls "$T/drafts"/*.lease 2>/dev/null | head -1)"
+DR="$(find "$T/drafts" -name "*.lease" -type f -print 2>/dev/null)"; DR="${DR%%$'\n'*}"
 [ "$rc" -eq 0 ] && [ -n "$DR" ] && [ "$(h)" = "$before" ] && ok "draft file · lease unchanged" || ko "D1 rc=$rc"
 
 echo "K1–K5 check"
@@ -106,7 +106,9 @@ if command -v python3 >/dev/null 2>&1; then
   echo "A3 terminal + right code"
   mk; code="$(printf '%s' "            $LINE" | shasum -a 256 | cut -c1-4)"
   ptyrun "$code" env -u CLAUDECODE bash "$S" apply "$DR" > "$T/a3.out" 2>&1; a3rc=$?
-  if [ "$a3rc" -eq 0 ] && sed -n 7p "$T/lease.md" | grep -qF "$LINE" && sed -n 8p "$T/lease.md" | grep -q '^제외' && ls "$T"/lease.md.bak.* >/dev/null 2>&1; then
+  l7="$(sed -n 7p "$T/lease.md")"; l8="$(sed -n 8p "$T/lease.md")"
+  bak_n="$(find "$T" -maxdepth 1 -name 'lease.md.bak.*' | wc -l | tr -d ' ')"
+  if [ "$a3rc" -eq 0 ] && [ "$l7" = "            $LINE" ] && [ "${l8#제외}" != "$l8" ] && [ "$bak_n" -ge 1 ]; then
     ok "inserted at L7 before 제외 · backup present"
   else ko "A3 $(tr -d '\r' < "$T/a3.out" | tail -2)"; fi
   echo "A4 terminal + wrong code"

@@ -40,6 +40,22 @@ The hub audits and improves itself weekly.
    they targeted, counting only cases where the unchanged arm met that behaviour (arXiv:2610.34938) — recording a fix
    and its anchor is not evidence that either works.
 3. **Carry-over re-check before copying.** Every carried-over / unresolved item from the previous audit is re-confirmed against a primary source (`gh pr view` · `git log -S` · a grep of the file it names) *before* it is copied forward, and the command used is written next to it together with what it returned for the current state (a `git log -S` hit shows history, not current status). Cannot confirm → mark `UNVERIFIED`; never promote it to "awaiting operator decision". (2026-10-11: a Haiku arm copied the 09-24 carry-over list without checking current state and re-reported an already-closed awesome-list PR and a nested-repo gitlink as pending; the governor corrected both.)
+3b. **Child-session raw audit (2026-11-07, AQ-20261107-9).** The top governor stays thin and the work runs in
+   child sessions, so the 400-character reports it relays are summaries the child wrote about itself. Read the
+   window's raw record instead: ① `python3 scripts/correction_moments.py --since <window start> --all` — every
+   operator correction cue in the utterance ledgers, root and child sessions alike (cue-word recall only;
+   the ledgers can hold in-house context, so the output never goes to another model) ② for each child session
+   that ran in the window, open its transcript (`mcp__ccd_session_mgmt__search_session_transcripts` with the
+   hit's words, or the CLI transcript under `~/.claude/projects/<hub>/`) and its merged diff, and read the
+   moment around each hit: a retry, a correction the child absorbed without recording, a judgment it folded
+   toward passing ③ each finding that names a harness gap → one absorption-queue row (`scripts/absorption_queue.py`)
+   with the transcript as its source. Write both counts in the audit — hits found, rows landed — because «0 rows»
+   with no hit count cannot be told apart from «not run». First run 2026-11-07 (window 10-31..11-07): 19 cue hits ·
+   1 recurring pair (word overlap only, judged not one rule) · 0 new rows — the one state-claim miss
+   («fh가 물어본것에 회신을 한건데 왜 확인을 안하는거지», 11-02) is the class AQ-20261107-12 already closes;
+   the rest were product requests or UI observations. Step ② was only probed in that run: the transcript search
+   returns one snippet per session (a locator, not a reader), so the moment-level read needs the CLI transcript
+   JSONL — named, not done. Record: `tracks/_meta/g1_child_audit_run_2026-11-07.md`.
 4. Write `tracks/_audit/weekly_audit_YYYY-MM-DD.md` mirroring the previous audit file's format (frontmatter + activity table + 🟥🟧🟩 + pattern table — no separate template file exists)
 5. Propose 3-tier improvements (🟥mandatory/🟧strong/🟩recommended)
 
