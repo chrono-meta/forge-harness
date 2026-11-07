@@ -5411,3 +5411,27 @@
   outcome: "3/3 wrote the vector R1 [new=3, fixed=3] → R2 [new=0, fixed=1] and ran scripts/convergence_verdict.py; 3/3 NOT-CONVERGED (correct — the R2 fix is unverified)"
   evidence: "FH PR #1034 body · marker feat/cartridge-convergence-verdict"
   tokens: "162938 + 162872 + 163094"
+- date: 2026-11-07
+  agent: "fh-commons:{designer,ux-writer,fe-dev,be-dev,qa,a11y}-lens (sonnet) ×6 — persona-cast first field use on FoD gate surfaces (purpose: independence)"
+  task: "review mode, stance neutral, frozen 6 files of FoD c2cd027 (checkpoint card · settings gate view · checkpoint store); prompt = paths + stance only"
+  outcome: "all 6 earned (unique ≥1 each, decorative 0) — cast graduation condition met; 9 cross-seat convergent groups; 1 false finding (be-dev «ran time units») dropped after source check (gate_hook.py:14343 converts to ms). Led to FoD branch fix/checkpoint-card-silent-states"
+  evidence: "tracks/_meta/pcast_fod_gate_ui_2026-11-07.md"
+  tokens: "104653 + 105419 + 116925 + 115524 + 114136 + 115474"
+- date: 2026-11-07
+  agent: "general-purpose (sonnet) — YouTube _dN-RMh0Tl0 insight digest (purpose: context)"
+  task: "fetch captions with yt-dlp, write Korean digest mapping each claim to what FH already has"
+  outcome: "ko auto-captions read (sha256 5dced25d…); screen demos UNMEASURED; most claims already in FH. Governor checked its top candidate in source: the change-size cap already exists (selfdev_merge_tier.sh SELFDEV_MAX_LINES 300) — subagent had marked it «부분/미확인» from grep counts only"
+  evidence: "tracks/_meta/video_insights__dN-RMh0Tl0_2026-11-07.md §거버너 확인"
+  tokens: "170849"
+- date: 2026-11-07
+  agent: "general-purpose (sonnet) — harness-100 recon (purpose: context)"
+  task: "verify licence, inventory 100 harnesses, map FH overlap, rank first cartridge candidates; read-only shallow clone"
+  outcome: "Apache-2.0; 100 harnesses x2 languages, all markdown prompts, no tests; overlap partial 13 / full 0; top candidates 25 · 62 · 39 — two built (cart-changelog, cart-adr)"
+  evidence: "tracks/_meta/harness100_recon_2026-11-07.md"
+  tokens: "177819"
+- date: 2026-11-07
+  agent: "general-purpose (sonnet) x12 — cart-changelog A/B C3 arms (purpose: independence)"
+  task: "write CHANGELOG_DRAFT.md for a fixture repo; arm B given the cartridge skill path; per-run repo copies"
+  outcome: "12/12 ran; both arms 26 by the implemented scorer; INCONCLUSIVE under all three readings of S4; scorer word-list defect found after the runs and reported"
+  evidence: "tracks/_meta/ab_cart_changelog_results_2026-11-07.md"
+  tokens: "~138k-140k each"
