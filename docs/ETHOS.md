@@ -149,7 +149,7 @@ The honesty is not a disclaimer bolted on at the end. It *is* the positioning.
 
 > **Quality gates that catch you, not just your agent.**
 
-That sentence is the **second** of two lines that open the README, and it was **chosen against two
+That sentence was the **second** of two lines that opened the README until 2026-11-07 (see the dated record at the end of this section — it now sits in «Who it is for»), and it was **chosen against two
 alternatives**. It was the first line until 2026-08-28; see §"Why a second line was added above it"
 below — a second line now sits above it, and that section records the blind cold read that
 chose its wording (and killed the first attempt). Both
@@ -228,3 +228,5 @@ author's own line is.
 figure is measured; "which sentence reads better" is not, and no reader study was run. What is being
 preserved here is *why the choice was made*, so a future rewrite argues with the reason rather than
 rediscovering it.
+
+**Moved, 2026-11-07 — from the slogan position into the body.** The centered bold line under the README's opening blockquote read as a marketing line dropped mid-flow (operator); the Korean «통과해야 하는» also leaned further into slogan than the English «catch». The claim is unchanged — the gates catch the person, not only the agent — and it now sits as one plain sentence in «Who it is for» in all four READMEs, carrying its evidence (docs/GATE_DAY.md §2: on that day the gates blocked the author seven times; author self-catches zero).
