@@ -1,0 +1,43 @@
+{
+  "_README": [
+    "State-claim recheck hook snippet — TRACKED, so the registration arrives with a clone (every",
+    ".claude/settings*.json path is gitignored). Two halves of one hook, scripts/state_claim_recheck_hook.sh:",
+    "  Stop             → the answer just given names «#N» next to a merge / permission / «morning» word and",
+    "                     the lease file (CLAUDE.local.md) has an «utterance» line naming #N → one pending note.",
+    "  UserPromptSubmit → the pending note is injected once as additionalContext, then removed.",
+    "",
+    "WHY. tracks/_meta/measure_reread_before_state_claim_2026-11-07.md, isolated 3rd round (15 Sonnet runs):",
+    "with the newer lease line present and no instruction, 5/5 relays repeated the stale state and opened",
+    "the file 0 times; an in-the-moment instruction gave 5/5 correct. A resident memory rule had no effect.",
+    "",
+    "NEVER BLOCKS. exit 0 always; silent when there is no lease file, no match, or no python3.",
+    "NOT SHIPPED to npm consumers yet (not in package.json files[]) — the lease-file convention is this",
+    "hub's. Merge the hooks below into .claude/settings.json by hand or through install-wizard."
+  ],
+  "project_settings_json": {
+    "hooks": {
+      "Stop": [
+        {
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bash \"${CLAUDE_PROJECT_DIR:-$HOME/projects/forge-harness}/scripts/state_claim_recheck_hook.sh\" stop",
+              "timeout": 10
+            }
+          ]
+        }
+      ],
+      "UserPromptSubmit": [
+        {
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bash \"${CLAUDE_PROJECT_DIR:-$HOME/projects/forge-harness}/scripts/state_claim_recheck_hook.sh\" prompt",
+              "timeout": 5
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
