@@ -19,7 +19,7 @@ Every source prints a count or `UNMEASURED (<reason>)` — an unreadable source 
 USAGE  python3 scripts/selfdev_queue.py --live <forge-harness checkout> [--checklists N] [--date YYYY-MM-DD]
 OUTPUT markdown on stdout; rc 0 when every source was read, 3 when ≥1 source is UNMEASURED.
 """
-import argparse, datetime, glob, os, re, subprocess, sys
+import argparse, datetime, glob, json, os, re, subprocess, sys
 
 OPEN_MARKS = ("🟡", "⬜", "🔴", "⏸", "❌")
 
@@ -234,6 +234,38 @@ def _absorption_detail(live, src, text, assets):
     return out
 
 
+ABLATION_STEPS = ("procedure = scripts/probe_scope_check.sh header steps 1-7: calibrate first (scripts/ablation_calibrate.sh "
+                  "rc 0) · two arms (A unchanged, B with the section cut) in separate dirs outside the repo "
+                  "(scripts/sim_isolated_run.sh) · Sonnet · the probe's own question · reps >= 3 per arm · on equal "
+                  "outcomes a must-move control (arm A with the answer deleted) must score differently, else "
+                  "INSTRUMENT-UNCONFIRMED. No loss → one deletion PR titled «selfdev: ablation — <section>» with the "
+                  "verdict table; it is seed=ablation, never auto-merged — the operator decides what goes. Loss → add a "
+                  "KEEP row to .claude/regression/ablation_verdicts.md so it is not nominated again.")
+
+
+def src_ablation(live, date):
+    """2026-11-07 (operator «고이지 않고 선두에서 계속 나아가면서»): the only source that asks «what can go now».
+    One candidate a night from scripts/ablation_nominate.py (probe-backed sections only; gates and ledger KEEP/CUT
+    excluded). seed=ablation: never auto-merge-eligible, whatever the builder writes."""
+    nom = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ablation_nominate.py")
+    if not os.path.exists(nom):
+        return None, "ablation_nominate.py missing"
+    r = subprocess.run([sys.executable, nom, "--repo", live, "--date", date, "--json"], capture_output=True, text=True)
+    if r.returncode not in (0, 1) or not r.stdout.strip():   # codex R1: only 0 (nominated) and 1 (none eligible) are answers
+        return None, "ablation_nominate.py: %s" % ((r.stdout or r.stderr).strip().splitlines() or ["no output"])[-1][:160]
+    try:
+        d = json.loads(r.stdout)
+    except ValueError:
+        return None, "ablation_nominate.py printed no JSON"
+    if not d.get("nominated"):
+        return [], None if r.returncode == 1 else "unexpected"
+    detail = ["probes: " + " · ".join("%s («%s» → %s)" % (p["id"], p["input"][:80], p["expected"][:120]) for p in d["probes"]),
+              "pool: %d eligible of %d scopes (excluded gate %d · ledger %d · malformed %d)" % (
+                  d["eligible"], d["scopes"], d["excluded"]["gate"], d["excluded"]["ledger"], d["excluded"]["malformed"]),
+              ABLATION_STEPS]
+    return [{"seed": "ablation", "src": "ablation:%s" % date, "text": "test removing «%s»" % d["nominated"], "detail": detail}], None
+
+
 def src_card(live):
     p = os.path.join(live, "tracks/_meta/reference_next_session_starter.md")
     if not os.path.exists(p):
@@ -306,11 +338,13 @@ def main(argv):
         ("session card [planned]", src_card(live)),
         ("frontier digest candidates (%s)" % a.date, src_digest(live, a.date)),
         ("correction moments", src_corrections(live)),
+        ("ablation candidate (one)", src_ablation(live, a.date)),
     ]
     unmeasured = 0
     print("# self-dev queue — %s\n" % a.date)
     print("seed=human → auto-merge eligible (still subject to selfdev_merge_tier.sh) · "
-          "seed=candidate → PR at most, operator confirms · seed=recheck → open only in an older "
+          "seed=candidate → PR at most, operator confirms · seed=ablation → a measured deletion PR at most, never "
+          "auto-merged (the operator decides what goes) · seed=recheck → open only in an older "
           "checklist, may already be done by a later session: verify it is still open first, never "
           "auto-merge · owner=operator rows are the "
           "operator's to do, not the loop's. Lines that start with «  > » are QUOTED SOURCE TEXT "
