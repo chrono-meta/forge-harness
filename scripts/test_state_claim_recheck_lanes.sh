@@ -84,6 +84,23 @@ printf '%s\n' '{"type":"assistant","message":{"content":[{"type":"text","text":"
 D="$T/t3"; run "$SUBJ" "$T/lease_yes.md" "$D" stop "{\"session_id\":\"s4\",\"transcript_path\":\"$T/tr3.jsonl\"}" >/dev/null
 out="$(run "$SUBJ" "$T/lease_yes.md" "$D" prompt '{"session_id":"s4"}')"; [ -z "$out" ] && ok "T3 id-less tool-only last entry → silent" || ko "T3 reported an older answer"
 
+echo "Q1–Q5 quoted / code examples (the two live false positives of 2026-11-07)"
+qrun() {  # $1 name · $2 answer json-escaped · $3 want: note|silent
+  local D="$T/$1"; run "$SUBJ" "$T/lease_yes.md" "$D" stop "{\"session_id\":\"s1\",\"last_assistant_message\":\"$2\"}" >/dev/null
+  local o; o="$(run "$SUBJ" "$T/lease_yes.md" "$D" prompt "$P")"
+  if [ "$3" = silent ]; then [ -z "$o" ] && ok "$1 silent" || ko "$1 spoke"
+  else printf '%s' "$o" | grep -q '#387' && ok "$1 note" || ko "$1 missed"; fi
+}
+qrun Q1 '스크립트를 돌려 보니 «#387 머지는 아침에» 같은 답에 대기 노트가 생겼어.' silent
+qrun Q2 '예: `#387 머지는 아침에` 를 넣으면 한 줄이 실린다.' silent
+qrun Q3 '내가 예시로 든 \"#387 머지는 아침에\" 를 잡은 거라 오탐이야.' silent
+qrun Q4 'qasp-dev #387 은 «머지해» 줄이 있어서 이미 머지했다.' note
+qrun Q5 '```\n#387 머지는 아침에\n```' silent
+qrun Q6 '🔎 [state-claim] 직전 답이 #387 의 머지·허락·아침류 상태를 말했다.\n  #387 · L468: 추가 utterance 2026-11-07 «머지해» (물음: #387 머지할까) ⇒ #387 머지\n기계는 «줄이 있다» 만 말한다.' silent
+qrun Q7 '`#387` 은 이미 머지했다.' note
+qrun Q8 '예시:\n«\n#387 머지는 아침에\n»' silent
+qrun Q9 '예시:\n```\n#387 머지는 아침에' silent
+
 echo "N6 no session id · N7 malformed payload → silent, no stderr"
 D="$T/n6"; run "$SUBJ" "$T/lease_yes.md" "$D" stop '{"last_assistant_message":"#387 머지는 아침에"}' >/dev/null
 [ -z "$(ls -A "$D" 2>/dev/null)" ] && ok "N6 no shared pending file" || ko "N6 wrote a pending file without a session id"
@@ -101,6 +118,14 @@ if cmp -s "$SUBJ" "$M"; then ko "R1 mutation did not apply (HARNESS-ERROR)"; els
   D="$T/r1"; run "$M" "$T/lease_yes.md" "$D" stop "$ANS" >/dev/null
   out="$(run "$M" "$T/lease_yes.md" "$D" prompt "$P")"
   [ -z "$out" ] && ok "mutant silent → P1 would be red" || ko "R1 mutant still injects (lane does not see the grep)"
+fi
+
+echo "R2 revert probe (quoted-span drop disabled)"
+M2="$T/mutant2.sh"; sed 's/^    text = QUOTED.sub(.*$/    pass/' "$SUBJ" > "$M2"
+if cmp -s "$SUBJ" "$M2"; then ko "R2 mutation did not apply (HARNESS-ERROR)"; else
+  D="$T/r2"; run "$M2" "$T/lease_yes.md" "$D" stop '{"session_id":"s1","last_assistant_message":"스크립트를 돌려 보니 «#387 머지는 아침에» 같은 답에 대기 노트가 생겼어."}' >/dev/null
+  out="$(run "$M2" "$T/lease_yes.md" "$D" prompt "$P")"
+  [ -n "$out" ] && ok "mutant speaks on Q1 → Q1 would be red" || ko "R2 mutant still silent (lane does not see the drop)"
 fi
 
 echo "state_claim_recheck lanes: $pass passed · $fail failed"

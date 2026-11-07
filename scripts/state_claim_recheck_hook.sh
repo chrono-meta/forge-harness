@@ -100,6 +100,20 @@ def main():
     WORDS = re.compile(r"머지|병합|허락|승인|아침|발행|다시 묻|묻는다|리스|merge|approv|publish|morning|lease", re.I)
     # A number counts only when it shares a clause with a state word («Merge #123 tomorrow. Read the #456
     # diff.» → #123 only). Clauses split on . ! ? ; and line breaks; the clause just before a state word also counts.
+    # Quoted or code spans that carry a #N are examples, citations or this hook own echoed note, not the
+    # answer stating a status (measured 2026-11-07: both first live firings were an example in «…»). Only the
+    # spans holding a #N are dropped, so a state word quoted elsewhere still counts. Named limit: a real
+    # status claim written inside quotes is no longer seen.
+    # A span that is one token («#387», `#387`) is a name, not an example — it stays, so «`#387` merged.»
+    # still counts. Quotes may span lines (up to 400 chars); an unclosed code fence runs to the end.
+    # Named limit: nested quotes of the same kind end at the first closer.
+    QUOTED = re.compile(r"```.*?(?:```|\Z)|`[^`\n]*`|«[^»]{0,400}»|“[^”]{0,400}”|\"[^\"]{0,400}\"|「[^」]{0,400}」", re.S)
+    def _drop(m):
+        s = m.group(0)
+        return " " if re.search(r"#\d", s) and re.search(r"\s", s.strip("`«»“”\"「」")) else s
+    text = QUOTED.sub(_drop, text)
+    NOTE = re.compile(r"\[state-claim\]|^\s*#\d+ · L\d+: |^\s*… 그 밖 \d+줄|기계는 «줄이 있다»")
+    text = "\n".join(l for l in text.split("\n") if not NOTE.search(l))
     nums = set()
     clauses = re.split(r"[.!?。;；]+|\n+", text)
     for k, clause in enumerate(clauses):
