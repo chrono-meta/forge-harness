@@ -24,6 +24,8 @@ ok()  { pass=$((pass+1)); echo "  ✅ $1"; }
 bad() { fail=$((fail+1)); echo "  ❌ $1"; }
 
 L="$W/live"; M="$L/tracks/_meta"; mkdir -p "$M" "$L/scripts"
+mkdir -p "$L/.claude/regression"; printf '| Probe ID | Input | Expected | Scope | Class |\n|---|---|---|---|---|\n| `P-1` | `x` | does x | CLAUDE.md §Alpha | mandatory-pass |\n' > "$L/.claude/regression/probes.md"   # 2026-11-07: the ablation source needs a probe table
+printf '# r\n## Alpha\nx\n' > "$L/CLAUDE.md"; printf '| Section | Verdict |\n|---|---|\n' > "$L/.claude/regression/ablation_verdicts.md"   # the section must exist and a ledger must be there
 HDR='| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안(이번 세션 vs 이월) |
 |---|---|---|---|---|---|---|'
 printf '%s\n| 1 | 11-01 | 레인 하나 더 달자 | 🟡PARTIAL | x | 레인 미작성 | 이월 |\n| 2 | 11-01 | 문서 고치자 | 🟡PARTIAL | x | 반쯤 | 이월 |\n| 3 | 11-01 | 플러그인 캐시 갱신 | 🟡PARTIAL | x | 운영자 몫 | 아침 |\n' "$HDR" > "$M/session_checklist_2026-11-01_a.md"
@@ -37,7 +39,7 @@ printf 'import sys\nprint("# correction moments — stub")\nprint("cue hits=2")\
 out="$(python3 "$Q" --live "$L" --date 2026-11-04 2>&1)"; rc=$?
 if printf '%s\n' "$out" | grep -q '문서 고치자' && ! printf '%s\n' "$out" | grep -q '레인 하나 더 달자'; then ok "Q1 newer DONE suppresses older open; other open row kept"; else bad "Q1"; printf '%s\n' "$out" | sed 's/^/     /'; fi
 if printf '%s\n' "$out" | grep '플러그인 캐시' | grep -q 'owner=operator'; then ok "Q2 operator-owned row tagged"; else bad "Q2"; fi
-if [ "$rc" -eq 0 ] && [ "$(printf '%s\n' "$out" | grep -cE '^## .* — [0-9]+$')" -eq 5 ] \
+if [ "$rc" -eq 0 ] && [ "$(printf '%s\n' "$out" | grep -cE '^## .* — [0-9]+$')" -eq 6 ] \
    && printf '%s\n' "$out" | grep -q '^## absorption queue (open) — 1$' \
    && printf '%s\n' "$out" | grep -q '^## session card \[planned\] — 1$' \
    && printf '%s\n' "$out" | grep -q '^## frontier digest candidates (2026-11-04) — 2$'; then ok "Q3 all sources counted, rc 0"; else bad "Q3 rc=$rc"; printf '%s\n' "$out" | grep '^## ' | sed 's/^/     /'; fi

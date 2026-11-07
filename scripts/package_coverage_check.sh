@@ -52,6 +52,11 @@ ACCEPTED_ABSENT=(
   "scripts/test_selfdev_merge_tier_lanes.sh"
   "scripts/test_selfdev_queue_lanes.sh"
   "scripts/test_selfdev_loop_lanes.sh"
+  # 2026-11-07 — the self-dev loop's ablation nominator and its lanes. Same loop, same scope as above; whether the
+  #    public cycle (docs/ABLATION_CYCLE.md, not shipped either) goes to npm is an open operator decision.
+  "scripts/ablation_nominate.py"
+  "scripts/test_ablation_nominate_lanes.sh"
+  "docs/ABLATION_CYCLE.md"
   # 2026-10-19 — cartridge admission checker and its lanes. Not shipped yet on purpose: publishing cartridges
   #    (fh-cartridges) is an open operator decision, and shipping the checker would put it in the next npm
   #    release by default. selfcheck resolves its row as SKIP («not in files[], and absent») on a consumer tree.
