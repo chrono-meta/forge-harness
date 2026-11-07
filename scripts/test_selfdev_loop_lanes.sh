@@ -179,6 +179,41 @@ done
 if [ "${a18:-0}" = 1 ] && [ "${b18:-0}" = 1 ]; then ok "LP18 a quiet build carries the builder's reason into the report; a build that opened #77 is counted, no «no PR» block (control)"
 else bad "LP18 (reason carried=${a18:-?} · control=${b18:-?})"; fi
 
-[ $((pass+fail)) -eq 18 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 18"; exit 2; }
+# LP19: subscription only — a key in the caller's env never reaches the builder unless the switch keeps
+# it; the report says which happened and never prints the value. Control arms: switch on → the builder
+# sees the key and the report says «bills the API»; no key at all → no NOTE line.
+setup p19; D19="$W/p19"
+sed -i.bak 's#"pr list|number,headRefName") echo 5 ;;#"pr list|number,headRefName") echo 5 ;;\
+  "pr list|number,headRefName,createdAt") : ;;#' "$D19/bin/gh"
+grep -q 'createdAt") :' "$D19/bin/gh" || { echo "HARNESS-ERROR: LP19 fixture edit did not apply"; exit 2; }
+printf '#!/usr/bin/env bash\nif [ -n "${ANTHROPIC_API_KEY:-}" ]; then echo "builder saw key: yes"; else echo "builder saw key: no"; fi\nif [ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]; then echo "builder saw token: yes"; else echo "builder saw token: no"; fi\necho "env dump: ${ANTHROPIC_API_KEY:-} / ${ANTHROPIC_AUTH_TOKEN:-}"\nexit 0\n' > "$D19/bin/claude-stub"; chmod +x "$D19/bin/claude-stub"
+FAKE=lane-fake-value-19
+for arm in strip keep none token overlap; do
+  rm -f "$D19/live/tracks/_meta/selfdev/report_$DATE.md" "$D19/live/tracks/_meta/logs/selfdev_loop_$DATE.log"
+  rm -rf "$D19/clone"; git clone -q "$D19/origin.git" "$D19/clone" 2>/dev/null
+  case "$arm" in
+    strip) KEYENV="ANTHROPIC_API_KEY=$FAKE SELFDEV_ALLOW_API_KEY=" ;;   # codex R1: never inherit the switch from the caller
+    token) KEYENV="ANTHROPIC_AUTH_TOKEN=$FAKE SELFDEV_ALLOW_API_KEY=" ;;
+    overlap) KEYENV="ANTHROPIC_API_KEY=$FAKE ANTHROPIC_AUTH_TOKEN=$FAKE-tail-secret SELFDEV_ALLOW_API_KEY=1" ;;   # codex R2: longest first
+    keep)  KEYENV="ANTHROPIC_API_KEY=$FAKE SELFDEV_ALLOW_API_KEY=1" ;;
+    none)  KEYENV="SELFDEV_ALLOW_API_KEY=" ;;
+  esac
+  OUT=$(cd "$D19/live" && env -u ANTHROPIC_API_KEY -u ANTHROPIC_AUTH_TOKEN PATH="$D19/bin:$PATH" SELFDEV_DRY_RUN=0 SELFDEV_NO_MERGE=1 FH_SELFDEV_DIR="$D19/clone" FD_CLAUDE_BIN="$D19/bin/claude-stub" \
+        $KEYENV bash scripts/selfdev_loop.sh 2>&1); RC=$?
+  REP="$(cat "$D19/live/tracks/_meta/selfdev/report_$DATE.md" 2>/dev/null)"
+  ALL="$(printf '%s\n' "$REP"; cat "$D19/live/tracks/_meta/logs/selfdev_loop_$DATE.log" 2>/dev/null)"
+  leak=0; printf '%s\n' "$ALL" "$OUT" | grep -qE "$FAKE|tail-secret" && leak=1
+  case "$arm" in
+    strip) printf '%s\n' "$ALL" | grep -qF 'builder saw key: no' && printf '%s\n' "$REP" | grep -qF 'unset for the builder (subscription only' && [ "$leak" = 0 ] && s19=1 || { s19=0; printf '%s\n' "$REP" | tail -6 | sed 's/^/       /'; } ;;
+    keep)  printf '%s\n' "$ALL" | grep -qF 'builder saw key: yes' && printf '%s\n' "$ALL" | grep -qF 'env dump: *** / ' && printf '%s\n' "$REP" | grep -qF 'this build bills the API' && [ "$leak" = 0 ] && k19=1 || { k19=0; printf '%s\n' "$REP" | tail -6 | sed 's/^/       /'; } ;;
+    none)  printf '%s\n' "$ALL" | grep -qF 'builder saw key: no' && ! printf '%s\n' "$REP" | grep -qF 'ANTHROPIC_API_KEY' && n19=1 || { n19=0; printf '%s\n' "$REP" | tail -6 | sed 's/^/       /'; } ;;
+    overlap) printf '%s\n' "$ALL" | grep -qF 'env dump: *** / ***' && [ "$leak" = 0 ] && o19=1 || { o19=0; printf '%s\n' "$ALL" | grep 'env dump' | sed 's/^/       /'; } ;;
+    token) printf '%s\n' "$ALL" | grep -qF 'builder saw token: no' && printf '%s\n' "$REP" | grep -qF -- '- NOTE: ANTHROPIC_AUTH_TOKEN was set' && [ "$leak" = 0 ] && t19=1 || { t19=0; printf '%s\n' "$REP" | tail -6 | sed 's/^/       /'; } ;;
+  esac
+done
+if [ "${s19:-0}" = 1 ] && [ "${k19:-0}" = 1 ] && [ "${n19:-0}" = 1 ] && [ "${t19:-0}" = 1 ] && [ "${o19:-0}" = 1 ]; then ok "LP19 a caller's ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN is unset for the builder and named (value never printed); SELFDEV_ALLOW_API_KEY=1 keeps it, says «bills the API» and the builder's own echo of it is redacted (control); no key → no line (control)"
+else bad "LP19 (strip=${s19:-?} · keep=${k19:-?} · none=${n19:-?} · token=${t19:-?} · overlap=${o19:-?})"; fi
+
+[ $((pass+fail)) -eq 19 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 19"; exit 2; }
 echo "selfdev_loop lanes: $pass passed · $fail failed"
 [ "$fail" -eq 0 ]
