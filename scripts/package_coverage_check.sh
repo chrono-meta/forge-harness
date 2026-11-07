@@ -57,6 +57,10 @@ ACCEPTED_ABSENT=(
   "scripts/ablation_nominate.py"
   "scripts/test_ablation_nominate_lanes.sh"
   "docs/ABLATION_CYCLE.md"
+  # 2026-11-07 — lease-record channel (AQ-20261107-11). It writes this hub's operator-local lease file; a consumer
+  #    has no such file and no such convention, so shipping it would ship a tool with nothing to act on.
+  "scripts/lease_line_apply.sh"
+  "scripts/test_lease_line_apply_lanes.sh"
   # 2026-10-19 — cartridge admission checker and its lanes. Not shipped yet on purpose: publishing cartridges
   #    (fh-cartridges) is an open operator decision, and shipping the checker would put it in the next npm
   #    release by default. selfcheck resolves its row as SKIP («not in files[], and absent») on a consumer tree.

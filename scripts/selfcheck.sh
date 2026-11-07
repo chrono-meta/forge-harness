@@ -1182,6 +1182,8 @@ for _pair in \
   "scripts/selfdev_merge_tier.sh|scripts/test_selfdev_merge_tier_lanes.sh" \
   "scripts/selfdev_queue.py|scripts/test_selfdev_queue_lanes.sh" \
   "scripts/ablation_nominate.py|scripts/test_ablation_nominate_lanes.sh" \
+  `# 리스 기록 채널(2026-11-07). 세션은 초안, 기록은 운영자 — 에이전트 셸 거부 · 코드 불일치 무기록 · 원자적 교체.` \
+  "scripts/lease_line_apply.sh|scripts/test_lease_line_apply_lanes.sh" \
   "scripts/selfdev_loop.sh|scripts/test_selfdev_loop_lanes.sh" \
   "scripts/lane_gap_hint.py|scripts/test_lane_gap_hint_lanes.sh" \
   "scripts/persona_cast_merge.py|scripts/test_persona_cast_merge_lanes.sh" \
