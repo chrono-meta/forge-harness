@@ -26,14 +26,15 @@ every session: rules it follows, checks that block bad changes, and a record of 
 
 > Stop re-explaining your rules to your agent. Put them in the project.
 
-<!-- The two lines above and below were chosen, not drafted. Before rewriting them, read docs/ETHOS.md
-     §"Who this line is for" — two rejected alternatives are recorded there with why. -->
-<p align="center"><b>Quality gates that catch you, not just your agent.</b></p>
-
+<!-- The line above was chosen, not drafted. Its companion — «quality gates that catch you, not just your
+     agent» — sat below it as a centered line until 2026-11-07 and now lives as one sentence with its evidence in
+     «Who it is for». Before rewriting either, read docs/ETHOS.md §"Who this line is for". -->
 ## Who it is for, and what you get
 
 For people who use Claude Code (or another coding agent) on real projects and are tired of repeating
 themselves or of finding out too late that a change was wrong. You get three things:
+
+The gates catch you, not only your agent: on 2026-08-22 they blocked the author seven times, and the author caught none of those first ([one day of gate blocks](docs/GATE_DAY.md)).
 
 | You get | In practice | Evidence |
 |---|---|---|
