@@ -2,6 +2,16 @@
 
 ### [Unreleased]
 
+### [3.39.1] — 2026-11-08
+
+Documentation-only patch.
+
+### Changed
+- `knowledge/shared/harness-core/fh_module_contract.md`: a short glossary (module = cartridge, the unit with a manifest; skill/agent = what a module provides; plugin = the distribution unit; one spelling `UNMEASURED`), a rule that a command which exits 0 on a negative finding is a measurement engine and not a `provides.verdicts` entry, and a note that exit code 3 means different things in different scripts (#1054).
+- `knowledge/shared/harness-core/governor_landing_before_compact.md`: internal pointers an outside reader cannot follow were removed (#1054).
+- README (en/ko/ja/zh): the sentence between «You get three things:» and the table moved below the table; «the author» now reads «the author of FH» (#1054).
+- `.claude/regression/ablation_verdicts.md`: the §Autonomous Initiative Layer KEEP verdict is now a table row, re-measured (#1053).
+
 ### [3.39.0] — 2026-11-07
 
 New scripts and lanes ship, so this is a minor by the version policy. No existing gate tightens. The new hook is not wired by default. The `persona-cast` and `convergence-loop` skills now tell the agent to run their engines instead of counting by hand, so a session that uses those skills runs the scripts.
