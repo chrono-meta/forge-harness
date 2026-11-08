@@ -31,13 +31,13 @@
 실제 프로젝트에서 Claude Code(또는 다른 코딩 에이전트)를 쓰면서, 같은 말을 반복하는 일이나 잘못된 변경을
 너무 늦게 알게 되는 일에 지친 분들을 위한 것입니다. 얻는 것은 세 가지입니다.
 
-게이트는 에이전트만이 아니라 당신의 실수도 잡습니다 — 2026-08-22 하루에 작성자를 일곱 번 막았고, 그중 작성자가 먼저 알아챈 것은 하나도 없었습니다([게이트가 막은 하루](docs/GATE_DAY.md)).
-
 | 얻는 것 | 실제로는 | 근거 |
 |---|---|---|
 | **머지 전 게이트** | 변경이 들어오기 *전에* diff 를 판정하고, 판정문은 그 변경이 무엇을 잃었는지 이름으로 짚어 줍니다. 판정은 grep 으로 뒤지는 글이 아니라 타입이 있는 값(`PASS · PENDING · BLOCKED · ESCALATE`)입니다. 에이전트가 쓴 코드뿐 아니라 직접 쓴 코드에도 동작합니다. | 아래 데모 GIF · 남이 쓴 코드에 돌린 실행과 구멍을 심은 시험(표본 크기 포함): [근거](#근거) · 방법론과 통제된 제거 실험: [arXiv:2609.04218](https://arxiv.org/abs/2609.04218) |
 | **이어지는 기억** | `tracks/` 에 세션마다 배운 것이 남아서, 두 번째 세션이 첫 번째 세션이 멈춘 자리에서 시작합니다. | 세션을 마칠 때 `tracks/_meta/` 의 카드가 갱신되고, 다음 세션은 그 카드를 읽고 시작합니다([`CLAUDE.md`](CLAUDE.md) §Session Wrap-up). |
 | **검사를 대신 골라 주는 상대** | "이 프로젝트 진단해줘" 또는 "이 프로젝트 가속화해줘"라고 하면 고치거나 설치할 것의 우선순위 목록을 받습니다. 항목마다 승인하기 전에는 아무것도 바뀌지 않습니다. | 절차는 [`CLAUDE.md`](CLAUDE.md) §Field-Harness Diagnostic 에 있습니다. 항목마다 승인한 뒤에만 반영합니다 |
+
+게이트는 에이전트만이 아니라 당신의 실수도 잡습니다 — 2026-08-22 하루에 FH 작성자를 일곱 번 막았고, 그중 작성자가 먼저 알아챈 것은 하나도 없었습니다([게이트가 막은 하루](docs/GATE_DAY.md)).
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/chrono-meta/forge-harness/main/docs/demo/gate-block.gif" alt="regression guard blocking a change that dropped a Done When section, then passing once it is restored" width="820">

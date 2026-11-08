@@ -12,12 +12,21 @@ tags: [module, manifest, core-floor, restriction-union, install-check]
 > - `capability_composition_contract.md` - how constraints merge (strictest-wins, closed enums, typed invocation). A module's `adds_constraints` and the merge of two modules are that contract's rules, unchanged.
 > - `fh_integration_contract.md` - the verdict vocabulary and exit codes a caller sees. A module's verdict entry points use the same three-way split.
 
+## 0. Words used here
+
+| Word | Means |
+|---|---|
+| **module** = **cartridge** | the unit that has a manifest (`fh-module.yaml`) and can be plugged in or pulled out. The two words name the same thing; this contract says *module*. |
+| **skill** / **agent** | what a module provides (`provides.skills` / `provides.agents`). A skill is not a module. |
+| **plugin** | the distribution unit — how files reach a machine (a Claude Code plugin). One plugin can ship several modules, or none. |
+| **UNMEASURED** | the check could not be run or read. Never a pass. |
+
 ## 1. Core floor (no module may weaken)
 
 1. Irreversible-op gates: publish, delete, history-rewrite (CLAUDE.md Irreversibility Gates).
 2. Fail-closed: a check whose tooling is down blocks.
 3. Company-data boundary: company data never leaves the machine.
-4. NOT_MEASURED is never PASS.
+4. UNMEASURED is never PASS. (One spelling: `UNMEASURED` — the checker's exit-code name. `NOT_MEASURED` in older text means the same.)
 
 5. **Added hooks may only observe.** A module hook cannot allow, rewrite input (`updatedInput`), set a `permissionDecision`, touch `core.hooksPath`, `.git/hooks` or `settings*.json`, or chmod/rm hook files. **In v0 only `SessionEnd` is open to modules.** Gating events (`PreToolUse`, `PermissionRequest`) and every event that can inject context or block (PostToolUse via `additionalContext`, SessionStart, UserPromptSubmit, Stop, SubagentStop, PreCompact, git-pre-commit, git-pre-push) are **closed**: a text scan of a hook body cannot prove it never emits a decision (`decision.behavior`, a key built from pieces) — cross-family review 2026-10-18 showed both — so these events are closed rather than scanned. Reopening them needs the core wrapper below. `action: add` alone is not harmless; commands are shape-checked and scanned (section 3).
 
@@ -43,9 +52,11 @@ Unknown key or unknown enum value = BLOCK. Missing required field = BLOCK.
 | `files` | optional list of repo-relative paths the module ships besides its skill/agent folders and command files; `export` copies exactly these |
 | `records` | optional list of paths the module writes (used by removal) |
 
+**A measurement engine is not a verdict entry.** A command that exits 0 even when it finds something wrong (it reports a number or a list, and the caller decides) does not go under `provides.verdicts` — a caller reads 0 there as «proceed». Declare it as a skill or a plain script; only a command whose 0 means «pass» is a verdict entry.
+
 ## 3. Install-time check (`scripts/fh_module_check.py check`)
 
-Exit codes: **0 OK, 1 BLOCK, 2 UNMEASURED, 3 OK-but-UNCALIBRATED** (valid, no verdict entry points, `calibration: UNCALIBRATED`; callers must not treat 3 as a clean pass). Unreadable, empty, or non-mapping input is 2; PyYAML missing is 2; an internal error is 2. Nothing unreadable or unknown exits 0.
+Exit codes: **0 OK, 1 BLOCK, 2 UNMEASURED, 3 OK-but-UNCALIBRATED** (valid, no verdict entry points, `calibration: UNCALIBRATED`; callers must not treat 3 as a clean pass). Unreadable, empty, or non-mapping input is 2; PyYAML missing is 2; an internal error is 2. Nothing unreadable or unknown exits 0. Exit code 3 means different things in different FH scripts (in `governor_landing_check.py` it is LATE); read each script's own exit table, never assume 3 means the same thing.
 
 **Caller rule:** proceed only on rc==0. rc==3 = refuse, unless an explicit operator flag installs the module inert (no hooks, no verdicts active). Anything else (1, 2, or any other code) = refuse.
 
