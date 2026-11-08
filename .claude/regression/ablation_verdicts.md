@@ -17,6 +17,7 @@ arms, its rep count and its date belong here; the narrative belongs in the sessi
 | FH Improvement 4-Axis Auto-Gate | **KEEP** | headless · `claude -p --model sonnet --tools ''` · cwd outside repo · per-arm dirs · known pair passed before the arms ran (that pair carries two named residuals — see `scripts/ablation_calibrate.sh`) | **10 per arm** | **2026-08-04** | arm A 8/10, arm B **0/10**, on a question grep-verified to be answerable only from the cut text — see §Re-run 2026-08-04 below. Supersedes the 2026-08-03 `UNCALIBRATED` row (kept below as the record of why the first basis collapsed) |
 | Permission-Denial Guidance | **KEEP** | headless · `claude -p --model sonnet --tools ''` · cwd outside repo · per-arm dirs · known pair passed before the arms ran (that pair carries two named residuals — see `scripts/ablation_calibrate.sh`) | 3 | 2026-08-03 | arm A 2/3, arm B 0/3. The single arm-A miss is the runner's nondeterminism, not a finding |
 | New Skill Creation Pre-Commit Gate | **UNCALIBRATED** | subagent method (leak channel 1 open) | — | 2026-08-02 | recorded KEEP by an instrument that had the uncut original in its system prompt. Not disproved — unqualified. Owes a re-run |
+| Autonomous Initiative | **KEEP** | headless · `claude -p --model sonnet --tools ''` · cwd outside repo · per-arm dirs · `ablation_calibrate.sh --reps 1` P/N/T ok before the arms ran | 3 | 2026-11-08 | heading «Autonomous Initiative Layer»; first cell matches the probe Scope «CLAUDE.md §Autonomous Initiative» so `ablation_nominate.py` reads it. arm A 15/15 · arm B 0/15 (NOT IN MY CONTEXT) · must-move arm A′ flipped Q1 only, 3/3. Measures the trigger table as of `578d5d3`, which the 2026-08-27 KEEP did not — see §Autonomous Initiative Layer — re-run 2026-11-08 |
 
 **Instrument-config field, not an instrument-version field.** Each row records the runner
 configuration the arms actually ran under, because that is what the verdict depends on. The
@@ -257,3 +258,35 @@ arm B 가 딴 데서 맞히고 **가짜 CUT** 이 났다 — 2026-08-03 에 반�
 이전: *"CUT 을 한 번도 낸 적이 없다 — 이 다리는 한 번도 행사된 적 없다. 미검증은 안전이 아니다."*
 이후: **여전히 CUT 0 이지만, 이제 한 번은 «재보고 못 잘랐다».** 그리고 계기 이동 확인 다리가
 처음 행사되어 **판별력이 있음이 실측됐다** — 미검증 항목 하나가 줄었다.
+
+## §Autonomous Initiative Layer — re-run 2026-11-08 — **KEEP** (instrument CONFIRMED)
+
+**Why a re-run, not a copy of the 2026-08-27 verdict.** That KEEP sat only in the section above, not in
+the verdict table, so `scripts/ablation_nominate.py` (which reads table rows) nominated the section again
+on 2026-11-08. It also measured Cadence Rules · the suppression guard · Expedition, which have since moved
+to `claude_md_full_reference.md`; its own limits paragraph says the trigger table was never tested. Writing
+its KEEP into the table would have certified text it did not measure.
+
+Pre-registration (sealed before any arm ran, sha256 `669b3b634280175f…`; framings tried before this set: 0):
+answer tokens grep-verified inside the cut and absent from arm B — `context-doctor` · `goal-quench` ·
+`deep-clarify` · `mcp_tool_gating` · `rejected 3`. Excluded because they also appear outside the cut:
+`CATALOG` · `harvest-loop` (so G-SEARCH-01 and G-TRIG-04 are not measured here).
+Erratum: the sealed text says «lines 65..92»; the cut that ran is 65..93 (heading to the line before
+`## Session Wrap-up`, computed mechanically, arm B = CLAUDE.md minus those lines). The arms are right; the
+note is wrong, and the seal is left as written.
+
+| question (key) | arm A | arm B (section cut) | arm A′ (Q1 answer only removed) |
+|---|---|---|---|
+| Q1 context getting long → `/context-doctor` after `/context`·`/compact` | ✅ 3/3 | NOT IN MY CONTEXT 3/3 | **«no FH skill named» 3/3 — flipped** |
+| Q2 heavy run → propose `/goal-quench` first | ✅ 3/3 | NOT IN MY CONTEXT 3/3 | ✅ 3/3 |
+| Q3 bare «정리해줘» → ask what (`/deep-clarify`) | ✅ 3/3 | NOT IN MY CONTEXT 3/3 (2 reps cite the dangling «table above» pointer) | ✅ 3/3 |
+| Q4 new MCP server → `mcp_tool_gating.md` | ✅ 3/3 | NOT IN MY CONTEXT 3/3 | ✅ 3/3 |
+| Q5 rejection limit → 3 | ✅ 3/3 | NOT IN MY CONTEXT 3/3 | ✅ 3/3 |
+
+**k tried = 5 · k flipped = 0.** Arm A answers and arm B cannot → KEEP (first row of the rule). The
+must-move arm moved on exactly the one question whose answer it lost → the grader discriminates.
+
+What this does **not** say: grader = governor (same family as the runner); not re-graded cross-family. Five
+questions in one prompt per call (9 calls, not 45) — the same recorded deviation as 2026-08-27. A KEEP on
+«the resident text holds these answers» is not a measurement that sessions *act* on them; that is the
+probes' live-behaviour question and is not run here.
