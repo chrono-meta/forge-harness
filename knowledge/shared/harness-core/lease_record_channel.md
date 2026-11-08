@@ -1,7 +1,6 @@
 # 리스 기록 채널 — 세션은 초안, 기록은 운영자 (G3, 2026-11-07)
 
 > 맥락 유지 엔진(`fh_three_layer_canon.md` §2)의 «쓰는 절반» 중 권한 기록 자리. 흡수 대기열 AQ-20261107-11.
-> 브리프 `tracks/_meta/brief_governor_role_items_2026-11-07.md` §G3.
 
 ## 왜
 
