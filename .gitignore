@@ -15,6 +15,9 @@
 # Hub-owner local operations — operator-specific wiring (companion-store route, Gap 1).
 # Auto-loaded locally, never public. Backed up to fh-be/hub-owner/ via sync-to-be.sh.
 CLAUDE.local.md
+# scripts/lease_line_apply.sh backs the file up next to itself before an edit (CLAUDE.local.md.bak.<time>.<rand>).
+# Those copies carry the same private lease text — ignore them too, or one `git add -A` stages them.
+CLAUDE.local.md.bak.*
 context/
 
 # public-surface-audit pattern source — operator-private token patterns (real username, employer, store).
