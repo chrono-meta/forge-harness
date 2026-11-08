@@ -493,7 +493,7 @@ _rcpt() {  # $1=file  $2..=pr:outcome[:at]  — one JSON line each, appended in 
   local f="$1"; shift
   local a pr out at
   for a in "$@"; do
-    pr=${a%%:*}; out=${a#*:}; at="2026-11-08T10:00:00+0900"
+    pr=${a%%:*}; out=${a#*:}; at="$(date +%Y-%m-%d)T10:00:00+0900"   # today: the 7-day window must not age the fixtures out
     case "$out" in *:*) at=${out#*:}; out=${out%%:*} ;; esac
     printf '{"at": "%s", "pr": %s, "head": "h", "merge": "m", "outcome": "%s", "actor": "a", "lease": "l", "rerun": "r"}\n' "$at" "$pr" "$out" >> "$f"
   done
@@ -529,7 +529,8 @@ _line "①-r-N1 an outcome name no list knows is still flagged" '#34 accepted-no
 
 # file order, not the `at` string: the later LINE carries the EARLIER timestamp
 T=$(_repo r_order); _artifacts "$T"
-_rcpt "$T/.git/fh-merge-receipts.jsonl" "34:verified:2026-11-09T10:00:00+0900" "34:verify-incomplete:2026-11-01T10:00:00+0900"; _run "$T"
+_rcpt "$T/.git/fh-merge-receipts.jsonl" "34:verified:2026-11-09T10:00:00+0900" "34:verify-incomplete:2026-11-01T10:00:00+0900"
+OUT=$(FH_RECEIPT_WINDOW_DAYS=0 PATH="$T/bin:$PATH" bash "$CHECK" "$T" 2>/dev/null); RC=$?   # window off: this lane is about order, not age
 _line "①-r-O1 last = file order (later line, earlier at) → flagged" '#34 verify-incomplete' 1 "$OUT"
 
 T=$(_repo r_bad); _artifacts "$T"
@@ -545,6 +546,18 @@ _line "①-r-U3 → no ✅ for zero PRs"                              '✅ ①-r
 T=$(_repo r_atnum); _artifacts "$T"; echo '{"pr": 34, "outcome": "verify-failed", "at": 123}' > "$T/.git/fh-merge-receipts.jsonl"; _run "$T"
 _line "①-r-B2 a non-string at does not crash the reader (codex R1)" '#34 verify-failed'        1 "$OUT"
 _line "①-r-B2 → no reader-failed line"                            'reader failed'               0 "$OUT"
+
+# 7-day window (operator 2026-11-08 «판단후추천대로»): an old non-verified receipt is COUNTED, not named, never dropped
+T=$(_repo r_window); _artifacts "$T"
+_rcpt "$T/.git/fh-merge-receipts.jsonl" "40:verify-incomplete:2020-01-01T10:00:00+0900" 41:verify-incomplete "42:verify-failed:not-a-date"; _run "$T"
+_line "①-r-T1 a recent non-verified PR is named"              '#41 verify-incomplete'          1 "$OUT"
+_line "①-r-T1 an old one is not named"                        '#40 '                           0 "$OUT"
+_line "①-r-T1 → but it is counted (not silently dropped)"     '①-r 1 older PR(s) (> 7 days)'   1 "$OUT"
+_line "①-r-T1 an unreadable at is treated as recent (shown)"  '#42 verify-failed'              1 "$OUT"
+_line "①-r-T1 → no ✅ while an old one is open"               '✅ ①-r'                         0 "$OUT"
+OUT=$(FH_RECEIPT_WINDOW_DAYS=0 PATH="$T/bin:$PATH" bash "$CHECK" "$T" 2>/dev/null); RC=$?
+_line "①-r-T2 FH_RECEIPT_WINDOW_DAYS=0 names the old one too" '#40 verify-incomplete'          1 "$OUT"
+_line "①-r-T2 → no older line"                                '①-r .* older PR'                0 "$OUT"
 
 # PMV_RECEIPTS wins over <git-common-dir> — the writer honours it, so the reader must too
 T=$(_repo r_env); _artifacts "$T"; _rcpt "$T/.git/fh-merge-receipts.jsonl" 34:verified

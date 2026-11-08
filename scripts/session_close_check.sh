@@ -128,6 +128,7 @@ fi
 # «last outcome is NOT `verified`» — never an enumerated list, so a new outcome name is shown, not passed. «Last» is
 # FILE order (append order), not the `at` string. Only THIS repo's file is read: receipts carry no repo field and PR
 # numbers collide across repos. Absent/empty file = UNMEASURED, never «all verified». Malformed lines are counted.
+# Only the last FH_RECEIPT_WINDOW_DAYS (default 7) days are named; older ones are counted on their own line.
 # Anchored by scripts/test_session_close_chain_lanes.sh lanes ①-r-*.
 RCPT="${PMV_RECEIPTS:-}"
 if [ -z "$RCPT" ]; then
@@ -162,9 +163,24 @@ if total == 0:   # whitespace-only file: nothing was read — UNMEASURED, never 
     print("ℹ️  ①-r receipts: none/UNMEASURED (%s holds no receipt line) — advisory, does not block" % path)
     sys.exit(0)
 flagged = sorted((pr, o, at) for pr, (o, at) in last.items() if o != "verified")
-if flagged:
-    items = " · ".join("#%d %s (%s)" % (pr, o, at[:10]) for pr, o, at in flagged)
-    print("⚠️  ①-r %d PR(s) whose last merge receipt is not «verified»: %s — read each; advisory, does not block" % (len(flagged), items))
+# window (operator 2026-11-08 «판단후추천대로»): name only receipts from the last N days (default 7 = the weekly-audit
+# cycle) so the same old PRs do not repeat at every close until nobody reads the line. Older ones are COUNTED, never
+# dropped silently. A receipt whose `at` has no readable date is treated as recent (shown). N=0 shows everything.
+import datetime, os, re
+try:
+    days = int(os.environ.get("FH_RECEIPT_WINDOW_DAYS", "7"))
+except ValueError:
+    days = 7
+cutoff = (datetime.date.today() - datetime.timedelta(days=days)).isoformat() if days > 0 else None
+def _recent(at):
+    return cutoff is None or not re.match(r"\d{4}-\d{2}-\d{2}", at) or at[:10] >= cutoff
+shown = [f for f in flagged if _recent(f[2])]
+older = len(flagged) - len(shown)
+if shown:
+    items = " · ".join("#%d %s (%s)" % (pr, o, at[:10]) for pr, o, at in shown)
+    print("⚠️  ①-r %d PR(s) whose last merge receipt is not «verified»: %s — read each; advisory, does not block" % (len(shown), items))
+if older:
+    print("ℹ️  ①-r %d older PR(s) (> %d days) whose last receipt is not «verified» — not named here; FH_RECEIPT_WINDOW_DAYS=0 lists all" % (older, days))
 if bad:
     print("⚠️  ①-r %d malformed receipt line(s) of %d in %s — those merges are UNMEASURED; advisory, does not block" % (bad, total, path))
 if not flagged and not bad:
