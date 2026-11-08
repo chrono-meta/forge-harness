@@ -17,7 +17,7 @@ set -uo pipefail
 
 # 상속된 git 환경변수를 끊는다 — export 된 GIT_DIR 이 있으면 `git -C "$FH"` 가 인자로 받은
 # 레포가 아니라 그 레포를 잰다(Axis 2 at-floor LOW, 2026-08-06). READ-ONLY 체커라 부작용 없음.
-unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR   # GIT_COMMON_DIR: ①-r would read another repo's receipts (codex R2, 2026-11-08)
 FH="${1:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 TODAY=$(date +%Y-%m-%d)
 CARD="$FH/tracks/_meta/reference_next_session_starter.md"
@@ -120,6 +120,72 @@ if command -v gh >/dev/null 2>&1; then
   }
   PRS=$( { _open_pr_numbers "@me"; _open_pr_numbers "app/claude"; } | sort -u | sed '/^$/d' | wc -l | tr -d ' ')
   [ "${PRS:-0}" -gt 0 ] && echo "⚠️  ①-b $PRS open PR(s) by you — classify: self-mergeable vs awaiting-external"
+fi
+
+# ①-r MERGE RECEIPTS — report only («advisory, does not block»; rc unchanged). `pr_merge_verified.sh` appends one
+# JSON line per merge to <git-common-dir>/fh-merge-receipts.jsonl (or $PMV_RECEIPTS), but nothing at close read it:
+# FH #1057 merged with `verify-incomplete` and only a hand check found it (2026-11-08 harvest H2). The flagged set is
+# «last outcome is NOT `verified`» — never an enumerated list, so a new outcome name is shown, not passed. «Last» is
+# FILE order (append order), not the `at` string. Only THIS repo's file is read: receipts carry no repo field and PR
+# numbers collide across repos. Absent/empty file = UNMEASURED, never «all verified». Malformed lines are counted.
+# Only the last FH_RECEIPT_WINDOW_DAYS (default 7) days are named; older ones are counted on their own line.
+# Anchored by scripts/test_session_close_chain_lanes.sh lanes ①-r-*.
+RCPT="${PMV_RECEIPTS:-}"
+if [ -z "$RCPT" ]; then
+  _gcd=$(git -C "$FH" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || _gcd=""
+  [ -n "$_gcd" ] && RCPT="$_gcd/fh-merge-receipts.jsonl"
+fi
+if [ -z "$RCPT" ] || [ ! -s "$RCPT" ]; then
+  echo "ℹ️  ①-r receipts: none/UNMEASURED (${RCPT:-no git dir}) — advisory, does not block"
+elif ! command -v python3 >/dev/null 2>&1; then
+  echo "ℹ️  ①-r receipts: UNMEASURED — python3 not found ($RCPT) — advisory, does not block"
+else
+  python3 - "$RCPT" <<'PYEOF' || echo "ℹ️  ①-r receipts: UNMEASURED — reader failed ($RCPT) — advisory, does not block"
+import json, sys
+path = sys.argv[1]
+last, bad, total = {}, 0, 0
+with open(path, encoding="utf-8", errors="replace") as f:
+    for raw in f:
+        if not raw.strip():
+            continue
+        total += 1
+        try:
+            d = json.loads(raw)
+            pr, out = d["pr"], d["outcome"]
+            if isinstance(pr, bool) or not isinstance(pr, int) or not isinstance(out, str) or not out:
+                raise ValueError
+        except Exception:
+            bad += 1
+            continue
+        at = d.get("at")
+        last[pr] = (out, at if isinstance(at, str) and at else "?")   # file order: a later line replaces an earlier one
+if total == 0:   # whitespace-only file: nothing was read — UNMEASURED, never an all-clear (codex R1)
+    print("ℹ️  ①-r receipts: none/UNMEASURED (%s holds no receipt line) — advisory, does not block" % path)
+    sys.exit(0)
+flagged = sorted((pr, o, at) for pr, (o, at) in last.items() if o != "verified")
+# window (operator 2026-11-08 «판단후추천대로»): name only receipts from the last N days (default 7 = the weekly-audit
+# cycle) so the same old PRs do not repeat at every close until nobody reads the line. Older ones are COUNTED, never
+# dropped silently. A receipt whose `at` has no readable date is treated as recent (shown). N=0 shows everything.
+import datetime, os, re
+try:
+    days = int(os.environ.get("FH_RECEIPT_WINDOW_DAYS", "7"))
+except ValueError:
+    days = 7
+cutoff = (datetime.date.today() - datetime.timedelta(days=days)).isoformat() if days > 0 else None
+def _recent(at):
+    return cutoff is None or not re.match(r"\d{4}-\d{2}-\d{2}", at) or at[:10] >= cutoff
+shown = [f for f in flagged if _recent(f[2])]
+older = len(flagged) - len(shown)
+if shown:
+    items = " · ".join("#%d %s (%s)" % (pr, o, at[:10]) for pr, o, at in shown)
+    print("⚠️  ①-r %d PR(s) whose last merge receipt is not «verified»: %s — read each; advisory, does not block" % (len(shown), items))
+if older:
+    print("ℹ️  ①-r %d older PR(s) (> %d days) whose last receipt is not «verified» — not named here; FH_RECEIPT_WINDOW_DAYS=0 lists all" % (older, days))
+if bad:
+    print("⚠️  ①-r %d malformed receipt line(s) of %d in %s — those merges are UNMEASURED; advisory, does not block" % (bad, total, path))
+if not flagged and not bad:
+    print("✅ ①-r merge receipts: last outcome «verified» for all %d PR(s) (%s)" % (len(last), path))
+PYEOF
 fi
 
 # ── ①-d CLOSE RE-OPENED? ──────────────────────────────────────────────────────

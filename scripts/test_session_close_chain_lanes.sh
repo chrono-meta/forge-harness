@@ -485,6 +485,99 @@ _rc   "PP-4 ordinary push + CLEAN → exit 0" "$RC" 0
 _line "PP-4 → no advisory noise on a healthy push" 'close invariant(s) violated' 0 "$OUT"
 
 echo
+echo "══ ①-r merge receipts (2026-11-08 harvest H2 — report only) ══"
+# FH #1057 merged with a `verify-incomplete` receipt and nothing at close read the file. The flagged set is «last
+# outcome != verified» in FILE order, this repo's file only; absent/empty = UNMEASURED; malformed lines are counted.
+unset PMV_RECEIPTS
+_rcpt() {  # $1=file  $2..=pr:outcome[:at]  — one JSON line each, appended in argument order
+  local f="$1"; shift
+  local a pr out at
+  for a in "$@"; do
+    pr=${a%%:*}; out=${a#*:}; at="$(date +%Y-%m-%d)T10:00:00+0900"   # today: the 7-day window must not age the fixtures out
+    case "$out" in *:*) at=${out#*:}; out=${out%%:*} ;; esac
+    printf '{"at": "%s", "pr": %s, "head": "h", "merge": "m", "outcome": "%s", "actor": "a", "lease": "l", "rerun": "r"}\n' "$at" "$pr" "$out" >> "$f"
+  done
+}
+
+T=$(_repo r_absent); _artifacts "$T"; _run "$T"
+_line "①-r-U1 no receipts file → none/UNMEASURED"           '①-r receipts: none/UNMEASURED' 1 "$OUT"
+_line "①-r-U1 no receipts file → no ✅ (absence ≠ verified)" '✅ ①-r'                        0 "$OUT"
+_rc   "①-r-U1 → exit unchanged (0)" "$RC" 0
+
+T=$(_repo r_empty); _artifacts "$T"; : > "$T/.git/fh-merge-receipts.jsonl"; _run "$T"
+_line "①-r-U2 empty receipts file → none/UNMEASURED"        '①-r receipts: none/UNMEASURED' 1 "$OUT"
+
+T=$(_repo r_incomplete); _artifacts "$T"; _rcpt "$T/.git/fh-merge-receipts.jsonl" 12:verified 34:verify-incomplete; _run "$T"
+_line "①-r-P1 one verify-incomplete → named"                '①-r 1 PR(s) whose last merge receipt is not «verified»: #34 verify-incomplete' 1 "$OUT"
+_line "①-r-P1 → the verified PR is not named"               '#12 '                          0 "$OUT"
+_line "①-r-P1 → says advisory"                              'advisory, does not block'      1 "$OUT"
+_rc   "①-r-P1 → exit unchanged (advisory, 0)" "$RC" 0
+
+T=$(_repo r_cleared); _artifacts "$T"; _rcpt "$T/.git/fh-merge-receipts.jsonl" 34:verify-incomplete 34:verified; _run "$T"
+_line "①-r-C1 a later verified for the SAME PR clears it"    '⚠️  ①-r'                       0 "$OUT"
+_line "①-r-C1 → ✅ all verified"                             '✅ ①-r merge receipts: last outcome «verified» for all 1 PR' 1 "$OUT"
+
+T=$(_repo r_otherpr); _artifacts "$T"; _rcpt "$T/.git/fh-merge-receipts.jsonl" 34:verify-incomplete 35:verified; _run "$T"
+_line "①-r-C2 a verified for a DIFFERENT PR does not clear"  '#34 verify-incomplete'          1 "$OUT"
+_line "①-r-C2 → the other PR is not named"                  '#35 '                          0 "$OUT"
+
+T=$(_repo r_reflag); _artifacts "$T"; _rcpt "$T/.git/fh-merge-receipts.jsonl" 34:verified 34:verify-failed; _run "$T"
+_line "①-r-C3 verify-failed after verified re-flags"        '#34 verify-failed'             1 "$OUT"
+
+T=$(_repo r_newout); _artifacts "$T"; _rcpt "$T/.git/fh-merge-receipts.jsonl" 34:accepted-not-completed; _run "$T"
+_line "①-r-N1 an outcome name no list knows is still flagged" '#34 accepted-not-completed'  1 "$OUT"
+
+# file order, not the `at` string: the later LINE carries the EARLIER timestamp
+T=$(_repo r_order); _artifacts "$T"
+_rcpt "$T/.git/fh-merge-receipts.jsonl" "34:verified:2026-11-09T10:00:00+0900" "34:verify-incomplete:2026-11-01T10:00:00+0900"
+OUT=$(FH_RECEIPT_WINDOW_DAYS=0 PATH="$T/bin:$PATH" bash "$CHECK" "$T" 2>/dev/null); RC=$?   # window off: this lane is about order, not age
+_line "①-r-O1 last = file order (later line, earlier at) → flagged" '#34 verify-incomplete' 1 "$OUT"
+
+T=$(_repo r_bad); _artifacts "$T"
+{ echo '{"pr": 34, "outcome": "verif'; echo '{"pr": "35", "outcome": "verified"}'; } > "$T/.git/fh-merge-receipts.jsonl"
+_rcpt "$T/.git/fh-merge-receipts.jsonl" 36:verified; _run "$T"
+_line "①-r-B1 malformed lines are counted"                  '①-r 2 malformed receipt line(s) of 3' 1 "$OUT"
+_line "①-r-B1 → no ✅ while lines are unreadable"           '✅ ①-r'                        0 "$OUT"
+
+T=$(_repo r_ws); _artifacts "$T"; printf '\n \t\n' > "$T/.git/fh-merge-receipts.jsonl"; _run "$T"
+_line "①-r-U3 whitespace-only receipts file → UNMEASURED (codex R1)" '①-r receipts: none/UNMEASURED' 1 "$OUT"
+_line "①-r-U3 → no ✅ for zero PRs"                              '✅ ①-r'                        0 "$OUT"
+
+T=$(_repo r_atnum); _artifacts "$T"; echo '{"pr": 34, "outcome": "verify-failed", "at": 123}' > "$T/.git/fh-merge-receipts.jsonl"; _run "$T"
+_line "①-r-B2 a non-string at does not crash the reader (codex R1)" '#34 verify-failed'        1 "$OUT"
+_line "①-r-B2 → no reader-failed line"                            'reader failed'               0 "$OUT"
+
+# 7-day window (operator 2026-11-08 «판단후추천대로»): an old non-verified receipt is COUNTED, not named, never dropped
+T=$(_repo r_window); _artifacts "$T"
+_rcpt "$T/.git/fh-merge-receipts.jsonl" "40:verify-incomplete:2020-01-01T10:00:00+0900" 41:verify-incomplete "42:verify-failed:not-a-date"; _run "$T"
+_line "①-r-T1 a recent non-verified PR is named"              '#41 verify-incomplete'          1 "$OUT"
+_line "①-r-T1 an old one is not named"                        '#40 '                           0 "$OUT"
+_line "①-r-T1 → but it is counted (not silently dropped)"     '①-r 1 older PR(s) (> 7 days)'   1 "$OUT"
+_line "①-r-T1 an unreadable at is treated as recent (shown)"  '#42 verify-failed'              1 "$OUT"
+_line "①-r-T1 → no ✅ while an old one is open"               '✅ ①-r'                         0 "$OUT"
+OUT=$(FH_RECEIPT_WINDOW_DAYS=0 PATH="$T/bin:$PATH" bash "$CHECK" "$T" 2>/dev/null); RC=$?
+_line "①-r-T2 FH_RECEIPT_WINDOW_DAYS=0 names the old one too" '#40 verify-incomplete'          1 "$OUT"
+_line "①-r-T2 → no older line"                                '①-r .* older PR'                0 "$OUT"
+
+# PMV_RECEIPTS wins over <git-common-dir> — the writer honours it, so the reader must too
+T=$(_repo r_env); _artifacts "$T"; _rcpt "$T/.git/fh-merge-receipts.jsonl" 34:verified
+_rcpt "$TMPROOT/r_env_receipts.jsonl" 77:verify-incomplete
+OUT=$(PMV_RECEIPTS="$TMPROOT/r_env_receipts.jsonl" PATH="$T/bin:$PATH" bash "$CHECK" "$T" 2>/dev/null); RC=$?
+_line "①-r-E1 PMV_RECEIPTS is read instead of the repo file" '#77 verify-incomplete'         1 "$OUT"
+
+# an inherited GIT_COMMON_DIR must not redirect the reader to another repo's receipts (codex R2)
+T=$(_repo r_gcd_a); _artifacts "$T"; _rcpt "$T/.git/fh-merge-receipts.jsonl" 34:verify-failed
+T2=$(_repo r_gcd_b); _rcpt "$T2/.git/fh-merge-receipts.jsonl" 34:verified
+OUT=$(GIT_COMMON_DIR="$T2/.git" PATH="$T/bin:$PATH" bash "$CHECK" "$T" 2>/dev/null); RC=$?
+_line "①-r-E2 inherited GIT_COMMON_DIR → still this repo's receipts" '#34 verify-failed'      1 "$OUT"
+
+# worktree: <git-common-dir> is the MAIN repo's .git, not the worktree's .git file
+T=$(_repo r_wt); _artifacts "$T"; _rcpt "$T/.git/fh-merge-receipts.jsonl" 34:verify-incomplete
+git -C "$T" worktree add -q "$TMPROOT/r_wt_tree" >/dev/null 2>&1; mkdir -p "$TMPROOT/r_wt_tree/tracks/_meta"; _artifacts "$TMPROOT/r_wt_tree"
+_run "$TMPROOT/r_wt_tree"
+_line "①-r-W1 from a worktree, the common-dir file is read"  '#34 verify-incomplete'         1 "$OUT"
+
+echo
 echo "──────────────────────────────────────────────"
 if [ "$FAILED" -ne 0 ]; then
   echo "CLOSE-CHAIN LANES: FAIL — the close-chain instrument is miscalibrated (do not trust its verdict)"

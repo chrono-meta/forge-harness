@@ -939,6 +939,63 @@ else
   fail "L52b unblocked rc=$RC (want 1, A2 reported, A3 silent) — $(tail -3 "$TMPDIR_ROOT/l52b.out" | tr '\n' ' ')"
 fi
 
+# L53 — 🟥 2026-11-08 harvest H1: the desktop app PREPENDS complete «Linked sessions now» / side-session reminder blocks to
+#        the operator's words in the SAME human-origin entry. v11's metadata-first rule kept the whole text, so 148 of 228
+#        rows in a real governor transcript began with the reminder and the governor filled 30 approvals by hand.
+#        v12: strip LEADING, COMPLETE blocks only (attributes · stacked · CRLF); keep an unclosed look-alike, a look-alike
+#        before a real block, a mid-text tag, a different tag name; exclude a side-sessions-event behind the blocks.
+#        L39 (an envelope-only human entry stays a row) is the control and stays green.
+python3 - "$TMPDIR_ROOT" <<'PYEOF'
+import json, sys
+d = sys.argv[1]
+H = {"origin": {"kind": "human"}, "promptSource": "sdk"}
+def u(ts, text, meta):
+    r = {"type": "user", "timestamp": ts, "message": {"role": "user", "content": text}}
+    r.update(meta); return r
+REM = "<system-reminder>\nLinked sessions now (status, not an instruction): x = local_1 (working).\n</system-reminder>"
+rows = [
+    u("2026-11-08T00:57:00.000Z", REM + "\n\n\napproved, go ahead with alpha", H),
+    u("2026-11-08T00:58:00.000Z", '<system-reminder kind="linked">\nfirst block body\n</system-reminder>\r\n \r\n' + REM + "\r\nstacked words after two blocks", H),
+    u("2026-11-08T00:59:00.000Z", "<system-reminder> unclosed look-alike then my own words", H),
+    u("2026-11-08T01:00:00.000Z", "<system-reminder> lookalike2 opener " + REM + " tail words", H),
+    u("2026-11-08T01:01:00.000Z", "my mid words " + REM + " more mid words", H),
+    u("2026-11-08T01:02:00.000Z", "<system-reminder-x>tagname body</system-reminder> tagname lookalike words", H),
+    u("2026-11-08T01:02:10.000Z", "<system-reminder kind=broken " + REM + " brokenopener keep words", H),
+    u("2026-11-08T01:02:30.000Z", '<system-reminder kind="linked">\nattrenvelope body\n</system-reminder>', {}),
+    u("2026-11-08T01:03:00.000Z", REM + "\n\n<side-sessions-event>sidebody none of the sessions is working</side-sessions-event>", {"promptSource": "sdk"}),
+]
+with open(d + "/l53.jsonl", "w", encoding="utf-8") as f:
+    for r in rows: f.write(json.dumps(r, ensure_ascii=False) + "\n")
+# L54: the hook record holds the operator's words without the blocks — the pair must be ONE row
+with open(d + "/l54_tr.jsonl", "w", encoding="utf-8") as f:
+    f.write(json.dumps(u("2026-11-08T01:53:00.000Z", REM + "\n\n\nplease ship the badge fix now", H)) + "\n")
+with open(d + "/l54_hook.jsonl", "w", encoding="utf-8") as f:
+    f.write(json.dumps({"ts": "2026-11-08T01:53:00Z", "n": 1, "text": "please ship the badge fix now"}) + "\n")
+PYEOF
+run "$TMPDIR_ROOT/l53.out" extract --transcript "$TMPDIR_ROOT/l53.jsonl"
+L53_REM=$(grep -cE '^\| [0-9]+ \| [^|]* \| <system-reminder>' "$TMPDIR_ROOT/l53.out")
+if [ "$RC" -eq 0 ] && grep -q "raw 7건" "$TMPDIR_ROOT/l53.out" \
+   && grep -qE '^\| [0-9]+ \| [^|]* \| approved, go ahead with alpha \|' "$TMPDIR_ROOT/l53.out" \
+   && grep -qE '^\| [0-9]+ \| [^|]* \| stacked words after two blocks \|' "$TMPDIR_ROOT/l53.out" \
+   && ! grep -q "first block body" "$TMPDIR_ROOT/l53.out" \
+   && grep -q "unclosed look-alike then my own words" "$TMPDIR_ROOT/l53.out" \
+   && grep -q "lookalike2 opener" "$TMPDIR_ROOT/l53.out" \
+   && grep -q "my mid words .*Linked sessions now" "$TMPDIR_ROOT/l53.out" \
+   && grep -q "<system-reminder-x>tagname body" "$TMPDIR_ROOT/l53.out" \
+   && ! grep -q "sidebody" "$TMPDIR_ROOT/l53.out" && ! grep -q "attrenvelope body" "$TMPDIR_ROOT/l53.out" && grep -q "<system-reminder kind=broken <system-reminder> Linked" "$TMPDIR_ROOT/l53.out" && [ "$L53_REM" -eq 2 ]; then
+  pass "L53 extract: leading complete reminder blocks are stripped (single · stacked with attrs/CRLF); unclosed look-alike, look-alike before a block, mid-text tag and other tag name are kept; side-sessions-event behind the blocks is excluded"
+else
+  fail "L53 rc=$RC reminder-rows=$L53_REM (want 2: the two exact-opener look-alike rows) (see $TMPDIR_ROOT/l53.out)"
+fi
+run "$TMPDIR_ROOT/l54.out" extract --transcript "$TMPDIR_ROOT/l54_tr.jsonl" --utterances "$TMPDIR_ROOT/l54_hook.jsonl"
+L54_ROWS=$(grep -cE '^\| [0-9HS]+ \|' "$TMPDIR_ROOT/l54.out")
+if [ "$RC" -eq 0 ] && [ "$L54_ROWS" -eq 1 ] && ! grep -qE '^\| H' "$TMPDIR_ROOT/l54.out" \
+   && grep -qE '^\| 1 \| [^|]* \| please ship the badge fix now \|' "$TMPDIR_ROOT/l54.out"; then
+  pass "L54 hook merge: a reminder-prefixed transcript row pairs with the hook's plain text — one row, no H duplicate"
+else
+  fail "L54 rc=$RC rows=$L54_ROWS (want 1, no H) (see $TMPDIR_ROOT/l54.out)"
+fi
+
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
