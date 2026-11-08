@@ -17,7 +17,7 @@ set -uo pipefail
 
 # 상속된 git 환경변수를 끊는다 — export 된 GIT_DIR 이 있으면 `git -C "$FH"` 가 인자로 받은
 # 레포가 아니라 그 레포를 잰다(Axis 2 at-floor LOW, 2026-08-06). READ-ONLY 체커라 부작용 없음.
-unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR   # GIT_COMMON_DIR: ①-r would read another repo's receipts (codex R2, 2026-11-08)
 FH="${1:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 TODAY=$(date +%Y-%m-%d)
 CARD="$FH/tracks/_meta/reference_next_session_starter.md"
@@ -120,6 +120,56 @@ if command -v gh >/dev/null 2>&1; then
   }
   PRS=$( { _open_pr_numbers "@me"; _open_pr_numbers "app/claude"; } | sort -u | sed '/^$/d' | wc -l | tr -d ' ')
   [ "${PRS:-0}" -gt 0 ] && echo "⚠️  ①-b $PRS open PR(s) by you — classify: self-mergeable vs awaiting-external"
+fi
+
+# ①-r MERGE RECEIPTS — report only («advisory, does not block»; rc unchanged). `pr_merge_verified.sh` appends one
+# JSON line per merge to <git-common-dir>/fh-merge-receipts.jsonl (or $PMV_RECEIPTS), but nothing at close read it:
+# FH #1057 merged with `verify-incomplete` and only a hand check found it (2026-11-08 harvest H2). The flagged set is
+# «last outcome is NOT `verified`» — never an enumerated list, so a new outcome name is shown, not passed. «Last» is
+# FILE order (append order), not the `at` string. Only THIS repo's file is read: receipts carry no repo field and PR
+# numbers collide across repos. Absent/empty file = UNMEASURED, never «all verified». Malformed lines are counted.
+# Anchored by scripts/test_session_close_chain_lanes.sh lanes ①-r-*.
+RCPT="${PMV_RECEIPTS:-}"
+if [ -z "$RCPT" ]; then
+  _gcd=$(git -C "$FH" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || _gcd=""
+  [ -n "$_gcd" ] && RCPT="$_gcd/fh-merge-receipts.jsonl"
+fi
+if [ -z "$RCPT" ] || [ ! -s "$RCPT" ]; then
+  echo "ℹ️  ①-r receipts: none/UNMEASURED (${RCPT:-no git dir}) — advisory, does not block"
+elif ! command -v python3 >/dev/null 2>&1; then
+  echo "ℹ️  ①-r receipts: UNMEASURED — python3 not found ($RCPT) — advisory, does not block"
+else
+  python3 - "$RCPT" <<'PYEOF' || echo "ℹ️  ①-r receipts: UNMEASURED — reader failed ($RCPT) — advisory, does not block"
+import json, sys
+path = sys.argv[1]
+last, bad, total = {}, 0, 0
+with open(path, encoding="utf-8", errors="replace") as f:
+    for raw in f:
+        if not raw.strip():
+            continue
+        total += 1
+        try:
+            d = json.loads(raw)
+            pr, out = d["pr"], d["outcome"]
+            if isinstance(pr, bool) or not isinstance(pr, int) or not isinstance(out, str) or not out:
+                raise ValueError
+        except Exception:
+            bad += 1
+            continue
+        at = d.get("at")
+        last[pr] = (out, at if isinstance(at, str) and at else "?")   # file order: a later line replaces an earlier one
+if total == 0:   # whitespace-only file: nothing was read — UNMEASURED, never an all-clear (codex R1)
+    print("ℹ️  ①-r receipts: none/UNMEASURED (%s holds no receipt line) — advisory, does not block" % path)
+    sys.exit(0)
+flagged = sorted((pr, o, at) for pr, (o, at) in last.items() if o != "verified")
+if flagged:
+    items = " · ".join("#%d %s (%s)" % (pr, o, at[:10]) for pr, o, at in flagged)
+    print("⚠️  ①-r %d PR(s) whose last merge receipt is not «verified»: %s — read each; advisory, does not block" % (len(flagged), items))
+if bad:
+    print("⚠️  ①-r %d malformed receipt line(s) of %d in %s — those merges are UNMEASURED; advisory, does not block" % (bad, total, path))
+if not flagged and not bad:
+    print("✅ ①-r merge receipts: last outcome «verified» for all %d PR(s) (%s)" % (len(last), path))
+PYEOF
 fi
 
 # ── ①-d CLOSE RE-OPENED? ──────────────────────────────────────────────────────

@@ -5435,3 +5435,33 @@
   outcome: "12/12 ran; both arms 26 by the implemented scorer; INCONCLUSIVE under all three readings of S4; scorer word-list defect found after the runs and reported"
   evidence: "tracks/_meta/ab_cart_changelog_results_2026-11-07.md"
   tokens: "~138k-140k each"
+- date: 2026-11-07
+  agent: "general-purpose (sonnet) — GC blind reason-class judge (purpose: independence)"
+  task: "label 24 S-task final answers + 6 hand-written calibration answers SURFACE/NUMBER/NONE, arm-blind, shuffled"
+  outcome: "calibration 6/6; all arms SURFACE except one ARM2 NONE — S tasks at ceiling, cannot discriminate the 막아선다 line; finals were cut to the last 1500 chars (named limitation)"
+  evidence: "tracks/_meta/morning_report_2026-11-08.md §GC"
+  tokens: "160310"
+- date: 2026-11-08
+  agent: "unattributed — 5 SubagentStop tally lines in this shared checkout (purpose: UNKNOWN)"
+  task: "not dispatched by session a1634920 (it used claude -p runners and codex exec, no Agent calls today); the tally file carries only a date, no session id, so the dispatching sibling session cannot be named from here"
+  outcome: "UNKNOWN — recorded so the count is not silent; the dispatching session should replace this line with its own entry"
+  evidence: "tracks/_meta/.subagent_dispatch_tally (5 lines dated 2026-11-08)"
+  tokens: "UNMEASURED"
+- date: 2026-11-08
+  agent: "fh-meta:challenger (sonnet) — harvest-loop Step 3a, integrated close fa277252 (purpose: independence)"
+  task: "attack 10 harvested patterns against existing FH assets; verify P1 in session_checklist.py and P7 in pr_merge_verified.sh"
+  outcome: "A x2 (P1 confirmed by code · P7 confirmed: close check reads no receipts) · 8 covered or working as designed · new S 0"
+  evidence: "tracks/_meta/fh_signal_2026-11-08_fa277252-close.md §Harvest"
+  tokens: "101352"
+- date: 2026-11-08
+  agent: "fh-meta:persona-innovator (sonnet) — harvest-loop Step 3b (purpose: independence)"
+  task: "propose at most 4 candidates, existing files first"
+  outcome: "C1 checklist reminder strip (S) · C2 receipt surfacing (S) · C3 runner guard (M, later rejected) · C4 catch_tally line (already landed)"
+  evidence: "tracks/_meta/fh_signal_2026-11-08_fa277252-close.md §Harvest"
+  tokens: "101637"
+- date: 2026-11-08
+  agent: "general-purpose (sonnet) — harvest-loop Step 3.75 isolated Critic (purpose: independence)"
+  task: "judge H1 and H2 Done When, edge cases, claim vs code, scope"
+  outcome: "both CONDITIONAL PASS — H1 would have reversed lane L39 (codex round 10 invariant) as first written; H2 set must be 'not verified' not an enumerated list, absolute common-dir path, absent file = UNMEASURED"
+  evidence: "tracks/_meta/fh_signal_2026-11-08_fa277252-close.md §Harvest"
+  tokens: "UNMEASURED"
