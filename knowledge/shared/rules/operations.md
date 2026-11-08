@@ -56,6 +56,7 @@ The hub audits and improves itself weekly.
    the rest were product requests or UI observations. Step ② was only probed in that run: the transcript search
    returns one snippet per session (a locator, not a reader), so the moment-level read needs the CLI transcript
    JSONL — named, not done. Record: `tracks/_meta/g1_child_audit_run_2026-11-07.md`.
+3b. **Catch tally** (2026-11-08 operator: count what the methods caught in hard real work, at each close, instead of planting easy defects): run `python3 scripts/catch_tally.py --days 7` and paste its lines into the audit — catches by method, by who missed it, and the days with no «잡은 것» section. 🟥 A day with no section is unrecorded, not zero; report it as such.
 4. Write `tracks/_audit/weekly_audit_YYYY-MM-DD.md` mirroring the previous audit file's format (frontmatter + activity table + 🟥🟧🟩 + pattern table — no separate template file exists)
 5. Propose 3-tier improvements (🟥mandatory/🟧strong/🟩recommended)
 
