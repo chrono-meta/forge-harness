@@ -1282,6 +1282,7 @@ for _pair in \
   "scripts/proposal_hook.sh|scripts/test_proposal_hook_lanes.sh" \
   "plugins/fh-commons/skills/ko-tech-writer/SKILL.md|scripts/test_ko_tech_writer_lanes.sh" \
   "scripts/absorption_queue.py|scripts/test_absorption_queue_lanes.sh" \
+  "scripts/catch_tally.py|scripts/test_catch_tally_lanes.sh" \
   "scripts/digest_slow_leg.py|scripts/test_digest_slow_leg_lanes.sh" \
   "scripts/script_caller_ratchet.sh|scripts/test_script_caller_ratchet_lanes.sh" \
   "scripts/script_caller_ratchet.sh|scripts/test_runner_surface_index_lanes.sh" \

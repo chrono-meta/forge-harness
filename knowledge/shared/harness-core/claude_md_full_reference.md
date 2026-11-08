@@ -1233,6 +1233,12 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc. —
        outcomes. ⑤ is ATOMIC and owns BOTH writes: (a) append any close-time finding to
        `fh_completed_{date}.md` FIRST, (b) then write the card. Once ⑤ starts, `fh_completed`
        is CLOSED — a later append re-opens the violation ⑤ exists to prevent.
+       **(a) always carries a `## 잡은 것` section** (2026-11-08 operator: the methods prove their
+       worth on hard real work, so count it at each close): one row per defect this session caught,
+       `| 결함 | 잡은 방법 | 놓친 쪽 | 근거 |`. 잡은 방법 ∈ `cross-family` · `revert-probe` · `control` ·
+       `lens` · `gate` · `lane` · `operator` · `self`; 놓친 쪽 ∈ `author` (this session — your own work or
+       claim) · `plain-review` · `lane` · `gate` · `none`; 근거 = PR · commit · file:line. Nothing caught → the line `0건 — <what you
+       looked at>`; a bare `0건` is unrecorded, not zero. Count: `python3 scripts/catch_tally.py`.
        **Late finding (named case)**: a finding that surfaces AFTER (b) — including while writing
        the final message to the operator — means ⑤ is **not done**. Re-run ⑤ **whole**: append,
        then **rewrite the card**. Appending alone is the violation; the card must never be older
