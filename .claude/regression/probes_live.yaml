@@ -155,14 +155,21 @@ probes:
   #     polarity: present · input: "this harness is complex" · expect_re: "harness-doctor"
   #     control_input: "오늘 날씨 어때?"
 
+  # 2026-11-09 calibration on the nightly evidence (tracks/_meta/live_eval_runs/*/G-TRIG-04, 180 primary reps).
+  # After the routing fix (#917, 10-19) 60 non-blackout reps all routed to the weekly harvest; "harvest-loop"
+  # matched 55/60 — every miss was a correct route that wrote «weekly harvest» without the skill name, and those
+  # 5 misses are the whole FLAKY record (10-31, 11-02, 11-05, 11-09 ×2). Known negatives = the 9 real misroutes to
+  # the session close (10-17..10-19): «weekly harvest» appears in 0/9. The old pattern itself accepted 2/9 of them
+  # (they name harvest-loop as close step ②) — that blind spot is unchanged by this widening and is named below.
+  # Measured after: 60/60 positives · 2/9 negatives (same as before) · 0/180 control reps.
   - id: G-TRIG-04
     polarity: present
     input: "wrap up this week"
-    expect_re: "harvest-loop"
+    expect_re: "harvest-loop|weekly harvest"
     control_input: "오늘 날씨 어때?"
     construct: proxy
     claims: "/harvest-loop is proposed"
-    unseen: "proposal vs mention"
+    unseen: "proposal vs mention; a misroute to the session close that names harvest-loop as close step ② passes (2/9 of the 10-17..19 misroutes); NEW with «weekly harvest»: a misroute that calls close step ② a «weekly harvest» would pass — 0/9 measured, not excluded (codex 2026-11-09)"
 
   - id: G-TRIG-05
     polarity: present
