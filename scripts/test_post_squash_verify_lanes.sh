@@ -71,11 +71,12 @@ done
 [ "$_tf" -eq 0 ] && ok "trivial ② (: · true · ' true ; ' · exit 0 · '' · /usr/bin/true) → rc=3 each"
 
 # failing ② on a byte-correct merge → rc=1
-run "$T/ok" "$TIP_OK" --rerun 'grep -q NOPE a'
+run "$T/ok" "$TIP_OK" --rerun 'grep -q NOPE a && echo found'
 [ "$RC" -eq 1 ] && ok "failing ② on a byte-correct squash → rc=1" || { bad "failing ② rc=$RC"; printf '%s\n' "$OUT" | tail -4; }
 
 # silent ② (rc=0, no output) → rc=4, never a pass
-run "$T/ok" "$TIP_OK" --rerun 'grep -q a2 a'
+# (wrapped in bash -c: a bare `grep -q` is now refused before running — X12; the guard must still catch what X12 cannot see)
+run "$T/ok" "$TIP_OK" --rerun 'bash -c "grep -q a2 a"'
 [ "$RC" -eq 4 ] && ok "silent ② (rc=0, empty output) → rc=4" || { bad "silent ② rc=$RC"; printf '%s\n' "$OUT" | tail -4; }
 
 # COMBINED: main also changed a (different line region) after the branch was cut → not DIFFERS
@@ -178,6 +179,26 @@ _p1=$(bash "$SC" --precheck --rerun 'true' >/dev/null 2>&1; echo $?)
 _p2=$(bash "$SC" --precheck --rerun 'grep -q x y; echo z' >/dev/null 2>&1; echo $?)
 _p3=$(bash "$SC" --precheck >/dev/null 2>&1; echo $?)
 [ "$_p1$_p2$_p3" = "302" ] && ok "X11 --precheck: trivial=3 · real=0 · missing=2" || bad "X11 --precheck got $_p1/$_p2/$_p3 (want 3/0/2)"
+
+# X12 a ② that is statically silent on success is refused BEFORE merging (rc=3). Origin: the 7 merges in the
+#   receipts that ended verify-incomplete (2026-11-09) — content intact, ② a quiet check, the rc=4 silence
+#   guard fired only after the merge. Shapes below are those real --rerun strings, reduced. Pass side: a
+#   quiet check that also says what passed, and commands that print, must stay accepted.
+_x12=0
+for q in 'grep -q x y' 'bash a.sh --help >/dev/null 2>&1; grep -q "A pass" b.md' 'git show HEAD:f | grep -qx L' \
+         'grep -qF "curl -sL \"u\"" s.md' 'python3 -c "import yaml;yaml.safe_load(open(\"l.yaml\"))"' \
+         'git check-ignore -q f' 'test -f a && [ -s a ]' 'cmp -s a b'; do
+  _r=$(bash "$SC" --precheck --rerun "$q" >/dev/null 2>&1; echo $?)
+  [ "$_r" = 3 ] || { bad "X12 quiet ② '$q' → rc=$_r (want 3)"; _x12=1; }
+done
+for p in 'grep -q x y && echo ok' 'pytest -q t' 'bash scripts/x.sh' 'python3 -c "import yaml;print(1)"' \
+         'git grep -e x' 'grep -c x y' 'make t >/dev/null 2>&1; echo done' 'cat a 2>/dev/null' 'bash -c true' \
+         'cat a 3>/dev/null' 'cat a >/dev/null 1>&2' "printf '%s\\n' -q | grep -- -q" "python3 -c 'import os; os.write(1,b\"ok\")'" \
+         "grep -q '\"' a; echo \"ok\"" "grep -q x a & echo done" 'cat a >&2 | test -d /tmp'; do   # last 7 = cross-family R1 over-refusals
+  _r=$(bash "$SC" --precheck --rerun "$p" >/dev/null 2>&1; echo $?)
+  [ "$_r" = 0 ] || { bad "X12 printing ② '$p' → rc=$_r (want 0)"; _x12=1; }
+done
+[ "$_x12" -eq 0 ] && ok "X12 quiet ② refused before merge (8 shapes → 3) · printing ② accepted (16 shapes → 0)"
 
 printf 'PASS %d · FAIL %d\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

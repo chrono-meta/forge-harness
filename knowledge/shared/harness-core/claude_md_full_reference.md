@@ -343,7 +343,8 @@ change>'`** — it records the PR head *before* the merge deletes it, merges wit
 above, then re-runs your lane on the merged `main` and compares every file the branch touched. A
 green `gh pr merge` only says the merge happened, not that the squash carried the branch
 (2026-09-21: four merges, none checked). `--rerun` is required and refused before merging if it is
-missing or does nothing (`true`, `echo …`).
+missing or does nothing (`true`, `echo …`), and when it would print nothing on success (`grep -q …`, `… >/dev/null`) — a
+silent pass reads as an instrument failure after the merge (`verify-incomplete`), so end it with `&& echo '<what passed>'`.
 
 **Two layers.** Shift-left = `templates/.git-hooks/pre-push` blocks a direct push to `main`/`master` unless
 `MAIN_PUSH_OK=1` (logged, same shape as `DESTRUCTIVE_OP_OK`; known-pair calibrated). The **hard floor is server-side**
