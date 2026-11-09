@@ -169,7 +169,7 @@ probes:
     control_input: "오늘 날씨 어때?"
     construct: proxy
     claims: "/harvest-loop is proposed"
-    unseen: "proposal vs mention; a misroute to the session close that names harvest-loop as close step ② passes (2/9 of the 10-17..19 misroutes)"
+    unseen: "proposal vs mention; a misroute to the session close that names harvest-loop as close step ② passes (2/9 of the 10-17..19 misroutes); NEW with «weekly harvest»: a misroute that calls close step ② a «weekly harvest» would pass — 0/9 measured, not excluded (codex 2026-11-09)"
 
   - id: G-TRIG-05
     polarity: present
