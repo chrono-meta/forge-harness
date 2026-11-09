@@ -156,7 +156,7 @@ if command -v python3 >/dev/null 2>&1; then
   { [ -f "$T/drafts/applied/a1.lease" ] && [ -f "$T/drafts/applied/a2.lease" ] && [ -f "$T/drafts/applied/a3.lease" ] \
     && [ -f "$T/drafts/a4.lease" ] && [ ! -f "$T/drafts/a1.lease" ]; } \
     && ok "B2b added + already-there moved to applied/ · skipped stays queued" || ko "B2b queue state: $(ls "$T/drafts" | tr '\n' ' ')"
-  tr -d '\r' < "$T/b2.out" | grep -q 'a4.lease — skipped' && ok "B2c the skipped draft is shown with its reason" || ko "B2c"
+  grep -q 'a4.lease — skipped' "$T/b2.out" && ok "B2c the skipped draft is shown with its reason" || ko "B2c"
   echo "B3 apply-all + a wrong code (known negative)"
   mkq; before="$(h)"; ptyrun zzzz env -u CLAUDECODE bash "$S" apply-all > "$T/b3.out" 2>&1; rc=$?
   [ "$rc" -eq 3 ] && [ "$(h)" = "$before" ] && [ -f "$T/drafts/a1.lease" ] && [ ! -d "$T/drafts/applied" ] \

@@ -295,7 +295,8 @@ PY
     bak="$(mktemp "$LEASE.bak.$(date +%Y%m%dT%H%M%S).XXXXXX")" && cp -p "$LEASE" "$bak" \
       || { echo "ERROR: backup failed — nothing written"; exit 5; }
     wout="$(planpy many "$LEASE" "$snap" "$code" "${drafts[@]}")"; wrc=$?
-    if [ "$wrc" -ne 0 ] || ! printf '%s\n' "$wout" | grep -qx 'WROTE'; then
+    wrote=0; case $'\n'"$wout"$'\n' in *$'\nWROTE\n'*) wrote=1 ;; esac   # no pipe: grep -q under pipefail can SIGPIPE
+    if [ "$wrc" -ne 0 ] || [ "$wrote" -ne 1 ]; then
       printf '%s\n' "$wout" | grep '^ERROR' ; echo "REFUSED/ERROR (rc=$wrc) — the lease file was not replaced (backup $bak)"
       [ "$wrc" -ne 0 ] && exit "$wrc"; exit 5
     fi
