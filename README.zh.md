@@ -31,9 +31,9 @@
 
 | 你得到 | 实际表现 | 证据 |
 |---|---|---|
-| **合并前的门禁** | 在改动落地*之前*判定 diff，判定会点名这次改动丢掉了什么。判定是有类型的值（`PASS · PENDING · BLOCKED · ESCALATE`），而不是需要你去 grep 的文字。对 agent 写的代码有效，对你自己写的代码同样有效。 | 下方演示 GIF · 一次对他人所写代码的运行与一次埋洞测试，附样本量：[证据](#证据以及它薄弱的地方) · 方法与受控消融实验：[arXiv:2609.04218](https://arxiv.org/abs/2609.04218) |
-| **能延续的记忆** | `tracks/` 记录每次会话学到的东西，第 2 次会话从第 1 次停下的地方开始。 | 设计意图。会话结束时更新 `tracks/_meta/` 里的卡片，下次会话启动时读取它（[`CLAUDE.md`](CLAUDE.md) §Session Wrap-up）。本页没有链接任何实测收益；而且它要从第 2 次会话起才看得出来。 |
-| **替你挑检查的帮手** | 说“诊断这个项目”或“加速这个项目”，你会得到一份按优先级排序的待修复/待安装清单。逐项批准之前不会改动任何东西。 | 描述见 [`CLAUDE.md`](CLAUDE.md)（§Field-Harness Diagnostic）；没有关于它命中率的基准测试 |
+| **合并前的门禁** | 在改动落地*之前*判定 diff，判定会点名这次改动丢掉了什么。判定是有类型的值（`PASS · PENDING · BLOCKED · ESCALATE`），而不是需要你去 grep 的文字。对 agent 写的代码有效，对你自己写的代码同样有效。 | 下方演示 GIF · 一次对他人所写代码的运行与一次埋洞测试，附样本量：[证据](#证据) · 方法与受控消融实验：[arXiv:2609.04218](https://arxiv.org/abs/2609.04218) |
+| **能延续的记忆** | `tracks/` 记录每次会话学到的东西，第 2 次会话从第 1 次停下的地方开始。 | 会话结束时更新 `tracks/_meta/` 里的卡片，下次会话从这张卡片开始（[`CLAUDE.md`](CLAUDE.md) §Session Wrap-up）。 |
+| **替你挑检查的帮手** | 说“诊断这个项目”或“加速这个项目”，你会得到一份按优先级排序的待修复/待安装清单。逐项批准之前不会改动任何东西。 | 流程写在 [`CLAUDE.md`](CLAUDE.md) §Field-Harness Diagnostic。每一项都要在你批准之后才会落地 |
 
 门禁拦的不只是 agent，也包括你自己的错误：2026-08-22 这一天，门禁拦住了FH 的作者七次，其中没有一次是作者自己先发现的（[门禁拦截的一天](docs/GATE_DAY.md)）。
 
@@ -79,7 +79,7 @@ cd ~/projects/forge-harness && claude          # 然后输入：hi   （或 안�
 
 ## 一张图看懂它如何运作
 
-这是设计上的流程。哪些步骤由代码强制、哪些由被告知要遵守的 AI 规则承担，见下方“能做与不能做”表和 [`docs/map/FH_MAP.md`](docs/map/FH_MAP.md)。
+这是设计上的流程。哪些步骤由代码强制、哪些由被告知要遵守的 AI 规则承担，见下方“FH 做什么，做到哪一步”表和 [`docs/map/FH_MAP.md`](docs/map/FH_MAP.md)。
 
 ```mermaid
 flowchart TD
@@ -108,22 +108,24 @@ flowchart TD
 2. **作者是最差的审查者。** 和 AI 一起做完之后，你就成了它的辩护人，所以真正算数的检查，是由从未见过你的推理过程的审查者做的——[`docs/WHY.md`](docs/WHY.md)。
 3. **在不可逆的边界上放机器；判断保持开放。** 在无法撤销的地方拦住，并承认你没有测量的东西——[`docs/ETHOS.md`](docs/ETHOS.md)。
 
-## 能做与不能做
+## FH 做什么，做到哪一步
 
-| 能做 | 不能做（仓库自己说明的） |
+| 它做什么 | 做到哪一步 |
 |---|---|
-| 在合并前判定 diff，并点名它丢掉了什么 | **取代事后审查。** 它让到达人手里的东西变少，而不是变得不必要。只有在真实屏幕、真实状态下运行才会暴露的问题，仍然是人的工作 |
-| 通过 git 钩子拦住提交和推送（规则、脚本、删除、强制推送） | **保证一定拦住。** 钩子在客户端，`--no-verify` 可以绕过；服务端的底线是“main 只能走 PR”加上必需的 CI 检查。它的 pre-commit 钩子是用来开发 FH 本身的——不要装进你自己的仓库，那里请用门 ① |
-| 把一个项目的经验带入下一次会话 | **在所有地方表现一致。** 问候时匹配你的语言是一条没有机械底线的文字规则；2026-08-21 的一次盲测中，有一种问候变体没有出现菜单 |
-| 让另一个模型家族（Codex、Gemini、本地）做审查，抓住单一家族漏掉的东西 | **在 Claude Code 之外完整可用。** 其他运行时得到方法论和 `fh-gate`/`fh-run`，得不到自动驾驶（[`docs/codex-compat.md`](docs/codex-compat.md)） |
-| 根据一句简短的请求为项目搭建框架 | **按需产出成品框架。** 将来要做这件事的孵化器只产出过一次，而且那次跳过了完整流程——这是前进的方向，不是已发布的功能 |
+| 在合并前判定 diff，并点名它丢掉了什么 | 它是前置的一道关，让到达人手里的东西更小、更清晰。只有在真实屏幕、真实状态下运行才会暴露的问题，由人来检查 |
+| 通过 git 钩子拦住提交和推送（规则、脚本、删除、强制推送） | 在接好钩子的检出里拦住提交和推送。客户端钩子可以用 `--no-verify` 有意跳过，所以最后一道防线在服务端（“main 只能走 PR”加上必需的 CI 检查）。它的 pre-commit 钩子是用来开发 FH 本身的；在你自己的仓库里，请用门 ① |
+| 把一个项目的经验带入下一次会话 | 通过会话卡片和记录带过去。以文字规则方式运行的部分（例如问候时匹配你的语言）会因模型而异，正在对照测量结果调整 |
+| 让另一个模型家族（Codex、Gemini、本地）做审查，抓住单一家族漏掉的东西 | 在 Claude Code 之外，git 钩子门禁和 `AGENTS.md` 引导同样可用（2026-10-12 在 Antigravity 上实测，3/3），`fh-gate` 也能在 Codex 后端上运行。由钩子驱动的会话自动化目前仍只支持 Claude Code（[`docs/codex-compat.md`](docs/codex-compat.md)） |
+| 根据一句简短的请求为项目搭建框架 | 孵化器已经通过正式流程产出过一个工具，这个工具接入了目标框架，并在真实数据上运行过（2026-08-21）。产出完整框架是下一步 |
 
-## 证据，以及它薄弱的地方
+## 证据
 
-- **一份真实的第三方 diff（2026-05-31）。** 对 OpenCode 中 AI 所写的 `permission/arity.ts`（163 行，CI 全绿）运行 `fh-gate`：判定 BLOCKED，依据是 CI 漏掉的两个 A 级发现。
-- **埋洞测试，模型固定（2026-07-14）。** 另外两个模型写下的八个 fail-open 漏洞。普通审查 5/8（其中 2 个找错了 bug）· + FH 的 degrade-direction 视角 6/8 · + 第二个模型家族 8/8，误报 0。**单次抽样，样本很小。** 要点是两次单模型运行漏掉了*同样*的两个漏洞。方法见 [`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md)；更多运行见 [`docs/OUTPUT_EVIDENCE.md`](docs/OUTPUT_EVIDENCE.md)。
-- **成熟度是评级，不是宣称。** 下面列出的五重身份在 [`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md) 中带有注明日期的等级；依赖其中任何一个之前，先读它的等级。
-- 本页的数字（**46 个技能 · 14 个 agent**）是 `plugins/`（`fh-meta`、`fh-commons`、`fh-qp`、`fh-preprep`）下的技能文件夹和 agent 文件，统计于 2026-10-10。用语手册：[`CHEATSHEET.md` §12](CHEATSHEET.md#12-skills--agents--what-each-does-and-what-to-say)。
+- 一份真实的第三方 diff（2026-05-31）。对 OpenCode 中 AI 所写的 `permission/arity.ts`（163 行，CI 全绿）运行 `fh-gate`：判定 BLOCKED，依据是 CI 漏掉的两个 A 级发现。
+- 另一个运行时（2026-10-12）。在 Antigravity CLI（Gemini）会话中，问候引导和 git 钩子门禁各自 3/3 生效。
+- 孵化器的一次正式产出（2026-08-21）。Chamber 运行 #15 通过正式流程（有顺序见证）产出了一个工具，该工具随后在目标框架中跑了真实数据（目前正式产出 1 次）。
+- 埋洞测试，模型固定（2026-07-14）。另外两个模型写下的八个 fail-open 漏洞。普通审查 5/8（其中 2 个找错了 bug）· + FH 的 degrade-direction 视角 6/8 · + 第二个模型家族 8/8，误报 0（单次抽样）。两次单模型运行漏掉了*同样*的两个漏洞，第二个模型家族把这两个都抓到了。方法见 [`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md)；更多运行见 [`docs/OUTPUT_EVIDENCE.md`](docs/OUTPUT_EVIDENCE.md)。
+- 成熟度是评级，不是宣称。下面列出的五重身份，各自在 [`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md) 中带有注明日期的等级及其依据。
+- 本页的数字（47 个技能 · 14 个 agent）是 `plugins/`（`fh-meta`、`fh-commons`、`fh-qp`、`fh-preprep`）下的技能文件夹和 agent 文件，统计于 2026-11-01。用语手册：[`CHEATSHEET.md` §12](CHEATSHEET.md#12-skills--agents--what-each-does-and-what-to-say)。
 
 ## 用起来之后会遇到的词
 
