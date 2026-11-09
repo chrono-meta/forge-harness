@@ -63,7 +63,19 @@ while time.time() - t0 < 20:
             break
         buf += chunk
     if not sent and b"Type " in buf:
-        os.write(fd, typed.encode() + b"\r"); sent = True
+        t = typed
+        if t.startswith("@AUTO@"):   # type the code the prompt shows (the agent trick the header names)
+            import re
+            m = re.search(rb"Type ([0-9a-f]{4}) ", buf)
+            if not m:
+                continue
+            if t == "@AUTO@touch":   # change the lease while the prompt is open
+                with open(os.environ["FH_LEASE_FILE"], "a", encoding="utf-8") as f:
+                    f.write("touched\n")
+            if os.environ.get("PTY_BEFORE_TYPE"):   # change something while the prompt is open
+                os.system(os.environ["PTY_BEFORE_TYPE"])
+            t = m.group(1).decode()
+        os.write(fd, t.encode() + b"\r"); sent = True
     w, st = os.waitpid(pid, os.WNOHANG)
     if w:
         break
@@ -111,20 +123,116 @@ if command -v python3 >/dev/null 2>&1; then
   if [ "$a3rc" -eq 0 ] && [ "$l7" = "            $LINE" ] && [ "${l8#제외}" != "$l8" ] && [ "$bak_n" -ge 1 ]; then
     ok "inserted at L7 before 제외 · backup present"
   else ko "A3 $(tr -d '\r' < "$T/a3.out" | tail -2)"; fi
+  # A6 the applied draft moved to applied/ (so apply-all will not offer it again); put it back for A4/R1
+  if [ ! -f "$DR" ] && [ -f "$T/drafts/applied/$(basename "$DR")" ]; then ok "A6 applied draft moved to applied/"
+  else ko "A6 draft not moved (present=$([ -f "$DR" ] && echo yes || echo no))"; fi
+  [ -f "$DR" ] || mv "$T/drafts/applied/$(basename "$DR")" "$DR"
   echo "A4 terminal + wrong code"
   mk; before="$(h)"
   ptyrun zzzz env -u CLAUDECODE bash "$S" apply "$DR" > "$T/a4.out" 2>&1; a4rc=$?
   [ "$a4rc" -eq 3 ] && [ "$(h)" = "$before" ] && grep -q 'REFUSED' "$T/a4.out" && ok "wrong code → unchanged" || ko "A4"
+  # ── apply-all: one code for every queued draft ──
+  # queue: two new lines for the same block (both must land, in order) · one already there · one malformed
+  L2="추가 utterance 2026-11-07 «초록이면 머지» (물음: #3) ⇒ #3 머지"
+  mkq() {
+    mk; rm -rf "$T/drafts"; mkdir -p "$T/drafts"; find "$T" -maxdepth 1 -name 'lease.md.bak.*' -delete
+    printf 'block: 2026-11-07 세션\nline: %s\n' "$LINE" > "$T/drafts/a1.lease"
+    printf 'block: 2026-11-07 세션\nline: %s\n' "$L2" > "$T/drafts/a2.lease"
+    printf 'block: 2026-11-07 세션\nline: 추가 utterance 2026-11-07 «머지해» (물음: #1 머지할까) ⇒ #1 머지\n' > "$T/drafts/a3.lease"
+    printf 'block: 없는 절\nline: %s\n' "$LINE" > "$T/drafts/a4.lease"
+  }
+  echo "B1 apply-all in an agent shell"
+  mkq; before="$(h)"; out="$(ptyrun abcd env CLAUDECODE=1 bash "$S" apply-all 2>&1)"; rc=$?
+  [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'agent shell' && [ "$(h)" = "$before" ] && [ -f "$T/drafts/a1.lease" ] \
+    && ok "B1 refused rc 3 · unchanged · nothing moved" || ko "B1 rc=$rc"
+  echo "B2 apply-all + the code it shows (known positive)"
+  mkq; ptyrun @AUTO@ env -u CLAUDECODE bash "$S" apply-all > "$T/b2.out" 2>&1; rc=$?
+  l7="$(sed -n 7p "$T/lease.md")"; l8="$(sed -n 8p "$T/lease.md")"; l9="$(sed -n 9p "$T/lease.md")"
+  bak_n="$(find "$T" -maxdepth 1 -name 'lease.md.bak.*' | wc -l | tr -d ' ')"
+  if [ "$rc" -eq 0 ] && [ "$l7" = "            $LINE" ] && [ "$l8" = "            $L2" ] && [ "${l9#제외}" != "$l9" ] \
+     && [ "$bak_n" -eq 1 ] && [ "$(grep -c '추가 utterance' "$T/lease.md")" -eq 3 ]; then
+    ok "B2 two lines in order before 제외 · one backup · the present line not duplicated"
+  else ko "B2 rc=$rc $(tr -d '\r' < "$T/b2.out" | tail -3)"; fi
+  { [ -f "$T/drafts/applied/a1.lease" ] && [ -f "$T/drafts/applied/a2.lease" ] && [ -f "$T/drafts/applied/a3.lease" ] \
+    && [ -f "$T/drafts/a4.lease" ] && [ ! -f "$T/drafts/a1.lease" ]; } \
+    && ok "B2b added + already-there moved to applied/ · skipped stays queued" || ko "B2b queue state: $(ls "$T/drafts" | tr '\n' ' ')"
+  tr -d '\r' < "$T/b2.out" | grep -q 'a4.lease — skipped' && ok "B2c the skipped draft is shown with its reason" || ko "B2c"
+  echo "B3 apply-all + a wrong code (known negative)"
+  mkq; before="$(h)"; ptyrun zzzz env -u CLAUDECODE bash "$S" apply-all > "$T/b3.out" 2>&1; rc=$?
+  [ "$rc" -eq 3 ] && [ "$(h)" = "$before" ] && [ -f "$T/drafts/a1.lease" ] && [ ! -d "$T/drafts/applied" ] \
+    && ok "B3 rc 3 · unchanged · nothing moved" || ko "B3 rc=$rc"
+  echo "B4 the lease changes while the prompt is open"
+  mkq; ptyrun @AUTO@touch env -u CLAUDECODE bash "$S" apply-all > "$T/b4.out" 2>&1; rc=$?
+  { [ "$rc" -eq 3 ] && [ "$(tail -1 "$T/lease.md")" = "touched" ] && ! grep -qF "$L2" "$T/lease.md" && [ -f "$T/drafts/a1.lease" ]; } \
+    && ok "B4 refused rc 3 · lines not written · nothing moved" || ko "B4 rc=$rc $(tr -d '\r' < "$T/b4.out" | tail -2)"
+  echo "B5 a second run offers only what is left"
+  mkq; ptyrun @AUTO@ env -u CLAUDECODE bash "$S" apply-all >/dev/null 2>&1; before="$(h)"
+  out="$(ptyrun @AUTO@ env -u CLAUDECODE bash "$S" apply-all 2>&1)"; rc=$?
+  [ "$rc" -eq 4 ] && [ "$(h)" = "$before" ] && printf '%s' "$out" | grep -q 'nothing to apply' && ! printf '%s' "$out" | grep -q 'a1.lease' \
+    && ok "B5 applied drafts not offered again · rc 4" || ko "B5 rc=$rc"
+  echo "B6 a draft's target block changes while the prompt is open (codex R1 HIGH)"
+  mkq; before="$(h)"
+  out="$(PTY_BEFORE_TYPE="printf 'block: 다른 절\\nline: %s\\n' '$LINE' > '$T/drafts/a1.lease'" \
+    ptyrun @AUTO@ env -u CLAUDECODE bash "$S" apply-all 2>&1)"; rc=$?
+  { [ "$rc" -eq 3 ] && [ "$(h)" = "$before" ] && [ -f "$T/drafts/a1.lease" ]; } \
+    && ok "B6 refused rc 3 · lease unchanged · nothing moved" || ko "B6 rc=$rc $(printf '%s' "$out" | tr -d '\r' | tail -2)"
+  echo "A7 single apply: the draft is edited while the prompt is open (codex R1 MED)"
+  mk; rm -rf "$T/drafts"; mkdir -p "$T/drafts"; printf 'block: 2026-11-07 세션\nline: %s\n' "$LINE" > "$T/drafts/s1.lease"
+  PTY_BEFORE_TYPE="printf 'block: 2026-11-07 세션\\nline: %s\\n' '$L2' > '$T/drafts/s1.lease'" \
+    ptyrun @AUTO@ env -u CLAUDECODE bash "$S" apply "$T/drafts/s1.lease" > "$T/a7.out" 2>&1; rc=$?
+  { [ "$rc" -eq 0 ] && [ -f "$T/drafts/s1.lease" ] && grep -qF "$L2" "$T/drafts/s1.lease" && [ ! -d "$T/drafts/applied" ]; } \
+    && ok "A7 the edited draft stays queued (not marked applied)" || ko "A7 rc=$rc $(tr -d '\r' < "$T/a7.out" | tail -2)"
+  echo "B7 a draft name carrying a tab/newline cannot forge a record (codex R2 HIGH)"
+  mkq; printf 'block: 없는 절\nline: %s\n' "$LINE" > "$T/drafts/victim.lease"; rm -f "$T/drafts/a4.lease"
+  printf 'block: 2026-11-07 세션\nline: %s\n' "$L2" > "$T/drafts/x"$'\n'"MOVE"$'\t'"victim.lease"$'\t'"$(shasum -a 256 "$T/drafts/victim.lease" | cut -c1-64)"$'\t'"j.lease"
+  out="$(ptyrun @AUTO@ env -u CLAUDECODE bash "$S" apply-all 2>&1)"; rc=$?
+  { [ -f "$T/drafts/victim.lease" ] && printf '%s' "$out" | grep -q 'unexpected file name'; } \
+    && ok "B7 the odd name is skipped and the victim stays queued" || ko "B7 rc=$rc victim=$([ -f "$T/drafts/victim.lease" ] && echo queued || echo MOVED)"
 else
-  echo "  ⏭  A3/A4 SKIP (no python3 — not a pass)"
+  echo "  ⏭  A3/A4/A7/B1–B7 SKIP (no python3 — not a pass)"
 fi
 
 echo "R1 revert probe"
+mkdir -p "$T/drafts"; printf 'block: 2026-11-07 세션\nline: %s\n' "$LINE" > "$DR"   # B lanes reset the queue
 M="$T/m.sh"; sed 's/if \[ -n "\${CLAUDECODE+x}" \]; then/if false; then/' "$S" > "$M"
 if cmp -s "$S" "$M"; then ko "R1 mutation did not apply (HARNESS-ERROR)"; else
   mk; out="$(ptyrun zzzz env CLAUDECODE=1 bash "$M" apply "$DR" 2>&1)"
   printf '%s' "$out" | grep -q 'Type ' && ! printf '%s' "$out" | grep -q 'agent shell' \
     && ok "mutant reaches the confirmation prompt → A1 would be red" || ko "R1 mutant did not reach the prompt"
 fi
+# mutate SCRIPT → one known-negative lane must turn red (apply-check: every find matched once, mutant differs)
+probe() {  # $1 name · $2 lane command (uses $M; must FAIL on the mutant) · then find/replace pairs
+  local name="$1" lane="$2"; shift 2; M="$T/m_$name.sh"
+  python3 - "$S" "$M" "$@" <<'PY'
+import sys
+s = open(sys.argv[1], encoding="utf-8").read()
+a = sys.argv[3:]
+for f, r in zip(a[0::2], a[1::2]):
+    if s.count(f) != 1:
+        sys.exit(1)
+    s = s.replace(f, r)
+open(sys.argv[2], "w", encoding="utf-8").write(s)
+PY
+  if [ $? -ne 0 ] || cmp -s "$S" "$M"; then ko "$name mutation did not apply (HARNESS-ERROR)"; return; fi
+  if eval "$lane"; then ko "$name mutant still passes the lane — decorative"; else ok "$name mutant turns the lane red"; fi
+}
+echo "R2–R4 revert probes on apply-all"
+probe R2 'mkq; before="$(h)"; ptyrun zzzz env -u CLAUDECODE bash "$M" apply-all >/dev/null 2>&1; [ $? -eq 3 ] && [ "$(h)" = "$before" ]' \
+  '[ -n "$code" ] && [ "$typed" = "$code" ]' 'true'
+# the «changed while waiting» refusal is three layers (shell compare · python start · python before replace): all three off
+probe R3 'mkq; ptyrun @AUTO@touch env -u CLAUDECODE bash "$M" apply-all >/dev/null 2>&1; [ $? -eq 3 ] && ! grep -qF "$L2" "$T/lease.md"' \
+  '[ "$snap" = "$now" ] || { echo "REFUSED: the lease file changed while waiting — run apply-all again"' 'true || { echo "x"' \
+  'if snap != "-" and hashlib.sha256(data).hexdigest() != snap:' 'if False:' \
+  'if hashlib.sha256(open(lease, "rb").read()).hexdigest() != snap:' 'if False:'
+probe R4 'mkq; ptyrun @AUTO@ env -u CLAUDECODE bash "$M" apply-all >/dev/null 2>&1; [ -f "$T/drafts/applied/a1.lease" ]' \
+  'then mark_applied "$DDIR/$nm"' 'then :'
+echo "R5–R6 revert probes on the codex R1 fixes"
+probe R5 'mkq; before="$(h)"; PTY_BEFORE_TYPE="printf '"'"'block: 다른 절\\nline: %s\\n'"'"' '"'"'$LINE'"'"' > '"'"'$T/drafts/a1.lease'"'"'" ptyrun @AUTO@ env -u CLAUDECODE bash "$M" apply-all >/dev/null 2>&1; [ $? -eq 3 ] && [ "$(h)" = "$before" ]' \
+  'added.append(f"{name}\t{lines[h]}\tL{at + 1}\t{new}")' 'added.append(f"{name}\t{new}")' \
+  'done.append(f"{name}\t{lines[h]}\t{new}")' 'done.append(name)'
+probe R6 'mk; rm -rf "$T/drafts"; mkdir -p "$T/drafts"; printf '"'"'block: 2026-11-07 세션\nline: %s\n'"'"' "$LINE" > "$T/drafts/s1.lease"; PTY_BEFORE_TYPE="printf '"'"'block: 2026-11-07 세션\\nline: %s\\n'"'"' '"'"'$L2'"'"' > '"'"'$T/drafts/s1.lease'"'"'" ptyrun @AUTO@ env -u CLAUDECODE bash "$M" apply "$T/drafts/s1.lease" >/dev/null 2>&1; [ -f "$T/drafts/s1.lease" ]' \
+  '= "$dsnap" ]; then mark_applied' '= "$dsnap" ] || true; then mark_applied'
+probe R7 'mkq; printf '"'"'block: 없는 절\nline: %s\n'"'"' "$LINE" > "$T/drafts/victim.lease"; rm -f "$T/drafts/a4.lease"; printf '"'"'block: 2026-11-07 세션\nline: %s\n'"'"' "$L2" > "$T/drafts/x"$'"'"'\n'"'"'"MOVE"$'"'"'\t'"'"'"victim.lease"$'"'"'\t'"'"'"$(shasum -a 256 "$T/drafts/victim.lease" | cut -c1-64)"$'"'"'\t'"'"'"j.lease"; ptyrun @AUTO@ env -u CLAUDECODE bash "$M" apply-all >/dev/null 2>&1; [ -f "$T/drafts/victim.lease" ]' \
+  'case "${f##*/}" in *[!A-Za-z0-9._-]*)' 'case "${f##*/}" in __never__)'
 echo "lease_line_apply lanes: $pass passed · $fail failed"
 [ "$fail" -eq 0 ]

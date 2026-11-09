@@ -368,3 +368,12 @@ How to apply:
   cost spread of up to 3× between harnesses began, with no consistent accuracy advantage (arXiv:2610.04433 — digest summary, paper not opened). Tokens
   are not cost (cache reads and writes bill differently). Shrinking resident text is a candidate lever; its saving is
   established only by the same two-arm run after a diet.
+
+## §Lease-Line-Scope — which operator answers need a lease line (2026-11-10)
+
+A RECORDED standing request needs a lease line; a per-PR operator answer («머지해», «초록이면 머지») does not —
+its record is the merge receipt's `--lease 'operator <date> «quote» (#PR)'` plus the transcript. Only
+scope-widening standing grants need a line, and one given remotely (the operator cannot run the apply script)
+reads as a one-time grant for that session until the operator applies its draft at the desk
+(`lease_line_apply.sh apply` / `apply-all`). Canonical text and the measurement that dropped the
+permission-prompt path: `knowledge/shared/harness-core/lease_record_channel.md` §무엇이 리스 줄을 필요로 하나.
