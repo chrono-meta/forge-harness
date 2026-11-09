@@ -104,6 +104,15 @@ if [ -n "$EXPECT_HEAD" ] && [ "$HEAD_OID" != "$EXPECT_HEAD" ]; then
   echo "🟥 PR #$PR head is $HEAD_OID, not the checked $EXPECT_HEAD — not merging" >&2; exit 2
 fi
 echo "── PR #$PR head recorded: $HEAD_OID"
+# 1a. no --lease → say so, before the merge (AQ-20261109-5). The receipt still records NONE and the merge still runs:
+#   most merges rest on the operator's per-PR answer, which is fine to leave unnamed. What must not stay silent is a merge
+#   that rested on a STANDING approval and recorded none — #1063 was merged on the self-dev lease with lease=NONE and the
+#   receipt said nothing. Advisory only; never changes rc.
+if [ "$LEASE" = "NONE" ]; then
+  echo "⚠️  no --lease: the receipt will record lease=NONE. If this merge rests on a standing approval (the self-dev" >&2
+  echo "   lease, a session lease), stop and rerun with --lease '<its label>'; if it rests on the operator's answer for" >&2
+  echo "   THIS PR, NONE is right. Advisory only; merging continues." >&2
+fi
 
 # 1b. coverage advisory — WARNING ONLY (never changes rc, never merges or refuses). post_squash_verify's precheck rejects a
 #   command that is trivially empty; it cannot see a command that is real but never touches this PR's files. Static, pre-merge,

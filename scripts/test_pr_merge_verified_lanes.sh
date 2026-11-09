@@ -81,6 +81,7 @@ GOOD='grep -q a2 a && grep -q b2 b && echo instrument-ok'
 printf '── pr_merge_verified ──\n'
 
 setup ok; mkgh "$T/ok"; run "$T/ok" 7 --rerun "$GOOD"
+OK_OUT="$OUT"
 { [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q 'merged and verified'; } \
   && ok "L1 merge + verify → rc=0" || { bad "L1 happy path rc=$RC"; printf '%s\n' "$OUT" | tail -6; }
 
@@ -157,12 +158,17 @@ setup st; mkgh "$T/st"; : > "$T/st/local_fail"; : > "$T/st/stuck"; run "$T/st" 7
 # ── merge receipt: actor + lease (frontier digest 2026-10-23, arXiv:2610.28683) ──
 # L17 an agent session merging under a named lease → one receipt line naming both, with the merge commit and outcome
 setup rl; mkgh "$T/rl"; OUT=$(cd "$T/rl/work" && CLAUDECODE=1 PATH="$T/rl/bin:$PATH" PMV_RETRY_SLEEP=0 PMV_RECEIPTS="$T/rl/receipts.jsonl" bash "$SC" 7 --rerun "$GOOD" --lease "night-2026-10-22" 2>&1); RC=$?
+RL_OUT="$OUT"
 { [ "$RC" -eq 0 ] && [ "$(rcpt "$T/rl" actor)" = "agent-session:claude-code" ] && [ "$(rcpt "$T/rl" lease)" = "night-2026-10-22" ] \
   && [ "$(rcpt "$T/rl" outcome)" = "verified" ] && [ "$(rcpt "$T/rl" merge)" = "$(cat "$T/rl/merge.oid")" ] && [ "$(wc -l < "$T/rl/receipts.jsonl")" -eq 1 ]; } \
   && ok "L17 agent merge under a lease → receipt: actor agent-session · lease · verified · merge oid" || { bad "L17 rc=$RC receipt=$(cat "$T/rl/receipts.jsonl" 2>/dev/null)"; printf '%s\n' "$OUT" | tail -3; }
 # L18 control: no lease, no agent marker → actor human-or-unknown, lease NONE (recorded, not refused)
 { [ "$(rcpt "$T/ok" actor)" = "human-or-unknown" ] && [ "$(rcpt "$T/ok" lease)" = "NONE" ]; } \
   && ok "L18 no lease, no agent marker → human-or-unknown · NONE (merge still allowed)" || bad "L18 receipt=$(cat "$T/ok/receipts.jsonl" 2>/dev/null)"
+# L18b/L18c (AQ-20261109-5) lease=NONE is said before the merge; a named lease is not warned about
+{ [ "$(rcpt "$T/ok" lease)" = "NONE" ] && printf '%s' "$OK_OUT" | grep -qF 'no --lease: the receipt will record lease=NONE'; } \
+  && ok "L18b no lease → warning line before the merge (the merge still runs)" || bad "L18b warning missing: $(printf '%s' "$OK_OUT" | head -5)"
+printf '%s' "$RL_OUT" | grep -qF 'no --lease' && bad "L18c named lease still warned" || ok "L18c --lease given → no NONE warning"
 # L19 negative control — a refusal BEFORE the merge, or a merge GitHub did not take, leaves no receipt. It cannot detect the feature
 #     being removed on its own (codex R1); L17 · L18 · L21 are its positive pair.
 { [ ! -s "$T/nore/receipts.jsonl" ] && [ ! -s "$T/triv/receipts.jsonl" ] && [ ! -s "$T/mf/receipts.jsonl" ]; } \
