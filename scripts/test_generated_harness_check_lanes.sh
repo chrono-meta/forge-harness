@@ -321,5 +321,13 @@ OUT=$("$PY" "$CHK" "$D/lnk" --json 2>&1); RC=$?
 N=$(printf '%s' "$OUT" | "$PY" -c 'import json,sys; print(sum(1 for x in json.load(sys.stdin)["human_review"] if x["id"]=="H2"))' 2>/dev/null)
 [ "$RC" -eq 1 ] && [ "$N" = "1" ] && ok "L14 링크된 .claude/CLAUDE.md 는 두 번 세지 않는다 (H2=1, rc=1)" || no "L14 링크 중복" "rc=$RC H2=$N"
 
+# L15 — W8 (정보): description 에 질문 모양이 없으면 표시, 있으면 표시 없음. rc 는 둘 다 0 (정보는 판정에 영향 없음)
+mkdir -p "$D/w8a/.claude/skills/a" "$D/w8b/.claude/skills/b"
+printf -- '---\nname: a\ndescription: Use when reviewing a SQL migration\n---\n## Done When\n- x\n' > "$D/w8a/.claude/skills/a/SKILL.md"
+printf -- '---\nname: b\ndescription: Use when reviewing a SQL migration, or asked «will this migration wipe data?»\n---\n## Done When\n- x\n' > "$D/w8b/.claude/skills/b/SKILL.md"
+OUTA=$("$PY" "$CHK" "$D/w8a" 2>&1); RCA=$?; OUTB=$("$PY" "$CHK" "$D/w8b" 2>&1); RCB=$?
+[ "$RCA" -eq 0 ] && [ "$RCB" -eq 0 ] && printf '%s' "$OUTA" | /usr/bin/grep -qE '^  W8 ' && ! printf '%s' "$OUTB" | /usr/bin/grep -qE '^  W8 ' \
+  && ok "L15 W8: 질문 모양 없는 description 표시 · 있는 쪽 표시 없음 · rc 0/0" || no "L15 W8" "rcA=$RCA rcB=$RCB $OUTA"
+
 /bin/rm -rf "$D"
 echo "PASS=$PASS FAIL=$FAIL"; [ "$FAIL" -eq 0 ] && { echo "FAILED=0"; exit 0; } || { echo "FAILED=1"; exit 1; }
