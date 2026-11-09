@@ -442,6 +442,7 @@
     "templates/regression_guard.sh",
     "templates/settings.Compaction.snippet.json",
     "templates/settings.FieldCanon.snippet.json",
+    "templates/settings.LaneGap.snippet.json",
     "templates/settings.PreToolUse.snippet.json",
     "templates/settings.PriorArt.snippet.json",
     "templates/settings.SessionStart.snippet.json",
