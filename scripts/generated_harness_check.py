@@ -18,6 +18,7 @@
 #             «확인 없이/알아서» 류와 같은(또는 바로 다음) 문장에서 허용.
 # 경고(rc 무영향): W1 읽기 전용 주장 vs 쓰기·Bash 도구(tools 없음=전부 상속 포함) · W2 tools 줄 없음(전부 상속) · W7 스킬 파일명이 SKILL.md 아님 ·
 #             W4 죽은 참조 · W6 스킬 description 비어 있음.
+# 정보 W8:   스킬 description 에 질문 모양 예시(«…?») 없음 — 질문으로 오는 요청에서 스스로 불리지 않을 수 있다.
 # 정보:       W3 Bash 범위 제한 서술 없음 · W5 Done When 없음(FH 기준, 생성기 결함 아님) ·
 #             아직 없는 입출력 경로(자리표시자·디렉터리·_workspace·런타임 산출 파일명).
 #
@@ -589,6 +590,9 @@ def check(target, exclude_skills=()):
             continue
         if not fm.get("description", "").strip():
             rep.add("warn", "W6", path, where.get("description", 1), "(description 비어 있음)", "")
+        elif not re.search(r"[?？]", fm.get("description", "")):
+            rep.add("info", "W8", path, where.get("description", 1), "description 에 질문 모양 예시 없음",
+                    "활동 이름만 적은 description 은 «머지해도 돼?» · «몇 파일?» 류 질문에서 스스로 불리지 않았다 (A/B C7–C12: 활동 요청 9/9 · 예/아니오 질문 0–1/9)")
         if not DONE_WHEN_RE.search(text):
             rep.add("info", "W5", path, 1, "Done When 절 없음", "FH 기준이다 — 생성기의 결함이 아니다")
 
