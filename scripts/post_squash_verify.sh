@@ -26,7 +26,8 @@
 #   --rerun  run with `bash -c` inside a throwaway detached worktree at --merge. Cwd = that worktree.
 #
 # EXIT  0 both halves pass · 1 content mismatch or ② failed · 2 usage (incl. missing --rerun)
-#       3 trivial ② refused · 4 instrument/harness error (② silent, worktree not creatable, bad sha)
+#       3 trivial or statically quiet ② refused (`grep -q …` alone — add `&& echo …`) · 4 instrument/harness
+#       error (② silent at run time, worktree not creatable, bad sha)
 #
 # Labels for ①, per path the branch changed (merge-base(tip, merge^) .. tip, machine-listed):
 #   SAME          blob on --merge == blob on --tip (incl. both absent = deletion carried)
@@ -81,6 +82,57 @@ done <<< "$(_x="${RERUN//&&/$'\n'}"; _x="${_x//||/$'\n'}"; printf '%s' "$_x" | t
 # (R2: split with bash substitution, not `sed 's/&&/\n/'` — older BSD sed writes a literal "n".)
 if [ "$_noop" -eq 1 ]; then
   echo "🟥 --rerun '$RERUN' only echoes / no-ops — refused. Printing is not exercising the change." >&2
+  exit 3
+fi
+# 🟥 2026-11-09 (verify-incomplete root cause, tracks/_meta/verify_incomplete_root_cause_2026-11-09.md):
+#   7 of 7 non-verified merges in the receipts carried a QUIET ② (`grep -q`, `>/dev/null`, a python -c
+#   with no print). Content was intact every time; the silence guard below (rc=0 + no output → rc=4)
+#   fired AFTER the merge, so each ended verify-incomplete. Refuse before merging instead, when every
+#   segment is statically a silent check. The silence guard stays as it is for what this cannot see.
+#   Quoted text is blanked before splitting so a `;` inside `python3 -c "…"` does not split it.
+#   🟥 cross-family R1 (codex, 11 findings): over-refusal is the costly direction (a printing command
+#   refused before merging). Fixed: quote blanking is one left-to-right pass (a `"` inside '…' no longer
+#   pairs with a later quote) · a lone `&` separates · `>&2` anywhere in a segment means output reaches
+#   ② (captured 2>&1) · only fd-less/1/& redirects to /dev/null count · grep options stop at `--` ·
+#   python -c is quiet only with no print/stdout/write anywhere. Named residual (fail-open → rc=4 after
+#   the merge, guard unchanged): a quoted option (`grep '-q'`), a comment containing «print», a quiet
+#   check piped into a printer of nothing (`… | cat`), and any wrapper (`bash -c '…'`).
+_quiet_seg() {  # $1 = one segment; rc 0 = prints nothing on success
+  local s="$1" w1 w
+  case "$s" in *'>&2'*) return 1 ;; esac            # stdout sent to stderr — ② captures both
+  s="${s##*|}"                                       # judge the last element of a pipeline
+  printf '%s' "$s" | grep -Eq '(^|[[:space:]])(1|&)?>[[:space:]]*/dev/null' && return 0
+  set -f; set -- $s; set +f; w1="${1:-}"
+  case "$w1" in
+    :|true|/bin/true|/usr/bin/true|exit|return|test|'['|'[[') return 0 ;;
+    grep|egrep|fgrep|rg)
+      for w in "$@"; do case "$w" in --) break ;; --quiet|--silent) return 0 ;; --*) : ;; -*q*) return 0 ;; esac; done ;;
+    git) for w in "$@"; do case "$w" in --) break ;; -q|--quiet|--is-ancestor) return 0 ;; esac; done
+         case " $s " in *" cat-file "*" -e "*) return 0 ;; esac ;;   # bare -e only for cat-file (git grep -e prints)
+    cmp) for w in "$@"; do [ "$w" = -s ] && return 0; done ;;
+    python|python3) for w in "$@"; do [ "$w" = -c ] && { case "$RERUN" in *print*|*stdout*|*write*) return 1 ;; esac; return 0; }; done ;;
+  esac
+  return 1
+}
+_bl=""; _q=""; _esc=0; _i=0
+while [ "$_i" -lt "${#RERUN}" ]; do
+  _c="${RERUN:$_i:1}"; _i=$((_i+1))
+  if [ "$_q" = "'" ]; then [ "$_c" = "'" ] && { _q=""; _bl="$_bl'"; }; continue; fi
+  if [ "$_q" = '"' ]; then
+    if [ "$_esc" -eq 1 ]; then _esc=0; elif [ "$_c" = '\' ]; then _esc=1; elif [ "$_c" = '"' ]; then _q=""; _bl="$_bl\""; fi
+    continue; fi
+  if [ "$_esc" -eq 1 ]; then _esc=0; _bl="$_bl$_c"; continue; fi
+  case "$_c" in '\') _esc=1; _bl="$_bl$_c" ;; "'"|'"') _q="$_c"; _bl="$_bl$_c" ;; *) _bl="$_bl$_c" ;; esac
+done
+_quiet=1; _nseg=0
+while IFS= read -r _seg; do
+  _t=$(printf '%s' "$_seg" | tr -d '[:space:]'); [ -z "$_t" ] && continue
+  _nseg=$((_nseg+1)); _quiet_seg "$_seg" || { _quiet=0; break; }
+done <<< "$(printf '%s' "$_bl" | sed -E -e 's/&&/;/g' -e 's/[|][|]/;/g' -e 's/([^>&<0-9])&([^>&]|$)/\1;\2/g' | tr ';' '\n')"
+if [ "$_quiet" -eq 1 ] && [ "$_nseg" -gt 0 ]; then
+  echo "🟥 --rerun '$RERUN' prints nothing when it passes (every segment is a quiet check) — refused before merging." >&2
+  echo "   A silent ② reads as an instrument failure (rc=4), so the merge would end verify-incomplete." >&2
+  echo "   Make it say what passed, e.g.  <your check> && echo '<what passed>'" >&2
   exit 3
 fi
 
