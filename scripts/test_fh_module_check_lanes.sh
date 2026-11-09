@@ -6,7 +6,9 @@
 # Revert probe: FH_MODULE_PROBE=<name> neuters one check in a TEMP COPY of the checker (never the real
 # one) and the matching lane must go red:
 #   hook-action | enum | route | strictest | dependants | unreadable | gating | corepat | irrverb |
-#   case | shape | filescan | events | uncalmerge | uncal | dupkey | mergefloor | mergevalid | emptyinst
+#   case | shape | filescan | events | uncalmerge | uncal | dupkey | mergefloor | mergevalid | emptyinst |
+#   rtguard | rtscan | rtpkg | rtdyn | rtnear | rtdef | rtshadow | rtattr | rtenc | rtwalk |
+#   rtkw | rtbuiltins | rtarg | rtmeth | rtgen
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(dirname "$HERE")"
@@ -31,6 +33,21 @@ if [ -n "${FH_MODULE_PROBE:-}" ]; then
     mergefloor)  needle='merged = {ax: AXES[ax].index(v) for ax, v in CORE_FLOOR.items()}'; repl='merged = {}' ;;
     mergevalid)  needle='        for x in sub.blocks: vd.block("%s: %s" % (p, x))'; repl='        pass' ;;
     emptyinst)   needle='    if not files:'; repl='    if False:' ;;
+    rtguard)     needle='                if node.lineno in guarded:'; repl='                if True:' ;;
+    rtscan)      needle='        runtime_deps(m, repo, vd)'; repl='        pass' ;;
+    rtpkg)       needle='or os.path.join(d, mod, "__init__.py") in shipped:'; repl=':' ;;
+    rtdyn)       needle='            elif _dynamic_import(node, bare):'; repl='            elif False:' ;;
+    rtnear)      needle='or _is_stdlib(mod) or _is_local(mod, f):'; repl='or _is_stdlib(mod) or mod in {os.path.splitext(os.path.basename(x))[0] for x in shipped}:' ;;
+    rtdef)       needle='            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):'; repl='            if False:' ;;
+    rtshadow)    needle='            return x.id in _CATCH and x.id not in bound'; repl='            return x.id in _CATCH' ;;
+    rtattr)      needle='        return (isinstance(x, ast.Attribute)'; repl='        return False and (isinstance(x, ast.Attribute)' ;;
+    rtkw)        needle='next((k.value for k in n.keywords if k.arg == "name"), None)'; repl='None' ;;
+    rtbuiltins)  needle='and "builtins" not in bound and x.attr in _CATCH'; repl='and x.attr in _CATCH' ;;
+    rtarg)       needle='            out.add(n.arg)'; repl='            pass' ;;
+    rtmeth)      needle='             and f.value.id == "importlib")):'; repl='             or True)):' ;;
+    rtgen)       needle='            if isinstance(n, ast.GeneratorExp):'; repl='            if False:' ;;
+    rtwalk)      needle='                files += [os.path.join(dp, f) for f in sorted(fns) if f.endswith(".py")]'; repl='                pass' ;;
+    rtenc)       needle='            with tokenize.open(f) as fh:'; repl='            with open(f, encoding="utf-8") as fh:' ;;
     hook-action) needle='elif act not in HOOK_ACTIONS:'; repl='elif False:' ;;
     enum)        needle='if h.get("event") not in HOOK_EVENTS:'; repl='if False:' ;;
     route)       needle='if route not in gates:'; repl='if False:' ;;
@@ -576,6 +593,94 @@ run "EX11 --out inside the repo is refused (2)"                         2 c expo
 run "EX12 calibration rc 2 is UNMEASURED, not BLOCK (2)"                2 c export "$W/ex_unm/fh-module.yaml" --out "$W/out12"
 if [ ! -e "$W/out8" ] && [ ! -e "$W/out12" ] && [ ! -e "$R/inside" ] && ! ls -d "$W"/.fh-export-* >/dev/null 2>&1; then PASS=$((PASS+1)); echo "PASS  EX13 refused or failed exports leave no folder and no staging"
 else FAIL=$((FAIL+1)); echo "FAIL  EX13 leftovers after a refused export"; fi
+
+# RD — runtime dependencies (spec 2b; A/B C10 2026-11-08: a guarded PyYAML import lost 9/9 runs in an env without it)
+printf 'import yaml\nprint(yaml)\n' > "$R/mod/dep_bad.py"
+printf 'import json\ntry:\n    import yaml\nexcept ImportError:\n    yaml = None\n' > "$R/mod/dep_guard.py"
+printf 'import json, os, re\nfrom collections import OrderedDict\n' > "$R/mod/dep_std.py"
+printf 'def f():\n    import requests\n    return requests\n' > "$R/mod/dep_lazy.py"
+printf 'import dep_std\n' > "$R/mod/dep_local.py"
+printf 'def broken(:\n' > "$R/mod/dep_syntax.py"
+for n in bad guard std lazy local syntax; do
+  extra=""; [ "$n" = local ] && extra=", mod/dep_std.py"
+  mk "rd_$n" <<YAML
+id: rd-$n
+version: 1.0.0
+touches_irreversible: none
+files: [mod/dep_$n.py$extra]
+$TAIL
+YAML
+done
+run "RD1 unguarded non-stdlib import blocks (1)"          1 c check "$W/rd_bad/fh-module.yaml"
+run "RD2 guarded non-stdlib import passes with a NOTE (0)" 0 c check "$W/rd_guard/fh-module.yaml"
+out="$(c check "$W/rd_guard/fh-module.yaml" 2>&1)"
+if printf '%s\n' "$out" | grep -q '^NOTE: runtime dependency yaml (mod/dep_guard.py:3)'; then PASS=$((PASS+1)); echo "PASS  RD2b the NOTE names the module and the line"
+else FAIL=$((FAIL+1)); echo "FAIL  RD2b no NOTE naming yaml"; echo "$out" | sed 's/^/      /'; fi
+run "RD3 stdlib-only passes (0)"                           0 c check "$W/rd_std/fh-module.yaml"
+run "RD4 unguarded lazy import inside a function blocks (1)" 1 c check "$W/rd_lazy/fh-module.yaml"
+run "RD5 a sibling module the module ships is not a dependency (0)" 0 c check "$W/rd_local/fh-module.yaml"
+run "RD6 unparsable python is UNMEASURED, not OK (2)"      2 c check "$W/rd_syntax/fh-module.yaml"
+mkdir -p "$R/mod/dep_pkg/helpers"; : > "$R/mod/dep_pkg/helpers/__init__.py"; printf 'import helpers\n' > "$R/mod/dep_pkg/main.py"
+mk rd_pkg <<YAML
+id: rd-pkg
+version: 1.0.0
+touches_irreversible: none
+files: [mod/dep_pkg]
+$TAIL
+YAML
+run "RD7 a package folder the module ships is not a dependency (0)" 0 c check "$W/rd_pkg/fh-module.yaml"
+# RD8–RD13 — codex R1 on the first draft (2026-11-09), one lane per verified finding
+mkdir -p "$R/mod/dep_far/elsewhere"
+printf 'import importlib\nimportlib.import_module("fh_missing_dep")\n' > "$R/mod/dep_dyn.py"
+printf 'import fh_missing_dep\n' > "$R/mod/dep_far/main.py"; : > "$R/mod/dep_far/elsewhere/fh_missing_dep.py"
+printf 'try:\n    def f():\n        import fh_missing_dep\nexcept ImportError:\n    pass\nf()\n' > "$R/mod/dep_def.py"
+printf 'ImportError = ValueError\ntry:\n    import fh_missing_dep\nexcept ImportError:\n    pass\n' > "$R/mod/dep_shadow.py"
+printf 'import builtins\ntry:\n    import fh_missing_dep\nexcept builtins.ImportError:\n    fh_missing_dep = None\n' > "$R/mod/dep_attr.py"
+printf '# coding: latin-1\nlabel = "caf\351"\nimport json\n' > "$R/mod/dep_enc.py"
+for n in dyn far def shadow attr enc; do
+  tgt="mod/dep_$n.py"; [ "$n" = far ] && tgt="mod/dep_far"
+  mk "rd_$n" <<YAML
+id: rd-$n
+version: 1.0.0
+touches_irreversible: none
+files: [$tgt]
+$TAIL
+YAML
+done
+run "RD8 a literal importlib/__import__ of a non-stdlib module blocks (1)"   1 c check "$W/rd_dyn/fh-module.yaml"
+run "RD9 a same-named file in an unrelated folder does not satisfy it (1)"   1 c check "$W/rd_far/fh-module.yaml"
+run "RD10 a try around a def does not guard the import inside it (1)"        1 c check "$W/rd_def/fh-module.yaml"
+run "RD11 a rebound ImportError does not count as a guard (1)"              1 c check "$W/rd_shadow/fh-module.yaml"
+run "RD12 except builtins.ImportError is a guard (0, NOTE)"                 0 c check "$W/rd_attr/fh-module.yaml"
+run "RD13 a latin-1 coding cookie is read, not UNMEASURED (0)"              0 c check "$W/rd_enc/fh-module.yaml"
+# RD14–RD17 — codex R2 (2026-11-09): new gaps in the R1 fixes
+printf 'import importlib\nimportlib.import_module(name="fh_missing_dep")\n' > "$R/mod/dep_kw.py"
+printf 'import types\nbuiltins = types.SimpleNamespace(ImportError=ValueError)\ntry:\n    import fh_missing_dep\nexcept builtins.ImportError:\n    pass\n' > "$R/mod/dep_builtins.py"
+printf 'def f(ImportError=ValueError):\n    try:\n        import fh_missing_dep\n    except ImportError:\n        pass\nf()\n' > "$R/mod/dep_arg.py"
+printf 'class Loader:\n    def import_module(self, name):\n        return name\nLoader().import_module("label")\n' > "$R/mod/dep_meth.py"
+for n in kw builtins arg meth; do
+  mk "rd_$n" <<YAML
+id: rd-$n
+version: 1.0.0
+touches_irreversible: none
+files: [mod/dep_$n.py]
+$TAIL
+YAML
+done
+run "RD14 import_module(name=\"…\") with a literal blocks (1)"             1 c check "$W/rd_kw/fh-module.yaml"
+run "RD15 a rebound builtins receiver does not count as a guard (1)"      1 c check "$W/rd_builtins/fh-module.yaml"
+run "RD16 a parameter named ImportError does not count as a guard (1)"     1 c check "$W/rd_arg/fh-module.yaml"
+run "RD17 a method named import_module is not a dependency (0)"           0 c check "$W/rd_meth/fh-module.yaml"
+# RD18 — codex R3: a generator inside the try runs on next(), outside it
+printf 'import importlib\nrows = [[1]]\ntry:\n    arrays = (importlib.import_module("fh_missing_dep").array(r) for r in rows)\nexcept ImportError:\n    arrays = iter(rows)\nnext(arrays)\n' > "$R/mod/dep_gen.py"
+mk rd_gen <<YAML
+id: rd-gen
+version: 1.0.0
+touches_irreversible: none
+files: [mod/dep_gen.py]
+$TAIL
+YAML
+run "RD18 an import inside a generator in a try is not guarded by it (1)" 1 c check "$W/rd_gen/fh-module.yaml"
 
 echo "lanes: pass=$PASS fail=$FAIL"
 [ "$FAIL" = 0 ]
