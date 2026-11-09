@@ -28,6 +28,8 @@
 #         2 usage (nothing merged) · 3 trivial --rerun refused (nothing merged)
 #         4 harness error (see message: before or after the merge)
 #         6 merge accepted but not completed (queue/lag) — NOT verified, nothing claimed
+#         7 lease merge refused: a --lease other than «operator…» and selfdev_merge_tier.sh did not say AUTO, or the tier
+#           could not be read (nothing merged)
 #         5 merge NOT observed (gh failed and GitHub still reports OPEN/CLOSED after bounded re-reads —
 #           an observation, not proof: stale state can outlast the re-reads)
 #         (gh non-zero but GitHub says MERGED → continue to verify; state unreadable → 4, outcome UNKNOWN)
@@ -104,6 +106,60 @@ if [ -n "$EXPECT_HEAD" ] && [ "$HEAD_OID" != "$EXPECT_HEAD" ]; then
   echo "🟥 PR #$PR head is $HEAD_OID, not the checked $EXPECT_HEAD — not merging" >&2; exit 2
 fi
 echo "── PR #$PR head recorded: $HEAD_OID"
+# 1a. no --lease → say so, before the merge (AQ-20261109-5). The receipt still records NONE and the merge still runs:
+#   most merges rest on the operator's per-PR answer, which is fine to leave unnamed. What must not stay silent is a merge
+#   that rested on a STANDING approval and recorded none — #1063 was merged on the self-dev lease with lease=NONE and the
+#   receipt said nothing. Advisory only; never changes rc.
+if [ "$LEASE" = "NONE" ]; then
+  echo "⚠️  no --lease: the receipt will record lease=NONE. If this merge rests on a standing approval (the self-dev" >&2
+  echo "   lease, a session lease), stop and rerun with --lease '<its label>'; if it rests on the operator's answer for" >&2
+  echo "   THIS PR, NONE is right. Advisory only; merging continues." >&2
+fi
+
+# 1c. a lease only covers what the merge tier allows (AQ-20261109-4). The self-dev lease (CLAUDE.local.md 2026-11-04) is
+#   grade (가): reversible changes merge on their own, anything gate-shaped waits for the operator. selfdev_loop.sh asks
+#   selfdev_merge_tier.sh before calling here; an interactive session merging «under the lease» did not (#1063: TIER=HOLD,
+#   merged as (가)). So every --lease is checked against the tier here, before the merge, EXCEPT a label that starts with
+#   «operator» — the operator's answer for THIS PR, which is what a HOLD asks for. Default-on, not a list of standing-lease
+#   spellings (codex R1: «STANDING», «self-dev», «session lease» each slipped a substring list).
+#   The tier reads the RECORDED head through local git (merge-base with origin/main .. $HEAD_OID), not the live PR, so what
+#   it judged is what --match-head-commit merges (codex R1: a head swapped during the check). Unreadable → refuse (rc 7).
+# only the literal default skips («--lease none» is a label someone typed — codex R2); «operator…» in any case
+_lease_lc=$(printf '%s' "$LEASE" | tr '[:upper:]' '[:lower:]')
+[ "$LEASE" = "NONE" ] && _lease_lc="__default_none__"
+case "$_lease_lc" in
+  __default_none__|operator*) ;;
+  *)
+    _tier="$(dirname "$PSV")/selfdev_merge_tier.sh"
+    _tw=$(mktemp -d "${TMPDIR:-/tmp}/pmv-tier-XXXXXX") || _tw=""
+    _tok=0
+    # the diff must not depend on the caller's git config (codex R2: diff.ignoreSubmodules · diff.relative hid changes;
+    # noprefix / color would break the tier's parser), and the base is the live main, fetched now
+    _gd() { git -c core.quotepath=off -c diff.noprefix=false -c diff.mnemonicPrefix=false -c diff.relative=false \
+              -c diff.ignoreSubmodules=none diff --no-color --no-ext-diff --no-textconv --no-renames --ignore-submodules=none "$@"; }
+    if [ -f "$_tier" ] && [ -n "$_tw" ] && git fetch -q origin main < /dev/null 2>/dev/null \
+       && _mb=$(git merge-base origin/main "$HEAD_OID" < /dev/null 2>/dev/null) && [ -n "$_mb" ] \
+       && _gd --name-status "$_mb" "$HEAD_OID" < /dev/null > "$_tw/ns" 2>/dev/null \
+       && _gd --numstat "$_mb" "$HEAD_OID" < /dev/null > "$_tw/num" 2>/dev/null \
+       && _gd "$_mb" "$HEAD_OID" < /dev/null > "$_tw/diff" 2>/dev/null \
+       && awk -F'\t' 'NR==FNR { st[$2]=$1; next } { print st[$3] "\t" $3 "\t" $1 "\t" $2 }' "$_tw/ns" "$_tw/num" > "$_tw/files" 2>/dev/null; then
+      _tok=1
+    fi
+    if [ "$_tok" -ne 1 ]; then
+      [ -n "$_tw" ] && rm -rf "$_tw"
+      echo "🟥 lease «$LEASE»: the merge tier could not be read for head $HEAD_OID (tier script, merge-base or diff) — not merging" >&2
+      exit 7
+    fi
+    _tout=$(bash "$_tier" --files "$_tw/files" --diff "$_tw/diff" < /dev/null 2>&1); _trc=$?
+    rm -rf "$_tw"
+    if [ "$_trc" -ne 0 ] || [ "$(printf '%s\n' "$_tout" | tail -1)" != "TIER=AUTO" ]; then
+      printf '%s\n' "$_tout" | sed 's/^/   /' >&2
+      echo "🟥 lease «$LEASE» is not the operator's answer for this PR, and selfdev_merge_tier.sh did not say AUTO (rc=$_trc) — not merging." >&2
+      echo "   Ask the operator for THIS PR, then merge with --lease 'operator: «<their words>» <date>'." >&2
+      exit 7
+    fi
+    echo "── lease «$LEASE»: selfdev_merge_tier.sh says TIER=AUTO for head $HEAD_OID" ;;
+esac
 
 # 1b. coverage advisory — WARNING ONLY (never changes rc, never merges or refuses). post_squash_verify's precheck rejects a
 #   command that is trivially empty; it cannot see a command that is real but never touches this PR's files. Static, pre-merge,
