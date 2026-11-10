@@ -234,5 +234,52 @@ probe R6 'mk; rm -rf "$T/drafts"; mkdir -p "$T/drafts"; printf '"'"'block: 2026-
   '= "$dsnap" ]; then mark_applied' '= "$dsnap" ] || true; then mark_applied'
 probe R7 'mkq; printf '"'"'block: 없는 절\nline: %s\n'"'"' "$LINE" > "$T/drafts/victim.lease"; rm -f "$T/drafts/a4.lease"; printf '"'"'block: 2026-11-07 세션\nline: %s\n'"'"' "$L2" > "$T/drafts/x"$'"'"'\n'"'"'"MOVE"$'"'"'\t'"'"'"victim.lease"$'"'"'\t'"'"'"$(shasum -a 256 "$T/drafts/victim.lease" | cut -c1-64)"$'"'"'\t'"'"'"j.lease"; ptyrun @AUTO@ env -u CLAUDECODE bash "$M" apply-all >/dev/null 2>&1; [ -f "$T/drafts/victim.lease" ]' \
   'case "${f##*/}" in *[!A-Za-z0-9._-]*)' 'case "${f##*/}" in __never__)'
+echo "W1–W2 default paths: a worktree drafts into the MAIN checkout's queue (2026-11-10)"
+wt_draft() {  # $1 script · $2 dir to run from → prints the draft path it wrote
+  ( cd "$2" && env -u FH_LEASE_FILE -u FH_LEASE_DRAFT_DIR CLAUDE_PROJECT_DIR="$2" bash "$1" draft --block x --line "추가 utterance w" 2>/dev/null \
+      | sed -n 's/^draft written: //p' )
+}
+G="$T/hubrepo"; mkdir -p "$G" && git -C "$G" init -q && git -C "$G" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init \
+  && git -C "$G" worktree add -q "$T/hubwt" 2>/dev/null
+if [ -d "$T/hubwt" ]; then
+  GP="$(cd "$G" && pwd -P)"; WP="$(cd "$T/hubwt" && pwd -P)"
+  d1="$(wt_draft "$PWD/$S" "$WP")"; d1p="$(cd "$(dirname "$d1")" 2>/dev/null && pwd -P)"
+  [ "$d1p" = "$GP/tracks/_meta/lease_drafts" ] && ok "W1 worktree → main checkout's queue" || ko "W1 wrote to «$d1p», want $GP/tracks/_meta/lease_drafts"
+  d2="$(wt_draft "$PWD/$S" "$GP")"; d2p="$(cd "$(dirname "$d2")" 2>/dev/null && pwd -P)"
+  [ "$d2p" = "$GP/tracks/_meta/lease_drafts" ] && ok "W2 control: the main checkout itself → its own queue" || ko "W2 wrote to «$d2p»"
+  SA="$PWD/$S"; printf '%s\n' "## 2026-11-07 세션" "제외        x" > "$G/CLAUDE.local.md"
+  printf 'block: 2026-11-07 세션\nline: 추가 utterance w3\n' > "$T/w3.lease"
+  ( cd "$WP" && env -u FH_LEASE_FILE -u FH_LEASE_DRAFT_DIR CLAUDE_PROJECT_DIR="$WP" bash "$SA" check "$T/w3.lease" >/dev/null 2>&1 ) \
+    && ok "W3 the lease default is the main checkout's file too" || ko "W3 check from the worktree did not find the main lease"
+  M="$T/m_w.sh"; python3 - "$S" "$M" <<'PY'
+import sys
+s = open(sys.argv[1], encoding="utf-8").read()
+f = '[ -n "$_main" ] && [ "$_bare" -eq 0 ] && [ -e "$_main/.git" ] && HUB="$_main"'
+if s.count(f) != 1: sys.exit(1)
+open(sys.argv[2], "w", encoding="utf-8").write(s.replace(f, ':'))
+PY
+  if [ $? -ne 0 ] || cmp -s "$S" "$M"; then ko "R8 mutation did not apply (HARNESS-ERROR)"
+  else d3="$(wt_draft "$M" "$WP")"; d3p="$(cd "$(dirname "$d3")" 2>/dev/null && pwd -P)"
+    [ "$d3p" = "$WP/tracks/_meta/lease_drafts" ] && ok "R8 mapping off → the worktree's own queue (W1 would be red)" || ko "R8 mutant wrote to «$d3p»"; fi
+  S2="$T/sep"; mkdir -p "$S2" && git -C "$S2" init -q --separate-git-dir="$T/sepmeta.git" && git -C "$S2" -c user.email=t@t -c user.name=t commit -q --allow-empty -m i \
+    && git -C "$S2" worktree add -q "$T/sepwt" 2>/dev/null
+  if [ -d "$T/sepwt" ]; then SP2="$(cd "$S2" && pwd -P)"
+    d4="$(wt_draft "$PWD/$S" "$(cd "$T/sepwt" && pwd -P)")"; d4p="$(cd "$(dirname "$d4")" 2>/dev/null && pwd -P)"
+    SW="$(cd "$T/sepwt" && pwd -P)"
+    # git cannot name the main checkout from here (it reports the metadata dir) — the script must stay put, not
+    # write into the metadata dir. Named residual: this layout still drafts into the worktree's own queue.
+    [ "$d4p" = "$SW/tracks/_meta/lease_drafts" ] && ok "W4 --separate-git-dir worktree → stays local, never the metadata dir" || ko "W4 wrote to «$d4p»"
+  else ko "W4 HARNESS-ERROR: separate-git-dir fixture"; fi
+  M9="$T/m_w9.sh"; python3 - "$S" "$M9" <<'PY'
+import sys
+s = open(sys.argv[1], encoding="utf-8").read()
+f = '[ -e "$_main/.git" ] && HUB="$_main"'
+if s.count(f) != 1: sys.exit(1)
+open(sys.argv[2], "w", encoding="utf-8").write(s.replace(f, '[ -d "$_main" ] && HUB="$_main"'))
+PY
+  if [ $? -ne 0 ] || cmp -s "$S" "$M9" || [ ! -d "$T/sepwt" ]; then ko "R9 mutation did not apply (HARNESS-ERROR)"
+  else d9="$(wt_draft "$M9" "$(cd "$T/sepwt" && pwd -P)")"; d9p="$(cd "$(dirname "$d9")" 2>/dev/null && pwd -P)"
+    [ "$d9p" = "$(cd "$T/sepmeta.git" && pwd -P)/tracks/_meta/lease_drafts" ] && ok "R9 checkout test off → writes into the metadata dir (W4 would be red)" || ko "R9 mutant wrote to «$d9p»"; fi
+else ko "W1 HARNESS-ERROR: could not build a repo + worktree fixture"; fi
 echo "lease_line_apply lanes: $pass passed · $fail failed"
 [ "$fail" -eq 0 ]
