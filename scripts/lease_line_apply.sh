@@ -31,6 +31,21 @@
 set -uo pipefail
 
 HUB="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || echo "$HOME/projects/forge-harness")}"
+# Inside a git worktree the lease and the draft queue still belong to the MAIN checkout: a session working in
+# a worktree would otherwise draft into the worktree's copy, and apply-all run from the hub would never see it
+# (measured 2026-11-10). The main checkout is the FIRST entry of `git worktree list` — not «the parent of .git»,
+# which misses submodule and --separate-git-dir layouts (codex). A bare main entry has no checkout: keep HUB.
+_wl="$(git -C "$HUB" worktree list --porcelain 2>/dev/null)" || _wl=""
+_main=""; _bare=0
+while IFS= read -r _l; do
+  [ -z "$_l" ] && break
+  case "$_l" in "worktree "*) _main="${_l#worktree }" ;; bare) _bare=1 ;; esac
+done <<EOF_WL
+$_wl
+EOF_WL
+# only a real checkout (it holds a «.git» entry): with --separate-git-dir git reports the metadata dir as the
+# main entry from a linked worktree, and writing a lease there would be worse than staying put (named residual)
+[ -n "$_main" ] && [ "$_bare" -eq 0 ] && [ -e "$_main/.git" ] && HUB="$_main"
 LEASE="${FH_LEASE_FILE:-$HUB/CLAUDE.local.md}"
 DDIR="${FH_LEASE_DRAFT_DIR:-$HUB/tracks/_meta/lease_drafts}"
 cmd="${1:-}"; shift || true
