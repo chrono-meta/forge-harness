@@ -38,7 +38,7 @@
 #   The merge decision is NOT the builder's — it is ④, mechanical, after the fact.
 #
 # ENV  SELFDEV_ALLOW_API_KEY(unset = the builder runs without ANTHROPIC_API_KEY) · FH_SELFDEV_DIR · SELFDEV_MAX_ITEMS(2) · SELFDEV_MAX_OPEN(2) · SELFDEV_CI_WAIT(1800s)
-#      SELFDEV_BUILD_TIMEOUT(2700s) · SELFDEV_DEMOTE_DAYS(30) · SELFDEV_DRY_RUN(0: 1 = no build, no
+#      SELFDEV_BUILD_TIMEOUT(2700s) · SELFDEV_POLL(20s watchdog poll) · SELFDEV_DEMOTE_DAYS(30) · SELFDEV_DRY_RUN(0: 1 = no build, no
 #      merge — print what would happen) · SELFDEV_NO_MERGE(0: any other value = build and open PRs as
 #      usual, but never merge — a PR that passes every check is reported ELIGIBLE for the operator to merge) ·
 #      FD_MODEL (pinned by the plist) · FD_CLAUDE_BIN
@@ -51,6 +51,9 @@ MAX_ITEMS="${SELFDEV_MAX_ITEMS:-2}"
 MAX_OPEN="${SELFDEV_MAX_OPEN:-2}"
 CI_WAIT="${SELFDEV_CI_WAIT:-1800}"
 BUILD_TIMEOUT="${SELFDEV_BUILD_TIMEOUT:-2700}"
+# watchdog poll interval: a finished build is noticed at the next poll, so lanes with an instant stub
+# builder set 1 (16 build runs × 20 s pushed the lane file past CI's 300 s budget, 2026-11-10)
+POLL="${SELFDEV_POLL:-20}"; case "$POLL" in ''|*[!0-9]*|0) POLL=20 ;; esac
 DEMOTE_DAYS="${SELFDEV_DEMOTE_DAYS:-30}"
 DRY="${SELFDEV_DRY_RUN:-0}"
 # fail-closed: only an unset/empty value or a literal 0 allows merging — «true», «yes», « 1» all mean
@@ -207,7 +210,7 @@ Never run gh pr merge, never push to main, never force-push, never tag. The merg
   # shellcheck disable=SC2086  # unset_args is a fixed list of «-u NAME» pairs, split on purpose
   ( cd "$CLONE" && env ${STRIP_KEY:+$unset_args} "$CLAUDE_BIN" -p "$PROMPT" --permission-mode bypassPermissions ${FD_MODEL:+--model "$FD_MODEL"} ) > "$BOUT" 2>&1 &
   pid=$!; deadline=$((SECONDS + BUILD_TIMEOUT))
-  while kill -0 "$pid" 2>/dev/null && [ "$SECONDS" -lt "$deadline" ]; do sleep 20 & wait $!; done
+  while kill -0 "$pid" 2>/dev/null && [ "$SECONDS" -lt "$deadline" ]; do sleep "$POLL" & wait $!; done
   if kill -0 "$pid" 2>/dev/null; then
     pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
     redact_bout

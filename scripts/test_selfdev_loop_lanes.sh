@@ -15,6 +15,8 @@ for f in selfdev_loop.sh selfdev_queue.py selfdev_merge_tier.sh; do
 done
 W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
 pass=0; fail=0
+# the stub builders finish at once; a 20 s watchdog poll per build run cost the file > 300 s in CI
+export SELFDEV_POLL=1
 ok()  { pass=$((pass+1)); echo "  ✅ $1"; }
 bad() { fail=$((fail+1)); echo "  ❌ $1"; }
 DATE="$(date +%Y-%m-%d)"
