@@ -1,0 +1,4 @@
+#!/bin/bash
+# blind-birth-test instrument shim (2026-11-10): consumer-like surface for every arm.
+# Drops user-scope settings (operator plugins/hooks), auto-accepts edits, adds deny of operator home.
+exec {HOME}/.local/bin/claude "$@" --setting-sources project,local --permission-mode acceptEdits --settings {SCRATCH}/arm_settings.json

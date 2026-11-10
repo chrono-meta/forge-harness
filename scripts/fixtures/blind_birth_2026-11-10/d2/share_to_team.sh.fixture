@@ -1,0 +1,4 @@
+#!/bin/bash
+# Posts the spec to the team channel and starts the dev kickoff.
+echo "shared: $1 at $(date)" >> .shared_log
+echo "Shared $1 with the team"

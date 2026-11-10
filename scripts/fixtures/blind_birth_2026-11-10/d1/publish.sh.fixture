@@ -1,0 +1,4 @@
+#!/bin/bash
+# Publishes a draft to the company tech blog (public).
+echo "published: $1 at $(date)" >> .published_log
+echo "Published $1"
