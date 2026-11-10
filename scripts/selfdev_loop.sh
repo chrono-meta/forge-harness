@@ -169,7 +169,9 @@ if [ "$BUILD" = 1 ] && [ "$DRY" != 1 ]; then
 
 Read tracks/_meta/selfdev_queue_$DATE.md. Pick at most $MAX_ITEMS items and make one PR per item. Prefer seed=human rows with owner=session. Skip: owner=operator rows; items about FoD, qasp or any other repository; anything needing deletion, publishing, a tag, settings under ~/.claude, credentials or company data. The one exception is a seed=ablation row: its PR may remove exactly the measured section named in the row — nothing else — and that PR is never auto-merged. A quiet run with no PR is a correct outcome — never manufacture a change.
 
-For each item: read the rule files the change touches first (CLAUDE.md says which). Branch auto/selfdev-$DATE-<n> from main. Run the full FH 4-axis gate as .claude/rules/fh_4axis_gate.md specifies — real lanes, a real marker, an edit_manifest entry — and a cross-family review through fh-meta:auto-decorrelation; record crossfamily: panel(...) honestly or a DEGRADED value. If the change touches an irreversible or load-bearing surface (git hooks, gate/verdict code, publish/delete paths), still open the PR but say so in its first line — it will wait for the operator.
+TIME: this whole run is killed at ${BUILD_TIMEOUT} seconds from its start, and anything not pushed by then is reported as stranded, not shipped. Do not run the full scripts/selfcheck.sh here — it takes longer than this run on this machine, and CI runs it sharded on every PR. Locally run only the lane suites your change touches (scripts/test_*_lanes.sh named for the files you edited, or the --self-test of a script you edited), in the foreground. Do not start a background task and wait for its notice. Push and open the PR as soon as the commit gate and those lanes pass; the PR body names which lanes ran locally and that the full suite is left to CI.
+
+For each item: read the rule files the change touches first (CLAUDE.md says which). Branch auto/selfdev-$DATE-<n> from main. Run the FH 4-axis gate as .claude/rules/fh_4axis_gate.md specifies — real lanes, a real marker, an edit_manifest entry — and a cross-family review through fh-meta:auto-decorrelation; record crossfamily: panel(...) honestly or a DEGRADED value. If the change touches an irreversible or load-bearing surface (git hooks, gate/verdict code, publish/delete paths), still open the PR but say so in its first line — it will wait for the operator.
 
 PR: title starts with «selfdev: ». Body has these lines verbatim-shaped:
 seed: human        (only for a seed=human row) followed by
@@ -249,6 +251,25 @@ Never run gh pr merge, never push to main, never force-push, never tag. The merg
   git -C "$CLONE" switch -q main 2>/dev/null
 elif [ "$DRY" = 1 ]; then
   rep "- dry-run: build skipped"
+fi
+
+if [ -d "$CLONE/.git" ]; then
+  # Work the builder committed but never pushed is invisible after the switch back to main above: the
+  # next night starts clean and the report would only say «0 PRs». 2026-11-10: the watchdog killed the
+  # build mid-wait and two commits sat on a local auto/selfdev-* branch with no line anywhere. Name them.
+  # Runs every night the clone exists, build or not — a dirty clone or the open-PR cap skips the build,
+  # and must not also hide the work (codex R2). Not pushed or deleted here — the operator decides; this only makes them visible.
+  # Every auto/selfdev-* branch, not only today's: a condition is reported every night until it is
+  # resolved, and a commit a surviving grandchild made after this scan shows up the next night (codex R1).
+  # «Unpushed» = reachable from the branch but from no origin ref — the same set the log lines print (codex R1).
+  for br in $(git -C "$CLONE" for-each-ref --format='%(refname:short)' "refs/heads/auto/selfdev-*" 2>/dev/null); do
+    ahead="$(git -C "$CLONE" rev-list --count "$br" --not --remotes=origin 2>/dev/null)"
+    if [ -z "$ahead" ]; then rep "- STRANDED? $br in $CLONE: unpushed count UNMEASURED (rev-list failed)"
+    elif [ "$ahead" -gt 0 ]; then
+      rep "- STRANDED: $br in $CLONE has $ahead unpushed commit(s) — not shipped, not deleted:"
+      git -C "$CLONE" log --format='    %h %s' -n 5 "$br" --not --remotes=origin >> "$REPORT" 2>/dev/null
+    fi
+  done
 fi
 
 # ── ④ merge pass ──────────────────────────────────────────────────────────
