@@ -6,7 +6,8 @@
 # until 2026-11-04 it had only been dry-run by hand with no open PR, i.e. never exercised at all
 # (CI new-code-anchor: «MENTION_ONLY»). Each lane is one condition the policy says must HOLD,
 # with LP1 as the positive control that the same fixture CAN reach WOULD MERGE. LP12/LP13: SELFDEV_NO_MERGE=1
-# stops a passing PR at ELIGIBLE and still holds a failing one.
+# stops a passing PR at ELIGIBLE and still holds a failing one. LP20/LP21 (2026-11-10 watchdog kill): a killed
+# build's unpushed commits are named STRANDED; the builder prompt names the watchdog's own limit.
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 for f in selfdev_loop.sh selfdev_queue.py selfdev_merge_tier.sh; do
@@ -14,6 +15,8 @@ for f in selfdev_loop.sh selfdev_queue.py selfdev_merge_tier.sh; do
 done
 W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
 pass=0; fail=0
+# the stub builders finish at once; a 20 s watchdog poll per build run cost the file > 300 s in CI
+export SELFDEV_POLL=1
 ok()  { pass=$((pass+1)); echo "  ✅ $1"; }
 bad() { fail=$((fail+1)); echo "  ❌ $1"; }
 DATE="$(date +%Y-%m-%d)"
@@ -214,6 +217,80 @@ done
 if [ "${s19:-0}" = 1 ] && [ "${k19:-0}" = 1 ] && [ "${n19:-0}" = 1 ] && [ "${t19:-0}" = 1 ] && [ "${o19:-0}" = 1 ]; then ok "LP19 a caller's ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN is unset for the builder and named (value never printed); SELFDEV_ALLOW_API_KEY=1 keeps it, says «bills the API» and the builder's own echo of it is redacted (control); no key → no line (control)"
 else bad "LP19 (strip=${s19:-?} · keep=${k19:-?} · none=${n19:-?} · token=${t19:-?} · overlap=${o19:-?})"; fi
 
-[ $((pass+fail)) -eq 19 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 19"; exit 2; }
+# LP20: 2026-11-10 — the watchdog killed a build that had committed on auto/selfdev-<date>-1 but not
+# pushed; the report said only «0 PRs». A killed build with unpushed commits must name the branch and
+# the commit; the control arm pushes the same branch first and must carry no STRANDED line.
+setup p20; D20="$W/p20"
+sed -i.bak 's#"pr list|number,headRefName") echo 5 ;;#"pr list|number,headRefName") echo 5 ;;\
+  "pr list|number,headRefName,createdAt") : ;;#' "$D20/bin/gh"
+grep -q 'createdAt") :' "$D20/bin/gh" || { echo "HARNESS-ERROR: LP20 fixture edit did not apply"; exit 2; }
+#   arms (codex R1): olddate = a stranded branch from an earlier night is still named (a late commit, or
+#   one the operator has not acted on, must not age out) · otherref = the commit is on origin under
+#   another branch name → not stranded (count against every origin ref, not one)
+for arm in strand pushed olddate otherref; do
+  BR="auto/selfdev-$DATE-1"; [ "$arm" = olddate ] && BR="auto/selfdev-2026-01-01-1"
+  push=""
+  [ "$arm" = pushed ] && push="git push -q origin HEAD 2>/dev/null"
+  [ "$arm" = otherref ] && push="git push -q origin HEAD:refs/heads/elsewhere 2>/dev/null"
+  cat > "$D20/bin/claude-stub" <<STUB
+#!/usr/bin/env bash
+git switch -q -c $BR && git -c user.email=t@t -c user.name=t commit -q --allow-empty -m 'docs: lane-20 stranded work'
+$push
+echo "Waiting for the selfcheck completion notice."
+exec sleep 120
+STUB
+  chmod +x "$D20/bin/claude-stub"
+  rm -f "$D20/live/tracks/_meta/selfdev/report_$DATE.md" "$D20/live/tracks/_meta/logs/selfdev_loop_$DATE.log"
+  rm -rf "$D20/clone"; git clone -q "$D20/origin.git" "$D20/clone" 2>/dev/null
+  for b in $(git -C "$D20/origin.git" for-each-ref --format='%(refname:short)' refs/heads); do [ "$b" = main ] || git -C "$D20/origin.git" branch -q -D "$b"; done
+  OUT=$(cd "$D20/live" && env PATH="$D20/bin:$PATH" SELFDEV_DRY_RUN=0 SELFDEV_NO_MERGE=1 SELFDEV_BUILD_TIMEOUT=2 FH_SELFDEV_DIR="$D20/clone" FD_CLAUDE_BIN="$D20/bin/claude-stub" \
+        bash scripts/selfdev_loop.sh 2>&1); RC=$?
+  REP="$(cat "$D20/live/tracks/_meta/selfdev/report_$DATE.md" 2>/dev/null)"
+  case "$arm" in
+    strand|olddate)
+      if printf '%s\n' "$REP" | grep -qF 'build killed by watchdog (2s)' \
+         && printf '%s\n' "$REP" | grep -qF -- "- STRANDED: $BR in $D20/clone has 1 unpushed commit(s)" \
+         && printf '%s\n' "$REP" | grep -qF 'docs: lane-20 stranded work'; then r=1
+      else r=0; printf '%s\n' "$REP" "$OUT" | tail -8 | sed 's/^/       /'; fi ;;
+    *)
+      if printf '%s\n' "$REP" | grep -qF 'build killed by watchdog (2s)' && ! printf '%s\n' "$REP" | grep -qF 'STRANDED'; then r=1
+      else r=0; printf '%s\n' "$REP" | tail -6 | sed 's/^/       /'; fi ;;
+  esac
+  eval "r20_$arm=$r"
+done
+#   arm dirty (codex R2): a dirty clone skips the build — the stranded branch from an earlier night must
+#   still be named on that night, not only on nights that build
+rm -f "$D20/live/tracks/_meta/selfdev/report_$DATE.md"
+rm -rf "$D20/clone"; git clone -q "$D20/origin.git" "$D20/clone" 2>/dev/null
+( cd "$D20/clone" && git switch -q -c auto/selfdev-2026-01-02-1 && git -c user.email=t@t -c user.name=t commit -q --allow-empty -m 'docs: lane-20 dirty-night work' && git switch -q main && echo x > untracked.txt )
+OUT=$(cd "$D20/live" && env PATH="$D20/bin:$PATH" SELFDEV_DRY_RUN=0 SELFDEV_NO_MERGE=1 FH_SELFDEV_DIR="$D20/clone" FD_CLAUDE_BIN="$D20/bin/claude-stub" \
+      bash scripts/selfdev_loop.sh 2>&1); RC=$?
+REP="$(cat "$D20/live/tracks/_meta/selfdev/report_$DATE.md" 2>/dev/null)"
+if printf '%s\n' "$REP" | grep -qF 'HOLD build: clone dirty' && ! printf '%s\n' "$REP" | grep -qF 'build killed' \
+   && printf '%s\n' "$REP" | grep -qF -- "- STRANDED: auto/selfdev-2026-01-02-1 in $D20/clone has 1 unpushed commit(s)"; then r20_dirty=1
+else r20_dirty=0; printf '%s\n' "$REP" "$OUT" | tail -8 | sed 's/^/       /'; fi
+if [ "${r20_strand:-0}" = 1 ] && [ "${r20_pushed:-0}" = 1 ] && [ "${r20_olddate:-0}" = 1 ] && [ "${r20_otherref:-0}" = 1 ] && [ "${r20_dirty:-0}" = 1 ]; then ok "LP20 a killed build's unpushed commits are named STRANDED with branch and subject, an earlier night's too, also on a night the dirty clone skips the build; the same branch pushed, or the commit pushed under another name → no STRANDED line (controls)"
+else bad "LP20 (strand=${r20_strand:-?} · pushed=${r20_pushed:-?} · olddate=${r20_olddate:-?} · otherref=${r20_otherref:-?} · dirty=${r20_dirty:-?})"; fi
+
+# LP21: the time limit the builder is told must BE the watchdog's limit, and the builder is told not to
+# run the full suite (11-10: it ran selfcheck.sh, >30 min here, into a 2700s watchdog it never saw).
+setup p21; D21="$W/p21"
+sed -i.bak 's#"pr list|number,headRefName") echo 5 ;;#"pr list|number,headRefName") echo 5 ;;\
+  "pr list|number,headRefName,createdAt") : ;;#' "$D21/bin/gh"
+grep -q 'createdAt") :' "$D21/bin/gh" || { echo "HARNESS-ERROR: LP21 fixture edit did not apply"; exit 2; }
+printf '#!/usr/bin/env bash\nprintf "%%s" "$2" > "%s/prompt"\nexit 0\n' "$D21" > "$D21/bin/claude-stub"; chmod +x "$D21/bin/claude-stub"
+for t in 1234 777; do
+  rm -f "$D21/prompt" "$D21/live/tracks/_meta/selfdev/report_$DATE.md"
+  rm -rf "$D21/clone"; git clone -q "$D21/origin.git" "$D21/clone" 2>/dev/null
+  OUT=$(cd "$D21/live" && env PATH="$D21/bin:$PATH" SELFDEV_DRY_RUN=0 SELFDEV_NO_MERGE=1 SELFDEV_BUILD_TIMEOUT=$t FH_SELFDEV_DIR="$D21/clone" FD_CLAUDE_BIN="$D21/bin/claude-stub" \
+        bash scripts/selfdev_loop.sh 2>&1); RC=$?
+  P="$(cat "$D21/prompt" 2>/dev/null)"
+  if [ -n "$P" ] && printf '%s' "$P" | grep -qF "killed at $t seconds" && printf '%s' "$P" | grep -qF 'Do not run the full scripts/selfcheck.sh'; then eval "ok21_$t=1"
+  else eval "ok21_$t=0"; printf '%s\n' "${P:-<no prompt captured>}" | head -3 | sed 's/^/       /'; fi
+done
+if [ "${ok21_1234:-0}" = 1 ] && [ "${ok21_777:-0}" = 1 ]; then ok "LP21 the builder prompt names the watchdog's own limit (1234 and 777 both follow SELFDEV_BUILD_TIMEOUT) and forbids the full selfcheck"
+else bad "LP21 (1234=${ok21_1234:-?} · 777=${ok21_777:-?})"; fi
+
+[ $((pass+fail)) -eq 21 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 21"; exit 2; }
 echo "selfdev_loop lanes: $pass passed · $fail failed"
 [ "$fail" -eq 0 ]

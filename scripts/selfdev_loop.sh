@@ -38,7 +38,7 @@
 #   The merge decision is NOT the builder's — it is ④, mechanical, after the fact.
 #
 # ENV  SELFDEV_ALLOW_API_KEY(unset = the builder runs without ANTHROPIC_API_KEY) · FH_SELFDEV_DIR · SELFDEV_MAX_ITEMS(2) · SELFDEV_MAX_OPEN(2) · SELFDEV_CI_WAIT(1800s)
-#      SELFDEV_BUILD_TIMEOUT(2700s) · SELFDEV_DEMOTE_DAYS(30) · SELFDEV_DRY_RUN(0: 1 = no build, no
+#      SELFDEV_BUILD_TIMEOUT(2700s) · SELFDEV_POLL(20s watchdog poll) · SELFDEV_DEMOTE_DAYS(30) · SELFDEV_DRY_RUN(0: 1 = no build, no
 #      merge — print what would happen) · SELFDEV_NO_MERGE(0: any other value = build and open PRs as
 #      usual, but never merge — a PR that passes every check is reported ELIGIBLE for the operator to merge) ·
 #      FD_MODEL (pinned by the plist) · FD_CLAUDE_BIN
@@ -51,6 +51,9 @@ MAX_ITEMS="${SELFDEV_MAX_ITEMS:-2}"
 MAX_OPEN="${SELFDEV_MAX_OPEN:-2}"
 CI_WAIT="${SELFDEV_CI_WAIT:-1800}"
 BUILD_TIMEOUT="${SELFDEV_BUILD_TIMEOUT:-2700}"
+# watchdog poll interval: a finished build is noticed at the next poll, so lanes with an instant stub
+# builder set 1 (16 build runs × 20 s pushed the lane file past CI's 300 s budget, 2026-11-10)
+POLL="${SELFDEV_POLL:-20}"; case "$POLL" in ''|*[!0-9]*|0) POLL=20 ;; esac
 DEMOTE_DAYS="${SELFDEV_DEMOTE_DAYS:-30}"
 DRY="${SELFDEV_DRY_RUN:-0}"
 # fail-closed: only an unset/empty value or a literal 0 allows merging — «true», «yes», « 1» all mean
@@ -169,7 +172,9 @@ if [ "$BUILD" = 1 ] && [ "$DRY" != 1 ]; then
 
 Read tracks/_meta/selfdev_queue_$DATE.md. Pick at most $MAX_ITEMS items and make one PR per item. Prefer seed=human rows with owner=session. Skip: owner=operator rows; items about FoD, qasp or any other repository; anything needing deletion, publishing, a tag, settings under ~/.claude, credentials or company data. The one exception is a seed=ablation row: its PR may remove exactly the measured section named in the row — nothing else — and that PR is never auto-merged. A quiet run with no PR is a correct outcome — never manufacture a change.
 
-For each item: read the rule files the change touches first (CLAUDE.md says which). Branch auto/selfdev-$DATE-<n> from main. Run the full FH 4-axis gate as .claude/rules/fh_4axis_gate.md specifies — real lanes, a real marker, an edit_manifest entry — and a cross-family review through fh-meta:auto-decorrelation; record crossfamily: panel(...) honestly or a DEGRADED value. If the change touches an irreversible or load-bearing surface (git hooks, gate/verdict code, publish/delete paths), still open the PR but say so in its first line — it will wait for the operator.
+TIME: this whole run is killed at ${BUILD_TIMEOUT} seconds from its start, and anything not pushed by then is reported as stranded, not shipped. Do not run the full scripts/selfcheck.sh here — it takes longer than this run on this machine, and CI runs it sharded on every PR. Locally run only the lane suites your change touches (scripts/test_*_lanes.sh named for the files you edited, or the --self-test of a script you edited), in the foreground. Do not start a background task and wait for its notice. Push and open the PR as soon as the commit gate and those lanes pass; the PR body names which lanes ran locally and that the full suite is left to CI.
+
+For each item: read the rule files the change touches first (CLAUDE.md says which). Branch auto/selfdev-$DATE-<n> from main. Run the FH 4-axis gate as .claude/rules/fh_4axis_gate.md specifies — real lanes, a real marker, an edit_manifest entry — and a cross-family review through fh-meta:auto-decorrelation; record crossfamily: panel(...) honestly or a DEGRADED value. If the change touches an irreversible or load-bearing surface (git hooks, gate/verdict code, publish/delete paths), still open the PR but say so in its first line — it will wait for the operator.
 
 PR: title starts with «selfdev: ». Body has these lines verbatim-shaped:
 seed: human        (only for a seed=human row) followed by
@@ -205,7 +210,7 @@ Never run gh pr merge, never push to main, never force-push, never tag. The merg
   # shellcheck disable=SC2086  # unset_args is a fixed list of «-u NAME» pairs, split on purpose
   ( cd "$CLONE" && env ${STRIP_KEY:+$unset_args} "$CLAUDE_BIN" -p "$PROMPT" --permission-mode bypassPermissions ${FD_MODEL:+--model "$FD_MODEL"} ) > "$BOUT" 2>&1 &
   pid=$!; deadline=$((SECONDS + BUILD_TIMEOUT))
-  while kill -0 "$pid" 2>/dev/null && [ "$SECONDS" -lt "$deadline" ]; do sleep 20 & wait $!; done
+  while kill -0 "$pid" 2>/dev/null && [ "$SECONDS" -lt "$deadline" ]; do sleep "$POLL" & wait $!; done
   if kill -0 "$pid" 2>/dev/null; then
     pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
     redact_bout
@@ -249,6 +254,25 @@ Never run gh pr merge, never push to main, never force-push, never tag. The merg
   git -C "$CLONE" switch -q main 2>/dev/null
 elif [ "$DRY" = 1 ]; then
   rep "- dry-run: build skipped"
+fi
+
+if [ -d "$CLONE/.git" ]; then
+  # Work the builder committed but never pushed is invisible after the switch back to main above: the
+  # next night starts clean and the report would only say «0 PRs». 2026-11-10: the watchdog killed the
+  # build mid-wait and two commits sat on a local auto/selfdev-* branch with no line anywhere. Name them.
+  # Runs every night the clone exists, build or not — a dirty clone or the open-PR cap skips the build,
+  # and must not also hide the work (codex R2). Not pushed or deleted here — the operator decides; this only makes them visible.
+  # Every auto/selfdev-* branch, not only today's: a condition is reported every night until it is
+  # resolved, and a commit a surviving grandchild made after this scan shows up the next night (codex R1).
+  # «Unpushed» = reachable from the branch but from no origin ref — the same set the log lines print (codex R1).
+  for br in $(git -C "$CLONE" for-each-ref --format='%(refname:short)' "refs/heads/auto/selfdev-*" 2>/dev/null); do
+    ahead="$(git -C "$CLONE" rev-list --count "$br" --not --remotes=origin 2>/dev/null)"
+    if [ -z "$ahead" ]; then rep "- STRANDED? $br in $CLONE: unpushed count UNMEASURED (rev-list failed)"
+    elif [ "$ahead" -gt 0 ]; then
+      rep "- STRANDED: $br in $CLONE has $ahead unpushed commit(s) — not shipped, not deleted:"
+      git -C "$CLONE" log --format='    %h %s' -n 5 "$br" --not --remotes=origin >> "$REPORT" 2>/dev/null
+    fi
+  done
 fi
 
 # ── ④ merge pass ──────────────────────────────────────────────────────────
