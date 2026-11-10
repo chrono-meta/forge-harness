@@ -662,5 +662,64 @@ mkdir -p "$WORKROOT/inh2"; printf 'x\n' > "$WORKROOT/inh2/CLAUDE.md"
   || no "L30l inherit warning count=$(grep -c 'arms WILL inherit' "$WORKROOT/o30l.log")"
 rm -rf "$WORKROOT/inh2"
 
+# ── L31 §CONSUMER SURFACE (2026-11-10, AQ-20261110-6) — opt-in flags reach the CLI, defaults do not move
+#   L31a default: none of the four flags in argv (byte-identical default is the whole promise)
+#   L31b all four given: each reaches argv, --add-dir is THIS rep's wrapper (w_a_r1), settings path absolute
+#   L31c --permission-mode bypassPermissions → rc 2 and NO arm invoked (known-negative)
+#   L31d bad --setting-sources token → rc 2 · L31e missing --settings file → rc 2
+#   L31f --turns path carries the same flags on every turn call (two call sites, one promise)
+SURFS="$WORKROOT/surf_settings.json"; printf '{"permissions":{"allow":["Write"]}}' > "$SURFS"
+LOG31a="$WORKROOT/argv31a.log"; : > "$LOG31a"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say FH_STUB_ARGV_LOG="$LOG31a" \
+   bash "$SUT" --arm a --reps 1 --prompt p --out "$WORKROOT/o31a" ) >/dev/null 2>&1
+{ [ -s "$LOG31a" ] && cmp -s "$LOG31a" "$LOG"; } \
+  && ok "L31a default argv is byte-identical to the L8a default run (no consumer-surface flag)" \
+  || no "L31a default argv changed (or arm not run): $(cat "$LOG31a")"
+LOG31b="$WORKROOT/argv31b.log"; : > "$LOG31b"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say FH_STUB_ARGV_LOG="$LOG31b" \
+   bash "$SUT" --arm a --reps 1 --prompt p --mode act --setting-sources project,local --settings "$SURFS" \
+   --permission-mode acceptEdits --add-wrapper-dir --out "$WORKROOT/o31b" ) >/dev/null 2>&1
+{ grep -q -- '--setting-sources project,local' "$LOG31b" && grep -q -- "--settings /" "$LOG31b" \
+  && grep -q -- '--permission-mode acceptEdits' "$LOG31b" && grep -qE -- "--add-dir [^ ]*/o31b/w_a_r1( |$)" "$LOG31b"; } \
+  && ok "L31b all four flags reach argv; --add-dir = this rep's wrapper; --settings absolute" \
+  || no "L31b flags missing from argv: $(cat "$LOG31b")"
+LOG31c="$WORKROOT/argv31c.log"; : > "$LOG31c"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say FH_STUB_ARGV_LOG="$LOG31c" \
+   bash "$SUT" --arm a --reps 1 --prompt p --permission-mode bypassPermissions --out "$WORKROOT/o31c" ) >/dev/null 2>&1; RC31c=$?
+{ [ "$RC31c" = 2 ] && [ ! -s "$LOG31c" ]; } \
+  && ok "L31c bypassPermissions → rc 2, no arm invoked" \
+  || no "L31c bypassPermissions slipped (rc=$RC31c · argv lines=$(wc -l < "$LOG31c" | tr -d ' '))"
+run_sut --arm a --reps 1 --prompt p --setting-sources user,global --out "$WORKROOT/o31d"
+[ "$RC" = 2 ] && ok "L31d bad --setting-sources token → rc 2" || no "L31d bad token accepted (rc=$RC)"
+run_sut --arm a --reps 1 --prompt p --settings "$WORKROOT/nope.json" --out "$WORKROOT/o31e"
+[ "$RC" = 2 ] && ok "L31e missing --settings file → rc 2" || no "L31e missing settings file accepted (rc=$RC)"
+printf 'one\ntwo\n' > "$WORKROOT/t31f.txt"; LOG31f="$WORKROOT/argv31f.log"; : > "$LOG31f"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say FH_STUB_ARGV_LOG="$LOG31f" \
+   bash "$SUT" --arm a --reps 1 --turns "$WORKROOT/t31f.txt" --setting-sources project,local --add-wrapper-dir --out "$WORKROOT/o31f" ) >/dev/null 2>&1
+_n31f=$(grep -c . "$LOG31f")
+[ "$_n31f" -ge 1 ] && [ "$(grep -c -- '--setting-sources project,local' "$LOG31f")" = "$_n31f" ] \
+  && [ "$(grep -cE -- "--add-dir [^ ]*/o31f/w_a_r1( |$)" "$LOG31f")" = "$_n31f" ] \
+  && ok "L31f --turns: every turn call ($_n31f) carries the consumer-surface flags" \
+  || no "L31f turns path dropped flags: $(cat "$LOG31f")"
+
+# L31g env inheritance (codex R1): ADDWRAP/SETSRC/SETFILE/PERMMODE in the env must not switch anything on
+LOG31g="$WORKROOT/argv31g.log"; : > "$LOG31g"
+( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say FH_STUB_ARGV_LOG="$LOG31g" \
+   ADDWRAP=1 SETSRC=project SETFILE="$SURFS" PERMMODE=plan bash "$SUT" --arm a --reps 1 --prompt p --out "$WORKROOT/o31g" ) >/dev/null 2>&1
+{ [ -s "$LOG31g" ] && cmp -s "$LOG31g" "$LOG"; } && ok "L31g inherited env vars do not enable consumer-surface flags" \
+  || no "L31g env leaked into argv: $(cat "$LOG31g")"
+# L31h empty --permission-mode → rc 2 (codex R1) · L31i trailing value flag → rc 2, no hang (codex R1)
+run_sut --arm a --reps 1 --prompt p --permission-mode '' --out "$WORKROOT/o31h"
+[ "$RC" = 2 ] && ok "L31h empty --permission-mode → rc 2" || no "L31h empty mode accepted (rc=$RC)"
+_t0=$(date +%s); run_sut --arm a --reps 1 --prompt p --out "$WORKROOT/o31i" --settings; _el=$(( $(date +%s) - _t0 ))
+{ [ "$RC" = 2 ] && [ "$_el" -lt 20 ]; } && ok "L31i trailing --settings with no value → rc 2 in ${_el}s" || no "L31i trailing flag rc=$RC elapsed=${_el}s"
+# L31j a source list without `local` drops the isolation deny file → rc 2 (codex R2)
+run_sut --arm a --reps 1 --prompt p --setting-sources project --out "$WORKROOT/o31j"
+[ "$RC" = 2 ] && ok "L31j --setting-sources without local → rc 2" || no "L31j source list without local accepted (rc=$RC)"
+# L31k the forwarded string itself is validated: space-separated and empty-token lists → rc 2 (codex R2)
+run_sut --arm a --reps 1 --prompt p --setting-sources 'project local' --out "$WORKROOT/o31k"; _rk1=$RC
+run_sut --arm a --reps 1 --prompt p --setting-sources ',,,' --out "$WORKROOT/o31k2"; _rk2=$RC
+{ [ "$_rk1" = 2 ] && [ "$_rk2" = 2 ]; } && ok "L31k 'project local' and ',,,' → rc 2" || no "L31k malformed source list accepted (rc=$_rk1/$_rk2)"
+
 echo "sim_isolated_run lanes: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1

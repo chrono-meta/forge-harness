@@ -315,6 +315,8 @@ _PYEOF
 BASE_REF=""; BASE_SHA=""
 ARM=""; REPS=1; PROMPT=""; MODE="observe"; MODEL="sonnet"; TIMEOUT=900; OUTDIR=""; NOHARNESS=0; SETUP=""; EXTRA=""
 TURNS=""; NORESUME=0
+SETSRC=""; SETFILE=""; PERMMODE=""; ADDWRAP=0   # §CONSUMER SURFACE — never inherited from the env (codex R1)
+_needval() { [ "$#" -ge 2 ] || { echo "FAIL: $1 needs a value" >&2; exit 2; }; }
 while [ $# -gt 0 ]; do
   case "$1" in
     --arm)     ARM="${2:-}"; shift 2 ;;
@@ -332,9 +334,56 @@ while [ $# -gt 0 ]; do
     --mcp-config) MCPCFG="${2:-}"; shift 2 ;;  # the ONLY MCP servers an arm may see (see MCP ISOLATION). Default: none.
     --turns)   TURNS="${2:-}"; shift 2 ;;  # MULTI-TURN: one turn per line. See §MULTI-TURN.
     --no-resume) NORESUME=1; shift ;;     # CONTROL arm for --turns:each turn is a fresh session. See §MULTI-TURN.
+    --setting-sources) _needval "$@"; SETSRC="$2"; [ -n "$SETSRC" ] || { echo "FAIL: --setting-sources is empty" >&2; exit 2; }; shift 2 ;;  # §CONSUMER SURFACE — e.g. project,local
+    --settings) _needval "$@"; SETFILE="$2"; [ -n "$SETFILE" ] || { echo "FAIL: --settings is empty" >&2; exit 2; }; shift 2 ;;        # §CONSUMER SURFACE — permission file
+    --permission-mode) _needval "$@"; PERMMODE="$2"
+       case "$PERMMODE" in default|acceptEdits|plan) ;; *) echo "FAIL: --permission-mode '$PERMMODE' refused — only default|acceptEdits|plan (an unattended arm must not bypass the runner's deny rules)" >&2; exit 2 ;; esac
+       shift 2 ;;
+    --add-wrapper-dir) ADDWRAP=1; shift ;;          # §CONSUMER SURFACE — the rep's own wrapper (clone + siblings)
     *) echo "unknown flag: $1" >&2; exit 2 ;;
   esac
 done
+# ── §CONSUMER SURFACE (2026-11-10, AQ-20261110-6) ───────────────────────────────────────────
+# WHY: the blind harness-birth test (branch claude/blind-birth-test-092883, its fixtures folder
+#   blind_birth_2026-11-10 — not on main when this landed) needed an arm that
+#   looks like a CONSUMER install, and the runner could not express one:
+#   · user-scope settings (the operator's own plugins and hooks) load into every non-restricted
+#     arm — so an "FH arm" measured FH + whatever this operator installed, and a "bare" arm could
+#     not be made bare without `--no-harness`;
+#   · `--no-harness` (= --restricted) kills act-mode writes (see the header), and plain act mode
+#     cannot reach a sibling project folder next to the clone.
+#   The test ran through a PATH shim that appended these four flags. This section makes the shim
+#   unnecessary. Known pair, 2026-11-10: with `--setting-sources project,local` the FH clone still
+#   answers «yes, the 🐿️ greeting rule» (project memory kept) and an emptied clone answers «no»;
+#   neither lists any user-scope `fh-` skill.
+# 🟥 ALL FOUR ARE OPT-IN. With none given, the argv handed to `claude` is byte-identical to before
+#   (lane L31a). `--permission-mode bypassPermissions` is REFUSED: an unattended arm that can bypass
+#   the deny rules this runner writes is not isolated, and the auto-mode classifier refused the same
+#   shape when it was tried by hand. Only default|acceptEdits|plan pass.
+# 🟥 RESIDUAL, named: headless arms still cannot write under `<project>/.claude/` even with an explicit
+#   allow — the platform treats it as sensitive and wants a human. Not fixable here; score what the
+#   arm wrote, and record how it reacted to the block.
+# 🟥 PILOT THE HELD-OUT TASK ON A BARE ARM FIRST. In the same test the stage-2 task hit the ceiling:
+#   an arm with NO harness found the planted false claim 6/6 and held the publish script 6/6, so the
+#   task could not tell a harness from none. Before registering a task, run it once on an emptied
+#   clone (no harness); if that arm already passes, the task measures nothing — pick a harder one.
+#   A same-model-authored trap is the usual cause (the cartridge rounds saw it six times).
+SURF=()
+if [ -n "$SETSRC" ]; then
+  # Validate the exact string that is forwarded, not a shell-split copy of it (codex R2).
+  printf '%s' "$SETSRC" | grep -qE '^(user|project|local)(,(user|project|local))*$' \
+    || { echo "FAIL: --setting-sources takes a comma list of user|project|local, got '$SETSRC'" >&2; exit 2; }
+  # 🟥 `local` is REQUIRED: the runner's isolation deny rules live in the clone's local settings
+  #    file — a source list without `local` silently drops them (codex R2).
+  case ",$SETSRC," in *,local,*) ;; *) echo "FAIL: --setting-sources must include 'local' — the runner's isolation deny rules are a local settings file" >&2; exit 2 ;; esac
+  SURF+=(--setting-sources "$SETSRC")
+fi
+if [ -n "$SETFILE" ]; then
+  [ -f "$SETFILE" ] || { echo "FAIL: --settings file not found: $SETFILE" >&2; exit 2; }
+  SETFILE="$(cd "$(dirname "$SETFILE")" && pwd)/$(basename "$SETFILE")"
+  SURF+=(--settings "$SETFILE")
+fi
+[ -n "$PERMMODE" ] && SURF+=(--permission-mode "$PERMMODE")   # validated in the parser (empty refused there)
 [ -n "$ARM" ]    || { echo "FAIL: --arm required" >&2; exit 2; }
 [ -n "$PROMPT" ] || [ -n "$TURNS" ] || { echo "FAIL: --prompt or --turns required" >&2; exit 2; }
 case "$MODE" in observe|act) ;; *) echo "FAIL: --mode must be observe|act" >&2; exit 2 ;; esac
@@ -409,6 +458,7 @@ fh_run_turns() {
     if [ -n "$_sid" ] && [ "$NORESUME" -eq 0 ]; then _resume=(--resume "$_sid"); fi
     ( cd "$WORK" && fh_timeout "$TIMEOUT" claude -p "$_t" \
           --model "$MODEL" "${TOOLS[@]}" ${MCPARGS[@]+"${MCPARGS[@]}"} \
+          ${SURFREP[@]+"${SURFREP[@]}"} \
           ${_resume[@]+"${_resume[@]}"} --output-format json \
           < /dev/null 2>"${_tf}.stderr.txt" ) > "${_tf}.json"
     _rc=$?; _lastrc=$_rc
@@ -810,7 +860,9 @@ for r in $(seq 1 "$REPS"); do
   #    = "only the servers given by --mcp-config" (CLI --help), and with no --mcp-config that is
   #    NONE. An arm that legitimately needs a server (e.g. Playwright for a web target) gets it
   #    explicitly via --mcp-config <file inside the clone>; nothing is inherited.
-  MCPARGS=(--strict-mcp-config); [ -n "${MCPCFG:-}" ] && MCPARGS+=(--mcp-config "$MCPCFG")   # bash 3.2 + set -u: expanded with the ${a[@]+"${a[@]}"} idiom below
+  MCPARGS=(--strict-mcp-config); [ -n "${MCPCFG:-}" ] && MCPARGS+=(--mcp-config "$MCPCFG")
+  # §CONSUMER SURFACE — per-rep copy: the wrapper dir differs per rep. Empty unless opted in.
+  SURFREP=(${SURF[@]+"${SURF[@]}"}); [ "$ADDWRAP" -eq 1 ] && SURFREP+=(--add-dir "$WRAP")   # bash 3.2 + set -u: expanded with the ${a[@]+"${a[@]}"} idiom below
   if [ -n "$TURNS" ]; then
     # §MULTI-TURN — the single-shot branch below is left byte-identical on purpose: `--turns`
     # adds a path, it does not modify the one every existing probe already runs on.
@@ -819,6 +871,7 @@ for r in $(seq 1 "$REPS"); do
   else
   ( cd "$WORK" && fh_timeout "$TIMEOUT" claude -p "$PROMPT" \
         --model "$MODEL" "${TOOLS[@]}" ${MCPARGS[@]+"${MCPARGS[@]}"} \
+        ${SURFREP[@]+"${SURFREP[@]}"} \
         < /dev/null 2>"$OUTDIR/${ARM}_r${r}.stderr.txt" ) > "$OUTDIR/${ARM}_r${r}.txt"
   rc=$?
   fi
