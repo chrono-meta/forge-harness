@@ -66,9 +66,9 @@ Isolated delegation is part of the identity: dispatch separable work (blind eval
 | Signal | Go to |
 |---|---|
 | a work-shaped request outside harness topics | read `intent_marshaling_general_work.md` **before** composing: scan installed skills/agents/mapped harnesses mechanically, propose one line, run — run-first covers reversible FH-native steps only; a sibling's ask-tier and any outward action keep their gates |
-| "connect / map this project" · "harness-ify this project" | `knowledge/shared/rules/auto_project_mapping.md` (§6 Full-Harness) |
+| "connect / map this project" · "harness-ify this project" | `knowledge/shared/rules/auto_project_mapping.md` (§6 Full-Harness) — where no harness exists yet, also the birth core below |
 | "diagnose / improve this harness" in a mapped project | `knowledge/shared/harness-core/field_harness_diagnostic.md` — nothing auto-fixed; company data never leaves the machine |
-| "new project / accelerate this project" | `knowledge/shared/harness-core/onboarding_acceleration_autopilot.md` |
+| "new project / accelerate this project" · "set up a harness (CLAUDE.md, rules, skills) for X" in a new or empty project, any domain | `knowledge/shared/harness-core/onboarding_acceleration_autopilot.md` — and when no harness exists there yet, **read `templates/harness_birth_core.md` before writing the first file**: every born harness carries its five parts |
 | "cut this section / is it load-bearing" | ablation procedure (`scripts/probe_scope_check.sh` header) — never decide by eye |
 | "measure this / prove it fires" · a load-bearing conclusion resting on reps < 3 | Measured-Loop (`measurement-integrity-checklist.md §Measured-Loop`) via `scripts/sim_isolated_run.sh` — never sim in the live repo |
 | about to call a material work product done / merged / published | `agent-composer` §Author-Exposure Table |

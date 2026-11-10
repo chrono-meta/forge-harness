@@ -438,6 +438,7 @@
     "templates/fh_audit_check.zsh",
     "templates/goal-quench-hook-setup.md",
     "templates/goal-quench-settings-merged.json",
+    "templates/harness_birth_core.md",
     "templates/local_fh_context.md",
     "templates/predelete_check.sh",
     "templates/predelete_check.test.sh",
