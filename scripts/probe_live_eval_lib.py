@@ -344,6 +344,13 @@ def _failure_reason(base, arm):
     (sim_isolated_run.sh prints "(rc=<n>, ...)" there) and bytes from the actual output file's
     size (0 for a file that was never written). Purely a diagnostic label for the report/console —
     never used by score_probe, which stays unchanged."""
+    rc = _runner_rc(base, arm, 1)
+    said = _read_first_line(os.path.join(base, '%s_r1.txt' % arm)) if rc is not None else None
+    if said:
+        # The arm wrote text but the runner says it did not finish (a usage-limit reply) — show
+        # the rc AND what it said, since the text is exactly what the old scorer mistook for an answer.
+        # Empty text falls through to stderr, which then holds the real error.
+        return 'rc=%s (runner): %s' % (rc, said)
     stderr_line = _read_first_line(os.path.join(base, '%s_r1.stderr.txt' % arm))
     if stderr_line:
         return stderr_line
@@ -400,6 +407,25 @@ def _read_meta_tsv(path):
             k, v = line.split('\t', 1)
             out[k.strip()] = v.strip()
     return out
+
+
+def _runner_rc(base, arm, i):
+    """The runner's recorded exit code for <arm>_r<i> when it is NONZERO, else None. A nonzero rc
+    means the rep did not finish (measured 2026-11-10/11: every usage-limit reply — 156 files across
+    a model-arms run and nightly 2026-10-27 — carried rc=1, every normal reply rc=0). The reply text
+    is never inspected: a normal answer that quotes limit wording must still be scored. No meta.tsv
+    (older runs) or no rc key -> None, i.e. scored exactly as before."""
+    m = _read_meta_tsv(os.path.join(base, '%s_r%d.meta.tsv' % (arm, i)))
+    rc = (m or {}).get('rc', '')
+    return rc if rc not in ('', '0') else None
+
+
+def _rep_text(base, arm, i):
+    """Text of <arm>_r<i>, or None when the runner recorded a nonzero rc for it — so score_probe
+    returns FAILED-TO-RUN for a reply that exists but came from a run that did not finish."""
+    if _runner_rc(base, arm, i) is not None:
+        return None
+    return _read_text(os.path.join(base, '%s_r%d.txt' % (arm, i)))
 
 
 def budget_line(base, arms_reps):
@@ -475,15 +501,15 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
         ctrl_b_absent = False   # rep-1 only, diagnostic: which arm actually produced nothing
         per_rep = []          # [(verdict, phit, chit, primary_text, control_text)]
         for i in range(1, reps + 1):
-            pt = _read_text(os.path.join(base, 'primary_r%d.txt' % i))
-            ct = _read_text(os.path.join(base, 'control_r%d.txt' % i))
+            pt = _rep_text(base, 'primary', i)
+            ct = _rep_text(base, 'control', i)
             ct_first_arm_ran = bool(ct)
             if has_ctrl_b:
                 # A declared second control that produced nothing did NOT run — and a probe whose
                 # calibration arm did not run has not been calibrated. Collapsing that into "the
                 # control stayed silent, so the pattern discriminates" is the not-found-is-not-zero
                 # defect pointed at the calibration channel instead of the measurement channel.
-                ctb = _read_text(os.path.join(base, 'control_b_r%d.txt' % i))
+                ctb = _rep_text(base, 'control_b', i)
                 if not ctb:
                     ct = None
                     if i == 1 and ct_first_arm_ran:

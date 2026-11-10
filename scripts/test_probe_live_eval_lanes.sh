@@ -906,6 +906,67 @@ PY
 )"
 _lane IF4 instrument "KNOWN-NEGATIVE — stub sim runner is fingerprinted as sim_runner(override)" "override" "$r"
 
+# ── run-rc: a rep the runner says did not finish (meta rc != 0) is FAILED-TO-RUN (2026-11-11) ──────
+# Real defect: a usage-limit reply is NON-EMPTY text, so the empty-text check let it through and it
+# was scored FAIL. Measured: 2026-11-10 model-arms run, Opus G-MAP-01 r1-r3 = 6 limit replies scored
+# FAIL 0/3; nightly 2026-10-27 had 75 such files. In every one of those 156 files the runner's
+# meta.tsv said rc=1, and in all 2,142 normal replies it said rc=0 — so the discriminator is the
+# runner's own exit code, never the reply text. Fixture texts below are byte-copied from those runs.
+# 🟥 RC4/RC5 are the opposite-direction controls: an rc=0 reply that merely CONTAINS limit wording is
+# still scored normally (a real FAIL stays FAIL), and a run with no meta.tsv is not re-guessed.
+_rc_run() {  # $1=reps, then per rep "<kind>:<primary rc>:<control rc>"; kind P pass | F fail | L limit | M mixed | Q pass+limit words; rc '-' = no meta
+  local reps="$1"; shift
+  python3 - "$REPO_ROOT" "$reps" "$@" <<'PY'
+import sys, os, tempfile
+sys.path.insert(0, os.path.join(sys.argv[1], 'scripts'))
+from probe_live_eval_lib import score_run
+LIMIT = "You've hit your 5-hour limit · resets 11:30pm (Asia/Seoul)\n"
+LIMIT_S = "You've hit your session limit · resets 3:20am (Asia/Seoul)\n"
+reps = int(sys.argv[2]); specs = sys.argv[3:]
+root = tempfile.mkdtemp(); base = os.path.join(root, 'G-X'); os.makedirs(base)
+for i, spec in enumerate(specs, start=1):
+    kind, prc, crc = spec.split(':')
+    prim = {'P': '\U0001f43f️ hi', 'F': 'nothing here', 'L': LIMIT, 'S': LIMIT_S,
+            'M': 'Not mapped. ' + LIMIT, 'Q': '\U0001f43f️ hi. ' + LIMIT}[kind]
+    ctrl = {'L': LIMIT, 'S': LIMIT_S}.get(kind, 'weather')
+    for arm, text, rc in (('primary', prim, prc), ('control', ctrl, crc)):
+        open(os.path.join(base, '%s_r%d.txt' % (arm, i)), 'w', encoding='utf-8').write(text)
+        if rc != '-':
+            open(os.path.join(base, '%s_r%d.meta.tsv' % (arm, i)), 'w').write('sim_model\tx\nrc\t%s\n' % rc)
+row = score_run([{'id': 'G-X', 'polarity': 'present', 'expect_re': '\U0001f43f️'}],
+                root, ['G-X'], 0.8, 'sonnet', reps=reps)['rows'][0]
+print('%s %s|%s' % (row['verdict'], row.get('reps'), row.get('reason', '')))
+PY
+}
+r="$(_rc_run 3 L:1:1 L:1:1 L:1:1)"
+_lane RC1 run-rc "3 limit replies (rc=1, real text) -> FAILED-TO-RUN, not FAIL 0/3" "FAILED-TO-RUN 0/0" "${r%%|*}"
+case "${r#*|}" in *"rc=1"*"limit"*) rr=named ;; *) rr="unnamed:${r#*|}" ;; esac
+_lane RC1b run-rc "reason names the runner rc and the reply's first line" "named" "$rr"
+r="$(python3 - "$REPO_ROOT" <<'PY'
+import sys, os, tempfile
+sys.path.insert(0, os.path.join(sys.argv[1], 'scripts'))
+from probe_live_eval_lib import _failure_reason
+b = tempfile.mkdtemp()
+open(os.path.join(b, 'primary_r1.txt'), 'w').write('')
+open(os.path.join(b, 'primary_r1.meta.tsv'), 'w').write('rc\t127\n')
+open(os.path.join(b, 'primary_r1.stderr.txt'), 'w').write('claude: command not found\n')
+print(_failure_reason(b, 'primary'))
+PY
+)"
+_lane RC1c run-rc "rc!=0 with EMPTY reply keeps the stderr diagnostic (codex R1)" "claude: command not found" "$r"
+r="$(_rc_run 3 P:0:0 P:0:0 L:1:1)"
+_lane RC2 run-rc "a limit rep leaves the denominator: 2 pass + 1 limit -> PASS 2/2" "PASS 2/2" "${r%%|*}"
+r="$(_rc_run 3 P:0:1 P:0:0 P:0:0)"
+_lane RC3 run-rc "control arm alone rc!=0 -> that rep did not run (PASS 2/2)" "PASS 2/2" "${r%%|*}"
+r="$(_rc_run 3 M:0:0 M:0:0 M:0:0)"
+_lane RC4 run-rc "KNOWN-NEGATIVE — rc=0 reply with limit wording and no rule hit stays FAIL" "FAIL 0/3" "${r%%|*}"
+r="$(_rc_run 3 Q:0:0 Q:0:0 Q:0:0)"
+_lane RC4b run-rc "KNOWN-NEGATIVE — rc=0 reply with limit wording and a rule hit stays PASS" "PASS 3/3" "${r%%|*}"
+r="$(_rc_run 3 L:-:- L:-:- L:-:-)"
+_lane RC5 run-rc "no meta.tsv (older run) -> text is not re-guessed; scored as before (FAIL)" "FAIL 0/3" "${r%%|*}"
+r="$(_rc_run 3 S:1:1 S:1:1 S:1:1)"
+_lane RC6 run-rc "nightly 'session limit' variant (rc=1) -> FAILED-TO-RUN" "FAILED-TO-RUN 0/0" "${r%%|*}"
+
 echo ""
 echo "── summary ──────────────────────────────────────────────────────"
 echo "lanes: $N   failed: $([ "$FAIL" -eq 0 ] && echo 0 || echo '>=1')"
