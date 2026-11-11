@@ -18,10 +18,16 @@
 #      through the normal 4-axis gate + cross-family. PR title prefix «selfdev: », branch
 #      auto/selfdev-<date>-<n>. It never merges.
 #   ④ merge pass over every open auto/selfdev-* PR — AUTO only if ALL hold, else HOLD with the reason:
-#        CI all pass · PR body «seed: human» AND its «request: «…»» text is a seed=human row of a queue
-#        this loop wrote (the builder's word alone is not enough) · the clone's marker for that branch
-#        has «crossfamily: panel(» · scripts/selfdev_merge_tier.sh says AUTO · not DEMOTED.
-#      AUTO → scripts/pr_merge_verified.sh (squash + post-merge verify). HOLD → morning report line.
+#        CI all pass · PR body «seed: human» (with a «request: «…»» that is a seed=human row of a queue
+#        this loop wrote — the builder's word alone is not enough) OR «seed: candidate» (operator
+#        2026-11-11 «후보 확인만 없앰»: a machine-proposed row no longer waits for the operator; what
+#        it may change is decided by the path tier, not by its seed) · a candidate PR deletes no file,
+#        removes no more lines than it adds and never names an ablation (a deletion is the operator's
+#        call) · the clone's marker for that branch has «crossfamily: panel(» ·
+#        scripts/selfdev_merge_tier.sh says AUTO · not DEMOTED · fewer than $SELFDEV_MAX_AUTO_MERGES
+#        merges already this run.
+#      AUTO → scripts/pr_merge_verified.sh (squash + post-merge verify), reported with its head SHA so
+#      the operator can revert it. HOLD → morning report line.
 #   ⑤ report: tracks/_meta/selfdev/report_<date>.md in the live checkout.
 #
 # DEMOTION (goal-quench §Autonomy Ladder (d) — rollback feeds demotion): any commit on origin/main in
@@ -41,7 +47,7 @@
 #      SELFDEV_BUILD_TIMEOUT(2700s) · SELFDEV_POLL(20s watchdog poll) · SELFDEV_DEMOTE_DAYS(30) · SELFDEV_DRY_RUN(0: 1 = no build, no
 #      merge — print what would happen) · SELFDEV_NO_MERGE(0: any other value = build and open PRs as
 #      usual, but never merge — a PR that passes every check is reported ELIGIBLE for the operator to merge) ·
-#      FD_MODEL (pinned by the plist) · FD_CLAUDE_BIN
+#      SELFDEV_MAX_AUTO_MERGES(2, lower only) · FD_MODEL (pinned by the plist) · FD_CLAUDE_BIN
 # RC   0 run completed (HOLDs are normal outcomes) · 2 HARNESS-ERROR (could not set up / read state)
 
 set -u
@@ -49,6 +55,14 @@ LIVE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CLONE="${FH_SELFDEV_DIR:-$HOME/projects/fh-selfdev}"
 MAX_ITEMS="${SELFDEV_MAX_ITEMS:-2}"
 MAX_OPEN="${SELFDEV_MAX_OPEN:-2}"
+# auto-merges per run: default 2 = one night's builds (SELFDEV_MAX_ITEMS 2, SELFDEV_MAX_OPEN 2), so a run
+# can never merge more than it could have built. May be LOWERED, never raised; a non-number is 0 (fail closed).
+# Set-but-empty is 0 too (codex R1: «:-» turned an explicit empty into the default); «001» is 1, not 2.
+MAX_AUTO="${SELFDEV_MAX_AUTO_MERGES-2}"
+case "$MAX_AUTO" in ''|*[!0-9]*) MAX_AUTO=0 ;; esac
+MAX_AUTO="$(printf '%s' "$MAX_AUTO" | sed 's/^0*//')"   # «00001» is 1 at any length (codex R2)
+if [ -z "$MAX_AUTO" ]; then MAX_AUTO=0; elif [ "${#MAX_AUTO}" -gt 1 ]; then MAX_AUTO=2; fi
+[ "$MAX_AUTO" -gt 2 ] && MAX_AUTO=2
 CI_WAIT="${SELFDEV_CI_WAIT:-1800}"
 BUILD_TIMEOUT="${SELFDEV_BUILD_TIMEOUT:-2700}"
 # watchdog poll interval: a finished build is noticed at the next poll, so lanes with an instant stub
@@ -170,7 +184,7 @@ if [ "$BUILD" = 1 ] && [ "$DRY" != 1 ]; then
   cp "$QUEUE" "$CLONE/tracks/_meta/selfdev_queue_$DATE.md"
   PROMPT="[automated-run: launchd, unattended — no human present. You are the FH self-dev loop, running in a dedicated clone ($CLONE), never the operator's checkout.]
 
-Read tracks/_meta/selfdev_queue_$DATE.md. Pick at most $MAX_ITEMS items and make one PR per item. Prefer seed=human rows with owner=session. Skip: owner=operator rows; items about FoD, qasp or any other repository; anything needing deletion, publishing, a tag, settings under ~/.claude, credentials or company data. The one exception is a seed=ablation row: its PR may remove exactly the measured section named in the row — nothing else — and that PR is never auto-merged. A quiet run with no PR is a correct outcome — never manufacture a change.
+Read tracks/_meta/selfdev_queue_$DATE.md. Pick at most $MAX_ITEMS items and make one PR per item. Prefer seed=human rows with owner=session; after those, seed=candidate rows (digest candidates, absorption-queue rows, card [planned], correction moments) are yours to build WITHOUT waiting for the operator to confirm them (operator, 2026-11-11). For a candidate: measure first — check whether it is already done on main (grep, git log, the PR list); if it is, do not rebuild it: close it with the evidence (for an absorption-queue row: scripts/absorption_queue.py close <ID> --status landed --evidence <PR or commit>) and say so. Skip, and write the row id and the reason in your final output, any candidate that is an operator-insight call (a new direction, a new identity claim, a change to what FH is) or that touches an excluded surface below. A candidate PR adds or tightens (augment) or trims a few lines in place; it deletes no file — deletion stays the operator's. Skip: owner=operator rows; items about FoD, qasp or any other repository; anything needing deletion, publishing, a tag, settings under ~/.claude, credentials or company data. The one exception is a seed=ablation row: its PR may remove exactly the measured section named in the row — nothing else — and that PR is never auto-merged. A quiet run with no PR is a correct outcome — never manufacture a change.
 
 TIME: this whole run is killed at ${BUILD_TIMEOUT} seconds from its start, and anything not pushed by then is reported as stranded, not shipped. Do not run the full scripts/selfcheck.sh here — it takes longer than this run on this machine, and CI runs it sharded on every PR. Locally run only the lane suites your change touches (scripts/test_*_lanes.sh named for the files you edited, or the --self-test of a script you edited), in the foreground. Do not start a background task and wait for its notice. Push and open the PR as soon as the commit gate and those lanes pass; the PR body names which lanes ran locally and that the full suite is left to CI.
 
@@ -179,7 +193,7 @@ For each item: read the rule files the change touches first (CLAUDE.md says whic
 PR: title starts with «selfdev: ». Body has these lines verbatim-shaped:
 seed: human        (only for a seed=human row) followed by
 request: «<the row's 발화 text exactly as it appears in the queue>»
-— or seed: candidate (with the source) for anything else. Then what changed, what was measured, what was not.
+— or seed: candidate (with the source and row id) for a candidate row — or seed: ablation for an ablation row (never seed: candidate). Then what changed, what was measured, what was not.
 
 Never run gh pr merge, never push to main, never force-push, never tag. The merge decision is made after you, mechanically, not by you."
   # the builder's output goes to its own file first (its evidence, not mixed with the loop's [hh:mm:ss]
@@ -283,6 +297,40 @@ fi
 # which cut «Do X · owner=operator please» down to «Do X» (codex R2)
 human_rows="$(python3 "$LIVE/scripts/selfdev_queue.py" --live "$LIVE" --emit-human 2>/dev/null)" || human_rows=""
 # a failed listing is not «no open PRs» (codex R1 #7)
+# the ONE seed line of a body: human | candidate | <other word> | «multiple» | «» (none)
+# Every «seed:» line is counted first; the word must end at a space, «(» or the line end — «candidate2»
+# and «candidate-other» are not «candidate» (codex R1), they are «other».
+seed_of() {
+  local all n w
+  all="$(printf '%s\n' "$1" | grep -E '^seed:')"; n="$(printf '%s' "$all" | grep -c .)"
+  case "$n" in 0) echo ""; return ;; 1) ;; *) echo "multiple"; return ;; esac
+  w="$(printf '%s\n' "$all" | sed -nE 's/^seed:[[:space:]]*([A-Za-z]+)([[:space:](].*)?$/\1/p')"
+  echo "${w:-other}"
+}
+# why a seed=candidate PR may NOT go on (empty = no candidate-specific refusal). Deletion is outside the
+# operator's grant and an ablation is never auto-merged — a builder that labels one «candidate» is caught
+# here by shape, not trusted by label. A file list that cannot be read is a refusal, not «no deletion».
+# Title, head and files come from ONE call and the head must be the one every other check bound to, so
+# a head swapped and swapped back cannot lend another commit's file counts (codex R1).
+candidate_refusal() {
+  local pr="$1" b="$2" want="$3" snap t oid fl
+  snap="$(gh pr view "$pr" -R "$REPO_SLUG" --json title,headRefOid,changedFiles,files -q '.title, .headRefOid, (.changedFiles|tostring), (.files[] | "\(.changeType)\t\(.path)\t\(.additions)\t\(.deletions)")' 2>/dev/null)" \
+    || { echo "candidate-files-unreadable"; return; }
+  t="$(printf '%s\n' "$snap" | sed -n 1p)"; oid="$(printf '%s\n' "$snap" | sed -n 2p)"; nf="$(printf '%s\n' "$snap" | sed -n 3p)"; fl="$(printf '%s\n' "$snap" | tail -n +4)"
+  if printf '%s\n%s\n' "$t" "$b" | grep -qiE 'ablation|절제'; then echo "candidate-names-ablation"; return; fi
+  if [ -z "$want" ] || [ "$oid" != "$want" ]; then echo "candidate-head-mismatch(${oid:-?})"; return; fi
+  [ -z "$fl" ] && { echo "candidate-files-unreadable"; return; }
+  # gh returns at most 100 files — a list shorter than changedFiles hides the rest (codex R6)
+  if [ "$(printf '%s\n' "$fl" | grep -c .)" != "$nf" ]; then echo "candidate-file-list-incomplete($(printf '%s\n' "$fl" | grep -c .)/${nf:-?})"; return; fi
+  printf '%s\n' "$fl" | awk -F'\t' '
+    $1 ~ /^(DELETED|D)$/ { d = 1 }
+    $3 !~ /^[0-9]+$/ || $4 !~ /^[0-9]+$/ { u = 1 }
+    { a += $3; r += $4 }
+    END { if (u) print "candidate-files-unreadable"; else if (d) print "candidate-deletes-file"; else if (r > a) print "candidate-net-removal(" r ">" a ")"; else print "OK" }'
+}
+# a check that printed nothing did not run — only an explicit OK clears a candidate (codex R2)
+candidate_check() { local r; r="$(candidate_refusal "$@")"; case "$r" in OK) ;; '') echo "candidate-check-failed" ;; *) echo "$r" ;; esac; }
+auto_n=0
 MERGE_LIST="$(open_auto)" || { say "HARNESS-ERROR: cannot list open selfdev PRs for the merge pass"; rep "- HARNESS-ERROR: merge pass could not list PRs"; exit 2; }
 for pr in $MERGE_LIST; do
   reasons=""
@@ -304,13 +352,17 @@ for pr in $MERGE_LIST; do
   done
   body="$(gh pr view "$pr" -R "$REPO_SLUG" --json body,headRefName -q '.body' 2>/dev/null)"
   head="$(gh pr view "$pr" -R "$REPO_SLUG" --json headRefName -q '.headRefName' 2>/dev/null)"
-  if printf '%s\n' "$body" | grep -qE '^seed: human'; then
-    req="$(printf '%s\n' "$body" | sed -nE 's/^request: «(.*)»[[:space:]]*$/\1/p' | head -1)"
-    if [ -z "$req" ]; then reasons="$reasons seed-human-without-request"
-    elif ! printf '%s\n' "$human_rows" | grep -qxF -- "$req"; then reasons="$reasons request-not-in-queue"; fi
-  else
-    reasons="$reasons seed-candidate"
-  fi
+  seed="$(seed_of "$body")"; req=""
+  case "$seed" in
+    human)
+      req="$(printf '%s\n' "$body" | sed -nE 's/^request: «(.*)»[[:space:]]*$/\1/p' | head -1)"
+      if [ -z "$req" ]; then reasons="$reasons seed-human-without-request"
+      elif ! printf '%s\n' "$human_rows" | grep -qxF -- "$req"; then reasons="$reasons request-not-in-queue"; fi ;;
+    candidate)
+      # operator 2026-11-11 «후보 확인만 없앰»: the seed alone no longer holds a candidate. Its limits:
+      cr="$(candidate_check "$pr" "$body" "$head_oid")"; [ -n "$cr" ] && reasons="$reasons $cr" ;;
+    *) reasons="$reasons seed-${seed:-missing}" ;;   # ablation, recheck, two seeds, none → operator
+  esac
   mk="$(ls "$CLONE"/tracks/_meta/.axes_23_passed_"$(printf '%s' "$head" | tr '/' '_')"_*.marker 2>/dev/null | tail -1)"
   if [ -z "$mk" ]; then reasons="$reasons no-marker"
   elif ! grep -qE '^crossfamily: panel\(' "$mk"; then reasons="$reasons crossfamily-not-panel"; fi
@@ -328,18 +380,44 @@ for pr in $MERGE_LIST; do
   snap="$(gh pr view "$pr" -R "$REPO_SLUG" --json headRefOid,body -q '.headRefOid + "\n" + .body' 2>/dev/null)"
   now_oid="$(printf '%s\n' "$snap" | head -1)"
   if [ "$now_oid" != "$head_oid" ]; then rep "- #$pr HOLD: head moved during checks ($head_oid → ${now_oid:-?})"; continue; fi
-  req2="$(printf '%s\n' "$snap" | sed -nE 's/^request: «(.*)»[[:space:]]*$/\1/p' | head -1)"
-  if [ "$req2" != "$req" ] || ! printf '%s\n' "$human_rows" | grep -qxF -- "$req2"; then rep "- #$pr HOLD: request changed or unauthorized at final snapshot"; continue; fi
+  body2="$(printf '%s\n' "$snap" | tail -n +2)"
+  if [ "$(seed_of "$body2")" != "$seed" ]; then rep "- #$pr HOLD: seed changed at final snapshot"; continue; fi
+  if [ "$seed" = human ]; then
+    req2="$(printf '%s\n' "$body2" | sed -nE 's/^request: «(.*)»[[:space:]]*$/\1/p' | head -1)"
+    if [ "$req2" != "$req" ] || ! printf '%s\n' "$human_rows" | grep -qxF -- "$req2"; then rep "- #$pr HOLD: request changed or unauthorized at final snapshot"; continue; fi
+  else
+    cr2="$(candidate_check "$pr" "$body2" "$head_oid")"
+    if [ -n "$cr2" ]; then rep "- #$pr HOLD: $cr2 at final snapshot"; continue; fi
+  fi
+  if [ "$auto_n" -ge "$MAX_AUTO" ]; then rep "- #$pr HOLD: auto-merge cap reached ($auto_n of $MAX_AUTO this run; head $head_oid, seed $seed)"; continue; fi
   # PR-only mode: the first real nights open PRs and stop here; the operator picks merges in the morning
-  if [ "$NO_MERGE" = 1 ]; then rep "- #$pr ELIGIBLE (no-merge mode — every check passed; operator merges, head $head_oid)"; continue; fi
-  if [ "$DRY" = 1 ]; then rep "- #$pr WOULD MERGE (dry-run, head $head_oid)"; continue; fi
+  if [ "$NO_MERGE" = 1 ]; then rep "- #$pr ELIGIBLE (no-merge mode — every check passed; operator merges, head $head_oid, seed $seed)"; auto_n=$((auto_n + 1)); continue; fi
+  if [ "$DRY" = 1 ]; then rep "- #$pr WOULD MERGE (dry-run, head $head_oid, seed $seed)"; auto_n=$((auto_n + 1)); continue; fi
   added_lanes="$(gh pr view "$pr" -R "$REPO_SLUG" --json files -q '.files[] | select(.changeType=="ADDED") | .path' 2>/dev/null | grep -E '^scripts/test_.*\.sh$')"
   if [ -n "$added_lanes" ]; then rerun="for l in $(echo $added_lanes); do bash \$l || exit 1; done"
   else rerun="git show --stat --format=%s HEAD"; fi   # docs-only: a carry check, not an exercise (named residual)
   if mo="$(bash "$LIVE/scripts/pr_merge_verified.sh" "$pr" --rerun "$rerun" --repo "$CLONE" --expect-head "$head_oid" --lease 'selfdev standing 2026-11-04 → 2027-02-04' 2>&1)"; then
-    rep "- #$pr MERGED (auto) — $(printf '%s\n' "$mo" | tail -1)"
+    # only a merge that happened uses up the cap — a refused attempt merged nothing (codex R1)
+    auto_n=$((auto_n + 1))
+    mc="$(gh pr view "$pr" -R "$REPO_SLUG" --json mergeCommit -q '.mergeCommit.oid' 2>/dev/null)"
+    rep "- #$pr MERGED (auto, seed $seed, head $head_oid, merge commit ${mc:-UNREAD} — undo: git revert ${mc:-<merge commit>}) — $(printf '%s\n' "$mo" | tail -1)"
   else
-    rep "- #$pr merge attempt FAILED — $(printf '%s\n' "$mo" | tail -2 | tr '\n' ' ')"
+    mrc=$?
+    # the helper also exits non-zero AFTER a merge (verify failed/incomplete, queued) — ask GitHub; only a PR
+    # that is still OPEN merged nothing. Unreadable counts as merged: the cap fails closed (codex R2).
+    st="$(gh pr view "$pr" -R "$REPO_SLUG" --json state,mergeCommit -q '.state + " " + (.mergeCommit.oid // "")' 2>/dev/null)"
+    # Fail closed (codex R3/R4: rc 6 queued and rc 5 «outcome unknown» can both be OPEN now and land later):
+    # the attempt is NOT counted only on rc 2 (every rc-2 exit in pr_merge_verified.sh is before the merge
+    # call) AND GitHub still shows the PR OPEN. rc 4 is not split by its text — output can carry a PR
+    # title (codex R5) — so a pre-merge rc 4 also uses up the cap: over-hold, the safe direction.
+    nomerge=0
+    [ "$mrc" = 2 ] && [ "${st%% *}" = OPEN ] && nomerge=1
+    if [ "$nomerge" != 1 ]; then
+      auto_n=$((auto_n + 1)); mc="${st#* }"; [ "$mc" = "$st" ] && mc=""
+      rep "- #$pr merge attempt returned non-zero (rc $mrc), PR state «${st%% *}» (counted against the cap; head $head_oid, merge commit ${mc:-UNREAD} — undo: git revert ${mc:-<merge commit>}) — $(printf '%s\n' "$mo" | tail -2 | tr '\n' ' ')"
+    else
+      rep "- #$pr merge attempt FAILED (PR still open) — $(printf '%s\n' "$mo" | tail -2 | tr '\n' ' ')"
+    fi
   fi
 done
 
