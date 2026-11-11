@@ -61,6 +61,11 @@ ACCEPTED_ABSENT=(
   #    has no such file and no such convention, so shipping it would ship a tool with nothing to act on.
   "scripts/lease_line_apply.sh"
   "scripts/test_lease_line_apply_lanes.sh"
+  # 2026-11-11 — shared session ledger (root/child sessions of this hub). Pilot for this hub's thin-root operation;
+  #    whether consumers get it is an operator decision after the pilot, so not shipped yet.
+  "scripts/session_ledger_write.sh"
+  "scripts/session_ledger_read.py"
+  "scripts/test_session_ledger_lanes.sh"
   # 2026-11-07 — context-continuity read half (AQ-20261107-10/-12). Governor tools for this hub: the hook reads the
   #    hub's lease-file convention (CLAUDE.local.md «utterance» lines) and its snippet is not shipped either, so
   #    shipping the script alone would hand consumers a hook nothing calls. Ship both together, or neither.
