@@ -409,8 +409,19 @@ score_rc=$?
               (\"*|*" -> "*) uh=$((uh + 1)); echo "<unhashed:$p>" >> "$body" ;;
               (*)
                 if [ -d "$f" ]; then
-                  if [ -n "$(find "$f" -type f ! -perm -u=r 2>/dev/null | head -1)" ]; then uh=$((uh + 1)); echo "<unhashed:$p>" >> "$body"
-                  else find "$f" -type f 2>/dev/null | LC_ALL=C sort | while IFS= read -r g; do echo "<f:${g#"$f"}>"; cat "$g"; done >> "$body"; fi
+                  # find output and rc captured apart: a failing find counts the path as unhashed,
+                  # never as «no unreadable files» (pipefail class-lock lane L12c).
+                  _bad="$(find "$f" -type f ! -perm -u=r 2>/dev/null)"; _brc=$?
+                  _all="$(find "$f" -type f 2>/dev/null)"; _arc=$?
+                  if [ "$_brc" -ne 0 ] || [ "$_arc" -ne 0 ] || [ -n "$_bad" ]; then uh=$((uh + 1)); echo "<unhashed:$p>" >> "$body"
+                  else
+                    _sorted="$(printf '%s\n' "$_all" | LC_ALL=C sort)"
+                    while IFS= read -r g; do
+                      [ -n "$g" ] || continue
+                      echo "<f:${g#"$f"}>" >> "$body"
+                      cat "$g" >> "$body" || { uh=$((uh + 1)); echo "<unhashed:$g>" >> "$body"; }
+                    done <<< "$_sorted"
+                  fi
                 elif [ -e "$f" ] && [ ! -r "$f" ]; then uh=$((uh + 1)); echo "<unhashed:$p>" >> "$body"
                 elif [ -f "$f" ]; then cat "$f" >> "$body"
                 else echo "<absent:$p>" >> "$body"; fi ;;
