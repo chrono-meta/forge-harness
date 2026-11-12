@@ -863,6 +863,7 @@ for r in $(seq 1 "$REPS"); do
   MCPARGS=(--strict-mcp-config); [ -n "${MCPCFG:-}" ] && MCPARGS+=(--mcp-config "$MCPCFG")
   # §CONSUMER SURFACE — per-rep copy: the wrapper dir differs per rep. Empty unless opted in.
   SURFREP=(${SURF[@]+"${SURF[@]}"}); [ "$ADDWRAP" -eq 1 ] && SURFREP+=(--add-dir "$WRAP")   # bash 3.2 + set -u: expanded with the ${a[@]+"${a[@]}"} idiom below
+  _wall_t0=$(date +%s)   # COST AXIS (2026-11-12): wall seconds per episode, record only — never scored
   if [ -n "$TURNS" ]; then
     # §MULTI-TURN — the single-shot branch below is left byte-identical on purpose: `--turns`
     # adds a path, it does not modify the one every existing probe already runs on.
@@ -875,6 +876,12 @@ for r in $(seq 1 "$REPS"); do
         < /dev/null 2>"$OUTDIR/${ARM}_r${r}.stderr.txt" ) > "$OUTDIR/${ARM}_r${r}.txt"
   rc=$?
   fi
+  # A failed clock read must not become 0 or an epoch-sized number (codex R1): both reads digits,
+  # delta >= 0, else UNMEASURED. Residual: a wall-clock step during the episode is not detected.
+  _wall_t1=$(date +%s)
+  case "$_wall_t0$_wall_t1" in (''|*[!0-9]*) _wall_s=UNMEASURED ;;
+    (*) if [ -n "$_wall_t0" ] && [ -n "$_wall_t1" ] && [ "$_wall_t1" -ge "$_wall_t0" ]; then
+          _wall_s=$((_wall_t1 - _wall_t0)); else _wall_s=UNMEASURED; fi ;; esac
   bytes=$(wc -c < "$OUTDIR/${ARM}_r${r}.txt" | tr -d ' ')
 
   # ── BUDGET LINE (2026-10-17) — which cap this episode ran under, and did it END at that cap. ──
@@ -902,6 +909,7 @@ for r in $(seq 1 "$REPS"); do
     printf 'max_turns\t%s\n' "$_cap_turns"
     printf 'token_cap\t%s\n' "$_cap_tokens"
     printf 'ended_at_cap\t%s\n' "$_cap_end"
+    printf 'wall_s\t%s\n' "$_wall_s"
   } >> "$OUTDIR/${ARM}_r${r}.meta.tsv"
 
   # 🟥 An empty output is NOT a "no" answer. The first version of tonight's runner used
