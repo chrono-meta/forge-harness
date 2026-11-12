@@ -547,6 +547,14 @@ M="$(bud_meta b29b say --timeout 60)"
 { [ "$(meta_get "$M" ended_at_cap)" = no ] && [ "$(meta_get "$M" max_turns)" = unset ] && [ "$(meta_get "$M" timeout_s)" = 60 ]; } \
   && ok "L29b KNOWN-NEGATIVE — normal answer: ended_at_cap=no, max_turns=unset, timeout_s=60" \
   || no "L29b normal answer mis-recorded ($(meta_get "$M" ended_at_cap))"
+# L29w cost axis (2026-11-12): every episode's meta carries wall_s as whole seconds; the hang under
+# --timeout 1 must read >=1 (a constant 0 would be a dead clock).
+# --timeout 2 so a constant 1 (or 0) producer is red (codex R1 B).
+M="$(bud_meta b29w hang --timeout 2)"
+_w="$(meta_get "$M" wall_s)"
+{ [[ "$_w" =~ ^[0-9]+$ ]] && [ "$_w" -ge 2 ] && [ "$_w" -le 30 ]; } \
+  && ok "L29w wall_s recorded as whole seconds (hang under --timeout 2 -> 2 <= $_w <= 30)" \
+  || no "L29w wall_s missing or dead clock («$_w»)"
 M="$(bud_meta b29c die --timeout 60)"
 [ "$(meta_get "$M" ended_at_cap)" = UNKNOWN ] \
   && ok "L29c a crash (rc=7) is UNKNOWN, not no and not yes" \

@@ -740,21 +740,30 @@ open(os.path.join(base, 'control_r1.txt'), 'w').write('weather')
 for arm in ('primary', 'control'):
     if sys.argv[2] == 'MISSING':
         continue
-    if sys.argv[2] == 'PARTIAL' and arm == 'primary':
+    if sys.argv[2] in ('PARTIAL', 'WALLNOMETA') and arm == 'primary':
         continue                       # transcript present, meta absent: ran but unmeasured
     end = sys.argv[2] if arm == 'primary' else 'no'
+    wall = ''
+    if sys.argv[2] == 'WALL':
+        end, wall = 'no', 'wall_s\t%d\n' % (3 if arm == 'primary' else 7)
+    if sys.argv[2] == 'WALLNOMETA':
+        end, wall = 'no', 'wall_s\t4\n'
+    if sys.argv[2] == 'WALLBAD':
+        end, wall = 'no', ('wall_s\t\u00b2\n' if arm == 'primary' else 'wall_s\t6\n')
+    if sys.argv[2] == 'WALLHALF':
+        end, wall = 'no', ('wall_s\t5\n' if arm == 'primary' else 'wall_s\t\n')
     open(os.path.join(base, arm + '_r1.meta.tsv'), 'w').write(
-        'rc\t0\ntimeout_s\t900\nmax_turns\tunset\ntoken_cap\tunset\nended_at_cap\t%s\n' % end)
+        'rc\t0\ntimeout_s\t900\nmax_turns\tunset\ntoken_cap\tunset\nended_at_cap\t%s\n%s' % (end, wall))
 r = score_run([{'id': 'G-X', 'polarity': 'present', 'expect_re': 'ZZZ'}], root, ['G-X'], 0.8, 'sonnet')['rows'][0]
 print('%s|%s|%s' % (r['verdict'], r['ended_at_cap'], r['budget']))
 PY
 }
 r="$(_budget yes)"
 _lane BU1 budget "KNOWN-POSITIVE — a FAIL whose primary episode ended at the cap says so" \
-  "FAIL|yes|timeout=900s max_turns=unset tokens=unset ended_at_cap=yes (1/2 episodes)" "$r"
+  "FAIL|yes|timeout=900s max_turns=unset tokens=unset ended_at_cap=yes (1/2 episodes) wall_s=UNMEASURED tokens_used=UNMEASURED" "$r"
 r="$(_budget no)"
 _lane BU2 budget "KNOWN-NEGATIVE — a FAIL that ended on its own says ended_at_cap=no" \
-  "FAIL|no|timeout=900s max_turns=unset tokens=unset ended_at_cap=no" "$r"
+  "FAIL|no|timeout=900s max_turns=unset tokens=unset ended_at_cap=no wall_s=UNMEASURED tokens_used=UNMEASURED" "$r"
 r="$(_budget MISSING)"
 _lane BU3 budget "no meta recorded -> UNKNOWN (not measured is not no)" \
   "FAIL|UNKNOWN|no episode meta (cap not recorded)" "$r"
@@ -762,7 +771,21 @@ _lane BU3 budget "no meta recorded -> UNKNOWN (not measured is not no)" \
 # episode's `no` stand for the row — before the fix this printed `...|no|...`.
 r="$(_budget PARTIAL)"
 _lane BU5 budget "partial meta (transcript without meta) -> UNKNOWN, not the other episode's no" \
-  "FAIL|UNKNOWN|timeout=900s max_turns=unset tokens=unset ended_at_cap=UNKNOWN" "$r"
+  "FAIL|UNKNOWN|timeout=900s max_turns=unset tokens=unset ended_at_cap=UNKNOWN wall_s=UNMEASURED tokens_used=UNMEASURED" "$r"
+
+# BU6/BU7 cost axis (2026-11-12): wall seconds sit next to the verdict, never in it; tokens stay UNMEASURED.
+r="$(_budget WALL)"
+_lane BU6 budget "KNOWN-POSITIVE — wall_s recorded in both episodes -> range, verdict unchanged" \
+  "FAIL|no|timeout=900s max_turns=unset tokens=unset ended_at_cap=no wall_s=3..7 tokens_used=UNMEASURED" "$r"
+r="$(_budget WALLHALF)"
+_lane BU7 budget "one episode's wall_s empty -> counted as unmeasured, not as 0" \
+  "FAIL|no|timeout=900s max_turns=unset tokens=unset ended_at_cap=no wall_s=5..5 (1/2 episodes unmeasured) tokens_used=UNMEASURED" "$r"
+r="$(_budget WALLNOMETA)"
+_lane BU8 budget "transcript without meta next to a measured episode -> range flagged partial (codex R1 A)" \
+  "FAIL|UNKNOWN|timeout=900s max_turns=unset tokens=unset ended_at_cap=UNKNOWN wall_s=4..4 (1/2 episodes unmeasured) tokens_used=UNMEASURED" "$r"
+r="$(_budget WALLBAD)"
+_lane BU9 budget "non-ASCII digit wall_s does not crash scoring; counted unmeasured (codex R1 A)" \
+  "FAIL|no|timeout=900s max_turns=unset tokens=unset ended_at_cap=no wall_s=6..6 (1/2 episodes unmeasured) tokens_used=UNMEASURED" "$r"
 
 # BU4/TG*: end to end through the runner with a stub sim that writes the meta the real runner writes.
 if [ "$NOPROBES" -eq 1 ]; then _skipblock "budget/target runner lanes BU4 TG3-TG5 (need probes.md)"; else

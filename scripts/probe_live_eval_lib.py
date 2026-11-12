@@ -435,7 +435,7 @@ def budget_line(base, arms_reps):
     its cap; otherwise UNKNOWN when any episode's value is UNKNOWN or its meta/field is missing
     (an older run, or a stub that wrote none — not measured is not `no`); otherwise no.
     Returns (ended_at_cap, text, n_yes, n_eps)."""
-    ends, caps = [], set()
+    ends, caps, walls, wall_missing = [], set(), [], 0
     for arm, i in arms_reps:
         m = _read_meta_tsv(os.path.join(base, '%s_r%d.meta.tsv' % (arm, i)))
         if m is None:
@@ -444,8 +444,14 @@ def budget_line(base, arms_reps):
             # let 2 `no` + 1 missing read as `no`).
             if os.path.exists(os.path.join(base, '%s_r%d.txt' % (arm, i))):
                 ends.append('UNKNOWN')
+                wall_missing += 1
             continue
         ends.append(m.get('ended_at_cap', 'UNKNOWN') or 'UNKNOWN')
+        w = m.get('wall_s', '') or ''
+        if re.fullmatch(r'[0-9]{1,9}', w):     # ASCII digits only — '²'.isdigit() is True (codex R1)
+            walls.append(int(w))
+        else:
+            wall_missing += 1
         caps.add('timeout=%ss max_turns=%s tokens=%s' % (
             m.get('timeout_s', '?'), m.get('max_turns', '?'), m.get('token_cap', '?')))
     if not caps:
@@ -459,6 +465,17 @@ def budget_line(base, arms_reps):
         end = 'no'
     text = '%s ended_at_cap=%s%s' % ('; '.join(sorted(caps)), end,
                                       ' (%d/%d episodes)' % (n_yes, len(ends)) if n_yes else '')
+    # COST AXIS (2026-11-12, arXiv:2611.13541 / 2611.12122): a separate record next to the 1-bit
+    # verdict, never folded into it. Wall seconds only; tokens are not captured by the single-shot
+    # runner (plain-text output) and are printed as UNMEASURED, not 0.
+    if walls:
+        text += ' wall_s=%d..%d' % (min(walls), max(walls))
+        if wall_missing:
+            text += ' (%d/%d episodes unmeasured)' % (wall_missing, len(walls) + wall_missing)
+    else:
+        text += ' wall_s=UNMEASURED'
+    text += ' tokens_used=UNMEASURED'
+
     return end, text, n_yes, len(ends)
 
 
