@@ -266,6 +266,8 @@
     "scripts/session_checklist.py",
     "scripts/agent_tools_pin.txt",
     "scripts/test_agent_tools_pin_lanes.sh",
+    "scripts/claim_precision_report.py",
+    "scripts/test_claim_precision_report_lanes.sh",
     "scripts/checklist_unblocked_hook.sh",
     "scripts/convergence_verdict.py",
     "scripts/session_close_check.sh",

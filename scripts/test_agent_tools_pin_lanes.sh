@@ -25,12 +25,13 @@ check() {  # $1 = repo root; prints problems, returns count via rc (capped)
     if [ -z "$got" ]; then echo "  tools: line deleted: $f (declared: $want)"; n=$((n+1))
     elif [ "$got" != "$want" ]; then echo "  tools: changed: $f «$got» (declared: «$want»)"; n=$((n+1)); fi
   done < "$pin"
-  local found frc
-  found="$(find "$root/plugins" "$root/.claude/agents" -path '*agents*' -name '*.md' -type f 2>&1)"; frc=$?
-  # .claude/agents may legitimately not exist; any other find error is an incomplete measurement.
-  if [ "$frc" -ne 0 ] && printf '%s\n' "$found" | grep 'find: ' | grep -qv "$root/.claude/agents: No such file"; then
-    echo "  discovery incomplete (find rc=$frc) — not measured"; n=$((n+1))
-  fi
+  local found frc d dirs=()
+  # .claude/agents may legitimately not exist — only existing roots go to find, so any find error
+  # (GNU quotes paths ‘…’, BSD does not — a message-text filter broke on CI) is an incomplete measurement.
+  for d in "$root/plugins" "$root/.claude/agents"; do [ -d "$d" ] && dirs+=("$d"); done
+  [ "${#dirs[@]}" -gt 0 ] || { echo "  discovery incomplete (no agent roots) — not measured"; return 1; }
+  found="$(find "${dirs[@]}" -path '*agents*' -name '*.md' -type f 2>&1)"; frc=$?
+  if [ "$frc" -ne 0 ]; then echo "  discovery incomplete (find rc=$frc) — not measured"; n=$((n+1)); fi
   while IFS= read -r f; do
     case "$f" in find:*|'') continue ;; esac
     rel="${f#"$root"/}"

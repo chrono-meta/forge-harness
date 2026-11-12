@@ -1254,6 +1254,7 @@ for _pair in \
   #   운영자 지적: «내 발화가 도중에 열화되었다 … 테스트 한 차례 끝날 때마다 들여다봐야 할 것 같다».
   #   SUBJECT 를 session_checklist.py 로 잡는다 — 이 레인이 재는 것은 그 도구의 판정이다.` \
   "scripts/session_checklist.py|scripts/test_checklist_unblocked_lanes.sh" \
+  "scripts/claim_precision_report.py|scripts/test_claim_precision_report_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_hook_leg_wiring_lanes.sh" \
   ".claude/soul_tenets.txt|scripts/test_marker_soul_tenet_lanes.sh" \
   "docs/map/fh_assets.architecture.json|scripts/test_fh_map_paths_lanes.sh" \

@@ -783,6 +783,77 @@ chmod +x "$BSTUB/fake_sim_budget.sh"
 _lane BU4 budget "runner -> report row carries 'ended_at_cap=yes' when the stub hit its cap" \
   "yes" "$(grep -E '^\| G-GREET-01 ' "$T/bud_report.md" | grep -q 'ended_at_cap=yes' && echo yes || echo no)"
 
+# SF1-SF3 state fingerprint (2026-11-11): one line per rep, appended after the verdict, never scored.
+# SF1 the budget stub writes no treediff → the line says MISSING (not measured ≠ 0).
+_lane SF1 state-fp "stub without treediff: report carries 'treediff=MISSING' for both arms" "2" \
+  "$(grep -cE '^state-fingerprint: G-GREET-01 (primary|control) r1 treediff=MISSING$' "$T/bud_report.md")"
+# SF2 a stub that writes a treediff + the changed file → changed=1 with a hash; a second run with
+#     different file bytes but the SAME porcelain line gets a different hash (state, not output).
+cat > "$BSTUB/fake_sim_state.sh" <<'FAKESTATE'
+#!/usr/bin/env bash
+arm=""; out=""
+while [ $# -gt 0 ]; do case "$1" in --arm) arm="$2"; shift 2 ;; --out) out="$2"; shift 2 ;; *) shift ;; esac; done
+mkdir -p "$out/w_${arm}_r1/repo"
+printf 'stub body %s\n' "$arm" > "$out/${arm}_r1.txt"
+printf 'rc\t0\ntimeout_s\t900\nmax_turns\tunset\ntoken_cap\tunset\nended_at_cap\tno\n' > "$out/${arm}_r1.meta.tsv"
+case "${FH_STATE_STUB_KIND:-file}" in
+  file)   printf '?? note.txt\n' > "$out/${arm}_r1.treediff.txt"
+          printf '%s\n' "${FH_STATE_STUB_BYTES:-a}" > "$out/w_${arm}_r1/repo/note.txt" ;;
+  dir)    printf '?? newdir/\n' > "$out/${arm}_r1.treediff.txt"; mkdir -p "$out/w_${arm}_r1/repo/newdir"
+          printf '%s\n' "${FH_STATE_STUB_BYTES:-a}" > "$out/w_${arm}_r1/repo/newdir/f.txt" ;;
+  quoted) printf '?? "a b.txt"\n' > "$out/${arm}_r1.treediff.txt"
+          printf '%s\n' "${FH_STATE_STUB_BYTES:-a}" > "$out/w_${arm}_r1/repo/a b.txt" ;;
+  unread) printf '?? note.txt\n' > "$out/${arm}_r1.treediff.txt"; chmod 000 "$out/${arm}_r1.treediff.txt" ;;
+  rename) printf 'R  old.txt -> new.txt\n' > "$out/${arm}_r1.treediff.txt"
+          printf '%s\n' "${FH_STATE_STUB_BYTES:-a}" > "$out/w_${arm}_r1/repo/new.txt" ;;
+  lockedfile) printf ' M secret.txt\n' > "$out/${arm}_r1.treediff.txt"
+          printf 'x\n' > "$out/w_${arm}_r1/repo/secret.txt"; chmod 000 "$out/w_${arm}_r1/repo/secret.txt" ;;
+esac
+echo "RESULT: CLEAN"; exit 0
+FAKESTATE
+chmod +x "$BSTUB/fake_sim_state.sh"
+for v in a b; do
+  ( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$BSTUB/fake_sim_state.sh" FH_STATE_STUB_BYTES="$v" \
+      bash "$RUNNER" --ids "G-GREET-01" --no-evidence --report-out "$T/sf_$v.md" ) >"$T/sf_$v.log" 2>&1
+done
+sf_a="$(grep -E '^state-fingerprint: G-GREET-01 primary r1 changed=1 unhashed=0 sha256=[0-9a-f]{16}$' "$T/sf_a.md")"
+sf_b="$(grep -E '^state-fingerprint: G-GREET-01 primary r1 changed=1 unhashed=0 sha256=[0-9a-f]{16}$' "$T/sf_b.md")"
+_lane SF2 state-fp "treediff present: changed=1 + hash; same porcelain, different bytes → different hash" "yes" \
+  "$([ -n "$sf_a" ] && [ -n "$sf_b" ] && [ "$sf_a" != "$sf_b" ] && echo yes || echo no)"
+# Codex R1 (2026-11-11): SF4 a changed DIRECTORY is hashed over its files (different bytes → different hash)
+for v in a b; do
+  ( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$BSTUB/fake_sim_state.sh" FH_STATE_STUB_KIND=dir FH_STATE_STUB_BYTES="$v" \
+      bash "$RUNNER" --ids "G-GREET-01" --no-evidence --report-out "$T/sfd_$v.md" ) >"$T/sfd_$v.log" 2>&1
+done
+_lane SF4 state-fp "untracked directory: content change moves the hash" "yes" \
+  "$(a=$(grep '^state-fingerprint: G-GREET-01 primary r1 changed=1 ' "$T/sfd_a.md"); b=$(grep '^state-fingerprint: G-GREET-01 primary r1 changed=1 ' "$T/sfd_b.md"); [ -n "$a" ] && [ "$a" != "$b" ] && echo yes || echo no)"
+# SF5 a git-quoted path is named as unhashed, never silently folded into «same hash»
+( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$BSTUB/fake_sim_state.sh" FH_STATE_STUB_KIND=quoted \
+    bash "$RUNNER" --ids "G-GREET-01" --no-evidence --report-out "$T/sfq.md" ) >"$T/sfq.log" 2>&1
+_lane SF5 state-fp "quoted porcelain path → unhashed=1 on the line" "1" \
+  "$(grep -cE '^state-fingerprint: G-GREET-01 primary r1 changed=1 unhashed=1 ' "$T/sfq.md")"
+# SF6 an unreadable treediff says UNREADABLE, not changed=0 (skipped as root: root reads mode 000)
+if [ "$(id -u)" = 0 ]; then _skipblock "SF6 (root reads mode-000 files)"; else
+( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$BSTUB/fake_sim_state.sh" FH_STATE_STUB_KIND=unread \
+    bash "$RUNNER" --ids "G-GREET-01" --no-evidence --report-out "$T/sfu.md" ) >"$T/sfu.log" 2>&1
+_lane SF6 state-fp "unreadable treediff → treediff=UNREADABLE" "1" \
+  "$(grep -cE '^state-fingerprint: G-GREET-01 primary r1 treediff=UNREADABLE$' "$T/sfu.md")"
+chmod -R u+rwx "$T" 2>/dev/null
+fi
+# Codex R2: SF7 rename record and SF8 unreadable listed file → counted as unhashed
+( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$BSTUB/fake_sim_state.sh" FH_STATE_STUB_KIND=rename \
+    bash "$RUNNER" --ids "G-GREET-01" --no-evidence --report-out "$T/sfr.md" ) >"$T/sfr.log" 2>&1
+_lane SF7 state-fp "rename record → unhashed=1" "1" "$(grep -cE '^state-fingerprint: G-GREET-01 primary r1 changed=1 unhashed=1 ' "$T/sfr.md")"
+if [ "$(id -u)" != 0 ]; then
+( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$BSTUB/fake_sim_state.sh" FH_STATE_STUB_KIND=lockedfile \
+    bash "$RUNNER" --ids "G-GREET-01" --no-evidence --report-out "$T/sfl.md" ) >"$T/sfl.log" 2>&1
+_lane SF8 state-fp "unreadable listed file → unhashed=1" "1" "$(grep -cE '^state-fingerprint: G-GREET-01 primary r1 changed=1 unhashed=1 ' "$T/sfl.md")"
+chmod -R u+rwx "$T" 2>/dev/null
+fi
+# SF3 the fingerprint never moves a verdict: the G-GREET-01 report row is byte-identical across a/b.
+_lane SF3 state-fp "verdict row identical across runs whose end states differ" "yes" \
+  "$([ -n "$(grep -E '^\| G-GREET-01 ' "$T/sf_a.md")" ] && [ "$(grep -E '^\| G-GREET-01 ' "$T/sf_a.md")" = "$(grep -E '^\| G-GREET-01 ' "$T/sf_b.md")" ] && echo yes || echo no)"
+
 # TG3 default output unchanged: no --target -> no split section anywhere.
 _lane TG3 target "default (no --target): report has no 'Target split' section" \
   "no" "$(grep -q 'Target split' "$T/bud_report.md" && echo yes || echo no)"
