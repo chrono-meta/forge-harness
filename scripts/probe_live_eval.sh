@@ -375,6 +375,67 @@ python3 "$LIB" score ${SCORE_EXTRA[@]+"${SCORE_EXTRA[@]}"} \
   --reps "$REPS"
 score_rc=$?
 
+# State fingerprint (2026-11-11, arXiv:2611.11216 — record only, never read by the scorer above).
+# Two arms can print the same output while leaving their isolated clones in different states. The
+# runner already writes `<arm>_r<n>.treediff.txt` (porcelain lines the arm added); this appends, in
+# the same execution as the verdict, one line per rep: changed-path count + a hash over the treediff
+# and the current bytes of every path it lists. A rep with no treediff file says MISSING — not 0.
+# Appended AFTER score so no verdict row can move; score_rc is untouched.
+{
+  echo ""
+  echo "## State fingerprint (record only — not scored)"
+  echo ""
+  while IFS= read -r id; do
+    [ -z "$id" ] && continue
+    for arm in primary control control_b; do
+      [ "$arm" = control_b ] && [ ! -f "$SPEC_DIR/$id.control_b.txt" ] && continue
+      r=1
+      while [ "$r" -le "$REPS" ]; do
+        td="$OUTDIR/$id/${arm}_r${r}.treediff.txt"
+        if [ ! -f "$td" ]; then
+          echo "state-fingerprint: $id $arm r$r treediff=MISSING"
+        elif [ ! -r "$td" ]; then
+          echo "state-fingerprint: $id $arm r$r treediff=UNREADABLE"
+        else
+          n=$(grep -c . "$td" 2>/dev/null); n=${n:-0}
+          # A listed path we cannot read as bytes is counted as unhashed and the line says how many,
+          # so «same hash» never silently covers it: git-quoted paths (spaces, non-ASCII — not decoded
+          # here), rename records («a -> b»), unreadable files, directories holding unreadable files.
+          # Directories (?? dir/) are otherwise hashed over their files in sorted order.
+          uh=0; body="$(mktemp "${TMPDIR:-/tmp}/fh-sfp.XXXXXX")"; cat "$td" > "$body"
+          while IFS= read -r p; do
+            f="$OUTDIR/$id/w_${arm}_r${r}/repo/$p"
+            case "$p" in
+              (\"*|*" -> "*) uh=$((uh + 1)); echo "<unhashed:$p>" >> "$body" ;;
+              (*)
+                if [ -d "$f" ]; then
+                  # find output and rc captured apart: a failing find counts the path as unhashed,
+                  # never as «no unreadable files» (pipefail class-lock lane L12c).
+                  _bad="$(find "$f" -type f ! -perm -u=r 2>/dev/null)"; _brc=$?
+                  _all="$(find "$f" -type f 2>/dev/null)"; _arc=$?
+                  if [ "$_brc" -ne 0 ] || [ "$_arc" -ne 0 ] || [ -n "$_bad" ]; then uh=$((uh + 1)); echo "<unhashed:$p>" >> "$body"
+                  else
+                    _sorted="$(printf '%s\n' "$_all" | LC_ALL=C sort)"
+                    while IFS= read -r g; do
+                      [ -n "$g" ] || continue
+                      echo "<f:${g#"$f"}>" >> "$body"
+                      cat "$g" >> "$body" || { uh=$((uh + 1)); echo "<unhashed:$g>" >> "$body"; }
+                    done <<< "$_sorted"
+                  fi
+                elif [ -e "$f" ] && [ ! -r "$f" ]; then uh=$((uh + 1)); echo "<unhashed:$p>" >> "$body"
+                elif [ -f "$f" ]; then cat "$f" >> "$body"
+                else echo "<absent:$p>" >> "$body"; fi ;;
+            esac
+          done < <(cut -c4- "$td")
+          h=$(shasum -a 256 < "$body" | cut -c1-16); rm -f "$body"
+          echo "state-fingerprint: $id $arm r$r changed=$n unhashed=$uh sha256=$h"
+        fi
+        r=$((r + 1))
+      done
+    done
+  done < "$SPEC_DIR/selected_ids.txt"
+} >> "$REPORT_PATH"
+
 if [ -n "$EVIDENCE_DIR" ]; then
   # The report is part of the evidence: a preserved body set with no verdict beside it forces the
   # next reader to re-derive what the run concluded.
