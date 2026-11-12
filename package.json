@@ -264,6 +264,8 @@
     "scripts/selfcheck.sh",
     "scripts/selfcheck_shard_weights.txt",
     "scripts/session_checklist.py",
+    "scripts/claim_precision_report.py",
+    "scripts/test_claim_precision_report_lanes.sh",
     "scripts/checklist_unblocked_hook.sh",
     "scripts/convergence_verdict.py",
     "scripts/session_close_check.sh",
