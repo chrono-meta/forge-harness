@@ -287,5 +287,12 @@ setup eh; mkgh "$T/eh"; run "$T/eh" 7 --rerun "$GOOD" --expect-head 000000000000
 setup eh2; mkgh "$T/eh2"; run "$T/eh2" 7 --rerun "$GOOD" --expect-head "$(cat "$T/eh2/head.oid")"
 { [ "$RC" -eq 0 ] && merged "$T/eh2"; } && ok "L32b --expect-head matching → merged and verified" || { bad "L32b rc=$RC"; printf '%s\n' "$OUT" | tail -3; }
 
+# L33 header honesty (2026-11-13, Area B S1): the RECEIPT note must not say the lease is «not enforced» —
+# --lease has gated the merge through the tier (rc 7) since 3.40.0, and the EXIT block says so.
+if [ ! -f "$SC" ]; then bad "L33 subject missing: $SC"
+elif grep -q 'recorded, not enforced' "$SC"; then bad "L33 header still says the lease is «recorded, not enforced»"
+elif ! grep -q '^#.*lease (.*TIER=AUTO, see EXIT 7)' "$SC"; then bad "L33 RECEIPT lease note no longer points at the TIER=AUTO / EXIT 7 enforcement"
+else ok "L33 header does not contradict EXIT 7 (lease is enforced)"; fi
+
 printf 'PASS %d · FAIL %d\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
