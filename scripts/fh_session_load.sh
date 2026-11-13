@@ -588,6 +588,8 @@ fi
   # So: no new hook, no new line, no nag — the node name is appended to a banner that already
   # prints every single session. `hostname -s`, the same source fh_node_check.sh uses.
   echo "🔄 [FH SessionStart] companion-store freshness — $PULL_NOTE. · node: $(hostname -s 2>/dev/null || echo unknown)"
+  # lane-identity tripwire (record-only): fixture commits that leaked into the hub repo
+  [ -f "$FH/scripts/lane_identity_tripwire.sh" ] && bash "$FH/scripts/lane_identity_tripwire.sh" "$FH" 2>/dev/null | grep -v '^LANE-TRIPWIRE ok' || true
   # §Diverged banner. Loud, counted, and it names the ONE command — see the §Diverged comment at the
   # fetch site for the 2026-08-28 measurement that made this necessary. The magnitude line and the
   # "everything below is stale" line are separate on purpose: the first says the tree is behind, the

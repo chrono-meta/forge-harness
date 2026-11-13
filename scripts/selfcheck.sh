@@ -12,6 +12,11 @@
 # Wiring: `npm test` for any session; `prepublishOnly` so a publish cannot ship a
 # syntactically broken executable.
 set -u
+# Inherited git environment reaches every lane: an exported GIT_DIR / GIT_INDEX_FILE makes a lane's
+# `git -C <fixture> commit` write into THAT repo (measured 2026-11-13 on a decoy: 70 of 90 git-using lanes do not
+# source fixture_guard_lib.sh). Same list as fixture_guard_lib.sh (repo-targeting vars only; GIT_CONFIG_* stay —
+# CI carries -c safe.directory there); precedent sync-to-be.sh / session_close_check.sh.
+unset GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_OBJECT_DIRECTORY GIT_DIR GIT_WORK_TREE GIT_IMPLICIT_WORK_TREE GIT_GRAFT_FILE GIT_INDEX_FILE GIT_NO_REPLACE_OBJECTS GIT_REPLACE_REF_BASE GIT_PREFIX GIT_SHALLOW_FILE GIT_COMMON_DIR GIT_NAMESPACE 2>/dev/null || true
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 fail=0
 
@@ -1244,6 +1249,8 @@ for _pair in \
   "scripts/probe_live_eval_lib.py|scripts/test_probe_live_eval_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_first_use_lanes.sh" \
   "scripts/fixture_guard_lib.sh|scripts/test_fixture_guard_lanes.sh" \
+  "scripts/fixture_guard_lib.sh|scripts/test_fixture_git_env_lanes.sh" \
+  "scripts/lane_identity_tripwire.sh|scripts/test_fixture_git_env_lanes.sh" \
   "scripts/stray_path_scan.sh|scripts/test_stray_path_lanes.sh" \
   "scripts/session_close_check.sh|scripts/test_stray_path_lanes.sh" \
   `# ── ①-g stale-ref (2026-09-21 신설) — #773 이 「배선 안 함」이라 적은 자리의 호출부. SUBJECT 는 스캐너가 아니라 «마감 블록»이다: 스캐너 자체는 test_stale_ref_scan_lanes.sh 가 이미 앵커한다 ──` \
@@ -3058,6 +3065,9 @@ else
   echo "SKIP  rules-dotfile (package mode: .git 없음 — 소스 트리 전용 검사)"
 fi
 
+# Lane-identity tripwire — record-only: a WARN line, never a FAIL (a hit is a past event in the
+# repo, not this run's verdict). Runs AFTER the lanes, which is when a leaked commit would have just landed.
+if [ -f scripts/lane_identity_tripwire.sh ]; then bash scripts/lane_identity_tripwire.sh . | grep -v '^LANE-TRIPWIRE ok' ; fi
 if [ "$_CONSUMER" -eq 1 ]; then
   _n=$(printf '%s\n' $CONSUMER_SKIPPED | grep -c .)
   echo "CONSUMER PROFILE — $_n checkout-only suite(s) NOT measured here (not a pass):$CONSUMER_SKIPPED"
