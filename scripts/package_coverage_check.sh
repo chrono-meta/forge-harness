@@ -46,10 +46,9 @@ ACCEPTED_ABSENT=(
   #    (CLAUDE.local.md §FH 자체개발 자율화: «일반 사용자는 이슈/PR 제안»): shipping it would put an
   #    auto-merging loop into every consumer install. self_evolution_routine.md §3b names these files to
   #    say exactly that; selfcheck resolves their rows as SKIP on a consumer tree.
+  #    (selfdev_merge_tier.sh and its lane DO ship since #1068 — pr_merge_verified.sh --lease reads the tier.)
   "scripts/selfdev_loop.sh"
-  "scripts/selfdev_merge_tier.sh"
   "scripts/selfdev_queue.py"
-  "scripts/test_selfdev_merge_tier_lanes.sh"
   "scripts/test_selfdev_queue_lanes.sh"
   "scripts/test_selfdev_loop_lanes.sh"
   # 2026-11-07 — the self-dev loop's ablation nominator and its lanes. Same loop, same scope as above; whether the
