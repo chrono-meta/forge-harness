@@ -7,6 +7,7 @@
 # 🟥 계기-오류 팔(L6)이 이 묶음의 핵심이다 — 허브가 아닌 곳을 겨누면 «드리프트 11건»이 아니라
 #    rc=2 가 나와야 한다. 그 팔이 없으면 이 계기의 가장 그럴듯한 실패(엉뚱한 cwd 에서 전부
 #    ABSENT 를 찍고 보고)가 초록으로 지나간다.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 2
 S=scripts/env_layer_fingerprint.sh

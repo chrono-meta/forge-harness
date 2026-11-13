@@ -4,6 +4,7 @@
 #
 # The load-bearing lanes are the REFUSALS: a refusal must happen BEFORE the merge, so each refusal
 # lane also asserts the fake gh never received `pr merge` (a merge log that stays empty).
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 cd "$(dirname "$0")/.."
 SC="$PWD/scripts/pr_merge_verified.sh"

@@ -11,6 +11,7 @@
 # case that is NOT provably old-and-identical (L2–L6, L8–L11) must still be listed. L0 is the instrument
 # control — the hook actually reached the freshness block — so a script that dies early cannot
 # pass L1 by printing nothing.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SUBJECT="$HERE/fh_session_load.sh"

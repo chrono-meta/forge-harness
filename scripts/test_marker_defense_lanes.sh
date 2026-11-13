@@ -14,6 +14,7 @@
 #
 # Usage: bash scripts/test_marker_defense_lanes.sh   Exit: 0 = all behave; 1 = regression.
 
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 # Script-relative, NOT `git rev-parse --show-toplevel` — same reason as the sibling lanes: in a
 # vendored tree rev-parse answers with the OUTER repo and the suite measures somebody else's files.

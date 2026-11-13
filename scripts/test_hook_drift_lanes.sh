@@ -9,6 +9,7 @@
 # go red on exactly that fixture — otherwise this file would be green whether or not the fix exists.
 #
 # Runs under bash 3.2 (/bin/bash) and bash 5.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"

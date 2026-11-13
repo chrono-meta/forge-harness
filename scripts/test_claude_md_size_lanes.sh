@@ -13,6 +13,7 @@
 #   세므로 같은 단위다. `wc -c` 는 바이트라 한글 한 글자를 3 으로 세어 과차단한다(L4 가 그 차이를 박는다).
 # 처방: 빨개지면 지우지 말고 **옮겨라** — 근거·실측·철회 경위를 detail 파일로 verbatim 이관하고 상주에는
 #   규칙 + 포인터만 남긴다(선례: tracks/_meta/claude_md_diet_2026-09-26/ 의 diet.py·verify.py).
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"; ROOT="$(cd "$HERE/.." && pwd)"
 LIMIT="${FH_CLAUDE_MD_LIMIT:-18000}"   # 포크는 자기 CLAUDE.md 에 맞춰 올려도 된다(이건 FH 허브 상주 래칫이다)

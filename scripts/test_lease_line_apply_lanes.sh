@@ -10,6 +10,7 @@
 #   R1 revert probe: the CLAUDECODE refusal removed in a copy → A1 no longer refuses (reaches the tty step)
 #   🟥 A3/A4 drive a pseudo-terminal from python — the same trick an agent could use, which is the
 #      header's named residual, shown working on purpose.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 2
 S="scripts/lease_line_apply.sh"; [ -f "$S" ] || { echo "HARNESS-ERROR: $S missing"; exit 2; }

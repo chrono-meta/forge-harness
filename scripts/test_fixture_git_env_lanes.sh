@@ -8,6 +8,7 @@
 # authors) must be identical before and after.
 #
 # Revert probe: delete the `for _fg_v in $FH_FIXTURE_GIT_ENV; do unset …` line in the lib → L1-L3 go red.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 LIB="$PWD/scripts/fixture_guard_lib.sh"; TRIP="$PWD/scripts/lane_identity_tripwire.sh"

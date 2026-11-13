@@ -12,6 +12,7 @@
 #   B4  behaviour: /bin/bash + ko_KR.UTF-8 runs the pr_merge_verified lanes (lease path S1–S3)
 #       to rc 0 with no "unbound variable" — only where that locale exists, else a named SKIP
 #       (a SKIP is not a pass). B4c checks the locale really triggers the defect (control).
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 2
 SCAN=scripts/shell_name_boundary_scan.sh

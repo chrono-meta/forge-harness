@@ -20,6 +20,7 @@
 #
 # Exit 0 = all lanes hold · 1 = a discriminator would mis-route.
 
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SELFCHECK="$SCRIPT_DIR/selfcheck.sh"

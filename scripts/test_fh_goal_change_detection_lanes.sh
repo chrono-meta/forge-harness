@@ -14,6 +14,7 @@
 #   ARM C (control)        git status OK, one file  → MUST reach fh-gate (proves A/B are not
 #                                                     just "everything exits early")
 # Without ARM C, A and B both pass on a script that never gets to the gate at all.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TARGET="${FH_GOAL_UNDER_TEST:-$ROOT/scripts/fh-goal.sh}"

@@ -16,6 +16,7 @@
 # SCOPE — 기록/배선의 속성이지 결론이 아니다. 「그 다리의 판정이 옳은가」는 안 묻는다.
 #
 # Usage: bash scripts/test_hook_leg_wiring_lanes.sh    Exit: 0 = 전부 배선됨 · 1 = 회귀 · 10 = 계기 불량
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOOK="$REPO_ROOT/templates/.git-hooks/pre-commit"

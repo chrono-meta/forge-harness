@@ -24,6 +24,7 @@
 # Exit 0 = 8/8 lanes calibrated · exit 1 = the gate's instrument is wrong (do not trust its verdict)
 # exit 3 = FIXTURE ERROR — a lane's premise never obtained, so this run's verdicts prove nothing
 
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 🟥 ENVIRONMENT ISOLATION (2026-08-27) — the suite inherited FH_COMPANION_STORE from the

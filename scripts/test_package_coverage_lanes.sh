@@ -25,6 +25,7 @@
 #         UNCALIBRATED and printed in the summary, and exit stays 0. Stated precisely because the
 #         earlier wording promised more than the code delivers, and an exit contract that overstates
 #         is exactly the false-clean this suite exists to prevent (round-3 review, LOW).
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

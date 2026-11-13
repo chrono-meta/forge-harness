@@ -13,6 +13,7 @@
 #
 # 🟥 이 파일은 **탐지만** 검증한다. 찾은 취약형을 고치는 것은 별 커밋이다 — 한 커밋에 탐지와
 #    수리를 섞으면 레인이 자기 수리를 못 본다([[feedback_lane_vocabulary_blind_to_its_own_fix]]).
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 export LC_ALL=C
 HERE="$(cd "$(dirname "$0")" && pwd)"

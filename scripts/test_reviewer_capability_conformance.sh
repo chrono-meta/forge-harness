@@ -39,6 +39,7 @@
 #
 # Usage: bash scripts/test_reviewer_capability_conformance.sh   Exit: 0 = conforms; 1 = drift.
 
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 # Script-relative, NOT `git rev-parse --show-toplevel`. Measured 2026-08-13 in a vendored tree
 # (npm install, then `git init` at a level above — a monorepo committing node_modules is the

@@ -3,6 +3,7 @@
 # 🟥 게이트는 «막나» 와 «정상 질문을 안 막나» 를 같이 잰다 — 역할로 바꾼 질문까지 막으면 이 길은 쓸모가 없다.
 # 사전은 픽스처다(/usr/share/dict/words 가 없는 CI 에서도 같은 판정). 실제 사전 · 실제 레포 과차단 비율은 D2 가 잰다.
 # rc 계약: 0 = clean · 1 = hit · 3 = NOT SCANNED
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 C="$HERE/abstract_consult_check.py"

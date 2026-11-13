@@ -25,6 +25,7 @@
 #   reads. Shipping S6 would have been a 0-true-positive probe — exactly the failure S5's own
 #   comment records ("100% FP trains dismissal of the one hit that will matter").
 
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
 G="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/pipe_verdict_guard.sh"
 pass=0; fail=0

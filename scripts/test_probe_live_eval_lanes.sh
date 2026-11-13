@@ -25,6 +25,7 @@
 #
 # exit: 0 = all lanes as expected · 1 = regression · 10 = harness error (setup failed, not a verdict)
 
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

@@ -9,6 +9,7 @@
 #   case | shape | filescan | events | uncalmerge | uncal | dupkey | mergefloor | mergevalid | emptyinst |
 #   rtguard | rtscan | rtpkg | rtdyn | rtnear | rtdef | rtshadow | rtattr | rtenc | rtwalk |
 #   rtkw | rtbuiltins | rtarg | rtmeth | rtgen
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(dirname "$HERE")"

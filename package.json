@@ -127,6 +127,7 @@
     "scripts/lane_onoff_compare.py",
     "scripts/test_lane_stub_env_lanes.sh",
     "scripts/test_fixture_git_env_lanes.sh",
+    "scripts/test_fixture_guard_coverage_lanes.sh",
     "scripts/test_post_squash_verify_lanes.sh",
     "scripts/test_frontier_digest_recall.sh",
     "scripts/fh_module_check.py",

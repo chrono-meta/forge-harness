@@ -3,6 +3,7 @@
 # Each lane builds a throwaway git repo under mktemp. Exit: 0 all lanes pass · 1 a lane failed · 10 harness error.
 # codex 2026-10-20 R1 shaped the second half: quoted paths, renames, submodules, swallowed tool errors, rewritten claims, and a
 # revert probe that runs the mismatch lanes themselves against a mutant (they must go red there).
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 R="$HERE/dispatch_receipt.py"

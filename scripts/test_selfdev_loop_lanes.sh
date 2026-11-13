@@ -8,6 +8,7 @@
 # with LP1 as the positive control that the same fixture CAN reach WOULD MERGE. LP12/LP13: SELFDEV_NO_MERGE=1
 # stops a passing PR at ELIGIBLE and still holds a failing one. LP20/LP21 (2026-11-10 watchdog kill): a killed
 # build's unpushed commits are named STRANDED; the builder prompt names the watchdog's own limit.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 for f in selfdev_loop.sh selfdev_queue.py selfdev_merge_tier.sh; do

@@ -23,6 +23,7 @@
 #   bash scripts/test_adapter_lanes.sh --revert-probe  # 레인 + 되돌림 프로브 2종
 # exit: 0 = 전부 기대대로 · 1 = 회귀 · 10 = 하네스 오류(전제 파손 — 판정 아님)
 
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
