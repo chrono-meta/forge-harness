@@ -2,13 +2,17 @@
 
 ### [Unreleased]
 
+### [3.42.0] — 2026-11-14
+
+Minor by the version policy: a new shipped ratchet lane (#1091) and new judged checks in the `ko-tech-writer` skill (#1092). Nothing here makes an existing gate refuse more, so no `BREAKING (gate)` line applies. If you run 3.41.0 from an npm install and have a companion store configured as a git repo, you have been seeing a `LANE-TRIPWIRE HARNESS-ERROR … is not a readable git repo` line at every session start; 3.42.0 removes it (#1093). The new ratchet lane is checkout-only: `selfcheck.sh` skips it in an installed package, and running it directly there fails by design.
+
 ### Added
 - `scripts/test_fixture_guard_coverage_lanes.sh` (shipped): a ratchet lane. A `scripts/test_*.sh` or `scripts/*_lanes.sh` that calls git must source `fixture_guard_lib.sh` before its first git call. It is a checkout-only suite: `selfcheck.sh` skips it in an installed package, which ships fewer lanes (70 against a floor of 80). Run directly inside the package, its live case fails on that floor while its nine planted calibration cases pass (#1091).
 - `ko-tech-writer` skill: five new judged checks S30–S34 (agentless passive, first-defined concept in quotes with a gloss, introduce a cited study before its numbers, progress statements that go stale before publication, colloquial register), a second example pair for S17, and a Step 4 check of citation descriptions against the linked abstract and a later-finalized sibling (#1092).
 
 ### Fixed
 - 78 test lanes now source `fixture_guard_lib.sh` before any git call, so running one directly from a shell with an exported `GIT_DIR` or `GIT_INDEX_FILE` no longer writes into, or reads from, the exported repo. This closes the «not yet covered» gap noted under 3.41.0 (#1091).
-- Session start no longer runs the lane-identity tripwire when the FH folder is not a git repository. Before, an npm-installed copy (not a git repo) with a configured git companion store printed `LANE-TRIPWIRE HARNESS-ERROR: … is not a readable git repo` at every session start (measured on the published 3.41.0 package). Called directly, `lane_identity_tripwire.sh` still exits 2 on a non-repo, and `--strict` is unchanged.
+- Session start no longer runs the lane-identity tripwire when the FH folder is not a git repository. Before, an npm-installed copy (not a git repo) with a configured git companion store printed `LANE-TRIPWIRE HARNESS-ERROR: … is not a readable git repo` at every session start (measured on the published 3.41.0 package). Called directly, `lane_identity_tripwire.sh` still exits 2 on a non-repo, and `--strict` is unchanged (#1093).
 
 ### Docs
 - 3.41.0 notes corrected below: what the session-start tripwire line prints, the close-check ✅ line, and the two docs entries that were joined on one line.
@@ -18,7 +22,7 @@
 Minor by the version policy: a new shipped tool and three new shipped lanes, a new session-start tripwire line, and a selfcheck that now scrubs inherited git env before lanes run. Nothing here makes an existing gate refuse more, so no `BREAKING (gate)` line applies.
 
 ### Added
-- `scripts/lane_identity_tripwire.sh`: a record-only report of reachable commits made by the lane fixture identity — fixture commits that leaked into a real repo. `--strict` exits 1. It runs at the end of `selfcheck.sh` and at session start. The session-start loader runs it only when a companion store is configured as a git repo; it then prints nothing when there are no hits, a WARN line when it finds lane commits, and, in 3.41.0 only, a HARNESS-ERROR line when the FH folder itself is not a git repo (fixed in the next release). On a WARN, check the branch and the index of that repo before anything else (#1088).
+- `scripts/lane_identity_tripwire.sh`: a record-only report of reachable commits made by the lane fixture identity — fixture commits that leaked into a real repo. `--strict` exits 1. It runs at the end of `selfcheck.sh` and at session start. The session-start loader runs it only when a companion store is configured as a git repo; it then prints nothing when there are no hits, a WARN line when it finds lane commits, and, in 3.41.0 only, a HARNESS-ERROR line when the FH folder itself is not a git repo (fixed in 3.42.0). On a WARN, check the branch and the index of that repo before anything else (#1088).
 - New lanes: `test_fixture_git_env_lanes.sh` (#1088), `test_name_boundary_locale_lanes.sh` (#1089), `test_doc_claims_1113_lanes.sh` (#1086).
 - `scripts/session_close_check.sh` prints a record-only line about the day's completed-work file: `✅` when it has a `## 잡은 것` (or `## Catches`) section, `ⓘ` when it does not. The close check's exit code does not change (#1087).
 
