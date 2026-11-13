@@ -3,6 +3,7 @@
 # 🟥 이 훅의 사활은 «막나» 가 아니라 **«소음이 아닌가»** 다. 냉독자가 지목한 자기무력화 경로:
 # 트리거가 부정확하면 하루 수십 번 뜨고, 3회 거절 억제가 오전 중에 켜져서 기능이 조용히 죽는다.
 # 그래서 음성 레인이 양성보다 많다.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 FH="$(cd "$(dirname "$0")/.." && pwd)"
 H="$FH/scripts/prior_art_prompt.sh"

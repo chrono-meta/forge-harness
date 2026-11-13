@@ -12,6 +12,7 @@
 # empty-record branch, a different path) and anchor its skeleton with a second revert probe.
 # L17/L17b are the WIRING arms: the snippet must register this hook, and the gate must finish
 # inside the timeout the snippet configures — a hook killed by its own timeout is fail-OPEN.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/.." && pwd)"

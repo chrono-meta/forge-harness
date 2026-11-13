@@ -195,7 +195,7 @@ if [ "${FH_SELFCHECK_PROFILE:-full}" = consumer ]; then
   if _package_mode; then _CONSUMER=1
   else echo "⚠️  FH_SELFCHECK_PROFILE=consumer IGNORED — this tree is a git checkout; running the full suite"; fi
 fi
-CHECKOUT_ONLY_SUITES="test_package_coverage_lanes.sh test_files_manifest_shipping_lanes.sh test_map_postprocess_lanes.sh test_remote_marker_gate_lanes.sh test_worktree_reclaim_lanes.sh test_sim_isolated_run_lanes.sh test_utterance_intake_lanes.sh test_precommit_pointer_index_lanes.sh test_selfcheck_shard_lanes.sh test_ci_validate_shard_count_lanes.sh"
+CHECKOUT_ONLY_SUITES="test_fixture_guard_coverage_lanes.sh test_package_coverage_lanes.sh test_files_manifest_shipping_lanes.sh test_map_postprocess_lanes.sh test_remote_marker_gate_lanes.sh test_worktree_reclaim_lanes.sh test_sim_isolated_run_lanes.sh test_utterance_intake_lanes.sh test_precommit_pointer_index_lanes.sh test_selfcheck_shard_lanes.sh test_ci_validate_shard_count_lanes.sh"
 CONSUMER_SKIPPED=""
 _consumer_skip() { # $1 = suite basename · rc 0 = skip it (and it has been named)
   [ "$_CONSUMER" -eq 1 ] || return 1
@@ -1251,6 +1251,7 @@ for _pair in \
   "scripts/fixture_guard_lib.sh|scripts/test_fixture_guard_lanes.sh" \
   "scripts/fixture_guard_lib.sh|scripts/test_fixture_git_env_lanes.sh" \
   "scripts/lane_identity_tripwire.sh|scripts/test_fixture_git_env_lanes.sh" \
+  "scripts/fixture_guard_lib.sh|scripts/test_fixture_guard_coverage_lanes.sh" \
   "scripts/stray_path_scan.sh|scripts/test_stray_path_lanes.sh" \
   "scripts/session_close_check.sh|scripts/test_stray_path_lanes.sh" \
   `# ── ①-g stale-ref (2026-09-21 신설) — #773 이 「배선 안 함」이라 적은 자리의 호출부. SUBJECT 는 스캐너가 아니라 «마감 블록»이다: 스캐너 자체는 test_stale_ref_scan_lanes.sh 가 이미 앵커한다 ──` \

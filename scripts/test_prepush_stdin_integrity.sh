@@ -8,6 +8,7 @@
 # silently disarming the Destructive-Op gate on a branch-delete / force push.
 #
 # This test reproduces the mechanism (not just greps for the fix), then asserts the fix is present.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOOK="$ROOT/templates/.git-hooks/pre-push"

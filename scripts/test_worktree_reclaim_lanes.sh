@@ -3,6 +3,7 @@
 # Fixture: a real `git init` main checkout + a real `git worktree add`, gitignored tracks/ on both sides.
 # The lanes assert the ORDER (list file before copy) as well as the verdicts — the list is the evidence
 # that survives the copy, which is the whole reason the script exists.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 ROOT="$(pwd -P)"

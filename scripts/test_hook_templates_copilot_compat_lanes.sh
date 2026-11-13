@@ -30,6 +30,7 @@
 # back → flagged). A scanner that flags nothing on the positive is a dead instrument → exit 1.
 # Exit: 0 = all lanes pass · 1 = a lane failed or the instrument/extraction broke.
 
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"

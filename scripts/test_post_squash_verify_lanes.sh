@@ -7,6 +7,7 @@
 # plus: trivial ② refused (rc=3) · failing ② (rc=1) · silent ② (rc=4) · a path main ALSO changed is
 # COMBINED, not DIFFERS · an extra path in the squash is 🟥 EXTRA · the caller's HEAD is untouched.
 # Every fixture is a throwaway repo built here (portable; no dependency on this repo's history).
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 cd "$(dirname "$0")/.."
 SC="$PWD/scripts/post_squash_verify.sh"

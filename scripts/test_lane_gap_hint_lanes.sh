@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # test_lane_gap_hint_lanes.sh — scripts/lane_gap_hint.py (UserPromptSubmit, advisory). G1 is the positive control: a turn
 # that edited code and ran nothing produces the line; every other lane is a turn that must stay silent, plus exit 0 always.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 H="$HERE/lane_gap_hint.py"

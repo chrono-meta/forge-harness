@@ -16,6 +16,7 @@
 # use count_check's own active-skill rule (first 20 lines carry no deprecation marker).
 # Arms assert the README line AND that it is the only FAIL, so a run failing for another reason
 # never counts as the README check firing.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

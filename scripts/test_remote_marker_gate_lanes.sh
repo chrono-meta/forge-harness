@@ -4,6 +4,7 @@
 # 🟥 «FAIL 0» 이 «검사가 도는 것» 을 증명하지 않는다. 합성 레포 픽스처로 양·음성을 둘 다 보인다.
 # 🟥 그리고 컨트롤이 **살아 있는지** 를 값으로 찍는다 — 죽은 컨트롤은 깨끗한 대상의 0 과
 #    똑같이 생겼다([[feedback_catches_come_from_two_signals_disagreeing]]).
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
 SRC_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PASS=0; FAIL=0

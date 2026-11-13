@@ -8,6 +8,7 @@
 #   D*  detach (known-positive: install changes the tree · known-negative: detach restores it exactly)
 #   G*  the wizard's 4-axis gate block needs FH_WIZARD_GATE_CONSENT=Y
 #   P1  --plugin calls the Claude Code uninstall (a fake `claude` records the argv)
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
