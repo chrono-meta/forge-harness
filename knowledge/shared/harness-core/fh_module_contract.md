@@ -79,7 +79,7 @@ A module's Python runs wherever the module is loaded — including a floor envir
   cart runs got rc 2. In the inline arm the no-guess contract turned that into no answer (2/6 against bare 6/6); the cart
   runs fell back to reading by hand. A guarded dependency is a
   typed failure, not a working module. That is why the guarded case is a NOTE the installer must read, and why the fix
-  proposed there is stdlib-only (fh-cartridges PR #19, open on 2026-11-09: a built-in reader for the YAML subset
+  proposed there is stdlib-only (fh-cartridges PR #19, merged 2026-11-09: a built-in reader for the YAML subset
   workflows use; script output byte-identical on 224 local workflow files).
 - **Named residual — passes unseen**: shell scripts calling `jq`, `yq`, `node` and the like are not read, and a
   computed import name (`import_module(name)`) is not followed. **Errs toward BLOCK**: an aliased exception
@@ -104,7 +104,7 @@ migration wipe data?») called it **1/9, 0/9, 0/9** — answered directly, the l
 - `scripts/generated_harness_check.py` reports **W8 (info)** for a skill description with no question example
   (`?`). Info only: it never changes a verdict, because a question mark is a proxy for the shape, not proof of routing.
 - **Not proven yet**: a no-token proxy (subagents shown the listing and asked which skill they would call) was at
-  ceiling before and after (9/9 targets, 0/8 false triggers; fh-cartridges PR #20, open on 2026-11-09) — it does not
+  ceiling before and after (9/9 targets, 0/8 false triggers; fh-cartridges PR #20, merged 2026-11-09) — it does not
   reproduce the live failure. The live effect is measured only by runs that install the module and do not hint it; the
   next such run is pre-registered (fh-cartridges `evidence/AB_PREREG_HAIKU_C7-C12.md`) and has no results yet.
 

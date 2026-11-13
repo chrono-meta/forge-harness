@@ -2,6 +2,8 @@
 
 ### [Unreleased]
 
+- Docs: in 3.40.0, with a `--lease` label other than `NONE` or `operator…`, `pr_merge_verified.sh` fetches `origin main` and diffs the PR head against its merge-base for the tier; if that fetch, merge-base, diff or tier run fails (for example a repository with no `main` branch on `origin`), it exits 7 like a `HOLD` and merges nothing. Drop `--lease` there, or pass a per-PR `operator: …` label. `catch_tally.py` accepts `## Catches` as well as `## 잡은 것` as the section heading. The module contract's two fh-cartridges PR references now say merged.
+
 ### [3.40.0] — 2026-11-13
 
 New scripts and lanes ship, and three checks that were already in the package now refuse more, so this is a minor by the version policy. Three `BREAKING (gate)` lines are below; each applies only if you call the named script yourself. The self-dev loop and its candidate auto-merge change (#1079, #1071) are not in the npm package: `scripts/selfdev_loop.sh`, `scripts/selfdev_queue.py` and its launchd plist stay in the hub clone. The new session-ledger scripts (#1076) are also not shipped. The new read-only reports (`catch_tally.py`, `claim_precision_report.py`) and the new live-eval and sim-runner options run only when you invoke them; no hook or setting is added or wired by default.
