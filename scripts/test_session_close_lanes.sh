@@ -88,6 +88,17 @@ _lane "②-P2 explicit skip note → silent"               "$WARN2" 0 "$(_fixtur
 _lane "②-P1 run recorded → prints the ✅ form"          "$OK2"   1 "$(_fixture 1 '- harvest-loop 실행 완료')"
 _lane "②-C  no FH asset touched → no ② line at all"    ' ② '    0 "$(_fixture 0 '- 항목 하나')"
 
+# ⑤-catches record-only line (2026-11-13): known-pair + English heading + near-miss heading + no file
+CA='ⓘ ⑤-catches'; CP='✅ ⑤-catches'
+_lane "⑤c-N  no catches section → record-only line"        "$CA" 1 "$(_fixture 0 '- 항목 하나')"
+_lane "⑤c-P  «## 잡은 것» present → no absent line"          "$CA" 0 "$(_fixture 0 '## 잡은 것
+0건 — fixture')"
+_lane "⑤c-P2 «## Catches» present → ✅ form"                 "$CP" 1 "$(_fixture 0 '## Catches
+0건 — fixture')"
+_lane "⑤c-M  «## 🟥 이 새벽이 잡은 것» is not the section"    "$CA" 1 "$(_fixture 0 '## 🟥 이 새벽이 잡은 것
+- x')"
+_lane "⑤c-C  no fh_completed file → no ⑤-catches line"      '⑤-catches' 0 "$(_fixture 0 '')"
+
 # ⑤ card-last fixture premise — the two ⑤ lanes are ORDERING lanes: each asserts what the subject
 # does when one file is strictly newer than another. Establishing that ordering by writing one file
 # after the other is not establishing it — it is hoping for it.
