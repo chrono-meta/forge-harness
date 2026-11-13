@@ -286,6 +286,16 @@ else
   else bad "L8c named+present: expected rc=0 and $ACC_ONE not STALE (rc=$_LAST_RC)" "$_LAST_OUT"; fi
 fi
 
+# ── lane L9: this repo's own ACCEPTED_ABSENT list carries no stale entry (2026-11-13) ──
+# The check only WARNS on a stale exception (rc stays 0), so nothing turned red when
+# selfdev_merge_tier.sh and its lane started shipping (#1068) while still listed as accepted-absent.
+# A stale exception is where a later real omission lands silently; pin the live list here.
+cd "$REPO_ROOT" || exit 10
+o=$(bash "$SUBJECT" 2>&1); rc=$?
+if [ "$rc" = 0 ] && ! printf '%s' "$o" | grep -q "no longer exercised"; then
+  ok "L9 live ACCEPTED_ABSENT list has no stale entry"
+else bad "L9 live list: stale ACCEPTED_ABSENT entries (rc=$rc)" "$(printf '%s' "$o" | grep -A4 'no longer exercised')"; fi
+
 echo
 if [ "$skipped" -gt 0 ]; then
   echo "package-coverage lanes: ${pass} passed, ${fail} failed, ${skipped} UNCALIBRATED (not verified here)"
