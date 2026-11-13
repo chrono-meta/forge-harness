@@ -21,7 +21,7 @@
 #         merged from another head · not fetchable — never for a refusal or a merge GitHub did not take) one JSON line goes to
 #         ${PMV_RECEIPTS:-<git common dir>/fh-merge-receipts.jsonl} — local, never pushed: pr · head · merge · outcome ·
 #         actor (agent-session:claude-code when CLAUDECODE is set, else human-or-unknown — a human cannot be proven) ·
-#         lease (the --lease label of the standing approval the caller merges under, else NONE — recorded, not enforced) · rerun.
+#         lease (the --lease label of the standing approval the caller merges under, else NONE — recorded; any label other than NONE or a case-insensitive «operator…» prefix is also enforced: the merge needs selfdev_merge_tier.sh TIER=AUTO, see EXIT 7) · rerun.
 #         Why: arXiv:2610.28683 — 27% of merges that passed a «non-author review» gate rested on an agent approving under a
 #         human account; who decided must be on the record, not inferred later (frontier digest 2026-10-23).
 # EXIT    0 merged + verified · 1 merged but verify FAILED (the merge stands — act on it)
