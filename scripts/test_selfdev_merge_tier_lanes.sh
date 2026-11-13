@@ -19,7 +19,7 @@ lane() { # id expected_tier expected_rc  (rows on stdin, «st<TAB>path<TAB>add<T
   else out="$(SELFDEV_MAX_LINES="${MAXL:-300}" bash "$TIER" --files "$f" 2>&1)"; rc=$?; fi
   got="$(printf '%s\n' "$out" | tail -1)"
   if [ "$got" = "TIER=$want" ] && [ "$rc" -eq "$wrc" ]; then pass=$((pass+1)); echo "  ✅ $id $got rc=$rc"
-  else fail=$((fail+1)); echo "  ❌ $id want TIER=$want rc=$wrc · got «$got» rc=$rc"; printf '%s\n' "$out" | sed 's/^/       /'; fi
+  else fail=$((fail+1)); echo "  ❌ $id want TIER=$want rc=$wrc · got «${got}» rc=$rc"; printf '%s\n' "$out" | sed 's/^/       /'; fi
 }
 T=$'\t'
 lane T1-doc AUTO 0 < <(printf 'M%sdocs/USER_GUIDE.md%s4%s1\n' "$T" "$T" "$T")

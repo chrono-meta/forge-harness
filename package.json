@@ -178,6 +178,7 @@
     "scripts/test_absorption_queue_lanes.sh",
     "scripts/catch_tally.py",
     "scripts/test_catch_tally_lanes.sh",
+    "scripts/test_name_boundary_locale_lanes.sh",
     "scripts/test_doc_claims_1113_lanes.sh",
     "scripts/digest_slow_leg.py",
     "scripts/test_digest_slow_leg_lanes.sh",

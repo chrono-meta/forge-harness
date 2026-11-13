@@ -89,7 +89,7 @@ awk -v A="$FENCE_ANCHOR" '
   }
   inb { buf = buf $0 "\n"; if (index($0, A)) hit=1 }
 ' "$FENCE_SRC" > "$WORK/fence.md"
-[ -s "$WORK/fence.md" ] || _die "앵커 «$FENCE_ANCHOR» 를 담은 펜스 블록을 $FENCE_SRC 에서 못 찾았다"
+[ -s "$WORK/fence.md" ] || _die "앵커 «${FENCE_ANCHOR}» 를 담은 펜스 블록을 $FENCE_SRC 에서 못 찾았다"
 
 # 픽스처 «potency» — 뚫리는 표기인지 먼저 증명한다. 이게 0 이면 P2 는 아무 분기도 안 지나간다
 # ([[feedback_fixture_must_use_the_breaking_spelling]] · [[feedback_three_reasons_a_lane_is_green]]).

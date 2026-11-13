@@ -1287,6 +1287,7 @@ for _pair in \
   "plugins/fh-commons/skills/ko-tech-writer/SKILL.md|scripts/test_ko_tech_writer_lanes.sh" \
   "scripts/absorption_queue.py|scripts/test_absorption_queue_lanes.sh" \
   "scripts/catch_tally.py|scripts/test_catch_tally_lanes.sh" \
+  "scripts/shell_name_boundary_scan.sh|scripts/test_name_boundary_locale_lanes.sh" \
   "scripts/catch_tally.py|scripts/test_doc_claims_1113_lanes.sh" \
   "scripts/digest_slow_leg.py|scripts/test_digest_slow_leg_lanes.sh" \
   "scripts/script_caller_ratchet.sh|scripts/test_script_caller_ratchet_lanes.sh" \

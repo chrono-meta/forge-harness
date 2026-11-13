@@ -23,7 +23,7 @@ check() {  # $1 = repo root; prints problems, returns count via rc (capped)
     if [ ! -f "$root/$f" ]; then echo "  declared but missing: $f"; n=$((n+1)); continue; fi
     got="$(fm_tools "$root/$f")"
     if [ -z "$got" ]; then echo "  tools: line deleted: $f (declared: $want)"; n=$((n+1))
-    elif [ "$got" != "$want" ]; then echo "  tools: changed: $f «$got» (declared: «$want»)"; n=$((n+1)); fi
+    elif [ "$got" != "$want" ]; then echo "  tools: changed: $f «${got}» (declared: «${want}»)"; n=$((n+1)); fi
   done < "$pin"
   local found frc d dirs=()
   # .claude/agents may legitimately not exist — only existing roots go to find, so any find error
