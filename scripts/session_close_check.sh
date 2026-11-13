@@ -516,6 +516,18 @@ if [ "$COMMITS_TODAY" -gt 0 ] && [ ! -f "$FC" ]; then
   FAIL=1
 fi
 
+# ⑤-catches (RECORD-ONLY — never sets FAIL). Wrap-up ⑤(a) asks every close for a «## 잡은 것» section
+# (or «## Catches»), which scripts/catch_tally.py counts. Measured 2026-11-13: 0 of 69 daily files
+# (2026-09-01..11-13) carried it, 6 of them after the step shipped (#1058) — nothing reported the absence.
+# This line states a property of today's record (present / absent), not a verdict on the session.
+if [ -f "$FC" ]; then
+  if grep -qE '^##[[:space:]]+(잡은 것|Catches)[[:space:]]*$' "$FC"; then
+    echo "✅ ⑤-catches fh_completed_${TODAY}.md has a «## 잡은 것» section"
+  else
+    echo "ⓘ ⑤-catches fh_completed_${TODAY}.md has no «## 잡은 것» section (record only) — add the table, or «0건 — <what you looked at>»"
+  fi
+fi
+
 # ④-b npm freshness — files[] assets changed since last version tag → republish owed.
 # Patterns are NARROWED to the actually-shipped subpaths (package.json files[]): knowledge/ ships only
 # shared/{harness-core,dialogue,rules}; docs/ ships only {codex-compat,CONTRIBUTING,pillars}. A broad
