@@ -405,7 +405,7 @@ if [ -d "$FH/tracks" ]; then
       UNRESOLVED)  continue ;;
       # 🟥 ARGS = 전제 파손(빈 이름·경로 탈출·알 수 없는 술어)이지 «못 찾음» 이 아니다.
       #    미해소로 접으면 그것도 미측정을 0 으로 렌더하는 형태다 — 따로 말한다.
-      ARGS:*)      printf '%s' "⚠️  [track-resolve] 트랙 이름 «$_n» 이 거부됐다(${_note#ARGS:}) — 이건 «레포 없음» 이 아니라 **전제 파손**이다.
+      ARGS:*)      printf '%s' "⚠️  [track-resolve] 트랙 이름 «${_n}» 이 거부됐다(${_note#ARGS:}) — 이건 «레포 없음» 이 아니라 **전제 파손**이다.
 "; continue ;;
     esac
     _resolved=$((_resolved + 1))

@@ -343,11 +343,11 @@ done
 cand c13; echo "selfdev: ablation of section X" > "$W/c13/knobs/title"; run c13
 holdnot "LC13 candidate whose TITLE names an ablation → HOLD" "candidate-names-ablation"
 for sw in candidate2 candidate-other; do setup "c14$sw"; printf 'seed: %s\n' "$sw" > "$W/c14$sw/knobs/body"; run "c14$sw"
-  holdnot "LC14 «seed: $sw» is not a candidate → HOLD" "seed-other"; done
+  holdnot "LC14 «seed: ${sw}» is not a candidate → HOLD" "seed-other"; done
 cand c15; printf 'seed: candidate\nseed: c-x\n' > "$W/c15/knobs/body"; run c15
 holdnot "LC15 a second, malformed seed line still counts → HOLD" "seed-multiple"
 for cap in 000 00000 ""; do cand "c16x$cap"; run "c16x$cap" SELFDEV_MAX_AUTO_MERGES=$cap
-  holdnot "LC16 cap «$cap» (zeros / set-but-empty) is 0 → HOLD" "auto-merge cap reached (0 of 0"; done
+  holdnot "LC16 cap «${cap}» (zeros / set-but-empty) is 0 → HOLD" "auto-merge cap reached (0 of 0"; done
 cand c17; sed -i.bak 's#"pr list|number,headRefName") echo 5 ;;#"pr list|number,headRefName") printf "5\\n6\\n7\\n" ;;#' "$W/c17/bin/gh"; run c17 SELFDEV_MAX_AUTO_MERGES=00001
 [ "$(printf '%s\n' "$REP" | grep -c 'WOULD MERGE')" = 1 ] && ok "LC17 cap «00001» is 1, not 2" || bad "LC17 cap 00001"
 cand c18; printf 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n' > "$W/c18/knobs/oid2"; sed -i.bak 's#"pr view|title,headRefOid,changedFiles,files") cat "$K/title" 2>/dev/null || echo "selfdev: x"; cat "$K/oid2"#"pr view|title,headRefOid,changedFiles,files") echo "selfdev: x"; cat "$K/oid2"#' "$W/c18/bin/gh"

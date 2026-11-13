@@ -59,7 +59,7 @@ _bad=""; _flipped=0; _total=0
 for _f in "${_pos_forms[@]}"; do
   _total=$(( _total + 1 ))
   _n="$(_flip "$_f")"
-  if [ "$_n" -eq 5 ]; then _flipped=$(( _flipped + 1 )); else _bad="$_bad [$_f→$_n/5]"; fi
+  if [ "$_n" -eq 5 ]; then _flipped=$(( _flipped + 1 )); else _bad="$_bad [${_f}→$_n/5]"; fi
 done
 if [ "$_flipped" -eq 0 ]; then
   no "L1 런타임 known-positive" "취약 표기 $_total 종 중 **0 종**이 뒤집혔다 — 계기가 죽었다. 아래 초록은 증거가 아니다"
@@ -83,7 +83,7 @@ _neg_forms=(
 )
 _nb=""; _nvals=""
 for _f in "${_neg_forms[@]}"; do
-  _n="$(_flip "$_f")"; _nvals="$_nvals $_n"; [ "$_n" -eq 0 ] || _nb="$_nb [$_f→$_n/5]"
+  _n="$(_flip "$_f")"; _nvals="$_nvals $_n"; [ "$_n" -eq 0 ] || _nb="$_nb [${_f}→$_n/5]"
 done
 [ -z "$_nb" ] \
   && ok "L2 런타임 known-negative: 안전 표기 ${#_neg_forms[@]} 종이 전부 0/5 (컨트롤 값:$_nvals)" \

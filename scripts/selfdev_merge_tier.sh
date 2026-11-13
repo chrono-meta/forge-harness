@@ -49,7 +49,7 @@
 set -u
 # the ceiling may be LOWERED by env, never raised, and a non-number is HARNESS-ERROR (codex R1 #6)
 MAX_LINES="${SELFDEV_MAX_LINES:-300}"
-case "$MAX_LINES" in ''|*[!0-9]*) echo "reason: SELFDEV_MAX_LINES=«$MAX_LINES» is not a number"; echo "TIER=HARNESS-ERROR"; exit 2 ;; esac
+case "$MAX_LINES" in ''|*[!0-9]*) echo "reason: SELFDEV_MAX_LINES=«${MAX_LINES}» is not a number"; echo "TIER=HARNESS-ERROR"; exit 2 ;; esac
 [ "${#MAX_LINES}" -gt 4 ] || [ "$((10#$MAX_LINES))" -gt 300 ] && MAX_LINES=300
 MAX_LINES=$((10#$MAX_LINES))
 FILES=""; PR=""; DIFF=""; REPO="chrono-meta/forge-harness"

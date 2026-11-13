@@ -304,7 +304,7 @@ fi
 rm -rf "$_FX"
 
 # ── L24 🟥 셸 이름-경계 스캐너를 «회귀에» 배선한다 ────────────────────────────────
-#    이 스캐너를 짓고도 «안 돌려서» 같은 날 같은 결함을 다시 넣었다(`«$_rel»`).
+#    이 스캐너를 짓고도 «안 돌려서» 같은 날 같은 결함을 다시 넣었다(`« $_rel »` 를 붙여 쓴 꼴).
 #    도구를 만드는 것과 «부르는 것»은 다른 일이다 — 그래서 레인이 부른다.
 if [ -x "$ROOT/scripts/shell_name_boundary_scan.sh" ]; then
   bash "$ROOT/scripts/shell_name_boundary_scan.sh" "$S" >/dev/null 2>&1 \

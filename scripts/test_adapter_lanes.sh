@@ -389,14 +389,14 @@ _revert_probe() {
   #    «레인이 튼튼하다» 고 읽는 것이 이 프로브의 최대 실패모드다.
   sed -i.bak "$sedexpr" "$C/peer_resolve.sh" && rm -f "$C/peer_resolve.sh.bak"
   if ! grep -q "$applied_marker" "$C/peer_resolve.sh"; then
-    echo "  ❌ $name — 중화가 적용되지 않았다(마커 «$applied_marker» 부재). 프로브를 신뢰할 수 없다"
+    echo "  ❌ $name — 중화가 적용되지 않았다(마커 «${applied_marker}» 부재). 프로브를 신뢰할 수 없다"
     return 1
   fi
   # 중화한 파일 말고는 사본이 실물과 동일해야 한다(다른 변수를 안 건드렸다는 확인).
   local other_diff
   other_diff="$(diff -rq "$REPO_ROOT/scripts/adapters" "$C" 2>/dev/null | grep -v 'peer_resolve.sh' | wc -l | tr -d ' ')"
   if [ "$other_diff" != "0" ]; then
-    echo "  ❌ $name — 사본이 peer_resolve.sh 외에도 다르다($other_diff건). 프로브 격리 실패"
+    echo "  ❌ $name — 사본이 peer_resolve.sh 외에도 다르다(${other_diff}건). 프로브 격리 실패"
     return 1
   fi
   # ── 2단 실행: 사본을 대상으로 레인을 통째로 다시 돌린다.
@@ -445,7 +445,7 @@ esac
 
 echo
 if [ "$FAIL" -eq 0 ]; then
-  # ★`${N}` 로 감싼다 — 한글이 바로 뒤에 오면 bash 가 `$N개` 를 **변수명 `N개`** 로 읽어
+  # ★`${N}` 로 감싼다 — 한글이 바로 뒤에 오면 bash 가 `$N` 바로 뒤 `개` 를 **변수명 `N개`** 로 읽어
   #   `unbound variable` 로 죽는다(실측 2026-08-16: 레인 23개 전부 초록인데 마지막 요약
   #   줄에서 rc=1). 계기가 자기 보고 줄에서 죽으면 초록이 빨강으로 렌더된다.
   echo "✅ 레인 ${N}개 전부 기대대로"

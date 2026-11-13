@@ -147,18 +147,18 @@ case "$_lease_lc" in
     fi
     if [ "$_tok" -ne 1 ]; then
       [ -n "$_tw" ] && rm -rf "$_tw"
-      echo "🟥 lease «$LEASE»: the merge tier could not be read for head $HEAD_OID (tier script, merge-base or diff) — not merging" >&2
+      echo "🟥 lease «${LEASE}»: the merge tier could not be read for head $HEAD_OID (tier script, merge-base or diff) — not merging" >&2
       exit 7
     fi
     _tout=$(bash "$_tier" --files "$_tw/files" --diff "$_tw/diff" < /dev/null 2>&1); _trc=$?
     rm -rf "$_tw"
     if [ "$_trc" -ne 0 ] || [ "$(printf '%s\n' "$_tout" | tail -1)" != "TIER=AUTO" ]; then
       printf '%s\n' "$_tout" | sed 's/^/   /' >&2
-      echo "🟥 lease «$LEASE» is not the operator's answer for this PR, and selfdev_merge_tier.sh did not say AUTO (rc=$_trc) — not merging." >&2
+      echo "🟥 lease «${LEASE}» is not the operator's answer for this PR, and selfdev_merge_tier.sh did not say AUTO (rc=$_trc) — not merging." >&2
       echo "   Ask the operator for THIS PR, then merge with --lease 'operator: «<their words>» <date>'." >&2
       exit 7
     fi
-    echo "── lease «$LEASE»: selfdev_merge_tier.sh says TIER=AUTO for head $HEAD_OID" ;;
+    echo "── lease «${LEASE}»: selfdev_merge_tier.sh says TIER=AUTO for head $HEAD_OID" ;;
 esac
 
 # 1b. coverage advisory — WARNING ONLY (never changes rc, never merges or refuses). post_squash_verify's precheck rejects a

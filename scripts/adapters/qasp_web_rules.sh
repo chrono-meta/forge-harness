@@ -140,8 +140,8 @@ esac
 PEER_ROOT="$(fh_peer_resolve "$PEER_NAME")"; _rrc=$?
 case "$_rrc" in
   0) ;;
-  1) _peer_absent "peer «$PEER_NAME» 가 이 머신에 없다 — 안 쟀다(통과가 아니다)" ;;
-  2) _harness_error "peer «$PEER_NAME» 해석이 모호하다 — 어느 트리를 쟀는지 말할 수 없으므로 판정하지 않는다" ;;
+  1) _peer_absent "peer «${PEER_NAME}» 가 이 머신에 없다 — 안 쟀다(통과가 아니다)" ;;
+  2) _harness_error "peer «${PEER_NAME}» 해석이 모호하다 — 어느 트리를 쟀는지 말할 수 없으므로 판정하지 않는다" ;;
   *) _harness_error "peer 루트 목록 자체가 없다 — 전제 파손" ;;
 esac
 

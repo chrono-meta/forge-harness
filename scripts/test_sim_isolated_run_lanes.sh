@@ -554,7 +554,7 @@ M="$(bud_meta b29w hang --timeout 2)"
 _w="$(meta_get "$M" wall_s)"
 { [[ "$_w" =~ ^[0-9]+$ ]] && [ "$_w" -ge 2 ] && [ "$_w" -le 30 ]; } \
   && ok "L29w wall_s recorded as whole seconds (hang under --timeout 2 -> 2 <= $_w <= 30)" \
-  || no "L29w wall_s missing or dead clock («$_w»)"
+  || no "L29w wall_s missing or dead clock («${_w}»)"
 M="$(bud_meta b29c die --timeout 60)"
 [ "$(meta_get "$M" ended_at_cap)" = UNKNOWN ] \
   && ok "L29c a crash (rc=7) is UNKNOWN, not no and not yes" \

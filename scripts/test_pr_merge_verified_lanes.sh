@@ -194,7 +194,7 @@ setup sh; mkgh "$T/sh"; run "$T/sh" 7 --rerun "$GOOD" --lease 'selfdev standing 
 # S3 spellings a substring list missed (codex R1): upper case · self-dev · session lease → all checked, all refused
 for _l in 'STANDING' 'self-dev lease' 'session lease 2026-11-09'; do
   setup sv; mkgh "$T/sv"; run "$T/sv" 7 --rerun "$GOOD" --lease "$_l"
-  { [ "$RC" -eq 7 ] && ! merged "$T/sv"; } && ok "S3 lease «$_l» → tier checked, rc 7" || bad "S3 lease «$_l» rc=$RC"
+  { [ "$RC" -eq 7 ] && ! merged "$T/sv"; } && ok "S3 lease «${_l}» → tier checked, rc 7" || bad "S3 lease «${_l}» rc=$RC"
   rm -rf "$T/sv"
 done
 # S4 control: the operator's answer for this PR is not checked — even when it mentions selfdev (codex R1 #4)
