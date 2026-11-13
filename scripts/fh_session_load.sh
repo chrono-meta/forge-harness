@@ -589,7 +589,9 @@ fi
   # prints every single session. `hostname -s`, the same source fh_node_check.sh uses.
   echo "🔄 [FH SessionStart] companion-store freshness — $PULL_NOTE. · node: $(hostname -s 2>/dev/null || echo unknown)"
   # lane-identity tripwire (record-only): fixture commits that leaked into the hub repo
-  [ -f "$FH/scripts/lane_identity_tripwire.sh" ] && bash "$FH/scripts/lane_identity_tripwire.sh" "$FH" 2>/dev/null | grep -v '^LANE-TRIPWIRE ok' || true
+  # only when $FH is a git repo: an npm-installed copy is not one, and the tool's rc-2 HARNESS-ERROR
+  # line would then print at every session start (measured on the published 3.41.0 tarball)
+  [ -f "$FH/scripts/lane_identity_tripwire.sh" ] && env -u GIT_DIR -u GIT_COMMON_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_OBJECT_DIRECTORY git -C "$FH" rev-parse --git-dir >/dev/null 2>&1 && bash "$FH/scripts/lane_identity_tripwire.sh" "$FH" 2>/dev/null | grep -v '^LANE-TRIPWIRE ok' || true
   # §Diverged banner. Loud, counted, and it names the ONE command — see the §Diverged comment at the
   # fetch site for the 2026-08-28 measurement that made this necessary. The magnitude line and the
   # "everything below is stale" line are separate on purpose: the first says the tree is behind, the

@@ -84,5 +84,19 @@ out="$(GIT_SHALLOW_FILE="$T/shallow" bash "$TRIP" "$V")"; rc=$?
 printf '%s' "$out" | grep -q 'WARN: 1 commit'; chk $? "L8e inherited GIT_SHALLOW_FILE cutting history at the tip → lane commit still found (codex R1)"
 bash "$TRIP" "$T/nope" >/dev/null; rc=$?; [ "$rc" -eq 2 ]; chk $? "L8d tripwire on non-repo → HARNESS-ERROR rc=2, not «ok» (got $rc)"
 
+# ── L9: the session-start caller (fh_session_load.sh) — non-git FH silent, clean git silent, lane commit warns ──
+# BE must be a git repo or the loader exits before its banner; no remote, so the fetch fails fast offline.
+LOAD="$PWD/scripts/fh_session_load.sh"; BE9="$T/be9"; mkdir -p "$BE9" "$T/h9"; ( cd "$BE9" && clean git init -q && touch INDEX.md )
+mkfh() { rm -rf "$1"; mkdir -p "$1/scripts"; cp "$TRIP" "$1/scripts/"; }
+sl() { env -u GIT_DIR -u GIT_INDEX_FILE HOME="$T/h9" CLAUDE_PROJECT_DIR="$1" BE_DIR="$BE9" bash "$LOAD" </dev/null 2>&1 | grep 'LANE-TRIPWIRE'; }
+mkfh "$T/fh_nongit"; out="$(sl "$T/fh_nongit")"
+[ -z "$out" ]; chk $? "L9a session start, FH not a git repo (npm install) → no tripwire line (got: ${out:-none})"
+mkfh "$T/fh_git"; ( cd "$T/fh_git" && clean git init -q && clean git -c user.name=v -c user.email=v@v commit -q --allow-empty -m root )
+out="$(sl "$T/fh_git")"; [ -z "$out" ]; chk $? "L9b session start, clean git FH → no tripwire line"
+( cd "$T/fh_git" && clean git -c user.name=lane -c user.email=lane@example.invalid commit -q --allow-empty -m base )
+out="$(sl "$T/fh_git")"; printf '%s' "$out" | grep -q 'WARN: 1 commit'; chk $? "L9c session start, lane commit in FH → WARN line (control: the caller does run the tripwire)"
+out="$(GIT_DIR="$T/missing" GIT_COMMON_DIR="$T/missing" HOME="$T/h9" CLAUDE_PROJECT_DIR="$T/fh_git" BE_DIR="$BE9" bash "$LOAD" </dev/null 2>&1 | grep 'LANE-TRIPWIRE')"
+printf '%s' "$out" | grep -q 'WARN: 1 commit'; chk $? "L9d session start with an inherited bogus GIT_DIR → the git-repo probe is not fooled, WARN still prints (codex R1)"
+
 echo "fixture-git-env lanes: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
