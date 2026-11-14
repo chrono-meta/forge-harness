@@ -37,6 +37,8 @@
 
 ゲートはエージェントだけでなく、あなたのミスも見つけて止めます — 2026-08-22 の一日でFH の作者を7回止め、そのうち作者が先に気づいたものは一つもありませんでした（[ゲートが止めた一日](docs/GATE_DAY.md)）。
 
+一般的な「ハーネス」との違いと、その代償は [How FH differs](docs/HOW_FH_DIFFERS.en.md)（英語）にまとめています。
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/chrono-meta/forge-harness/main/docs/demo/gate-block.gif" alt="regression guard blocking a change that dropped a Done When section, then passing once it is restored" width="820">
 </p>

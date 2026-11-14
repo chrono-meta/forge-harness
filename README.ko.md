@@ -39,6 +39,8 @@
 
 게이트는 에이전트만이 아니라 당신의 실수도 잡습니다 — 2026-08-22 하루에 FH 작성자를 일곱 번 막았고, 그중 작성자가 먼저 알아챈 것은 하나도 없었습니다([게이트가 막은 하루](docs/GATE_DAY.md)).
 
+흔히 말하는 하네스와 무엇이 다르고 그 대가가 무엇인지는 [FH는 어디가 다른가](docs/HOW_FH_DIFFERS.md)에 정리했습니다.
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/chrono-meta/forge-harness/main/docs/demo/gate-block.gif" alt="regression guard blocking a change that dropped a Done When section, then passing once it is restored" width="820">
 </p>
