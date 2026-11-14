@@ -345,6 +345,17 @@ How to apply:
   independence and context at once — keep it one dispatch and do not fold it. Precedence:
   independence > permission > context.
 - Name the purpose(s) in the Context Card's first line («purpose: independence — …»).
+- **A builder's card types its file constraints (2026-11-15, FH-6).** Prose like «don't touch the hooks»
+  cannot be compared with what the builder did, so a builder card carries a `files:` block with four roles —
+  `editable` · `required` (must change or create) · `inspect-only` · `protected` — one glob per line. After
+  the builder returns, the governor or a sidecar (not the builder, in its own turn) runs
+  `python3 scripts/builder_card_files_check.py --card <card> --repo <builder tree> --base <ref>`: rc 0 CLEAN ·
+  1 VIOLATION (a protected or inspect-only path changed, an undeclared path changed, or a required path did
+  not) · 2 HARNESS-ERROR. A card with no `protected` line is HARNESS-ERROR, not a pass — «changed ∩ protected
+  = ∅» is true for every diff when the set is empty. It checks paths, not content. Basis: arXiv:2611.01265
+  (the four roles, pilot n=40 — no effect claimed) and arXiv:2611.05094 (an orchestrator checking its own
+  blocks logged out-of-scope changes in 11 of 247 checks), both cited from the frontier digests of 2026-11-04/05, not re-opened here. Lanes:
+  `scripts/test_builder_card_files_lanes.sh`.
 - Do not cite the article as grounds to fold a reviewer, a blind sim or a cross-family check. Its fold
   advice compares task quality, cost and latency; its own text keeps verification as a split candidate.
 - Tool-count side note from the same article: «once you exceed 30-50 tool definitions in the system

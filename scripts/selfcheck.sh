@@ -1191,6 +1191,8 @@ for _pair in \
   "scripts/selfdev_queue.py|scripts/test_selfdev_queue_lanes.sh" \
   "scripts/ablation_nominate.py|scripts/test_ablation_nominate_lanes.sh" \
   "scripts/ablation_verdict.py|scripts/test_ablation_verdict_lanes.sh" \
+  `# 빌더 카드 파일 역할 4값(2026-11-15, FH-6). 디스패치 뒤 바뀐 파일 ∩ protected = ∅ — protected 를 안 적은 카드는 통과가 아니라 HARNESS-ERROR.` \
+  "scripts/builder_card_files_check.py|scripts/test_builder_card_files_lanes.sh" \
   `# 리스 기록 채널(2026-11-07). 세션은 초안, 기록은 운영자 — 에이전트 셸 거부 · 코드 불일치 무기록 · 원자적 교체.` \
   "scripts/lease_line_apply.sh|scripts/test_lease_line_apply_lanes.sh" \
   `# 공유 세션 장부(2026-11-11 시범). 실무 세션이 쓰고 루트가 읽는다 — 안 적은 세션은 NOT-WRITTEN, 깨진 줄은 MALFORMED.` \
