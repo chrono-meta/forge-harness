@@ -137,6 +137,9 @@ MODEL="sonnet"
 #   그대로 남긴다(3/3 과 2/3 은 다른 사실이다).
 #   ⚠️ 비용: reps=3 이면 프로브당 `claude -p` 호출이 2 → 6 이다(12 프로브 = 24 → 72).
 REPS=1
+# §TRACE (2026-11-14, FH-3): arms keep their event stream so the scorer can read tool calls and the
+# init tool/MCP list (behave: probes · INVALID-COMPARISON). FH_LIVE_TRACE=0 restores text-only runs.
+if [ "${FH_LIVE_TRACE:-1}" = 0 ]; then FH_LIVE_TRACE_ARG=""; else FH_LIVE_TRACE_ARG="--trace"; fi
 DRYRUN=0
 SUBSET=""
 IDS=""
@@ -287,7 +290,7 @@ while IFS= read -r id; do
   echo ""
   echo "▶ $id — primary"
   bash "$SIM_RUNNER" --arm primary --reps "$REPS" --prompt "$input_text" \
-       --mode observe --model "$MODEL" --out "$probe_out" \
+       --mode observe --model "$MODEL" --out "$probe_out" ${FH_LIVE_TRACE_ARG:+"$FH_LIVE_TRACE_ARG"} \
        > "$probe_out/_runner_primary.log" 2>&1
   runner_rc=$?
   tail -n 6 "$probe_out/_runner_primary.log"
@@ -308,7 +311,7 @@ while IFS= read -r id; do
 
   echo "▶ $id — control"
   bash "$SIM_RUNNER" --arm control --reps "$REPS" --prompt "$control_text" \
-       --mode observe --model "$MODEL" --out "$probe_out" \
+       --mode observe --model "$MODEL" --out "$probe_out" ${FH_LIVE_TRACE_ARG:+"$FH_LIVE_TRACE_ARG"} \
        > "$probe_out/_runner_control.log" 2>&1
   runner_rc=$?
   tail -n 6 "$probe_out/_runner_control.log"
@@ -329,7 +332,7 @@ while IFS= read -r id; do
     control_b_text="$(cat "$SPEC_DIR/$id.control_b.txt")"
     echo "▶ $id — control_b"
     bash "$SIM_RUNNER" --arm control_b --reps "$REPS" --prompt "$control_b_text" \
-         --mode observe --model "$MODEL" --out "$probe_out" \
+         --mode observe --model "$MODEL" --out "$probe_out" ${FH_LIVE_TRACE_ARG:+"$FH_LIVE_TRACE_ARG"} \
          > "$probe_out/_runner_control_b.log" 2>&1
     runner_rc=$?
     tail -n 6 "$probe_out/_runner_control_b.log"
