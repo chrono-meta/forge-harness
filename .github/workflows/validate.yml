@@ -297,6 +297,11 @@ jobs:
         env:
           RMG_CHANNEL_NAME: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
           PR_BODY: ${{ github.event.pull_request.body }}
+          # push 실행엔 이벤트 본문이 없다 — 그 커밋의 PR 본문을 API 로 읽는다(조회 실패 = 빨강).
+          # pull_request 실행은 이벤트 본문을 쓰므로 조회하지 않는다. (AQ-20261114-10, #1095 · #1103)
+          RMG_PR_LOOKUP: ${{ github.event_name == 'push' && '1' || '0' }}
+          RMG_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
           # 얕은 클론이라 base 를 직접 받아온다. 못 받으면 그건 HARNESS-ERROR 로 떨어져야지
