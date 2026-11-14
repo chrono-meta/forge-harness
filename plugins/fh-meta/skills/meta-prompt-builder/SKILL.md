@@ -106,6 +106,22 @@ Before outputting the generated prompt draft, check against 3 criteria.
 2. **Done When measurability**: Is Done When a measurable event in the M/S/R framework?
 3. **Context alignment**: Does the Context match the "target" scope defined in the agent's SKILL.md?
 
+4. **Restate check (cold reader)** — the procedure for the judged Done-When row below («read one
+   draft cold»). Hand **each** draft — its text only, no conversation, no repo — to a separate reader
+   (a fresh subagent, Sonnet or Haiku, or a different model family) and ask it to restate **GOAL**
+   (what is true when finished) · **DONE** (the observable check) · **CONSTRAINTS** (what not to
+   touch), marking each `RESTATABLE` or `GUESS`, and to list the questions it would need answered.
+   Any `GUESS` field is `[WARN: brief not restatable — <field>]`; its questions are the fix list.
+   Do not tell the reader which draft you suspect. Restating your own draft yourself does not count —
+   the failure this answers is the author filling gaps from context the receiver never gets. Record
+   the reader's model and keep its raw reply next to the draft. Dispatching the reader follows the
+   usual dispatch consent; if no reader can be dispatched, mark the row `NOT RUN`, never `RESTATABLE`.
+   Measured once (2026-11-14, one reader per brief, briefs written by the same author — `UNCALIBRATED`):
+   4 briefs made vague on purpose → 4/4 not restatable on all three fields; 4 briefs meant to be clear →
+   3/4 restatable, the fourth flagged an undefined term the author then judged real. This shows the
+   check flags briefs made vague, not a false-alarm rate. Idea from the comprehension stage of
+   https://github.com/google/elephant-goldfish-model ; the procedure here is FH's own.
+
 Items that fail the check are marked `[WARN]` and the decision is delegated to the user.
 
 **Step 3 bias prevention**: When checking Goal achievability, Read the agent's SKILL.md to directly verify (directly compare allowed-tools list). Since generator and validator are the same LLM, self-validation without external reference repeats bias.
@@ -183,6 +199,9 @@ Version / baseline:  the Step 3 checklist and the WARN-trigger table in
 ☐ [WARN] items are surfaced to the user with the reason, and
   the decision is the user's                                     (mandatory-pass)
 ☐ Drafts are handed over for review, not dispatched              (mandatory-pass)
+☐ Step 3 item 4 ran on every draft with a separate reader;
+  each GUESS field is a recorded [WARN] or was fixed and re-read  (mandatory-pass — NOT RUN is
+                                                                  recorded, never counted as pass)
 ☐ The drafts are usable by the target agent as written           (judged — adversarial pairing:
                                                                   generator and validator are the
                                                                   same model, so self-validation
