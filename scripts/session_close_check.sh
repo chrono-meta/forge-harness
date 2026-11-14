@@ -528,6 +528,22 @@ if [ -f "$FC" ]; then
   fi
 fi
 
+# ⑤-done-anchor (RECORD-ONLY — never sets FAIL, 2026-11-14). A «완료/done» line is a claim about the
+# world handed to the next session. arXiv:2611.14654 measured what a tidied record costs the reader:
+# an agent's own «completed» action next to an error still in the world lowered recovery 50% → 44%,
+# while a truthful note beside the preserved error raised it 51% → 66% (vs a matched neutral note).
+# This line checks only a property of the record — does each done-line carry a world anchor (commit
+# sha · #PR · run id · file path · URL) — never whether the work is actually done.
+if [ -f "$FC" ]; then
+  _DONE_RE='완료|[Dd]one|DONE|[Cc]losed'
+  _ANCHOR_RE='[0-9a-f]{7,40}|#[0-9]+|[0-9]{8,}|[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+|[A-Za-z0-9_-]+\.(md|sh|py|js|json|yml)|https?://'
+  _bare=$(grep -E "$_DONE_RE" "$FC" | grep -vE '^[[:space:]]*#' | grep -vcE "$_ANCHOR_RE")
+  if [ "${_bare:-0}" -gt 0 ]; then
+    echo "ⓘ ⑤-done-anchor ${_bare} «완료» line(s) in fh_completed_${TODAY}.md name no commit · PR · file (record only) — pair each with its world state, and say what is still unresolved:"
+    grep -E "$_DONE_RE" "$FC" | grep -vE '^[[:space:]]*#' | grep -vE "$_ANCHOR_RE" | head -3 | cut -c1-140 | sed 's/^/     /'
+  fi
+fi
+
 # ④-b npm freshness — files[] assets changed since last version tag → republish owed.
 # Patterns are NARROWED to the actually-shipped subpaths (package.json files[]): knowledge/ ships only
 # shared/{harness-core,dialogue,rules}; docs/ ships only {codex-compat,CONTRIBUTING,pillars}. A broad
