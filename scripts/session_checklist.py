@@ -660,6 +660,32 @@ def _cells(line):
 
 
 CARRY_HEADING = "## 이전 결과서에서 이어받지 못한 판정"
+KEEP_HEADING = "## 이전 결과서의 표 밖 내용 (extract 가 다시 만들지 않는 줄 — 원래 순서)"
+# lines do_extract writes itself: a stale copy of one (counts change between runs) is not the operator's content
+_GENERATED_PREFIXES = ("# 세션 요청 체크리스트 (스켈레톤)", "채널 2/2 열음", chr(0x1F4CE) + " 원장 = ", "🟥 JSONL 파싱 실패",
+                       "🪝 훅 기록 채널", "🟨 훅 기록 채널", "🟥 훅 기록", "↩️ 이전 결과서에서", CARRY_HEADING, KEEP_HEADING)
+_SEPARATOR_RE = re.compile(r"^\|[\s:|-]+\|\s*$")
+
+
+def _unconsumed(old, lines_out):
+    """lines of the previous sheet that the table parser does not consume and extract does not regenerate —
+    a result-sheet section written below the table, a preface above it, prose between (2026-11-14 harvest H3: 13 such
+    lines vanished on one re-extract). Kept in their original order; blank runs collapsed, edges trimmed, so a re-run
+    over its own output yields the same block (idempotent)."""
+    regenerated = set(lines_out)
+    kept = []
+    for l in old:
+        if not l.strip():
+            if kept and kept[-1] != "":
+                kept.append("")
+            continue
+        if (l in regenerated or l.startswith(_GENERATED_PREFIXES) or _SEPARATOR_RE.match(l)
+                or _cells(l) is not None):
+            continue
+        kept.append(l)
+    while kept and kept[-1] == "":
+        kept.pop()
+    return kept
 
 
 def carry_forward(lines_out, out_path):
@@ -674,7 +700,9 @@ def carry_forward(lines_out, out_path):
         if l.startswith(CARRY_HEADING):
             in_orphans = True; continue
         c = _cells(l)
-        if not c or c[0] in ("#", "---") or set(c[0]) <= set("-"):
+        # «-» alone is how an orphan row is written (below) — not a separator. Reading it as one dropped every orphan
+        # judgment on the SECOND re-extract (found 2026-11-15 by the idempotency lane L55; origin/main reproduces it).
+        if not c or c[0] in ("#", "---") or (c[0] != "-" and set(c[0]) <= set("-")):
             continue
         if not any(c[3:]):
             continue                                   # an empty row has nothing to carry
@@ -691,11 +719,17 @@ def carry_forward(lines_out, out_path):
         out.append(l)
     orphans = ["| %s | %s | %s | %s | %s | %s | %s |" % ((("-",) + k + tuple(v))) for k, vs in prev.items() for v in vs]
     orphans += orphans_prev
-    if used or orphans:
-        out.insert(4, "↩️ 이전 결과서에서 판정 %d줄 이어받음 · 못 맞춘 판정 %d줄은 맨 아래 «이전 결과서에서 이어받지 못한 판정»에 보존" % (used, len(orphans)))
+    kept = _unconsumed(old, lines_out)
+    if used or orphans or kept:
+        msg = "↩️ 이전 결과서에서 판정 %d줄 이어받음 · 못 맞춘 판정 %d줄은 맨 아래 «이전 결과서에서 이어받지 못한 판정»에 보존" % (used, len(orphans))
+        if kept:
+            msg += " · 표 밖 줄 %d줄은 맨 아래 «이전 결과서의 표 밖 내용»에 보존" % sum(1 for l in kept if l)
+        out.insert(4, msg)
     if orphans:
         out += ["", CARRY_HEADING, "", "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안(이번 세션 vs 이월) |",
                 "|---|---|---|---|---|---|---|"] + orphans
+    if kept:
+        out += ["", KEEP_HEADING, ""] + kept
     return out
 
 

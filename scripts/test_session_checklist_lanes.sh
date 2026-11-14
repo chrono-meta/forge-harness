@@ -996,6 +996,44 @@ else
   fail "L54 rc=$RC rows=$L54_ROWS (want 1, no H) (see $TMPDIR_ROOT/l54.out)"
 fi
 
+# L55 — re-extract keeps every line the table parser does not consume (2026-11-14 harvest H3: a result-sheet section
+# written below the table — 13 lines — vanished on `extract --out`). Known pair + decoys:
+#   preface above the table · a result section below it · a decoy that LOOKS 7-column but is not a row (no «| » lead) ·
+#   an 8-cell line · a real 7-cell row with a judgment (must stay an orphan row, NOT be copied into the kept block too).
+# Then a second re-extract over that output must be byte-identical (idempotent).
+build_jsonl "$TMPDIR_ROOT/l55.jsonl" "[{'type':'user','timestamp':'2026-10-18T01:00:00.000Z','message':{'role':'user','content':'Please move the session bar a little higher than it is now.'}}]"
+L55="$TMPDIR_ROOT/l55.md"
+run "$TMPDIR_ROOT/l55a.out" extract --transcript "$TMPDIR_ROOT/l55.jsonl" --out "$L55"
+L55A_RC=$RC
+python3 - "$L55" <<'PYEOF'
+import sys
+p = sys.argv[1]; L = open(p, encoding="utf-8").read().rstrip("\n").split("\n")
+i = next(k for k, l in enumerate(L) if l.startswith("| # |"))
+L[i:i] = ["PREFACE-LINE operator note above the table", ""]
+L += ["", "## 8차 결과 시트", "", "RESULT-LINE-1 merged #1095 after CI green", "",
+      "|decoy|b|c|d|e|f|g|", "| e1 | e2 | e3 | e4 | e5 | e6 | e7 | e8 |",
+      "RESULT-LINE-2 still open: P22-B", "| 9 | 10-17 08:00 | gone utterance | ✅DONE | x | - | - |"]
+open(p, "w", encoding="utf-8").write("\n".join(L) + "\n")
+PYEOF
+run "$TMPDIR_ROOT/l55b.out" extract --transcript "$TMPDIR_ROOT/l55.jsonl" --out "$L55"
+L55B_RC=$RC; cp "$L55" "$TMPDIR_ROOT/l55_after1.md"
+run "$TMPDIR_ROOT/l55c.out" extract --transcript "$TMPDIR_ROOT/l55.jsonl" --out "$L55"
+L55C_RC=$RC
+L55_KEPT=$(awk '/^## 이전 결과서의 표 밖 내용/{f=1;next} f' "$L55")
+L55_ORDER=$(printf '%s\n' "$L55_KEPT" | grep -nE '^(PREFACE-LINE|## 8차|RESULT-LINE-1|\|decoy|\| e1 |RESULT-LINE-2)' | cut -d: -f2- | awk '{print $1}' | tr '\n' ',')
+if [ "$L55A_RC" -eq 0 ] && [ "$L55B_RC" -eq 0 ] && [ "$L55C_RC" -eq 0 ] \
+   && [ "$L55_ORDER" = "PREFACE-LINE,##,RESULT-LINE-1,|decoy|b|c|d|e|f|g|,|,RESULT-LINE-2," ] \
+   && [ "$(grep -c 'gone utterance' "$L55")" -eq 1 ] \
+   && awk '/^## 이전 결과서에서 이어받지 못한 판정/{f=1} f && /gone utterance/{ok=1} /^## 이전 결과서의 표 밖 내용/{f=0} END{exit !ok}' "$L55" \
+   && [ "$(grep -c 'PREFACE-LINE' "$L55")" -eq 1 ] && [ "$(grep -c '^|decoy|' "$L55")" -eq 1 ] \
+   && ! printf '%s\n' "$L55_KEPT" | grep -qE '^(📎|↩️|채널 2/2|\|---)' \
+   && grep -q '표 밖 줄 6줄은 맨 아래' "$L55" \
+   && cmp -s "$L55" "$TMPDIR_ROOT/l55_after1.md"; then
+  pass "L55 re-extract keeps non-table lines (preface · result section · 7-col-looking decoy · 8-cell line) in order, once; a real row stays an orphan row; a second re-extract is byte-identical"
+else
+  fail "L55 rc=$L55A_RC/$L55B_RC/$L55C_RC order=$L55_ORDER (see $L55 · $TMPDIR_ROOT/l55_after1.md)"
+fi
+
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
