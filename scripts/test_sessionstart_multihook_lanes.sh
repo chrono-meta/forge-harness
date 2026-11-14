@@ -29,10 +29,22 @@
 set -uo pipefail
 TMPROOT=$(mktemp -d "${TMPDIR:-/tmp}/fh_multihook.XXXXXX")
 trap 'rm -rf "$TMPROOT"' EXIT
-FAILED=0; PASSED=0; GAPS=0
+FAILED=0; PASSED=0; GAPS=0; UNMEAS=0
 _pass() { echo "✅ $1"; PASSED=$((PASSED+1)); }
 _fail() { echo "❌ $1"; FAILED=1; }
 _eq()   { if [ "$2" = "$3" ]; then _pass "$1 ($2)"; else _fail "$1 — got [$2], expected [$3]"; fi; }
+_unmeas() { echo "⬜ $1"; UNMEAS=$((UNMEAS+1)); }
+# Like _eq, but a subject the query could not IDENTIFY is UNMEASURED — not a verdict about the
+# subject and not a pass. Keyed on the one token _q emits for that case, so a future shape change
+# lands here instead of printing a confident wrong answer about the CLI (2026-11-09: it printed
+# `got [ABSENT|ABSENT], expected [127|error]`, i.e. "the platform swallowed a missing-script hook",
+# while 127|error was sitting on the typed channel the whole time).
+_eq_id() {
+  case "$2" in
+    UNIDENTIFIED:*) _unmeas "$1 — no hook_response row could be identified as that hook ($2); nothing is claimed about the subject, and this is NOT a pass";;
+    *)              _eq "$1" "$2" "$3";;
+  esac
+}
 _gap()  { if [ "$2" = "1" ]; then echo "ⓘ GAP (still open) $1"; echo "       ↳ $3"; GAPS=$((GAPS+1));
           else echo "🎉 GAP CLOSED — $1 : behaviour changed, promote this lane"; fi; }
 _unexercised() { echo; echo "══════════════════════════════════════════════"; echo "MULTI-HOOK LANES: NOT EXERCISED — $1"; echo "  This is exit 2, not a pass. Nothing below was measured."; exit 2; }
@@ -46,6 +58,11 @@ command -v claude >/dev/null 2>&1 || _unexercised "the \`claude\` CLI is not on 
 # C: instant + exit 0 — the sibling that must survive B.
 # D: a command pointing at a script that DOES NOT EXIST (bash exits 127). This is not hypothetical:
 #    it is the shape of a stale settings.json entry, and this repo has one today.
+#    🟥 D is the ONE hook here that prints no marker of its own, so the queries below find its
+#    row by ELIMINATION. Do not re-key it to the row's stderr: the CLI substitutes its own sentence
+#    there for a 127 ("exit 127, a shell's code for a program it could not run; the hook's stderr is
+#    left out", measured on 2.1.319), so bash's own message — and any substring of this fixture's
+#    path — is not in the stream at all.
 _fixture() {  # $1=name $2=B's exit code → echoes project dir
   local P="$TMPROOT/$1" n ec slp
   mkdir -p "$P/.claude" "$P/h"
@@ -115,9 +132,21 @@ if q == "count":                      # how many of OUR hooks reported at all
     print(sum(1 for m in ("HOOK_A_", "HOOK_B_", "HOOK_C_") if find(m)))
 elif q == "order":                    # arrival order of our markers in the typed stream
     print(",".join(n for h in hks for n in ("A", "B", "C") if "HOOK_%s_STDOUT" % n in (h.get("stdout") or "")))
-elif q == "err127":                   # the nonexistent-script hook
-    e = [h for h in hks if "MISSING_ON_PURPOSE" in (h.get("stderr") or "")]
-    print("%s|%s" % (e[0].get("exit_code"), e[0].get("outcome")) if e else "ABSENT|ABSENT")
+elif q in ("err127", "err127stderr"):  # the nonexistent-script hook, found by ELIMINATION
+    # It is the only one of the four that prints no marker, so it is whatever row is left once A, B
+    # and C are accounted for. Identifying it by its stderr text put the lane at the mercy of the
+    # CLI's wording for a 127 (see the fixture comment above).
+    named = [i for i, h in enumerate(hks)
+             if any(("HOOK_%s_STDOUT" % n) in (h.get("stdout") or "") for n in ("A", "B", "C"))]
+    rest = [h for i, h in enumerate(hks) if i not in named]
+    if len(named) != 3 or len(rest) != 1:
+        # Cannot isolate it — so say that, and let the caller route it to UNMEASURED. Printing
+        # ABSENT here would read as a measurement of the subject.
+        print("UNIDENTIFIED:named=%d,rest=%d" % (len(named), len(rest)))
+    elif q == "err127":
+        print("%s|%s" % (rest[0].get("exit_code"), rest[0].get("outcome")))
+    else:
+        print((rest[0].get("stderr") or "").strip().replace("\n", " ⏎")[:200] or "(empty)")
 elif q.startswith("exit:"):
     f = find(q[5:]); print(f[0].get("exit_code") if f else "ABSENT")
 elif q.startswith("outcome:"):
@@ -158,7 +187,8 @@ _eq "MH-3 → and it is labelled an error there"        "$(_q "$PN/stream.jsonl"
 _eq "MH-3 → sibling A is labelled success (paired)"   "$(_q "$PN/stream.jsonl" outcome:HOOK_A_STDOUT_MARKER)" success
 _eq "MH-3 → sibling C is labelled success (paired)"   "$(_q "$PN/stream.jsonl" outcome:HOOK_C_STDOUT_MARKER)" success
 
-_eq "MH-4 nonexistent hook script → exit 127 / error on the typed channel" "$(_q "$PN/stream.jsonl" err127)" "127|error"
+_eq_id "MH-4 nonexistent hook script → exit 127 / error on the typed channel" "$(_q "$PN/stream.jsonl" err127)" "127|error"
+echo "   ↳ what the CLI puts on that row's stderr (recorded, never matched on): $(_q "$PN/stream.jsonl" err127stderr)"
 
 # DELIVERY — the separate proposition. In-run control: A and C must be present in the same reply.
 _eq "MH-5 sibling A's output reached the agent (in-run control)" "$(_q "$PN/stream.jsonl" delivered:HOOK_A_STDOUT_MARKER)" 1
@@ -190,13 +220,23 @@ if [ ! -s "$PP/stream.jsonl" ]; then _fail "MH-C control run produced no stream 
   _eq "MH-C  → and B's output NOW reaches the agent (closes MH-5)"   "$(_q "$PP/stream.jsonl" delivered:HOOK_B_STDOUT_MARKER)" 1
   _eq "MH-C  → A still delivered"                                    "$(_q "$PP/stream.jsonl" delivered:HOOK_A_STDOUT_MARKER)" 1
   _eq "MH-C  → C still delivered"                                    "$(_q "$PP/stream.jsonl" delivered:HOOK_C_STDOUT_MARKER)" 1
-  _eq "MH-C  the missing-script hook still fails, independently"     "$(_q "$PP/stream.jsonl" err127)" "127|error"
+  _eq_id "MH-C  the missing-script hook still fails, independently"   "$(_q "$PP/stream.jsonl" err127)" "127|error"
 fi
 
 echo
 echo "──────────────────────────────────────────────"
 if [ "$FAILED" -ne 0 ]; then
   echo "MULTI-HOOK LANES: FAIL — instrument miscalibrated (do not trust its verdict)"
+  echo "  asserting lanes passed: $PASSED · open gaps: $GAPS · unmeasured: $UNMEAS"
+  exit 1
+fi
+if [ "$UNMEAS" -ne 0 ]; then
+  # line-head `INCOMPLETE  <subject>:` is this repo's aggregate vocabulary for "ran, measured
+  # nothing, not a pass" (test_fh_detach_lanes.sh, test_mutation_probe_lanes.sh). Keep it on its own
+  # line so a round-to-round log diff can count it, and keep this file's own banner below it.
+  echo "INCOMPLETE  multi-hook: $UNMEAS lane(s) could not identify their subject on the typed channel — not a pass"
+  echo "MULTI-HOOK LANES: INCOMPLETE — $UNMEAS lane(s) could not identify their subject on the typed"
+  echo "  channel, so nothing is claimed about it. This is exit 1, NOT a pass."
   echo "  asserting lanes passed: $PASSED · open gaps: $GAPS"
   exit 1
 fi
