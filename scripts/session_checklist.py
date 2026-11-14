@@ -676,7 +676,9 @@ _GENERATED_LINE_RES = tuple(re.compile(p) for p in (
     r"^↩️ 이전 결과서에서 판정 \d+줄 이어받음 · 못 맞춘 판정 \d+줄은 맨 아래 «이전 결과서에서 이어받지 못한 판정»에 보존"
     r"( · 표 밖 줄 \d+줄은 맨 아래 «이전 결과서의 표 밖 내용»에 보존)?$",
 ))
-_FENCE_RE = re.compile(r"^\s*(```|~~~)")
+_GENERATED_ROW_ID_RE = re.compile(r"^(\d+|H\d+|S\d+)$")   # the «#» ids do_extract writes: 7 · H2 · S1
+_GENERATED_HEADER = "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안(이번 세션 vs 이월) |"
+_GENERATED_SEPARATOR = "|---|---|---|---|---|---|---|"
 
 
 def _is_generated(line):
@@ -684,29 +686,33 @@ def _is_generated(line):
 
 
 def _fenced(old):
-    """indices of lines inside a fenced code block, fence markers included — a person's code is kept verbatim, never
-    read as table rows or separators (review 2026-11-15: a 7-cell line inside a fence became an orphan row)."""
-    idx, fence = set(), None
+    """indices of lines inside a CLOSED fenced code block, markers included — a person's code is kept verbatim, never
+    read as table rows or separators (review 2026-11-15). Same opener rule as load_tables (FENCE_RE: same character,
+    closer at least as long). An unclosed fence is ignored here, and so is an opener whose closer lies beyond extract's
+    own table header: either way the live table was swallowed and every judgment below it detached (review R2)."""
+    idx, opened = set(), None   # opened = (index, char, length)
     for i, l in enumerate(old):
-        m = _FENCE_RE.match(l)
-        if fence is None:
-            if m:
-                fence = m.group(1); idx.add(i)
-        else:
-            idx.add(i)
-            if m and m.group(1) == fence:
-                fence = None
+        if l == _GENERATED_HEADER and opened is not None:
+            opened = None   # a fence never spans extract's own table: an opener above it is unclosed (review R2 repro)
+            continue
+        m = FENCE_RE.match(l)
+        if not m:
+            continue
+        tick = m.group(1)
+        if opened is None:
+            opened = (i, tick[0], len(tick))
+        elif tick[0] == opened[1] and len(tick) >= opened[2] and l.strip() == tick:
+            idx.update(range(opened[0], i + 1)); opened = None
     return idx
 
 
 def _unconsumed(old, lines_out):
     """lines of the previous sheet that the table parser does not consume and extract does not regenerate —
     a result-sheet section written below the table, a preface above it, prose between (2026-11-14 harvest H3: 13 such
-    lines vanished on one re-extract), fenced code verbatim, and a hand-added row with empty judgment cells whose
-    (시각, 발화) is not a generated row. Kept in their original order; outside fences blank runs collapse and edges are
+    lines vanished on one re-extract), closed fenced code verbatim, a person's own 7-column separator, and a hand-added
+    row with empty judgment cells whose «#» is not an id extract writes. Kept in their original order; outside fences blank runs collapse and edges are
     trimmed, so a re-run over its own output yields the same block (idempotent)."""
     regenerated = set(lines_out)
-    new_keys = {(c[1], c[2]) for c in (_cells(l) for l in lines_out) if c}
     fenced = _fenced(old)
     kept = []
     for i, l in enumerate(old):
@@ -716,13 +722,20 @@ def _unconsumed(old, lines_out):
             if kept and kept[-1] != "":
                 kept.append("")
             continue
-        if l in regenerated or _is_generated(l):   # the 7-column separator extract writes is in `regenerated`; a person's own table keeps its separator
+        if l == _GENERATED_SEPARATOR:
+            # regenerated only where extract writes it — right under its own header; a person's 7-column table keeps it
+            if i > 0 and old[i - 1] == _GENERATED_HEADER:
+                continue
+            kept.append(l); continue
+        if l in regenerated or _is_generated(l):
             continue
         c = _cells(l)
         if c is not None:
-            # a row with a judgment is carried or orphaned by carry_forward; the header row and generated skeleton
-            # rows are regenerated. Only an empty row extract would not write again is the person's own.
-            if c[0] == "#" or any(c[3:]) or (c[1], c[2]) in new_keys:
+            # a row with a judgment is carried or orphaned by carry_forward; the header row is regenerated; an empty
+            # row with an id extract writes (7 · H2 · S1) is a skeleton row from some run — never the person's content,
+            # even when this run no longer writes it (review R2: hook channel gone, transcript swapped). Only an empty
+            # row the person labelled themselves is kept.
+            if c[0] == "#" or any(c[3:]) or _GENERATED_ROW_ID_RE.match(c[0]):
                 continue
         kept.append(l)
     while kept and kept[-1] == "":

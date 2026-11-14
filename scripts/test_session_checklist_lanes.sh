@@ -1078,6 +1078,65 @@ else
   fail "L56 rc=$L56A_RC/$L56B_RC/$L56C_RC fence=$L56_FENCE (see $L56 · $TMPDIR_ROOT/l56_edited.md)"
 fi
 
+# L57 — the second independent review (2026-11-15) against L56's version, each reproduced there:
+#   (a) a hook-only H row from a run WITH the hook file must not be kept when the next run has no hook file
+#   (b) skeleton rows of a longer transcript must not be kept when the sheet is re-extracted from a shorter one
+#   (c) an UNCLOSED fence above the table must not swallow it: row 1's judgment is still carried into the live table
+#   (d) a 4-backtick fence holding «```» and a filled 7-cell row is kept verbatim, not split or orphaned
+#   (e) a person's own 7-column table keeps its separator line
+python3 - "$TMPDIR_ROOT" <<'PYEOF'
+import json, sys, datetime
+d = sys.argv[1]
+def loc(z):
+    t = datetime.datetime.strptime(z, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc).astimezone()
+    return t.strftime("%Y-%m-%dT%H:%M:%S")
+def tr(path, texts):
+    with open(path, "w", encoding="utf-8") as f:
+        for k, t in enumerate(texts):
+            f.write(json.dumps({"type": "user", "timestamp": "2026-10-18T01:0%d:00Z" % k, "message": {"role": "user", "content": t}}) + "\n")
+tr(d + "/l57_long.jsonl", ["first request about the session bar", "second request about the badge", "third request about the footer"])
+tr(d + "/l57_short.jsonl", ["first request about the session bar"])
+with open(d + "/l57_hook.jsonl", "w", encoding="utf-8") as f:
+    f.write(json.dumps({"ts": loc("2026-10-18T01:00:00Z"), "n": 1, "text": "first request about the session bar"}) + "\n")
+    f.write(json.dumps({"ts": loc("2026-10-18T05:00:00Z"), "n": 2, "text": "HOOKONLY request typed while a tool ran"}) + "\n")
+PYEOF
+L57="$TMPDIR_ROOT/l57.md"
+run "$TMPDIR_ROOT/l57a.out" extract --transcript "$TMPDIR_ROOT/l57_long.jsonl" --utterances "$TMPDIR_ROOT/l57_hook.jsonl" --out "$L57"
+L57_RCS="$RC"
+L57_HROW=$(grep -c '^| H1 | .*HOOKONLY' "$L57")               # control: the H row really existed in run 1
+python3 - "$L57" <<'PYEOF'
+import sys
+p = sys.argv[1]; L = open(p, encoding="utf-8").read().rstrip("\n").split("\n")
+L.insert(1, "```python"); L.insert(2, "x = 1   # FENCE-UNCLOSED the operator never closed this")
+for k, l in enumerate(L):
+    if l.startswith("| 1 |"):
+        L[k] = l.replace("|  |  |  |  |", "| ✅DONE | L57-EVID | - | - |")
+L += ["", "````", "```", "| 9 | 10-18 01:09 | FENCE4 in fence | x | y | z | w |", "```", "````",
+      "", "OWN-TABLE:", "| a | b | c | d | e | f | g |", "|---|---|---|---|---|---|---|", "| 1x | p | q |  |  |  |  |"]
+open(p, "w", encoding="utf-8").write("\n".join(L) + "\n")
+PYEOF
+run "$TMPDIR_ROOT/l57b.out" extract --transcript "$TMPDIR_ROOT/l57_short.jsonl" --out "$L57"
+L57_RCS="$L57_RCS/$RC"; cp "$L57" "$TMPDIR_ROOT/l57_after1.md"
+run "$TMPDIR_ROOT/l57c.out" extract --transcript "$TMPDIR_ROOT/l57_short.jsonl" --out "$L57"
+L57_RCS="$L57_RCS/$RC"
+L57_KEPT=$(awk '/^## 이전 결과서의 표 밖 내용/{f=1;next} f' "$L57")
+L57_LIVE=$(awk '/^## /{exit} {print}' "$L57")
+L57_F4=$(printf '%s\n' "$L57_KEPT" | awk '/^````$/{n++; print; next} n==1{print}' | tr '\n' '~')
+if [ "$L57_RCS" = "0/0/0" ] && [ "$L57_HROW" -eq 1 ] \
+   && ! grep -q 'HOOKONLY' "$L57" \
+   && ! grep -qE '^\| [0-9]+ \| [^|]* \| (second|third) request' "$L57" \
+   && printf '%s\n' "$L57_LIVE" | grep -qE '^\| 1 \| .*first request.* \| ✅DONE \| L57-EVID \| - \| - \|$' \
+   && printf '%s\n' "$L57_KEPT" | grep -qF 'FENCE-UNCLOSED' \
+   && [ "$L57_F4" = '````~```~| 9 | 10-18 01:09 | FENCE4 in fence | x | y | z | w |~```~````~' ] \
+   && ! grep -q '^| - | 10-18 01:09 | FENCE4' "$L57" \
+   && printf '%s\n' "$L57_KEPT" | awk '/^OWN-TABLE:/{f=1} f' | grep -qxF '|---|---|---|---|---|---|---|' \
+   && printf '%s\n' "$L57_KEPT" | grep -qF '| 1x | p | q |  |  |  |  |' \
+   && cmp -s "$L57" "$TMPDIR_ROOT/l57_after1.md"; then
+  pass "L57 no stale H/skeleton rows kept · unclosed fence leaves the table live (judgment carried) · 4-tick fence verbatim · own 7-col separator kept · next run identical"
+else
+  fail "L57 rc=$L57_RCS hrow=$L57_HROW f4=$L57_F4 (see $L57 · $TMPDIR_ROOT/l57_after1.md)"
+fi
+
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
