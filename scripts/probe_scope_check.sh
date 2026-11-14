@@ -39,7 +39,9 @@
 #   5. RUN AT reps>=3. The runner is nondeterministic: on 2026-08-03 an arm A that CONTAINED the
 #      answer returned NOT IN MY CONTEXT in 1 of 3 reps. A single rep is not a measurement.
 #   6. arm A answers it and arm B cannot -> the section is load-bearing, KEEP. Both answer -> the
-#      section is redundant with whatever else is resident, and it is a deletion candidate.
+#      section is redundant with whatever else is resident, and it is a deletion candidate -- render
+#      it with `scripts/ablation_verdict.py`, which prints NOT-DETECTED@N + the minimum detectable
+#      drop at that N (at N=3 only a 100% drop is detectable), never «no loss».
 #      A third outcome exists and is the worst: arm B answers CONFIDENTLY AND WRONGLY. That is not
 #      redundancy, it is the section doing load-bearing work by preventing a wrong inference. Score
 #      it KEEP. (Measured: cutting §FH 4-Axis made every rep conclude the gate does NOT apply to
