@@ -12,6 +12,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; V="${ABLATION_VERDICT:-$HE
 pass=0; fail=0; ok(){ pass=$((pass+1)); echo "  ✅ $1"; }; bad(){ fail=$((fail+1)); echo "  ❌ $1"; }
 run(){ out=$(python3 "$V" "$@" 2>&1); rc=$?; }
 
+python3 "$HERE/ablation_verdict.py" --a 3/3 --b 0/3 >/dev/null 2>&1 && ok "V0 the shipped file runs by its own path (rc 0)" || bad "V0 direct run failed"
 run --a 3/3 --b 0/3; [ $rc -eq 0 ] && [[ "$out" == DETECTED*p=0.0500* ]] && ok "V1 3/3→0/3 DETECTED p=0.05" || bad "V1 3/3→0/3: rc=$rc $out"
 run --a 9/10 --b 1/10; [ $rc -eq 0 ] && [[ "$out" == *p=0.0005* ]] && ok "V1 9/10→1/10 DETECTED p=0.0005 (B>0)" || bad "V1 9/10→1/10: rc=$rc $out"
 run --a 8/10 --b 10/10 --control 0/10; [ $rc -eq 1 ] && ok "V1 B above A is not a drop → NOT-DETECTED" || bad "V1 reverse: rc=$rc $out"
@@ -54,5 +55,5 @@ if grep -q 'no loss — NOT-DETECTED' "$T/mut.py"; then
   else bad "V7 revert probe: v2rc=$v2rc rc=$rc out=$out"; fi
 else bad "V7 mutation did not apply (instrument error, not a pass)"; fi
 
-[ $pass -eq 20 ] || bad "lane count $pass != 20 — a case did not run"
+[ $pass -eq 21 ] || bad "lane count $pass != 21 — a case did not run"
 echo "ablation_verdict lanes: $pass passed, $fail failed"; [ $fail -eq 0 ]
