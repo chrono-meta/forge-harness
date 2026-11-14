@@ -660,6 +660,21 @@ def _cells(line):
 
 
 CARRY_HEADING = "## 이전 결과서에서 이어받지 못한 판정"
+KEEP_HEADING = "## 이전 결과서에서 표 밖에 있던 줄"
+# Lines the generator itself writes above the table. Their counts change between runs, so they are matched by
+# prefix and regenerated, never preserved (a preserved stale «raw 12건» would pile up on every re-extract).
+GENERATED_PREFIXES = ("# 세션 요청 체크리스트", "채널 2/2 열음", chr(0x1F4CE) + " 원장 =", "🪝 훅 기록", "🟨 훅 기록",
+                      "🟥 JSONL 파싱 실패", "🟥 훅 기록", "↩️ 이전 결과서")
+
+
+def _is_table_scaffold(line):
+    """the header/separator rows the generator writes for the main and orphan tables (regenerated, not kept)."""
+    if line.strip() == "|---|---|---|---|---|---|---|":
+        return True                                    # the generated separator; _cells needs «| » so it misses it
+    c = _cells(line)
+    # NOT «set(c[0]) <= set("-")»: an orphan row's first cell is «-» and an empty cell is a subset of anything, so
+    # that test also swallowed every carried orphan judgement on the second re-extract (cross-family agy, 2026-11-15).
+    return bool(c) and (c[0] == "#" or (len(c[0]) >= 3 and set(c[0]) <= set("-:")))
 
 
 def carry_forward(lines_out, out_path):
@@ -670,12 +685,19 @@ def carry_forward(lines_out, out_path):
         return lines_out
     prev, orphans_prev = {}, []
     in_orphans = False
+    # 2026-11-14 (AQ-20261114-12): a re-extract kept only 7-cell table rows, so 13 hand-written lines of a filled
+    # result sheet (notes, a summary section, a differently shaped table) vanished. Every old line the table logic
+    # does not consume is now kept, in order, under KEEP_HEADING — idempotent, because that heading and the
+    # generator's own lines are skipped on the next read and the kept lines are kept again, once.
+    kept = []
     for l in old:
         if l.startswith(CARRY_HEADING):
             in_orphans = True; continue
-        c = _cells(l)
-        if not c or c[0] in ("#", "---") or set(c[0]) <= set("-"):
+        if l.startswith(KEEP_HEADING) or l.startswith(GENERATED_PREFIXES) or _is_table_scaffold(l):
             continue
+        c = _cells(l)
+        if not c:
+            kept.append(l); continue                   # not a 7-cell row: the table logic below would drop it
         if not any(c[3:]):
             continue                                   # an empty row has nothing to carry
         if in_orphans:
@@ -691,8 +713,16 @@ def carry_forward(lines_out, out_path):
         out.append(l)
     orphans = ["| %s | %s | %s | %s | %s | %s | %s |" % ((("-",) + k + tuple(v))) for k, vs in prev.items() for v in vs]
     orphans += orphans_prev
-    if used or orphans:
-        out.insert(4, "↩️ 이전 결과서에서 판정 %d줄 이어받음 · 못 맞춘 판정 %d줄은 맨 아래 «이전 결과서에서 이어받지 못한 판정»에 보존" % (used, len(orphans)))
+    while kept and not kept[0].strip():
+        kept.pop(0)
+    while kept and not kept[-1].strip():
+        kept.pop()
+    n_kept = sum(1 for l in kept if l.strip())
+    if used or orphans or n_kept:
+        out.insert(4, "↩️ 이전 결과서에서 판정 %d줄 이어받음 · 못 맞춘 판정 %d줄은 맨 아래 «이전 결과서에서 이어받지 못한 판정»에 보존"
+                   " · 표 밖 줄 %d줄은 «이전 결과서에서 표 밖에 있던 줄»에 보존" % (used, len(orphans), n_kept))
+    if n_kept:
+        out += ["", KEEP_HEADING, ""] + kept
     if orphans:
         out += ["", CARRY_HEADING, "", "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 남은 것 | 제안(이번 세션 vs 이월) |",
                 "|---|---|---|---|---|---|---|"] + orphans

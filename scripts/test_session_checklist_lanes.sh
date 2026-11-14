@@ -996,6 +996,52 @@ else
   fail "L54 rc=$RC rows=$L54_ROWS (want 1, no H) (see $TMPDIR_ROOT/l54.out)"
 fi
 
+# L55 — re-extract keeps every line the table logic does not consume (AQ-20261114-12: a 2026-11-14 re-extract
+# dropped 13 hand-written lines of a filled result sheet). Known pair: hand-written notes, a heading and a 3-column
+# table come back once under the keep heading, in order; the generator's own header lines (counts change per run)
+# are NOT kept (a stale «raw 99건» must not survive). An orphan judgement must survive a SECOND re-extract (main lost it:
+# the scaffold test «set(c[0]) <= set("-")» matched the orphan's «-» cell). Idempotent: third run == second, byte for byte.
+build_jsonl "$TMPDIR_ROOT/l55.jsonl" "[{'type':'user','timestamp':'2026-11-14T01:00:00.000Z','message':{'role':'user','content':'Please move the session bar a little higher than it is now.'}}]"
+L55="$TMPDIR_ROOT/l55.md"
+run "$TMPDIR_ROOT/l55a.out" extract --transcript "$TMPDIR_ROOT/l55.jsonl" --out "$L55"
+L55_PLAIN=$(grep -c '표 밖에 있던 줄' "$L55")                          # control: a fresh sheet has nothing to keep
+python3 - "$L55" <<'PYEOF2'
+import sys
+p = sys.argv[1]; L = open(p, encoding="utf-8").read().split("\n")
+for i, l in enumerate(L):
+    if l.startswith("| 1 |"):
+        L[i] = l.replace("|  |  |  |  |", "| ✅DONE | abc1234 (#99) | - | - |")
+    if l.startswith("채널 2/2 열음"):
+        L[i] = l.replace("raw 1건", "raw 99건")                  # a stale count: must be regenerated, never kept
+L.append("| 7 | 10-17 09:00 | an utterance no longer in the transcript | 🟡PARTIAL | - | half done | 이월: finish |")
+L += ["", "## 마감 메모", "", "- note one: bar moved, badge left for tomorrow", "", "| 항목 | 값 | 비고 |", "|---|---|---|", "| 남은 PR | 2 | #10 · #11 |", "", "- note two after the table"]
+open(p, "w", encoding="utf-8").write("\n".join(L))
+PYEOF2
+run "$TMPDIR_ROOT/l55b.out" extract --transcript "$TMPDIR_ROOT/l55.jsonl" --out "$L55"
+L55B_RC=$RC; cp "$L55" "$TMPDIR_ROOT/l55_second.md"
+run "$TMPDIR_ROOT/l55c.out" extract --transcript "$TMPDIR_ROOT/l55.jsonl" --out "$L55"
+L55_KEPT_ORDER=$(python3 - "$L55" <<'PYEOF2'
+import sys
+L = open(sys.argv[1], encoding="utf-8").read().split("\n")
+want = ["## 마감 메모", "- note one: bar moved, badge left for tomorrow", "| 항목 | 값 | 비고 |", "|---|---|---|", "| 남은 PR | 2 | #10 · #11 |", "- note two after the table"]
+k = L.index("## 이전 결과서에서 표 밖에 있던 줄") if "## 이전 결과서에서 표 밖에 있던 줄" in L else -1
+got = [l for l in L[k + 1:] if l.strip()][:len(want)] if k >= 0 else []
+print(int(got == want and all(L.count(w) == 1 for w in want)))
+PYEOF2
+)
+if [ "$L55_PLAIN" = 0 ] && [ "$L55B_RC" -eq 0 ] && [ "$L55_KEPT_ORDER" = 1 ] \
+   && grep -q '^| 1 | .*session bar.* | ✅DONE | abc1234 (#99) | - | - |$' "$L55" \
+   && grep -q '표 밖 줄 6줄은' "$L55" \
+   && [ "$(grep -c '^# 세션 요청 체크리스트' "$L55")" -eq 1 ] && [ "$(grep -c '^채널 2/2 열음' "$L55")" -eq 1 ] \
+   && [ "$(grep -c '^## 이전 결과서에서 표 밖에 있던 줄' "$L55")" -eq 1 ] \
+   && ! grep -q 'raw 99건' "$L55" \
+   && [ "$(grep -c 'an utterance no longer in the transcript | 🟡PARTIAL' "$L55")" -eq 1 ] \
+   && cmp -s "$L55" "$TMPDIR_ROOT/l55_second.md"; then
+  pass "L55 re-extract keeps hand-written lines (notes · heading · 3-column table) once, in order, under the keep heading; a stale generator count is not kept; an orphan judgement survives the third run; third run is byte-identical to the second"
+else
+  fail "L55 plain=$L55_PLAIN rc=$L55B_RC order=$L55_KEPT_ORDER (see $L55 vs $TMPDIR_ROOT/l55_second.md)"
+fi
+
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
