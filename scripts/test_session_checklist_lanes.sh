@@ -996,6 +996,178 @@ else
   fail "L54 rc=$RC rows=$L54_ROWS (want 1, no H) (see $TMPDIR_ROOT/l54.out)"
 fi
 
+# L55 — re-extract keeps every line the table parser does not consume (2026-11-14 harvest H3: a result-sheet section
+# written below the table — 13 lines — vanished on `extract --out`). Known pair + decoys:
+#   preface above the table · a result section below it · a decoy that LOOKS 7-column but is not a row (no «| » lead) ·
+#   an 8-cell line · a real 7-cell row with a judgment (must stay an orphan row, NOT be copied into the kept block too).
+# Then a second re-extract over that output must be byte-identical (idempotent).
+build_jsonl "$TMPDIR_ROOT/l55.jsonl" "[{'type':'user','timestamp':'2026-10-18T01:00:00.000Z','message':{'role':'user','content':'Please move the session bar a little higher than it is now.'}}]"
+L55="$TMPDIR_ROOT/l55.md"
+run "$TMPDIR_ROOT/l55a.out" extract --transcript "$TMPDIR_ROOT/l55.jsonl" --out "$L55"
+L55A_RC=$RC
+python3 - "$L55" <<'PYEOF'
+import sys
+p = sys.argv[1]; L = open(p, encoding="utf-8").read().rstrip("\n").split("\n")
+i = next(k for k, l in enumerate(L) if l.startswith("| # |"))
+L[i:i] = ["PREFACE-LINE operator note above the table", ""]
+L += ["", "## 8차 결과 시트", "", "RESULT-LINE-1 merged #1095 after CI green", "",
+      "|decoy|b|c|d|e|f|g|", "| e1 | e2 | e3 | e4 | e5 | e6 | e7 | e8 |",
+      "RESULT-LINE-2 still open: P22-B", "| 9 | 10-17 08:00 | gone utterance | ✅DONE | x | - | - |"]
+open(p, "w", encoding="utf-8").write("\n".join(L) + "\n")
+PYEOF
+run "$TMPDIR_ROOT/l55b.out" extract --transcript "$TMPDIR_ROOT/l55.jsonl" --out "$L55"
+L55B_RC=$RC; cp "$L55" "$TMPDIR_ROOT/l55_after1.md"
+run "$TMPDIR_ROOT/l55c.out" extract --transcript "$TMPDIR_ROOT/l55.jsonl" --out "$L55"
+L55C_RC=$RC
+L55_KEPT=$(awk '/^## 이전 결과서의 표 밖 내용/{f=1;next} f' "$L55")
+L55_ORDER=$(printf '%s\n' "$L55_KEPT" | grep -nE '^(PREFACE-LINE|## 8차|RESULT-LINE-1|\|decoy|\| e1 |RESULT-LINE-2)' | cut -d: -f2- | awk '{print $1}' | tr '\n' ',')
+if [ "$L55A_RC" -eq 0 ] && [ "$L55B_RC" -eq 0 ] && [ "$L55C_RC" -eq 0 ] \
+   && [ "$L55_ORDER" = "PREFACE-LINE,##,RESULT-LINE-1,|decoy|b|c|d|e|f|g|,|,RESULT-LINE-2," ] \
+   && [ "$(grep -c 'gone utterance' "$L55")" -eq 1 ] \
+   && awk '/^## 이전 결과서에서 이어받지 못한 판정/{f=1} f && /gone utterance/{ok=1} /^## 이전 결과서의 표 밖 내용/{f=0} END{exit !ok}' "$L55" \
+   && [ "$(grep -c 'PREFACE-LINE' "$L55")" -eq 1 ] && [ "$(grep -c '^|decoy|' "$L55")" -eq 1 ] \
+   && ! printf '%s\n' "$L55_KEPT" | grep -qE '^(📎|↩️|채널 2/2|\|---)' \
+   && grep -q '표 밖 줄 6줄은 맨 아래' "$L55" \
+   && cmp -s "$L55" "$TMPDIR_ROOT/l55_after1.md"; then
+  pass "L55 re-extract keeps non-table lines (preface · result section · 7-col-looking decoy · 8-cell line) in order, once; a real row stays an orphan row; a second re-extract is byte-identical"
+else
+  fail "L55 rc=$L55A_RC/$L55B_RC/$L55C_RC order=$L55_ORDER (see $L55 · $TMPDIR_ROOT/l55_after1.md)"
+fi
+
+# L56 — what an independent review reproduced against L55's first version (2026-11-15), each a known-positive:
+#   a note starting with a generated prefix · a note appended to a generated status line · a hand-added row with empty
+#   judgment cells · a fenced block holding a 7-cell line, a separator and two blank lines · a person's own 3-column table.
+# Known-negative (the control that keeps the regexes honest): the transcript grows between runs, so «채널 2/2 …» and
+# «📎 원장 … (N lines)» change counts — their stale copies must NOT pile up in the kept block. Then a further run is identical.
+build_jsonl "$TMPDIR_ROOT/l56.jsonl" "[{'type':'user','timestamp':'2026-10-18T01:00:00.000Z','message':{'role':'user','content':'Please move the session bar a little higher than it is now.'}}]"
+L56="$TMPDIR_ROOT/l56.md"
+run "$TMPDIR_ROOT/l56a.out" extract --transcript "$TMPDIR_ROOT/l56.jsonl" --out "$L56"
+L56A_RC=$RC
+python3 - "$L56" <<'PYEOF'
+import sys
+p = sys.argv[1]; L = open(p, encoding="utf-8").read().rstrip("\n").split("\n")
+i = next(k for k, l in enumerate(L) if l.startswith("채널 2/2"))
+L.insert(i + 1, L[i] + " · NOTE-APPENDED by the operator")   # keep the pure status line too: its stale copy is the control
+L += ["", "🟥 훅 기록 NOTE-PREFIX the operator's red note",
+      "| hand | 10-17 07:00 | NOTE-HANDROW a request added by hand |  |  |  |  |",
+      "", "```", "| a | b | c | d | e | f | g |", "", "", "code after two blanks", "|---|---|", "```",
+      "", "| k | v | w |", "|---|---|---|", "| 1 | 2 | 3 |"]
+open(p, "w", encoding="utf-8").write("\n".join(L) + "\n")
+PYEOF
+cp "$L56" "$TMPDIR_ROOT/l56_edited.md"
+build_jsonl "$TMPDIR_ROOT/l56.jsonl" "[{'type':'user','timestamp':'2026-10-18T01:00:00.000Z','message':{'role':'user','content':'Please move the session bar a little higher than it is now.'}},{'type':'user','timestamp':'2026-10-18T01:09:00.000Z','message':{'role':'user','content':'Also make the badge smaller please.'}}]"
+run "$TMPDIR_ROOT/l56b.out" extract --transcript "$TMPDIR_ROOT/l56.jsonl" --out "$L56"
+L56B_RC=$RC; cp "$L56" "$TMPDIR_ROOT/l56_after1.md"
+run "$TMPDIR_ROOT/l56c.out" extract --transcript "$TMPDIR_ROOT/l56.jsonl" --out "$L56"
+L56C_RC=$RC
+L56_KEPT=$(awk '/^## 이전 결과서의 표 밖 내용/{f=1;next} f' "$L56")
+L56_FENCE=$(printf '%s\n' "$L56_KEPT" | awk '/^```/{n++; print; next} n==1{print}' | tr '\n' '~')
+if [ "$L56A_RC" -eq 0 ] && [ "$L56B_RC" -eq 0 ] && [ "$L56C_RC" -eq 0 ] \
+   && printf '%s\n' "$L56_KEPT" | grep -q 'NOTE-APPENDED by the operator' \
+   && printf '%s\n' "$L56_KEPT" | grep -qF "🟥 훅 기록 NOTE-PREFIX the operator's red note" \
+   && printf '%s\n' "$L56_KEPT" | grep -qF '| hand | 10-17 07:00 | NOTE-HANDROW a request added by hand |  |  |  |  |' \
+   && [ "$L56_FENCE" = '```~| a | b | c | d | e | f | g |~~~code after two blanks~|---|---|~```~' ] \
+   && printf '%s\n' "$L56_KEPT" | grep -qxF '|---|---|---|' \
+   && ! grep -q '^| - | b | c |' "$L56" \
+   && [ "$(printf '%s\n' "$L56_KEPT" | grep -c '^채널 2/2 열음 — raw [0-9]*건 · 압축 요약 [0-9]*건([^)]*)$')" -eq 0 ] \
+   && [ "$(printf '%s\n' "$L56_KEPT" | grep -c '원장 = .* lines)$')" -eq 0 ] \
+   && grep -q '^채널 2/2 열음 — raw 2건' "$L56" \
+   && cmp -s "$L56" "$TMPDIR_ROOT/l56_after1.md"; then
+  pass "L56 kept: prefix-looking note · note on a status line · hand row with empty judgments · fenced code verbatim · own 3-col table; stale status lines do not pile up when counts change; next run identical"
+else
+  fail "L56 rc=$L56A_RC/$L56B_RC/$L56C_RC fence=$L56_FENCE (see $L56 · $TMPDIR_ROOT/l56_edited.md)"
+fi
+
+# L57 — the second independent review (2026-11-15) against L56's version, each reproduced there:
+#   (a) a hook-only H row from a run WITH the hook file must not be kept when the next run has no hook file
+#   (b) skeleton rows of a longer transcript must not be kept when the sheet is re-extracted from a shorter one
+#   (c) an UNCLOSED fence above the table must not swallow it: row 1's judgment is still carried into the live table
+#   (d) a 4-backtick fence holding «```» and a filled 7-cell row is kept verbatim, not split or orphaned
+#   (e) a person's own 7-column table keeps its separator line
+python3 - "$TMPDIR_ROOT" <<'PYEOF'
+import json, sys, datetime
+d = sys.argv[1]
+def loc(z):
+    t = datetime.datetime.strptime(z, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc).astimezone()
+    return t.strftime("%Y-%m-%dT%H:%M:%S")
+def tr(path, texts):
+    with open(path, "w", encoding="utf-8") as f:
+        for k, t in enumerate(texts):
+            f.write(json.dumps({"type": "user", "timestamp": "2026-10-18T01:0%d:00Z" % k, "message": {"role": "user", "content": t}}) + "\n")
+tr(d + "/l57_long.jsonl", ["first request about the session bar", "second request about the badge", "third request about the footer"])
+tr(d + "/l57_short.jsonl", ["first request about the session bar"])
+with open(d + "/l57_hook.jsonl", "w", encoding="utf-8") as f:
+    f.write(json.dumps({"ts": loc("2026-10-18T01:00:00Z"), "n": 1, "text": "first request about the session bar"}) + "\n")
+    f.write(json.dumps({"ts": loc("2026-10-18T05:00:00Z"), "n": 2, "text": "HOOKONLY request typed while a tool ran"}) + "\n")
+PYEOF
+L57="$TMPDIR_ROOT/l57.md"
+run "$TMPDIR_ROOT/l57a.out" extract --transcript "$TMPDIR_ROOT/l57_long.jsonl" --utterances "$TMPDIR_ROOT/l57_hook.jsonl" --out "$L57"
+L57_RCS="$RC"
+L57_HROW=$(grep -c '^| H1 | .*HOOKONLY' "$L57")               # control: the H row really existed in run 1
+python3 - "$L57" <<'PYEOF'
+import sys
+p = sys.argv[1]; L = open(p, encoding="utf-8").read().rstrip("\n").split("\n")
+L.insert(1, "```python"); L.insert(2, "x = 1   # FENCE-UNCLOSED the operator never closed this")
+for k, l in enumerate(L):
+    if l.startswith("| 1 |"):
+        L[k] = l.replace("|  |  |  |  |", "| ✅DONE | L57-EVID | - | - |")
+L += ["", "````", "```", "| 9 | 10-18 01:09 | FENCE4 in fence | x | y | z | w |", "```", "````",
+      "", "OWN-TABLE:", "| a | b | c | d | e | f | g |", "|---|---|---|---|---|---|---|", "| 1x | p | q |  |  |  |  |"]
+open(p, "w", encoding="utf-8").write("\n".join(L) + "\n")
+PYEOF
+run "$TMPDIR_ROOT/l57b.out" extract --transcript "$TMPDIR_ROOT/l57_short.jsonl" --out "$L57"
+L57_RCS="$L57_RCS/$RC"; cp "$L57" "$TMPDIR_ROOT/l57_after1.md"
+run "$TMPDIR_ROOT/l57c.out" extract --transcript "$TMPDIR_ROOT/l57_short.jsonl" --out "$L57"
+L57_RCS="$L57_RCS/$RC"
+L57_KEPT=$(awk '/^## 이전 결과서의 표 밖 내용/{f=1;next} f' "$L57")
+L57_LIVE=$(awk '/^## /{exit} {print}' "$L57")
+L57_F4=$(printf '%s\n' "$L57_KEPT" | awk '/^````$/{n++; print; next} n==1{print}' | tr '\n' '~')
+if [ "$L57_RCS" = "0/0/0" ] && [ "$L57_HROW" -eq 1 ] \
+   && ! grep -q 'HOOKONLY' "$L57" \
+   && ! grep -qE '^\| [0-9]+ \| [^|]* \| (second|third) request' "$L57" \
+   && printf '%s\n' "$L57_LIVE" | grep -qE '^\| 1 \| .*first request.* \| ✅DONE \| L57-EVID \| - \| - \|$' \
+   && printf '%s\n' "$L57_KEPT" | grep -qF 'FENCE-UNCLOSED' \
+   && [ "$L57_F4" = '````~```~| 9 | 10-18 01:09 | FENCE4 in fence | x | y | z | w |~```~````~' ] \
+   && ! grep -q '^| - | 10-18 01:09 | FENCE4' "$L57" \
+   && printf '%s\n' "$L57_KEPT" | awk '/^OWN-TABLE:/{f=1} f' | grep -qxF '|---|---|---|---|---|---|---|' \
+   && printf '%s\n' "$L57_KEPT" | grep -qF '| 1x | p | q |  |  |  |  |' \
+   && cmp -s "$L57" "$TMPDIR_ROOT/l57_after1.md"; then
+  pass "L57 no stale H/skeleton rows kept · unclosed fence leaves the table live (judgment carried) · 4-tick fence verbatim · own 7-col separator kept · next run identical"
+else
+  fail "L57 rc=$L57_RCS hrow=$L57_HROW f4=$L57_F4 (see $L57 · $TMPDIR_ROOT/l57_after1.md)"
+fi
+
+# L58 — the third (last) review round (2026-11-15): rows BOTH passes skipped vanished, and a BOM hid the title.
+#   kept verbatim: a spaced «| --- | … |» separator · an aligned «| :--- | … |» separator · a person's «| # | 항목 | … |» header
+#   (all three were skipped by carry_forward AND assumed «carried» by the keep pass) · and a BOM-prefixed sheet must not
+#   leave a stale title in the kept block.
+build_jsonl "$TMPDIR_ROOT/l58.jsonl" "[{'type':'user','timestamp':'2026-10-18T01:00:00.000Z','message':{'role':'user','content':'Please move the session bar a little higher than it is now.'}}]"
+L58="$TMPDIR_ROOT/l58.md"
+run "$TMPDIR_ROOT/l58a.out" extract --transcript "$TMPDIR_ROOT/l58.jsonl" --out "$L58"
+L58_RCS="$RC"
+python3 - "$L58" <<'PYEOF'
+import sys
+p = sys.argv[1]; L = open(p, encoding="utf-8").read().rstrip("\n").split("\n")
+L += ["", "MY-TABLE:", "| # | 항목 | 담당 | 상태 | 증거 | 비고 | 기한 |", "| --- | --- | --- | --- | --- | --- | --- |",
+      "| m1 | x | y |  |  |  |  |", "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |"]
+open(p, "w", encoding="utf-8").write("\ufeff" + "\n".join(L) + "\n")
+PYEOF
+run "$TMPDIR_ROOT/l58b.out" extract --transcript "$TMPDIR_ROOT/l58.jsonl" --out "$L58"
+L58_RCS="$L58_RCS/$RC"; cp "$L58" "$TMPDIR_ROOT/l58_after1.md"
+run "$TMPDIR_ROOT/l58c.out" extract --transcript "$TMPDIR_ROOT/l58.jsonl" --out "$L58"
+L58_RCS="$L58_RCS/$RC"
+L58_KEPT=$(awk '/^## 이전 결과서의 표 밖 내용/{f=1;next} f' "$L58")
+L58_MINE=$(printf '%s\n' "$L58_KEPT" | awk '/^MY-TABLE:/{f=1;next} f' | tr '\n' '~')
+if [ "$L58_RCS" = "0/0/0" ] \
+   && [ "$L58_MINE" = '| # | 항목 | 담당 | 상태 | 증거 | 비고 | 기한 |~| --- | --- | --- | --- | --- | --- | --- |~| m1 | x | y |  |  |  |  |~| :--- | :--- | :--- | :--- | :--- | :--- | :--- |~' ] \
+   && ! grep -q '^| - | :---' "$L58" \
+   && ! printf '%s\n' "$L58_KEPT" | grep -q '세션 요청 체크리스트 (스켈레톤)' \
+   && cmp -s "$L58" "$TMPDIR_ROOT/l58_after1.md"; then
+  pass "L58 a person's «| # |» header, spaced and aligned separators kept verbatim in order · BOM sheet leaves no stale title · next run identical"
+else
+  fail "L58 rc=$L58_RCS mine=$L58_MINE (see $L58)"
+fi
+
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
