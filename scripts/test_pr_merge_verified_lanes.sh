@@ -31,6 +31,10 @@ setup() {
     mkdir -p "$d/seed/plugins/p/skills/s"; printf 'Plain text one.\n' > "$d/seed/plugins/p/skills/s/SKILL.md"; git -C "$d/seed" add plugins
     git -C "$d/seed" commit -qm skill --no-verify; git -C "$d/seed" push -q origin HEAD:main
     git -C "$d/seed" switch -qc feat; printf 'Plain text two.\n' > "$d/seed/plugins/p/skills/s/SKILL.md"
+  elif [ -n "${SETUP_LANE:-}" ]; then   # SETUP_LANE=1: the PR changes only a lane file (scripts/test_*)
+    mkdir -p "$d/seed/scripts"; printf 'echo l1\n' > "$d/seed/scripts/test_x_lanes.sh"; git -C "$d/seed" add scripts
+    git -C "$d/seed" commit -qm lane --no-verify; git -C "$d/seed" push -q origin HEAD:main
+    git -C "$d/seed" switch -qc feat; printf 'echo l2\n' > "$d/seed/scripts/test_x_lanes.sh"
   elif [ -n "${SETUP_DOCS:-}" ]; then
     mkdir -p "$d/seed/docs"; printf 'x1\n' > "$d/seed/docs/x.md"; git -C "$d/seed" add docs/x.md
     git -C "$d/seed" commit -qm docs --no-verify; git -C "$d/seed" push -q origin HEAD:main
@@ -247,6 +251,25 @@ SETUP_EXTRA=1 setup cvg; mkgh "$T/cvg"; run "$T/cvg" 7 --rerun 'git --version &&
 SETUP_EXTRA=1 setup cvd; mkgh "$T/cvd"; run "$T/cvd" 7 --rerun 'git --version && ls d'
 { [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q 'mentions none of this PR'; } \
   && ok "L25b --rerun naming a tracked dir → advisory still fires (blobs only)" || bad "L25b rc=$RC (dir listing counted as coverage?)"
+
+# ── defect-path prompt (1c — print only, 2026-11-14 harvest H2) ──
+DP='name the path the defect travels'
+# D1 a code-changing PR (a, b) → the one-line prompt prints, rc and merge unchanged (L24's run, covering --rerun)
+setup dp1; mkgh "$T/dp1"; run "$T/dp1" 7 --rerun "$GOOD"
+{ [ "$RC" -eq 0 ] && merged "$T/dp1" && [ "$(printf '%s\n' "$OUT" | grep -cF "$DP")" -eq 1 ]; } \
+  && ok "D1 code-changing PR → exactly one defect-path line, merge + verify unchanged (rc=0)" || { bad "D1 rc=$RC"; printf '%s\n' "$OUT" | tail -4; }
+# D2 docs-only PR → quiet (the condition is narrowed so doc PRs carry no noise)
+SETUP_DOCS=1 setup dp2; mkgh "$T/dp2"; run "$T/dp2" 7 --rerun "$GOODX"
+{ [ "$RC" -eq 0 ] && merged "$T/dp2" && ! printf '%s' "$OUT" | grep -qF "$DP"; } \
+  && ok "D2 docs-only PR → no defect-path line" || bad "D2 rc=$RC (prompt fired on a docs-only PR?)"
+# D3 lane-only PR → quiet
+SETUP_LANE=1 setup dp3; mkgh "$T/dp3"; run "$T/dp3" 7 --rerun 'grep -q l2 scripts/test_x_lanes.sh && echo instrument-ok'
+{ [ "$RC" -eq 0 ] && merged "$T/dp3" && ! printf '%s' "$OUT" | grep -qF "$DP"; } \
+  && ok "D3 lane-only PR (scripts/test_*) → no defect-path line" || { bad "D3 rc=$RC (prompt fired on a lane-only PR?)"; printf '%s\n' "$OUT" | tail -3; }
+# D4 it is printed BEFORE the merge: a run whose merge is refused still shows it (and still exits 5, nothing verified)
+setup dp4; mkgh "$T/dp4"; : > "$T/dp4/merge_fail"; run "$T/dp4" 7 --rerun "$GOOD"
+{ [ "$RC" -eq 5 ] && printf '%s' "$OUT" | grep -qF "$DP"; } \
+  && ok "D4 merge refused → line was already printed (pre-merge), rc unchanged (5)" || { bad "D4 rc=$RC"; printf '%s\n' "$OUT" | tail -3; }
 
 # ── completion record (tracks/_meta/fh_completed_<date>.md) ──
 # cl_setup <name> : a work clone that HAS a tracks/ dir (a consumer without one is skipped silently — L30)
