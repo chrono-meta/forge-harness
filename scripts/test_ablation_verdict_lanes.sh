@@ -33,7 +33,7 @@ run --a 3/3 --b 3/3 --control 3/3; [ $rc -eq 3 ] && ok "V4 dead control → INST
 for a in "--alpha oops --json" "" "--a 3/3" "--a 1/1 --b 0/1" "--a x --b 1/3" "--a 3/3 --b 2/4 --control 0/3" "--a 4/3 --b 0/3"; do
   set -f; set -- $a; set +f; out=$(python3 "$V" "$@" 2>&1); rc=$?
   [[ "$a" == *--json* ]] && out=$(printf '%s' "$out" | python3 -c 'import json,sys; print(json.load(sys.stdin)["line"])' 2>&1)
-  [ $rc -eq 2 ] && [[ "$out" == INPUT-ERROR* ]] && ok "V5 «$a» → INPUT-ERROR" || bad "V5 «$a»: rc=$rc $out"
+  [ $rc -eq 2 ] && [[ "$out" == INPUT-ERROR* ]] && ok "V5 «${a}» → INPUT-ERROR" || bad "V5 «${a}»: rc=$rc $out"
 done
 
 S=$(python3 -c "import sys; sys.path.insert(0,'$HERE'); import selfdev_queue as q; print(q.ABLATION_STEPS)")
