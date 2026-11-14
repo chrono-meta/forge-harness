@@ -56,6 +56,11 @@
 #            tried before this question set and why each earlier one was discarded — same field the
 #            checklist made mandatory, same reason (arXiv:2606.11217): without it, a reader cannot
 #            tell "this framing" from "the framing that happened to pass";
+#            🟥 2026-11-15 (FH-2): reps you LOOKED AT to choose or change anything (pilots,
+#            «does this question discriminate?» checks, a batch after which the question or
+#            scorer changed) never count toward the verdict's N — the verdict batch is fresh
+#            reps nobody chose on. Counting the run that chose the question counts the choice
+#            twice (measurement-integrity-checklist.md §Measured-Loop, the 3-sample table);
 #        (b) arm A's answer must be GREP-VERIFIABLE in the cut text -- right because of the section,
 #            not right by luck;
 #        (c) arm B's wrong answer must be CONSEQUENTIAL -- name the behavior it changes. "Wrong but

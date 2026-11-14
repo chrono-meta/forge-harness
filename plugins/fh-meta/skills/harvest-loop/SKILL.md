@@ -187,7 +187,7 @@ FAIL routing: First FAIL → 1 re-synthesis allowed. FAIL after re-synthesis →
 
 **6-a Skill Usage Leaderboard**: Record skills called this session in `tracks/_meta/skill_usage.md`. Flag 4+ weeks no-call → deprecation candidate.
 
-**6-b Harness Evolution Cadence** (4-week cycle): Scan skills with `complexity_routing`. Aggregate escalation records from `fh_signal_*.md`. Valid conditions = keep; never activated in 4 weeks = removal candidate; pattern in fh_signal = addition candidate. No auto-modification — output candidates then require user approval.
+**6-b Harness Evolution Cadence** (4-week cycle): Scan skills with `complexity_routing`. Aggregate escalation records from `fh_signal_*.md`. Valid conditions = keep; never activated in 4 weeks = removal candidate; pattern in fh_signal = addition candidate. No auto-modification — output candidates then require user approval. An approved addition is **provisional**: the `fh_signal` pattern that nominated it is selection evidence, so its edit-manifest entry is decided only by later events (edit-manifest §Fresh-sample guard).
 
 > **Detail**: See `SKILL_detail.md §Step6-Detail` — bash scripts for STALE detection, memory scan, skill usage leaderboard, evolution cadence aggregation — read when executing Step 6.
 
