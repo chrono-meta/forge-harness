@@ -116,8 +116,9 @@ user runs them (a real session or `claude -p`, nothing installed, no hint in the
 exists). If the bare model is at the **ceiling** there, record the negative result and do not build.
 
 - **Ceiling** = at the cheapest tier the module claims to help (and at Sonnet when that is a different tier),
-  ≥ 3 runs on each of ≥ 3 target tasks, and **0 misses** — or, when the module declares its own success threshold,
-  the bare model already meets it. Record it as a null at that size (e.g. «0/9 misses at Haiku — NOT-DETECTED@9»),
+  ≥ 3 runs on each of ≥ 3 target tasks, and **0 misses** — or, when the module declared its own success threshold
+  and task set **before** the run, the bare model meets that threshold under the same minimum runs and tiers (a
+  threshold chosen after seeing the results is not a ceiling). Record it as a null at that size (e.g. «0/9 misses at Haiku — NOT-DETECTED@9»),
   never as «the model does not need it»: 9 clean runs do not rule out a rarer failure.
 - **A proxy metric at ceiling does not stop a build.** A no-token proxy (§2c: subagents shown a listing, 9/9) did not
   reproduce the live failure; only the real path can say «already solved». The positive case looks like fh-cartridges
