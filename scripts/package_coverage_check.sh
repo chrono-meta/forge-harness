@@ -58,6 +58,10 @@ ACCEPTED_ABSENT=(
   # 2026-11-14 — the verdict renderer the loop's ABLATION_STEPS points at. Same loop, same scope.
   "scripts/ablation_verdict.py"
   "scripts/test_ablation_verdict_lanes.sh"
+  # 2026-11-15 — builder Context Card file-role check (FH-6). Hub pilot: whether consumers get it is a §7 ship
+  #    decision for the operator, and the dispatch doc that names it is hub-local practice today.
+  "scripts/builder_card_files_check.py"
+  "scripts/test_builder_card_files_lanes.sh"
   "docs/ABLATION_CYCLE.md"
   # 2026-11-07 — lease-record channel (AQ-20261107-11). It writes this hub's operator-local lease file; a consumer
   #    has no such file and no such convention, so shipping it would ship a tool with nothing to act on.
