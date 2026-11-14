@@ -108,6 +108,25 @@ migration wipe data?») called it **1/9, 0/9, 0/9** — answered directly, the l
   reproduce the live failure. The live effect is measured only by runs that install the module and do not hint it; the
   next such run is pre-registered (fh-cartridges `evidence/AB_PREREG_HAIKU_C7-C12.md`) and has no results yet.
 
+## 2d. Before building — measure the bare model on the real path
+
+Before building a module whose purpose is **accuracy** (it exists so the model gets an answer right that it would
+otherwise get wrong), measure the bare model on the **real path** first: the module's own target tasks, run the way a
+user runs them (a real session or `claude -p`, nothing installed, no hint in the prompt that a module or a check
+exists). If the bare model is at the **ceiling** there, record the negative result and do not build.
+
+- **Ceiling** = at the cheapest tier the module claims to help (and at Sonnet when that is a different tier),
+  ≥ 3 runs on each of ≥ 3 target tasks, and **0 misses** — or, when the module declared its own success threshold
+  and task set **before** the run, the bare model meets that threshold under the same minimum runs and tiers (a
+  threshold chosen after seeing the results is not a ceiling). Record it as a null at that size (e.g. «0/9 misses at Haiku — NOT-DETECTED@9»),
+  never as «the model does not need it»: 9 clean runs do not rule out a rarer failure.
+- **A proxy metric at ceiling does not stop a build.** A no-token proxy (§2c: subagents shown a listing, 9/9) did not
+  reproduce the live failure; only the real path can say «already solved». The positive case looks like fh-cartridges
+  #25: the bare arm gave a silent wrong answer 7/7/7 on frozen fixtures, the module 0/0/0 — that gap is why it was built.
+- **Out of scope**: modules whose value is not accuracy — determinism, a gate, an audit trail, a refusal at an
+  irreversible edge. A bare model that «usually gets it right» is not a substitute for those, so they are built without
+  this measurement.
+
 ## 3. Install-time check (`scripts/fh_module_check.py check`)
 
 Exit codes: **0 OK, 1 BLOCK, 2 UNMEASURED, 3 OK-but-UNCALIBRATED** (valid, no verdict entry points, `calibration: UNCALIBRATED`; callers must not treat 3 as a clean pass). Unreadable, empty, or non-mapping input is 2; PyYAML missing is 2; an internal error is 2. Nothing unreadable or unknown exits 0. Exit code 3 means different things in different FH scripts (in `governor_landing_check.py` it is LATE); read each script's own exit table, never assume 3 means the same thing.
