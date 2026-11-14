@@ -1137,6 +1137,37 @@ else
   fail "L57 rc=$L57_RCS hrow=$L57_HROW f4=$L57_F4 (see $L57 · $TMPDIR_ROOT/l57_after1.md)"
 fi
 
+# L58 — the third (last) review round (2026-11-15): rows BOTH passes skipped vanished, and a BOM hid the title.
+#   kept verbatim: a spaced «| --- | … |» separator · an aligned «| :--- | … |» separator · a person's «| # | 항목 | … |» header
+#   (all three were skipped by carry_forward AND assumed «carried» by the keep pass) · and a BOM-prefixed sheet must not
+#   leave a stale title in the kept block.
+build_jsonl "$TMPDIR_ROOT/l58.jsonl" "[{'type':'user','timestamp':'2026-10-18T01:00:00.000Z','message':{'role':'user','content':'Please move the session bar a little higher than it is now.'}}]"
+L58="$TMPDIR_ROOT/l58.md"
+run "$TMPDIR_ROOT/l58a.out" extract --transcript "$TMPDIR_ROOT/l58.jsonl" --out "$L58"
+L58_RCS="$RC"
+python3 - "$L58" <<'PYEOF'
+import sys
+p = sys.argv[1]; L = open(p, encoding="utf-8").read().rstrip("\n").split("\n")
+L += ["", "MY-TABLE:", "| # | 항목 | 담당 | 상태 | 증거 | 비고 | 기한 |", "| --- | --- | --- | --- | --- | --- | --- |",
+      "| m1 | x | y |  |  |  |  |", "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |"]
+open(p, "w", encoding="utf-8").write("\ufeff" + "\n".join(L) + "\n")
+PYEOF
+run "$TMPDIR_ROOT/l58b.out" extract --transcript "$TMPDIR_ROOT/l58.jsonl" --out "$L58"
+L58_RCS="$L58_RCS/$RC"; cp "$L58" "$TMPDIR_ROOT/l58_after1.md"
+run "$TMPDIR_ROOT/l58c.out" extract --transcript "$TMPDIR_ROOT/l58.jsonl" --out "$L58"
+L58_RCS="$L58_RCS/$RC"
+L58_KEPT=$(awk '/^## 이전 결과서의 표 밖 내용/{f=1;next} f' "$L58")
+L58_MINE=$(printf '%s\n' "$L58_KEPT" | awk '/^MY-TABLE:/{f=1;next} f' | tr '\n' '~')
+if [ "$L58_RCS" = "0/0/0" ] \
+   && [ "$L58_MINE" = '| # | 항목 | 담당 | 상태 | 증거 | 비고 | 기한 |~| --- | --- | --- | --- | --- | --- | --- |~| m1 | x | y |  |  |  |  |~| :--- | :--- | :--- | :--- | :--- | :--- | :--- |~' ] \
+   && ! grep -q '^| - | :---' "$L58" \
+   && ! printf '%s\n' "$L58_KEPT" | grep -q '세션 요청 체크리스트 (스켈레톤)' \
+   && cmp -s "$L58" "$TMPDIR_ROOT/l58_after1.md"; then
+  pass "L58 a person's «| # |» header, spaced and aligned separators kept verbatim in order · BOM sheet leaves no stale title · next run identical"
+else
+  fail "L58 rc=$L58_RCS mine=$L58_MINE (see $L58)"
+fi
+
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then

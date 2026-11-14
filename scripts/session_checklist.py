@@ -681,6 +681,15 @@ _GENERATED_HEADER = "| # | 시각 | 발화(요지) | 상태 | 증거 | 사유 / 
 _GENERATED_SEPARATOR = "|---|---|---|---|---|---|---|"
 
 
+def _carry_skip(c):
+    """rows carry_forward never reads as a checklist row: a header («#» · empty first cell) or a separator in any
+    markdown spelling. ONE definition for both passes — when carry_forward skipped a row and _unconsumed assumed
+    carry_forward had it, the row vanished (review R3: «| --- | … |», «| :--- | … |», a person's «| # | … |» header)."""
+    if c[0] in ("#", "") or all(re.fullmatch(r":?-+:?", x) for x in c):
+        return True
+    return c[0] != "-" and set(c[0]) <= set("-")      # «-» alone is an orphan row, not a separator
+
+
 def _is_generated(line):
     return line in (CARRY_HEADING, KEEP_HEADING) or any(r.match(line) for r in _GENERATED_LINE_RES)
 
@@ -731,12 +740,14 @@ def _unconsumed(old, lines_out):
             continue
         c = _cells(l)
         if c is not None:
-            # a row with a judgment is carried or orphaned by carry_forward; the header row is regenerated; an empty
-            # row with an id extract writes (7 · H2 · S1) is a skeleton row from some run — never the person's content,
-            # even when this run no longer writes it (review R2: hook channel gone, transcript swapped). Only an empty
-            # row the person labelled themselves is kept.
-            if c[0] == "#" or any(c[3:]) or _GENERATED_ROW_ID_RE.match(c[0]):
-                continue
+            # a row carry_forward reads (not _carry_skip, has a judgment) is carried or orphaned there; an empty row
+            # with an id extract writes (7 · H2 · S1) is a skeleton row from some run — never the person's content,
+            # even when this run no longer writes it (review R2). Everything else — a person's own header, separator
+            # or empty labelled row — is kept here (the generated header was already dropped as `regenerated`).
+            if not _carry_skip(c) and any(c[3:]):
+                continue                               # carry_forward carries or orphans it
+            if not _carry_skip(c) and _GENERATED_ROW_ID_RE.match(c[0]):
+                continue                               # an empty skeleton row from some run
         kept.append(l)
     while kept and kept[-1] == "":
         kept.pop()
@@ -746,9 +757,10 @@ def _unconsumed(old, lines_out):
 def carry_forward(lines_out, out_path):
     try:
         with open(out_path, "r", encoding="utf-8", errors="replace") as f:
-            old = f.read().split("\n")
+            text = f.read()
     except OSError:
         return lines_out
+    old = (text[1:] if text.startswith("\ufeff") else text).split("\n")   # a BOM (Notepad) broke every ^-anchored match
     prev, orphans_prev = {}, []
     in_orphans = False
     fenced = _fenced(old)
@@ -760,7 +772,7 @@ def carry_forward(lines_out, out_path):
         c = _cells(l)
         # «-» alone is how an orphan row is written (below) — not a separator. Reading it as one dropped every orphan
         # judgment on the SECOND re-extract (found 2026-11-15 by the idempotency lane L55; origin/main reproduces it).
-        if not c or c[0] in ("#", "---") or (c[0] != "-" and set(c[0]) <= set("-")):
+        if not c or _carry_skip(c):
             continue
         if not any(c[3:]):
             continue                                   # an empty row has nothing to carry
