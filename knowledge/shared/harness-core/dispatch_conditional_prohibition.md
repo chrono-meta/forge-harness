@@ -347,6 +347,13 @@ How to apply:
 - Name the purpose(s) in the Context Card's first line («purpose: independence — …»).
 - Do not cite the article as grounds to fold a reviewer, a blind sim or a cross-family check. Its fold
   advice compares task quality, cost and latency; its own text keeps verification as a split candidate.
+- **Before sending a builder's Context Card or a root→work-session brief, a context-free reader restates it
+  (2026-11-15, AQ-20261114-9).** Use `meta-prompt-builder` Step 3 item 4 as written. Give a fresh reader (Sonnet
+  or Haiku, or another family) the card text and nothing else. The reader restates GOAL · DONE · CONSTRAINTS,
+  marks each `RESTATABLE` or `GUESS`, and lists its questions. A `GUESS` field is fixed before sending.
+  Restating your own card does not count, and if no reader can be dispatched it is `NOT RUN`. This matters
+  most here because most real briefs are written here, not through `meta-prompt-builder`. It is judgment,
+  not a hook. Skip it for a read-only fetch whose card is one line.
 - Tool-count side note from the same article: «once you exceed 30-50 tool definitions in the system
   prompt, tool choice tends to degrade», with grouping by user intent as the remedy. The quantity is tool
   definitions **loaded into the prompt** (deferred tools not yet loaded do not count) — not installed skills
