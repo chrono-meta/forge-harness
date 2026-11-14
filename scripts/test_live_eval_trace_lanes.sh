@@ -11,6 +11,7 @@
 #   TR6 arms with different tool/MCP lists (82 vs 24) → INVALID-COMPARISON, overall has no pass_rate
 #   TR7 a malformed behave: spec → UNCALIBRATED with BAD-BEHAVE, never a silent text-only pass
 #   TR8 the runner refuses --trace with --turns (rc 2), never ignores it
+#   TR13 ablation_calibrate.sh (direct claude -p measurement path) pins MCP in every arm
 #   TR9 revert probe: a scorer without the «said, not done → FAIL» line turns TR2 red
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -135,5 +136,10 @@ build "$T/half" P 3 "$RT||CATALOG has it|Read=CATALOG.md" "-||오늘 맑아|"
 hf=$(score "$T/half" P 'read=CATALOG\.md')
 [[ "$hf" == UNCALIBRATED* ]] && [[ "$hf" == *TRACE-INCOMPLETE* ]] && ok "TR12 a control arm with no trace while primary has one → UNCALIBRATED, not text-only PASS" || bad "TR12 [$hf]"
 
-[ $pass -eq 13 ] || bad "lane count $pass != 13 — a case did not run"
+# TR13 the direct `claude -p` measurement path (not via sim_isolated_run) pins MCP in all three arms.
+# Static check of the argv only — a pin is not proof; the recorded tool list (TR6/TR11) is the defence.
+npin=$(grep -cE '^  (allowlist|denylist|baseline)\) +FLAGS=\(.*--strict-mcp-config' "$HERE/ablation_calibrate.sh")
+[ "$npin" -eq 3 ] && ok "TR13 ablation_calibrate.sh pins MCP (--strict-mcp-config) in all 3 arms" || bad "TR13 pinned arms=$npin/3"
+
+[ $pass -eq 14 ] || bad "lane count $pass != 14 — a case did not run"
 echo "live_eval_trace lanes: $pass passed, $fail failed"; [ $fail -eq 0 ]
