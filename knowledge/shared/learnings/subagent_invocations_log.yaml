@@ -5495,3 +5495,9 @@
   outcome: "all four CONDITIONAL PASS — H1 premise half wrong (commit message is the stated surface, PR body optional) · H2 print before the merge, not after · H3 preserve rather than refuse, idempotent · H4 define ceiling and live path"
   evidence: "tracks/_meta/fh_signal_2026-11-14_fcdf9c61-close.md §FH Registration Candidate"
   tokens: "139606"
+- date: 2026-11-15
+  agent: "fh-meta:challenger (sonnet) — axis 2 for docs/USER_GUIDE.md §4 governor placement guide (purpose: independence)"
+  task: "check the new section against the governance canon table, every cited script/path/flag, the CLAUDE.local.md three-field rule, a CLI-only cold start, privacy"
+  outcome: "no canon distortion, script claims all correct; 2 A (CLI /context route and transcript path stated without source · work session never told the clone script path) · 2 B (duration heuristic read as rule · LATE/OK/2 outcomes missing) · 4 C — all fixed before commit"
+  evidence: "PR body capsule (claude/docs-governor-placement-guide)"
+  tokens: "132744"
