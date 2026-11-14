@@ -661,27 +661,69 @@ def _cells(line):
 
 CARRY_HEADING = "## 이전 결과서에서 이어받지 못한 판정"
 KEEP_HEADING = "## 이전 결과서의 표 밖 내용 (extract 가 다시 만들지 않는 줄 — 원래 순서)"
-# lines do_extract writes itself: a stale copy of one (counts change between runs) is not the operator's content
-_GENERATED_PREFIXES = ("# 세션 요청 체크리스트 (스켈레톤)", "채널 2/2 열음", chr(0x1F4CE) + " 원장 = ", "🟥 JSONL 파싱 실패",
-                       "🪝 훅 기록 채널", "🟨 훅 기록 채널", "🟥 훅 기록", "↩️ 이전 결과서에서", CARRY_HEADING, KEEP_HEADING)
-_SEPARATOR_RE = re.compile(r"^\|[\s:|-]+\|\s*$")
+# Lines do_extract writes itself, matched by their WHOLE shape (a stale copy, whose counts changed between runs, is not
+# the operator's content). Whole-line, not prefix: a note the person starts with «🟥 훅 기록 …» or appends to a status
+# line is theirs and must survive (independent review 2026-11-15 reproduced prefix matching dropping both).
+_GENERATED_LINE_RES = tuple(re.compile(p) for p in (
+    r"^# 세션 요청 체크리스트 \(스켈레톤\) — [^\n]+$",
+    r"^채널 2/2 열음 — raw \d+건 · 압축 요약 \d+건\(중복 제거 후 \d+건 추가\)$",
+    "^" + chr(0x1F4CE) + r" 원장 = .* \(\d+ lines\)$",
+    r"^🟥 JSONL 파싱 실패 \d+줄 — 그 줄의 발화는 이 표에 없다 \(rc=2\)$",
+    r"^🪝 훅 기록 채널 읽음 — \d+건 · 전사와 일치 \d+건 · 훅 전용 \d+건 \(행 번호 H = 훅 전용, S = 요약, 숫자 = 전사\)$",
+    r"^🟨 훅 기록 채널 안 읽음 — 파일 없음: .* \(0건이 아니라 미열람; 훅이 안 걸렸거나 다른 허브일 수 있다\)$",
+    r"^🟥 훅 기록 채널 오류 — .*: .* \(rc=2; 전사 행은 그대로 아래에 있다\)$",
+    r"^🟥 훅 기록 \d+줄 해석 실패 — 그 줄의 발화는 이 표에 없을 수 있다 \(rc=2\)$",
+    r"^↩️ 이전 결과서에서 판정 \d+줄 이어받음 · 못 맞춘 판정 \d+줄은 맨 아래 «이전 결과서에서 이어받지 못한 판정»에 보존"
+    r"( · 표 밖 줄 \d+줄은 맨 아래 «이전 결과서의 표 밖 내용»에 보존)?$",
+))
+_FENCE_RE = re.compile(r"^\s*(```|~~~)")
+
+
+def _is_generated(line):
+    return line in (CARRY_HEADING, KEEP_HEADING) or any(r.match(line) for r in _GENERATED_LINE_RES)
+
+
+def _fenced(old):
+    """indices of lines inside a fenced code block, fence markers included — a person's code is kept verbatim, never
+    read as table rows or separators (review 2026-11-15: a 7-cell line inside a fence became an orphan row)."""
+    idx, fence = set(), None
+    for i, l in enumerate(old):
+        m = _FENCE_RE.match(l)
+        if fence is None:
+            if m:
+                fence = m.group(1); idx.add(i)
+        else:
+            idx.add(i)
+            if m and m.group(1) == fence:
+                fence = None
+    return idx
 
 
 def _unconsumed(old, lines_out):
     """lines of the previous sheet that the table parser does not consume and extract does not regenerate —
     a result-sheet section written below the table, a preface above it, prose between (2026-11-14 harvest H3: 13 such
-    lines vanished on one re-extract). Kept in their original order; blank runs collapsed, edges trimmed, so a re-run
-    over its own output yields the same block (idempotent)."""
+    lines vanished on one re-extract), fenced code verbatim, and a hand-added row with empty judgment cells whose
+    (시각, 발화) is not a generated row. Kept in their original order; outside fences blank runs collapse and edges are
+    trimmed, so a re-run over its own output yields the same block (idempotent)."""
     regenerated = set(lines_out)
+    new_keys = {(c[1], c[2]) for c in (_cells(l) for l in lines_out) if c}
+    fenced = _fenced(old)
     kept = []
-    for l in old:
+    for i, l in enumerate(old):
+        if i in fenced:
+            kept.append(l); continue
         if not l.strip():
             if kept and kept[-1] != "":
                 kept.append("")
             continue
-        if (l in regenerated or l.startswith(_GENERATED_PREFIXES) or _SEPARATOR_RE.match(l)
-                or _cells(l) is not None):
+        if l in regenerated or _is_generated(l):   # the 7-column separator extract writes is in `regenerated`; a person's own table keeps its separator
             continue
+        c = _cells(l)
+        if c is not None:
+            # a row with a judgment is carried or orphaned by carry_forward; the header row and generated skeleton
+            # rows are regenerated. Only an empty row extract would not write again is the person's own.
+            if c[0] == "#" or any(c[3:]) or (c[1], c[2]) in new_keys:
+                continue
         kept.append(l)
     while kept and kept[-1] == "":
         kept.pop()
@@ -696,7 +738,10 @@ def carry_forward(lines_out, out_path):
         return lines_out
     prev, orphans_prev = {}, []
     in_orphans = False
-    for l in old:
+    fenced = _fenced(old)
+    for i, l in enumerate(old):
+        if i in fenced:
+            continue                                   # a person's code block: kept verbatim by _unconsumed
         if l.startswith(CARRY_HEADING):
             in_orphans = True; continue
         c = _cells(l)

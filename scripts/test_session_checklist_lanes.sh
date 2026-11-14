@@ -1034,6 +1034,50 @@ else
   fail "L55 rc=$L55A_RC/$L55B_RC/$L55C_RC order=$L55_ORDER (see $L55 · $TMPDIR_ROOT/l55_after1.md)"
 fi
 
+# L56 — what an independent review reproduced against L55's first version (2026-11-15), each a known-positive:
+#   a note starting with a generated prefix · a note appended to a generated status line · a hand-added row with empty
+#   judgment cells · a fenced block holding a 7-cell line, a separator and two blank lines · a person's own 3-column table.
+# Known-negative (the control that keeps the regexes honest): the transcript grows between runs, so «채널 2/2 …» and
+# «📎 원장 … (N lines)» change counts — their stale copies must NOT pile up in the kept block. Then a further run is identical.
+build_jsonl "$TMPDIR_ROOT/l56.jsonl" "[{'type':'user','timestamp':'2026-10-18T01:00:00.000Z','message':{'role':'user','content':'Please move the session bar a little higher than it is now.'}}]"
+L56="$TMPDIR_ROOT/l56.md"
+run "$TMPDIR_ROOT/l56a.out" extract --transcript "$TMPDIR_ROOT/l56.jsonl" --out "$L56"
+L56A_RC=$RC
+python3 - "$L56" <<'PYEOF'
+import sys
+p = sys.argv[1]; L = open(p, encoding="utf-8").read().rstrip("\n").split("\n")
+i = next(k for k, l in enumerate(L) if l.startswith("채널 2/2"))
+L.insert(i + 1, L[i] + " · NOTE-APPENDED by the operator")   # keep the pure status line too: its stale copy is the control
+L += ["", "🟥 훅 기록 NOTE-PREFIX the operator's red note",
+      "| hand | 10-17 07:00 | NOTE-HANDROW a request added by hand |  |  |  |  |",
+      "", "```", "| a | b | c | d | e | f | g |", "", "", "code after two blanks", "|---|---|", "```",
+      "", "| k | v | w |", "|---|---|---|", "| 1 | 2 | 3 |"]
+open(p, "w", encoding="utf-8").write("\n".join(L) + "\n")
+PYEOF
+cp "$L56" "$TMPDIR_ROOT/l56_edited.md"
+build_jsonl "$TMPDIR_ROOT/l56.jsonl" "[{'type':'user','timestamp':'2026-10-18T01:00:00.000Z','message':{'role':'user','content':'Please move the session bar a little higher than it is now.'}},{'type':'user','timestamp':'2026-10-18T01:09:00.000Z','message':{'role':'user','content':'Also make the badge smaller please.'}}]"
+run "$TMPDIR_ROOT/l56b.out" extract --transcript "$TMPDIR_ROOT/l56.jsonl" --out "$L56"
+L56B_RC=$RC; cp "$L56" "$TMPDIR_ROOT/l56_after1.md"
+run "$TMPDIR_ROOT/l56c.out" extract --transcript "$TMPDIR_ROOT/l56.jsonl" --out "$L56"
+L56C_RC=$RC
+L56_KEPT=$(awk '/^## 이전 결과서의 표 밖 내용/{f=1;next} f' "$L56")
+L56_FENCE=$(printf '%s\n' "$L56_KEPT" | awk '/^```/{n++; print; next} n==1{print}' | tr '\n' '~')
+if [ "$L56A_RC" -eq 0 ] && [ "$L56B_RC" -eq 0 ] && [ "$L56C_RC" -eq 0 ] \
+   && printf '%s\n' "$L56_KEPT" | grep -q 'NOTE-APPENDED by the operator' \
+   && printf '%s\n' "$L56_KEPT" | grep -qF "🟥 훅 기록 NOTE-PREFIX the operator's red note" \
+   && printf '%s\n' "$L56_KEPT" | grep -qF '| hand | 10-17 07:00 | NOTE-HANDROW a request added by hand |  |  |  |  |' \
+   && [ "$L56_FENCE" = '```~| a | b | c | d | e | f | g |~~~code after two blanks~|---|---|~```~' ] \
+   && printf '%s\n' "$L56_KEPT" | grep -qxF '|---|---|---|' \
+   && ! grep -q '^| - | b | c |' "$L56" \
+   && [ "$(printf '%s\n' "$L56_KEPT" | grep -c '^채널 2/2 열음 — raw [0-9]*건 · 압축 요약 [0-9]*건([^)]*)$')" -eq 0 ] \
+   && [ "$(printf '%s\n' "$L56_KEPT" | grep -c '원장 = .* lines)$')" -eq 0 ] \
+   && grep -q '^채널 2/2 열음 — raw 2건' "$L56" \
+   && cmp -s "$L56" "$TMPDIR_ROOT/l56_after1.md"; then
+  pass "L56 kept: prefix-looking note · note on a status line · hand row with empty judgments · fenced code verbatim · own 3-col table; stale status lines do not pile up when counts change; next run identical"
+else
+  fail "L56 rc=$L56A_RC/$L56B_RC/$L56C_RC fence=$L56_FENCE (see $L56 · $TMPDIR_ROOT/l56_edited.md)"
+fi
+
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
