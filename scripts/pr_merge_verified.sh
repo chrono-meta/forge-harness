@@ -183,6 +183,13 @@ if [ -n "$_changed" ]; then
   [ "$_hit" -eq 1 ] || echo "⚠️  --rerun mentions none of this PR's $(printf '%s\n' "$_changed" | wc -l | tr -d ' ') changed file(s) (nor any script it names) — it may not exercise the change. Advisory only; merging continues." >&2
 fi
 
+# 1c. defect-path prompt — ONE LINE, PRINT ONLY (never changes rc, runs nothing, checks nothing). The script cannot know
+#   the path a defect travels, so it does not judge coverage; it asks the merging session to say it (2026-11-14 harvest H2:
+#   #316's control was green on main because HOME held a space and the lane ran elsewhere). Quiet when every changed file is
+#   a doc (*.md / docs/) or a lane (scripts/test_*) — those PRs have no defect path to name, and the line would be noise.
+_code=$(printf '%s\n' "$_changed" | grep -vE '(\.md$|^docs/|(^|/)test_[^/]*$)' | grep -c . )
+[ "${_code:-0}" -gt 0 ] && echo "🔎 before merging: name the path the defect travels — does this --rerun lane traverse it, and was its control red on the UNFIXED target via that same path? (prompt only — nothing was checked; merging continues)" >&2
+
 # 2. merge
 # 🟥 cross-family W1: pin the merge to the head we RECORDED. Without it, a push landing between the
 #   record and the merge gets squashed in unverified, and «merged and verified» describes a commit
