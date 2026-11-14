@@ -55,6 +55,9 @@ ACCEPTED_ABSENT=(
   #    public cycle (docs/ABLATION_CYCLE.md, not shipped either) goes to npm is an open operator decision.
   "scripts/ablation_nominate.py"
   "scripts/test_ablation_nominate_lanes.sh"
+  # 2026-11-14 — the verdict renderer the loop's ABLATION_STEPS points at. Same loop, same scope.
+  "scripts/ablation_verdict.py"
+  "scripts/test_ablation_verdict_lanes.sh"
   "docs/ABLATION_CYCLE.md"
   # 2026-11-07 — lease-record channel (AQ-20261107-11). It writes this hub's operator-local lease file; a consumer
   #    has no such file and no such convention, so shipping it would ship a tool with nothing to act on.

@@ -241,9 +241,13 @@ ABLATION_STEPS = ("procedure = scripts/probe_scope_check.sh header steps 1-7: ca
                   "rc 0) · two arms (A unchanged, B with the section cut) in separate dirs outside the repo "
                   "(scripts/sim_isolated_run.sh) · Sonnet · the probe's own question · reps >= 3 per arm · on equal "
                   "outcomes a must-move control (arm A with the answer deleted) must score differently, else "
-                  "INSTRUMENT-UNCONFIRMED. No loss → one deletion PR titled «selfdev: ablation — <section>» with the "
-                  "verdict table; it is seed=ablation, never auto-merged — the operator decides what goes. Loss → add a "
-                  "KEEP row to .claude/regression/ablation_verdicts.md so it is not nominated again.")
+                  "INSTRUMENT-UNCONFIRMED. Render the verdict with scripts/ablation_verdict.py --a K/N --b K/N --control K/N "
+                  "and paste its line verbatim; never write «no loss». NOT-DETECTED@N (rc 1) and no arm-B rep answered confidently and wrongly (step 6 — that is KEEP whatever the "
+                  "renderer says) → one deletion PR titled "
+                  "«selfdev: ablation — <section>» whose body carries that NOT-DETECTED@N line (with its minimum "
+                  "detectable drop) above the verdict table; it is seed=ablation, never auto-merged — the operator decides what goes. DETECTED (rc 0) → add a "
+                  "KEEP row to .claude/regression/ablation_verdicts.md so it is not nominated again. INSTRUMENT-UNCONFIRMED (rc 3) "
+                  "or INPUT-ERROR (rc 2) → no PR.")
 
 
 def src_ablation(live, date):

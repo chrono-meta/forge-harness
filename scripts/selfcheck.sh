@@ -1187,6 +1187,7 @@ for _pair in \
   "scripts/selfdev_merge_tier.sh|scripts/test_selfdev_merge_tier_lanes.sh" \
   "scripts/selfdev_queue.py|scripts/test_selfdev_queue_lanes.sh" \
   "scripts/ablation_nominate.py|scripts/test_ablation_nominate_lanes.sh" \
+  "scripts/ablation_verdict.py|scripts/test_ablation_verdict_lanes.sh" \
   `# 리스 기록 채널(2026-11-07). 세션은 초안, 기록은 운영자 — 에이전트 셸 거부 · 코드 불일치 무기록 · 원자적 교체.` \
   "scripts/lease_line_apply.sh|scripts/test_lease_line_apply_lanes.sh" \
   `# 공유 세션 장부(2026-11-11 시범). 실무 세션이 쓰고 루트가 읽는다 — 안 적은 세션은 NOT-WRITTEN, 깨진 줄은 MALFORMED.` \
