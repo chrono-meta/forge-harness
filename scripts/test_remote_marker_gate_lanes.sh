@@ -144,6 +144,77 @@ out=$(RMG_GUARD_FILE=templates/_tiny.sh run); rc=$?
                  || ng "H2 어긋남 (rc=$rc) — 깨진 파서가 조용히 통과시킨다"
 
 echo
+echo "== push 실행의 PR 본문 조회 (AQ-20261114-10 — 같은 HEAD 두 판정) =="
+# 🟥 #1095 · #1103: 마커가 PR 본문에만 있으면 pull_request 실행은 초록인데 push 실행은 빨강이었다.
+#    push 실행은 이벤트 본문이 없어서다. 가짜 gh 로 조회 응답을 꽂아 다섯 갈래를 가른다.
+FAKEGH="$TMPD/fakegh"; mkdir -p "$FAKEGH"
+mkgh(){ # $1=이름 $2=모드(json|fail|garbage) $3=json 본문
+  printf '#!/usr/bin/env bash\n' > "$FAKEGH/$1"
+  case "$2" in
+    json)    printf 'cat <<'"'"'JSON'"'"'\n%s\nJSON\n' "$3" >> "$FAKEGH/$1" ;;
+    fail)    printf 'echo "HTTP 502: Bad Gateway" >&2; exit 1\n' >> "$FAKEGH/$1" ;;
+    garbage) printf 'echo "<html>not json</html>"\n' >> "$FAKEGH/$1" ;;
+  esac
+  chmod +x "$FAKEGH/$1"
+}
+BODY_JSON=$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$(printf '%s' "$FULL" | sed 1,2d)")
+mk claude/frontier-auto-push plugins/fh-meta/skills/demo/SKILL.md "frontier-auto: 마커는 PR 본문에만"
+PBR=$(git rev-parse --abbrev-ref HEAD)
+mkgh ok    json "[{\"head\":{\"ref\":\"$PBR\",\"repo\":{\"full_name\":\"o/r\"}},\"body\":$BODY_JSON}]"
+mkgh fork  json "[{\"head\":{\"ref\":\"$PBR\",\"repo\":{\"full_name\":\"x/fork\"}},\"body\":$BODY_JSON}]"
+mkgh nulle json "[null]"
+mkgh noref json "[{\"head\":{},\"body\":$BODY_JSON}]"
+mkgh norepo json "[{\"head\":{\"ref\":\"$PBR\",\"repo\":null},\"body\":$BODY_JSON}]"
+mkgh empty json "[]"
+mkgh other json "[{\"head\":{\"ref\":\"claude/someone-else\",\"repo\":{\"full_name\":\"o/r\"}},\"body\":$BODY_JSON}]"
+mkgh fail  fail
+mkgh junk  garbage
+plook(){ RMG_PR_LOOKUP=1 RMG_REPO=o/r RMG_GH="$FAKEGH/$1" RMG_BASE_REF=_base RMG_HEAD_REF="$PBR" bash "${2:-scripts/remote_marker_gate.sh}" 2>&1; }
+out=$(plook ok); rc=$?
+if [ "$rc" -eq 0 ] && printf '%s' "$out" | /usr/bin/grep -q "PR($PBR) 1 개 본문"; then
+  ok "L1 (a) push + 이 채널 PR 본문에 마커 → rc=0 (pull_request 실행과 같은 판정)"
+else ng "L1 어긋남 (rc=$rc) — push 실행이 PR 본문을 못 읽는다: $(printf '%s' "$out" | tail -2)"; fi
+out=$(plook empty); rc=$?
+[ "$rc" -eq 1 ] && printf '%s' "$out" | /usr/bin/grep -q "PR 이 없다" \
+  && ok "L2 (c) push + PR 없음 + 커밋에 마커 없음 → rc=1 (빨강 유지)" \
+  || ng "L2 어긋남 (rc=$rc) — PR 없는 push 가 통과한다"
+out=$(plook other); rc=$?
+[ "$rc" -eq 1 ] && ok "L3 (d) 같은 커밋을 품은 «남의 채널» PR 본문으로는 통과 안 한다 → rc=1" \
+                || ng "L3 어긋남 (rc=$rc) — 다른 head ref 의 본문을 기록으로 셌다"
+out=$(plook fail); rc=$?
+[ "$rc" -eq 10 ] && printf '%s' "$out" | /usr/bin/grep -q "PR 조회가 실패" \
+  && ok "L4 (e) PR 조회 실패 → rc=10 빨강 («PR 없음» 으로 안 접는다)" \
+  || ng "L4 어긋남 (rc=$rc) — 조회 실패가 판정으로 접혔다"
+out=$(plook junk); rc=$?
+[ "$rc" -eq 10 ] && ok "L5 (e') 조회 응답이 JSON 이 아니면 rc=10" \
+                 || ng "L5 어긋남 (rc=$rc) — 깨진 응답을 «PR 없음» 으로 읽었다"
+out=$(plook fork); rc=$?
+[ "$rc" -eq 1 ] && ok "L3b 같은 브랜치 이름의 «포크» PR 본문으로는 통과 안 한다 → rc=1 (codex R1)" \
+                || ng "L3b 어긋남 (rc=$rc) — 포크 PR 본문을 기록으로 셌다"
+out=$(plook nulle); rc=$?
+[ "$rc" -eq 10 ] && ok "L5b 응답 항목이 깨졌으면([null]) rc=10 — 조용히 버리지 않는다 (codex R1)" \
+                 || ng "L5b 어긋남 (rc=$rc) — 깨진 항목을 «PR 없음» 으로 읽었다"
+for _m in noref norepo; do
+  out=$(plook "$_m"); rc=$?
+  [ "$rc" -eq 10 ] && ok "L5c 응답 항목에 head.ref / head.repo 가 없으면($_m) rc=10 (codex R2)" \
+                   || ng "L5c 어긋남 ($_m rc=$rc) — 귀속 불가 항목을 «PR 없음» 으로 읽었다"
+done
+out=$(RMG_PR_LOOKUP=1 RMG_GH="$FAKEGH/ok" RMG_BASE_REF=_base RMG_HEAD_REF="$PBR" bash scripts/remote_marker_gate.sh 2>&1); rc=$?
+[ "$rc" -eq 10 ] && ok "L6 RMG_REPO 없이 조회 모드 → rc=10 (조회 불가를 통과로 안 읽는다)" \
+                 || ng "L6 어긋남 (rc=$rc)"
+# 되돌림 known-pair: 조회 블록만 끈 사본에서 L1 이 빨개져야 그 블록이 일한다.
+sed -E 's/^if \[ -z "\$BODY_FILE" \] && \[ "\$\{RMG_PR_LOOKUP:-0\}" = "1" \]; then$/if false; then/' \
+    scripts/remote_marker_gate.sh > scripts/_nolookup.sh
+if /usr/bin/grep -q '^if false; then$' scripts/_nolookup.sh; then
+  out=$(plook ok scripts/_nolookup.sh); rc=$?
+  [ "$rc" -eq 1 ] && ok "R2 되돌림: 조회 블록을 끄면 L1 이 rc=1 빨강 → 그 블록이 push 판정을 바꾼다" \
+                  || ng "R2: 꺼도 rc=$rc — 다른 것이 L1 을 통과시킨다(앵커 귀속 틀림)"
+else
+  ng "R2 계기 오류 — 되돌림 치환이 안 먹었다. 프로브가 죽었다"
+fi
+rm -f scripts/_nolookup.sh
+
+echo
 echo "== 되돌림 프로브 — 앵커가 장식인가 =="
 # 필수 필드 루프를 무력화한 사본으로 P1 을 다시 돌린다. 적색이 초록이 되어야 «그 줄이 일한다».
 sed -E 's/^for field in "axes-run" "crossfamily" "standpoint"; do$/for field in ; do/' \
@@ -182,6 +253,31 @@ else
   /usr/bin/grep -q 'remote_marker_gate.sh' "$WF" \
     && ok "W2: validate.yml 이 remote_marker_gate.sh 를 실제로 부른다(배선됨)" \
     || ng "W2: 게이트가 CI 에 배선 안 됐다 — 산문이 실행기다"
+  # W3 은 «글자가 있나» 가 아니라 «그 스텝의 env 값이 그것인가» 를 YAML 로 읽는다(codex R2 — 주석 처리한 줄도 grep 엔 남는다).
+  w3(){ python3 - "$1" <<'PY'
+import sys
+try:
+    import yaml
+except ImportError:
+    print("NO-YAML"); sys.exit(3)
+wf = yaml.safe_load(open(sys.argv[1], encoding="utf-8"))
+want = "${{ github.event_name == 'push' && '1' || '0' }}"
+for job in (wf.get("jobs") or {}).values():
+    for st in job.get("steps") or []:
+        if str(st.get("name", "")).startswith("Floorless-channel"):
+            env = st.get("env") or {}
+            sys.exit(0 if env.get("RMG_PR_LOOKUP") == want and env.get("RMG_REPO") and env.get("GH_TOKEN") else 1)
+sys.exit(2)
+PY
+  }
+  w3 "$WF" >/dev/null; w3rc=$?
+  sed -E 's/^([[:space:]]+)RMG_PR_LOOKUP:/\1# RMG_PR_LOOKUP:/' "$WF" > "$TMPD/wf_mut.yml"
+  w3 "$TMPD/wf_mut.yml" >/dev/null; w3m=$?
+  if [ "$w3rc" -eq 0 ] && [ "$w3m" -eq 1 ] && /usr/bin/grep -q '# RMG_PR_LOOKUP:' "$TMPD/wf_mut.yml"; then
+    ok "W3: Floorless 스텝 env 에 push 조회가 배선됐다 · 그 줄을 주석 처리한 사본은 빨강(되돌림 컨트롤 살아 있음)"
+  else
+    ng "W3: push 조회 배선 판정 어긋남 (실물 rc=$w3rc · 주석 사본 rc=$w3m — 3 = PyYAML 없음 · 2 = 스텝 못 찾음)"
+  fi
 fi
 
 echo
