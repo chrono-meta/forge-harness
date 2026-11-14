@@ -171,6 +171,16 @@ Then score `match_score`: **1.0** = evidence clearly confirms the prediction · 
 > (proposal lists, curator decisions) as verification evidence. Evidence sources are limited
 > to primary signals — raw utterance logs, invocation counts, git history, friction signals —
 > that exist independently of any harvest-loop run.
+>
+> **Fresh-sample guard (2026-11-15, FH-2)**: evidence counts only if the **underlying events** are
+> dated after the entry's `date` — a grep or a cumulative count run today still counts only events
+> after that date — and are **not part of the selection evidence**: every observation used to choose
+> or shape the edit (the prompting signal, utterance or session, trial fixes, candidate comparisons).
+> That evidence chose the edit; scoring the edit on it again is selecting and promoting on one sample,
+> and it confirms by construction. Name what was excluded in `verification_note`. If only selection
+> or pre-edit evidence exists, the entry stays `pending` — not `verified`. A `redefine` (Step V3) is a
+> new version: give it a new `date`, and the evidence that prompted the redefinition becomes selection
+> evidence for it.
 
 **Step V3 — Apply Validation Gate**
 
@@ -205,7 +215,10 @@ Apply `verified_at`, `verification_note`, `gate_decision` to each resolved entry
 
 ## Validation Gate Logic
 
-Mirrors SkillOpt's validation gate (the held-out gate over its selection-split score):
+Mirrors SkillOpt's validation gate (the held-out gate over its selection-split score). What FH
+holds out is time: the prompting observation and everything dated before the edit are the selection
+side; only later primary signals decide (Fresh-sample guard, Step V2). Without that guard the gate
+would be held out in name only:
 
 ```
 IF verified evidence shows improvement:

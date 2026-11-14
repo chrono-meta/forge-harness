@@ -174,7 +174,9 @@ was written for; recorded here, not fixed in this commit.
 ## Pre-registration log
 
 The question set must be fixed before the arms run, and the count reported, or the CUT branch is
-unfalsifiable.
+unfalsifiable. «k tried» counts framings; the reps that tried them are **not** in the verdict row's
+`Reps` — that column counts only reps nobody chose on (run after the seal, and after the last change) (2026-11-15, FH-2; `probe_scope_check.sh`
+step 6(a)).
 
 | Date | Section | Questions pre-registered | Source of registration | k tried | k that flipped the verdict |
 |---|---|---|---|---|---|
