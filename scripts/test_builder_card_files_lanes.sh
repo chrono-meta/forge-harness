@@ -14,6 +14,7 @@
 #   B10 revert probe: remove the protected/inspect-only branch on a COPY, confirm the edit applied,
 #       B2 must turn green-for-the-wrong-reason (rc 0) — the lane anchors that branch
 set -u
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; C="${BUILDER_CARD_CHECK:-$HERE/builder_card_files_check.py}"
 pass=0; fail=0; ok(){ pass=$((pass+1)); echo "  ✅ $1"; }; bad(){ fail=$((fail+1)); echo "  ❌ $1"; }
 T="$(mktemp -d "${TMPDIR:-/tmp}/bcfc.XXXXXX")"; trap 'rm -rf "$T"' EXIT
@@ -73,7 +74,7 @@ printf 'files:\n  editable: scripts/foo.py\n' > "$T/c_noprot.md"; run "$T/c_nopr
 printf 'files:\n  protected: hooks/**\n' > "$T/c_noedit.md"; run "$T/c_noedit.md"; he && ok "B8 no editable/required → HARNESS-ERROR" || bad "B8 noedit: rc=$rc $out"
 for k in 'read-only' 'Protected' 'protect' 'inspect_only'; do
   printf 'files:\n  editable: scripts/foo.py\n  protected: hooks/**\n  %s: CLAUDE.md\n' "$k" > "$T/c_near.md"; run "$T/c_near.md"
-  he && [[ "$out" == *"unknown key"* ]] && ok "B8 near-miss key «$k:» beside correct lines → HARNESS-ERROR" || bad "B8 near «$k»: rc=$rc $out"
+  he && [[ "$out" == *"unknown key"* ]] && ok "B8 near-miss key «$k:» beside correct lines → HARNESS-ERROR" || bad "B8 near «${k}»: rc=$rc $out"
 done
 out=$(python3 "$C" --card "$T/card.md" --repo "$R" --base no-such-ref 2>&1); rc=$?; he && ok "B8 bad base ref → HARNESS-ERROR" || bad "B8 ref: rc=$rc $out"
 out=$(python3 "$C" --card "$T/card.md" 2>&1); rc=$?; he && ok "B8 no change source → HARNESS-ERROR" || bad "B8 src: rc=$rc $out"
@@ -102,7 +103,7 @@ g(){ printf 'files:\n  editable: **\n  protected: %s\n' "$1" > "$T/c_g.md"; prin
 for c in 'hooks/pre-commi?|hooks/pre-commit|1' 'hooks/*|hooks/a|1' 'hooks/*|hooks/a/b|0' '**/x.sh|x.sh|1' '**/x.sh|a/b/x.sh|1' 'vendor/lib/|vendor/lib|1' 'vendor/lib/**|vendor/lib|1' 'vendor/lib/|vendor/libx|0' 'a?c|a/c|0'; do
   IFS='|' read -r pat path want <<<"$c"; g "$pat" "$path"
   if [ "$want" = 1 ]; then [ $rc -eq 1 ] && [[ "$out" == *"touched-protected: $path"* ]]; else [ $rc -eq 0 ] && [[ "$out" == *"VERDICT=CLEAN"* ]]; fi \
-    && ok "B12 glob «$pat» vs «$path» → protected=$want" || bad "B12 glob «$pat» vs «$path»: rc=$rc $out"
+    && ok "B12 glob «${pat}» vs «${path}» → protected=$want" || bad "B12 glob «${pat}» vs «${path}»: rc=$rc $out"
 done
 
 # B13 codex R2 regressions
@@ -116,7 +117,7 @@ out=$(python3 "$C" --card "$T/card.md" --repo "$R/scripts" --base "$BASE" 2>&1);
 [ $rc -eq 1 ] && [[ "$out" == *"touched-protected: hooks/pre-commit"* ]] && ok "B13 --repo subdir + diff.relative → still sees hooks/ (VIOLATION)" || bad "B13 relative: rc=$rc $out"
 for pth in './hooks/pre-commit' 'scripts/../hooks/pre-commit' '/abs/x' 'hooks//x'; do
   printf '%s\n' "$pth" > "$T/ch_nc.txt"; out=$(python3 "$C" --card "$T/card.md" --changed "$T/ch_nc.txt" 2>&1); rc=$?
-  he && ok "B13 non-canonical «$pth» → HARNESS-ERROR" || bad "B13 «$pth»: rc=$rc $out"
+  he && ok "B13 non-canonical «${pth}» → HARNESS-ERROR" || bad "B13 «${pth}»: rc=$rc $out"
 done
 printf 'files:\n  editable: scripts/foo.py\n  required: hooks/pre-commit\n  protected: hooks/**\n' > "$T/c_rp.md"
 printf 'hooks/pre-commit\n' > "$T/ch_rp.txt"; out=$(python3 "$C" --card "$T/c_rp.md" --changed "$T/ch_rp.txt" 2>&1); rc=$?
