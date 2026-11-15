@@ -6,7 +6,9 @@
 # empty temp directory as cwd: agy ran a filesystem-wide `find` and a recursive `grep` over the home
 # directory, read the run's answer key in 45 of 83 conversations, and the search output carried file
 # names from a company repository checked out on the same machine. Claude-side deny rules do not bind
-# agy. `--sandbox` restricts terminal commands; it was not measured as a barrier for file reads.
+# agy. 🟥 `--sandbox` is NOT isolation: measured 2026-11-16 (canary test), `agy -p --mode plan --sandbox`
+# from a fresh temp cwd read three canary files it was pointed at — one in cwd, one in another temp
+# folder, one in the home directory. It restricts the terminal at most; file reads go through.
 #
 # RULE. A cloud agent CLI with tools enabled must not run on a machine where company repositories are
 # readable. Allowed instead: a tool-less API call (that does not use agy, so it does not come here), or
@@ -14,8 +16,11 @@
 #
 # MARKER. FH_AGY_ISOLATION=container  or  FH_AGY_ISOLATION=os-user. Unset, empty, or any other value
 # (including 1 / yes / true) is refused. 🟥 The marker is self-declared: this script checks that you
-# said it, not that it is true — it cannot see a container or an OS user. Set it only from inside the
-# isolated environment you built, never on the host that holds company repositories.
+# said it, not that it is true — it cannot see a container or an OS user. Set it only inside a container
+# or OS user where a canary check has confirmed it: place a canary file outside the frozen inputs (in
+# the host home directory and in another temp folder), ask agy to read those exact paths, and set the
+# marker only if every read fails. Never on the host that holds company repositories, and never because
+# of `--sandbox`.
 #
 # Usage:  bash scripts/agy_launch_guard.sh <agy-binary> [agy arguments...]
 # Exit:   3 = refused, agy was not started · 2 = usage · otherwise agy's own exit code

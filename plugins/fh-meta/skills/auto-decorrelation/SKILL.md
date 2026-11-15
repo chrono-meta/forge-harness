@@ -57,9 +57,13 @@ empty temp directory as cwd, `agy -p --mode plan` searched the whole filesystem 
 read the run's answer key in 45 of 83 conversations, and sent file names from a company repository on
 the same machine to the model. **Allowed instead**: a tool-less API call (prompt and excerpt only, no
 tools offered), or the CLI inside a container or a separate OS user that can see only the frozen inputs.
-FH's scripts start agy only through `scripts/agy_launch_guard.sh`, which refuses (exit 3, `AGY-REFUSED`)
-unless `FH_AGY_ISOLATION=container` or `FH_AGY_ISOLATION=os-user`. The marker is self-declared — the guard
-checks that you said it, not that it is true — so set it only inside the isolated environment. Being
+**`--sandbox` is not isolation**: measured 2026-11-16 with canary files, `agy -p --mode plan --sandbox`
+read files it was pointed at in its cwd, in another temp folder and in the home directory. FH's scripts
+start agy only through `scripts/agy_launch_guard.sh`, which refuses (exit 3, `AGY-REFUSED`) unless
+`FH_AGY_ISOLATION=container` or `FH_AGY_ISOLATION=os-user`. The marker is self-declared — the guard checks
+that you said it, not that it is true — so set it only inside a container or OS user where a canary check
+has confirmed it (canary files outside the frozen inputs, agy asked to read those exact paths, every read
+fails). Being
 discovered below makes agy a *candidate*, not a recruit: on the host, without the marker, it is not
 recruitable. Lanes: `scripts/test_agy_launch_guard_lanes.sh`.
 
