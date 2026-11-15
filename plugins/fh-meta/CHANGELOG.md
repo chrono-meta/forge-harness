@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### Changed
+- live-eval: the init plugin list (each plugin's source and version, never its path) is now part of the surface that `INVALID-COMPARISON` compares, next to the tool and MCP lists. Arms that loaded different plugins, or the same plugin at different versions, or one arm whose init has no plugin list, make the probe `INVALID-COMPARISON` with no pass rate and the run exits 2. Arms with the same plugins score as before. Why: the 2026-11-15 nightly had two probes where one rep loaded one more built-in plugin than the rest, with tools and MCP equal, and the report counted one surface. The plugins are still loaded from the operator's HOME; pinning them is not in this change. Lanes TR14–TR18 in `scripts/test_live_eval_trace_lanes.sh` (shipped).
+
 ### [3.43.0] — 2026-11-15
 
 Minor by the version policy: a new shipped tool and lane for live-eval (#1099), a new shipped lane for `meta-prompt-builder` (#1103), and new judged procedures in shipped skills and rules. Nothing here makes an existing commit or publish gate refuse more by default, so no `BREAKING (gate)` line applies. Two checks are stricter, and neither is a consumer gate: the live-eval report can now exit 2 with `INVALID-COMPARISON` (#1099), and the checkout-only fixture-guard ratchet counts more git calls (#1097). The one new refusal path in a shipped gate script is opt-in: `remote_marker_gate.sh` reads PR bodies over the API only when `RMG_PR_LOOKUP=1` is set, and a failed lookup then exits 10 (#1105). If you run the 3.42.0 package's `test_fixture_guard_coverage_lanes.sh` directly, it no longer fails on the checkout floor (#1097). Items marked «not in the npm package» are in the repository checkout only.
