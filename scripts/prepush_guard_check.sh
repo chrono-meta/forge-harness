@@ -19,6 +19,14 @@
 # Runs in throwaway repos (mktemp): never touches this repo's index or worktree.
 # Usage: bash scripts/prepush_guard_check.sh   → exit 0 all pairs hold, 1 otherwise.
 set -uo pipefail
+# Measure the pre-push hook as it behaves by DEFAULT: an override the caller exported (PUBLIC_SURFACE_OK=1 …) must
+# not reach the hook under test (pmh-dev #91 ②, 2026-11-15). Lane: scripts/test_guard_anchor_override_env_lanes.sh.
+# Also the two non-override inputs the hook reads from the environment (codex R1): PSA_PATTERNS replaces the
+# fixtures' synthetic operator patterns, FH_DESTRUCTIVE_BASE moves the destructive-advisory baseline.
+unset PUBLIC_SURFACE_OK DESTRUCTIVE_OP_OK FH_NOVELTY_OK MAIN_PUSH_OK PUSH_ZONE_OK TAG_VERSION_OK TRACKS_GITLINK_OK TRACKS_PUBLIC_OK PSA_PATTERNS FH_DESTRUCTIVE_BASE 2>/dev/null || true
+# Every PSA_* input too (codex R2: PSA_ALLOWLIST suppressed a planted positive) — by prefix, so a new PSA_ input
+# cannot slip past a hand-written list. The scan library sets the ones it needs itself.
+for _v in $(compgen -v | grep '^PSA_'); do unset "$_v"; done; unset _v
 
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 HOOK_SRC="$REPO_ROOT/templates/.git-hooks/pre-push"
