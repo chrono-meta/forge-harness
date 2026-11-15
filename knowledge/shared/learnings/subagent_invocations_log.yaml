@@ -5501,3 +5501,15 @@
   outcome: "no canon distortion, script claims all correct; 2 A (CLI /context route and transcript path stated without source · work session never told the clone script path) · 2 B (duration heuristic read as rule · LATE/OK/2 outcomes missing) · 4 C — all fixed before commit"
   evidence: "PR body capsule (claude/docs-governor-placement-guide)"
   tokens: "132744"
+- date: 2026-11-15
+  agent: "fh-meta:challenger (sonnet) — axis 2 for USER_GUIDE §4 structure rule · supervising-governor advantages · opt-in maintenance lease (purpose: independence)"
+  task: "check cited canon sections, the opt-in block (quoted words, lease, scope; not read as a gate bypass), structure rule vs canon table, private tokens, cold-reader ambiguity"
+  outcome: "S0 A2 B5 C2 — A1 block has no consumer rule (now stated: judgment only) · A2 close-chain sweep over-cited (reworded as operator-instructed) · B placeholders, exclusions, unmeasured mechanism — all fixed before commit"
+  evidence: "PR body capsule (claude/docs-governor-structure-delegation)"
+  tokens: "159284"
+- date: 2026-11-15
+  agent: "web-fetch (sonnet) — Anthropic guidance lookup for the three-ways comparison (purpose: context)"
+  task: "verbatim lines on single task in one context vs subagents/parallel agents from code.claude.com best-practices, sub-agents, common-workflows and two anthropic.com engineering posts"
+  outcome: "no page states it in one sentence; nearest verbatim lines: best-practices «can end up slower than doing the task where you are», multi-agent research «are not a good fit»; summary-only lines flagged and not used"
+  evidence: "docs/USER_GUIDE.md §4 «세 가지 일하는 방식»"
+  tokens: "66577"
