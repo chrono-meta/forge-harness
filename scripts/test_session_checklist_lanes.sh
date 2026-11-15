@@ -1168,6 +1168,39 @@ else
   fail "L58 rc=$L58_RCS mine=$L58_MINE (see $L58)"
 fi
 
+# KR1 — KNOWN RESIDUAL (round 4, 2026-11-15), not a pass claim. A person's 7-column table whose header is NOT the
+#   checklist header («| Name | Owner | … |»): its header and filled rows are carried as orphan judgments with the first
+#   cell replaced by «-» (Name · alpha lost), and an empty «| 2 | … |» row is dropped. Measured on the same fixture
+#   against origin/main 3572903: main loses exactly the same cells AND drops the label line and the separator, so this
+#   is not a regression of this change (operator «ㅇㅇ 그러자 추천대로» 2026-11-15: decide by regression, then merge).
+#   What this lane asserts: the part this change does keep (label line + separator survive in order). What it only
+#   reports: the residual loss — printed as KNOWN-RESIDUAL, counted in neither PASS nor FAIL. If the residual stops
+#   reproducing, the lane says so: turn it into a pass lane then.
+build_jsonl "$TMPDIR_ROOT/kr1.jsonl" "[{'type':'user','timestamp':'2026-10-18T01:00:00.000Z','message':{'role':'user','content':'first request about the bar'}}]"
+KR1="$TMPDIR_ROOT/kr1.md"
+run "$TMPDIR_ROOT/kr1a.out" extract --transcript "$TMPDIR_ROOT/kr1.jsonl" --out "$KR1"
+KR1_RCS="$RC"
+python3 - "$KR1" <<'PYEOF'
+import sys
+p = sys.argv[1]; L = open(p, encoding="utf-8").read().rstrip("\n").split("\n")
+L += ["", "MY-HUMAN-TABLE:", "| Name | Owner | Due | A | B | C | D |", "|---|---|---|---|---|---|---|",
+      "| alpha | me | 11-20 | x | y | z | w |", "| 2 |  |  |  |  |  |  |"]
+open(p, "w", encoding="utf-8").write("\n".join(L) + "\n")
+PYEOF
+run "$TMPDIR_ROOT/kr1b.out" extract --transcript "$TMPDIR_ROOT/kr1.jsonl" --out "$KR1"
+KR1_RCS="$KR1_RCS/$RC"
+KR1_KEPT=$(awk '/^## 이전 결과서의 표 밖 내용/{f=1;next} f' "$KR1" | awk '/^MY-HUMAN-TABLE:/{f=1} f' | tr '\n' '~')
+if [ "$KR1_RCS" = "0/0" ] && [ "${KR1_KEPT#MY-HUMAN-TABLE:~|---|---|---|---|---|---|---|~}" != "$KR1_KEPT" ]; then
+  pass "KR1 (kept part) a person's table: label line and separator survive in order"
+else
+  fail "KR1 (kept part) rc=$KR1_RCS kept=$KR1_KEPT (see $KR1)"
+fi
+if grep -qF '| alpha |' "$KR1" || grep -qF '| Name |' "$KR1"; then
+  echo "ℹ️  KR1 residual no longer reproduces (Name/alpha cells survive) — promote KR1 to a pass lane"
+else
+  echo "⚠️  KNOWN-RESIDUAL KR1: a different-header 7-column table's rows become orphan judgments with «-» in the first cell (Name · alpha lost) and its empty «2» row is dropped — same as origin/main 3572903; not counted as a pass"
+fi
+
 echo "── $PASS_COUNT passed, $FAIL_COUNT failed ──"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
