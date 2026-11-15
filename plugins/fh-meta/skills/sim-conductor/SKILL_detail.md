@@ -180,7 +180,7 @@ Run multi-team? (a) Full panel  (b) Claude sub-agents only  (c) Skip to Area B
 > 출력 파일을 눈으로 보고 판정하지 마라 — 살아있는 프로세스와 죽은 프로세스가 같은 0바이트를
 > 낸다(2026-07-29 실측: 1초/30초 만에 읽고 정상 동작 중인 사이드카 2종을 '실패'로 기록,
 > 실제로는 4건의 진짜 finding 이 나왔다). 정본 = `auto-decorrelation` SKILL.md §S-1b.
-| T5 agy | `agy -p` (gemini successor) | challenger · beginner | `agy -p "PROMPT"` — argument form only (stdin pipe prints help); timebox+retry hard rule (intermittent hang class); -p auto-approves tools → trusted artifacts only |
+| T5 agy | `agy -p` (gemini successor) | challenger · beginner | `agy -p "PROMPT"` — argument form only (stdin pipe prints help); timebox+retry hard rule (intermittent hang class); -p auto-approves tools → trusted artifacts only; start it only through `scripts/agy_launch_guard.sh` (refuses unless `FH_AGY_ISOLATION=container\|os-user` — never on a host where company repos are readable, auto-decorrelation §Step 2) |
 
 ### CLI detection bash
 
