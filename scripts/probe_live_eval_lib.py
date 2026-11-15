@@ -312,7 +312,7 @@ FAILED_TO_RUN = 'FAILED-TO-RUN'
 UNCALIBRATED = 'UNCALIBRATED'
 PASS = 'PASS'
 FAIL = 'FAIL'
-INVALID_COMPARISON = 'INVALID-COMPARISON'   # arms ran with different tool/MCP surfaces (FH-3, 2026-11-14)
+INVALID_COMPARISON = 'INVALID-COMPARISON'   # arms ran with different tool/MCP/plugin surfaces (FH-3 2026-11-14; plugins 2026-11-15)
 
 try:   # §TRACE — sibling module; absent = every probe is scored on text only and labelled MENTION-ONLY
     import live_eval_trace as _trace
@@ -633,10 +633,12 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
         elif behave and any_trace and (no_trace or damaged):
             row['reason'] = 'TRACE-INCOMPLETE: %d rep(s) missing an arm trace · %d damaged stream(s)' % (no_trace, damaged)
         elif len(inventories) > 1:
-            row['reason'] = 'INVALID-COMPARISON: arms saw %d different tool/MCP lists — %s' % (
+            row['reason'] = 'INVALID-COMPARISON: arms saw %d different tool/MCP/plugin lists — %s' % (
                 len(inventories), ' ≠ '.join(sorted(inventories)))
         if len(ran_reps) > 1 and 0 < len(pass_reps) < len(ran_reps):
-            row['reason'] = 'FLAKY across reps (%s)' % ','.join(r[0] for r in per_rep)
+            flaky = 'FLAKY across reps (%s)' % ','.join(r[0] for r in per_rep)
+            # an INVALID-COMPARISON reason must survive: the surface mismatch is why there is no number
+            row['reason'] = (row['reason'] + '; ' + flaky) if verdict == INVALID_COMPARISON and row['reason'] else flaky
         if adv_pat is not None:
             row['advisory'] = '%d/%d' % (adv_hits, len(ran_reps) if ran_reps else 0)
             row['advisory_re'] = adv_re
@@ -979,7 +981,7 @@ def render_report_md(select_result, score_result, run_date, instrument=None):
                          score_result['uncalibrated'], score_result['passed'], pr_s))
         lines.append("")
         lines.append("- scored by behaviour: **%d** of %d PASS · MENTION-ONLY: **%d** (a MENTION-ONLY PASS read the "
-                      "reply text; it is not evidence the rule acted) · tool/MCP surfaces in this run: %s"
+                      "reply text; it is not evidence the rule acted) · tool/MCP/plugin surfaces in this run: %s"
                       % (score_result.get('behaviour_backed', 0), score_result['passed'],
                          score_result.get('mention_only_pass', 0),
                          score_result.get('run_inventories') or 'UNMEASURED (no trace)'))
@@ -1006,7 +1008,7 @@ def render_report_md(select_result, score_result, run_date, instrument=None):
         lines.extend(["## Scored by — behaviour or mention", "",
                       "`BEHAVIOUR` = the probe's `behave:` action was read from the event stream in every rep "
                       "(primary did it, control did not). `MENTION-ONLY` = the verdict rests on reply text.", "",
-                      "| Probe | scored_by | behave (primary did · control did) | tool/MCP lists |", "|---|---|---|---|"])
+                      "| Probe | scored_by | behave (primary did · control did) | tool/MCP/plugin lists |", "|---|---|---|---|"])
         for r in score_result['rows']:
             lines.append("| %s | %s | %s | %s |" % (r['id'], r.get('scored_by', 'MENTION-ONLY'),
                                                    _md_escape(r.get('behave', '-')), _md_escape(r.get('inventory', '-'))))
