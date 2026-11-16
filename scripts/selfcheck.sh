@@ -1868,6 +1868,18 @@ else
   echo "FAIL  test_sidecar_calibrate_lanes.sh: sidecar_calibrate.sh present but its anchor is missing"
   fail=1
 fi
+# agy launch guard (2026-11-16). The guard is the only thing between an FH script and a cloud agent
+# CLI that reads this machine and sends what it read to the model; its lanes use fake agy stubs only.
+if [ ! -f scripts/agy_launch_guard.sh ]; then
+  _absent_subject_verdict "test_agy_launch_guard_lanes.sh" "scripts/agy_launch_guard.sh" || fail=1
+elif [ -f scripts/test_agy_launch_guard_lanes.sh ]; then
+  if ! bash scripts/test_agy_launch_guard_lanes.sh < /dev/null; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_agy_launch_guard_lanes.sh: agy_launch_guard.sh present but its anchor is missing"
+  fail=1
+fi
 # Squash-merge verification + its merge-path wiring (2026-09-24). Same subject/anchor pairing as above:
 # both scripts return verdict exit codes, and pr_merge_verified's whole job is to REFUSE before merging —
 # a refusal nobody re-runs is one the next edit quietly removes. Lanes are hermetic (temp repos, fake gh).

@@ -94,6 +94,7 @@ VERDICT_PROMPT="Reply with exactly one word, PASS or FAIL, and nothing else. The
 BOGUS_MODEL="zzz-nonexistent-model-9.9"
 
 PANEL=""
+AGY_GUARD="$(cd "$(dirname "$0")" && pwd)/agy_launch_guard.sh"
 
 # build_cmd <runtime> <model> <prompt> — fills CMD as an argv array.
 # NOT a shell function passed to the watchdog: `timeout`/`gtimeout` exec a BINARY and cannot see
@@ -102,7 +103,7 @@ PANEL=""
 build_cmd() {
   case "$1" in
     codex) CMD=(codex exec -m "$2" -c model_reasoning_effort=high --skip-git-repo-check "$3") ;;
-    agy)   CMD=(agy -p "$3" --model "$2" --print-timeout 170s) ;;
+    agy)   CMD=(bash "$AGY_GUARD" agy -p "$3" --model "$2" --print-timeout 170s) ;;  # refuses unless FH_AGY_ISOLATION=container|os-user
     *)     CMD=("$1" "$3") ;;
   esac
 }
@@ -125,6 +126,12 @@ probe_runtime() {
   #    (`${PIPESTATUS[0]}` 는 bash 전용이고, 정본은 «파이프를 쓰지 않는 것» 이다.)
   id_raw="$(_run 200 "${CMD[@]}" 2>&1)"; id_rc=$?
   id_out="$(printf '%s\n' "$id_raw" | _answer)"
+  # The isolation guard refused before agy started: nothing was measured. Say so instead of reading
+  # the refusal text as the model's answer (it rendered REACHABLE · control: rejects-bogus before).
+  if [ "$id_rc" -eq 3 ] && printf '%s\n' "$id_raw" | grep -q '^AGY-REFUSED'; then
+    printf '%-6s REFUSED — agy_launch_guard: FH_AGY_ISOLATION is not container|os-user, agy not started, nothing measured\n' "$rt"
+    return 0
+  fi
 
   # Discriminating check — the answer must be the MODEL's self-report naming the model that was
   # pinned. What counts as "naming it" is the VERSION token, not every token of the pin slug:

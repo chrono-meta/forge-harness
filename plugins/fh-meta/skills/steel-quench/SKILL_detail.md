@@ -363,7 +363,10 @@ fi
 # ── T5: agy (Antigravity) — gemini successor ──────────────
 # Constraints: argument form only (`agy -p "PROMPT"`); timebox+retry is a hard rule
 # (intermittent hang class, ~50% observed 2026-06-11); -p auto-approves tool execution,
-# so feed only trusted artifacts — never untrusted external content. Serial by design
+# so feed only trusted artifacts — never untrusted external content. 🟥 Its tools also READ the
+# machine and send what they print to the cloud model: start it only through
+# scripts/agy_launch_guard.sh, which refuses unless FH_AGY_ISOLATION=container|os-user — never on a
+# host where company repositories are readable (auto-decorrelation §Step 2). Serial by design
 # (worst case ~6 min if the hang class fires on every call) — do NOT copy the T1-T4
 # `VAR=$(...) &` pattern: it assigns inside a background subshell.
 if [[ " ${TEAMS[*]} " =~ " agy " ]]; then
@@ -372,8 +375,9 @@ if [[ " ${TEAMS[*]} " =~ " agy " ]]; then
   # pipe can outlive it (same gap as `timeout` without process-group kill).
   tb() { perl -e 'alarm shift; exec @ARGV' "$@"; }
   agy_call() {  # $1=prompt — 60s timebox, 1 retry on empty
-    local out; out=$(tb 60 agy -p "$1" 2>/dev/null)
-    [ -z "$out" ] && out=$(tb 60 agy -p "$1" 2>/dev/null)
+    local g="${FH_DIR:-.}/scripts/agy_launch_guard.sh" out
+    out=$(tb 60 bash "$g" agy -p "$1" 2>/dev/null)
+    [ -z "$out" ] && out=$(tb 60 bash "$g" agy -p "$1" 2>/dev/null)
     printf '%s' "$out"
   }
   A_DEVIL=$(agy_call "[Devil] Adversarial reviewer, no prior context.
