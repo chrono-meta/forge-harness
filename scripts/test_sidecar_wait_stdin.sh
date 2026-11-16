@@ -24,6 +24,7 @@
 #   P3  the caller's own stdin is NOT consumed by the wrapper       (spool regression)
 #   P4  verdict codes: TIMEOUT=1 · EMPTY=0 · COMPLETE=0, and EMPTY/COMPLETE are distinguished
 #   P5  an unwritable outfile is exit 2, not "EMPTY" (a false clean on the typed channel)
+#   P10 a model the CLI refuses is HARNESS-ERROR (rc 3), not COMPLETE · P10b control
 #
 # Verdicts are read by running the wrapper DIRECTLY — piping it into `tail` and reading `$?`
 # answers with tail's status and turns a real exit 1 green.
@@ -174,6 +175,23 @@ if grep -q 'STDERR_MARK' "$TD/p8.out" 2>/dev/null && grep -q 'exit=3' "$TD/p8.tx
   ok "P8 child stderr is captured and its exit code reaches the verdict line"
 else
   bad "P8 stderr or child exit code lost (out='$(head -c 40 "$TD/p8.out" 2>/dev/null)' verdict='$(head -1 "$TD/p8.txt")')"
+fi
+
+# P10 — a model the CLI refuses (measured 2026-11-16: codex «-m gpt-5.5» → HTTP 400 "not supported when
+# using Codex with a ChatGPT account", rc 1) is a HARNESS-ERROR, never COMPLETE: a COMPLETE verdict with
+# an error body reads as «the reviewer answered and found nothing». Control P10b: an ordinary non-zero exit
+# with other text stays COMPLETE (the new verdict must not swallow every failure).
+SIDECAR_POLL=1 bash "$SW" "$TD/p10.out" 20 -- sh -c 'echo "ERROR: {\"type\":\"error\",\"status\":400,\"error\":{\"type\":\"invalid_request_error\",\"message\":\"The '"'"'gpt-5.5'"'"' model is not supported when using Codex with a ChatGPT account.\"}}" >&2; exit 1' >"$TD/p10.txt" 2>&1 </dev/null; p10rc=$?
+if grep -q 'SIDECAR_VERDICT=HARNESS-ERROR' "$TD/p10.txt" && ! grep -q 'SIDECAR_VERDICT=COMPLETE' "$TD/p10.txt" && [ "$p10rc" -eq 3 ]; then
+  ok "P10 a refused model is SIDECAR_VERDICT=HARNESS-ERROR (rc 3), not COMPLETE"
+else
+  bad "P10 refused model: rc=$p10rc verdict='$(grep SIDECAR_VERDICT "$TD/p10.txt" | head -1)'"
+fi
+SIDECAR_POLL=1 bash "$SW" "$TD/p10b.out" 20 -- sh -c 'echo "some review text"; exit 1' >"$TD/p10b.txt" 2>&1 </dev/null; p10brc=$?
+if grep -q 'SIDECAR_VERDICT=COMPLETE exit=1' "$TD/p10b.txt" && [ "$p10brc" -eq 0 ]; then
+  ok "P10b control: an ordinary non-zero exit stays COMPLETE exit=1"
+else
+  bad "P10b control: rc=$p10brc verdict='$(grep SIDECAR_VERDICT "$TD/p10b.txt" | head -1)'"
 fi
 
 echo "----"

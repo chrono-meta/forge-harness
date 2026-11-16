@@ -27,12 +27,17 @@
 #   SIDECAR_VERDICT=TIMEOUT  waited=<n>s bytes=<n> still alive when the budget ran out; NOT a result
 #   SIDECAR_VERDICT=EMPTY    exit=<n>             exited cleanly having written nothing — the only
 #                                                 state in which "the sidecar said nothing" is true
+#   SIDECAR_VERDICT=HARNESS-ERROR exit=<n> reason=model-not-available   the CLI refused the model
+#                                                 (exit 3) — nothing was reviewed; never read as 0 findings
 #
 # Usage:
 #   bash scripts/sidecar_wait.sh <outfile> <timeout_seconds> -- <command> [args...]
-#   printf '%s' "$prompt" | bash scripts/sidecar_wait.sh out.txt 600 -- codex exec -m gpt-5.5 -
+#   printf '%s' "$prompt" | bash scripts/sidecar_wait.sh out.txt 600 -- codex exec -
+#   (no -m: the CLI default answers; a pinned model can be retired — gpt-5.5 / gpt-5 return HTTP 400
+#    on 2026-11-16 — and then this wrapper reports HARNESS-ERROR, not a result)
 #
 # Exit: 0 = COMPLETE (with or without output) · 1 = TIMEOUT (verdict withheld, not a failure claim)
+#       · 3 = HARNESS-ERROR (the CLI refused the model; nothing was reviewed)
 set -uo pipefail
 
 OUT="${1:?usage: sidecar_wait.sh <outfile> <timeout_s> -- <cmd...>}"
@@ -118,6 +123,14 @@ done
 
 wait "$PID"; rc=$?
 size=$(wc -c < "$OUT" 2>/dev/null | tr -d ' ')
+# A model the CLI refuses (measured 2026-11-16: codex `-m gpt-5.5` → HTTP 400 «not supported when using
+# Codex with a ChatGPT account», rc 1) is a broken instrument, not a review that found nothing. COMPLETE
+# with that body reads as «the reviewer answered», so it gets its own verdict and a non-zero exit.
+if [ "$rc" -ne 0 ] && grep -qE 'model_not_found|model is not supported|requires a newer version of Codex' "$OUT" 2>/dev/null; then
+  echo "SIDECAR_VERDICT=HARNESS-ERROR exit=$rc reason=model-not-available bytes=${size:-0}"
+  echo "  the sidecar refused the requested model — nothing was reviewed. Drop the -m pin (CLI default) or pin a model that answers." >&2
+  exit 3
+fi
 if [ "${size:-0}" -eq 0 ]; then
   echo "SIDECAR_VERDICT=EMPTY exit=$rc"
 else

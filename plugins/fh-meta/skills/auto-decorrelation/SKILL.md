@@ -186,11 +186,19 @@ diversity vs the orchestrator** (orchestrator = Claude/opus → recruit GPT or G
   > does not exist until the process has exited.
 
   ```bash
-  printf '%s' "$prompt" | bash scripts/sidecar_wait.sh out.txt 900 -- codex exec -m gpt-5.5 -
+  printf '%s' "$prompt" | bash scripts/sidecar_wait.sh out.txt 900 -- codex exec -
   # → SIDECAR_VERDICT=COMPLETE exit=0 bytes=48489      (read out.txt)
   # → SIDECAR_VERDICT=TIMEOUT  waited=900s bytes=0     (still alive — NOT a result)
   # → SIDECAR_VERDICT=EMPTY    exit=0                  (the only state that means "it said nothing")
+  # → SIDECAR_VERDICT=HARNESS-ERROR exit=1 reason=model-not-available   (exit 3 — nothing was reviewed)
   ```
+  No `-m` pin by default: the CLI default answers, while a pinned model can be retired under you —
+  on 2026-11-16 `-m gpt-5.5` and `-m gpt-5` returned HTTP 400 «not supported when using Codex with a
+  ChatGPT account» (rc 1). Pin only a model `sidecar_calibrate.sh` has just shown answering.
+  🟥 **Send codex only public diffs.** Its `--sandbox read-only` limits writes, not reads: measured
+  2026-11-16 with canary files, it read paths in its cwd, in another temp folder and in the home
+  directory. A codex arm on a machine that holds company checkouts must never be given company
+  material, and the sandbox flag is not a reason to relax that.
 
   The runner **refuses to emit a verdict while the process is alive**, so "the sidecar returned
   nothing" becomes unsayable until it has actually exited. Grep the typed `SIDECAR_VERDICT=` line;
