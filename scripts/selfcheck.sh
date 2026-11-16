@@ -1880,6 +1880,17 @@ else
   echo "FAIL  test_agy_launch_guard_lanes.sh: agy_launch_guard.sh present but its anchor is missing"
   fail=1
 fi
+# agy remote runner (2026-11-16) — the only route the guard's remote-os-user marker opens; its lanes use a fake ssh/scp.
+if [ ! -f scripts/agy_remote_run.sh ]; then
+  _absent_subject_verdict "test_agy_remote_run_lanes.sh" "scripts/agy_remote_run.sh" || fail=1
+elif [ -f scripts/test_agy_remote_run_lanes.sh ]; then
+  if ! env -u FH_AGY_REMOTE -u FH_AGY_REMOTE_DENY -u FH_AGY_REMOTE_RECEIPT_DIR bash scripts/test_agy_remote_run_lanes.sh < /dev/null; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_agy_remote_run_lanes.sh: agy_remote_run.sh present but its anchor is missing"
+  fail=1
+fi
 # Squash-merge verification + its merge-path wiring (2026-09-24). Same subject/anchor pairing as above:
 # both scripts return verdict exit codes, and pr_merge_verified's whole job is to REFUSE before merging —
 # a refusal nobody re-runs is one the next edit quietly removes. Lanes are hermetic (temp repos, fake gh).

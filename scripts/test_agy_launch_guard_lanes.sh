@@ -71,6 +71,16 @@ done
 bash "$GUARD" < /dev/null >/dev/null 2>&1; rc=$?
 [ "$rc" -eq 2 ] && ok "G5 no args: rc=2" || bad "G5 no args: rc=$rc"
 
+# G15 remote-os-user with any other target → refused, target not started
+rm -f "$D/ran"
+FH_AGY_ISOLATION=remote-os-user bash "$GUARD" "$D/agy_fake" -p x < /dev/null >/dev/null 2>&1; rc=$?
+if [ "$rc" -eq 3 ] && [ ! -e "$D/ran" ]; then ok "G15 remote-os-user + other target: refused"; else bad "G15 remote-os-user + other target: rc=$rc started=$([ -e "$D/ran" ] && echo yes || echo no)"; fi
+# G16 remote-os-user with a file NAMED agy_remote_run.sh elsewhere → refused (the path, not the name, is the route)
+mkdir -p "$D/elsewhere"; mkfake "$D/elsewhere/agy_remote_run.sh" "$D/ran"
+rm -f "$D/ran"
+FH_AGY_ISOLATION=remote-os-user bash "$GUARD" "$D/elsewhere/agy_remote_run.sh" -p x < /dev/null >/dev/null 2>&1; rc=$?
+if [ "$rc" -eq 3 ] && [ ! -e "$D/ran" ]; then ok "G16 remote-os-user + same-named file elsewhere: refused"; else bad "G16 same-named file elsewhere: rc=$rc started=$([ -e "$D/ran" ] && echo yes || echo no)"; fi
+
 echo "── finding_fleet.sh default fleet (gemini row)"
 cat > "$D/codex_fake" <<'EOF'
 #!/usr/bin/env bash

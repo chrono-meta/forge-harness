@@ -14,7 +14,8 @@
 # readable. Allowed instead: a tool-less API call (that does not use agy, so it does not come here), or
 # agy inside a container or a separate OS user that can see only the frozen inputs of the task.
 #
-# MARKER. FH_AGY_ISOLATION=container  or  FH_AGY_ISOLATION=os-user. Unset, empty, or any other value
+# MARKER. FH_AGY_ISOLATION=container  or  FH_AGY_ISOLATION=os-user, or FH_AGY_ISOLATION=remote-os-user
+# (honoured only when the target is scripts/agy_remote_run.sh beside this guard). Unset, empty, or any other value
 # (including 1 / yes / true) is refused. 🟥 The marker is self-declared: this script checks that you
 # said it, not that it is true — it cannot see a container or an OS user. Set it only inside a container
 # or OS user where a canary check has confirmed it: place a canary file outside the frozen inputs (in
@@ -28,6 +29,16 @@ set -uo pipefail
 [ $# -ge 1 ] || { echo "usage: agy_launch_guard.sh <agy-binary> [agy arguments...]" >&2; exit 2; }
 case "${FH_AGY_ISOLATION-}" in
   container|os-user) exec "$@" ;;
+  remote-os-user)
+    # Honoured for ONE route only: the target must be FH's remote runner beside this guard, which runs
+    # agy as a separate OS user on another machine and itself refuses without a fresh canary receipt.
+    _here="$(cd "$(dirname "$0")" && pwd -P)"
+    _tgt_dir="$(cd "$(dirname "$1")" 2>/dev/null && pwd -P)"
+    if [ "$_tgt_dir/$(basename "$1")" = "$_here/agy_remote_run.sh" ] && [ -f "$_here/agy_remote_run.sh" ]; then
+      exec bash "$_here/agy_remote_run.sh" "${@:2}"
+    fi
+    echo "AGY-REFUSED: FH_AGY_ISOLATION=remote-os-user is honoured only when the target is $_here/agy_remote_run.sh (got: $1)." >&2
+    exit 3 ;;
 esac
 {
   echo "AGY-REFUSED: agy was not started (FH_AGY_ISOLATION=${FH_AGY_ISOLATION-<unset>})."
