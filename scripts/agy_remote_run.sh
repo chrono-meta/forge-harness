@@ -22,6 +22,11 @@
 # with key=value lines (verdict, target_sha, epoch, denied=N/N, positive) and one line per path.
 # A run is refused unless that receipt says PASS, is under 7 days old and matches the current settings.
 # 🟥 The receipt records this script's own measurement on the day it ran; it is not proof of isolation.
+# 🟥 A deny on a drive or folder root does NOT override an explicit allow entry on a sub-item: on the
+#    operator's machine (2026-11-16) the remote user could still list or open 8 such sub-items (game
+#    folders, the recycle bins, an antivirus decoy folder, three device-information files), which the
+#    operator accepted. The canary only measures the paths you list — list a sub-item only after you
+#    have denied it explicitly, and name the accepted ones where you record the receipt.
 #
 # USAGE (agy-compatible; extra flags are this runner's own and are not passed to agy):
 #   agy_remote_run.sh [--input <file>]... [--fetch <name>]... [--fetch-dir <dir>] -p "<prompt>" [agy flags...]

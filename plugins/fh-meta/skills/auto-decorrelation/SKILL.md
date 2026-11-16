@@ -67,6 +67,21 @@ fails). Being
 discovered below makes agy a *candidate*, not a recruit: on the host, without the marker, it is not
 recruitable. Lanes: `scripts/test_agy_launch_guard_lanes.sh`.
 
+**The one route FH opens for agy: a separate OS user on another machine** — `scripts/agy_remote_run.sh`.
+Set `FH_AGY_BIN=<repo>/scripts/agy_remote_run.sh` and `FH_AGY_ISOLATION=remote-os-user` (the guard honours
+that value only for this runner). Configuration is environment-only (`FH_AGY_REMOTE` = ssh target,
+`FH_AGY_REMOTE_DENY` = `;`-separated paths that user must not read). First run
+`agy_remote_run.sh --canary` — no agy, a plain remote shell tries every deny path (all must be refused)
+and a positive file (must be readable) and writes a local receipt. Runs are refused without a PASS
+receipt under 7 days old for the same settings, and a route that is down is a refusal (exit 4), never a
+local agy. The receipt is the record of that measurement, not proof of isolation. **Name what the remote
+user can still read**: on the operator's machine measured 2026-11-16, the remote user cannot read the
+admin profile, the shared Public folder, the admin WSL home or the two data-drive roots, but still lists
+or opens 8 sub-items the operator accepted — game folders, the two recycle bins, an antivirus decoy
+folder and three device-information files — because those carry their own explicit allow entries that an
+inherited deny does not override. Lanes: `scripts/test_agy_remote_run_lanes.sh` (fake ssh/scp; the
+PowerShell side was run for real once).
+
 Build the available panel at run time; absent tools **and unreachable endpoints** drop off silently:
 ```bash
 # Sidecar-callable CLIs only. **Scope discipline**: the probe list is NOT "every agent CLI that exists".
