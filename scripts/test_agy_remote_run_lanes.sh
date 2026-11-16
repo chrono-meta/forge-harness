@@ -79,6 +79,9 @@ chmod +x "$D/bin/ssh" "$D/bin/scp" "$D/fake_agy" "$D/bin/agy"
 export PATH="$D/bin:$PATH"   # fake ssh/scp by name, first on PATH — the runner has no override switch
 export FH_AGY_REMOTE_RECEIPT_DIR="$D/receipts"
 DENY='C:\Users\admin;C:\Users\Public;D:\'
+# first / newest receipt without an early-exit reader on a pipe (pipefail class-lock)
+first_receipt() { local f; for f in "$D"/receipts/receipt_*.txt; do [ -f "$f" ] && { printf '%s' "$f"; return 0; }; done; return 1; }
+newest_receipt() { local f n=""; for f in "$D"/receipts/receipt_*.txt; do [ -f "$f" ] || continue; { [ -z "$n" ] || [ "$f" -nt "$n" ]; } && n="$f"; done; printf '%s' "$n"; }
 leftover() { find "$RH" -mindepth 1 -maxdepth 1 -name 'fh_agy_*' | wc -l | tr -d ' '; }
 run() { out=$("$@" 2>"$D/err" </dev/null); rc=$?; err=$(cat "$D/err"); }
 
@@ -94,7 +97,7 @@ run env FH_AGY_REMOTE_DENY= bash "$RUN" --canary
 echo "── canary"
 : > "$D/readable"
 run bash "$RUN" --canary
-R="$(ls "$D"/receipts/receipt_*.txt 2>/dev/null | head -1)"
+R="$(first_receipt)"
 if [ "$rc" -eq 0 ] && grep -qx 'verdict=PASS' "$R" && grep -qx 'denied=3/3' "$R" && [ "$(leftover)" = 0 ]; then ok "R4 canary all denied: PASS 3/3, receipt written, remote folder removed"
 else bad "R4 canary PASS: rc=$rc receipt=$(head -4 "$R" 2>/dev/null | tr '\n' ' ') left=$(leftover)"; fi
 printf 'C:\\Users\\Public\n' > "$D/readable"
@@ -134,7 +137,7 @@ run bash "$RUN" -p hi --settings x.json
 [ "$rc" -eq 2 ] && ok "R15 caller --settings: rc=2 (the runner owns it)" || bad "R15 settings: rc=$rc"
 
 echo "── receipt freshness and settings"
-R="$(ls "$D"/receipts/receipt_*.txt | head -1)"
+R="$(first_receipt)"
 sed -i.bak 's/^epoch=.*/epoch=1000/' "$R"
 run bash "$RUN" -p hi
 [ "$rc" -eq 3 ] && printf '%s' "$err" | grep -q 'older than 7 days' && ok "R16 receipt older than 7 days: rc=3" || bad "R16 stale: rc=$rc"
@@ -202,7 +205,7 @@ rm -rf "$RH"/fh_agy_*
 run bash "$RUN" --canary
 run bash "$RUN" --fetch ../outside.txt --fetch-dir "$D/back" -p hi
 [ "$rc" -eq 2 ] && ok "R35 --fetch ../outside.txt: rc=2 (bare names only)" || bad "R35 fetch traversal: rc=$rc"
-R="$(printf '%s' "$out" | sed -n 's/.*receipt=//p')"; [ -n "$R" ] || R="$(ls -t "$D"/receipts/receipt_*.txt | head -1)"
+R="$(printf '%s' "$out" | sed -n 's/.*receipt=//p')"; [ -n "$R" ] || R="$(newest_receipt)"
 run bash "$RUN" --canary; R="$(printf '%s' "$out" | sed -n 's/.*receipt=//p')"
 sed -i.bak 's/^epoch=.*/epoch=9999999999/' "$R"
 run bash "$RUN" -p hi
