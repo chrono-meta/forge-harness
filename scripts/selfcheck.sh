@@ -513,12 +513,15 @@ if [ ! -f scripts/prepush_guard_check.sh ]; then
   _absent_subject_verdict "prepush-guard known-pair" "scripts/prepush_guard_check.sh" || fail=1
 else
   # 🟥 파이프 앞에서 rc 를 잡는다 — 표시 필터의 rc 를 읽으면 실패가 0 으로 보인다.
+  # 🟥 tail -12 로 자르지 않는다 — 하위 소비자가 «BLOCKED — a known pair broke» 만 받고 어느 쌍인지
+  # 못 읽은 실사고(2026-11-16, 원인은 UNMEASURED). ❌ 줄을 뽑는 _show_failure 로 보이고, 전체 경과도 찍는다.
+  _pg_t0=$SECONDS
   _pg_out="$(bash scripts/prepush_guard_check.sh 2>&1)"; _pg_rc=$?
   if [ "$_pg_rc" -eq 0 ]; then
     echo "PASS  prepush-guard known-pair"
   else
-    echo "FAIL  prepush-guard known-pair (rc=$_pg_rc)"
-    [ -n "$_pg_out" ] && printf '%s\n' "$_pg_out" | tail -12 | sed 's/^/      /'
+    echo "FAIL  prepush-guard known-pair (rc=$_pg_rc, $((SECONDS - _pg_t0))s)"
+    _show_failure "$_pg_out"
     fail=1
   fi
 fi
@@ -1900,6 +1903,18 @@ elif [ -f scripts/test_codex_launch_guard_lanes.sh ]; then
   fi
 else
   echo "FAIL  test_codex_launch_guard_lanes.sh: codex_launch_guard.sh present but its anchor is missing"
+  fail=1
+fi
+# prepush-guard failure visibility (2026-11-16) — a broken known pair must be named, with rc and
+# elapsed, in the last lines of the check and in selfcheck's own rendering of it.
+if [ ! -f scripts/prepush_guard_check.sh ]; then
+  _absent_subject_verdict "test_prepush_guard_failure_visibility_lanes.sh" "scripts/prepush_guard_check.sh" || fail=1
+elif [ -f scripts/test_prepush_guard_failure_visibility_lanes.sh ]; then
+  if ! bash scripts/test_prepush_guard_failure_visibility_lanes.sh < /dev/null; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_prepush_guard_failure_visibility_lanes.sh: prepush_guard_check.sh present but its anchor is missing"
   fail=1
 fi
 # Squash-merge verification + its merge-path wiring (2026-09-24). Same subject/anchor pairing as above:
