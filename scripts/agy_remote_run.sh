@@ -12,7 +12,8 @@
 # (default %LOCALAPPDATA%\agy\bin\agy.exe). Configuration comes only from the environment — this public
 # file names no host, account or path:
 #   FH_AGY_REMOTE        ssh target, e.g. user@host                       (required)
-#   FH_AGY_REMOTE_DENY   ;-separated remote paths the user must NOT read  (required for --canary)
+#   FH_AGY_REMOTE_DENY   ;-separated remote paths the user must NOT read  (required for --canary); only an
+#                        access-denied error counts, unless the entry starts with ? (then not-found is accepted too)
 #   FH_AGY_REMOTE_AGY    remote agy path        (default: %LOCALAPPDATA%\agy\bin\agy.exe)
 #   FH_AGY_REMOTE_RECEIPT_DIR  local receipt folder (default: $HOME/.cache/fh-agy-remote — outside any repo)
 #
@@ -39,11 +40,7 @@
 #       no/stale/FAIL/mismatched receipt) · 4 route unavailable (ssh/scp failed) · 5 cleanup not verified
 #       --canary: 0 PASS · 1 FAIL · 2 usage · 4 route unavailable
 set -uo pipefail
-SSH=ssh; SCP=scp
-# Transport overrides exist for the lanes only, and are honoured only with FH_AGY_REMOTE_LANE=1 — otherwise
-# an override pointing at a local agy would start it.
-if [ "${FH_AGY_REMOTE_LANE-}" = 1 ]; then SSH="${FH_AGY_REMOTE_SSH:-ssh}"; SCP="${FH_AGY_REMOTE_SCP:-scp}"
-elif [ -n "${FH_AGY_REMOTE_SSH-}${FH_AGY_REMOTE_SCP-}" ]; then echo "agy_remote_run: FH_AGY_REMOTE_SSH/SCP are honoured only in the lanes (FH_AGY_REMOTE_LANE=1)" >&2; exit 2; fi
+SSH=ssh; SCP=scp   # by name from PATH; there is no override (the lanes put fakes first on PATH)
 die() { echo "agy_remote_run: $2" >&2; exit "$1"; }
 TARGET="${FH_AGY_REMOTE-}"
 [ -n "$TARGET" ] || die 3 "AGY-REMOTE-REFUSED: FH_AGY_REMOTE is not set — refusing (agy is never started locally)"
@@ -84,21 +81,25 @@ if [ "${1-}" = "--canary" ]; then
   printf '%s\n' "$DENY" | tr ';' '\n' | sed '/^$/d' > "$LOCAL/deny.txt"
   cat > "$LOCAL/canary.ps1" <<'PS'
 foreach ($p in Get-Content -LiteralPath (Join-Path $PSScriptRoot 'deny.txt')) {
+  $absentOk = $p.StartsWith('?'); if ($absentOk) { $p = $p.Substring(1) }
   try { $i = Get-Item -LiteralPath $p -Force -ErrorAction Stop
         if ($i.PSIsContainer) { [void](Get-ChildItem -LiteralPath $p -Force -ErrorAction Stop) } else { [IO.File]::OpenRead($p).Close() }
-        "DENY-FAIL $p" } catch { "DENY-OK $p (" + $_.Exception.GetType().Name + ")" } }
+        "DENY-FAIL $p (readable)" }
+  catch { $e = $_.Exception.GetType().Name
+          if ($e -match 'UnauthorizedAccess' -or ($absentOk -and $e -match 'NotFound')) { "DENY-OK $p ($e)" }
+          else { "DENY-FAIL $p (not measured: $e)" } } }
 $f = Join-Path $PSScriptRoot 'positive.txt'; Set-Content -LiteralPath $f -Value 'FH-POSITIVE'
 try { if ((Get-Content -LiteralPath $f -Raw).Trim() -eq 'FH-POSITIVE') { 'POS-OK' } else { 'POS-FAIL' } } catch { 'POS-FAIL' }
 PS
   remote_mkdir || die 4 "AGY-REMOTE-UNAVAILABLE: cannot reach $TARGET (mkdir failed)"
   remote_put "$LOCAL/deny.txt" "$LOCAL/canary.ps1" || { remote_cleanup; die 4 "AGY-REMOTE-UNAVAILABLE: copy to $TARGET failed"; }
-  out="$(remote_ps canary.ps1 2>&1 | tr -d '\r')"
+  out="$(remote_ps canary.ps1 2>&1)"; prc=$?; out="$(printf '%s' "$out" | tr -d '\r')"
   remote_cleanup; crc=$?
   want=$(grep -c '' "$LOCAL/deny.txt")
   ok=$(printf '%s\n' "$out" | grep -c '^DENY-OK ')
   bad=$(printf '%s\n' "$out" | grep -c '^DENY-FAIL ')
   pos=$(printf '%s\n' "$out" | grep -q '^POS-OK$' && echo READ || echo FAIL)
-  verdict=FAIL; [ "$ok" -eq "$want" ] && [ "$bad" -eq 0 ] && [ "$pos" = READ ] && [ "$want" -gt 0 ] && [ "$crc" -eq 0 ] && verdict=PASS
+  verdict=FAIL; [ "$ok" -eq "$want" ] && [ "$bad" -eq 0 ] && [ "$pos" = READ ] && [ "$want" -gt 0 ] && [ "$crc" -eq 0 ] && [ "$prc" -eq 0 ] && verdict=PASS
   mkdir -p "$RDIR" || die 4 "cannot create $RDIR"
   { echo "verdict=$verdict"; echo "target_sha=$TSHA"; echo "epoch=$(date +%s)"; echo "denied=$ok/$want"
     echo "positive=$pos"; echo "cleanup=$([ "$crc" -eq 0 ] && echo OK || echo UNVERIFIED)"
@@ -134,11 +135,11 @@ for f in ${INPUTS[@]+"${INPUTS[@]}"} ${FETCH[@]+"${FETCH[@]}"}; do
   b="$(basename "$f")"
   lb="$(printf '%s' "$b" | tr 'A-Z' 'a-z')"   # Windows names are case-insensitive
   case "$b" in ''|*[!A-Za-z0-9._-]*) die 2 "file name not allowed: $b" ;; esac
-  case "$lb" in prompt.txt|args.txt|settings.json|run.ps1|cleanup.ps1|agy_path.txt|rc.txt|canary.ps1|deny.txt) die 2 "file name reserved by the runner: $b" ;; esac
+  case "$lb" in prompt.txt|args.txt|settings.json|run.ps1|cleanup.ps1|agy_path.txt|canary.ps1|deny.txt) die 2 "file name reserved by the runner: $b" ;; esac
 done
 for f in ${INPUTS[@]+"${INPUTS[@]}"}; do
   [ -f "$f" ] || die 2 "input not found: $f"
-  b="$(basename "$f")"; case "$seen" in *" $b "*) die 2 "two inputs named $b" ;; esac; seen="$seen$b "
+  b="$(basename "$f" | tr 'A-Z' 'a-z')"; case "$seen" in *" $b "*) die 2 "two inputs share the name $b (Windows ignores case)" ;; esac; seen="$seen$b "
 done
 printf '%s' "$PROMPT" > "$LOCAL/prompt.txt"
 : > "$LOCAL/args.txt"; for a in ${PASS[@]+"${PASS[@]}"}; do printf '%s\n' "$a" >> "$LOCAL/args.txt"; done
@@ -146,22 +147,20 @@ printf '{"toolPermission":"always-proceed","allowNonWorkspaceAccess":false}\n' >
 printf '%s' "$RAGY" > "$LOCAL/agy_path.txt"
 cat > "$LOCAL/run.ps1" <<'PS'
 Set-Location $PSScriptRoot
-$p = Get-Content -LiteralPath 'prompt.txt' -Raw
-$a = @(Get-Content -LiteralPath 'args.txt' | Where-Object { $_ -ne '' })
-$agy = [Environment]::ExpandEnvironmentVariables((Get-Content -LiteralPath 'agy_path.txt' -Raw).Trim())
+$p = Get-Content -LiteralPath 'prompt.txt' -Raw -Encoding UTF8
+$a = @(Get-Content -LiteralPath 'args.txt' -Encoding UTF8 | Where-Object { $_ -ne '' })
+$agy = [Environment]::ExpandEnvironmentVariables((Get-Content -LiteralPath 'agy_path.txt' -Raw -Encoding UTF8).Trim())
 & $agy -p $p @a --settings (Join-Path $PSScriptRoot 'settings.json')
-# written after agy has exited, so nothing agy prints or writes can stand in for it
-Set-Content -LiteralPath (Join-Path $PSScriptRoot 'rc.txt') -Value $LASTEXITCODE -Encoding ASCII
+# printed after agy has exited: the runner trusts only the LAST line, which agy's output cannot follow
+"FH_AGY_RC=$LASTEXITCODE"
 PS
 remote_mkdir || die 4 "AGY-REMOTE-UNAVAILABLE: cannot reach $TARGET (mkdir failed) — not falling back to a local agy"
 remote_put "$LOCAL/prompt.txt" "$LOCAL/args.txt" "$LOCAL/settings.json" "$LOCAL/agy_path.txt" "$LOCAL/run.ps1" ${INPUTS[@]+"${INPUTS[@]}"} \
   || { remote_cleanup; die 4 "AGY-REMOTE-UNAVAILABLE: copy to $TARGET failed"; }
 remote_ps run.ps1 > "$LOCAL/out.txt" 2> "$LOCAL/err.txt"; src=$?
-tr -d '\r' < "$LOCAL/out.txt"; tr -d '\r' < "$LOCAL/err.txt" >&2
-arc=""
-if "$SCP" -q "${SSHO[@]}" "$TARGET:$WD/rc.txt" "$LOCAL/rc.txt" </dev/null >/dev/null 2>&1; then
-  arc="$(tr -d '\r \n' < "$LOCAL/rc.txt")"; printf '%s' "$arc" | grep -Eq '^-?[0-9]+$' || arc=""
-fi
+tr -d '\r' < "$LOCAL/out.txt" | sed '$ { /^FH_AGY_RC=/d; }'; tr -d '\r' < "$LOCAL/err.txt" >&2
+last="$(tr -d '\r' < "$LOCAL/out.txt" | sed '/^$/d' | tail -1)"
+arc="$(printf '%s' "$last" | sed -n 's/^FH_AGY_RC=\(-\{0,1\}[0-9][0-9]*\)$/\1/p')"
 frc=0
 for n in ${FETCH[@]+"${FETCH[@]}"}; do
   mkdir -p "$FDIR" && "$SCP" -q "${SSHO[@]}" "$TARGET:$WD/$n" "$FDIR/" </dev/null >/dev/null 2>&1 || { echo "agy_remote_run: could not fetch $n" >&2; frc=4; }

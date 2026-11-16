@@ -23,7 +23,7 @@ bad() { FAIL=$((FAIL+1)); echo "  ❌ $1"; }
 RH="$D/rhome"; mkdir -p "$RH" "$D/bin"
 
 # ── fake remote ────────────────────────────────────────────────────────────────────────────────────
-cat > "$D/bin/fake_ssh" <<EOF
+cat > "$D/bin/ssh" <<EOF
 #!/usr/bin/env bash
 RH="$RH"; D="$D"
 [ "\${FAKE_SSH_DOWN:-0}" = 1 ] && exit 255
@@ -35,22 +35,25 @@ case "\$cmd" in
   powershell*-File*) f="\${cmd##*-File }"; wd="\${f%%\\\\*}"; sc="\${f##*\\\\}"; W="\$RH/\$wd"
     mkdir -p "\$D/seen"; cp "\$W/\$sc" "\$D/seen/\$sc" 2>/dev/null
     case "\$sc" in
-      canary.ps1) while IFS= read -r p; do
-                    if grep -qxF -- "\$p" "\$D/readable" 2>/dev/null; then echo "DENY-FAIL \$p"; else echo "DENY-OK \$p (UnauthorizedAccessException)"; fi
+      canary.ps1) while IFS= read -r p; do ao=0; case "\$p" in '?'*) ao=1; p="\${p#?}" ;; esac
+                    if grep -qxF -- "\$p" "\$D/readable" 2>/dev/null; then echo "DENY-FAIL \$p (readable)"
+                    elif grep -qxF -- "\$p" "\$D/notfound" 2>/dev/null; then [ \$ao = 1 ] && echo "DENY-OK \$p (ItemNotFoundException)" || echo "DENY-FAIL \$p (not measured: ItemNotFoundException)"
+                    else echo "DENY-OK \$p (UnauthorizedAccessException)"; fi
                   done < "\$W/deny.txt"
-                  [ "\${FAKE_POS_FAIL:-0}" = 1 ] && echo POS-FAIL || echo POS-OK ;;
+                  [ "\${FAKE_POS_FAIL:-0}" = 1 ] && echo POS-FAIL || echo POS-OK
+                  exit "\${FAKE_SSH_CANARY_RC:-0}" ;;
       run.ps1) ( cd "\$W" && args=(); while IFS= read -r a; do [ -n "\$a" ] && args+=("\$a"); done < args.txt
-                 "\$D/fake_agy" -p "\$(cat prompt.txt)" \${args[@]+"\${args[@]}"} --settings "\$W/settings.json"; echo "\$?" > rc.txt )
+                 "\$D/fake_agy" -p "\$(cat prompt.txt)" \${args[@]+"\${args[@]}"} --settings "\$W/settings.json"; echo "FH_AGY_RC=\$?" )
                exit "\${FAKE_SSH_RUN_RC:-0}" ;;
       cleanup.ps1) n="\$wd"
                    if ! printf '%s' "\$n" | grep -Eq '^fh_agy_[0-9]{14}_[0-9a-f]{6}$'; then echo "CLEANUP-REFUSED \$n"; exit 3; fi
                    [ "\${FAKE_CLEANUP_FAIL:-0}" = 1 ] && { echo CLEANUP-FAILED; exit 5; }
                    rm -rf "\$W"; echo CLEANUP-OK ;;
     esac ;;
-  *) echo "fake_ssh: unexpected command: \$cmd" >&2; exit 99 ;;
+  *) echo "fake ssh: unexpected command: \$cmd" >&2; exit 99 ;;
 esac
 EOF
-cat > "$D/bin/fake_scp" <<EOF
+cat > "$D/bin/scp" <<EOF
 #!/usr/bin/env bash
 RH="$RH"
 args=(); while [ \$# -gt 0 ]; do case "\$1" in -q) shift ;; -o) shift 2 ;; *) args+=("\$1"); shift ;; esac; done
@@ -65,12 +68,13 @@ cat > "$D/fake_agy" <<EOF
 printf '%s\n' "\$@" > "$D/agy_argv"
 echo "fake-output" > out.txt
 echo "FAKE-AGY-RAN"
+[ -n "\${FAKE_AGY_FORGE:-}" ] && echo "FH_AGY_RC=0"
 exit \${FAKE_AGY_RC:-0}
 EOF
 # a recording `agy` on PATH: if the runner ever fell back to a local agy, this would record it
 printf '#!/usr/bin/env bash\n: > "%s/local_agy_ran"\n' "$D" > "$D/bin/agy"
-chmod +x "$D/bin/fake_ssh" "$D/bin/fake_scp" "$D/fake_agy" "$D/bin/agy"
-export PATH="$D/bin:$PATH" FH_AGY_REMOTE_LANE=1 FH_AGY_REMOTE_SSH="$D/bin/fake_ssh" FH_AGY_REMOTE_SCP="$D/bin/fake_scp"
+chmod +x "$D/bin/ssh" "$D/bin/scp" "$D/fake_agy" "$D/bin/agy"
+export PATH="$D/bin:$PATH"   # fake ssh/scp by name, first on PATH — the runner has no override switch
 export FH_AGY_REMOTE_RECEIPT_DIR="$D/receipts"
 DENY='C:\Users\admin;C:\Users\Public;D:\'
 leftover() { find "$RH" -mindepth 1 -maxdepth 1 -name 'fh_agy_*' | wc -l | tr -d ' '; }
@@ -148,8 +152,9 @@ run env -u FH_AGY_ISOLATION bash "$GUARD" "$RUN" -p hi
 
 echo "── review round 1 holes"
 run bash "$RUN" --canary
-run env -u FH_AGY_REMOTE_LANE bash "$RUN" -p hi
-[ "$rc" -eq 2 ] && [ ! -e "$D/local_agy_ran" ] && ok "R22 transport override without FH_AGY_REMOTE_LANE: rc=2, nothing started" || bad "R22 override outside lanes: rc=$rc"
+printf '#!/usr/bin/env bash\n: > "%s/override_ran"\n' "$D" > "$D/override"; chmod +x "$D/override"
+run env FH_AGY_REMOTE_SSH="$D/override" FH_AGY_REMOTE_SCP="$D/override" FH_AGY_REMOTE_LANE=1 bash "$RUN" -p hi
+[ ! -e "$D/override_ran" ] && [ "$rc" -eq 0 ] && ok "R22 FH_AGY_REMOTE_SSH/SCP/LANE in the environment have no effect (no override exists)" || bad "R22 override honoured: rc=$rc"
 printf 'x' > "$D/RUN.PS1"
 run bash "$RUN" --input "$D/RUN.PS1" -p hi
 [ "$rc" -eq 2 ] && printf '%s' "$err" | grep -q reserved && ok "R23 input named RUN.PS1 (case differs): rc=2 reserved" || bad "R23 RUN.PS1: rc=$rc"
@@ -162,19 +167,34 @@ run env FAKE_CLEANUP_FAIL=1 bash "$RUN" --canary
 R="$(printf '%s' "$out" | sed -n 's/.*receipt=//p')"
 [ "$rc" -ne 0 ] && grep -qx 'verdict=FAIL' "$R" && ok "R26 canary whose cleanup fails: not PASS" || bad "R26 canary cleanup: rc=$rc verdict=$(sed -n 's/^verdict=//p' "$R")"
 rm -rf "$RH"/fh_agy_*
-mkdir -p "$D/ro"; chmod 500 "$D/ro"
-run env FH_AGY_REMOTE_RECEIPT_DIR="$D/ro" bash "$RUN" --canary
-chmod 700 "$D/ro"
+: > "$D/afile"   # a receipt dir UNDER a regular file cannot be created, even by root
+run env FH_AGY_REMOTE_RECEIPT_DIR="$D/afile/sub" bash "$RUN" --canary
 [ "$rc" -eq 4 ] && ok "R27 receipt cannot be written: rc=4" || bad "R27 unwritable receipt: rc=$rc"
 run env FH_AGY_REMOTE_DENY="$(printf 'C:\\a\nC:\\b')" bash "$RUN" --canary
 [ "$rc" -eq 2 ] && ok "R28 deny list with a line break: rc=2" || bad "R28 newline in deny: rc=$rc"
 # R29 the uploaded scripts themselves carry the probes the emulator stands in for
-if grep -q 'Get-ChildItem -LiteralPath \$p -Force -ErrorAction Stop' "$D/seen/canary.ps1" 2>/dev/null \
+if grep -q 'Get-ChildItem -LiteralPath \$p -Force -ErrorAction Stop' "$D/seen/canary.ps1" 2>/dev/null && grep -q "UnauthorizedAccess" "$D/seen/canary.ps1" \
    && grep -q "OpenRead(\$p)" "$D/seen/canary.ps1" && grep -q "POS-OK" "$D/seen/canary.ps1" \
    && grep -qF "'^fh_agy_[0-9]{14}_[0-9a-f]{6}\$'" "$D/seen/cleanup.ps1" && grep -qF '$parent -ne $env:USERPROFILE' "$D/seen/cleanup.ps1" \
-   && grep -qF "Set-Content -LiteralPath (Join-Path \$PSScriptRoot 'rc.txt')" "$D/seen/run.ps1"; then
-  ok "R29 uploaded canary/cleanup/run scripts carry the read probe, the name+parent check and the rc file"
+   && grep -qF '"FH_AGY_RC=$LASTEXITCODE"' "$D/seen/run.ps1" && grep -qF "prompt.txt' -Raw -Encoding UTF8" "$D/seen/run.ps1"; then
+  ok "R29 uploaded canary/cleanup/run scripts carry the read probe, the access-denied rule, the name+parent check and the final rc line"
 else bad "R29 uploaded script content missing a probe or check"; fi
+echo "── review round 2 holes"
+printf 'C:\\Users\\Typo\n' > "$D/notfound"
+run env FH_AGY_REMOTE_DENY='C:\Users\Typo;C:\Users\Public' bash "$RUN" --canary
+[ "$rc" -eq 1 ] && printf '%s' "$out" | grep -q 'FAIL' && ok "R30 a deny path that does not exist (no ?): FAIL, not measured" || bad "R30 typo path: rc=$rc"
+run env FH_AGY_REMOTE_DENY='?C:\Users\Typo;C:\Users\Public' bash "$RUN" --canary
+[ "$rc" -eq 0 ] && ok "R31 the same path marked ? (absence accepted): PASS" || bad "R31 ? path: rc=$rc"
+: > "$D/notfound"; rm -rf "$RH"/fh_agy_*
+run env FAKE_SSH_CANARY_RC=255 bash "$RUN" --canary
+[ "$rc" -eq 1 ] && ok "R32 canary whose ssh exits 255 after printing all probes: FAIL" || bad "R32 canary ssh rc: rc=$rc"
+rm -rf "$RH"/fh_agy_*
+run bash "$RUN" --canary
+run env FAKE_AGY_FORGE=1 FAKE_AGY_RC=7 bash "$RUN" -p hi
+[ "$rc" -eq 1 ] && printf '%s' "$err" | grep -q 'AGY_RC=7' && ok "R33 agy prints a forged FH_AGY_RC=0 then exits 7: runner rc=1 (only the last line counts)" || bad "R33 forged rc: rc=$rc"
+printf 'a' > "$D/Evidence.txt"; printf 'b' > "$D/other/evidence.txt"
+run bash "$RUN" --input "$D/Evidence.txt" --input "$D/other/evidence.txt" -p hi
+[ "$rc" -eq 2 ] && ok "R34 inputs Evidence.txt and evidence.txt: rc=2 (Windows ignores case)" || bad "R34 case dup: rc=$rc"
 [ ! -e "$D/local_agy_ran" ] && ok "R21 no lane started a local agy" || bad "R21 a local agy was started"
 echo
 echo "agy remote run lanes: $PASS passed, $FAIL failed"
