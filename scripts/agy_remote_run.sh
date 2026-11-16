@@ -71,8 +71,8 @@ Set-Location $env:USERPROFILE; Remove-Item -LiteralPath $PSScriptRoot -Recurse -
 if (Test-Path -LiteralPath $PSScriptRoot) { "CLEANUP-FAILED"; exit 5 } else { "CLEANUP-OK" }
 PS
   remote_put "$LOCAL/cleanup.ps1" || return 5
-  remote_ps cleanup.ps1 2>/dev/null | tr -d '\r' | grep -q '^CLEANUP-OK$' || return 5
-  return 0
+  local co; co="$(remote_ps cleanup.ps1 2>/dev/null)"   # capture first: no early-exit reader on a pipe
+  case "$(printf '%s' "$co" | tr -d '\r')" in CLEANUP-OK|*$'\n'CLEANUP-OK) return 0 ;; *) return 5 ;; esac
 }
 # An interrupt after the remote folder exists still removes it (only this run's folder, re-checked remotely).
 CREATED=0
@@ -117,7 +117,7 @@ fi
 
 # ── run mode: receipt first, then the route ───────────────────────────────────────────────────────
 [ -f "$RECEIPT" ] || die 3 "AGY-REMOTE-REFUSED: no canary receipt for these settings — run: agy_remote_run.sh --canary"
-r_get() { sed -n "s/^$1=//p" "$RECEIPT" | head -1; }
+r_get() { sed -n "s/^$1=//p" "$RECEIPT" | sed -n 1p; }   # first value only; sed reads to the end
 [ "$(r_get verdict)" = PASS ] || die 3 "AGY-REMOTE-REFUSED: the last canary did not pass ($RECEIPT)"
 [ "$(r_get target_sha)" = "$TSHA" ] || die 3 "AGY-REMOTE-REFUSED: receipt is for different settings"
 age=$(( $(date +%s) - $(r_get epoch | grep -E '^[0-9]+$' || echo 0) ))
