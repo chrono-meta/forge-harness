@@ -185,13 +185,13 @@ SIDECAR_POLL=1 bash "$SW" "$TD/p10.out" 20 -- sh -c 'echo "ERROR: {\"type\":\"er
 if grep -q 'SIDECAR_VERDICT=HARNESS-ERROR' "$TD/p10.txt" && ! grep -q 'SIDECAR_VERDICT=COMPLETE' "$TD/p10.txt" && [ "$p10rc" -eq 3 ]; then
   ok "P10 a refused model is SIDECAR_VERDICT=HARNESS-ERROR (rc 3), not COMPLETE"
 else
-  bad "P10 refused model: rc=$p10rc verdict='$(grep SIDECAR_VERDICT "$TD/p10.txt" | head -1)'"
+  bad "P10 refused model: rc=$p10rc verdict='$(grep -m1 SIDECAR_VERDICT "$TD/p10.txt")'"
 fi
 SIDECAR_POLL=1 bash "$SW" "$TD/p10b.out" 20 -- sh -c 'echo "some review text"; exit 1' >"$TD/p10b.txt" 2>&1 </dev/null; p10brc=$?
 if grep -q 'SIDECAR_VERDICT=COMPLETE exit=1' "$TD/p10b.txt" && [ "$p10brc" -eq 0 ]; then
   ok "P10b control: an ordinary non-zero exit stays COMPLETE exit=1"
 else
-  bad "P10b control: rc=$p10brc verdict='$(grep SIDECAR_VERDICT "$TD/p10b.txt" | head -1)'"
+  bad "P10b control: rc=$p10brc verdict='$(grep -m1 SIDECAR_VERDICT "$TD/p10b.txt")'"
 fi
 
 echo "----"

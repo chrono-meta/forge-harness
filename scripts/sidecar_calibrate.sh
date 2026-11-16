@@ -95,6 +95,7 @@ BOGUS_MODEL="zzz-nonexistent-model-9.9"
 
 PANEL=""
 AGY_GUARD="$(cd "$(dirname "$0")" && pwd)/agy_launch_guard.sh"
+CODEX_GUARD="$(cd "$(dirname "$0")" && pwd)/codex_launch_guard.sh"
 
 # build_cmd <runtime> <model> <prompt> — fills CMD as an argv array.
 # NOT a shell function passed to the watchdog: `timeout`/`gtimeout` exec a BINARY and cannot see
@@ -102,7 +103,7 @@ AGY_GUARD="$(cd "$(dirname "$0")" && pwd)/agy_launch_guard.sh"
 # runtime failing to run (caught by lane 3/4b/5b, not by reading).
 build_cmd() {
   case "$1" in
-    codex) CMD=(codex exec -m "$2" -c model_reasoning_effort=high --skip-git-repo-check "$3") ;;
+    codex) CMD=(bash "$CODEX_GUARD" codex exec -m "$2" -c model_reasoning_effort=high --skip-git-repo-check "$3") ;;  # company-root paths refused
     agy)   CMD=(bash "$AGY_GUARD" agy -p "$3" --model "$2" --print-timeout 170s) ;;  # refuses unless FH_AGY_ISOLATION=container|os-user
     *)     CMD=("$1" "$3") ;;
   esac

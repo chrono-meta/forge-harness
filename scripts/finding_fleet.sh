@@ -32,7 +32,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 # consumer's machine. Override with FH_CODEX_BIN / FH_AGY_BIN.
 CODEX="${FH_CODEX_BIN:-$(command -v codex 2>/dev/null || echo "$HOME/.npm-global/bin/codex")}"
 # A function named agy (exported into this shell) would outrank PATH and fool `command -v`: drop it first.
-unset -f agy 2>/dev/null || true
+unset -f agy codex 2>/dev/null || true
 AGY="${FH_AGY_BIN:-$(command -v agy 2>/dev/null || echo "$HOME/.local/bin/agy")}"
 # Every agy launch goes through the isolation guard (refuses unless FH_AGY_ISOLATION=container|os-user).
 # How: a shim named `agy` in a private temp dir is put FIRST on PATH, and the fleet token AGY_BIN
@@ -44,11 +44,18 @@ AGY_GUARD="$HERE/agy_launch_guard.sh"
 # A bare name (FH_AGY_BIN=agy) would resolve back to the shim once PATH is changed: pin it to a path now.
 case "$AGY" in */*) ;; *) AGY="$(command -v -- "$AGY" 2>/dev/null || echo "/nonexistent/$AGY")" ;; esac
 case "$AGY" in */fh_agy_shim.*/agy) AGY="${FH_AGY_REAL:-$AGY}" ;; esac   # nested run: keep the real binary
+# codex gets the same shim treatment, through the lighter codex_launch_guard.sh (refuses company-root paths)
+case "$CODEX" in */*) ;; *) CODEX="$(command -v -- "$CODEX" 2>/dev/null || echo "/nonexistent/$CODEX")" ;; esac
+case "$CODEX" in */fh_agy_shim.*/codex) CODEX="${FH_CODEX_REAL:-$CODEX}" ;; esac
+CODEX_GUARD="$HERE/codex_launch_guard.sh"
 AGY_SHIM_DIR="$(mktemp -d /tmp/fh_agy_shim.XXXXXX 2>/dev/null)" && [ -d "$AGY_SHIM_DIR" ] || {
   echo "finding_fleet: cannot create the agy shim directory — refusing to run (agy would be unguarded)" >&2; exit 1; }
 trap 'rm -rf "$AGY_SHIM_DIR"' EXIT
 printf '#!/usr/bin/env bash\nexec bash "$FH_AGY_GUARD_PATH" "$FH_AGY_REAL" "$@"\n' > "$AGY_SHIM_DIR/agy"
 chmod +x "$AGY_SHIM_DIR/agy"
+printf '#!/usr/bin/env bash\nexec bash "$FH_CODEX_GUARD_PATH" "$FH_CODEX_REAL" "$@"\n' > "$AGY_SHIM_DIR/codex"
+chmod +x "$AGY_SHIM_DIR/codex"
+export FH_CODEX_GUARD_PATH="$CODEX_GUARD" FH_CODEX_REAL="$CODEX"
 export FH_AGY_GUARD_PATH="$AGY_GUARD" FH_AGY_REAL="$AGY"
 # The shim must actually run here (a noexec /tmp would make a bare `agy` fall through to the real one):
 # run it once with the marker cleared — it must come back from the guard as a refusal, nothing else.
@@ -118,7 +125,7 @@ DROPPED: lines. Your assigned area is unchanged: '
 run_member_r2() { # $1=family $2=role $3=command $4=target $5=outdir
   local fam="$1" role="$2" cmd="$3" tgt="$4" out="$5"
   local q_codex q_agy q_pf
-  q_codex="$(printf '%q' "$CODEX")"; q_agy="$(printf '%q' "$AGY_SHIM_DIR/agy")"
+  q_codex="$(printf '%q' "$AGY_SHIM_DIR/codex")"; q_agy="$(printf '%q' "$AGY_SHIM_DIR/agy")"
   cmd="${cmd//CODEX_BIN/$q_codex}"; cmd="${cmd//AGY_BIN/$q_agy}"
   local raw="$out/raw2_${fam}_${role}.txt" pf="$out/prompt2_${fam}_${role}.txt"
   for _p in "$raw" "$pf" "$out/err2_${fam}_${role}.txt" "$out/part2_${fam}_${role}.jsonl" "$out/peer_${fam}_${role}.txt"; do
@@ -318,7 +325,7 @@ run_member() { # $1=family $2=role $3=command $4=target $5=outdir
   #    여기는 bash `eval` 이므로 `printf %q` 가 옳은 도구다(shell=True 로 /bin/sh 에 넘기는
   #    finding_pipeline.sh 와는 사정이 다르다 — 거기서는 %q 가 dash 에서 깨져서 argv 로 갔다).
   local q_codex q_agy q_pf
-  q_codex="$(printf '%q' "$CODEX")"; q_agy="$(printf '%q' "$AGY_SHIM_DIR/agy")"
+  q_codex="$(printf '%q' "$AGY_SHIM_DIR/codex")"; q_agy="$(printf '%q' "$AGY_SHIM_DIR/agy")"
   cmd="${cmd//CODEX_BIN/$q_codex}"; cmd="${cmd//AGY_BIN/$q_agy}"
   local raw="$out/raw_${fam}_${role}.txt" pf="$out/prompt_${fam}_${role}.txt"
   # 🟥 심링크를 통해 쓰면 남의 파일을 덮는다. 그리고 타깃이 심링크면 그 «내용»이 외부로 나간다.

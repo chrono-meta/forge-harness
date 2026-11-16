@@ -27,12 +27,13 @@
 #   SIDECAR_VERDICT=TIMEOUT  waited=<n>s bytes=<n> still alive when the budget ran out; NOT a result
 #   SIDECAR_VERDICT=EMPTY    exit=<n>             exited cleanly having written nothing — the only
 #                                                 state in which "the sidecar said nothing" is true
-#   SIDECAR_VERDICT=HARNESS-ERROR exit=<n> reason=model-not-available   the CLI refused the model
+#   SIDECAR_VERDICT=HARNESS-ERROR exit=<n> reason=model-not-available|guard-refused   the CLI refused the
+#                                                 model, or a launch guard refused to start it
 #                                                 (exit 3) — nothing was reviewed; never read as 0 findings
 #
 # Usage:
 #   bash scripts/sidecar_wait.sh <outfile> <timeout_seconds> -- <command> [args...]
-#   printf '%s' "$prompt" | bash scripts/sidecar_wait.sh out.txt 600 -- codex exec -
+#   printf '%s' "$prompt" | bash scripts/sidecar_wait.sh out.txt 600 -- bash scripts/codex_launch_guard.sh codex exec -
 #   (no -m: the CLI default answers; a pinned model can be retired — gpt-5.5 / gpt-5 return HTTP 400
 #    on 2026-11-16 — and then this wrapper reports HARNESS-ERROR, not a result)
 #
@@ -129,6 +130,12 @@ size=$(wc -c < "$OUT" 2>/dev/null | tr -d ' ')
 if [ "$rc" -ne 0 ] && grep -qE 'model_not_found|model is not supported|requires a newer version of Codex' "$OUT" 2>/dev/null; then
   echo "SIDECAR_VERDICT=HARNESS-ERROR exit=$rc reason=model-not-available bytes=${size:-0}"
   echo "  the sidecar refused the requested model — nothing was reviewed. Drop the -m pin (CLI default) or pin a model that answers." >&2
+  exit 3
+fi
+# A launch guard that refused (codex_launch_guard.sh / agy_launch_guard.sh) started nothing: same verdict.
+if [ "$rc" -ne 0 ] && grep -qE 'CODEX-REFUSED|AGY-REFUSED' "$OUT" 2>/dev/null; then
+  echo "SIDECAR_VERDICT=HARNESS-ERROR exit=$rc reason=guard-refused bytes=${size:-0}"
+  echo "  a launch guard refused — the sidecar was never started, so nothing was reviewed." >&2
   exit 3
 fi
 if [ "${size:-0}" -eq 0 ]; then
