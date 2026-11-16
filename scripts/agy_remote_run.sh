@@ -74,24 +74,30 @@ PS
   remote_ps cleanup.ps1 2>/dev/null | tr -d '\r' | grep -q '^CLEANUP-OK$' || return 5
   return 0
 }
+# An interrupt after the remote folder exists still removes it (only this run's folder, re-checked remotely).
+CREATED=0
+on_signal() { trap - INT TERM; [ "$CREATED" = 1 ] && remote_cleanup; echo "agy_remote_run: interrupted" >&2; exit 130; }
+trap on_signal INT TERM
 
 if [ "${1-}" = "--canary" ]; then
   [ $# -eq 1 ] || die 2 "--canary takes no other arguments"
   [ -n "$DENY" ] || die 2 "FH_AGY_REMOTE_DENY is empty — a canary with nothing to deny measures nothing"
   printf '%s\n' "$DENY" | tr ';' '\n' | sed '/^$/d' > "$LOCAL/deny.txt"
   cat > "$LOCAL/canary.ps1" <<'PS'
-foreach ($p in Get-Content -LiteralPath (Join-Path $PSScriptRoot 'deny.txt')) {
+foreach ($p in Get-Content -LiteralPath (Join-Path $PSScriptRoot 'deny.txt') -Encoding UTF8) {
   $absentOk = $p.StartsWith('?'); if ($absentOk) { $p = $p.Substring(1) }
   try { $i = Get-Item -LiteralPath $p -Force -ErrorAction Stop
         if ($i.PSIsContainer) { [void](Get-ChildItem -LiteralPath $p -Force -ErrorAction Stop) } else { [IO.File]::OpenRead($p).Close() }
         "DENY-FAIL $p (readable)" }
-  catch { $e = $_.Exception.GetType().Name
+  catch { $x = $_.Exception; $e = $x.GetType().Name   # walk wrapped errors (OpenRead wraps its own)
+          while ($null -ne $x.InnerException) { $x = $x.InnerException; $e = $e + '/' + $x.GetType().Name }
           if ($e -match 'UnauthorizedAccess' -or ($absentOk -and $e -match 'NotFound')) { "DENY-OK $p ($e)" }
           else { "DENY-FAIL $p (not measured: $e)" } } }
 $f = Join-Path $PSScriptRoot 'positive.txt'; Set-Content -LiteralPath $f -Value 'FH-POSITIVE'
 try { if ((Get-Content -LiteralPath $f -Raw).Trim() -eq 'FH-POSITIVE') { 'POS-OK' } else { 'POS-FAIL' } } catch { 'POS-FAIL' }
 PS
   remote_mkdir || die 4 "AGY-REMOTE-UNAVAILABLE: cannot reach $TARGET (mkdir failed)"
+  CREATED=1
   remote_put "$LOCAL/deny.txt" "$LOCAL/canary.ps1" || { remote_cleanup; die 4 "AGY-REMOTE-UNAVAILABLE: copy to $TARGET failed"; }
   out="$(remote_ps canary.ps1 2>&1)"; prc=$?; out="$(printf '%s' "$out" | tr -d '\r')"
   remote_cleanup; crc=$?
@@ -116,12 +122,15 @@ r_get() { sed -n "s/^$1=//p" "$RECEIPT" | head -1; }
 [ "$(r_get target_sha)" = "$TSHA" ] || die 3 "AGY-REMOTE-REFUSED: receipt is for different settings"
 age=$(( $(date +%s) - $(r_get epoch | grep -E '^[0-9]+$' || echo 0) ))
 [ "$age" -le 604800 ] || die 3 "AGY-REMOTE-REFUSED: canary receipt is older than 7 days — run --canary again"
+[ "$age" -ge 0 ] || die 3 "AGY-REMOTE-REFUSED: canary receipt is dated in the future — run --canary again"
 
 PROMPT=""; HAVEP=0; INPUTS=(); FETCH=(); FDIR=""; PASS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --input) [ $# -ge 2 ] || die 2 "--input needs a file"; INPUTS+=("$2"); shift 2 ;;
-    --fetch) [ $# -ge 2 ] || die 2 "--fetch needs a name"; FETCH+=("$2"); shift 2 ;;
+    --fetch) [ $# -ge 2 ] || die 2 "--fetch needs a name"
+             [ "$2" = "$(basename "$2")" ] || die 2 "--fetch takes a bare file name inside the work folder, not a path: $2"
+             FETCH+=("$2"); shift 2 ;;
     --fetch-dir) [ $# -ge 2 ] || die 2 "--fetch-dir needs a folder"; FDIR="$2"; shift 2 ;;
     -p|--print|--prompt) [ $# -ge 2 ] || die 2 "$1 needs a prompt"; PROMPT="$2"; HAVEP=1; shift 2 ;;
     --settings) die 2 "--settings is set by this runner (workspace-only); remove it" ;;
@@ -152,9 +161,12 @@ $a = @(Get-Content -LiteralPath 'args.txt' -Encoding UTF8 | Where-Object { $_ -n
 $agy = [Environment]::ExpandEnvironmentVariables((Get-Content -LiteralPath 'agy_path.txt' -Raw -Encoding UTF8).Trim())
 & $agy -p $p @a --settings (Join-Path $PSScriptRoot 'settings.json')
 # printed after agy has exited: the runner trusts only the LAST line, which agy's output cannot follow
-"FH_AGY_RC=$LASTEXITCODE"
+$rc = $LASTEXITCODE
+"FH_AGY_RC=$rc"
+exit $rc   # the ssh exit status carries the same code, which nothing agy leaves behind can rewrite
 PS
 remote_mkdir || die 4 "AGY-REMOTE-UNAVAILABLE: cannot reach $TARGET (mkdir failed) — not falling back to a local agy"
+CREATED=1
 remote_put "$LOCAL/prompt.txt" "$LOCAL/args.txt" "$LOCAL/settings.json" "$LOCAL/agy_path.txt" "$LOCAL/run.ps1" ${INPUTS[@]+"${INPUTS[@]}"} \
   || { remote_cleanup; die 4 "AGY-REMOTE-UNAVAILABLE: copy to $TARGET failed"; }
 remote_ps run.ps1 > "$LOCAL/out.txt" 2> "$LOCAL/err.txt"; src=$?
@@ -166,8 +178,10 @@ for n in ${FETCH[@]+"${FETCH[@]}"}; do
   mkdir -p "$FDIR" && "$SCP" -q "${SSHO[@]}" "$TARGET:$WD/$n" "$FDIR/" </dev/null >/dev/null 2>&1 || { echo "agy_remote_run: could not fetch $n" >&2; frc=4; }
 done
 remote_cleanup || { echo "agy_remote_run: remote work folder $WD not confirmed removed" >&2; exit 5; }
-[ "$src" -eq 0 ] || { echo "agy_remote_run: ssh exited $src — route failed" >&2; exit 4; }
-[ -n "$arc" ] || { echo "agy_remote_run: no exit code came back from the remote side — route failed" >&2; exit 4; }
+[ -n "$arc" ] || { echo "agy_remote_run: no exit code came back from the remote side (ssh exited $src) — route failed" >&2; exit 4; }
+# success needs BOTH: the printed code and the ssh exit status agree (a line printed later by a leftover
+# child cannot change the exit status; an ssh failure cannot print the line)
+[ "$src" = "$(( arc & 255 ))" ] || { echo "agy_remote_run: ssh exited $src but the remote printed FH_AGY_RC=$arc — route or output not trusted" >&2; exit 4; }
 [ "$frc" -eq 0 ] || exit 4
 [ "$arc" = 0 ] && exit 0
 echo "AGY_RC=$arc" >&2; exit 1

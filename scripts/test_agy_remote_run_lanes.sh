@@ -43,8 +43,9 @@ case "\$cmd" in
                   [ "\${FAKE_POS_FAIL:-0}" = 1 ] && echo POS-FAIL || echo POS-OK
                   exit "\${FAKE_SSH_CANARY_RC:-0}" ;;
       run.ps1) ( cd "\$W" && args=(); while IFS= read -r a; do [ -n "\$a" ] && args+=("\$a"); done < args.txt
-                 "\$D/fake_agy" -p "\$(cat prompt.txt)" \${args[@]+"\${args[@]}"} --settings "\$W/settings.json"; echo "FH_AGY_RC=\$?" )
-               exit "\${FAKE_SSH_RUN_RC:-0}" ;;
+                 "\$D/fake_agy" -p "\$(cat prompt.txt)" \${args[@]+"\${args[@]}"} --settings "\$W/settings.json"; arc=\$?
+                 echo "FH_AGY_RC=\$arc"; [ "\${FAKE_LATE_LINE:-0}" = 1 ] && echo "FH_AGY_RC=0"
+                 exit "\${FAKE_SSH_RUN_RC:-\$arc}" ); exit \$? ;;
       cleanup.ps1) n="\$wd"
                    if ! printf '%s' "\$n" | grep -Eq '^fh_agy_[0-9]{14}_[0-9a-f]{6}$'; then echo "CLEANUP-REFUSED \$n"; exit 3; fi
                    [ "\${FAKE_CLEANUP_FAIL:-0}" = 1 ] && { echo CLEANUP-FAILED; exit 5; }
@@ -68,6 +69,7 @@ cat > "$D/fake_agy" <<EOF
 printf '%s\n' "\$@" > "$D/agy_argv"
 echo "fake-output" > out.txt
 echo "FAKE-AGY-RAN"
+[ -n "\${FAKE_AGY_SLEEP:-}" ] && sleep "\$FAKE_AGY_SLEEP"
 [ -n "\${FAKE_AGY_FORGE:-}" ] && echo "FH_AGY_RC=0"
 exit \${FAKE_AGY_RC:-0}
 EOF
@@ -176,7 +178,7 @@ run env FH_AGY_REMOTE_DENY="$(printf 'C:\\a\nC:\\b')" bash "$RUN" --canary
 if grep -q 'Get-ChildItem -LiteralPath \$p -Force -ErrorAction Stop' "$D/seen/canary.ps1" 2>/dev/null && grep -q "UnauthorizedAccess" "$D/seen/canary.ps1" \
    && grep -q "OpenRead(\$p)" "$D/seen/canary.ps1" && grep -q "POS-OK" "$D/seen/canary.ps1" \
    && grep -qF "'^fh_agy_[0-9]{14}_[0-9a-f]{6}\$'" "$D/seen/cleanup.ps1" && grep -qF '$parent -ne $env:USERPROFILE' "$D/seen/cleanup.ps1" \
-   && grep -qF '"FH_AGY_RC=$LASTEXITCODE"' "$D/seen/run.ps1" && grep -qF "prompt.txt' -Raw -Encoding UTF8" "$D/seen/run.ps1"; then
+   && grep -qF '"FH_AGY_RC=$rc"' "$D/seen/run.ps1" && grep -qF "prompt.txt' -Raw -Encoding UTF8" "$D/seen/run.ps1"; then
   ok "R29 uploaded canary/cleanup/run scripts carry the read probe, the access-denied rule, the name+parent check and the final rc line"
 else bad "R29 uploaded script content missing a probe or check"; fi
 echo "── review round 2 holes"
@@ -195,6 +197,28 @@ run env FAKE_AGY_FORGE=1 FAKE_AGY_RC=7 bash "$RUN" -p hi
 printf 'a' > "$D/Evidence.txt"; printf 'b' > "$D/other/evidence.txt"
 run bash "$RUN" --input "$D/Evidence.txt" --input "$D/other/evidence.txt" -p hi
 [ "$rc" -eq 2 ] && ok "R34 inputs Evidence.txt and evidence.txt: rc=2 (Windows ignores case)" || bad "R34 case dup: rc=$rc"
+echo "── narrowed round 3: verdict and destructive paths"
+rm -rf "$RH"/fh_agy_*
+run bash "$RUN" --canary
+run bash "$RUN" --fetch ../outside.txt --fetch-dir "$D/back" -p hi
+[ "$rc" -eq 2 ] && ok "R35 --fetch ../outside.txt: rc=2 (bare names only)" || bad "R35 fetch traversal: rc=$rc"
+R="$(printf '%s' "$out" | sed -n 's/.*receipt=//p')"; [ -n "$R" ] || R="$(ls -t "$D"/receipts/receipt_*.txt | head -1)"
+run bash "$RUN" --canary; R="$(printf '%s' "$out" | sed -n 's/.*receipt=//p')"
+sed -i.bak 's/^epoch=.*/epoch=9999999999/' "$R"
+run bash "$RUN" -p hi
+[ "$rc" -eq 3 ] && printf '%s' "$err" | grep -q 'future' && ok "R36 receipt dated in the future: rc=3" || bad "R36 future receipt: rc=$rc"
+run bash "$RUN" --canary
+run env FAKE_AGY_RC=7 FAKE_LATE_LINE=1 bash "$RUN" -p hi
+[ "$rc" -ne 0 ] && ok "R37 agy exits 7, a late line prints FH_AGY_RC=0: not success (rc=$rc)" || bad "R37 late forged line: rc=0"
+rm -rf "$RH"/fh_agy_*
+FAKE_AGY_SLEEP=3 bash "$RUN" -p hi > "$D/int.out" 2> "$D/int.err" < /dev/null &
+ipid=$!; k=0; until ls "$RH"/fh_agy_* >/dev/null 2>&1 || [ "$k" -ge 50 ]; do sleep 0.1; k=$((k+1)); done
+sleep 0.5; kill -TERM "$ipid" 2>/dev/null; wait "$ipid" 2>/dev/null; irc=$?
+if [ "$(leftover)" = 0 ] && [ "$irc" = 130 ]; then ok "R38 TERM during a run: the runner's own handler exits 130 and the remote work folder is removed"
+else bad "R38 interrupt: left=$(leftover) irc=$irc waited=$k out=$(head -c 80 "$D/int.out" | tr "\n" " ") err=$(head -c 120 "$D/int.err")"; fi
+if grep -qF "deny.txt') -Encoding UTF8" "$D/seen/canary.ps1" && grep -qF 'InnerException' "$D/seen/canary.ps1" \
+   && grep -qF 'exit $rc' "$D/seen/run.ps1"; then ok "R39 uploaded scripts read the deny list as UTF-8, walk wrapped errors, and exit with agy's code"
+else bad "R39 uploaded script content missing UTF-8 deny read / inner-error walk / exit code"; fi
 [ ! -e "$D/local_agy_ran" ] && ok "R21 no lane started a local agy" || bad "R21 a local agy was started"
 echo
 echo "agy remote run lanes: $PASS passed, $FAIL failed"
