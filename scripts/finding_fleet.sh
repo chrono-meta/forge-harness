@@ -53,7 +53,8 @@ export FH_AGY_GUARD_PATH="$AGY_GUARD" FH_AGY_REAL="$AGY"
 # The shim must actually run here (a noexec /tmp would make a bare `agy` fall through to the real one):
 # run it once with the marker cleared — it must come back from the guard as a refusal, nothing else.
 _shim_probe="$(FH_AGY_ISOLATION= "$AGY_SHIM_DIR/agy" --version 2>&1 </dev/null)"; _shim_rc=$?
-if [ "$_shim_rc" -ne 3 ] || ! printf '%s\n' "$_shim_probe" | grep -q '^AGY-REFUSED'; then
+case "$_shim_probe" in AGY-REFUSED*) _shim_said=1 ;; *) _shim_said=0 ;; esac   # no early-exit reader on a pipe
+if [ "$_shim_rc" -ne 3 ] || [ "$_shim_said" -ne 1 ]; then
   echo "finding_fleet: the agy shim did not run (rc=$_shim_rc) — refusing to run (agy would be unguarded)" >&2; exit 1
 fi
 export PATH="$AGY_SHIM_DIR:$PATH"
