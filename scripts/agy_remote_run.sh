@@ -39,16 +39,23 @@
 #       no/stale/FAIL/mismatched receipt) · 4 route unavailable (ssh/scp failed) · 5 cleanup not verified
 #       --canary: 0 PASS · 1 FAIL · 2 usage · 4 route unavailable
 set -uo pipefail
-SSH="${FH_AGY_REMOTE_SSH:-ssh}"; SCP="${FH_AGY_REMOTE_SCP:-scp}"   # overridable for the lanes only
+SSH=ssh; SCP=scp
+# Transport overrides exist for the lanes only, and are honoured only with FH_AGY_REMOTE_LANE=1 — otherwise
+# an override pointing at a local agy would start it.
+if [ "${FH_AGY_REMOTE_LANE-}" = 1 ]; then SSH="${FH_AGY_REMOTE_SSH:-ssh}"; SCP="${FH_AGY_REMOTE_SCP:-scp}"
+elif [ -n "${FH_AGY_REMOTE_SSH-}${FH_AGY_REMOTE_SCP-}" ]; then echo "agy_remote_run: FH_AGY_REMOTE_SSH/SCP are honoured only in the lanes (FH_AGY_REMOTE_LANE=1)" >&2; exit 2; fi
 die() { echo "agy_remote_run: $2" >&2; exit "$1"; }
 TARGET="${FH_AGY_REMOTE-}"
 [ -n "$TARGET" ] || die 3 "AGY-REMOTE-REFUSED: FH_AGY_REMOTE is not set — refusing (agy is never started locally)"
 case "$TARGET" in *[!A-Za-z0-9@._-]*) die 2 "FH_AGY_REMOTE must look like user@host" ;; esac
 RAGY="${FH_AGY_REMOTE_AGY:-%LOCALAPPDATA%\\agy\\bin\\agy.exe}"
-case "$RAGY" in *[\'\"\`\$]*) die 2 "FH_AGY_REMOTE_AGY must not contain quotes, backticks or dollar signs" ;; esac
+case "$RAGY" in *[!A-Za-z0-9%\\:._\ -]*) die 2 "FH_AGY_REMOTE_AGY may contain only letters, digits, % \\ : . _ - and spaces" ;; esac
 DENY="${FH_AGY_REMOTE_DENY-}"
 RDIR="${FH_AGY_REMOTE_RECEIPT_DIR:-$HOME/.cache/fh-agy-remote}"
-TSHA="$(printf '%s\n%s\n%s\n' "$TARGET" "$DENY" "$RAGY" | shasum -a 256 | cut -c1-64)"
+case "$DENY$RAGY" in *$'\n'*|*$'\r'*) die 2 "FH_AGY_REMOTE_DENY / FH_AGY_REMOTE_AGY must not contain line breaks" ;; esac
+# length-prefixed fields: no two different settings can produce the same hashed text
+TSHA="$(printf 'v1|%d:%s|%d:%s|%d:%s' "${#TARGET}" "$TARGET" "${#DENY}" "$DENY" "${#RAGY}" "$RAGY" | shasum -a 256 2>/dev/null | cut -c1-64)"
+printf '%s' "$TSHA" | grep -Eq '^[0-9a-f]{64}$' || die 4 "could not compute the settings hash (shasum) — refusing"
 RECEIPT="$RDIR/receipt_${TSHA:0:16}.txt"
 SSHO=(-o BatchMode=yes -o ConnectTimeout=15)
 WD="fh_agy_$(date +%Y%m%d%H%M%S)_$(od -An -N3 -tx1 /dev/urandom | tr -d ' \n')"
@@ -91,11 +98,12 @@ PS
   ok=$(printf '%s\n' "$out" | grep -c '^DENY-OK ')
   bad=$(printf '%s\n' "$out" | grep -c '^DENY-FAIL ')
   pos=$(printf '%s\n' "$out" | grep -q '^POS-OK$' && echo READ || echo FAIL)
-  verdict=FAIL; [ "$ok" -eq "$want" ] && [ "$bad" -eq 0 ] && [ "$pos" = READ ] && [ "$want" -gt 0 ] && verdict=PASS
+  verdict=FAIL; [ "$ok" -eq "$want" ] && [ "$bad" -eq 0 ] && [ "$pos" = READ ] && [ "$want" -gt 0 ] && [ "$crc" -eq 0 ] && verdict=PASS
   mkdir -p "$RDIR" || die 4 "cannot create $RDIR"
   { echo "verdict=$verdict"; echo "target_sha=$TSHA"; echo "epoch=$(date +%s)"; echo "denied=$ok/$want"
     echo "positive=$pos"; echo "cleanup=$([ "$crc" -eq 0 ] && echo OK || echo UNVERIFIED)"
-    printf '%s\n' "$out" | grep -E '^(DENY-OK|DENY-FAIL|POS-OK|POS-FAIL)'; } > "$RECEIPT"
+    printf '%s\n' "$out" | grep -E '^(DENY-OK|DENY-FAIL|POS-OK|POS-FAIL)'; } > "$RECEIPT.tmp" && mv "$RECEIPT.tmp" "$RECEIPT" \
+    || die 4 "could not write the receipt $RECEIPT — the canary result is not recorded"
   echo "AGY-REMOTE-CANARY $verdict denied=$ok/$want positive=$pos receipt=$RECEIPT"
   [ "$verdict" = PASS ] && exit 0 || exit 1
 fi
@@ -124,7 +132,9 @@ done
 seen=" "
 for f in ${INPUTS[@]+"${INPUTS[@]}"} ${FETCH[@]+"${FETCH[@]}"}; do
   b="$(basename "$f")"
-  case "$b" in ''|*[!A-Za-z0-9._-]*|prompt.txt|args.txt|settings.json|run.ps1|cleanup.ps1) die 2 "file name not allowed: $b" ;; esac
+  lb="$(printf '%s' "$b" | tr 'A-Z' 'a-z')"   # Windows names are case-insensitive
+  case "$b" in ''|*[!A-Za-z0-9._-]*) die 2 "file name not allowed: $b" ;; esac
+  case "$lb" in prompt.txt|args.txt|settings.json|run.ps1|cleanup.ps1|agy_path.txt|rc.txt|canary.ps1|deny.txt) die 2 "file name reserved by the runner: $b" ;; esac
 done
 for f in ${INPUTS[@]+"${INPUTS[@]}"}; do
   [ -f "$f" ] || die 2 "input not found: $f"
@@ -133,26 +143,32 @@ done
 printf '%s' "$PROMPT" > "$LOCAL/prompt.txt"
 : > "$LOCAL/args.txt"; for a in ${PASS[@]+"${PASS[@]}"}; do printf '%s\n' "$a" >> "$LOCAL/args.txt"; done
 printf '{"toolPermission":"always-proceed","allowNonWorkspaceAccess":false}\n' > "$LOCAL/settings.json"
-cat > "$LOCAL/run.ps1" <<PS
-Set-Location \$PSScriptRoot
-\$p = Get-Content -LiteralPath 'prompt.txt' -Raw
-\$a = @(Get-Content -LiteralPath 'args.txt' | Where-Object { \$_ -ne '' })
-\$agy = [Environment]::ExpandEnvironmentVariables('$RAGY')
-& \$agy -p \$p @a --settings (Join-Path \$PSScriptRoot 'settings.json')
-"AGY_RC=\$LASTEXITCODE"
+printf '%s' "$RAGY" > "$LOCAL/agy_path.txt"
+cat > "$LOCAL/run.ps1" <<'PS'
+Set-Location $PSScriptRoot
+$p = Get-Content -LiteralPath 'prompt.txt' -Raw
+$a = @(Get-Content -LiteralPath 'args.txt' | Where-Object { $_ -ne '' })
+$agy = [Environment]::ExpandEnvironmentVariables((Get-Content -LiteralPath 'agy_path.txt' -Raw).Trim())
+& $agy -p $p @a --settings (Join-Path $PSScriptRoot 'settings.json')
+# written after agy has exited, so nothing agy prints or writes can stand in for it
+Set-Content -LiteralPath (Join-Path $PSScriptRoot 'rc.txt') -Value $LASTEXITCODE -Encoding ASCII
 PS
 remote_mkdir || die 4 "AGY-REMOTE-UNAVAILABLE: cannot reach $TARGET (mkdir failed) — not falling back to a local agy"
-remote_put "$LOCAL/prompt.txt" "$LOCAL/args.txt" "$LOCAL/settings.json" "$LOCAL/run.ps1" ${INPUTS[@]+"${INPUTS[@]}"} \
+remote_put "$LOCAL/prompt.txt" "$LOCAL/args.txt" "$LOCAL/settings.json" "$LOCAL/agy_path.txt" "$LOCAL/run.ps1" ${INPUTS[@]+"${INPUTS[@]}"} \
   || { remote_cleanup; die 4 "AGY-REMOTE-UNAVAILABLE: copy to $TARGET failed"; }
-remote_ps run.ps1 > "$LOCAL/out.txt" 2> "$LOCAL/err.txt"
-tr -d '\r' < "$LOCAL/out.txt" | grep -v '^AGY_RC=' ; tr -d '\r' < "$LOCAL/err.txt" >&2
-arc="$(tr -d '\r' < "$LOCAL/out.txt" | sed -n 's/^AGY_RC=//p' | tail -1)"
+remote_ps run.ps1 > "$LOCAL/out.txt" 2> "$LOCAL/err.txt"; src=$?
+tr -d '\r' < "$LOCAL/out.txt"; tr -d '\r' < "$LOCAL/err.txt" >&2
+arc=""
+if "$SCP" -q "${SSHO[@]}" "$TARGET:$WD/rc.txt" "$LOCAL/rc.txt" </dev/null >/dev/null 2>&1; then
+  arc="$(tr -d '\r \n' < "$LOCAL/rc.txt")"; printf '%s' "$arc" | grep -Eq '^-?[0-9]+$' || arc=""
+fi
 frc=0
 for n in ${FETCH[@]+"${FETCH[@]}"}; do
   mkdir -p "$FDIR" && "$SCP" -q "${SSHO[@]}" "$TARGET:$WD/$n" "$FDIR/" </dev/null >/dev/null 2>&1 || { echo "agy_remote_run: could not fetch $n" >&2; frc=4; }
 done
 remote_cleanup || { echo "agy_remote_run: remote work folder $WD not confirmed removed" >&2; exit 5; }
-[ -n "$arc" ] || { echo "agy_remote_run: no AGY_RC from the remote side — route failed" >&2; exit 4; }
+[ "$src" -eq 0 ] || { echo "agy_remote_run: ssh exited $src — route failed" >&2; exit 4; }
+[ -n "$arc" ] || { echo "agy_remote_run: no exit code came back from the remote side — route failed" >&2; exit 4; }
 [ "$frc" -eq 0 ] || exit 4
 [ "$arc" = 0 ] && exit 0
 echo "AGY_RC=$arc" >&2; exit 1
