@@ -44,6 +44,7 @@
 #
 # Usage: bash scripts/test_liveness_echo_token_lanes.sh   Exit: 0 = contract holds; 1 = regression.
 
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROBE="$REPO_ROOT/scripts/test_prepush_destructive_liveness.sh"

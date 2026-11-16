@@ -9,6 +9,7 @@
 # What it does NOT prove: that a session FOLLOWS the SKILL prose (that is the floor-tier sim's job),
 # or that any verdict label is TRUE (judgment, deliberately unmechanised).
 # Exit: 0 all lanes pass · 1 any lane fails · 10 harness error (plugin/tool missing).
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 FH="$(cd "$(dirname "$0")/.." && pwd)"
 T="$FH/plugins/fh-qp/scripts/qp_tools.sh"

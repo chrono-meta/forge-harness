@@ -23,6 +23,7 @@
 | 등급 | 추천 기본 | 올리는 조건 | 근거 등급 |
 |---|---|---|---|
 | **Sonnet** | **high** | 항상 — 싸고, 한 번 더 자기검증하는 값이 base op 의 «미실행 ≠ 0» 분류에 직접 닿는다 | 기대 + 운영자 정책(effort high 기본, 2026-07-18) |
+| **Opus 5.5** | 벤더 권고: 기본 = **medium**(API 기본값 — Opus 5 이하는 high) · 이전 모델 설정을 옮기지 말고 자기 평가로 이폴트 스윕 · xhigh/max 면 `max_tokens` 를 크게 [근거: §2-b Opus 5.5 줄] · **우리 역할 판정: UNMEASURED** | 아래 Opus 줄의 실측(N=12, Opus 4.8)은 **세대가 달라 옮기지 않는다(FH 규칙)** — 벤더 문서도 이전 모델의 설정을 옮기지 말고 자기 평가로 다시 재라고 적는다 | 벤더 문서(2026-11-15 열람) + **관측 N=1**(2026-11-14 밤 · 측정 아님): 루트 거버너 = high · 게이트 코드 세션 = high · 문서/준비 세션 = medium. 앱의 추천도 medium |
 | **Opus** | **medium**(역량 안쪽 단발 판단이 실측된 작업) / **high**(그 밖의 기본) | 설계 확정·교리·경계 판단·장호흡 에이전트 작업은 **high → xhigh**(문서: 코딩·에이전트는 xhigh 시작). max 는 «frontier problems» 에만 · 깊이는 cross-family 디스패치로도 산다 | 실측 N=12(Opus 4.8): 역량 안쪽 단발 판단은 tie · 장호흡 미측정 · 운영자 정책 2026-09-05 «메인 기본 = 오퍼스-미디엄» |
 | **Fable** | **max — 거버너/오케스트레이터 세션에만** (문서 기준 다음 후보 = **xhigh**, 미측정) | 여러 정체성을 병렬로 엮고 리턴을 재검하는 «메인» 세션. 그 외 세션은 Opus 가 기본이다 | 운영자 정책 2026-09-05 + 관측 N=1(«medium → max 3단 올리니 답이 체감상 다르다, 메인에서」) |
 | **무인 런(launchd/CI)** | plist·워크플로에 **명시 핀** | `/model` 로 저장한 기본값이 `claude -p` 에도 적용된다 — 핀 없으면 무인 잡이 조용히 최상위 모델로 돈다 | 실측 2026-09-05(`~/.claude/settings.json` model 키 · digest plist `FD_MODEL`) |
@@ -33,15 +34,18 @@ Anthropic 플랫폼 문서 «Effort»(platform.claude.com/docs/en/build-with-cla
 
 | 문서가 말하는 것 | 이 문서의 추천과의 관계 |
 |---|---|
-| 이폴트는 5단(low·medium·high·**xhigh**·max), 기본 = high. «Effort is a behavioral signal, not a strict token budget» — 낮은 이폴트에서도 어려운 문제엔 생각한다, 덜 할 뿐 | 이 문서의 «이폴트 = 숙고 깊이» 와 일치. 🟥 **xhigh 라는 중간 단이 있다** — 이 문서 초판은 max 만 봤다 |
+| 이폴트는 5단(low·medium·high·**xhigh**·max), 기본 = high(Opus 5.5 · Haiku 5.5 는 medium — 2026-11-15 열람). «Effort is a behavioral signal, not a strict token budget» — 낮은 이폴트에서도 어려운 문제엔 생각한다, 덜 할 뿐 | 이 문서의 «이폴트 = 숙고 깊이» 와 일치. 🟥 **xhigh 라는 중간 단이 있다** — 이 문서 초판은 max 만 봤다 |
 | 이폴트는 **모든 출력 토큰**에 걸린다 — 낮으면 «fewer and terser tool calls», 전문 없이 바로 행동; 높으면 도구 호출이 늘고 계획을 먼저 설명한다 | 오늘 관측(«리턴을 끝까지 읽고 컨트롤을 하나씩 붙인다»)과 같은 방향 — 문서는 그것을 도구 호출 수·설명 길이로 기술한다 |
 | **Fable 5.1**: «Start with high, the default. Step up to xhigh or max for the most capability-sensitive agentic and coding work, and step down to medium or low for routine … once your evals show quality holds» | «거버너 세션만 max» 와 일치. 단 문서는 그 위 단으로 **xhigh 를 먼저** 든다 — 미측정 대안 |
-| **Opus 5**: high 에서 시작, xhigh 는 «demanding coding and agentic work», max 는 «when a task justifies unconstrained token spending», low/medium 은 «liberally as your primary control for token cost … wherever your evals show quality holds» | «Opus = medium 기본」은 운영자 실측(N=12, 역량 안쪽 단발 판단 tie)이 뒷받침하는 «evals show quality holds» 케이스다. 장호흡 오케스트레이션은 그 실측 밖 → 문서대로 high/xhigh |
+| **Opus 5.5** (2026-11-15 열람, platform.claude.com/docs/en/build-with-claude/effort): 기본 = **medium**(Opus 5 이하는 high) · 생각은 항상 켜져 있어 이폴트가 사고량·비용의 주 제어 · xhigh/max 에선 `max_tokens` 를 크게 · «Run an effort sweep on your own evals rather than carrying settings over» | 🟥 2026-11-14 밤 이 줄이 없어서 루트가 아래 4.7/4.8 줄로 추천을 냈다 — 4.7/4.8 의 «코딩·에이전트는 xhigh 에서 시작」은 5.5 의 API 기본값(medium)보다 두 단 위다(FH 작업별 추천은 우리 스윕으로 정한다). 5.5 의 역할 판정은 우리 측정 팔이 생길 때까지 UNMEASURED |
+| **Opus 5**: high 에서 시작, xhigh 는 «demanding coding and agentic work», max 는 «when a task justifies unconstrained token spending», low/medium 은 «liberally as your primary control for token cost … wherever your evals show quality holds» | «Opus = medium 기본」은 운영자 실측(N=12, **Opus 4.8**, 역량 안쪽 단발 판단 tie)이 뒷받침하는 «evals show quality holds» 케이스다 — Opus 5 자체는 미측정이고, 그 위에 정책으로 얹었다. 장호흡 오케스트레이션은 그 실측 밖 → 문서대로 high/xhigh |
 | **Opus 4.7/4.8**: 코딩·에이전트 작업은 **xhigh 에서 시작**; max 는 «Reserve for frontier problems. On most workloads max adds significant cost for relatively small quality gains … can lead to overthinking» | max 를 «거버너 세션만」으로 제한하는 근거가 문서에도 있다 — 대부분 작업에서 비용 대비 이득이 작다 |
 | **Sonnet 5**: 기본 high, medium 은 «Comparable to Claude Sonnet 4.6 at high effort», xhigh 는 가장 어려운 코딩·에이전트, max 도 가능 | «Sonnet = high 기본」 일치 |
 | 헬프센터: 앱/CC 의 Extra high 는 «for long-running coding and agentic tasks, offering deeper reasoning than high without the full token cost of max» · «for complex coding and agentic tasks on Opus 4.7 or newer, try Extra high first» | 다음 측정 팔 = **Fable xhigh**. max 체감의 얼마가 xhigh 로 확보되는지가 비용 결정의 핵심이고 미측정이다 |
 
-**대조 결론**: 문서와 체감이 **방향에서 일치**한다(기본 high · 조합·에이전트 작업일수록 위로 · 대부분 작업에서 max 는 비용 대비 작다). 어긋나는 점 하나 = 이 문서 초판이 **xhigh 를 빠뜨렸다**. 추천 표를 그에 맞춰 고쳤다(아래). 「같은 이폴트라도 모델에 따라 산출이 크게 다르다」는 운영자 관측은 문서의 «medium(Sonnet 5) ≈ high(Sonnet 4.6)» 같은 교차 등급 등가 서술과 같은 축이다 — 이폴트 눈금은 모델마다 다른 절대값을 가리킨다.
+**대조 결론**: 문서와 체감이 **방향에서 일치**한다(기본 high — Opus 5.5 · Haiku 5.5 는 medium · 조합·에이전트 작업일수록 위로 · 대부분 작업에서 max 는 비용 대비 작다). 어긋나는 점 하나 = 이 문서 초판이 **xhigh 를 빠뜨렸다**. 추천 표를 그에 맞춰 고쳤다(아래). 「같은 이폴트라도 모델에 따라 산출이 크게 다르다」는 운영자 관측은 문서의 «medium(Sonnet 5) ≈ high(Sonnet 4.6)» 같은 교차 등급 등가 서술과 같은 축이다 — 이폴트 눈금은 모델마다 다른 절대값을 가리킨다.
+
+**갱신 규칙 (2026-11-15, 운영자 «추천대로»)**: 이 표를 릴리스마다 손으로 고치지 않는다. 새 모델이 나오면 `frontier-digest` 가 그것을 잡고, 그때 두 표(§2 · §2-b)에 **벤더 권고(출처 URL · 열람일) + 역할 판정 UNMEASURED** 줄을 하나씩 더한다. 역할 판정(§2 그 모델 줄의 «우리 역할 판정» 자리 · §2-b 그 모델 줄의 해석 칸 · §4 한계 줄 — 세 곳을 같은 PR 에서 함께)은 **우리 측정 팔(사전등록 · reps≥3)로만** 바뀐다 — 그 팔을 돌린 세션이 결과 파일 경로를 달아 그 자리를 고치는 PR 을 내고, 머지 판정은 다른 문서 변경과 같은 4축 게이트를 탄다. 관측 N=1 · 앱 추천 · 이전 세대 실측은 그 자리를 못 채운다. 같은 누락(새 모델 줄이 없어 이전 세대 줄로 추천)이 **두 번 더** 나면 digest↔표 대조 검사를 짓는다(N≥3 규칙) — 지금은 짓지 않는다(1회째 = 2026-11-14 밤).
 
 ## 3. 기본을 max 로 두면 무엇이 달라지나 (그리고 무엇은 안 달라지나)
 
@@ -52,7 +56,7 @@ Anthropic 플랫폼 문서 «Effort»(platform.claude.com/docs/en/build-with-cla
 ## 4. 정직한 한계 — 인용하기 전에 읽어라
 
 - 표의 Fable 칸은 **한 세션(2026-09-05)** 의 관측과 운영자 체감이다. 같은 작업 분포에서 medium 팔과 대조한 적이 없다.
-- Opus 의 «medium≈high» 는 **Opus 4.8 세대, 역량 안쪽 단발 판단** 에 한정된 실측이다(N=12). Opus 5·장호흡 조합은 미측정.
+- Opus 의 «medium≈high» 는 **Opus 4.8 세대, 역량 안쪽 단발 판단** 에 한정된 실측이다(N=12). Opus 5·장호흡 조합은 미측정. **Opus 5.5 는 우리 측정이 0 이다** — §2 의 5.5 줄은 벤더 권고와 관측 N=1 뿐이다.
 - Sonnet 칸의 «조합 설계 낮음» 은 기대다 — 반증되면 이 표를 고친다.
 - **측정 계획(사전등록 후 실행, reps≥3)**: 같은 임무를 «의도 한 줄 프롬프트」로 Sonnet/Opus/Fable × medium/**xhigh**/max 에 주고 — 엮은 정체성 수 · 차단 질문 수 · 게이트 통과율 · 리턴에서 스스로 잡은 결함 수 — 를 센다. 실행부는 `scripts/sim_isolated_run.sh`(라이브 레포 금지).
 

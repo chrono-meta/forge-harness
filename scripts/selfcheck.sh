@@ -12,6 +12,11 @@
 # Wiring: `npm test` for any session; `prepublishOnly` so a publish cannot ship a
 # syntactically broken executable.
 set -u
+# Inherited git environment reaches every lane: an exported GIT_DIR / GIT_INDEX_FILE makes a lane's
+# `git -C <fixture> commit` write into THAT repo (measured 2026-11-13 on a decoy: 70 of 90 git-using lanes do not
+# source fixture_guard_lib.sh). Same list as fixture_guard_lib.sh (repo-targeting vars only; GIT_CONFIG_* stay —
+# CI carries -c safe.directory there); precedent sync-to-be.sh / session_close_check.sh.
+unset GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_OBJECT_DIRECTORY GIT_DIR GIT_WORK_TREE GIT_IMPLICIT_WORK_TREE GIT_GRAFT_FILE GIT_INDEX_FILE GIT_NO_REPLACE_OBJECTS GIT_REPLACE_REF_BASE GIT_PREFIX GIT_SHALLOW_FILE GIT_COMMON_DIR GIT_NAMESPACE 2>/dev/null || true
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 fail=0
 
@@ -190,7 +195,7 @@ if [ "${FH_SELFCHECK_PROFILE:-full}" = consumer ]; then
   if _package_mode; then _CONSUMER=1
   else echo "⚠️  FH_SELFCHECK_PROFILE=consumer IGNORED — this tree is a git checkout; running the full suite"; fi
 fi
-CHECKOUT_ONLY_SUITES="test_package_coverage_lanes.sh test_files_manifest_shipping_lanes.sh test_map_postprocess_lanes.sh test_remote_marker_gate_lanes.sh test_worktree_reclaim_lanes.sh test_sim_isolated_run_lanes.sh test_utterance_intake_lanes.sh test_precommit_pointer_index_lanes.sh test_selfcheck_shard_lanes.sh test_ci_validate_shard_count_lanes.sh"
+CHECKOUT_ONLY_SUITES="test_fixture_guard_coverage_lanes.sh test_package_coverage_lanes.sh test_files_manifest_shipping_lanes.sh test_map_postprocess_lanes.sh test_remote_marker_gate_lanes.sh test_worktree_reclaim_lanes.sh test_sim_isolated_run_lanes.sh test_utterance_intake_lanes.sh test_precommit_pointer_index_lanes.sh test_selfcheck_shard_lanes.sh test_ci_validate_shard_count_lanes.sh"
 CONSUMER_SKIPPED=""
 _consumer_skip() { # $1 = suite basename · rc 0 = skip it (and it has been named)
   [ "$_CONSUMER" -eq 1 ] || return 1
@@ -1178,12 +1183,20 @@ for _pair in \
   "scripts/probe_live_eval_lib.py|scripts/test_live_eval_transitions_lanes.sh" \
   "scripts/correction_moments.py|scripts/test_correction_moments_lanes.sh" \
   "scripts/probe_live_eval_lib.py|scripts/test_live_eval_construct_lanes.sh" \
+  "scripts/live_eval_trace.py|scripts/test_live_eval_trace_lanes.sh" \
+  "scripts/probe_live_eval_lib.py|scripts/test_live_eval_trace_lanes.sh" \
+  "scripts/sim_isolated_run.sh|scripts/test_live_eval_trace_lanes.sh" \
   `# 무인 자체개발 루프(2026-11-04, 운영자 상시 요청). 자동 머지 등급은 모델이 아니라 경로 허용 목록이 정한다 — 빈 목록은 AUTO 가 아니라 HARNESS-ERROR(실측: 가드를 지우면 빈 목록이 AUTO 로 통과).` \
   "scripts/selfdev_merge_tier.sh|scripts/test_selfdev_merge_tier_lanes.sh" \
   "scripts/selfdev_queue.py|scripts/test_selfdev_queue_lanes.sh" \
   "scripts/ablation_nominate.py|scripts/test_ablation_nominate_lanes.sh" \
+  "scripts/ablation_verdict.py|scripts/test_ablation_verdict_lanes.sh" \
+  `# 빌더 카드 파일 역할 4값(2026-11-15, FH-6). 디스패치 뒤 바뀐 파일 ∩ protected = ∅ — protected 를 안 적은 카드는 통과가 아니라 HARNESS-ERROR.` \
+  "scripts/builder_card_files_check.py|scripts/test_builder_card_files_lanes.sh" \
   `# 리스 기록 채널(2026-11-07). 세션은 초안, 기록은 운영자 — 에이전트 셸 거부 · 코드 불일치 무기록 · 원자적 교체.` \
   "scripts/lease_line_apply.sh|scripts/test_lease_line_apply_lanes.sh" \
+  `# 공유 세션 장부(2026-11-11 시범). 실무 세션이 쓰고 루트가 읽는다 — 안 적은 세션은 NOT-WRITTEN, 깨진 줄은 MALFORMED.` \
+  "scripts/session_ledger_read.py|scripts/test_session_ledger_lanes.sh" \
   `# 맥락 유지 읽는 절반(2026-11-07). 상태 주장 뒤 리스 줄 한 줄 · 착지 판정 — 못 읽음은 OK 가 아니다.` \
   "scripts/state_claim_recheck_hook.sh|scripts/test_state_claim_recheck_lanes.sh" \
   "scripts/governor_landing_check.py|scripts/test_governor_landing_check_lanes.sh" \
@@ -1236,11 +1249,15 @@ for _pair in \
   `# ── mutation_probe (2026-10-07) — revert_probe 의 «저자가 고른 변이 1개» 를 연산자 생성 변이로 넓힌 것. 앵커가 고정하는 것은 생성기 보정(리다이렉트 비변이)과 «못 잰 것은 2» 다 ──` \
   "scripts/mutation_probe.py|scripts/test_mutation_probe_lanes.sh" \
   "scripts/cartridge_admit.py|scripts/test_cartridge_admit_lanes.sh" \
+  "scripts/agent_tools_pin.txt|scripts/test_agent_tools_pin_lanes.sh" \
   `# ── live-eval — the live twin of the static /prompt-regression probe check (2026-09-04) ──` \
   "scripts/probe_live_eval.sh|scripts/test_probe_live_eval_lanes.sh" \
   "scripts/probe_live_eval_lib.py|scripts/test_probe_live_eval_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_first_use_lanes.sh" \
   "scripts/fixture_guard_lib.sh|scripts/test_fixture_guard_lanes.sh" \
+  "scripts/fixture_guard_lib.sh|scripts/test_fixture_git_env_lanes.sh" \
+  "scripts/lane_identity_tripwire.sh|scripts/test_fixture_git_env_lanes.sh" \
+  "scripts/fixture_guard_lib.sh|scripts/test_fixture_guard_coverage_lanes.sh" \
   "scripts/stray_path_scan.sh|scripts/test_stray_path_lanes.sh" \
   "scripts/session_close_check.sh|scripts/test_stray_path_lanes.sh" \
   `# ── ①-g stale-ref (2026-09-21 신설) — #773 이 「배선 안 함」이라 적은 자리의 호출부. SUBJECT 는 스캐너가 아니라 «마감 블록»이다: 스캐너 자체는 test_stale_ref_scan_lanes.sh 가 이미 앵커한다 ──` \
@@ -1251,6 +1268,7 @@ for _pair in \
   #   운영자 지적: «내 발화가 도중에 열화되었다 … 테스트 한 차례 끝날 때마다 들여다봐야 할 것 같다».
   #   SUBJECT 를 session_checklist.py 로 잡는다 — 이 레인이 재는 것은 그 도구의 판정이다.` \
   "scripts/session_checklist.py|scripts/test_checklist_unblocked_lanes.sh" \
+  "scripts/claim_precision_report.py|scripts/test_claim_precision_report_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_hook_leg_wiring_lanes.sh" \
   ".claude/soul_tenets.txt|scripts/test_marker_soul_tenet_lanes.sh" \
   "docs/map/fh_assets.architecture.json|scripts/test_fh_map_paths_lanes.sh" \
@@ -1281,8 +1299,11 @@ for _pair in \
   "scripts/stale_clone_guard.sh|scripts/test_stale_clone_guard_lanes.sh" \
   "scripts/proposal_hook.sh|scripts/test_proposal_hook_lanes.sh" \
   "plugins/fh-commons/skills/ko-tech-writer/SKILL.md|scripts/test_ko_tech_writer_lanes.sh" \
+  "plugins/fh-meta/skills/meta-prompt-builder/SKILL.md|scripts/test_meta_prompt_restate_lanes.sh" \
   "scripts/absorption_queue.py|scripts/test_absorption_queue_lanes.sh" \
   "scripts/catch_tally.py|scripts/test_catch_tally_lanes.sh" \
+  "scripts/shell_name_boundary_scan.sh|scripts/test_name_boundary_locale_lanes.sh" \
+  "scripts/catch_tally.py|scripts/test_doc_claims_1113_lanes.sh" \
   "scripts/digest_slow_leg.py|scripts/test_digest_slow_leg_lanes.sh" \
   "scripts/script_caller_ratchet.sh|scripts/test_script_caller_ratchet_lanes.sh" \
   "scripts/script_caller_ratchet.sh|scripts/test_runner_surface_index_lanes.sh" \
@@ -3053,6 +3074,9 @@ else
   echo "SKIP  rules-dotfile (package mode: .git 없음 — 소스 트리 전용 검사)"
 fi
 
+# Lane-identity tripwire — record-only: a WARN line, never a FAIL (a hit is a past event in the
+# repo, not this run's verdict). Runs AFTER the lanes, which is when a leaked commit would have just landed.
+if [ -f scripts/lane_identity_tripwire.sh ]; then bash scripts/lane_identity_tripwire.sh . | grep -v '^LANE-TRIPWIRE ok' ; fi
 if [ "$_CONSUMER" -eq 1 ]; then
   _n=$(printf '%s\n' $CONSUMER_SKIPPED | grep -c .)
   echo "CONSUMER PROFILE — $_n checkout-only suite(s) NOT measured here (not a pass):$CONSUMER_SKIPPED"

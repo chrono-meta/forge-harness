@@ -54,6 +54,79 @@ Unknown key or unknown enum value = BLOCK. Missing required field = BLOCK.
 
 **A measurement engine is not a verdict entry.** A command that exits 0 even when it finds something wrong (it reports a number or a list, and the caller decides) does not go under `provides.verdicts` — a caller reads 0 there as «proceed». Declare it as a skill or a plain script; only a command whose 0 means «pass» is a verdict entry.
 
+## 2b. Runtime dependencies — stdlib-only, or a named missing state
+
+A module's Python runs wherever the module is loaded — including a floor environment the author never saw. So:
+
+- **Default: standard library only.** No third-party import in any `.py` the module ships (skill folders, command
+  files, `files`).
+- **If a dependency is unavoidable**, the import is guarded (`try: … except ImportError`) and its absence exits
+  **2 (UNMEASURED)** with one line that names the missing module. Never a traceback, never a guess, never folded into a
+  pass or a block.
+- `check` reads every shipped `.py` (AST, honouring a coding cookie): an **unguarded** non-stdlib import — `import`,
+  `from … import`, or `importlib.import_module` / `__import__` with a literal name (positional or `name=`; a bare
+  `import_module(…)` only when the file imported it from `importlib`), at top level or inside a function —
+  BLOCKs; a **guarded** one is a NOTE naming the module and line; an unparsable file is UNMEASURED. «Guarded» means the
+  import runs inside the `try` body (a `def`, `lambda` or generator expression written inside the `try` runs later
+  and is not guarded by it) and the handler
+  catches `ImportError` / `ModuleNotFoundError` / `Exception` / `BaseException` by name or as `builtins.<name>`, and the
+  file does not bind that name (or `builtins`) anywhere — assignment, parameter, `except … as`, def/class, import alias. A module the package ships in the importing file's folder or an ancestor folder (a
+  `.py`, or a folder with `__init__.py`) is not a dependency; a same-named file elsewhere in the module does not count.
+  Lanes RD1–RD18; probes `rtguard` `rtscan` `rtpkg` `rtdyn` `rtnear` `rtdef` `rtshadow` `rtattr` `rtenc` `rtwalk`
+  `rtkw` `rtbuiltins` `rtarg` `rtmeth` `rtgen` each turn their lanes red.
+- **Why the guard is not enough** (measured, fh-cartridges A/B C10, 2026-11-08): `cart-ghaudit` guarded PyYAML and
+  named its absence exactly as above — and the isolated runner's first `python3` had no PyYAML, so 9/9 inline and 5/9
+  cart runs got rc 2. In the inline arm the no-guess contract turned that into no answer (2/6 against bare 6/6); the cart
+  runs fell back to reading by hand. A guarded dependency is a
+  typed failure, not a working module. That is why the guarded case is a NOTE the installer must read, and why the fix
+  proposed there is stdlib-only (fh-cartridges PR #19, merged 2026-11-09: a built-in reader for the YAML subset
+  workflows use; script output byte-identical on 224 local workflow files).
+- **Named residual — passes unseen**: shell scripts calling `jq`, `yq`, `node` and the like are not read, and a
+  computed import name (`import_module(name)`) is not followed. **Errs toward BLOCK**: an aliased exception
+  (`from builtins import ImportError as E`), a folder added by `sys.path` edits, and a default argument, decorator or
+  generator consumed at once (`list(__import__("x") for …)`) inside a guarded `try` (treated as unguarded). Codex found
+  a new edge form in each of four rounds; the rounds were capped there and these forms are named instead. «stdlib» means the stdlib of the interpreter running `check`.
+
+## 2c. Descriptions name the question shapes, not only the activity
+
+A skill that should route itself is chosen from its `description`. Measured (fh-cartridges A/B C7–C12, Sonnet, live
+`claude -p`, cart arm only installed): requests that named an activity («the postmortem's time to resolve», «security
+review of the workflows», «the version bump for this API change») called the skill **9/9**; yes/no and counting
+questions about the same artifacts («is the delta ready to merge?», «how many files reference X?», «will this
+migration wipe data?») called it **1/9, 0/9, 0/9** — answered directly, the listing never consulted.
+
+- A description lists, besides the activity, the **question shapes** users ask about that artifact — yes/no
+  («ready to merge?», «reversible?», «will it lose data?») and counting («how many …?») — inside the same artifact
+  scope (a delta spec, a name in code, a SQL migration), so the question does not widen the trigger to every
+  «ready to merge?».
+- The description is a YAML plain scalar: it may not contain `: ` (the first rewrite did, and admission refused the
+  frontmatter as unparsable — the check worked).
+- `scripts/generated_harness_check.py` reports **W8 (info)** for a skill description with no question example
+  (`?`). Info only: it never changes a verdict, because a question mark is a proxy for the shape, not proof of routing.
+- **Not proven yet**: a no-token proxy (subagents shown the listing and asked which skill they would call) was at
+  ceiling before and after (9/9 targets, 0/8 false triggers; fh-cartridges PR #20, merged 2026-11-09) — it does not
+  reproduce the live failure. The live effect is measured only by runs that install the module and do not hint it; the
+  next such run is pre-registered (fh-cartridges `evidence/AB_PREREG_HAIKU_C7-C12.md`) and has no results yet.
+
+## 2d. Before building — measure the bare model on the real path
+
+Before building a module whose purpose is **accuracy** (it exists so the model gets an answer right that it would
+otherwise get wrong), measure the bare model on the **real path** first: the module's own target tasks, run the way a
+user runs them (a real session or `claude -p`, nothing installed, no hint in the prompt that a module or a check
+exists). If the bare model is at the **ceiling** there, record the negative result and do not build.
+
+- **Ceiling** = at the cheapest tier the module claims to help (and at Sonnet when that is a different tier),
+  ≥ 3 runs on each of ≥ 3 target tasks, and **0 misses** — or, when the module declared its own success threshold
+  and task set **before** the run, the bare model meets that threshold under the same minimum runs and tiers (a
+  threshold chosen after seeing the results is not a ceiling). Record it as a null at that size (e.g. «0/9 misses at Haiku — NOT-DETECTED@9»),
+  never as «the model does not need it»: 9 clean runs do not rule out a rarer failure.
+- **A proxy metric at ceiling does not stop a build.** A no-token proxy (§2c: subagents shown a listing, 9/9) did not
+  reproduce the live failure; only the real path can say «already solved». The positive case looks like fh-cartridges
+  #25: the bare arm gave a silent wrong answer 7/7/7 on frozen fixtures, the module 0/0/0 — that gap is why it was built.
+- **Out of scope**: modules whose value is not accuracy — determinism, a gate, an audit trail, a refusal at an
+  irreversible edge. A bare model that «usually gets it right» is not a substitute for those, so they are built without
+  this measurement.
+
 ## 3. Install-time check (`scripts/fh_module_check.py check`)
 
 Exit codes: **0 OK, 1 BLOCK, 2 UNMEASURED, 3 OK-but-UNCALIBRATED** (valid, no verdict entry points, `calibration: UNCALIBRATED`; callers must not treat 3 as a clean pass). Unreadable, empty, or non-mapping input is 2; PyYAML missing is 2; an internal error is 2. Nothing unreadable or unknown exits 0. Exit code 3 means different things in different FH scripts (in `governor_landing_check.py` it is LATE); read each script's own exit table, never assume 3 means the same thing.
@@ -97,7 +170,7 @@ Measured on the pilot: without `files:` the export failed with «missing scripts
 
 ## 6. Calibration of the checker
 
-`bash scripts/test_fh_module_check_lanes.sh` - known-positive (valid module), known-negatives (disable, override, shadow, reorder, unknown enum, unknown key, unrouted publish, garbage / empty / missing manifest, removal with dependant, merge in both orders). `FH_MODULE_PROBE=<name>` neuters one check in a temp copy; the matching lane must go red.
+`bash scripts/test_fh_module_check_lanes.sh` - known-positive (valid module), known-negatives (disable, override, shadow, reorder, unknown enum, unknown key, unrouted publish, garbage / empty / missing manifest, removal with dependant, merge in both orders, runtime dependencies RD1–RD18). `FH_MODULE_PROBE=<name>` neuters one check in a temp copy; the matching lane must go red.
 
 Pilot: `plugins/fh-commons/skills/ko-tech-writer/fh-module.yaml`.
 Second module (2026-11-06): `plugins/fh-commons/skills/persona-cast/fh-module.yaml` — the doorway skill, its six lens agents and the Step 4 merge engine `scripts/persona_cast_merge.py`; `export` is STANDALONE with 10 files.

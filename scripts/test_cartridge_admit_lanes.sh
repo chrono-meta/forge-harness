@@ -3,6 +3,7 @@
 # only because its skills pre-approve a blanket Bash (checker H1); the clean minimal cartridge ADMITs; a cartridge declaring a hook is refused;
 # a missing cartridge.yaml is HARNESS_ERROR. Revert probe: the hook fixture minus hooks/ admits.
 # Env: CARTRIDGE_ROOT = repo root holding plugins/fh-qp (default: this script's parent).
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="${CARTRIDGE_ROOT:-$(cd "$HERE/.." && pwd)}"

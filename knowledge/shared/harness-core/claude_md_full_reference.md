@@ -343,7 +343,8 @@ change>'`** — it records the PR head *before* the merge deletes it, merges wit
 above, then re-runs your lane on the merged `main` and compares every file the branch touched. A
 green `gh pr merge` only says the merge happened, not that the squash carried the branch
 (2026-09-21: four merges, none checked). `--rerun` is required and refused before merging if it is
-missing or does nothing (`true`, `echo …`).
+missing or does nothing (`true`, `echo …`), and when it would print nothing on success (`grep -q …`, `… >/dev/null`) — a
+silent pass reads as an instrument failure after the merge (`verify-incomplete`), so end it with `&& echo '<what passed>'`.
 
 **Two layers.** Shift-left = `templates/.git-hooks/pre-push` blocks a direct push to `main`/`master` unless
 `MAIN_PUSH_OK=1` (logged, same shape as `DESTRUCTIVE_OP_OK`; known-pair calibrated). The **hard floor is server-side**
@@ -1239,6 +1240,16 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc. —
        `lens` · `gate` · `lane` · `operator` · `self`; 놓친 쪽 ∈ `author` (this session — your own work or
        claim) · `plain-review` · `lane` · `gate` · `none`; 근거 = PR · commit · file:line. Nothing caught → the line `0건 — <what you
        looked at>`; a bare `0건` is unrecorded, not zero. Count: `python3 scripts/catch_tally.py`.
+       **Every «완료 / done» line names its world state and what is still open** (2026-11-14):
+       the anchor (commit sha · `#PR` + its state · file path · run id) on the same line, and if
+       anything is unresolved, say so there (`완료 — #1097 open, CI pending · 미해결: N6 맥 미측정`).
+       Never write «완료» over an error that is still in the world — leave the error visible and add
+       the honest note. Why: arXiv:2611.14654 (AgentCE-Bench) — an agent's own «completed» action
+       next to a still-wrong value lowered the receiver's recovery 50% → 44%; a truthful note beside
+       the preserved error raised it to 66% (51% with a matched neutral note). The same holds for the
+       card's status tags (below) and a handoff. `session_close_check.sh` ⑤-done-anchor lists
+       today's done-lines with no anchor (record only — it checks the pairing, never that the work
+       is done).
        **Late finding (named case)**: a finding that surfaces AFTER (b) — including while writing
        the final message to the operator — means ⑤ is **not done**. Re-run ⑤ **whole**: append,
        then **rewrite the card**. Appending alone is the violation; the card must never be older

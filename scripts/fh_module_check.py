@@ -12,7 +12,7 @@ Exit codes: 0 OK . 1 BLOCK . 2 UNMEASURED (unreadable / tooling down / empty cor
 3 OK-but-UNCALIBRATED (valid, no verdict entry points, calibration declared UNCALIBRATED; never a clean pass).
 Fail closed: nothing unreadable, unknown or empty ever exits 0.
 """
-import argparse, glob, hashlib, json, os, re, shutil, subprocess, sys
+import argparse, ast, glob, hashlib, json, os, re, shutil, subprocess, sys, sysconfig
 
 OK, BLOCK, UNMEASURED, UNCAL = 0, 1, 2, 3
 
@@ -384,6 +384,185 @@ def validate(m, vd, repo_core, repo):
                     vd.block("files: %s resolves outside the repo" % f)
 
 
+def _is_stdlib(name):
+    """True when `name` is a standard-library module of the interpreter running this check (3.9 has no
+    sys.stdlib_module_names: fall back to where the module lives)."""
+    names = getattr(sys, "stdlib_module_names", None)
+    if names is not None:
+        return name in names
+    if name in sys.builtin_module_names:
+        return True
+    import importlib.util
+    try:
+        spec = importlib.util.find_spec(name)
+    except (ImportError, ValueError):
+        return False
+    if spec is None or not spec.origin:
+        return False
+    if spec.origin in ("built-in", "frozen"):
+        return True
+    std = os.path.realpath(sysconfig.get_paths()["stdlib"])
+    org = os.path.realpath(spec.origin)
+    return org.startswith(std + os.sep) and "site-packages" not in org
+
+
+_CATCH = ("ImportError", "ModuleNotFoundError", "Exception", "BaseException")
+
+
+def _bound_names(tree):
+    """Every name the file binds anywhere (assignment, parameter, `except … as`, def/class, import alias), except a plain
+    `import builtins`. Over-approximate on purpose: a rebound name stops counting as a guard -> fail closed."""
+    out = set()
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Name) and isinstance(n.ctx, (ast.Store, ast.Del)):
+            out.add(n.id)
+        elif isinstance(n, ast.arg):
+            out.add(n.arg)
+        elif isinstance(n, ast.ExceptHandler) and n.name:
+            out.add(n.name)
+        elif isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            out.add(n.name)
+        elif isinstance(n, (ast.Global, ast.Nonlocal)):
+            out.update(n.names)
+        elif isinstance(n, (ast.Import, ast.ImportFrom)):
+            for a in n.names:
+                if isinstance(n, ast.Import) and a.name == "builtins" and not a.asname:
+                    continue
+                out.add((a.asname or a.name).split(".")[0])
+    return out
+
+
+def _bare_import_module(tree):
+    """True when the file binds `import_module` from importlib (so a bare `import_module("x")` call is that one)."""
+    return any(isinstance(n, ast.ImportFrom) and n.module == "importlib" and n.level == 0
+               and any(a.name == "import_module" and not a.asname for a in n.names) for n in ast.walk(tree))
+
+
+def _dynamic_import(n, bare_ok=False):
+    """`importlib.import_module("x")` / `__import__("x")` (and a bare `import_module("x")` when the file imported it
+    from importlib), name given positionally or as `name=`, literal -> "x", else None. A computed name is not read
+    (named residual, contract 2b)."""
+    if not isinstance(n, ast.Call):
+        return None
+    f = n.func
+    if not ((isinstance(f, ast.Name) and (f.id == "__import__" or (bare_ok and f.id == "import_module"))) or
+            (isinstance(f, ast.Attribute) and f.attr == "import_module" and isinstance(f.value, ast.Name)
+             and f.value.id == "importlib")):
+        return None
+    arg = n.args[0] if n.args else next((k.value for k in n.keywords if k.arg == "name"), None)
+    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+        return arg.value
+    return None
+
+
+def _guarded_lines(tree):
+    """Line numbers of imports that run inside a `try:` body whose handlers catch ImportError / ModuleNotFoundError /
+    Exception / BaseException (or everything), by a name the file does not rebind."""
+    bound = _bound_names(tree)
+    bare = _bare_import_module(tree)
+
+    def _catches(x):
+        if isinstance(x, ast.Name):
+            return x.id in _CATCH and x.id not in bound
+        return (isinstance(x, ast.Attribute) and isinstance(x.value, ast.Name) and x.value.id == "builtins"
+                and "builtins" not in bound and x.attr in _CATCH)
+
+    def _imports_run_now(st):
+        # A def / lambda body inside the try runs later, outside the try: its imports are not guarded by it.
+        # (Named residual: default arguments and decorators do run at definition time; skipping them errs toward BLOCK.)
+        stack = [st]
+        while stack:
+            n = stack.pop()
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+                continue
+            if isinstance(n, ast.GeneratorExp):
+                # A generator runs on next(), outside the try; only its first iterable is evaluated here.
+                stack.append(n.generators[0].iter)
+                continue
+            if isinstance(n, (ast.Import, ast.ImportFrom)) or _dynamic_import(n, bare):
+                yield n.lineno
+            stack.extend(ast.iter_child_nodes(n))
+
+    out = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Try):
+            continue
+        catches = False
+        for h in node.handlers:
+            t = h.type
+            names = [t] if t is not None and not isinstance(t, ast.Tuple) else (t.elts if t is not None else [])
+            if t is None or any(_catches(x) for x in names):
+                catches = True
+        if catches:
+            for st in node.body:
+                out.update(_imports_run_now(st))
+    return out
+
+
+def runtime_deps(m, repo, vd):
+    """Spec section 2b: a module's python is stdlib-only, or each non-stdlib import is guarded so its absence can be
+    reported as UNMEASURED (exit 2, naming it). Unguarded non-stdlib import -> BLOCK; guarded -> NOTE (the floor run
+    environment may not have it). Unparsable python -> UNMEASURED. Only .py files are read (named residual: shell
+    scripts calling jq / yq / node are not checked)."""
+    paths, _prob = module_paths(m, repo)
+    files = []
+    for rel in paths:
+        full = os.path.join(repo, rel)
+        if os.path.isdir(full):
+            for dp, dn, fns in os.walk(full):
+                dn[:] = sorted(d for d in dn if d not in (".git", "__pycache__"))
+                files += [os.path.join(dp, f) for f in sorted(fns) if f.endswith(".py")]
+        elif full.endswith(".py") and os.path.isfile(full):
+            files.append(full)
+    shipped = {os.path.realpath(f) for f in files}
+
+    def _is_local(mod, importer):
+        # Python puts the running script's folder first on sys.path; a module inside a shipped package resolves from an
+        # ancestor folder. So a name is local when <dir>/<mod>.py or <dir>/<mod>/__init__.py is shipped in the
+        # importer's folder or one of its ancestors -- not anywhere in the module.
+        d = os.path.dirname(os.path.realpath(importer))
+        while True:
+            if os.path.join(d, mod + ".py") in shipped or os.path.join(d, mod, "__init__.py") in shipped:
+                return True
+            up = os.path.dirname(d)
+            if up == d or not up.startswith(os.path.realpath(repo)):
+                return False
+            d = up
+
+    import tokenize
+    for f in sorted(set(files)):
+        rel = os.path.relpath(f, repo)
+        try:
+            with tokenize.open(f) as fh:  # honours a PEP 263 coding cookie, as Python does
+                tree = ast.parse(fh.read(), filename=rel)
+        except (OSError, UnicodeDecodeError, SyntaxError, ValueError) as e:
+            vd.unm("runtime dependencies of %s cannot be read: %s" % (rel, e))
+            continue
+        guarded = _guarded_lines(tree)
+        bare = _bare_import_module(tree)
+        seen = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                mods = [a.name.split(".")[0] for a in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+                mods = [node.module.split(".")[0]]
+            elif _dynamic_import(node, bare):
+                mods = [_dynamic_import(node, bare).split(".")[0]]
+            else:
+                continue
+            for mod in mods:
+                if (mod, node.lineno) in seen or not mod or mod == "__future__" or _is_stdlib(mod) or _is_local(mod, f):
+                    continue
+                seen.add((mod, node.lineno))
+                if node.lineno in guarded:
+                    vd.notes.append("runtime dependency %s (%s:%d) is not stdlib; guarded — allowed only when a stdlib route is not feasible (contract 2b); its absence must exit 2 "
+                                    "(UNMEASURED) naming it, and the floor run environment may not have it" % (mod, rel, node.lineno))
+                else:
+                    vd.block("runtime dependency %s (%s:%d) is not stdlib and not guarded — in an environment without it "
+                             "the module crashes instead of answering UNMEASURED; make it stdlib-only, or guard the import "
+                             "and exit 2 naming the missing module" % (mod, rel, node.lineno))
+
+
 def load_installed(d):
     mods, errs, dups = {}, [], []
     if not os.path.isdir(d):
@@ -416,6 +595,8 @@ def cmd_check(a):
     if cerr:
         vd.unm(cerr)
     validate(m, vd, core, repo)
+    if isinstance(m, dict):
+        runtime_deps(m, repo, vd)
     if a.installed:
         inst, errs, dups = load_installed(a.installed)
         for e in errs: vd.unm("installed registry unreadable: " + e)

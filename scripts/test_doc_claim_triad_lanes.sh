@@ -4,6 +4,7 @@
 # 🟥 이 레인이 지키는 것은 «숫자»가 아니라 «판별력»이다. 그 계기는 세션 중 세 번 뚫렸고
 #    (공존≠관계 · 방향 미해결 · 나열 통과) 세 번 다 손검증이 잡았다. 레인은 그 셋이
 #    되돌아오는지를 본다 — 픽스처는 실제로 뚫렸던 표기를 그대로 쓴다.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"; ROOT="$(dirname "$HERE")"
 SCAN="$HERE/doc_claim_triad_scan.py"

@@ -8,6 +8,7 @@
 #   N1 staged VALID pointer, file rm'd from disk        → [Pointers] block runs with no ❌ (control: index read works)
 #   N2 staged broken pointer, file still on disk        → BLOCKED (the pre-fix path also caught this — control)
 # Usage: bash scripts/test_precommit_pointer_index_lanes.sh [--hook <path>]   (default = templates/.git-hooks/pre-commit)
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u; ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; HOOK="$ROOT/templates/.git-hooks/pre-commit"
 [ "${1:-}" = "--hook" ] && HOOK="$2"
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT; pass=0; fail=0

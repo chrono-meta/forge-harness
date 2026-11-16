@@ -14,7 +14,7 @@
 #     첫 검증에서 그걸 겪었다.)
 #
 # 실행: bash scripts/test_fh_run_resolver_lanes.sh
-# 🟥 이 파일의 모든 «$VAR» 는 `${VAR}` 로 쓴다 — 변수 뒤에 ASCII 가 아닌 글자(» 등)가 바로
+# 🟥 이 파일의 모든 « $VAR » 꼴(붙여 쓴 것)은 `${VAR}` 로 쓴다 — 변수 뒤에 ASCII 가 아닌 글자(» 등)가 바로
 #    붙으면 셸이 그 바이트를 **변수 이름에 먹어** `VAR?: unbound variable` 로 죽는다.
 #    이 세션에 같은 결함을 두 번 냈다(한 번 고치고 새 파일에 또 썼다). 중괄호가 그 경계다.
 set -uo pipefail

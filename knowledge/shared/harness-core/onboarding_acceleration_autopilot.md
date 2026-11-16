@@ -41,6 +41,13 @@ install plan, and gate every install.**
    emitting today. Rationale + economics:
    `knowledge/shared/harness-core/harness_incubator_doctrine.md §3`.
 
+   **Birth core — every new-build, before the first file is written**: read
+   `templates/harness_birth_core.md` and give the new harness its five parts (purpose · when unsure ·
+   calibration without a script · irreversible edges · typed verdict), in the domain's words.
+   Measured 2026-11-10 (blind Sonnet, two domains with no script oracle, 3 reps per arm): asked to
+   "set up a harness for X in this empty project", the FH arm opened no FH file in 6/6 runs and its
+   harnesses matched a bare model's — and 12/12 harnesses from both arms lacked any calibration path.
+
    This audit-and-branch pre-step is imported from the revfactory/harness Phase-0 State Audit
    (sister-audit 2026-07-07) — it tightens FH's found→extend reflex and is the "이미 로컬에 연결돼
    있으면 자동 탐색" mechanism.

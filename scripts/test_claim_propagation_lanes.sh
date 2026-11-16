@@ -30,6 +30,7 @@
 #
 # Usage:  bash scripts/test_claim_propagation_lanes.sh        (PATH=<interp-dir>:$PATH to pin an interpreter — a $PY invoker is unreadable to new_code_anchor_check.sh)
 # Exit:   0 = every lane passed · 1 = a lane failed (or the instrument itself broke)
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCAN="$HERE/claim_propagation_scan.py"

@@ -14,6 +14,7 @@
 #   Q15-Q18 exact top-level title only · symlink refused · cut counted · quoted lines are data
 #   Q20-Q22 file-path sources (tracks/_audit/x.md#N-M) carry the anchored part, or say why not
 #   Q9 a later edit (newer mtime) to the OLDER checklist does not make it newest: its rows stay recheck and the newer DONE still wins
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 Q="$HERE/selfdev_queue.py"

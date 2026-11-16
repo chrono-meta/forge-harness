@@ -17,6 +17,7 @@
 # restated here: a restated copy drifts from the thing it claims to verify.
 # 🟥 No network. The subject under test is the caller, so the scanner is a stub whose verdict
 #    line is the lane's input — a live scan would make these lanes depend on Zenodo's state.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

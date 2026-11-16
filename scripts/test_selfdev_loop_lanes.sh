@@ -6,7 +6,9 @@
 # until 2026-11-04 it had only been dry-run by hand with no open PR, i.e. never exercised at all
 # (CI new-code-anchor: «MENTION_ONLY»). Each lane is one condition the policy says must HOLD,
 # with LP1 as the positive control that the same fixture CAN reach WOULD MERGE. LP12/LP13: SELFDEV_NO_MERGE=1
-# stops a passing PR at ELIGIBLE and still holds a failing one.
+# stops a passing PR at ELIGIBLE and still holds a failing one. LP20/LP21 (2026-11-10 watchdog kill): a killed
+# build's unpushed commits are named STRANDED; the builder prompt names the watchdog's own limit.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 for f in selfdev_loop.sh selfdev_queue.py selfdev_merge_tier.sh; do
@@ -14,6 +16,8 @@ for f in selfdev_loop.sh selfdev_queue.py selfdev_merge_tier.sh; do
 done
 W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
 pass=0; fail=0
+# the stub builders finish at once; a 20 s watchdog poll per build run cost the file > 300 s in CI
+export SELFDEV_POLL=1
 ok()  { pass=$((pass+1)); echo "  ✅ $1"; }
 bad() { fail=$((fail+1)); echo "  ❌ $1"; }
 DATE="$(date +%Y-%m-%d)"
@@ -55,6 +59,9 @@ case "\$1 \$2|\$json" in
   "pr view|body,headRefName") cat "\$K/body" ;;
   "pr view|headRefName") echo auto/selfdev-x ;;
   "pr view|files") cat "\$K/files" ;;
+  "pr view|title,headRefOid,changedFiles,files") cat "\$K/title" 2>/dev/null || echo "selfdev: x"; cat "\$K/oid2"; cat "\$K/nfiles" 2>/dev/null || grep -c . "\$K/files"; cat "\$K/files" ;;
+  "pr view|mergeCommit") echo cccccccccccccccccccccccccccccccccccccccc ;;
+  "pr view|state,mergeCommit") cat "\$K/state" 2>/dev/null || echo "OPEN " ;;
   *) echo "fake gh: unhandled \$*" >&2; exit 3 ;;
 esac
 GH
@@ -75,7 +82,9 @@ setup p1; run p1; expect "LP1 control: every condition met → WOULD MERGE" "#5 
 setup p2; printf 'seed: human\nrequest: «레인»\n' > "$W/p2/knobs/body"; run p2
 expect "LP2 request is a fragment of the operator row → HOLD" "request-not-in-queue"
 setup p3; printf 'seed: candidate (digest)\n' > "$W/p3/knobs/body"; run p3
-expect "LP3 machine-proposed candidate → HOLD" "seed-candidate"
+#   operator 2026-11-11 «후보 확인만 없앰»: the seed alone no longer holds a candidate — this lane goes red
+#   if the old blanket «seed-candidate» refusal comes back (revert probe target)
+expect "LP3 candidate with an AUTO-tier change → WOULD MERGE, head + seed named" "#5 WOULD MERGE (dry-run, head $OID_A, seed candidate)"
 setup p4; printf 'pass\nskipping\n' > "$W/p4/knobs/checks"; run p4
 expect "LP4 a skipped check is not a pass → HOLD" "ci-fail-or-skipped"
 setup p5; ( cd "$W/p5/live" && git commit -q --allow-empty -m 'Revert "selfdev: x"' && git push -q origin HEAD:main 2>/dev/null ); run p5
@@ -101,8 +110,8 @@ setup p12; run p12 SELFDEV_NO_MERGE=1
 if [ "$RC" -eq 0 ] && printf '%s\n' "$REP" | grep -qF '#5 ELIGIBLE (no-merge mode' && ! printf '%s\n' "$REP" | grep -qE 'WOULD MERGE|MERGED'; then
   ok "LP12 no-merge mode: the same fixture as LP1 stops at ELIGIBLE, never WOULD MERGE"
 else bad "LP12 (rc=$RC)"; printf '%s\n' "$REP" | tail -4 | sed 's/^/       /'; fi
-setup p13; printf 'seed: candidate\n' > "$W/p13/knobs/body"; run p13 SELFDEV_NO_MERGE=1
-expect "LP13 no-merge mode does not skip the checks: a candidate is still HOLD, not ELIGIBLE" "seed-candidate"
+setup p13; printf 'seed: candidate\n' > "$W/p13/knobs/body"; printf 'MODIFIED\tCLAUDE.md\t2\t0\n' > "$W/p13/knobs/files"; run p13 SELFDEV_NO_MERGE=1
+expect "LP13 no-merge mode does not skip the checks: a HOLD-tier candidate is HOLD, not ELIGIBLE" "tier:HOLD"
 
 # real-run lanes (DRY=0): the merge helper is a stub that records its call. The clone is a git dir with an
 # untracked marker, i.e. dirty → the loop skips the build (no claude call) and still runs the merge pass.
@@ -214,6 +223,170 @@ done
 if [ "${s19:-0}" = 1 ] && [ "${k19:-0}" = 1 ] && [ "${n19:-0}" = 1 ] && [ "${t19:-0}" = 1 ] && [ "${o19:-0}" = 1 ]; then ok "LP19 a caller's ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN is unset for the builder and named (value never printed); SELFDEV_ALLOW_API_KEY=1 keeps it, says «bills the API» and the builder's own echo of it is redacted (control); no key → no line (control)"
 else bad "LP19 (strip=${s19:-?} · keep=${k19:-?} · none=${n19:-?} · token=${t19:-?} · overlap=${o19:-?})"; fi
 
-[ $((pass+fail)) -eq 19 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 19"; exit 2; }
+# LP20: 2026-11-10 — the watchdog killed a build that had committed on auto/selfdev-<date>-1 but not
+# pushed; the report said only «0 PRs». A killed build with unpushed commits must name the branch and
+# the commit; the control arm pushes the same branch first and must carry no STRANDED line.
+setup p20; D20="$W/p20"
+sed -i.bak 's#"pr list|number,headRefName") echo 5 ;;#"pr list|number,headRefName") echo 5 ;;\
+  "pr list|number,headRefName,createdAt") : ;;#' "$D20/bin/gh"
+grep -q 'createdAt") :' "$D20/bin/gh" || { echo "HARNESS-ERROR: LP20 fixture edit did not apply"; exit 2; }
+#   arms (codex R1): olddate = a stranded branch from an earlier night is still named (a late commit, or
+#   one the operator has not acted on, must not age out) · otherref = the commit is on origin under
+#   another branch name → not stranded (count against every origin ref, not one)
+for arm in strand pushed olddate otherref; do
+  BR="auto/selfdev-$DATE-1"; [ "$arm" = olddate ] && BR="auto/selfdev-2026-01-01-1"
+  push=""
+  [ "$arm" = pushed ] && push="git push -q origin HEAD 2>/dev/null"
+  [ "$arm" = otherref ] && push="git push -q origin HEAD:refs/heads/elsewhere 2>/dev/null"
+  cat > "$D20/bin/claude-stub" <<STUB
+#!/usr/bin/env bash
+git switch -q -c $BR && git -c user.email=t@t -c user.name=t commit -q --allow-empty -m 'docs: lane-20 stranded work'
+$push
+echo "Waiting for the selfcheck completion notice."
+exec sleep 120
+STUB
+  chmod +x "$D20/bin/claude-stub"
+  rm -f "$D20/live/tracks/_meta/selfdev/report_$DATE.md" "$D20/live/tracks/_meta/logs/selfdev_loop_$DATE.log"
+  rm -rf "$D20/clone"; git clone -q "$D20/origin.git" "$D20/clone" 2>/dev/null
+  for b in $(git -C "$D20/origin.git" for-each-ref --format='%(refname:short)' refs/heads); do [ "$b" = main ] || git -C "$D20/origin.git" branch -q -D "$b"; done
+  OUT=$(cd "$D20/live" && env PATH="$D20/bin:$PATH" SELFDEV_DRY_RUN=0 SELFDEV_NO_MERGE=1 SELFDEV_BUILD_TIMEOUT=2 FH_SELFDEV_DIR="$D20/clone" FD_CLAUDE_BIN="$D20/bin/claude-stub" \
+        bash scripts/selfdev_loop.sh 2>&1); RC=$?
+  REP="$(cat "$D20/live/tracks/_meta/selfdev/report_$DATE.md" 2>/dev/null)"
+  case "$arm" in
+    strand|olddate)
+      if printf '%s\n' "$REP" | grep -qF 'build killed by watchdog (2s)' \
+         && printf '%s\n' "$REP" | grep -qF -- "- STRANDED: $BR in $D20/clone has 1 unpushed commit(s)" \
+         && printf '%s\n' "$REP" | grep -qF 'docs: lane-20 stranded work'; then r=1
+      else r=0; printf '%s\n' "$REP" "$OUT" | tail -8 | sed 's/^/       /'; fi ;;
+    *)
+      if printf '%s\n' "$REP" | grep -qF 'build killed by watchdog (2s)' && ! printf '%s\n' "$REP" | grep -qF 'STRANDED'; then r=1
+      else r=0; printf '%s\n' "$REP" | tail -6 | sed 's/^/       /'; fi ;;
+  esac
+  eval "r20_$arm=$r"
+done
+#   arm dirty (codex R2): a dirty clone skips the build — the stranded branch from an earlier night must
+#   still be named on that night, not only on nights that build
+rm -f "$D20/live/tracks/_meta/selfdev/report_$DATE.md"
+rm -rf "$D20/clone"; git clone -q "$D20/origin.git" "$D20/clone" 2>/dev/null
+( cd "$D20/clone" && git switch -q -c auto/selfdev-2026-01-02-1 && git -c user.email=t@t -c user.name=t commit -q --allow-empty -m 'docs: lane-20 dirty-night work' && git switch -q main && echo x > untracked.txt )
+OUT=$(cd "$D20/live" && env PATH="$D20/bin:$PATH" SELFDEV_DRY_RUN=0 SELFDEV_NO_MERGE=1 FH_SELFDEV_DIR="$D20/clone" FD_CLAUDE_BIN="$D20/bin/claude-stub" \
+      bash scripts/selfdev_loop.sh 2>&1); RC=$?
+REP="$(cat "$D20/live/tracks/_meta/selfdev/report_$DATE.md" 2>/dev/null)"
+if printf '%s\n' "$REP" | grep -qF 'HOLD build: clone dirty' && ! printf '%s\n' "$REP" | grep -qF 'build killed' \
+   && printf '%s\n' "$REP" | grep -qF -- "- STRANDED: auto/selfdev-2026-01-02-1 in $D20/clone has 1 unpushed commit(s)"; then r20_dirty=1
+else r20_dirty=0; printf '%s\n' "$REP" "$OUT" | tail -8 | sed 's/^/       /'; fi
+if [ "${r20_strand:-0}" = 1 ] && [ "${r20_pushed:-0}" = 1 ] && [ "${r20_olddate:-0}" = 1 ] && [ "${r20_otherref:-0}" = 1 ] && [ "${r20_dirty:-0}" = 1 ]; then ok "LP20 a killed build's unpushed commits are named STRANDED with branch and subject, an earlier night's too, also on a night the dirty clone skips the build; the same branch pushed, or the commit pushed under another name → no STRANDED line (controls)"
+else bad "LP20 (strand=${r20_strand:-?} · pushed=${r20_pushed:-?} · olddate=${r20_olddate:-?} · otherref=${r20_otherref:-?} · dirty=${r20_dirty:-?})"; fi
+
+# LP21: the time limit the builder is told must BE the watchdog's limit, and the builder is told not to
+# run the full suite (11-10: it ran selfcheck.sh, >30 min here, into a 2700s watchdog it never saw).
+setup p21; D21="$W/p21"
+sed -i.bak 's#"pr list|number,headRefName") echo 5 ;;#"pr list|number,headRefName") echo 5 ;;\
+  "pr list|number,headRefName,createdAt") : ;;#' "$D21/bin/gh"
+grep -q 'createdAt") :' "$D21/bin/gh" || { echo "HARNESS-ERROR: LP21 fixture edit did not apply"; exit 2; }
+printf '#!/usr/bin/env bash\nprintf "%%s" "$2" > "%s/prompt"\nexit 0\n' "$D21" > "$D21/bin/claude-stub"; chmod +x "$D21/bin/claude-stub"
+for t in 1234 777; do
+  rm -f "$D21/prompt" "$D21/live/tracks/_meta/selfdev/report_$DATE.md"
+  rm -rf "$D21/clone"; git clone -q "$D21/origin.git" "$D21/clone" 2>/dev/null
+  OUT=$(cd "$D21/live" && env PATH="$D21/bin:$PATH" SELFDEV_DRY_RUN=0 SELFDEV_NO_MERGE=1 SELFDEV_BUILD_TIMEOUT=$t FH_SELFDEV_DIR="$D21/clone" FD_CLAUDE_BIN="$D21/bin/claude-stub" \
+        bash scripts/selfdev_loop.sh 2>&1); RC=$?
+  P="$(cat "$D21/prompt" 2>/dev/null)"
+  if [ -n "$P" ] && printf '%s' "$P" | grep -qF "killed at $t seconds" && printf '%s' "$P" | grep -qF 'Do not run the full scripts/selfcheck.sh'; then eval "ok21_$t=1"
+  else eval "ok21_$t=0"; printf '%s\n' "${P:-<no prompt captured>}" | head -3 | sed 's/^/       /'; fi
+done
+if [ "${ok21_1234:-0}" = 1 ] && [ "${ok21_777:-0}" = 1 ]; then ok "LP21 the builder prompt names the watchdog's own limit (1234 and 777 both follow SELFDEV_BUILD_TIMEOUT) and forbids the full selfcheck"
+else bad "LP21 (1234=${ok21_1234:-?} · 777=${ok21_777:-?})"; fi
+
+# LC: candidate lanes (2026-11-11). A candidate reaches AUTO only through the path tier and its own shape.
+cand() { setup "$1"; printf 'seed: candidate (digest 2026-11-11 #2)\nwhat changed: x\n' > "$W/$1/knobs/body"; }
+holdnot() { # <label> <needle> — HOLD with the needle AND no WOULD MERGE line
+  if [ "$RC" -eq 0 ] && printf '%s\n' "$REP" | grep -qF -- "$2" && ! printf '%s\n' "$REP" | grep -qE 'WOULD MERGE|MERGED'; then ok "$1"
+  else bad "$1 (rc=$RC, want «$2», no merge)"; printf '%s\n' "$REP" | tail -4 | sed 's/^/       /'; fi
+}
+for hp in "CLAUDE.md" "scripts/selfdev_merge_tier.sh" ".claude/rules/fh_4axis_gate.md" "templates/.git-hooks/pre-commit" "knowledge/shared/rules/x.md" "knowledge/shared/harness-core/irreversibility_gate.md"; do
+  id="c1_$(printf '%s' "$hp" | tr -c 'a-z0-9' _)"; cand "$id"
+  printf 'ADDED\tdocs/y.md\t1\t0\nMODIFIED\t%s\t1\t0\n' "$hp" > "$W/$id/knobs/files"; run "$id"
+  holdnot "LC1 HOLD-tier candidate ($hp beside a doc) is never merged" "tier:HOLD"
+done
+cand c2; printf 'DELETED\tdocs/x.md\t0\t9\n' > "$W/c2/knobs/files"; run c2
+holdnot "LC2 candidate that deletes a file → HOLD" "candidate-deletes-file"
+cand c3; printf 'MODIFIED\tdocs/x.md\t2\t9\n' > "$W/c3/knobs/files"; run c3
+holdnot "LC3 candidate that removes more than it adds → HOLD" "candidate-net-removal(9>2)"
+cand c4; printf 'seed: candidate\nremoves the section the ablation run measured\n' > "$W/c4/knobs/body"; run c4
+holdnot "LC4 candidate body naming an ablation → HOLD" "candidate-names-ablation"
+setup c5; printf 'seed: ablation\n' > "$W/c5/knobs/body"; run c5
+holdnot "LC5 seed: ablation → HOLD" "seed-ablation"
+setup c6; printf 'what changed: no seed line\n' > "$W/c6/knobs/body"; run c6
+holdnot "LC6 no seed line → HOLD (missing is not candidate)" "seed-missing"
+setup c7; printf 'seed: candidate\nseed: human\nrequest: «%s»\n' "$REQ" > "$W/c7/knobs/body"; run c7
+holdnot "LC7 two seed lines → HOLD" "seed-multiple"
+for cap in 0 abc; do cand "c8$cap"; run "c8$cap" SELFDEV_MAX_AUTO_MERGES=$cap
+  holdnot "LC8 auto-merge cap $cap (non-number = 0) → HOLD" "auto-merge cap reached (0 of 0"; done
+cand c9; printf 'seed: candidate\n' > "$W/c9/knobs/body2"
+printf 'seed: ablation\n' > "$W/c9/knobs/body2"; sed -i.bak 's#"pr view|headRefOid,body") cat "$K/oid2"; cat "$K/body" ;;#"pr view|headRefOid,body") cat "$K/oid2"; cat "$K/body2" ;;#' "$W/c9/bin/gh"
+grep -q 'body2' "$W/c9/bin/gh" || { echo "HARNESS-ERROR: LC9 fixture edit did not apply"; exit 2; }
+run c9; holdnot "LC9 seed changed at the final snapshot → HOLD" "seed changed at final snapshot"
+cand c10; realrun c10
+if [ -e "$W/c10/merge_called" ] && printf '%s\n' "$REP" | grep -qF "#5 MERGED (auto, seed candidate, head $OID_A, merge commit cccccccccccccccccccccccccccccccccccccccc"; then ok "LC10 real run: candidate merged and the report names its head SHA"
+else bad "LC10 (called=$([ -e "$W/c10/merge_called" ] && echo yes || echo no))"; printf '%s\n' "$REP" | tail -3 | sed 's/^/       /'; fi
+cand c11; printf 'MODIFIED\tCLAUDE.md\t1\t0\n' > "$W/c11/knobs/files"; realrun c11
+if [ ! -e "$W/c11/merge_called" ] && printf '%s\n' "$REP" | grep -qF "tier:HOLD"; then ok "LC11 real run: HOLD-tier candidate never reaches the merge helper (LC10 is its control)"
+else bad "LC11"; printf '%s\n' "$REP" | tail -3 | sed 's/^/       /'; fi
+for cap in 1 9; do cand "c12$cap"
+  sed -i.bak 's#"pr list|number,headRefName") echo 5 ;;#"pr list|number,headRefName") printf "5\\n6\\n7\\n" ;;#' "$W/c12$cap/bin/gh"
+  grep -q '5\\n6' "$W/c12$cap/bin/gh" || { echo "HARNESS-ERROR: LC12 fixture edit did not apply"; exit 2; }
+  run "c12$cap" SELFDEV_MAX_AUTO_MERGES=$cap
+  want=$cap; [ "$want" -gt 2 ] && want=2
+  nm="$(printf '%s\n' "$REP" | grep -c 'WOULD MERGE')"; nc="$(printf '%s\n' "$REP" | grep -c 'auto-merge cap reached')"
+  if [ "$nm" = "$want" ] && [ "$nc" = $((3 - want)) ]; then ok "LC12 cap $cap over 3 eligible PRs → $want merge(s), the rest HOLD (cap may be lowered, never raised past 2)"
+  else bad "LC12 cap $cap (merges=$nm want $want · cap-holds=$nc)"; fi
+done
+cand c13; echo "selfdev: ablation of section X" > "$W/c13/knobs/title"; run c13
+holdnot "LC13 candidate whose TITLE names an ablation → HOLD" "candidate-names-ablation"
+for sw in candidate2 candidate-other; do setup "c14$sw"; printf 'seed: %s\n' "$sw" > "$W/c14$sw/knobs/body"; run "c14$sw"
+  holdnot "LC14 «seed: ${sw}» is not a candidate → HOLD" "seed-other"; done
+cand c15; printf 'seed: candidate\nseed: c-x\n' > "$W/c15/knobs/body"; run c15
+holdnot "LC15 a second, malformed seed line still counts → HOLD" "seed-multiple"
+for cap in 000 00000 ""; do cand "c16x$cap"; run "c16x$cap" SELFDEV_MAX_AUTO_MERGES=$cap
+  holdnot "LC16 cap «${cap}» (zeros / set-but-empty) is 0 → HOLD" "auto-merge cap reached (0 of 0"; done
+cand c17; sed -i.bak 's#"pr list|number,headRefName") echo 5 ;;#"pr list|number,headRefName") printf "5\\n6\\n7\\n" ;;#' "$W/c17/bin/gh"; run c17 SELFDEV_MAX_AUTO_MERGES=00001
+[ "$(printf '%s\n' "$REP" | grep -c 'WOULD MERGE')" = 1 ] && ok "LC17 cap «00001» is 1, not 2" || bad "LC17 cap 00001"
+cand c18; printf 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n' > "$W/c18/knobs/oid2"; sed -i.bak 's#"pr view|title,headRefOid,changedFiles,files") cat "$K/title" 2>/dev/null || echo "selfdev: x"; cat "$K/oid2"#"pr view|title,headRefOid,changedFiles,files") echo "selfdev: x"; cat "$K/oid2"#' "$W/c18/bin/gh"
+sed -i.bak 's#"pr view|headRefOid,body") cat "$K/oid2"; cat "$K/body" ;;#"pr view|headRefOid,body") cat "$K/oid1"; cat "$K/body" ;;#' "$W/c18/bin/gh"
+grep -q 'cat "$K/oid1"; cat "$K/body"' "$W/c18/bin/gh" || { echo "HARNESS-ERROR: LC18 fixture edit did not apply"; exit 2; }
+run c18; holdnot "LC18 candidate file counts read at another head → HOLD" "candidate-head-mismatch"
+cand c19; sed -i.bak 's#"pr list|number,headRefName") echo 5 ;;#"pr list|number,headRefName") printf "5\\n6\\n" ;;#' "$W/c19/bin/gh"
+git -C "$W/c19/clone" init -q
+printf '#!/usr/bin/env bash\necho called >> "%s/merge_called"; [ "$(wc -l < "%s/merge_called")" -gt 1 ] && exit 0; echo "head moved — not merging" >\&2; exit 2\n' "$W/c19" "$W/c19" > "$W/c19/live/scripts/pr_merge_verified.sh"
+OUT=$(cd "$W/c19/live" && env PATH="$W/c19/bin:$PATH" SELFDEV_DRY_RUN=0 SELFDEV_MAX_AUTO_MERGES=1 FH_SELFDEV_DIR="$W/c19/clone" bash scripts/selfdev_loop.sh 2>&1)
+REP="$(cat "$W/c19/live/tracks/_meta/selfdev/report_$DATE.md")"
+if printf '%s\n' "$REP" | grep -qF 'merge attempt FAILED' && printf '%s\n' "$REP" | grep -qF "merge commit cccccccccccccccccccccccccccccccccccccccc — undo: git revert cccccccccccccccccccccccccccccccccccccccc"; then ok "LC19 a refused merge does not use up the cap; the next merge is reported with its merge commit and revert command"
+else bad "LC19"; printf '%s\n' "$REP" | tail -3 | sed 's/^/       /'; fi
+cand c20; sed -i.bak 's#"pr list|number,headRefName") echo 5 ;;#"pr list|number,headRefName") printf "5\\n6\\n" ;;#' "$W/c20/bin/gh"
+echo "MERGED dddddddddddddddddddddddddddddddddddddddd" > "$W/c20/knobs/state"; git -C "$W/c20/clone" init -q
+printf '#!/usr/bin/env bash\necho called >> "%s/merge_called"; echo "merged but verify failed"; exit 1\n' "$W/c20" > "$W/c20/live/scripts/pr_merge_verified.sh"
+OUT=$(cd "$W/c20/live" && env PATH="$W/c20/bin:$PATH" SELFDEV_DRY_RUN=0 SELFDEV_MAX_AUTO_MERGES=1 FH_SELFDEV_DIR="$W/c20/clone" bash scripts/selfdev_loop.sh 2>&1)
+REP="$(cat "$W/c20/live/tracks/_meta/selfdev/report_$DATE.md")"
+if [ "$(wc -l < "$W/c20/merge_called")" -eq 1 ] && printf '%s\n' "$REP" | grep -qF 'auto-merge cap reached (1 of 1' && printf '%s\n' "$REP" | grep -qF 'git revert dddddddddddddddddddddddddddddddddddddddd'; then ok "LC20 a merge that happened but failed verification uses up the cap (second PR HOLD) and names its revert"
+else bad "LC20"; printf '%s\n' "$REP" | tail -3 | sed 's/^/       /'; fi
+cand c22; sed -i.bak 's#"pr list|number,headRefName") echo 5 ;;#"pr list|number,headRefName") printf "5\\n6\\n" ;;#' "$W/c22/bin/gh"; git -C "$W/c22/clone" init -q
+printf '#!/usr/bin/env bash\necho called >> "%s/merge_called"; echo "queued"; exit 6\n' "$W/c22" > "$W/c22/live/scripts/pr_merge_verified.sh"
+OUT=$(cd "$W/c22/live" && env PATH="$W/c22/bin:$PATH" SELFDEV_DRY_RUN=0 SELFDEV_MAX_AUTO_MERGES=1 FH_SELFDEV_DIR="$W/c22/clone" bash scripts/selfdev_loop.sh 2>&1)
+REP="$(cat "$W/c22/live/tracks/_meta/selfdev/report_$DATE.md")"
+if [ "$(wc -l < "$W/c22/merge_called")" -eq 1 ] && printf '%s\n' "$REP" | grep -qF 'auto-merge cap reached (1 of 1'; then ok "LC22 a merge queued (rc 6, still OPEN) uses up the cap"
+else bad "LC22"; printf '%s\n' "$REP" | tail -3 | sed 's/^/       /'; fi
+for rc in 5 1 4; do cand "c23$rc"; sed -i.bak 's#"pr list|number,headRefName") echo 5 ;;#"pr list|number,headRefName") printf "5\\n6\\n" ;;#' "$W/c23$rc/bin/gh"; git -C "$W/c23$rc/clone" init -q
+  printf '#!/usr/bin/env bash\necho called >> "%s/merge_called"; echo "HARNESS-ERROR (before merge): x"; exit %s\n' "$W/c23$rc" "$rc" > "$W/c23$rc/live/scripts/pr_merge_verified.sh"
+  OUT=$(cd "$W/c23$rc/live" && env PATH="$W/c23$rc/bin:$PATH" SELFDEV_DRY_RUN=0 SELFDEV_MAX_AUTO_MERGES=1 FH_SELFDEV_DIR="$W/c23$rc/clone" bash scripts/selfdev_loop.sh 2>&1)
+  REP="$(cat "$W/c23$rc/live/tracks/_meta/selfdev/report_$DATE.md")"
+  if [ "$(wc -l < "$W/c23$rc/merge_called")" -eq 1 ] && printf '%s\n' "$REP" | grep -qF 'auto-merge cap reached (1 of 1'; then ok "LC23 helper rc $rc with the PR still OPEN (outcome not proven «no merge») uses up the cap"
+  else bad "LC23 rc $rc"; printf '%s\n' "$REP" | tail -3 | sed 's/^/       /'; fi
+done
+cand c24; echo 101 > "$W/c24/knobs/nfiles"; run c24
+holdnot "LC24 file list shorter than changedFiles (gh's 100-file page) → HOLD" "candidate-file-list-incomplete(1/101)"
+cand c21; sed -i.bak 's/else print "OK" }/}/' "$W/c21/live/scripts/selfdev_loop.sh"; grep -q 'else print "OK"' "$W/c21/live/scripts/selfdev_loop.sh" && { echo "HARNESS-ERROR: LC21 mutant not applied"; exit 2; }
+run c21; holdnot "LC21 a candidate check that prints nothing → HOLD (only an explicit OK clears it)" "candidate-check-failed"
+
+[ $((pass+fail)) -eq 57 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 57"; exit 2; }
 echo "selfdev_loop lanes: $pass passed · $fail failed"
 [ "$fail" -eq 0 ]

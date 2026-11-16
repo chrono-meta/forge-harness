@@ -11,6 +11,7 @@
 # supposed to consume it.
 #
 # USAGE: bash scripts/sync_to_be_lanes.sh          → runs all lanes, exit 0 = all pass, 1 = any fail
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 
 SCRIPT="$(cd "$(dirname "$0")" && pwd)/sync-to-be.sh"

@@ -17,6 +17,7 @@
 #
 # Usage: bash scripts/test_precommit_staged_drift_lanes.sh   Exit: 0 = all behave; 1 = regression.
 
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOOK="$REPO_ROOT/templates/.git-hooks/pre-commit"

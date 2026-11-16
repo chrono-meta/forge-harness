@@ -6,7 +6,8 @@
 결함이 쉬워 일반 검토가 87~100% 를 잡았고(천장), 방법 차이를 잴 힘이 없었다. 방법의 값은
 실작업에서 «일반 검토·저자가 놓친 것을 무엇이 잡았나» 로 드러나므로 그 기록을 센다.
 
-기록 자리: Session Wrap-up ⑤(a) 가 `tracks/_meta/fh_completed_{date}.md` 에 쓰는 `## 잡은 것` 절.
+기록 자리: Session Wrap-up ⑤(a) 가 `tracks/_meta/fh_completed_{date}.md` 에 쓰는 `## 잡은 것` 절
+(Record location: the `## 잡은 것` section; the English heading `## Catches` is accepted as the same section.)
 
     ## 잡은 것
     | 결함 | 잡은 방법 | 놓친 쪽 | 근거 |

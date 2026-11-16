@@ -4,6 +4,7 @@
 #
 # The load-bearing lanes are the REFUSALS: a refusal must happen BEFORE the merge, so each refusal
 # lane also asserts the fake gh never received `pr merge` (a merge log that stays empty).
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 cd "$(dirname "$0")/.."
 SC="$PWD/scripts/pr_merge_verified.sh"
@@ -24,7 +25,23 @@ setup() {
   # SETUP_EXTRA=1: a tracked dir whose listing names `a`, and a runner whose text names `a` — the shapes a glob/dir word can drag in
   [ -n "${SETUP_EXTRA:-}" ] && { mkdir -p "$d/seed/d"; printf 'x\n' > "$d/seed/d/a"; printf 'grep -q a2 a\n' > "$d/seed/r.sh"; }
   git -C "$d/seed" add -A; git -C "$d/seed" commit -qm init --no-verify; git -C "$d/seed" push -q origin HEAD:main
-  git -C "$d/seed" switch -qc feat; printf 'a2\n' > "$d/seed/a"; printf 'b2\n' > "$d/seed/b"
+  # SETUP_DOCS=1: the PR changes only docs/x.md (a change the merge tier allows); main carries it at x1
+  # SETUP_SKILL=1: the PR rewords one skill line (no verdict words) — the tier must READ its diff to say AUTO
+  if [ -n "${SETUP_SKILL:-}" ]; then
+    mkdir -p "$d/seed/plugins/p/skills/s"; printf 'Plain text one.\n' > "$d/seed/plugins/p/skills/s/SKILL.md"; git -C "$d/seed" add plugins
+    git -C "$d/seed" commit -qm skill --no-verify; git -C "$d/seed" push -q origin HEAD:main
+    git -C "$d/seed" switch -qc feat; printf 'Plain text two.\n' > "$d/seed/plugins/p/skills/s/SKILL.md"
+  elif [ -n "${SETUP_LANE:-}" ]; then   # SETUP_LANE=1: the PR changes only a lane file (scripts/test_*)
+    mkdir -p "$d/seed/scripts"; printf 'echo l1\n' > "$d/seed/scripts/test_x_lanes.sh"; git -C "$d/seed" add scripts
+    git -C "$d/seed" commit -qm lane --no-verify; git -C "$d/seed" push -q origin HEAD:main
+    git -C "$d/seed" switch -qc feat; printf 'echo l2\n' > "$d/seed/scripts/test_x_lanes.sh"
+  elif [ -n "${SETUP_DOCS:-}" ]; then
+    mkdir -p "$d/seed/docs"; printf 'x1\n' > "$d/seed/docs/x.md"; git -C "$d/seed" add docs/x.md
+    git -C "$d/seed" commit -qm docs --no-verify; git -C "$d/seed" push -q origin HEAD:main
+    git -C "$d/seed" switch -qc feat; printf 'x2\n' > "$d/seed/docs/x.md"
+  else
+    git -C "$d/seed" switch -qc feat; printf 'a2\n' > "$d/seed/a"; printf 'b2\n' > "$d/seed/b"
+  fi
   git -C "$d/seed" commit -qam feat --no-verify; git -C "$d/seed" push -q origin feat
   git clone -q "$d/origin.git" "$d/work" 2>/dev/null; git -C "$d/work" fetch -q origin feat
   printf '%s' "$(git -C "$d/seed" rev-parse feat)" > "$d/head.oid"
@@ -38,6 +55,7 @@ D="$D"
 case "\$1 \$2" in
   "pr view")
     [ -f "\$D/view_fail" ] && exit 1
+    case "\$*" in *--json\ files*) cat "\$D/files.tsv"; exit 0 ;; esac
     [ -f "\$D/view_fail_after_merge" ] && [ -s "\$D/merge.log" ] && exit 1
     case "\$*" in
       *state,headRefOid*)
@@ -81,6 +99,7 @@ GOOD='grep -q a2 a && grep -q b2 b && echo instrument-ok'
 printf '── pr_merge_verified ──\n'
 
 setup ok; mkgh "$T/ok"; run "$T/ok" 7 --rerun "$GOOD"
+OK_OUT="$OUT"
 { [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q 'merged and verified'; } \
   && ok "L1 merge + verify → rc=0" || { bad "L1 happy path rc=$RC"; printf '%s\n' "$OUT" | tail -6; }
 
@@ -156,13 +175,51 @@ setup st; mkgh "$T/st"; : > "$T/st/local_fail"; : > "$T/st/stuck"; run "$T/st" 7
 
 # ── merge receipt: actor + lease (frontier digest 2026-10-23, arXiv:2610.28683) ──
 # L17 an agent session merging under a named lease → one receipt line naming both, with the merge commit and outcome
-setup rl; mkgh "$T/rl"; OUT=$(cd "$T/rl/work" && CLAUDECODE=1 PATH="$T/rl/bin:$PATH" PMV_RETRY_SLEEP=0 PMV_RECEIPTS="$T/rl/receipts.jsonl" bash "$SC" 7 --rerun "$GOOD" --lease "night-2026-10-22" 2>&1); RC=$?
-{ [ "$RC" -eq 0 ] && [ "$(rcpt "$T/rl" actor)" = "agent-session:claude-code" ] && [ "$(rcpt "$T/rl" lease)" = "night-2026-10-22" ] \
+setup rl; mkgh "$T/rl"; OUT=$(cd "$T/rl/work" && CLAUDECODE=1 PATH="$T/rl/bin:$PATH" PMV_RETRY_SLEEP=0 PMV_RECEIPTS="$T/rl/receipts.jsonl" bash "$SC" 7 --rerun "$GOOD" --lease "operator «night-2026-10-22»" 2>&1); RC=$?
+RL_OUT="$OUT"
+{ [ "$RC" -eq 0 ] && [ "$(rcpt "$T/rl" actor)" = "agent-session:claude-code" ] && [ "$(rcpt "$T/rl" lease)" = "operator «night-2026-10-22»" ] \
   && [ "$(rcpt "$T/rl" outcome)" = "verified" ] && [ "$(rcpt "$T/rl" merge)" = "$(cat "$T/rl/merge.oid")" ] && [ "$(wc -l < "$T/rl/receipts.jsonl")" -eq 1 ]; } \
   && ok "L17 agent merge under a lease → receipt: actor agent-session · lease · verified · merge oid" || { bad "L17 rc=$RC receipt=$(cat "$T/rl/receipts.jsonl" 2>/dev/null)"; printf '%s\n' "$OUT" | tail -3; }
 # L18 control: no lease, no agent marker → actor human-or-unknown, lease NONE (recorded, not refused)
 { [ "$(rcpt "$T/ok" actor)" = "human-or-unknown" ] && [ "$(rcpt "$T/ok" lease)" = "NONE" ]; } \
   && ok "L18 no lease, no agent marker → human-or-unknown · NONE (merge still allowed)" || bad "L18 receipt=$(cat "$T/ok/receipts.jsonl" 2>/dev/null)"
+# L18b/L18c (AQ-20261109-5) lease=NONE is said before the merge; a named lease is not warned about
+{ [ "$(rcpt "$T/ok" lease)" = "NONE" ] && printf '%s' "$OK_OUT" | grep -qF 'no --lease: the receipt will record lease=NONE'; } \
+  && ok "L18b no lease → warning line before the merge (the merge still runs)" || bad "L18b warning missing: $(printf '%s' "$OK_OUT" | head -5)"
+printf '%s' "$RL_OUT" | grep -qF 'no --lease' && bad "L18c named lease still warned" || ok "L18c --lease given → no NONE warning"
+# ── a lease is checked by the merge tier unless it is the operator's answer for this PR (AQ-20261109-4: #1063 was
+#    TIER=HOLD and merged «under the lease»). The tier reads the recorded head through local git, not the live PR.
+GOODX='grep -q x2 docs/x.md && echo instrument-ok'
+# S1 a standing lease + a docs-only PR (tier AUTO) → merged, and it says it asked
+SETUP_DOCS=1 setup sa; mkgh "$T/sa"; run "$T/sa" 7 --rerun "$GOODX" --lease 'selfdev standing 2026-11-04'
+{ [ "$RC" -eq 0 ] && merged "$T/sa" && printf '%s' "$OUT" | grep -qF 'says TIER=AUTO'; } && ok "S1 standing lease + tier AUTO → merged" || { bad "S1 rc=$RC"; printf '%s\n' "$OUT" | tail -4; }
+# S2 a standing lease + a PR the tier holds (root files a, b) → rc 7 before the merge
+setup sh; mkgh "$T/sh"; run "$T/sh" 7 --rerun "$GOOD" --lease 'selfdev standing 2026-11-04'
+{ [ "$RC" -eq 7 ] && ! merged "$T/sh" && printf '%s' "$OUT" | grep -qF 'TIER=HOLD'; } && ok "S2 standing lease + tier HOLD → rc 7, nothing merged" || { bad "S2 rc=$RC merged=$(merged "$T/sh" && echo yes || echo no)"; printf '%s\n' "$OUT" | tail -4; }
+# S3 spellings a substring list missed (codex R1): upper case · self-dev · session lease → all checked, all refused
+for _l in 'STANDING' 'self-dev lease' 'session lease 2026-11-09'; do
+  setup sv; mkgh "$T/sv"; run "$T/sv" 7 --rerun "$GOOD" --lease "$_l"
+  { [ "$RC" -eq 7 ] && ! merged "$T/sv"; } && ok "S3 lease «${_l}» → tier checked, rc 7" || bad "S3 lease «${_l}» rc=$RC"
+  rm -rf "$T/sv"
+done
+# S4 control: the operator's answer for this PR is not checked — even when it mentions selfdev (codex R1 #4)
+setup so; mkgh "$T/so"; run "$T/so" 7 --rerun "$GOOD" --lease 'Operator: «merge this selfdev fix» 2026-11-09'
+{ [ "$RC" -eq 0 ] && merged "$T/so" && ! printf '%s' "$OUT" | grep -qF 'TIER='; } && ok "S4 operator lease → tier not consulted, merged" || { bad "S4 rc=$RC"; printf '%s\n' "$OUT" | tail -4; }
+# S6 codex R2: «--lease none» typed by hand is a label, not the default → checked, refused on a HOLD change
+setup sn; mkgh "$T/sn"; run "$T/sn" 7 --rerun "$GOOD" --lease 'none'
+{ [ "$RC" -eq 7 ] && ! merged "$T/sn"; } && ok "S6 «--lease none» → tier checked, rc 7" || bad "S6 rc=$RC"
+# S7 codex R2: the caller's git config cannot change what the tier sees (noprefix · color · relative · ignoreSubmodules)
+for _d in s7a s7h; do
+  if [ "$_d" = s7a ]; then SETUP_SKILL=1 setup "$_d"; else setup "$_d"; fi; mkgh "$T/$_d"
+  for _c in 'diff.noprefix true' 'color.diff always' 'color.ui always' 'diff.relative true' 'diff.ignoreSubmodules all'; do git -C "$T/$_d/work" config $_c; done
+done
+run "$T/s7a" 7 --rerun 'grep -q "text two" plugins/p/skills/s/SKILL.md && echo instrument-ok' --lease 'selfdev standing 2026-11-04'
+{ [ "$RC" -eq 0 ] && merged "$T/s7a"; } && ok "S7a hostile git config + plain skill edit (diff is read) → tier still AUTO, merged" || { bad "S7a rc=$RC"; printf '%s\n' "$OUT" | tail -4; }
+run "$T/s7h" 7 --rerun "$GOOD" --lease 'selfdev standing 2026-11-04'
+{ [ "$RC" -eq 7 ] && ! merged "$T/s7h"; } && ok "S7h hostile git config + held PR → still rc 7" || bad "S7h rc=$RC"
+# S5 the tier judges the RECORDED head: a live PR whose file list says docs-only cannot launder a head that changes a, b
+setup sl; mkgh "$T/sl"; printf 'MODIFIED\tdocs/x.md\t1\t1\n' > "$T/sl/files.tsv"; run "$T/sl" 7 --rerun "$GOOD" --lease 'selfdev standing 2026-11-04'
+{ [ "$RC" -eq 7 ] && ! merged "$T/sl"; } && ok "S5 tier reads the recorded head, not the live file list → rc 7" || bad "S5 rc=$RC"
 # L19 negative control — a refusal BEFORE the merge, or a merge GitHub did not take, leaves no receipt. It cannot detect the feature
 #     being removed on its own (codex R1); L17 · L18 · L21 are its positive pair.
 { [ ! -s "$T/nore/receipts.jsonl" ] && [ ! -s "$T/triv/receipts.jsonl" ] && [ ! -s "$T/mf/receipts.jsonl" ]; } \
@@ -194,6 +251,25 @@ SETUP_EXTRA=1 setup cvg; mkgh "$T/cvg"; run "$T/cvg" 7 --rerun 'git --version &&
 SETUP_EXTRA=1 setup cvd; mkgh "$T/cvd"; run "$T/cvd" 7 --rerun 'git --version && ls d'
 { [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q 'mentions none of this PR'; } \
   && ok "L25b --rerun naming a tracked dir → advisory still fires (blobs only)" || bad "L25b rc=$RC (dir listing counted as coverage?)"
+
+# ── defect-path prompt (1c — print only, 2026-11-14 harvest H2) ──
+DP='name the path the defect travels'
+# D1 a code-changing PR (a, b) → the one-line prompt prints, rc and merge unchanged (L24's run, covering --rerun)
+setup dp1; mkgh "$T/dp1"; run "$T/dp1" 7 --rerun "$GOOD"
+{ [ "$RC" -eq 0 ] && merged "$T/dp1" && [ "$(printf '%s\n' "$OUT" | grep -cF "$DP")" -eq 1 ]; } \
+  && ok "D1 code-changing PR → exactly one defect-path line, merge + verify unchanged (rc=0)" || { bad "D1 rc=$RC"; printf '%s\n' "$OUT" | tail -4; }
+# D2 docs-only PR → quiet (the condition is narrowed so doc PRs carry no noise)
+SETUP_DOCS=1 setup dp2; mkgh "$T/dp2"; run "$T/dp2" 7 --rerun "$GOODX"
+{ [ "$RC" -eq 0 ] && merged "$T/dp2" && ! printf '%s' "$OUT" | grep -qF "$DP"; } \
+  && ok "D2 docs-only PR → no defect-path line" || bad "D2 rc=$RC (prompt fired on a docs-only PR?)"
+# D3 lane-only PR → quiet
+SETUP_LANE=1 setup dp3; mkgh "$T/dp3"; run "$T/dp3" 7 --rerun 'grep -q l2 scripts/test_x_lanes.sh && echo instrument-ok'
+{ [ "$RC" -eq 0 ] && merged "$T/dp3" && ! printf '%s' "$OUT" | grep -qF "$DP"; } \
+  && ok "D3 lane-only PR (scripts/test_*) → no defect-path line" || { bad "D3 rc=$RC (prompt fired on a lane-only PR?)"; printf '%s\n' "$OUT" | tail -3; }
+# D4 it is printed BEFORE the merge: a run whose merge is refused still shows it (and still exits 5, nothing verified)
+setup dp4; mkgh "$T/dp4"; : > "$T/dp4/merge_fail"; run "$T/dp4" 7 --rerun "$GOOD"
+{ [ "$RC" -eq 5 ] && printf '%s' "$OUT" | grep -qF "$DP"; } \
+  && ok "D4 merge refused → line was already printed (pre-merge), rc unchanged (5)" || { bad "D4 rc=$RC"; printf '%s\n' "$OUT" | tail -3; }
 
 # ── completion record (tracks/_meta/fh_completed_<date>.md) ──
 # cl_setup <name> : a work clone that HAS a tracks/ dir (a consumer without one is skipped silently — L30)
@@ -234,6 +310,13 @@ setup eh; mkgh "$T/eh"; run "$T/eh" 7 --rerun "$GOOD" --expect-head 000000000000
   && ok "L32a --expect-head mismatch → rc=2, merge never called" || { bad "L32a rc=$RC merged=$(merged "$T/eh" && echo yes || echo no)"; printf '%s\n' "$OUT" | tail -3; }
 setup eh2; mkgh "$T/eh2"; run "$T/eh2" 7 --rerun "$GOOD" --expect-head "$(cat "$T/eh2/head.oid")"
 { [ "$RC" -eq 0 ] && merged "$T/eh2"; } && ok "L32b --expect-head matching → merged and verified" || { bad "L32b rc=$RC"; printf '%s\n' "$OUT" | tail -3; }
+
+# L33 header honesty (2026-11-13, Area B S1): the RECEIPT note must not say the lease is «not enforced» —
+# --lease has gated the merge through the tier (rc 7) since 3.40.0, and the EXIT block says so.
+if [ ! -f "$SC" ]; then bad "L33 subject missing: $SC"
+elif grep -q 'recorded, not enforced' "$SC"; then bad "L33 header still says the lease is «recorded, not enforced»"
+elif ! grep -q '^#.*lease (.*TIER=AUTO, see EXIT 7)' "$SC"; then bad "L33 RECEIPT lease note no longer points at the TIER=AUTO / EXIT 7 enforcement"
+else ok "L33 header does not contradict EXIT 7 (lease is enforced)"; fi
 
 printf 'PASS %d · FAIL %d\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

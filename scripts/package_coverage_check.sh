@@ -46,21 +46,32 @@ ACCEPTED_ABSENT=(
   #    (CLAUDE.local.md §FH 자체개발 자율화: «일반 사용자는 이슈/PR 제안»): shipping it would put an
   #    auto-merging loop into every consumer install. self_evolution_routine.md §3b names these files to
   #    say exactly that; selfcheck resolves their rows as SKIP on a consumer tree.
+  #    (selfdev_merge_tier.sh and its lane DO ship since #1068 — pr_merge_verified.sh --lease reads the tier.)
   "scripts/selfdev_loop.sh"
-  "scripts/selfdev_merge_tier.sh"
   "scripts/selfdev_queue.py"
-  "scripts/test_selfdev_merge_tier_lanes.sh"
   "scripts/test_selfdev_queue_lanes.sh"
   "scripts/test_selfdev_loop_lanes.sh"
   # 2026-11-07 — the self-dev loop's ablation nominator and its lanes. Same loop, same scope as above; whether the
   #    public cycle (docs/ABLATION_CYCLE.md, not shipped either) goes to npm is an open operator decision.
   "scripts/ablation_nominate.py"
   "scripts/test_ablation_nominate_lanes.sh"
+  # 2026-11-14 — the verdict renderer the loop's ABLATION_STEPS points at. Same loop, same scope.
+  "scripts/ablation_verdict.py"
+  "scripts/test_ablation_verdict_lanes.sh"
+  # 2026-11-15 — builder Context Card file-role check (FH-6). Hub pilot: whether consumers get it is a §7 ship
+  #    decision for the operator, and the dispatch doc that names it is hub-local practice today.
+  "scripts/builder_card_files_check.py"
+  "scripts/test_builder_card_files_lanes.sh"
   "docs/ABLATION_CYCLE.md"
   # 2026-11-07 — lease-record channel (AQ-20261107-11). It writes this hub's operator-local lease file; a consumer
   #    has no such file and no such convention, so shipping it would ship a tool with nothing to act on.
   "scripts/lease_line_apply.sh"
   "scripts/test_lease_line_apply_lanes.sh"
+  # 2026-11-11 — shared session ledger (root/child sessions of this hub). Pilot for this hub's thin-root operation;
+  #    whether consumers get it is an operator decision after the pilot, so not shipped yet.
+  "scripts/session_ledger_write.sh"
+  "scripts/session_ledger_read.py"
+  "scripts/test_session_ledger_lanes.sh"
   # 2026-11-07 — context-continuity read half (AQ-20261107-10/-12). Governor tools for this hub: the hook reads the
   #    hub's lease-file convention (CLAUDE.local.md «utterance» lines) and its snippet is not shipped either, so
   #    shipping the script alone would hand consumers a hook nothing calls. Ship both together, or neither.

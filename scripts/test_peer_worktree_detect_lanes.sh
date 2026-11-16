@@ -18,6 +18,7 @@
 #                    trains skimming past the lines that matter)
 # A lane that only asserts the positive would pass on a script that flags literally everything.
 
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 REPO_ROOT="$(pwd -P)"

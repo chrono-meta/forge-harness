@@ -143,6 +143,15 @@ or a repaired check does not require asking the same intent again. Bring the use
 reviewable decision only for missing intent, an actual permission requirement, or an irreversible
 gate that the existing approval does not cover. Existing delegation-consent rules still apply.
 
+> **Choosing a placement** (one governor that dispatches subagents — *집약* — vs a supervising governor that
+> audits work sessions the user drives directly — *감독*): `docs/USER_GUIDE.md` §4 covers when to pick each,
+> what to say to start it, what a CLI-only setup uses instead of the desktop app's session tools, and how
+> continuity works without a private store. It also covers how the two stack (the work sessions under a
+> supervising governor usually run as intensive governors themselves; the practical difference is who reads
+> the result), what running a supervising governor for a long time can give (an author observation, not a
+> measured claim), and an **opt-in** lease block for reversible maintenance on the user's own machine. No FH
+> rule reads that block, so it is followed by judgment only. Irreversible surfaces and gates are unchanged by it.
+>
 > **Detail**: Read `knowledge/shared/harness-core/agents_md_runtime_details.md §Governor-operation`
 > before diagnosing a blocked workflow or adapting host automation. It separates FH evidence,
 > task authorization, runtime permissions, and hook compatibility.

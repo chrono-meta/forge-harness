@@ -18,7 +18,7 @@
 #      the original · setsid escapees · --json only when measured · kernel shebang · mode bits · future
 #      mtime · inode-keyed leftovers) — each lane red on v6.
 #   G7 the v6 generator defect classes, pinned — fail-closed: an uncertain region yields no mutant.
-#   K0 the /proc process counter used by N6/S7-5, on a known pair, before either trusts it.
+#   K0 the process counter used by N6/S7-5 (/proc, or ps on macOS), on a known pair, before either trusts it.
 #
 # Exit 0 = all lanes behave · 1 = regression (or an UNMEASURED lane — never folded into PASS).
 set -uo pipefail
@@ -156,6 +156,9 @@ ibkpath() { python3 -c 'import os,sys;st=os.stat(sys.argv[1]);print("/tmp/mutati
 sha_of() { python3 -c 'import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$1"; }
 procs_matching() {  # count live processes whose WHOLE cmdline is $1 — /proc, not pgrep (pgrep absent → vacuous);
   local n=0 c                # exact match, so the counter never counts itself (a substring grep did)
+  if [ "$HAVE_PROC" -eq 0 ]; then   # macOS: no /proc, but `ps` lists every process's argv — same exact-line rule
+    grep -cxF -- "$1" <<<"$(ps -axww -o command= 2>/dev/null)"; return 0
+  fi
   for c in /proc/[0-9]*/cmdline; do [ -e "$c" ] || continue; [ "$(tr '\0' ' ' < "$c" 2>/dev/null)" = "$1 " ] && n=$((n+1)); done
   echo "$n"
 }
@@ -171,6 +174,15 @@ procs_matching() {  # count live processes whose WHOLE cmdline is $1 — /proc, 
 _PSFX="$$${RANDOM}"
 TOK_N6="4747.$_PSFX"; TOK_K0="4646.$_PSFX"; TOK_S75="4848.$_PSFX"
 if [ -d /proc/self ]; then HAVE_PROC=1; else HAVE_PROC=0; fi
+# HAVE_COUNTER (2026-11-14): N6 and K0 used to need /proc, so on macOS they printed UNMEASURED and the
+# suite exited 1 on every local run — a red the author learned to read past (CI on Linux was green).
+# N6 does not need /proc; it needs a process counter. `ps -axww -o command=` is one, and K0/K1 below
+# calibrate whichever counter is in use on a known pair before N6 trusts it. No counter at all is
+# still UNMEASURED (red), never a pass.
+HAVE_COUNTER=0
+if [ "$HAVE_PROC" -eq 1 ]; then HAVE_COUNTER=1; _COUNTER="/proc"
+elif ps -axww -o command= >/dev/null 2>&1; then HAVE_COUNTER=1; _COUNTER="ps"; fi
+NOT_APPLICABLE=0; NA_NAMES=""
 
 # B4 — the baseline lane writes its own subject: refuse, and leave the ORIGINAL bytes
 cp age.sh b4.sh; h0=$(sha_of b4.sh)
@@ -242,10 +254,10 @@ printf '. ./n1.sh\nis_adult 19 && exit 0\n( touch n6.started; exec sleep %s ) &\
 rm -f n6.started
 out=$(python3 "$PROBE" n1.sh lane_n6.sh --timeout 2 2>&1)
 sleep 0.5
-if [ "$HAVE_PROC" -eq 1 ]; then
-  [ -e n6.started ] && grep -q 'TIMEOUT' <<<"$out" && [ "$(procs_matching "sleep $TOK_N6")" -eq 0 ] ; chk $? "N6 the timed-out lane's grandchildren are killed with its process group (counted via /proc — v6 used pgrep, vacuous when absent)"
+if [ "$HAVE_COUNTER" -eq 1 ]; then
+  [ -e n6.started ] && grep -q 'TIMEOUT' <<<"$out" && [ "$(procs_matching "sleep $TOK_N6")" -eq 0 ] ; chk $? "N6 the timed-out lane's grandchildren are killed with its process group (counted via $_COUNTER, calibrated by K0 — v6 used pgrep, vacuous when absent)"
 else
-  echo "  ⚠️  N6 UNMEASURED — no /proc"; UNMEASURED=$((UNMEASURED+1))
+  echo "  ⚠️  N6 UNMEASURED — no process counter (/proc absent and ps failed)"; UNMEASURED=$((UNMEASURED+1))
 fi
 
 # N2 · N3 · N7 — generator noise
@@ -564,9 +576,9 @@ printf '#!/bin/sh\n[ "$a" != b ] && echo d\n[ "$c" = d ] && echo e\n' > z28.sh
 out=$(python3 "$PROBE" z28.sh --list 2>&1)
 ! grep -qF '==' <<<"$out" && grep -qF '[=→!=]' <<<"$out" ; chk $? "Z28 #!/bin/sh: '!=' is not flipped to the non-POSIX '==' (= → != still is)"
 
-if [ "$HAVE_PROC" -eq 1 ]; then   # the process counter itself, on a known pair, before any lane trusts it
+if [ "$HAVE_COUNTER" -eq 1 ]; then   # the process counter itself, on a known pair, before any lane trusts it
   sleep "$TOK_K0" & kp=$!; sleep 0.1; k1=$(procs_matching "sleep $TOK_K0"); kill "$kp"; wait "$kp" 2>/dev/null; k0=$(procs_matching "sleep $TOK_K0")
-  [ "$k1" -eq 1 ] && [ "$k0" -eq 0 ] ; chk $? "K0 the /proc process counter sees a live sleep (1) and not a dead one (0) — and not itself"
+  [ "$k1" -eq 1 ] && [ "$k0" -eq 0 ] ; chk $? "K0 the process counter ($_COUNTER) sees a live sleep (1) and not a dead one (0) — and not itself"
   # K1 (2026-10-26) — the token must be unique to this run, not merely exact. Known pair against a
   # live FOREIGN process carrying the old shared name: the thing a concurrent sibling used to be.
   sleep 4747 & kf=$!; sleep 0.1
@@ -615,6 +627,13 @@ if [ "$HAVE_PROC" -eq 1 ] && command -v setsid >/dev/null 2>&1; then
   out=$(python3 "$PROBE" s75.sh lane_s75.sh --timeout 30 2>&1)
   sleep 0.3
   [ -e s75.started ] && grep -qE 'mutants=1 ' <<<"$out" && [ "$(procs_matching "sleep $TOK_S75")" -eq 0 ] ; chk $? "S7-5 a setsid descendant of the lane does not outlive the probe (v6: it kept running with the mutant)"
+elif [ "$(uname -s)" != Linux ]; then
+  # NOT-APPLICABLE, not UNMEASURED: the subject itself declares this behaviour Linux-only
+  # (mutation_probe.py: PR_SET_CHILD_SUBREAPER; elsewhere it prints «no subreaper on this OS … named
+  # residual»). There is no contract here to measure. On Linux a missing /proc or setsid is still
+  # UNMEASURED and red — the platform is the oracle, not the tool's absence.
+  echo "  ⏭️  S7-5 NOT-APPLICABLE on $(uname -s) — setsid-escapee kill is Linux-only by the probe's own contract (CI measures it)"
+  NOT_APPLICABLE=$((NOT_APPLICABLE+1)); NA_NAMES="$NA_NAMES S7-5"
 else
   echo "  ⚠️  S7-5 UNMEASURED — no /proc or no setsid"; UNMEASURED=$((UNMEASURED+1))
 fi
@@ -856,5 +875,6 @@ grep -q '\[>→>=\] cmd >= out.txt' <<<"$out" ; chk $? "RV2 without the (( )) re
 
 echo ""
 if [ "$FAILED" -eq 0 ] && [ "$UNMEASURED" -gt 0 ]; then echo "INCOMPLETE  mutation probe: $PASS lanes passed, $UNMEASURED UNMEASURED — not a pass"; exit 1; fi
+if [ "$FAILED" -eq 0 ] && [ "$NOT_APPLICABLE" -gt 0 ]; then echo "PASS  mutation probe: $PASS lanes · $NOT_APPLICABLE NOT-APPLICABLE on $(uname -s) ($NA_NAMES ) — not measured here, not counted as passed"; exit 0; fi
 if [ "$FAILED" -eq 0 ]; then echo "PASS  mutation probe: $PASS lanes"; exit 0; fi
 echo "FAIL  mutation probe"; exit 1

@@ -1,0 +1,16 @@
+# Declared tools: restriction per agent definition — a lane pins each line (present + unchanged).
+# Change a restriction here in the same commit as the agent file; widening it is then a visible diff.
+plugins/fh-commons/agents/a11y-lens.md|Read, Grep, Glob
+plugins/fh-commons/agents/be-dev-lens.md|Read, Grep, Glob
+plugins/fh-commons/agents/designer-lens.md|Read, Grep, Glob
+plugins/fh-commons/agents/fe-dev-lens.md|Read, Grep, Glob
+plugins/fh-commons/agents/qa-lens.md|Read, Grep, Glob
+plugins/fh-commons/agents/quench-challenger.md|Read, Grep, Glob
+plugins/fh-commons/agents/ux-writer-lens.md|Read, Grep, Glob
+plugins/fh-meta/agents/beginner.md|Read
+plugins/fh-meta/agents/challenger.md|Read, Grep, Glob, WebSearch, WebFetch
+plugins/fh-meta/agents/expert.md|Read, WebSearch, WebFetch
+plugins/fh-meta/agents/fact-checker.md|Read, Grep, Glob
+plugins/fh-meta/agents/hub-persona-auditor.md|Read, Grep, Glob
+plugins/fh-meta/agents/main-player.md|Read, Grep, Glob
+plugins/fh-meta/agents/persona-innovator.md|Read, Grep, Glob, WebSearch, WebFetch

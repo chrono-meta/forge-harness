@@ -25,6 +25,7 @@
 #
 # exit: 0 = all lanes as expected · 1 = regression · 10 = harness error (setup failed, not a verdict)
 
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -740,21 +741,30 @@ open(os.path.join(base, 'control_r1.txt'), 'w').write('weather')
 for arm in ('primary', 'control'):
     if sys.argv[2] == 'MISSING':
         continue
-    if sys.argv[2] == 'PARTIAL' and arm == 'primary':
+    if sys.argv[2] in ('PARTIAL', 'WALLNOMETA') and arm == 'primary':
         continue                       # transcript present, meta absent: ran but unmeasured
     end = sys.argv[2] if arm == 'primary' else 'no'
+    wall = ''
+    if sys.argv[2] == 'WALL':
+        end, wall = 'no', 'wall_s\t%d\n' % (3 if arm == 'primary' else 7)
+    if sys.argv[2] == 'WALLNOMETA':
+        end, wall = 'no', 'wall_s\t4\n'
+    if sys.argv[2] == 'WALLBAD':
+        end, wall = 'no', ('wall_s\t\u00b2\n' if arm == 'primary' else 'wall_s\t6\n')
+    if sys.argv[2] == 'WALLHALF':
+        end, wall = 'no', ('wall_s\t5\n' if arm == 'primary' else 'wall_s\t\n')
     open(os.path.join(base, arm + '_r1.meta.tsv'), 'w').write(
-        'rc\t0\ntimeout_s\t900\nmax_turns\tunset\ntoken_cap\tunset\nended_at_cap\t%s\n' % end)
+        'rc\t0\ntimeout_s\t900\nmax_turns\tunset\ntoken_cap\tunset\nended_at_cap\t%s\n%s' % (end, wall))
 r = score_run([{'id': 'G-X', 'polarity': 'present', 'expect_re': 'ZZZ'}], root, ['G-X'], 0.8, 'sonnet')['rows'][0]
 print('%s|%s|%s' % (r['verdict'], r['ended_at_cap'], r['budget']))
 PY
 }
 r="$(_budget yes)"
 _lane BU1 budget "KNOWN-POSITIVE — a FAIL whose primary episode ended at the cap says so" \
-  "FAIL|yes|timeout=900s max_turns=unset tokens=unset ended_at_cap=yes (1/2 episodes)" "$r"
+  "FAIL|yes|timeout=900s max_turns=unset tokens=unset ended_at_cap=yes (1/2 episodes) wall_s=UNMEASURED tokens_used=UNMEASURED" "$r"
 r="$(_budget no)"
 _lane BU2 budget "KNOWN-NEGATIVE — a FAIL that ended on its own says ended_at_cap=no" \
-  "FAIL|no|timeout=900s max_turns=unset tokens=unset ended_at_cap=no" "$r"
+  "FAIL|no|timeout=900s max_turns=unset tokens=unset ended_at_cap=no wall_s=UNMEASURED tokens_used=UNMEASURED" "$r"
 r="$(_budget MISSING)"
 _lane BU3 budget "no meta recorded -> UNKNOWN (not measured is not no)" \
   "FAIL|UNKNOWN|no episode meta (cap not recorded)" "$r"
@@ -762,7 +772,21 @@ _lane BU3 budget "no meta recorded -> UNKNOWN (not measured is not no)" \
 # episode's `no` stand for the row — before the fix this printed `...|no|...`.
 r="$(_budget PARTIAL)"
 _lane BU5 budget "partial meta (transcript without meta) -> UNKNOWN, not the other episode's no" \
-  "FAIL|UNKNOWN|timeout=900s max_turns=unset tokens=unset ended_at_cap=UNKNOWN" "$r"
+  "FAIL|UNKNOWN|timeout=900s max_turns=unset tokens=unset ended_at_cap=UNKNOWN wall_s=UNMEASURED tokens_used=UNMEASURED" "$r"
+
+# BU6/BU7 cost axis (2026-11-12): wall seconds sit next to the verdict, never in it; tokens stay UNMEASURED.
+r="$(_budget WALL)"
+_lane BU6 budget "KNOWN-POSITIVE — wall_s recorded in both episodes -> range, verdict unchanged" \
+  "FAIL|no|timeout=900s max_turns=unset tokens=unset ended_at_cap=no wall_s=3..7 tokens_used=UNMEASURED" "$r"
+r="$(_budget WALLHALF)"
+_lane BU7 budget "one episode's wall_s empty -> counted as unmeasured, not as 0" \
+  "FAIL|no|timeout=900s max_turns=unset tokens=unset ended_at_cap=no wall_s=5..5 (1/2 episodes unmeasured) tokens_used=UNMEASURED" "$r"
+r="$(_budget WALLNOMETA)"
+_lane BU8 budget "transcript without meta next to a measured episode -> range flagged partial (codex R1 A)" \
+  "FAIL|UNKNOWN|timeout=900s max_turns=unset tokens=unset ended_at_cap=UNKNOWN wall_s=4..4 (1/2 episodes unmeasured) tokens_used=UNMEASURED" "$r"
+r="$(_budget WALLBAD)"
+_lane BU9 budget "non-ASCII digit wall_s does not crash scoring; counted unmeasured (codex R1 A)" \
+  "FAIL|no|timeout=900s max_turns=unset tokens=unset ended_at_cap=no wall_s=6..6 (1/2 episodes unmeasured) tokens_used=UNMEASURED" "$r"
 
 # BU4/TG*: end to end through the runner with a stub sim that writes the meta the real runner writes.
 if [ "$NOPROBES" -eq 1 ]; then _skipblock "budget/target runner lanes BU4 TG3-TG5 (need probes.md)"; else
@@ -782,6 +806,77 @@ chmod +x "$BSTUB/fake_sim_budget.sh"
     bash "$RUNNER" --ids "G-GREET-01" --no-evidence --report-out "$T/bud_report.md" ) >"$T/bud.log" 2>&1
 _lane BU4 budget "runner -> report row carries 'ended_at_cap=yes' when the stub hit its cap" \
   "yes" "$(grep -E '^\| G-GREET-01 ' "$T/bud_report.md" | grep -q 'ended_at_cap=yes' && echo yes || echo no)"
+
+# SF1-SF3 state fingerprint (2026-11-11): one line per rep, appended after the verdict, never scored.
+# SF1 the budget stub writes no treediff → the line says MISSING (not measured ≠ 0).
+_lane SF1 state-fp "stub without treediff: report carries 'treediff=MISSING' for both arms" "2" \
+  "$(grep -cE '^state-fingerprint: G-GREET-01 (primary|control) r1 treediff=MISSING$' "$T/bud_report.md")"
+# SF2 a stub that writes a treediff + the changed file → changed=1 with a hash; a second run with
+#     different file bytes but the SAME porcelain line gets a different hash (state, not output).
+cat > "$BSTUB/fake_sim_state.sh" <<'FAKESTATE'
+#!/usr/bin/env bash
+arm=""; out=""
+while [ $# -gt 0 ]; do case "$1" in --arm) arm="$2"; shift 2 ;; --out) out="$2"; shift 2 ;; *) shift ;; esac; done
+mkdir -p "$out/w_${arm}_r1/repo"
+printf 'stub body %s\n' "$arm" > "$out/${arm}_r1.txt"
+printf 'rc\t0\ntimeout_s\t900\nmax_turns\tunset\ntoken_cap\tunset\nended_at_cap\tno\n' > "$out/${arm}_r1.meta.tsv"
+case "${FH_STATE_STUB_KIND:-file}" in
+  file)   printf '?? note.txt\n' > "$out/${arm}_r1.treediff.txt"
+          printf '%s\n' "${FH_STATE_STUB_BYTES:-a}" > "$out/w_${arm}_r1/repo/note.txt" ;;
+  dir)    printf '?? newdir/\n' > "$out/${arm}_r1.treediff.txt"; mkdir -p "$out/w_${arm}_r1/repo/newdir"
+          printf '%s\n' "${FH_STATE_STUB_BYTES:-a}" > "$out/w_${arm}_r1/repo/newdir/f.txt" ;;
+  quoted) printf '?? "a b.txt"\n' > "$out/${arm}_r1.treediff.txt"
+          printf '%s\n' "${FH_STATE_STUB_BYTES:-a}" > "$out/w_${arm}_r1/repo/a b.txt" ;;
+  unread) printf '?? note.txt\n' > "$out/${arm}_r1.treediff.txt"; chmod 000 "$out/${arm}_r1.treediff.txt" ;;
+  rename) printf 'R  old.txt -> new.txt\n' > "$out/${arm}_r1.treediff.txt"
+          printf '%s\n' "${FH_STATE_STUB_BYTES:-a}" > "$out/w_${arm}_r1/repo/new.txt" ;;
+  lockedfile) printf ' M secret.txt\n' > "$out/${arm}_r1.treediff.txt"
+          printf 'x\n' > "$out/w_${arm}_r1/repo/secret.txt"; chmod 000 "$out/w_${arm}_r1/repo/secret.txt" ;;
+esac
+echo "RESULT: CLEAN"; exit 0
+FAKESTATE
+chmod +x "$BSTUB/fake_sim_state.sh"
+for v in a b; do
+  ( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$BSTUB/fake_sim_state.sh" FH_STATE_STUB_BYTES="$v" \
+      bash "$RUNNER" --ids "G-GREET-01" --no-evidence --report-out "$T/sf_$v.md" ) >"$T/sf_$v.log" 2>&1
+done
+sf_a="$(grep -E '^state-fingerprint: G-GREET-01 primary r1 changed=1 unhashed=0 sha256=[0-9a-f]{16}$' "$T/sf_a.md")"
+sf_b="$(grep -E '^state-fingerprint: G-GREET-01 primary r1 changed=1 unhashed=0 sha256=[0-9a-f]{16}$' "$T/sf_b.md")"
+_lane SF2 state-fp "treediff present: changed=1 + hash; same porcelain, different bytes → different hash" "yes" \
+  "$([ -n "$sf_a" ] && [ -n "$sf_b" ] && [ "$sf_a" != "$sf_b" ] && echo yes || echo no)"
+# Codex R1 (2026-11-11): SF4 a changed DIRECTORY is hashed over its files (different bytes → different hash)
+for v in a b; do
+  ( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$BSTUB/fake_sim_state.sh" FH_STATE_STUB_KIND=dir FH_STATE_STUB_BYTES="$v" \
+      bash "$RUNNER" --ids "G-GREET-01" --no-evidence --report-out "$T/sfd_$v.md" ) >"$T/sfd_$v.log" 2>&1
+done
+_lane SF4 state-fp "untracked directory: content change moves the hash" "yes" \
+  "$(a=$(grep '^state-fingerprint: G-GREET-01 primary r1 changed=1 ' "$T/sfd_a.md"); b=$(grep '^state-fingerprint: G-GREET-01 primary r1 changed=1 ' "$T/sfd_b.md"); [ -n "$a" ] && [ "$a" != "$b" ] && echo yes || echo no)"
+# SF5 a git-quoted path is named as unhashed, never silently folded into «same hash»
+( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$BSTUB/fake_sim_state.sh" FH_STATE_STUB_KIND=quoted \
+    bash "$RUNNER" --ids "G-GREET-01" --no-evidence --report-out "$T/sfq.md" ) >"$T/sfq.log" 2>&1
+_lane SF5 state-fp "quoted porcelain path → unhashed=1 on the line" "1" \
+  "$(grep -cE '^state-fingerprint: G-GREET-01 primary r1 changed=1 unhashed=1 ' "$T/sfq.md")"
+# SF6 an unreadable treediff says UNREADABLE, not changed=0 (skipped as root: root reads mode 000)
+if [ "$(id -u)" = 0 ]; then _skipblock "SF6 (root reads mode-000 files)"; else
+( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$BSTUB/fake_sim_state.sh" FH_STATE_STUB_KIND=unread \
+    bash "$RUNNER" --ids "G-GREET-01" --no-evidence --report-out "$T/sfu.md" ) >"$T/sfu.log" 2>&1
+_lane SF6 state-fp "unreadable treediff → treediff=UNREADABLE" "1" \
+  "$(grep -cE '^state-fingerprint: G-GREET-01 primary r1 treediff=UNREADABLE$' "$T/sfu.md")"
+chmod -R u+rwx "$T" 2>/dev/null
+fi
+# Codex R2: SF7 rename record and SF8 unreadable listed file → counted as unhashed
+( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$BSTUB/fake_sim_state.sh" FH_STATE_STUB_KIND=rename \
+    bash "$RUNNER" --ids "G-GREET-01" --no-evidence --report-out "$T/sfr.md" ) >"$T/sfr.log" 2>&1
+_lane SF7 state-fp "rename record → unhashed=1" "1" "$(grep -cE '^state-fingerprint: G-GREET-01 primary r1 changed=1 unhashed=1 ' "$T/sfr.md")"
+if [ "$(id -u)" != 0 ]; then
+( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$BSTUB/fake_sim_state.sh" FH_STATE_STUB_KIND=lockedfile \
+    bash "$RUNNER" --ids "G-GREET-01" --no-evidence --report-out "$T/sfl.md" ) >"$T/sfl.log" 2>&1
+_lane SF8 state-fp "unreadable listed file → unhashed=1" "1" "$(grep -cE '^state-fingerprint: G-GREET-01 primary r1 changed=1 unhashed=1 ' "$T/sfl.md")"
+chmod -R u+rwx "$T" 2>/dev/null
+fi
+# SF3 the fingerprint never moves a verdict: the G-GREET-01 report row is byte-identical across a/b.
+_lane SF3 state-fp "verdict row identical across runs whose end states differ" "yes" \
+  "$([ -n "$(grep -E '^\| G-GREET-01 ' "$T/sf_a.md")" ] && [ "$(grep -E '^\| G-GREET-01 ' "$T/sf_a.md")" = "$(grep -E '^\| G-GREET-01 ' "$T/sf_b.md")" ] && echo yes || echo no)"
 
 # TG3 default output unchanged: no --target -> no split section anywhere.
 _lane TG3 target "default (no --target): report has no 'Target split' section" \
@@ -905,6 +1000,67 @@ print('override' if fp.get('sim_runner(override)') == _git_blob_sha(sys.argv[3])
 PY
 )"
 _lane IF4 instrument "KNOWN-NEGATIVE — stub sim runner is fingerprinted as sim_runner(override)" "override" "$r"
+
+# ── run-rc: a rep the runner says did not finish (meta rc != 0) is FAILED-TO-RUN (2026-11-11) ──────
+# Real defect: a usage-limit reply is NON-EMPTY text, so the empty-text check let it through and it
+# was scored FAIL. Measured: 2026-11-10 model-arms run, Opus G-MAP-01 r1-r3 = 6 limit replies scored
+# FAIL 0/3; nightly 2026-10-27 had 75 such files. In every one of those 156 files the runner's
+# meta.tsv said rc=1, and in all 2,142 normal replies it said rc=0 — so the discriminator is the
+# runner's own exit code, never the reply text. Fixture texts below are byte-copied from those runs.
+# 🟥 RC4/RC5 are the opposite-direction controls: an rc=0 reply that merely CONTAINS limit wording is
+# still scored normally (a real FAIL stays FAIL), and a run with no meta.tsv is not re-guessed.
+_rc_run() {  # $1=reps, then per rep "<kind>:<primary rc>:<control rc>"; kind P pass | F fail | L limit | M mixed | Q pass+limit words; rc '-' = no meta
+  local reps="$1"; shift
+  python3 - "$REPO_ROOT" "$reps" "$@" <<'PY'
+import sys, os, tempfile
+sys.path.insert(0, os.path.join(sys.argv[1], 'scripts'))
+from probe_live_eval_lib import score_run
+LIMIT = "You've hit your 5-hour limit · resets 11:30pm (Asia/Seoul)\n"
+LIMIT_S = "You've hit your session limit · resets 3:20am (Asia/Seoul)\n"
+reps = int(sys.argv[2]); specs = sys.argv[3:]
+root = tempfile.mkdtemp(); base = os.path.join(root, 'G-X'); os.makedirs(base)
+for i, spec in enumerate(specs, start=1):
+    kind, prc, crc = spec.split(':')
+    prim = {'P': '\U0001f43f️ hi', 'F': 'nothing here', 'L': LIMIT, 'S': LIMIT_S,
+            'M': 'Not mapped. ' + LIMIT, 'Q': '\U0001f43f️ hi. ' + LIMIT}[kind]
+    ctrl = {'L': LIMIT, 'S': LIMIT_S}.get(kind, 'weather')
+    for arm, text, rc in (('primary', prim, prc), ('control', ctrl, crc)):
+        open(os.path.join(base, '%s_r%d.txt' % (arm, i)), 'w', encoding='utf-8').write(text)
+        if rc != '-':
+            open(os.path.join(base, '%s_r%d.meta.tsv' % (arm, i)), 'w').write('sim_model\tx\nrc\t%s\n' % rc)
+row = score_run([{'id': 'G-X', 'polarity': 'present', 'expect_re': '\U0001f43f️'}],
+                root, ['G-X'], 0.8, 'sonnet', reps=reps)['rows'][0]
+print('%s %s|%s' % (row['verdict'], row.get('reps'), row.get('reason', '')))
+PY
+}
+r="$(_rc_run 3 L:1:1 L:1:1 L:1:1)"
+_lane RC1 run-rc "3 limit replies (rc=1, real text) -> FAILED-TO-RUN, not FAIL 0/3" "FAILED-TO-RUN 0/0" "${r%%|*}"
+case "${r#*|}" in *"rc=1"*"limit"*) rr=named ;; *) rr="unnamed:${r#*|}" ;; esac
+_lane RC1b run-rc "reason names the runner rc and the reply's first line" "named" "$rr"
+r="$(python3 - "$REPO_ROOT" <<'PY'
+import sys, os, tempfile
+sys.path.insert(0, os.path.join(sys.argv[1], 'scripts'))
+from probe_live_eval_lib import _failure_reason
+b = tempfile.mkdtemp()
+open(os.path.join(b, 'primary_r1.txt'), 'w').write('')
+open(os.path.join(b, 'primary_r1.meta.tsv'), 'w').write('rc\t127\n')
+open(os.path.join(b, 'primary_r1.stderr.txt'), 'w').write('claude: command not found\n')
+print(_failure_reason(b, 'primary'))
+PY
+)"
+_lane RC1c run-rc "rc!=0 with EMPTY reply keeps the stderr diagnostic (codex R1)" "claude: command not found" "$r"
+r="$(_rc_run 3 P:0:0 P:0:0 L:1:1)"
+_lane RC2 run-rc "a limit rep leaves the denominator: 2 pass + 1 limit -> PASS 2/2" "PASS 2/2" "${r%%|*}"
+r="$(_rc_run 3 P:0:1 P:0:0 P:0:0)"
+_lane RC3 run-rc "control arm alone rc!=0 -> that rep did not run (PASS 2/2)" "PASS 2/2" "${r%%|*}"
+r="$(_rc_run 3 M:0:0 M:0:0 M:0:0)"
+_lane RC4 run-rc "KNOWN-NEGATIVE — rc=0 reply with limit wording and no rule hit stays FAIL" "FAIL 0/3" "${r%%|*}"
+r="$(_rc_run 3 Q:0:0 Q:0:0 Q:0:0)"
+_lane RC4b run-rc "KNOWN-NEGATIVE — rc=0 reply with limit wording and a rule hit stays PASS" "PASS 3/3" "${r%%|*}"
+r="$(_rc_run 3 L:-:- L:-:- L:-:-)"
+_lane RC5 run-rc "no meta.tsv (older run) -> text is not re-guessed; scored as before (FAIL)" "FAIL 0/3" "${r%%|*}"
+r="$(_rc_run 3 S:1:1 S:1:1 S:1:1)"
+_lane RC6 run-rc "nightly 'session limit' variant (rc=1) -> FAILED-TO-RUN" "FAILED-TO-RUN 0/0" "${r%%|*}"
 
 echo ""
 echo "── summary ──────────────────────────────────────────────────────"

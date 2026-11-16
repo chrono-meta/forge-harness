@@ -194,6 +194,14 @@ Record sim results in the Axes 2–3 marker + sub-agent invocation log.
 공허한 한 단어(placeholder)는 차단된다. 훅은 **존재와 비공허성**만 본다 — 내용의 옳음은 안 본다.
 🟥 provenance(«정말 설계 전에 썼나»)는 **파일에서 확인 불가**다. 훅 주석이 그렇게 명시한다.
 
+**설계 전에 한 번, 맥락 없는 독자가 `soul:` 줄만 읽고 재진술한다 (2026-11-15, AQ-20261114-9).** 절차는
+`meta-prompt-builder` Step 3 의 4번(재진술 읽기)을 그대로 쓰고, 칸만 둘로 바꾼다: **성공 정의**와 **절대 안 함**을
+각각 `RESTATABLE` / `GUESS` 로 표시하고, 필요한 질문을 적게 한다. 독자에게는 `soul:` 줄 한 줄만 준다(대화 ·
+레포 · 설계 메모 없음). 무엇이 의심되는지는 말하지 않는다. `GUESS` 가 나온 칸은 설계 전에 고쳐 쓴다.
+저자가 스스로 재진술한 것은 치지 않는다 — 저자는 맥락으로 빈칸을 채운다. 독자를 못 띄우면 `NOT RUN` 이다.
+결과는 `soul-check:` 근거 안에 적는다(예: `reflected(… · soul read: Sonnet, both RESTATABLE)`). 새 필드도 훅 검사도
+없다 — 판단 단계다(§Mechanization Boundary).
+
 **`soul-check:` — 있으면 닫힌 enum, 없으면 통과(부재는 차단 아님).** `reflected(<무엇이 되돌아왔나 — 어긋남 여부>)` ·
 `violated(<어느 절반이 깨졌나 + 무엇을 했나>)` · `DEGRADED_NOT_RUN(<왜>)` ·
 `DEGRADED_NO_SOUL(<왜>)` · `UNKNOWN` · `not-applicable(<왜>)`.

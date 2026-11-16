@@ -8,10 +8,13 @@ together; this script reads them together. It decides nothing — it lists, with
 
   seed=human      the operator's own request, still open in a session checklist. Direction was
                   chosen by a human (goal-quench §Autonomy Ladder — «direction is always human»),
-                  so only these may ever reach the auto-merge tier.
+                  A request match lets their PR reach the auto-merge tier.
   seed=candidate  everything a machine proposed: digest candidates, absorption-queue rows,
-                  correction-moment cues, session-card [planned] lines. PR at most; the operator
-                  confirms in the morning report. A candidate is not a seed.
+                  correction-moment cues, session-card [planned] lines. Since 2026-11-11 (operator
+                  «후보 확인만 없앰») the loop builds these without the operator confirming the row;
+                  the PR auto-merges only when selfdev_merge_tier.sh says AUTO (gate, verdict and
+                  resident-instruction paths stay HOLD) and it deletes no file and removes no more
+                  lines than it adds. Operator-insight calls (new direction / identity) are skipped.
 
 Every source prints a count or `UNMEASURED (<reason>)` — an unreadable source is never «0 items»
 (feedback_not_found_is_not_zero_family).
@@ -238,9 +241,13 @@ ABLATION_STEPS = ("procedure = scripts/probe_scope_check.sh header steps 1-7: ca
                   "rc 0) · two arms (A unchanged, B with the section cut) in separate dirs outside the repo "
                   "(scripts/sim_isolated_run.sh) · Sonnet · the probe's own question · reps >= 3 per arm · on equal "
                   "outcomes a must-move control (arm A with the answer deleted) must score differently, else "
-                  "INSTRUMENT-UNCONFIRMED. No loss → one deletion PR titled «selfdev: ablation — <section>» with the "
-                  "verdict table; it is seed=ablation, never auto-merged — the operator decides what goes. Loss → add a "
-                  "KEEP row to .claude/regression/ablation_verdicts.md so it is not nominated again.")
+                  "INSTRUMENT-UNCONFIRMED. Render the verdict with scripts/ablation_verdict.py --a K/N --b K/N --control K/N "
+                  "and paste its line verbatim; never write «no loss». NOT-DETECTED@N (rc 1) and no arm-B rep answered confidently and wrongly (step 6 — that is KEEP whatever the "
+                  "renderer says) → one deletion PR titled "
+                  "«selfdev: ablation — <section>» whose body carries that NOT-DETECTED@N line (with its minimum "
+                  "detectable drop) above the verdict table; it is seed=ablation, never auto-merged — the operator decides what goes. DETECTED (rc 0) → add a "
+                  "KEEP row to .claude/regression/ablation_verdicts.md so it is not nominated again. INSTRUMENT-UNCONFIRMED (rc 3) "
+                  "or INPUT-ERROR (rc 2) → no PR.")
 
 
 def src_ablation(live, date):
@@ -343,7 +350,7 @@ def main(argv):
     unmeasured = 0
     print("# self-dev queue — %s\n" % a.date)
     print("seed=human → auto-merge eligible (still subject to selfdev_merge_tier.sh) · "
-          "seed=candidate → PR at most, operator confirms · seed=ablation → a measured deletion PR at most, never "
+          "seed=candidate → build without waiting for the operator (skip operator-insight calls: new direction or identity; close already-done rows with evidence); auto-merge only if the path tier says AUTO · seed=ablation → a measured deletion PR at most, never "
           "auto-merged (the operator decides what goes) · seed=recheck → open only in an older "
           "checklist, may already be done by a later session: verify it is still open first, never "
           "auto-merge · owner=operator rows are the "

@@ -405,7 +405,7 @@ if [ -d "$FH/tracks" ]; then
       UNRESOLVED)  continue ;;
       # 🟥 ARGS = 전제 파손(빈 이름·경로 탈출·알 수 없는 술어)이지 «못 찾음» 이 아니다.
       #    미해소로 접으면 그것도 미측정을 0 으로 렌더하는 형태다 — 따로 말한다.
-      ARGS:*)      printf '%s' "⚠️  [track-resolve] 트랙 이름 «$_n» 이 거부됐다(${_note#ARGS:}) — 이건 «레포 없음» 이 아니라 **전제 파손**이다.
+      ARGS:*)      printf '%s' "⚠️  [track-resolve] 트랙 이름 «${_n}» 이 거부됐다(${_note#ARGS:}) — 이건 «레포 없음» 이 아니라 **전제 파손**이다.
 "; continue ;;
     esac
     _resolved=$((_resolved + 1))
@@ -588,6 +588,10 @@ fi
   # So: no new hook, no new line, no nag — the node name is appended to a banner that already
   # prints every single session. `hostname -s`, the same source fh_node_check.sh uses.
   echo "🔄 [FH SessionStart] companion-store freshness — $PULL_NOTE. · node: $(hostname -s 2>/dev/null || echo unknown)"
+  # lane-identity tripwire (record-only): fixture commits that leaked into the hub repo
+  # only when $FH is a git repo: an npm-installed copy is not one, and the tool's rc-2 HARNESS-ERROR
+  # line would then print at every session start (measured on the published 3.41.0 tarball)
+  [ -f "$FH/scripts/lane_identity_tripwire.sh" ] && env -u GIT_DIR -u GIT_COMMON_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_OBJECT_DIRECTORY git -C "$FH" rev-parse --git-dir >/dev/null 2>&1 && bash "$FH/scripts/lane_identity_tripwire.sh" "$FH" 2>/dev/null | grep -v '^LANE-TRIPWIRE ok' || true
   # §Diverged banner. Loud, counted, and it names the ONE command — see the §Diverged comment at the
   # fetch site for the 2026-08-28 measurement that made this necessary. The magnitude line and the
   # "everything below is stale" line are separate on purpose: the first says the tree is behind, the
