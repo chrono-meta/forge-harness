@@ -21,7 +21,7 @@
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LIB="${LIVE_EVAL_LIB_DIR:-$HERE}"
-pass=0; fail=0; ok(){ pass=$((pass+1)); echo "  ✅ $1"; }; bad(){ fail=$((fail+1)); echo "  ❌ $1"; }
+pass=0; fail=0; skipped=0; ok(){ pass=$((pass+1)); echo "  ✅ $1"; }; bad(){ fail=$((fail+1)); echo "  ❌ $1"; }
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 
 python3 "$HERE/live_eval_trace.py" extract /dev/null /dev/null /dev/null >/dev/null 2>&1; [ $? -eq 3 ] \
@@ -155,8 +155,29 @@ hf=$(score "$T/half" P 'read=CATALOG\.md')
 
 # TR13 the direct `claude -p` measurement path (not via sim_isolated_run) pins MCP in all three arms.
 # Static check of the argv only — a pin is not proof; the recorded tool list (TR6/TR11) is the defence.
-npin=$(grep -cE '^  (allowlist|denylist|baseline)\) +FLAGS=\(.*--strict-mcp-config' "$HERE/ablation_calibrate.sh")
-[ "$npin" -eq 3 ] && ok "TR13 ablation_calibrate.sh pins MCP (--strict-mcp-config) in all 3 arms" || bad "TR13 pinned arms=$npin/3"
+# 🟥 The subject is hub-only: `ablation_calibrate.sh` is not in package.json's files[] and
+# package_coverage_check.sh carries it as an accepted absence, while THIS suite ships. Measured
+# 2026-11-16 in the extracted npm pack (clean-room audit round 9): the grep hit a missing file, npin
+# came back empty, and the lane printed `TR13 pinned arms=/3` — a red about a subject that is not in
+# the tree, plus `lane count 18 != 19`, in a tree whose owner did nothing wrong. Two arms now: inside
+# a checkout the subject MUST be there, so its absence stays red (the subject is gone, not unshipped);
+# outside a checkout it is a named SKIP, which is not a pass and is counted as its own thing.
+if [ -f "$HERE/ablation_calibrate.sh" ]; then
+  npin=$(grep -cE '^  (allowlist|denylist|baseline)\) +FLAGS=\(.*--strict-mcp-config' "$HERE/ablation_calibrate.sh")
+  [ "$npin" -eq 3 ] && ok "TR13 ablation_calibrate.sh pins MCP (--strict-mcp-config) in all 3 arms" || bad "TR13 pinned arms=$npin/3"
+# 🟥 The checkout test here is `.git` presence, NOT a git call — and that asymmetry with
+# test_name_boundary_locale_lanes.sh (which does call `git ls-files`, and sources fixture_guard_lib.sh
+# for it) is deliberate. This suite called no git at all before, and `test_fixture_guard_coverage_lanes.sh`
+# L-live requires every git-calling lane to source that guard first (#1088); a `git rev-parse` added
+# here made this file UNGUARDED and turned that lane red — caught by the full local selfcheck run
+# before the push, not by CI. `.git` present also answers the only question this lane has (is this
+# tree a checkout of itself, or an unpacked package), without inheriting GIT_* from the caller.
+elif [ -e "$HERE/../.git" ]; then
+  bad "TR13 ablation_calibrate.sh is missing from this CHECKOUT — the subject is gone, not merely unshipped"
+else
+  skipped=$((skipped+1))
+  echo "  ⏭️  SKIP TR13 — ablation_calibrate.sh is hub-only (not in files[]) and this tree is not a checkout, so the argv it pins cannot be read here. Not a pass"
+fi
 
 # ── plugins (2026-11-15): the nightly's G-GREET-01 / G-TRIG-05 had tools and MCP equal in every arm and
 # one rep (primary_r1) with one extra builtin plugin; the scorer reported «1 distinct». Names below are
@@ -187,5 +208,12 @@ if grep -q "trace.get('plugins') is None" "$T/mut2/live_eval_trace.py"; then bad
 else mp=$(LIB="$T/mut2" score "$T/plg" P 'read=CATALOG\.md')
   [[ "$mp" == "PASS "* ]] && ok "TR18 revert probe: inventory without plugins → TR14's pair scores PASS (TR14 would be red)" || bad "TR18 mutant still [$mp]"; fi
 
-[ $pass -eq 19 ] || bad "lane count $pass != 19 — a case did not run"
-echo "live_eval_trace lanes: $pass passed, $fail failed"; [ $fail -eq 0 ]
+# the count has to add the named skips, or a lane that correctly declined would read as a lane that
+# silently did not run — which is the thing this counter exists to catch.
+[ $((pass + fail + skipped)) -eq 19 ] || bad "lane count $pass passed + $fail failed + $skipped skipped != 19 — a case did not run"
+if [ "$skipped" -gt 0 ]; then
+  echo "live_eval_trace lanes: $pass passed, $fail failed, $skipped skipped (named, not a pass)"
+else
+  echo "live_eval_trace lanes: $pass passed, $fail failed"
+fi
+[ $fail -eq 0 ]

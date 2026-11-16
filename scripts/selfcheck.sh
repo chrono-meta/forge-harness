@@ -2649,6 +2649,62 @@ else
   fail=1
 fi
 
+# fh_module_check.py — the REAL-CORPUS arm. Wired 2026-11-16 (clean-room audit round 9) because the
+# 19 RD fixture lanes in test_fh_module_check_lanes.sh measure the CHECKER and nothing measured its
+# SUBJECTS. Three `fh-module.yaml` manifests ship (plugins/fh-commons/skills/{ko-tech-writer,
+# persona-cast,convergence-loop}) and no standing channel ever ran the install-time check over them:
+# measured with grep over scripts/, templates/.git-hooks/ and .github/ — 0 callers, the only hits
+# being this file's pair declaration, the spec, CATALOG.md and the lane suite's own fixtures.
+# plugins/fh-meta/CHANGELOG.md asserts "The three modules in this package pass". That was true when
+# measured by hand (all three rc 0, re-measured 2026-11-16) and had NO channel behind it, so a drift
+# in a manifest, or in a shipped .py inside one of those skills, would have been found by the
+# consumer installing the module rather than here. The install-time verdict is exactly what a
+# context-less clone user meets first, which is why it belongs in this file and not in a lane.
+# Package mode is decided by BOTH sides being absent — the `probe_scope_check.sh` idiom two blocks
+# up, whose own comment earns the rule that over-blocking the normal case is a defect too.
+# The subject's exit contract, from its own header: 0 OK · 1 BLOCK · 2 UNMEASURED ·
+# 3 OK-but-UNCALIBRATED, which it calls "never a clean pass" — so 2 and 3 are NOT passes here. They
+# print at the LINE HEAD as `INCOMPLETE  fh-module …` rather than only as a ⬜ decoration, because a
+# non-pass written in a local decoration is one the next round's log diff cannot count (round 8).
+# Why not `_show_failure`: that helper extracts ❌-marked lines from a SUITE's output, and this
+# subject speaks a different vocabulary — `BLOCK:`/`UNMEASURED:`/`RESULT:` lines. Handing it this
+# output would print the trailing NOTE instead of the reason, so the reason is lifted directly.
+_fmc_why() { printf '%s\n' "$1" | grep -E '^(BLOCK|UNMEASURED|UNCAL|RESULT):' | head -6 | sed 's/^/     /'; }
+_fmc_manifests=$(find . -name fh-module.yaml -not -path './node_modules/*' -not -path './.git/*' 2>/dev/null | sort)
+# `wc -l` over a sed-stripped list rather than `grep -c . || true`: grep exits 1 on a zero count, so
+# the obvious form needs a `|| true`, and a short-circuit to a permissive value is the exact shape
+# degrade_direction_scan.sh exists to flag. `wc` always exits 0, so the count needs no rescue.
+_fmc_n=$(printf '%s\n' "$_fmc_manifests" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')
+if [ ! -f scripts/fh_module_check.py ] && [ "$_fmc_n" -eq 0 ]; then
+  echo "SKIP  fh_module_check.py corpus (package mode: neither the checker nor any fh-module.yaml is here)"
+elif [ ! -f scripts/fh_module_check.py ]; then
+  echo "FAIL  fh_module_check.py corpus: $_fmc_n manifest(s) present but the checker is missing — the install-time verdict is UNMEASURED, not clean"
+  fail=1
+elif [ "$_fmc_n" -eq 0 ]; then
+  echo "FAIL  fh_module_check.py corpus: the checker is here but no fh-module.yaml was found — the corpus vanished; UNMEASURED, not clean"
+  fail=1
+else
+  _fmc_bad=0
+  while IFS= read -r _m; do
+    [ -n "$_m" ] || continue
+    _out=$(python3 scripts/fh_module_check.py check "$_m" 2>&1); _rc=$?
+    case "$_rc" in
+      0) echo "PASS  fh-module ${_m#./} (install-time check: OK)" ;;
+      1) echo "FAIL  fh-module ${_m#./}: BLOCK (rc 1) — this module would be refused at install time"
+         _fmc_why "$_out"; _fmc_bad=1 ;;
+      2) echo "INCOMPLETE  fh-module ${_m#./}: ⬜ UNMEASURED (rc 2 — unreadable, tooling down, or empty core list). NOT a pass"
+         _fmc_why "$_out"; _fmc_bad=1 ;;
+      3) echo "INCOMPLETE  fh-module ${_m#./}: ⬜ OK-but-UNCALIBRATED (rc 3) — the subject's own contract calls this never a clean pass"
+         _fmc_bad=1 ;;
+      *) echo "INCOMPLETE  fh-module ${_m#./}: ⬜ the checker exited $_rc, outside its documented 0/1/2/3 contract — UNMEASURED"
+         _fmc_why "$_out"; _fmc_bad=1 ;;
+    esac
+  done <<_FMC_EOF
+$_fmc_manifests
+_FMC_EOF
+  [ "$_fmc_bad" -eq 0 ] || fail=1
+fi
+
 # utterance landing check — the close chain's CONTENT anchor, and it has to be RUN, not parsed.
 # Measured 2026-08-08 on the branch that introduced it: the only thing in this file that touched
 # `scripts/utterance_landing_check.sh` was the `bash -n` syntax sweep at the top. Syntax passing is
