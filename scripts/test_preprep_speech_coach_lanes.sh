@@ -39,12 +39,28 @@ echo "$OUT" | grep -qE 'R1-b .*MUT [0-9]+' \
   || ng "되돌림 프로브 출력 없음 — 지역 문턱의 하중을 아무도 안 쟀다"
 
 echo "== CLI 계약 — self-test 밖에서 한 번 더 =="
+# The isolation that matters is «no ffmpeg on PATH». `command -v python3` can be a shell shim (pyenv,
+# asdf: `#!/usr/bin/env bash`) that dies with rc 127 once PATH is empty — before the code under test
+# runs. So resolve the real interpreter first, with the normal PATH, and run THAT under the empty PATH.
+real_py() { "$1" -c 'import sys; print(sys.executable)' 2>/dev/null; }
+PY=$(real_py "$(command -v python3)")
+[ -n "$PY" ] && [ -x "$PY" ] || { echo "ⓘ could not resolve the real python3 interpreter — setup broke (NOT a pass)"; exit 10; }
 EMPTY=$(mktemp -d) || exit 10
-OUT=$(cd plugins/fh-preprep/skills/preprep && PATH="$EMPTY" "$(command -v python3)" lane_speech_coach.py /nonexistent.wav 2>&1); RC=$?
-rmdir "$EMPTY"
+OUT=$(cd plugins/fh-preprep/skills/preprep && PATH="$EMPTY" "$PY" lane_speech_coach.py /nonexistent.wav 2>&1); RC=$?
 [ "$RC" -eq 2 ] && echo "$OUT" | grep -q '통과 아님' \
   && ok "ffmpeg 없음 → rc 2 · «통과 아님」 (0 도 1 도 아니다)" \
   || ng "ffmpeg 없음이 rc=$RC 로 나간다: $(echo "$OUT" | tail -3)"
+# control: a bash-shim python3 (the shape that broke this probe on pyenv) still reaches rc 2 through
+# the same resolution — and the shim itself, run directly under the empty PATH, really does die
+SHIM=$(mktemp -d) || exit 10
+printf '#!/usr/bin/env bash\nexec "%s" "$@"\n' "$PY" > "$SHIM/python3"; chmod +x "$SHIM/python3"
+SPY=$(PATH="$SHIM:$PATH" real_py "$SHIM/python3")
+OUT=$(cd plugins/fh-preprep/skills/preprep && PATH="$EMPTY" "$SPY" lane_speech_coach.py /nonexistent.wav 2>&1); RC=$?
+DIRECT=$(cd plugins/fh-preprep/skills/preprep && PATH="$EMPTY" "$SHIM/python3" lane_speech_coach.py /nonexistent.wav >/dev/null 2>&1; echo $?)
+[ "$RC" -eq 2 ] && [ "$DIRECT" -ne 2 ] \
+  && ok "셸 래퍼 python3 컨트롤: 해석기 해석 경유 rc 2 · 래퍼 직접 실행은 rc=$DIRECT (래퍼가 실제로 죽는 모양)" \
+  || ng "셸 래퍼 컨트롤: 해석 경유 rc=$RC · 직접 rc=$DIRECT"
+rm -rf "$SHIM"; rmdir "$EMPTY"
 
 grep -q "lane_speech_coach" plugins/fh-preprep/skills/preprep/SKILL.md \
   && ok "명세: SKILL.md 가 이 레인을 적는다(고아 구현 아님)" \
