@@ -2174,6 +2174,17 @@ else
   fail=1
 fi
 
+# prepush_marker_lookup — the pre-push Load-Bearing gate reads this branch's marker where pre-commit
+# writes it (the evidence root), not a path only the main checkout has.
+if [ -f scripts/test_prepush_marker_lookup_lanes.sh ]; then
+  if ! bash scripts/test_prepush_marker_lookup_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_prepush_marker_lookup_lanes.sh: absent — the pre-push marker lookup has no lane"
+  fail=1
+fi
+
 # And the ablation calibrator, for the third instance of the same reason. Its whole job is telling
 # apart states that look identical from outside — "the arm could not answer" vs "the runner is dead"
 # vs "the runner read the answer off disk" — and round 2 of its own adversarial review found that

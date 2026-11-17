@@ -73,7 +73,7 @@ lane() {   # $1 id · $2 want (pass | gate-pass = pass AND the gate printed its 
      || { [ "$2" = block ] && [ "$3" -ne 0 ] && grep -q 'no cross-family leg recorded' "$W/last_push.log"; }; then
     pass=$((pass+1)); echo "  ✅ $1 (want $2, rc=$3)"
   else
-    fail=$((fail+1)); echo "  ❌ $1 — want $2, got rc=$3"; grep -E '⛔|❌|error' "$W/last_push.log" | head -4 | sed 's/^/       /'
+    fail=$((fail+1)); echo "  ❌ $1 — want $2, got rc=$3"; awk '/⛔|❌|error/ && n < 4 { n++; print "       " $0 }' "$W/last_push.log"
   fi
 }
 echo "pre-push marker lookup lanes"
