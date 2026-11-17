@@ -9,7 +9,7 @@ sim_isolated_run.sh), and a probe may declare `behave:` — an observable tool c
 
 Two uses:
   extract <stream.jsonl> <out.txt> <tools.txt>   (runner) write the final result text and the init
-      tool/MCP inventory. Exit 3 on a stream that has no parseable result event — never an empty
+      tool/MCP/plugin inventory. Exit 3 on a stream that has no parseable result event — never an empty
       «the session said nothing» (same rule as sim_isolated_run.sh's turns path).
   library: parse_stream(path) · behave_hit(trace, spec) · inventory(trace)
 
@@ -35,7 +35,8 @@ def parse_stream(path):
         lines = open(path, encoding='utf-8').read().splitlines()
     except (OSError, UnicodeDecodeError):
         return None
-    out = {'result': None, 'tools': None, 'mcp': None, 'calls': [], 'damaged': 0, 'ok_ids': set()}
+    out = {'result': None, 'tools': None, 'mcp': None, 'plugins': None, 'calls': [], 'damaged': 0, 'ok_ids': set()}
+    inits = []   # plugin set of every init event, in order
     for ln in lines:
         ln = ln.strip()
         if not ln:
@@ -54,6 +55,17 @@ def parse_stream(path):
             if isinstance(ev.get('mcp_servers'), list):
                 out['mcp'] = sorted(('%s:%s' % (s.get('name'), s.get('status'))) if isinstance(s, dict) else str(s)
                                     for s in ev['mcp_servers'])
+            # Plugins (2026-11-15): arms load the operator's user/builtin/synced plugins from the real
+            # HOME, and the set can change between reps (a builtin rolled out mid-run; an auto-update
+            # moved a version). name, source and version — never the path (it carries the home directory).
+            # Key absent → None (UNKNOWN, never «no plugins»).
+            # Each entry is a JSON array [name, source, version] so no separator inside a name can make
+            # two different sets render alike; a non-object entry is {"raw": ...}, which never equals
+            # an array. A set: duplicates and order do not matter. Every init is kept (see below).
+            inits.append(None if not isinstance(ev.get('plugins'), list) else sorted(set(
+                json.dumps([p.get('name'), p.get('source'), p.get('version')], ensure_ascii=False)
+                if isinstance(p, dict) else json.dumps({'raw': p}, ensure_ascii=False)
+                for p in ev['plugins'])))
         elif t == 'assistant':
             if ev.get('parent_tool_use_id'):
                 continue
@@ -69,14 +81,21 @@ def parse_stream(path):
                 out['damaged'] += 1   # an error result is not a finished session
             r = ev.get('result')
             out['result'] = r if isinstance(r, str) else ('' if r is None else json.dumps(r, ensure_ascii=False))
+    # One init (the normal single-shot stream): its set. Several inits that agree: that set. Several
+    # that disagree: the whole sequence, so a later init can never erase an earlier mismatch (codex R1).
+    if inits:
+        out['plugins'] = inits[0] if all(x == inits[0] for x in inits) else \
+            [json.dumps({'inits': inits}, ensure_ascii=False)]
     return out
 
 
 def inventory(trace):
-    """One comparable string for the arm's tool surface, or None when the init event was absent."""
+    """One comparable string for the arm's tool/MCP/plugin surface, or None when the init event was
+    absent. An init without a plugin list reads plugins=UNKNOWN, so it never equals an arm that has one."""
     if trace is None or trace['tools'] is None:
         return None
-    return 'tools=' + ','.join(trace['tools']) + ' | mcp=' + ','.join(trace['mcp'] or [])
+    plug = 'UNKNOWN' if trace.get('plugins') is None else ','.join(trace['plugins'])
+    return 'tools=' + ','.join(trace['tools']) + ' | mcp=' + ','.join(trace['mcp'] or []) + ' | plugins=' + plug
 
 
 def _read_hit(call, trace, pat):

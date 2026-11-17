@@ -50,6 +50,38 @@ single-session even when sidecars are available.
 
 ## Step 2 — Sidecar discovery (mechanical, the anti-power-waste core)
 
+🟥 **A cloud agent CLI with tools enabled must not run on a machine where company repositories are
+readable.** That covers `agy` in every mode (`--mode plan` included) and any similar CLI that runs its
+own shell or file tools: what those tools print goes to the cloud model. Measured 2026-11-16: given an
+empty temp directory as cwd, `agy -p --mode plan` searched the whole filesystem and the home directory,
+read the run's answer key in 45 of 83 conversations, and sent file names from a company repository on
+the same machine to the model. **Allowed instead**: a tool-less API call (prompt and excerpt only, no
+tools offered), or the CLI inside a container or a separate OS user that can see only the frozen inputs.
+**`--sandbox` is not isolation**: measured 2026-11-16 with canary files, `agy -p --mode plan --sandbox`
+read files it was pointed at in its cwd, in another temp folder and in the home directory. FH's scripts
+start agy only through `scripts/agy_launch_guard.sh`, which refuses (exit 3, `AGY-REFUSED`) unless
+`FH_AGY_ISOLATION=container` or `FH_AGY_ISOLATION=os-user`. The marker is self-declared — the guard checks
+that you said it, not that it is true — so set it only inside a container or OS user where a canary check
+has confirmed it (canary files outside the frozen inputs, agy asked to read those exact paths, every read
+fails). Being
+discovered below makes agy a *candidate*, not a recruit: on the host, without the marker, it is not
+recruitable. Lanes: `scripts/test_agy_launch_guard_lanes.sh`.
+
+**The route FH ships for agy: a separate OS user on another machine** — `scripts/agy_remote_run.sh` (the `container` / `os-user` markers remain for an isolated environment you built yourself, and the guard cannot check those).
+Set `FH_AGY_BIN=<repo>/scripts/agy_remote_run.sh` and `FH_AGY_ISOLATION=remote-os-user` (the guard honours
+that value only for this runner). Configuration is environment-only (`FH_AGY_REMOTE` = ssh target,
+`FH_AGY_REMOTE_DENY` = `;`-separated paths that user must not read). First run
+`agy_remote_run.sh --canary` — no agy, a plain remote shell tries every deny path (all must be refused)
+and a positive file (must be readable) and writes a local receipt. Runs are refused without a PASS
+receipt under 7 days old for the same settings, and a route that is down is a refusal (exit 4), never a
+local agy. The receipt is the record of that measurement, not proof of isolation. **Name what the remote
+user can still read**: on the operator's machine measured 2026-11-16, the remote user cannot read the
+admin profile, the shared Public folder, the admin WSL home or the two data-drive roots, but still lists
+or opens 8 sub-items the operator accepted — game folders, the two recycle bins, an antivirus decoy
+folder and three device-information files — because those carry their own explicit allow entries that an
+inherited deny does not override. Lanes: `scripts/test_agy_remote_run_lanes.sh` (fake ssh/scp; the
+PowerShell side was run for real once).
+
 Build the available panel at run time; absent tools **and unreachable endpoints** drop off silently:
 ```bash
 # Sidecar-callable CLIs only. **Scope discipline**: the probe list is NOT "every agent CLI that exists".
@@ -154,11 +186,23 @@ diversity vs the orchestrator** (orchestrator = Claude/opus → recruit GPT or G
   > does not exist until the process has exited.
 
   ```bash
-  printf '%s' "$prompt" | bash scripts/sidecar_wait.sh out.txt 900 -- codex exec -m gpt-5.5 -
+  printf '%s' "$prompt" | bash scripts/sidecar_wait.sh out.txt 900 -- bash scripts/codex_launch_guard.sh codex exec -
   # → SIDECAR_VERDICT=COMPLETE exit=0 bytes=48489      (read out.txt)
   # → SIDECAR_VERDICT=TIMEOUT  waited=900s bytes=0     (still alive — NOT a result)
   # → SIDECAR_VERDICT=EMPTY    exit=0                  (the only state that means "it said nothing")
+  # → SIDECAR_VERDICT=HARNESS-ERROR exit=1 reason=model-not-available   (exit 3 — nothing was reviewed)
   ```
+  No `-m` pin by default: the CLI default answers, while a pinned model can be retired under you —
+  on 2026-11-16 `-m gpt-5.5` and `-m gpt-5` returned HTTP 400 «not supported when using Codex with a
+  ChatGPT account» (rc 1). Pin only a model `sidecar_calibrate.sh` has just shown answering.
+  🟥 **Send codex only public diffs.** Its `--sandbox read-only` limits writes, not reads: measured
+  2026-11-16 with canary files, it read paths in its cwd, in another temp folder and in the home
+  directory. A codex arm on a machine that holds company checkouts must never be given company
+  material, and the sandbox flag is not a reason to relax that. FH starts codex verifier arms through
+  `scripts/codex_launch_guard.sh`, which refuses (exit 3, `HARNESS-ERROR: CODEX-REFUSED`) when the prompt, an
+  argument or the working folder names a root in the operator's company-repo list (`FH_COMPANY_ROOTS` or the
+  gitignored `.claude/rules/.company-roots`); with no list it runs and says «not checked». It is a string check
+  on paths, not isolation: a relative path or pasted file content without its path is not seen.
 
   The runner **refuses to emit a verdict while the process is alive**, so "the sidecar returned
   nothing" becomes unsayable until it has actually exited. Grep the typed `SIDECAR_VERDICT=` line;

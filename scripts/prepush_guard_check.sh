@@ -49,6 +49,18 @@ esac
 HOOK="$WORK/hook"
 
 FAILED=0
+# Each pair's name, exit code and elapsed time when it breaks. The BLOCKED line at the end names them,
+# because a caller that shows only the last lines of this output (selfcheck did: tail -12) otherwise
+# reads «a known pair broke» with the pair itself cut off above. A downstream consumer hit exactly that
+# under heavy load and could not say which pair broke, or whether it timed out. Elapsed is per pair
+# (whole seconds, $SECONDS): a pair that ran long points at a timeout, a short one at a wrong verdict.
+FAILED_LIST=()
+_t0=$SECONDS
+_el() { printf '%ss' "$((SECONDS - _t0))"; }
+_pair_fail() {  # called inside check/sb_check: reads their locals name and rc
+  FAILED=1
+  FAILED_LIST+=("$(printf '%s' "$name" | tr -s ' ') (rc=${rc:-?}, $(_el))")
+}
 # Fixtures assembled at runtime so this file's own bytes carry no matching credential shape
 # (same rule as universal_guard_check.sh — a fixture file excluded from scanning would be a hole).
 AWSK="AKIA""1234567890ABCDEF"
@@ -75,14 +87,14 @@ newrepo() {  # echoes a fresh repo path with the pattern layers in place and one
 # check <name> <repo> <expect: block|pass> <refline...>
 check() {
   local name="$1" repo="$2" expect="$3"; shift 3
-  local out rc got
+  local out rc got; _t0=$SECONDS
   out=$(printf '%s\n' "$@" | ( cd "$repo" && bash templates/.git-hooks/pre-push origin git@example:x/y.git 2>&1 )); rc=$?
   # A runtime fault is its own failure mode, checked BEFORE the verdict: an aborted hook that exits 0
   # would otherwise be scored as a clean pass — the exact defect this anchor was written for.
   if printf '%s' "$out" | grep -qiE 'bad substitution|unbound variable|syntax error|command not found'; then
-    echo "  ❌ $name — RUNTIME FAULT in the hook (a hook that aborts is not a hook that passed)"
+    echo "  ❌ $name [$(_el)] — RUNTIME FAULT in the hook (a hook that aborts is not a hook that passed)"
     printf '%s\n' "$out" | grep -iE 'bad substitution|unbound|syntax error|command not found' | sed 's/^/       /' | head -3
-    FAILED=1; return
+    _pair_fail; return
   fi
   # A hook killed by a signal, or one that dies printing nothing, produces no fault TEXT — the grep
   # above cannot see it, and rc alone would score it as a pass (R7 audit, 2026-07-26). So a `pass`
@@ -96,23 +108,23 @@ check() {
     if printf '%s' "$out" | grep -qE '(leak —|leak in pushed|incomplete confidentiality instrument|unusable pattern)'; then
       got=block
     else
-      echo "  ❌ $name — blocked, but for a HARNESS reason, not a confidentiality finding"
+      echo "  ❌ $name [$(_el)] — blocked, but for a HARNESS reason, not a confidentiality finding"
       printf '%s\n' "$out" | sed 's/^/       | /' | head -6
-      FAILED=1; return
+      _pair_fail; return
     fi
   elif printf '%s' "$out" | grep -qF 'FH Pre-Publish'; then
     got=pass
   else
-    echo "  ❌ $name — hook exited 0 without reaching the publish check (silent abort is not a pass)"
+    echo "  ❌ $name [$(_el)] — hook exited 0 without reaching the publish check (silent abort is not a pass)"
     printf '%s\n' "$out" | sed 's/^/       | /' | head -5
-    FAILED=1; return
+    _pair_fail; return
   fi
   if [ "$got" = "$expect" ]; then
-    echo "  ✅ $name (expected $expect)"
+    echo "  ✅ $name [$(_el)] (expected $expect)"
   else
-    echo "  ❌ $name — expected $expect, got $got"
+    echo "  ❌ $name [$(_el)] — expected $expect, got $got"
     printf '%s\n' "$out" | sed 's/^/       | /' | head -8
-    FAILED=1
+    _pair_fail
   fi
 }
 
@@ -264,10 +276,10 @@ sb_check() {  # sb_check <name> <repo> <expect: warn|skip|none> <refline> [must-
   # [must-name]: a branch the warning MUST name. "a warning appeared" is too weak an assertion —
   # under a mutation that broke the self-exclusion, the advisory still warned, but about the
   # pushed branch ITSELF. The leg went green while the defect was live (measured 2026-07-27).
-  local name="$1" repo="$2" expect="$3" refline="$4" mustname="${5:-}" out rc got
+  local name="$1" repo="$2" expect="$3" refline="$4" mustname="${5:-}" out rc got; _t0=$SECONDS
   out=$(printf '%s\n' "$refline" | ( cd "$repo" && bash templates/.git-hooks/pre-push origin git@example:x/y.git 2>&1 )); rc=$?
   if printf '%s' "$out" | grep -qiE 'bad substitution|unbound variable|syntax error|command not found'; then
-    echo "  ❌ $name — RUNTIME FAULT in the hook"; FAILED=1; return
+    echo "  ❌ $name [$(_el)] — RUNTIME FAULT in the hook"; _pair_fail; return
   fi
   if printf '%s' "$out" | grep -qF "$SB_MARK"; then
     # Key on a machine token, not prose. Measured 2026-07-27: this classifier first grepped the
@@ -278,23 +290,23 @@ sb_check() {  # sb_check <name> <repo> <expect: warn|skip|none> <refline> [must-
     got=none
   fi
   if [ "$got" != "$expect" ]; then
-    echo "  ❌ $name — expected $expect, got $got"
+    echo "  ❌ $name [$(_el)] — expected $expect, got $got"
     printf '%s\n' "$out" | sed 's/^/       | /' | head -8
-    FAILED=1; return
+    _pair_fail; return
   fi
   # The advisory must not move the verdict. These legs are otherwise-clean pushes, so a non-zero
   # exit means the advisory (or something it perturbed) started blocking.
   if [ "$rc" -ne 0 ]; then
-    echo "  ❌ $name — advisory changed the verdict (exit $rc); it must be advisory only"
+    echo "  ❌ $name [$(_el)] — advisory changed the verdict (exit $rc); it must be advisory only"
     printf '%s\n' "$out" | sed 's/^/       | /' | head -6
-    FAILED=1; return
+    _pair_fail; return
   fi
   if [ -n "$mustname" ] && ! printf '%s' "$out" | grep -qF "$mustname"; then
-    echo "  ❌ $name — warned, but never named '$mustname' (warning for the wrong reason)"
+    echo "  ❌ $name [$(_el)] — warned, but never named '$mustname' (warning for the wrong reason)"
     printf '%s\n' "$out" | grep -F "$SB_MARK" -A5 | sed 's/^/       | /' | head -8
-    FAILED=1; return
+    _pair_fail; return
   fi
-  echo "  ✅ $name ($expect, verdict unchanged${mustname:+, named $mustname})"
+  echo "  ✅ $name [$(_el)] ($expect, verdict unchanged${mustname:+, named $mustname})"
 }
 # ⚠️ 계기 주의 (실측): 처음엔 remote_sha 를 all-zero(=신규 브랜치)로 줬는데, 그러면 push 범위에
 # 샌드박스의 base 커밋(= templates/.git-hooks/pre-push 사본을 담고 있다)이 들어가 이 훅의 **기존**
@@ -390,7 +402,8 @@ if [ "$FAILED" -eq 0 ]; then
   echo "[prepush-guard] ✅ all known pairs hold"
   exit 0
 fi
-echo "[prepush-guard] ❌ BLOCKED — a known pair broke."
+_broken=""; for _b in ${FAILED_LIST[@]+"${FAILED_LIST[@]}"}; do _broken="${_broken:+$_broken; }$_b"; done
+echo "[prepush-guard] ❌ BLOCKED — ${#FAILED_LIST[@]} known pair(s) broke after ${SECONDS}s: ${_broken:-<unnamed>}"
 echo "  BLOCK→PASS = the publish boundary stopped covering something it claims to cover."
 echo "  PASS→BLOCK = over-blocking, which trains PUBLIC_SURFACE_OK into reflex and disarms the gate."
 echo "  RUNTIME FAULT = the hook aborted; that is never a pass, however it exited."

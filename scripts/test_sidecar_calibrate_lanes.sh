@@ -13,6 +13,10 @@
 # Exit:   0 = all lanes pass; 1 = at least one failed.
 
 set -uo pipefail
+# Every agy in this file is a FAKE (a stub script), and agy_launch_guard.sh refuses any agy launch
+# without an isolation marker. The guard's own refusal is tested in test_agy_launch_guard_lanes.sh;
+# here the marker only lets the fakes through so these lanes keep measuring what they measure.
+export FH_AGY_ISOLATION=container
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CAL="$REPO/scripts/sidecar_calibrate.sh"
