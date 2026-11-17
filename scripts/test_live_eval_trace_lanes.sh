@@ -19,6 +19,7 @@
 #   TR17 one arm's init carries a plugin list (or an empty one), the other's none → INVALID-COMPARISON (UNKNOWN ≠ «no plugins»)
 #   TR18 revert probe: an inventory without plugins turns TR14 back to comparable → TR14 would be red
 set -u
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088); TR19's fixture names `git status` as data
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LIB="${LIVE_EVAL_LIB_DIR:-$HERE}"
 pass=0; fail=0; ok(){ pass=$((pass+1)); echo "  ✅ $1"; }; bad(){ fail=$((fail+1)); echo "  ❌ $1"; }
