@@ -187,5 +187,59 @@ if grep -q "trace.get('plugins') is None" "$T/mut2/live_eval_trace.py"; then bad
 else mp=$(LIB="$T/mut2" score "$T/plg" P 'read=CATALOG\.md')
   [[ "$mp" == "PASS "* ]] && ok "TR18 revert probe: inventory without plugins → TR14's pair scores PASS (TR14 would be red)" || bad "TR18 mutant still [$mp]"; fi
 
-[ $pass -eq 19 ] || bad "lane count $pass != 19 — a case did not run"
+# ── behaviour profile (2026-11-17, record only): top-level calls in explore · edit · test-run · other.
+# mk2 <file> <json list of [name, input, flag]> [noresult] — flag "SUB" = inside a subagent
+cat > "$T/mk2.py" <<'PY'
+import json, sys
+f, calls = sys.argv[1], json.loads(sys.argv[2])
+ev = [{"type": "system", "subtype": "init", "tools": ["Read", "Bash"], "mcp_servers": []}]
+for n, (name, inp, flag) in enumerate(calls):
+    a = {"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "b%d" % n, "name": name, "input": inp}]}}
+    if flag == "SUB":
+        a["parent_tool_use_id"] = "task0"
+    ev.append(a)
+    ev.append({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "b%d" % n}]}})
+if len(sys.argv) < 4:
+    ev.append({"type": "result", "subtype": "success", "result": "done"})
+open(f, "w").write("".join(json.dumps(e) + "\n" for e in ev))
+PY
+B='[["Read",{"file_path":"a.md"},""],["Edit",{"file_path":"a.md"},""],["Write",{"file_path":"b.md"},""],
+["Bash",{"command":"pytest -q tests/"},""],["Bash",{"command":"bash scripts/test_x_lanes.sh"},""],
+["Bash",{"command":"echo hi > out.txt"},""],["Bash",{"command":"sed -i s/a/b/ f.txt"},""],
+["Bash",{"command":"cd /x && git status --short"},""],["Bash",{"command":"ls tracks 2>/dev/null"},""],
+["Bash",{"command":"cat f 2>&1 | head -3"},""],["Bash",{"command":"python3 build.py"},""],["Agent",{"prompt":"x"},""],
+["Edit",{"file_path":"c.md"},"SUB"],["Bash",{"command":"pytest"},"SUB"]]'
+python3 "$T/mk2.py" "$T/bp.jsonl" "$B"
+bp=$(python3 "$HERE/live_eval_trace.py" profile "$T/bp.jsonl"; echo "rc=$?")
+[ "$bp" = "explore=4 edit=4 test-run=2 other=2 total=12
+rc=0" ] && ok "TR19 profile bins: one known call per rule; redirects to /dev/null and 2>&1 stay explore; subagent calls not counted" \
+  || bad "TR19 [$bp]"
+python3 "$T/mk2.py" "$T/bpn.jsonl" '[["Read",{"file_path":"a.md"},""]]' noresult
+bn=$(python3 "$HERE/live_eval_trace.py" profile "$T/bpn.jsonl"); bu=$(python3 "$HERE/live_eval_trace.py" profile "$T/absent.jsonl"; echo "rc=$?")
+[ "$bn" = "explore=1 edit=0 test-run=0 other=0 total=1 result=MISSING (counts are a lower bound)" ] \
+  && [ "$bu" = "trace=UNREADABLE
+rc=3" ] && ok "TR20 no result event → counts marked a lower bound; unreadable stream → trace=UNREADABLE rc 3, never 0" \
+  || bad "TR20 noresult=[$bn] absent=[$bu]"
+# TR21 revert probe. Three conditions, each its own failure: the original carries the exclusion, the
+# mutation removed it, and the mutant RAN (rc 0) — so «counts changed» cannot come from a crash or a no-op.
+mkdir -p "$T/mut3"; sed 's|(?!/dev/null\\b)||' "$LIB/live_eval_trace.py" > "$T/mut3/live_eval_trace.py"
+if ! grep -q '(?!/dev/null' "$LIB/live_eval_trace.py"; then bad "TR21 the original has no /dev/null exclusion to revert"
+elif grep -q '(?!/dev/null' "$T/mut3/live_eval_trace.py"; then bad "TR21 mutation did not apply (instrument error, not a pass)"
+else mb=$(python3 "$T/mut3/live_eval_trace.py" profile "$T/bp.jsonl"); mrc=$?
+  [ $mrc -eq 0 ] && [ "$mb" = "explore=3 edit=5 test-run=2 other=2 total=12" ] \
+    && ok "TR21 revert probe: without the /dev/null exclusion, 2>/dev/null reads as an edit → TR19 would be red" \
+    || bad "TR21 mutant rc=$mrc [$mb]"; fi
+# TR22 (codex R1): naming a test file as data is not a test run; sed -Ei / --in-place are edits;
+# a wrapper (timeout N / env) does not hide the runner.
+B2='[["Bash",{"command":"cat tests/test_example.py"},""],["Bash",{"command":"grep -n x scripts/test_y_lanes.sh"},""],
+["Bash",{"command":"sed -Ei s/a/b/ f"},""],["Bash",{"command":"sed --in-place s/a/b/ f"},""],["Bash",{"command":"sed -n 1p f"},""],
+["Bash",{"command":"timeout 60 bash scripts/selfcheck.sh"},""],["Bash",{"command":"env A=1 python3 -m pytest -q"},""],
+["Bash",{"command":"./scripts/test_z.sh"},""],["Bash",{"command":"npm run test"},""]]'
+python3 "$T/mk2.py" "$T/bp2.jsonl" "$B2"
+b2=$(python3 "$HERE/live_eval_trace.py" profile "$T/bp2.jsonl")
+[ "$b2" = "explore=3 edit=2 test-run=4 other=0 total=9" ] \
+  && ok "TR22 reading a test file stays explore; sed -Ei/--in-place are edits; timeout/env wrappers keep the runner visible" \
+  || bad "TR22 [$b2]"
+
+[ $pass -eq 23 ] || bad "lane count $pass != 23 — a case did not run"
 echo "live_eval_trace lanes: $pass passed, $fail failed"; [ $fail -eq 0 ]
