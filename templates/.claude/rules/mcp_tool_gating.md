@@ -160,6 +160,33 @@ not from sounding harmless.
    pin for this threat, though the same config-rewrite class can still repoint a
    `stdio` server's launch command — out of scope for this step, not out of scope
    for config-integrity generally.
+6. For `stdio` servers launched with `npx` / `uvx` (advisory — not a Done When item): a pinned
+   version (`pkg@1.2.3`, `uvx --from 'tool==1.2.3'`) is **not a dependency freeze**. The server's
+   transitive dependencies are still resolved fresh against their semver ranges whenever a new
+   environment is built, so a pinned server is "pinned but not frozen"
+   ([CSA AI Safety Initiative, "Pinned but Not Frozen: Dependency Drift in Coding-Assistant
+   MCP Servers," 2026-11-15](https://labs.cloudsecurityalliance.org/research/csa-research-note-mcp-server-dependency-drift-20261115-csa-s/)).
+   The note recommends:
+   - **Freeze with a lockfile you control.** Run the approved server from an internal wrapper
+     package with its own committed lockfile (`package-lock.json`, `uv.lock`), or publish it
+     internally with an `npm-shrinkwrap.json`.
+   - **Add a release-age delay.** npm has `min-release-age`; the note cites npm ≥ 11.10.0 for
+     it, from a practitioner guide. uv has `exclude-newer` and pnpm has `minimumReleaseAge`.
+     The note warns that these settings are documented for install and resolution commands,
+     not for ad-hoc runners, so check that `npx` / `npm exec` / `uvx` actually honour them.
+   - **Set `ignore-scripts=true`** where the server needs no install scripts. This closes the
+     lifecycle-script channel. It does not stop malicious code in a dependency from running
+     when the server imports it.
+
+   The note also points out that a pin can freeze a known-vulnerable version (it cites
+   CVE-2025-6514 in `mcp-remote`, fixed in 0.1.16), so a pin needs revisiting, not just setting.
+
+   Headless runs need care too. The note says that in `claude -p` runs, Agent SDK sessions
+   and cloud sessions, project-scoped servers load without asking (in Claude Code, project
+   scope is the `.mcp.json` file). FH recommendation, not from the note: a headless run that
+   should use only a known server set passes `--mcp-config <file> --strict-mcp-config`. Per the
+   Claude Code CLI help, that flag uses only the servers from `--mcp-config` and ignores every
+   other MCP configuration.
 
 Done When (per mounted server):
 - §3 table filled, every enumerated tool name present (check class: mandatory-pass — file inspection)

@@ -878,6 +878,49 @@ fi
 _lane SF3 state-fp "verdict row identical across runs whose end states differ" "yes" \
   "$([ -n "$(grep -E '^\| G-GREET-01 ' "$T/sf_a.md")" ] && [ "$(grep -E '^\| G-GREET-01 ' "$T/sf_a.md")" = "$(grep -E '^\| G-GREET-01 ' "$T/sf_b.md")" ] && echo yes || echo no)"
 
+# BP1-BP4 behaviour profile (2026-11-17): one record-only line per rep, appended after the verdict.
+# BP1 the budget stub writes no stream → MISSING for both arms (not measured ≠ 0).
+_lane BP1 behave-prof "stub without stream: report carries 'trace=MISSING' for both arms" "2" \
+  "$(grep -cE '^behaviour-profile: G-GREET-01 (primary|control) r1 trace=MISSING$' "$T/bud_report.md")"
+# BP2 a stub that writes a stream: primary explores + runs a test, control only explores.
+cat > "$BSTUB/fake_sim_trace.sh" <<'FAKETRACE'
+#!/usr/bin/env bash
+arm=""; out=""
+while [ $# -gt 0 ]; do case "$1" in --arm) arm="$2"; shift 2 ;; --out) out="$2"; shift 2 ;; *) shift ;; esac; done
+mkdir -p "$out"
+printf 'stub body %s\n' "$arm" > "$out/${arm}_r1.txt"
+printf 'rc\t0\ntimeout_s\t900\nmax_turns\tunset\ntoken_cap\tunset\nended_at_cap\tno\n' > "$out/${arm}_r1.meta.tsv"
+if [ "$arm" = primary ]; then cmd='bash scripts/test_x_lanes.sh'; else cmd='ls tracks'; fi
+{ printf '{"type":"system","subtype":"init","tools":["Read","Bash"],"mcp_servers":[]}\n'
+  printf '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"a","name":"Read","input":{"file_path":"CATALOG.md"}}]}}\n'
+  printf '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"b","name":"Bash","input":{"command":"%s"}}]}}\n' "$cmd"
+  printf '{"type":"result","subtype":"success","result":"stub body"}\n'; } > "$out/${arm}_r1.stream.jsonl"
+[ "$arm" = control ] && [ "${FH_TRACE_STUB_BAD:-no}" = yes ] && printf 'not json\x00' > "$out/${arm}_r1.stream.jsonl" && chmod 000 "$out/${arm}_r1.stream.jsonl"
+echo "RESULT: CLEAN"; exit 0
+FAKETRACE
+chmod +x "$BSTUB/fake_sim_trace.sh"
+( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$BSTUB/fake_sim_trace.sh" \
+    bash "$RUNNER" --ids "G-GREET-01" --no-evidence --report-out "$T/bp.md" ) >"$T/bp.log" 2>&1
+_lane BP2 behave-prof "stream present: per-arm counts (primary runs a test, control only explores)" "yes" \
+  "$(grep -qxF 'behaviour-profile: G-GREET-01 primary r1 explore=1 edit=0 test-run=1 other=0 total=2' "$T/bp.md" \
+     && grep -qxF 'behaviour-profile: G-GREET-01 control r1 explore=2 edit=0 test-run=0 other=0 total=2' "$T/bp.md" && echo yes || echo no)"
+# BP3 FH_LIVE_TRACE=0 keeps no stream → one «not recorded» line, not a MISSING line per rep
+( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$BSTUB/fake_sim_trace.sh" FH_LIVE_TRACE=0 \
+    bash "$RUNNER" --ids "G-GREET-01" --no-evidence --report-out "$T/bp0.md" ) >"$T/bp0.log" 2>&1
+_lane BP3 behave-prof "FH_LIVE_TRACE=0 → one 'not recorded' line, no per-rep lines" "1 0" \
+  "$(grep -c '^behaviour-profile: not recorded — FH_LIVE_TRACE=0' "$T/bp0.md") $(grep -c '^behaviour-profile: G-GREET-01' "$T/bp0.md")"
+# BP4 an unreadable stream says UNREADABLE (skipped as root: root reads mode 000)
+if [ "$(id -u)" != 0 ]; then
+( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$BSTUB/fake_sim_trace.sh" FH_TRACE_STUB_BAD=yes \
+    bash "$RUNNER" --ids "G-GREET-01" --no-evidence --report-out "$T/bpu.md" ) >"$T/bpu.log" 2>&1
+_lane BP4 behave-prof "unreadable stream → trace=UNREADABLE, not counts of 0" "1" \
+  "$(grep -cxF 'behaviour-profile: G-GREET-01 control r1 trace=UNREADABLE' "$T/bpu.md")"
+chmod -R u+rwx "$T" 2>/dev/null
+fi
+# BP5 the profile never moves a verdict: the G-GREET-01 row is identical with and without streams.
+_lane BP5 behave-prof "verdict row identical with stream (BP2) and without (FH_LIVE_TRACE=0)" "yes" \
+  "$([ -n "$(grep -E '^\| G-GREET-01 ' "$T/bp.md")" ] && [ "$(grep -E '^\| G-GREET-01 ' "$T/bp.md")" = "$(grep -E '^\| G-GREET-01 ' "$T/bp0.md")" ] && echo yes || echo no)"
+
 # TG3 default output unchanged: no --target -> no split section anywhere.
 _lane TG3 target "default (no --target): report has no 'Target split' section" \
   "no" "$(grep -q 'Target split' "$T/bud_report.md" && echo yes || echo no)"
