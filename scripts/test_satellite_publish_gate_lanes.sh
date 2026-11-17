@@ -27,6 +27,7 @@
 #   R3  같은 날 파일이 둘이고 **뒤엣것이 LEAK** 이면 rc=2 — head -1 이면 CLEAN 이 나온다
 #
 # Exit 0 = 전 레인.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # 🟥 arm 간 전달 파일을 **고정 `/tmp` 이름**으로 쓰면 안 된다 (보안 패스 2026-08-18, MED·재현됨).

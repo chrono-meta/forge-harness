@@ -312,6 +312,13 @@ FAILED_TO_RUN = 'FAILED-TO-RUN'
 UNCALIBRATED = 'UNCALIBRATED'
 PASS = 'PASS'
 FAIL = 'FAIL'
+INVALID_COMPARISON = 'INVALID-COMPARISON'   # arms ran with different tool/MCP/plugin surfaces (FH-3 2026-11-14; plugins 2026-11-15)
+
+try:   # §TRACE — sibling module; absent = every probe is scored on text only and labelled MENTION-ONLY
+    import live_eval_trace as _trace
+except ImportError:   # pragma: no cover
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import live_eval_trace as _trace
 
 
 def _read_text(path):
@@ -435,7 +442,7 @@ def budget_line(base, arms_reps):
     its cap; otherwise UNKNOWN when any episode's value is UNKNOWN or its meta/field is missing
     (an older run, or a stub that wrote none — not measured is not `no`); otherwise no.
     Returns (ended_at_cap, text, n_yes, n_eps)."""
-    ends, caps = [], set()
+    ends, caps, walls, wall_missing = [], set(), [], 0
     for arm, i in arms_reps:
         m = _read_meta_tsv(os.path.join(base, '%s_r%d.meta.tsv' % (arm, i)))
         if m is None:
@@ -444,8 +451,14 @@ def budget_line(base, arms_reps):
             # let 2 `no` + 1 missing read as `no`).
             if os.path.exists(os.path.join(base, '%s_r%d.txt' % (arm, i))):
                 ends.append('UNKNOWN')
+                wall_missing += 1
             continue
         ends.append(m.get('ended_at_cap', 'UNKNOWN') or 'UNKNOWN')
+        w = m.get('wall_s', '') or ''
+        if re.fullmatch(r'[0-9]{1,9}', w):     # ASCII digits only — '²'.isdigit() is True (codex R1)
+            walls.append(int(w))
+        else:
+            wall_missing += 1
         caps.add('timeout=%ss max_turns=%s tokens=%s' % (
             m.get('timeout_s', '?'), m.get('max_turns', '?'), m.get('token_cap', '?')))
     if not caps:
@@ -459,6 +472,17 @@ def budget_line(base, arms_reps):
         end = 'no'
     text = '%s ended_at_cap=%s%s' % ('; '.join(sorted(caps)), end,
                                       ' (%d/%d episodes)' % (n_yes, len(ends)) if n_yes else '')
+    # COST AXIS (2026-11-12, arXiv:2611.13541 / 2611.12122): a separate record next to the 1-bit
+    # verdict, never folded into it. Wall seconds only; tokens are not captured by the single-shot
+    # runner (plain-text output) and are printed as UNMEASURED, not 0.
+    if walls:
+        text += ' wall_s=%d..%d' % (min(walls), max(walls))
+        if wall_missing:
+            text += ' (%d/%d episodes unmeasured)' % (wall_missing, len(walls) + wall_missing)
+    else:
+        text += ' wall_s=UNMEASURED'
+    text += ' tokens_used=UNMEASURED'
+
     return end, text, n_yes, len(ends)
 
 
@@ -498,6 +522,14 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
         adv_re = spec.get('advisory_re')
         adv_pat = re.compile(adv_re) if adv_re else None
         adv_hits = 0
+        behave, behave_err = spec.get('behave'), None
+        if behave:
+            try:
+                _trace.parse_behave(behave)
+            except (ValueError, re.error) as e:
+                behave_err, behave = str(e), None
+        inventories, inv_unknown, traces, no_trace, b_reps = set(), 0, {}, 0, []
+        damaged, any_trace = 0, False
         ctrl_b_absent = False   # rep-1 only, diagnostic: which arm actually produced nothing
         per_rep = []          # [(verdict, phit, chit, primary_text, control_text)]
         for i in range(1, reps + 1):
@@ -527,6 +559,31 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
                     # without re-deriving this; none currently does.
                     ct = ct + '\n----- control_b -----\n' + ctb
             v, ph, ch = score_probe(pt, ct, spec['polarity'], spec['expect_re'])
+            # §TRACE — what each arm's session had (init tools/MCP) and, for a `behave:` probe, did.
+            for arm in ['primary', 'control'] + (['control_b'] if has_ctrl_b else []):
+                tr = _trace.parse_stream(os.path.join(base, '%s_r%d.stream.jsonl' % (arm, i)))
+                if tr is not None and tr['damaged']:
+                    damaged += 1
+                    tr = None
+                any_trace = any_trace or tr is not None
+                inv = _trace.inventory(tr)
+                if inv is not None:
+                    inventories.add(inv)
+                elif tr is not None:
+                    inv_unknown += 1
+                traces[(arm, i)] = tr
+            if behave and v in (PASS, FAIL):
+                arms_i = ['primary', 'control'] + (['control_b'] if has_ctrl_b else [])
+                if any(traces[(a, i)] is None for a in arms_i):
+                    no_trace += 1
+                else:
+                    bp = _trace.behave_hit(traces[('primary', i)], behave)
+                    bc = any(_trace.behave_hit(traces[(a, i)], behave) for a in arms_i[1:])
+                    b_reps.append((bp, bc))
+                    if bc:
+                        v = UNCALIBRATED      # the control arm did the action too: it cannot discriminate
+                    elif v == PASS and not bp:
+                        v = FAIL              # said it, did not do it
             if adv_pat is not None and pt:
                 if adv_pat.search(pt):
                     adv_hits += 1
@@ -538,6 +595,10 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
 
         if not ran_reps:
             verdict = FAILED_TO_RUN
+        elif len(inventories) > 1 or (inventories and inv_unknown):
+            verdict = INVALID_COMPARISON   # different surfaces, or one arm's surface unknown
+        elif behave_err or (behave and any_trace and (no_trace or damaged)):
+            verdict = UNCALIBRATED         # bad spec, or traces expected but some arm's is missing/damaged
         elif uncal:
             verdict = UNCALIBRATED
         else:
@@ -556,8 +617,28 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
                'reps_requested': reps,
                'silent': silent,
                'rep_verdicts': [r[0] for r in per_rep]}
+        # scored_by: BEHAVIOUR only when every rep that ran carried both traces and a behave spec.
+        # A probe with no `behave:` or a rep with no trace is MENTION-ONLY — its PASS reads a text.
+        row['scored_by'] = ('BEHAVIOUR' if behave and ran_reps and len(b_reps) == len(ran_reps)
+                            else 'MENTION-ONLY')
+        row['behave'] = ('%d/%d did · control %d/%d' % (sum(1 for b in b_reps if b[0]), len(b_reps),
+                         sum(1 for b in b_reps if b[1]), len(b_reps))) if b_reps else ('no trace' if behave else '-')
+        row['inventory'] = (('%d distinct' % len(inventories)) if inventories else 'UNMEASURED (no trace)') + \
+                           ((' · %d trace(s) without init' % inv_unknown) if inv_unknown else '')
+        row['_inventories'] = sorted(inventories)
+        if behave_err:
+            row['reason'] = 'BAD-BEHAVE: ' + behave_err
+        elif inventories and inv_unknown and len(inventories) == 1:
+            row['reason'] = 'INVALID-COMPARISON: %d trace(s) carry no init tool list — surfaces not comparable' % inv_unknown
+        elif behave and any_trace and (no_trace or damaged):
+            row['reason'] = 'TRACE-INCOMPLETE: %d rep(s) missing an arm trace · %d damaged stream(s)' % (no_trace, damaged)
+        elif len(inventories) > 1:
+            row['reason'] = 'INVALID-COMPARISON: arms saw %d different tool/MCP/plugin lists — %s' % (
+                len(inventories), ' ≠ '.join(sorted(inventories)))
         if len(ran_reps) > 1 and 0 < len(pass_reps) < len(ran_reps):
-            row['reason'] = 'FLAKY across reps (%s)' % ','.join(r[0] for r in per_rep)
+            flaky = 'FLAKY across reps (%s)' % ','.join(r[0] for r in per_rep)
+            # an INVALID-COMPARISON reason must survive: the surface mismatch is why there is no number
+            row['reason'] = (row['reason'] + '; ' + flaky) if verdict == INVALID_COMPARISON and row['reason'] else flaky
         if adv_pat is not None:
             row['advisory'] = '%d/%d' % (adv_hits, len(ran_reps) if ran_reps else 0)
             row['advisory_re'] = adv_re
@@ -626,11 +707,19 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
             r['reason'] = (r['reason'] + '; ' + note) if r.get('reason') else note
 
     failed_to_run = [r for r in rows if r['verdict'] == FAILED_TO_RUN]
+    invalid = [r for r in rows if r['verdict'] == INVALID_COMPARISON]
+    run_inv = set(x for r in rows for x in r.get('_inventories', []))
+    behaviour_backed = [r for r in rows if r['verdict'] == PASS and r.get('scored_by') == 'BEHAVIOUR']
+    mention_only_pass = [r for r in rows if r['verdict'] == PASS and r.get('scored_by') != 'BEHAVIOUR']
     uncalibrated = [r for r in rows if r['verdict'] == UNCALIBRATED]
     ran = [r for r in rows if r['verdict'] in (PASS, FAIL)]
     passed = [r for r in rows if r['verdict'] == PASS]
 
-    if uncalibrated:
+    if invalid or len(run_inv) > 1:
+        overall = INVALID_COMPARISON   # no number: the arms were not the same instrument
+        rc = 2
+        pass_rate = None
+    elif uncalibrated:
         overall = 'UNCALIBRATED'
         rc = 2
         pass_rate = None
@@ -664,6 +753,10 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
         'silent_fraction': silent_fraction,
         'blackout': blackout,
         'blackout_suspect': blackout_suspect,
+        'invalid_comparison': len(invalid),
+        'run_inventories': len(run_inv),
+        'behaviour_backed': len(behaviour_backed),
+        'mention_only_pass': len(mention_only_pass),
     }
 
 
@@ -887,6 +980,11 @@ def render_report_md(select_result, score_result, run_date, instrument=None):
                       % (score_result['overall'], score_result['ran'], score_result['failed_to_run'],
                          score_result['uncalibrated'], score_result['passed'], pr_s))
         lines.append("")
+        lines.append("- scored by behaviour: **%d** of %d PASS · MENTION-ONLY: **%d** (a MENTION-ONLY PASS read the "
+                      "reply text; it is not evidence the rule acted) · tool/MCP/plugin surfaces in this run: %s"
+                      % (score_result.get('behaviour_backed', 0), score_result['passed'],
+                         score_result.get('mention_only_pass', 0),
+                         score_result.get('run_inventories') or 'UNMEASURED (no trace)'))
         sf = score_result.get('silent_fraction')
         if sf is not None:
             lines.append("- instrument-silent probes: %d/%d (%.2f) — a probe is *silent* when its "
@@ -905,6 +1003,15 @@ def render_report_md(select_result, score_result, run_date, instrument=None):
                           "demonstrably worked. Both a broad real regression and a partial "
                           "instrument failure produce this shape, and this file cannot tell them "
                           "apart; the preserved response bodies can.")
+        lines.append("")
+    if score_result is not None:
+        lines.extend(["## Scored by — behaviour or mention", "",
+                      "`BEHAVIOUR` = the probe's `behave:` action was read from the event stream in every rep "
+                      "(primary did it, control did not). `MENTION-ONLY` = the verdict rests on reply text.", "",
+                      "| Probe | scored_by | behave (primary did · control did) | tool/MCP/plugin lists |", "|---|---|---|---|"])
+        for r in score_result['rows']:
+            lines.append("| %s | %s | %s | %s |" % (r['id'], r.get('scored_by', 'MENTION-ONLY'),
+                                                   _md_escape(r.get('behave', '-')), _md_escape(r.get('inventory', '-'))))
         lines.append("")
     lines.extend(render_construct_md(select_result['selected']))
     if score_result is not None and score_result.get('target'):

@@ -42,6 +42,8 @@ themselves or of finding out too late that a change was wrong. You get three thi
 
 The gates catch you, not only your agent: on 2026-08-22 they blocked the author of FH seven times, and the author caught none of those first ([one day of gate blocks](docs/GATE_DAY.md)).
 
+How this differs from the usual idea of a harness — what FH adds, and what it costs: [How FH differs](docs/HOW_FH_DIFFERS.en.md).
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/chrono-meta/forge-harness/main/docs/demo/gate-block.gif" alt="regression guard blocking a change that dropped a Done When section, then passing once it is restored" width="820">
 </p>

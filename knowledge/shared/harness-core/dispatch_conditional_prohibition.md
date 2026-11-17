@@ -345,8 +345,26 @@ How to apply:
   independence and context at once — keep it one dispatch and do not fold it. Precedence:
   independence > permission > context.
 - Name the purpose(s) in the Context Card's first line («purpose: independence — …»).
+- **A builder's card types its file constraints (2026-11-15, FH-6).** Prose like «don't touch the hooks»
+  cannot be compared with what the builder did, so a builder card carries a `files:` block with four roles —
+  `editable` · `required` (must change or create) · `inspect-only` · `protected` — one glob per line. After
+  the builder returns, the governor or a sidecar (not the builder, in its own turn) runs
+  `python3 scripts/builder_card_files_check.py --card <card> --repo <builder tree> --base <ref>`: rc 0 CLEAN ·
+  1 VIOLATION (a protected or inspect-only path changed, an undeclared path changed, or a required path did
+  not) · 2 HARNESS-ERROR. A card with no `protected` line is HARNESS-ERROR, not a pass — «changed ∩ protected
+  = ∅» is true for every diff when the set is empty. It checks paths, not content. Basis: arXiv:2611.01265
+  (the four roles, pilot n=40 — no effect claimed) and arXiv:2611.05094 (an orchestrator checking its own
+  blocks logged out-of-scope changes in 11 of 247 checks), both cited from the frontier digests of 2026-11-04/05, not re-opened here. Lanes:
+  `scripts/test_builder_card_files_lanes.sh`.
 - Do not cite the article as grounds to fold a reviewer, a blind sim or a cross-family check. Its fold
   advice compares task quality, cost and latency; its own text keeps verification as a split candidate.
+- **Before sending a builder's Context Card or a root→work-session brief, a context-free reader restates it
+  (2026-11-15, AQ-20261114-9).** Use `meta-prompt-builder` Step 3 item 4 as written. Give a fresh reader (Sonnet
+  or Haiku, or another family) the card text and nothing else. The reader restates GOAL · DONE · CONSTRAINTS,
+  marks each `RESTATABLE` or `GUESS`, and lists its questions. A `GUESS` field is fixed before sending.
+  Restating your own card does not count, and if no reader can be dispatched it is `NOT RUN`. This matters
+  most here because most real briefs are written here, not through `meta-prompt-builder`. It is judgment,
+  not a hook. Skip it for a read-only fetch whose card is one line.
 - Tool-count side note from the same article: «once you exceed 30-50 tool definitions in the system
   prompt, tool choice tends to degrade», with grouping by user intent as the remedy. The quantity is tool
   definitions **loaded into the prompt** (deferred tools not yet loaded do not count) — not installed skills

@@ -24,6 +24,7 @@
 # Exit 0 = 8/8 lanes calibrated · exit 1 = the gate's instrument is wrong (do not trust its verdict)
 # exit 3 = FIXTURE ERROR — a lane's premise never obtained, so this run's verdicts prove nothing
 
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 🟥 ENVIRONMENT ISOLATION (2026-08-27) — the suite inherited FH_COMPANION_STORE from the
@@ -87,6 +88,24 @@ _lane "②-P1 harvest-loop run recorded → silent"        "$WARN2" 0 "$(_fixtur
 _lane "②-P2 explicit skip note → silent"               "$WARN2" 0 "$(_fixture 1 '- harvest-loop: skipped — 3-repo session, deferred')"
 _lane "②-P1 run recorded → prints the ✅ form"          "$OK2"   1 "$(_fixture 1 '- harvest-loop 실행 완료')"
 _lane "②-C  no FH asset touched → no ② line at all"    ' ② '    0 "$(_fixture 0 '- 항목 하나')"
+
+# ⑤-catches record-only line (2026-11-13): known-pair + English heading + near-miss heading + no file
+CA='ⓘ ⑤-catches'; CP='✅ ⑤-catches'
+_lane "⑤c-N  no catches section → record-only line"        "$CA" 1 "$(_fixture 0 '- 항목 하나')"
+_lane "⑤c-P  «## 잡은 것» present → no absent line"          "$CA" 0 "$(_fixture 0 '## 잡은 것
+0건 — fixture')"
+_lane "⑤c-P2 «## Catches» present → ✅ form"                 "$CP" 1 "$(_fixture 0 '## Catches
+0건 — fixture')"
+_lane "⑤c-M  «## 🟥 이 새벽이 잡은 것» is not the section"    "$CA" 1 "$(_fixture 0 '## 🟥 이 새벽이 잡은 것
+- x')"
+_lane "⑤c-C  no fh_completed file → no ⑤-catches line"      '⑤-catches' 0 "$(_fixture 0 '')"
+
+# ⑤-done-anchor record-only line (2026-11-14): bare «완료» is named; an anchored one is not
+DA='ⓘ ⑤-done-anchor'
+_lane "⑤d-N  bare «완료» line → named"                       "$DA" 1 "$(_fixture 0 '- 수리 완료')"
+_lane "⑤d-P  «완료» with PR + sha → silent"                  "$DA" 0 "$(_fixture 0 '- 수리 완료 — #1097 merged a1b2c3d4')"
+_lane "⑤d-P2 «완료» with a file path → silent"               "$DA" 0 "$(_fixture 0 '- 문서 완료 scripts/foo.sh · 미해결: 없음')"
+_lane "⑤d-C  no done-word at all → silent"                   "$DA" 0 "$(_fixture 0 '- 항목 하나')"
 
 # ⑤ card-last fixture premise — the two ⑤ lanes are ORDERING lanes: each asserts what the subject
 # does when one file is strictly newer than another. Establishing that ordering by writing one file

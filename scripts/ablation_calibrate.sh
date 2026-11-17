@@ -142,9 +142,9 @@ fi
 # construction, so a tool added to Claude Code later does not silently re-open the channel. The
 # denylist form passes the same controls today but leaks by default the day a new tool ships.
 case "$VARIANT" in
-  allowlist) FLAGS=(--tools '') ;;
-  denylist)  FLAGS=(--disallowedTools Bash Read Glob Grep WebFetch WebSearch Task Agent) ;;
-  baseline)  FLAGS=() ;;
+  allowlist) FLAGS=(--tools '' --strict-mcp-config) ;;
+  denylist)  FLAGS=(--strict-mcp-config --disallowedTools Bash Read Glob Grep WebFetch WebSearch Task Agent) ;;
+  baseline)  FLAGS=(--strict-mcp-config) ;;   # MCP pinned in every arm (2026-11-14): an inherited account connector must not differ between arms — pinning is not proof, the tool list is not recorded here
 esac
 
 # Fixtures live OUTSIDE this repo. mktemp -d lands in $TMPDIR (/var/folders/... on macOS), which is

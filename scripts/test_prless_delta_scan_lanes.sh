@@ -10,6 +10,7 @@
 # 레인은 **합성 레포**를 짓는다 — 라이브 레포를 sim 대상으로 쓰지 않는다.
 #
 # 실행: bash scripts/test_prless_delta_scan_lanes.sh
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"

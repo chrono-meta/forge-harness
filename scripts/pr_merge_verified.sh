@@ -21,7 +21,7 @@
 #         merged from another head · not fetchable — never for a refusal or a merge GitHub did not take) one JSON line goes to
 #         ${PMV_RECEIPTS:-<git common dir>/fh-merge-receipts.jsonl} — local, never pushed: pr · head · merge · outcome ·
 #         actor (agent-session:claude-code when CLAUDECODE is set, else human-or-unknown — a human cannot be proven) ·
-#         lease (the --lease label of the standing approval the caller merges under, else NONE — recorded, not enforced) · rerun.
+#         lease (the --lease label of the standing approval the caller merges under, else NONE — recorded; any label other than NONE or a case-insensitive «operator…» prefix is also enforced: the merge needs selfdev_merge_tier.sh TIER=AUTO, see EXIT 7) · rerun.
 #         Why: arXiv:2610.28683 — 27% of merges that passed a «non-author review» gate rested on an agent approving under a
 #         human account; who decided must be on the record, not inferred later (frontier digest 2026-10-23).
 # EXIT    0 merged + verified · 1 merged but verify FAILED (the merge stands — act on it)
@@ -147,18 +147,18 @@ case "$_lease_lc" in
     fi
     if [ "$_tok" -ne 1 ]; then
       [ -n "$_tw" ] && rm -rf "$_tw"
-      echo "🟥 lease «$LEASE»: the merge tier could not be read for head $HEAD_OID (tier script, merge-base or diff) — not merging" >&2
+      echo "🟥 lease «${LEASE}»: the merge tier could not be read for head $HEAD_OID (tier script, merge-base or diff) — not merging" >&2
       exit 7
     fi
     _tout=$(bash "$_tier" --files "$_tw/files" --diff "$_tw/diff" < /dev/null 2>&1); _trc=$?
     rm -rf "$_tw"
     if [ "$_trc" -ne 0 ] || [ "$(printf '%s\n' "$_tout" | tail -1)" != "TIER=AUTO" ]; then
       printf '%s\n' "$_tout" | sed 's/^/   /' >&2
-      echo "🟥 lease «$LEASE» is not the operator's answer for this PR, and selfdev_merge_tier.sh did not say AUTO (rc=$_trc) — not merging." >&2
+      echo "🟥 lease «${LEASE}» is not the operator's answer for this PR, and selfdev_merge_tier.sh did not say AUTO (rc=$_trc) — not merging." >&2
       echo "   Ask the operator for THIS PR, then merge with --lease 'operator: «<their words>» <date>'." >&2
       exit 7
     fi
-    echo "── lease «$LEASE»: selfdev_merge_tier.sh says TIER=AUTO for head $HEAD_OID" ;;
+    echo "── lease «${LEASE}»: selfdev_merge_tier.sh says TIER=AUTO for head $HEAD_OID" ;;
 esac
 
 # 1b. coverage advisory — WARNING ONLY (never changes rc, never merges or refuses). post_squash_verify's precheck rejects a
@@ -182,6 +182,13 @@ if [ -n "$_changed" ]; then
   done <<< "$_changed"
   [ "$_hit" -eq 1 ] || echo "⚠️  --rerun mentions none of this PR's $(printf '%s\n' "$_changed" | wc -l | tr -d ' ') changed file(s) (nor any script it names) — it may not exercise the change. Advisory only; merging continues." >&2
 fi
+
+# 1c. defect-path prompt — ONE LINE, PRINT ONLY (never changes rc, runs nothing, checks nothing). The script cannot know
+#   the path a defect travels, so it does not judge coverage; it asks the merging session to say it (2026-11-14 harvest H2:
+#   #316's control was green on main because HOME held a space and the lane ran elsewhere). Quiet when every changed file is
+#   a doc (*.md / docs/) or a lane (scripts/test_*) — those PRs have no defect path to name, and the line would be noise.
+_code=$(printf '%s\n' "$_changed" | grep -vE '(\.md$|^docs/|(^|/)test_[^/]*$)' | grep -c . )
+[ "${_code:-0}" -gt 0 ] && echo "🔎 before merging: name the path the defect travels — does this --rerun lane traverse it, and was its control red on the UNFIXED target via that same path? (prompt only — nothing was checked; merging continues)" >&2
 
 # 2. merge
 # 🟥 cross-family W1: pin the merge to the head we RECORDED. Without it, a push landing between the

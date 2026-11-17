@@ -9,6 +9,7 @@
 # Every lane runs against a THROWAWAY fixture tree, never against this repo, so the suite is
 # hermetic: a real bump in progress can neither turn it green nor turn it red.
 
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 CHECK="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/version_lockstep_check.sh"
 TMPROOT=$(mktemp -d "${TMPDIR:-/tmp}/fh_lockstep.XXXXXX")

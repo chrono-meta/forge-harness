@@ -37,6 +37,8 @@
 
 门禁拦的不只是 agent，也包括你自己的错误：2026-08-22 这一天，门禁拦住了FH 的作者七次，其中没有一次是作者自己先发现的（[门禁拦截的一天](docs/GATE_DAY.md)）。
 
+FH 与通常所说的 harness 有何不同、代价是什么，见 [How FH differs](docs/HOW_FH_DIFFERS.en.md)（英文）。
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/chrono-meta/forge-harness/main/docs/demo/gate-block.gif" alt="regression guard blocking a change that dropped a Done When section, then passing once it is restored" width="820">
 </p>

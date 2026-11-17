@@ -64,6 +64,11 @@ FILE_FAILED=0   # 현재 capfile 한정 — 파일마다 초기화한다. 이게
                 # 뒤 파일의 M4 를 SKIPPED 로 만들어, 뒤 파일의 실제 결함이 안 보인다(보고 결함).
 _fail() { printf '  ❌ %s — %s\n' "$1" "$2"; FAILED=1; FILE_FAILED=1; }
 _ok()   { printf '  ✅ %s — %s\n' "$1" "$2"; }
+# _has <haystack> <fixed-needle> — substring test with NO pipe. Under `set -o pipefail` (line 49)
+# `printf "$big" | grep -q x` returns 141 whenever grep exits on the first match before printf has
+# written everything (SIGPIPE on the writer) — a timing race that made --self-test go red ~5% of
+# runs under parallel load (2026-11-14: 7/144 at 24-way). A here-string has no writer to kill.
+_has() { grep -qF -- "$2" <<<"$1"; }
 _die()  { printf '❌ HARNESS_ERROR: %s\n' "$*" >&2; exit "$RC_HARNESS"; }
 
 _parse() {
@@ -495,6 +500,14 @@ _self_test() {
     else fail=$((fail+1)); printf '  ❌ %-34s rc=%s (기대 %s)\n%s\n' "$1" "$r" "$2" "$o"; fi
   }
   printf 'capability_registry_check --self-test\n'
+  # P0: the matcher itself. Needle first, then >1 MiB after it — a piped `grep -q` exits on line 1
+  # and the writer dies of SIGPIPE, which pipefail turns into «not found». Known-positive (needle
+  # present → hit) and known-negative (absent → miss), so a matcher that always says yes is red too.
+  local _big; _big="NEEDLE-P0"$'\n'"$(head -c 1200000 /dev/zero | tr '\0' x)"
+  if _has "$_big" "NEEDLE-P0"; then pass=$((pass+1)); printf '  ✅ %-34s\n' "P0: 큰 출력 앞머리 매치(파이프 경합 없음)"
+  else fail=$((fail+1)); printf '  ❌ %-34s — 있는 문자열을 못 찾았다(파이프+pipefail SIGPIPE 형태)\n' "P0: 큰 출력 앞머리 매치"; fi
+  if _has "$_big" "ABSENT-P0"; then fail=$((fail+1)); printf '  ❌ %-34s — 없는 문자열을 찾았다고 했다\n' "P0: 컨트롤(없는 문자열)"
+  else pass=$((pass+1)); printf '  ✅ %-34s\n' "P0: 컨트롤(없는 문자열은 미스)"; fi
   cat > "$T/good.cap" <<EOF
 id: selftest:true-false
 entry: bash $T/probe.sh
@@ -585,7 +598,7 @@ LIAR
   # ★rc 만 보면 **어느 축이 막았는지** 모른다 — M6 를 재려면 M6 가 실패했다고 말해야 한다.
   CRC_DEBUG_OUT=$(bash "$0" "$T/liar.cap" 2>&1)
   [ -n "${CRC_DEBUG:-}" ] && printf '%s\n' "$CRC_DEBUG_OUT" >&2
-  if printf '%s' "$CRC_DEBUG_OUT" | grep -q '❌ M6'; then
+  if _has "$CRC_DEBUG_OUT" '❌ M6'; then
     pass=$((pass+1)); printf '  ✅ %-34s (M6 가 차단자임을 확인)\n' "M6: 차단 귀속"
   else
     fail=$((fail+1)); printf '  ❌ %-34s — rc 는 1 인데 M6 가 막은 게 아니다(다른 축이 먼저 걸렸다)\n' "M6: 차단 귀속"
@@ -595,7 +608,7 @@ LIAR
   #   «채널이 켜져 있나 · 계산이 맞나 · 조건부로 꺼지지 않나» 셋이다.
   _tg() {   # $1=이름 $2=기대 rc $3=capfile $4=반드시 포함할 문자열
     local o r hit; o="$(bash "$0" "$3" 2>&1)"; r=$?
-    if printf '%s' "$o" | grep -qF "$4"; then hit=1; else hit=0; fi
+    if _has "$o" "$4"; then hit=1; else hit=0; fi
     if [ "$r" = "$2" ] && [ "$hit" = "1" ]; then
       pass=$((pass+1)); printf '  ✅ %-34s rc=%s\n' "$1" "$r"
     else

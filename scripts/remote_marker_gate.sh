@@ -47,6 +47,9 @@
 #                    하나로 묶어 뒀더니 실물 PR 재현이 **전부 SKIP** 으로 떨어졌다(조용한 통과).
 #   RMG_BASE_REF    비교 기준           (기본: origin/main)
 #   RMG_BODY_FILE   PR 본문이 담긴 파일 (선택 — 없으면 커밋 메시지만 본다)
+#   RMG_PR_LOOKUP   1 이면 BODY_FILE 이 없을 때 그 커밋의 PR 본문을 `gh api` 로 읽는다(push 실행용)
+#                   조회 실패 = rc=10 · 이 채널의 PR 없음 = 커밋 메시지만
+#   RMG_REPO        owner/name (RMG_PR_LOOKUP=1 일 때 필수) · RMG_GH  gh 실행 파일 (기본: gh — 레인이 가짜를 꽂는다)
 #   RMG_CHANNEL_RE  플로어 없는 채널 패턴 (기본: '^claude/')
 #   RMG_GUARD_FILE  GUARD_PATHSPEC 정본  (기본: templates/regression_guard.sh)
 set -u
@@ -133,6 +136,59 @@ if [ "$NCH" -eq 0 ]; then
 fi
 say "📄 FH 자산 $NCH 개를 건드렸다:"
 printf '%s\n' "$CHANGED" | sed 's/^/     /'
+
+# ── 3-a. push 실행: 그 커밋의 PR 본문을 API 로 읽는다 (2026-11-15, AQ-20261114-10) ──
+#    `pull_request` 실행은 본문을 이벤트에서 받지만 `push` 실행에는 본문이 없다. 그래서 같은
+#    HEAD 에 push 실행만 빨갛고 pull_request 실행은 초록인 두 판정이 났다(#1095 · #1103).
+#    🟥 조회 실패는 «PR 없음» 이 아니다 → rc=10(빨강). PR 이 정말 없으면 커밋 메시지만 본다 —
+#       그때 마커가 없으면 아래 4 가 rc=1 로 막는다. 정본 기록면은 여전히 커밋 메시지다(:172 처방).
+if [ -z "$BODY_FILE" ] && [ "${RMG_PR_LOOKUP:-0}" = "1" ]; then
+  GH_BIN="${RMG_GH:-gh}"
+  if [ -z "${RMG_REPO:-}" ] || [ -z "$_h" ]; then
+    say "❌ HARNESS-ERROR — PR 조회에 필요한 값이 없다(RMG_REPO='${RMG_REPO:-}' · sha='$_h')."
+    exit 10
+  fi
+  LOOKUP_DIR=$(mktemp -d 2>/dev/null) || { say "❌ HARNESS-ERROR — 임시 폴더를 못 만든다"; exit 10; }
+  if ! "$GH_BIN" api "repos/$RMG_REPO/commits/$_h/pulls" > "$LOOKUP_DIR/pulls.json" 2> "$LOOKUP_DIR/err.txt"; then
+    say "❌ HARNESS-ERROR — 커밋 $_h 의 PR 조회가 실패했다:"
+    sed 's/^/     /' "$LOOKUP_DIR/err.txt" | head -5
+    say "   🟥 조회 실패를 «PR 없음» 으로 읽지 않는다. 다시 돌리거나 커밋 메시지에 마커를 실어라."
+    rm -rf "$LOOKUP_DIR"; exit 10
+  fi
+  # 이 채널(head ref)의 PR 만 받는다 — 같은 커밋을 품은 남의 PR 본문으로 통과하지 않게.
+  #    head 레포까지 맞춘다 — 같은 브랜치 이름의 포크 PR 본문으로 통과하지 않게(codex R1).
+  if ! python3 - "$LOOKUP_DIR/pulls.json" "$CHANNEL_NAME" "$LOOKUP_DIR/body.txt" "$RMG_REPO" > "$LOOKUP_DIR/n.txt" 2>> "$LOOKUP_DIR/err.txt" <<'PY'
+import json, sys
+src, ref, out, repo = sys.argv[1:5]
+data = json.load(open(src, encoding="utf-8"))
+if not isinstance(data, list):
+    raise SystemExit("not a list")
+bodies = []
+for p in data:
+    # a malformed entry is an unreadable answer, not «no PR» (codex R1)
+    h = p.get("head") if isinstance(p, dict) else None
+    r = h.get("repo") if isinstance(h, dict) else None
+    if not (isinstance(h, dict) and isinstance(h.get("ref"), str)
+            and isinstance(r, dict) and isinstance(r.get("full_name"), str)):
+        raise SystemExit("malformed PR entry (head.ref / head.repo.full_name)")
+    if h["ref"] == ref and r["full_name"] == repo:
+        bodies.append(p.get("body") or "")
+open(out, "w", encoding="utf-8").write("\n".join(bodies))
+print(len(bodies))
+PY
+  then
+    say "❌ HARNESS-ERROR — PR 조회 응답을 못 읽는다:"
+    sed 's/^/     /' "$LOOKUP_DIR/err.txt" | head -5
+    rm -rf "$LOOKUP_DIR"; exit 10
+  fi
+  NPR=$(cat "$LOOKUP_DIR/n.txt")
+  if [ "${NPR:-0}" -gt 0 ] 2>/dev/null; then
+    BODY_FILE="$LOOKUP_DIR/body.txt"
+    say "🔎 push 실행: 커밋 $_h 의 PR($CHANNEL_NAME) ${NPR} 개 본문을 API 로 읽었다."
+  else
+    say "🔎 push 실행: 커밋 $_h 를 품은 '$CHANNEL_NAME' PR 이 없다 — 커밋 메시지만 본다."
+  fi
+fi
 
 # ── 3. 기록면 = 커밋 메시지 (+ 선택적 PR 본문) ────────────────────────────────
 RECORD=$(git log --format='%B' "$BASE_REF".."$HEAD_REF" 2>/dev/null)

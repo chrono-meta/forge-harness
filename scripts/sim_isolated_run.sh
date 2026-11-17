@@ -314,7 +314,7 @@ _PYEOF
 
 BASE_REF=""; BASE_SHA=""
 ARM=""; REPS=1; PROMPT=""; MODE="observe"; MODEL="sonnet"; TIMEOUT=900; OUTDIR=""; NOHARNESS=0; SETUP=""; EXTRA=""
-TURNS=""; NORESUME=0
+TURNS=""; NORESUME=0; TRACE=0
 SETSRC=""; SETFILE=""; PERMMODE=""; ADDWRAP=0   # §CONSUMER SURFACE — never inherited from the env (codex R1)
 _needval() { [ "$#" -ge 2 ] || { echo "FAIL: $1 needs a value" >&2; exit 2; }; }
 while [ $# -gt 0 ]; do
@@ -334,6 +334,7 @@ while [ $# -gt 0 ]; do
     --mcp-config) MCPCFG="${2:-}"; shift 2 ;;  # the ONLY MCP servers an arm may see (see MCP ISOLATION). Default: none.
     --turns)   TURNS="${2:-}"; shift 2 ;;  # MULTI-TURN: one turn per line. See §MULTI-TURN.
     --no-resume) NORESUME=1; shift ;;     # CONTROL arm for --turns:each turn is a fresh session. See §MULTI-TURN.
+    --trace)   TRACE=1; shift ;;        # §TRACE: keep the event stream (tool calls + init tool list). Single-shot only.
     --setting-sources) _needval "$@"; SETSRC="$2"; [ -n "$SETSRC" ] || { echo "FAIL: --setting-sources is empty" >&2; exit 2; }; shift 2 ;;  # §CONSUMER SURFACE — e.g. project,local
     --settings) _needval "$@"; SETFILE="$2"; [ -n "$SETFILE" ] || { echo "FAIL: --settings is empty" >&2; exit 2; }; shift 2 ;;        # §CONSUMER SURFACE — permission file
     --permission-mode) _needval "$@"; PERMMODE="$2"
@@ -343,6 +344,7 @@ while [ $# -gt 0 ]; do
     *) echo "unknown flag: $1" >&2; exit 2 ;;
   esac
 done
+if [ "$TRACE" -eq 1 ] && [ -n "$TURNS" ]; then echo "FAIL: --trace is single-shot only (refused with --turns, never silently ignored)" >&2; exit 2; fi
 # ── §CONSUMER SURFACE (2026-11-10, AQ-20261110-6) ───────────────────────────────────────────
 # WHY: the blind harness-birth test (branch claude/blind-birth-test-092883, its fixtures folder
 #   blind_birth_2026-11-10 — not on main when this landed) needed an arm that
@@ -685,7 +687,7 @@ for r in $(seq 1 "$REPS"); do
   # A reused --out must not carry the previous run's budget record into a rep that fails before
   # writing its own (clone failure `continue`s first) — a stale `ended_at_cap=no` would be read as
   # this run's. Same for the per-turn table the budget line reads.
-  rm -f "$OUTDIR/${ARM}_r${r}.meta.tsv" "$OUTDIR/${ARM}_r${r}.turns.tsv"
+  rm -f "$OUTDIR/${ARM}_r${r}.meta.tsv" "$OUTDIR/${ARM}_r${r}.turns.tsv" "$OUTDIR/${ARM}_r${r}.stream.jsonl" "$OUTDIR/${ARM}_r${r}.tools.txt"
   # Each clone gets its OWN parent directory. Siblings under one parent are visible to `../`,
   # and that is not hypothetical: an arm measured 2026-08-29 scanned its parent for mappable
   # projects and reported finding "iso_A, door_CTRL" — the other arms' work dirs. Content stayed
@@ -863,11 +865,25 @@ for r in $(seq 1 "$REPS"); do
   MCPARGS=(--strict-mcp-config); [ -n "${MCPCFG:-}" ] && MCPARGS+=(--mcp-config "$MCPCFG")
   # §CONSUMER SURFACE — per-rep copy: the wrapper dir differs per rep. Empty unless opted in.
   SURFREP=(${SURF[@]+"${SURF[@]}"}); [ "$ADDWRAP" -eq 1 ] && SURFREP+=(--add-dir "$WRAP")   # bash 3.2 + set -u: expanded with the ${a[@]+"${a[@]}"} idiom below
+  _wall_t0=$(date +%s)   # COST AXIS (2026-11-12): wall seconds per episode, record only — never scored
   if [ -n "$TURNS" ]; then
     # §MULTI-TURN — the single-shot branch below is left byte-identical on purpose: `--turns`
     # adds a path, it does not modify the one every existing probe already runs on.
     fh_run_turns "$r"
     rc=$?
+  elif [ "$TRACE" -eq 1 ]; then
+    # §TRACE (2026-11-14, FH-3) — same argv plus a stream format, so the scorer can read what the
+    # session DID (tool calls) and which tool surface it had (init event). The .txt keeps the shape
+    # every scorer already reads. A stream with no result event is rc 3, never an empty answer.
+    ( cd "$WORK" && fh_timeout "$TIMEOUT" claude -p "$PROMPT" \
+          --model "$MODEL" "${TOOLS[@]}" ${MCPARGS[@]+"${MCPARGS[@]}"} \
+          ${SURFREP[@]+"${SURFREP[@]}"} --output-format stream-json --verbose \
+          < /dev/null 2>"$OUTDIR/${ARM}_r${r}.stderr.txt" ) > "$OUTDIR/${ARM}_r${r}.stream.jsonl"
+    rc=$?
+    python3 "$(dirname "$0")/live_eval_trace.py" extract "$OUTDIR/${ARM}_r${r}.stream.jsonl" \
+      "$OUTDIR/${ARM}_r${r}.txt" "$OUTDIR/${ARM}_r${r}.tools.txt"
+    _xrc=$?
+    [ "$rc" -eq 0 ] && [ "$_xrc" -ne 0 ] && rc=3
   else
   ( cd "$WORK" && fh_timeout "$TIMEOUT" claude -p "$PROMPT" \
         --model "$MODEL" "${TOOLS[@]}" ${MCPARGS[@]+"${MCPARGS[@]}"} \
@@ -875,6 +891,12 @@ for r in $(seq 1 "$REPS"); do
         < /dev/null 2>"$OUTDIR/${ARM}_r${r}.stderr.txt" ) > "$OUTDIR/${ARM}_r${r}.txt"
   rc=$?
   fi
+  # A failed clock read must not become 0 or an epoch-sized number (codex R1): both reads digits,
+  # delta >= 0, else UNMEASURED. Residual: a wall-clock step during the episode is not detected.
+  _wall_t1=$(date +%s)
+  case "$_wall_t0$_wall_t1" in (''|*[!0-9]*) _wall_s=UNMEASURED ;;
+    (*) if [ -n "$_wall_t0" ] && [ -n "$_wall_t1" ] && [ "$_wall_t1" -ge "$_wall_t0" ]; then
+          _wall_s=$((_wall_t1 - _wall_t0)); else _wall_s=UNMEASURED; fi ;; esac
   bytes=$(wc -c < "$OUTDIR/${ARM}_r${r}.txt" | tr -d ' ')
 
   # ── BUDGET LINE (2026-10-17) — which cap this episode ran under, and did it END at that cap. ──
@@ -902,6 +924,7 @@ for r in $(seq 1 "$REPS"); do
     printf 'max_turns\t%s\n' "$_cap_turns"
     printf 'token_cap\t%s\n' "$_cap_tokens"
     printf 'ended_at_cap\t%s\n' "$_cap_end"
+    printf 'wall_s\t%s\n' "$_wall_s"
   } >> "$OUTDIR/${ARM}_r${r}.meta.tsv"
 
   # 🟥 An empty output is NOT a "no" answer. The first version of tonight's runner used

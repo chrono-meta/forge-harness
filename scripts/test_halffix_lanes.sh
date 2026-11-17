@@ -22,6 +22,7 @@
 # ADVISORY BY MANDATE, not by preference: the operator's spec for this debt says "표시(차단 아님 —
 #   정당한 복제도 있다)" — mark, do not block, because legitimate duplication exists.
 
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCAN="$ROOT/scripts/halffix_propagation_scan.sh"

@@ -25,6 +25,7 @@
 #
 # Usage: bash scripts/test_marker_axes_run_lanes.sh   Exit: 0 = all fixtures behave; 1 = regression.
 
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 HOOK="$REPO_ROOT/templates/.git-hooks/pre-commit"

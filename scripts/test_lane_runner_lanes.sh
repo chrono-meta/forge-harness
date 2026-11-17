@@ -12,6 +12,7 @@
 #
 # Script-relative, NOT `git rev-parse --show-toplevel`: in a vendored tree rev-parse returns the
 # OUTER repo and this suite would then test someone else's checkout.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CHECK="$REPO_ROOT/scripts/lane_runner_check.sh"

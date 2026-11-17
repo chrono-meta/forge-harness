@@ -79,7 +79,7 @@ A module's Python runs wherever the module is loaded — including a floor envir
   cart runs got rc 2. In the inline arm the no-guess contract turned that into no answer (2/6 against bare 6/6); the cart
   runs fell back to reading by hand. A guarded dependency is a
   typed failure, not a working module. That is why the guarded case is a NOTE the installer must read, and why the fix
-  proposed there is stdlib-only (fh-cartridges PR #19, open on 2026-11-09: a built-in reader for the YAML subset
+  proposed there is stdlib-only (fh-cartridges PR #19, merged 2026-11-09: a built-in reader for the YAML subset
   workflows use; script output byte-identical on 224 local workflow files).
 - **Named residual — passes unseen**: shell scripts calling `jq`, `yq`, `node` and the like are not read, and a
   computed import name (`import_module(name)`) is not followed. **Errs toward BLOCK**: an aliased exception
@@ -104,9 +104,28 @@ migration wipe data?») called it **1/9, 0/9, 0/9** — answered directly, the l
 - `scripts/generated_harness_check.py` reports **W8 (info)** for a skill description with no question example
   (`?`). Info only: it never changes a verdict, because a question mark is a proxy for the shape, not proof of routing.
 - **Not proven yet**: a no-token proxy (subagents shown the listing and asked which skill they would call) was at
-  ceiling before and after (9/9 targets, 0/8 false triggers; fh-cartridges PR #20, open on 2026-11-09) — it does not
+  ceiling before and after (9/9 targets, 0/8 false triggers; fh-cartridges PR #20, merged 2026-11-09) — it does not
   reproduce the live failure. The live effect is measured only by runs that install the module and do not hint it; the
   next such run is pre-registered (fh-cartridges `evidence/AB_PREREG_HAIKU_C7-C12.md`) and has no results yet.
+
+## 2d. Before building — measure the bare model on the real path
+
+Before building a module whose purpose is **accuracy** (it exists so the model gets an answer right that it would
+otherwise get wrong), measure the bare model on the **real path** first: the module's own target tasks, run the way a
+user runs them (a real session or `claude -p`, nothing installed, no hint in the prompt that a module or a check
+exists). If the bare model is at the **ceiling** there, record the negative result and do not build.
+
+- **Ceiling** = at the cheapest tier the module claims to help (and at Sonnet when that is a different tier),
+  ≥ 3 runs on each of ≥ 3 target tasks, and **0 misses** — or, when the module declared its own success threshold
+  and task set **before** the run, the bare model meets that threshold under the same minimum runs and tiers (a
+  threshold chosen after seeing the results is not a ceiling). Record it as a null at that size (e.g. «0/9 misses at Haiku — NOT-DETECTED@9»),
+  never as «the model does not need it»: 9 clean runs do not rule out a rarer failure.
+- **A proxy metric at ceiling does not stop a build.** A no-token proxy (§2c: subagents shown a listing, 9/9) did not
+  reproduce the live failure; only the real path can say «already solved». The positive case looks like fh-cartridges
+  #25: the bare arm gave a silent wrong answer 7/7/7 on frozen fixtures, the module 0/0/0 — that gap is why it was built.
+- **Out of scope**: modules whose value is not accuracy — determinism, a gate, an audit trail, a refusal at an
+  irreversible edge. A bare model that «usually gets it right» is not a substitute for those, so they are built without
+  this measurement.
 
 ## 3. Install-time check (`scripts/fh_module_check.py check`)
 

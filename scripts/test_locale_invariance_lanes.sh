@@ -162,7 +162,7 @@ while IFS='|' read -r _exp _s; do
   [ -n "$_exp" ] || continue
   _r=$(_ref_words "$_s")
   if [ "$_r" != "$_exp" ]; then
-    echo "❌ HARNESS-ERROR — 코퍼스 기대값이 대조군과 어긋난다: «$_s» exp=$_exp ref=$_r"; exit 2
+    echo "❌ HARNESS-ERROR — 코퍼스 기대값이 대조군과 어긋난다: «${_s}» exp=$_exp ref=$_r"; exit 2
   fi
   for _L in POSIX "$UTF8"; do
     _h=$(LC_ALL="$_L" bash -c "printf '%s\n' \"\$1\" | $EXPR" _ "$_s")
@@ -281,7 +281,7 @@ _t "L7 되돌림 — 옛 셈법은 판정을 로케일에 따라 갈리게 만�
 m_p=0; _run_aff POSIX   "$T/fn_wc.sh" || m_p=1
 m_u=0; _run_aff "$UTF8" "$T/fn_wc.sh" || m_u=1
 if [ "$m_p" -ne "$m_u" ]; then _ok
-else _no "변이체가 두 로케일에서 같은 판정(rc=$m_p) — 이 팔은 셈법을 안 보고 있다(이빨 없음). 실측 옛 wc -w: POSIX=$s_p $UTF8=$s_u · 문턱=$AFF_THR · 픽스처=«$STRADDLE»"; fi
+else _no "변이체가 두 로케일에서 같은 판정(rc=$m_p) — 이 팔은 셈법을 안 보고 있다(이빨 없음). 실측 옛 wc -w: POSIX=$s_p $UTF8=$s_u · 문턱=$AFF_THR · 픽스처=«${STRADDLE}»"; fi
 
 # ── L8 컨트롤: **같은 픽스처·같은 러너**로 지금의 훅은 두 로케일 판정이 같다 ────
 #    L7 과 L8 이 known-pair 를 이룬다 — 바뀐 것은 셈법 하나뿐이므로, L7 이 갈리고 L8 이
@@ -542,7 +542,7 @@ else
              '동일한 스테이지드 diff 를 둘 다에게' 'ran bash x.sh, 30/30 PASS' ''; do
     _n1=$(LC_ALL="$UTF8" bash -c 'printf "%s" "${#1}"' _ "$_sv")
     _n2=$(LC_ALL="$UTF8" bash -c '. "$1"; _charlen "$2"' _ "$T/fn_cl_now.sh" "$_sv")
-    [ "$_n1" = "$_n2" ] || _cl_bad="$_cl_bad '$_sv'($_n1≠$_n2)"
+    [ "$_n1" = "$_n2" ] || _cl_bad="$_cl_bad '$_sv'(${_n1}≠$_n2)"
   done
   if [ -z "$_cl_bad" ]; then _ok
   else _no "UTF-8 기계에서 수가 움직인다 —$_cl_bad. 기존 문턱값이 재교정 없이 못 쓴다"; fi

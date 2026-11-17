@@ -6,6 +6,7 @@
 # NOT enough — B must explicitly fetch to know it is behind, so the fixture fetches for it; the
 # no-fetch env only skips the guard's own network call) and a private marker dir per lane.
 
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
 G="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/stale_clone_guard.sh"
 pass=0; fail=0

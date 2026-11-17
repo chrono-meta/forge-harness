@@ -22,6 +22,7 @@
 # does not come back GREEN, no later verdict in this file means anything.
 #
 # 🟥 The real repository is never mutated. L8 asserts that.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

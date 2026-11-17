@@ -22,6 +22,7 @@
 #               호출부를 옛 리터럴로 되돌린 사본에서 사라지는지(known-negative)
 #
 # Usage: bash scripts/test_axis23_skip_reason_lanes.sh   Exit: 0 PASS · 1 회귀 · 10 계기 불량
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOOK="$REPO_ROOT/templates/.git-hooks/pre-commit"

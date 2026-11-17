@@ -13,6 +13,7 @@
 #   H4 FH asset on main + MAIN_COMMIT_OK=1 → override line            (channel works through the hook)
 # REVERT: the hook with the guard call removed must turn H1 red — else H1 is decoration.
 # Usage: bash scripts/test_main_commit_guard_lanes.sh [--hook <path>]
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOOK="$ROOT/templates/.git-hooks/pre-commit"; [ "${1:-}" = "--hook" ] && HOOK="$2"

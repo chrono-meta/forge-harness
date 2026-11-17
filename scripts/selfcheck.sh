@@ -12,6 +12,11 @@
 # Wiring: `npm test` for any session; `prepublishOnly` so a publish cannot ship a
 # syntactically broken executable.
 set -u
+# Inherited git environment reaches every lane: an exported GIT_DIR / GIT_INDEX_FILE makes a lane's
+# `git -C <fixture> commit` write into THAT repo (measured 2026-11-13 on a decoy: 70 of 90 git-using lanes do not
+# source fixture_guard_lib.sh). Same list as fixture_guard_lib.sh (repo-targeting vars only; GIT_CONFIG_* stay —
+# CI carries -c safe.directory there); precedent sync-to-be.sh / session_close_check.sh.
+unset GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_OBJECT_DIRECTORY GIT_DIR GIT_WORK_TREE GIT_IMPLICIT_WORK_TREE GIT_GRAFT_FILE GIT_INDEX_FILE GIT_NO_REPLACE_OBJECTS GIT_REPLACE_REF_BASE GIT_PREFIX GIT_SHALLOW_FILE GIT_COMMON_DIR GIT_NAMESPACE 2>/dev/null || true
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 fail=0
 
@@ -190,7 +195,7 @@ if [ "${FH_SELFCHECK_PROFILE:-full}" = consumer ]; then
   if _package_mode; then _CONSUMER=1
   else echo "⚠️  FH_SELFCHECK_PROFILE=consumer IGNORED — this tree is a git checkout; running the full suite"; fi
 fi
-CHECKOUT_ONLY_SUITES="test_package_coverage_lanes.sh test_files_manifest_shipping_lanes.sh test_map_postprocess_lanes.sh test_remote_marker_gate_lanes.sh test_worktree_reclaim_lanes.sh test_sim_isolated_run_lanes.sh test_utterance_intake_lanes.sh test_precommit_pointer_index_lanes.sh test_selfcheck_shard_lanes.sh test_ci_validate_shard_count_lanes.sh"
+CHECKOUT_ONLY_SUITES="test_fixture_guard_coverage_lanes.sh test_package_coverage_lanes.sh test_files_manifest_shipping_lanes.sh test_map_postprocess_lanes.sh test_remote_marker_gate_lanes.sh test_worktree_reclaim_lanes.sh test_sim_isolated_run_lanes.sh test_utterance_intake_lanes.sh test_precommit_pointer_index_lanes.sh test_selfcheck_shard_lanes.sh test_ci_validate_shard_count_lanes.sh"
 CONSUMER_SKIPPED=""
 _consumer_skip() { # $1 = suite basename · rc 0 = skip it (and it has been named)
   [ "$_CONSUMER" -eq 1 ] || return 1
@@ -508,12 +513,15 @@ if [ ! -f scripts/prepush_guard_check.sh ]; then
   _absent_subject_verdict "prepush-guard known-pair" "scripts/prepush_guard_check.sh" || fail=1
 else
   # 🟥 파이프 앞에서 rc 를 잡는다 — 표시 필터의 rc 를 읽으면 실패가 0 으로 보인다.
+  # 🟥 tail -12 로 자르지 않는다 — 하위 소비자가 «BLOCKED — a known pair broke» 만 받고 어느 쌍인지
+  # 못 읽은 실사고(2026-11-16, 원인은 UNMEASURED). ❌ 줄을 뽑는 _show_failure 로 보이고, 전체 경과도 찍는다.
+  _pg_t0=$SECONDS
   _pg_out="$(bash scripts/prepush_guard_check.sh 2>&1)"; _pg_rc=$?
   if [ "$_pg_rc" -eq 0 ]; then
     echo "PASS  prepush-guard known-pair"
   else
-    echo "FAIL  prepush-guard known-pair (rc=$_pg_rc)"
-    [ -n "$_pg_out" ] && printf '%s\n' "$_pg_out" | tail -12 | sed 's/^/      /'
+    echo "FAIL  prepush-guard known-pair (rc=$_pg_rc, $((SECONDS - _pg_t0))s)"
+    _show_failure "$_pg_out"
     fail=1
   fi
 fi
@@ -1179,10 +1187,16 @@ for _pair in \
   "scripts/correction_moments.py|scripts/test_correction_moments_lanes.sh" \
   "scripts/probe_live_eval_lib.py|scripts/test_live_eval_construct_lanes.sh" \
   "scripts/live_eval_matrix.py|scripts/test_live_eval_matrix_lanes.sh" \
+  "scripts/live_eval_trace.py|scripts/test_live_eval_trace_lanes.sh" \
+  "scripts/probe_live_eval_lib.py|scripts/test_live_eval_trace_lanes.sh" \
+  "scripts/sim_isolated_run.sh|scripts/test_live_eval_trace_lanes.sh" \
   `# 무인 자체개발 루프(2026-11-04, 운영자 상시 요청). 자동 머지 등급은 모델이 아니라 경로 허용 목록이 정한다 — 빈 목록은 AUTO 가 아니라 HARNESS-ERROR(실측: 가드를 지우면 빈 목록이 AUTO 로 통과).` \
   "scripts/selfdev_merge_tier.sh|scripts/test_selfdev_merge_tier_lanes.sh" \
   "scripts/selfdev_queue.py|scripts/test_selfdev_queue_lanes.sh" \
   "scripts/ablation_nominate.py|scripts/test_ablation_nominate_lanes.sh" \
+  "scripts/ablation_verdict.py|scripts/test_ablation_verdict_lanes.sh" \
+  `# 빌더 카드 파일 역할 4값(2026-11-15, FH-6). 디스패치 뒤 바뀐 파일 ∩ protected = ∅ — protected 를 안 적은 카드는 통과가 아니라 HARNESS-ERROR.` \
+  "scripts/builder_card_files_check.py|scripts/test_builder_card_files_lanes.sh" \
   `# 리스 기록 채널(2026-11-07). 세션은 초안, 기록은 운영자 — 에이전트 셸 거부 · 코드 불일치 무기록 · 원자적 교체.` \
   "scripts/lease_line_apply.sh|scripts/test_lease_line_apply_lanes.sh" \
   `# 공유 세션 장부(2026-11-11 시범). 실무 세션이 쓰고 루트가 읽는다 — 안 적은 세션은 NOT-WRITTEN, 깨진 줄은 MALFORMED.` \
@@ -1245,6 +1259,9 @@ for _pair in \
   "scripts/probe_live_eval_lib.py|scripts/test_probe_live_eval_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_first_use_lanes.sh" \
   "scripts/fixture_guard_lib.sh|scripts/test_fixture_guard_lanes.sh" \
+  "scripts/fixture_guard_lib.sh|scripts/test_fixture_git_env_lanes.sh" \
+  "scripts/lane_identity_tripwire.sh|scripts/test_fixture_git_env_lanes.sh" \
+  "scripts/fixture_guard_lib.sh|scripts/test_fixture_guard_coverage_lanes.sh" \
   "scripts/stray_path_scan.sh|scripts/test_stray_path_lanes.sh" \
   "scripts/session_close_check.sh|scripts/test_stray_path_lanes.sh" \
   `# ── ①-g stale-ref (2026-09-21 신설) — #773 이 「배선 안 함」이라 적은 자리의 호출부. SUBJECT 는 스캐너가 아니라 «마감 블록»이다: 스캐너 자체는 test_stale_ref_scan_lanes.sh 가 이미 앵커한다 ──` \
@@ -1286,8 +1303,11 @@ for _pair in \
   "scripts/stale_clone_guard.sh|scripts/test_stale_clone_guard_lanes.sh" \
   "scripts/proposal_hook.sh|scripts/test_proposal_hook_lanes.sh" \
   "plugins/fh-commons/skills/ko-tech-writer/SKILL.md|scripts/test_ko_tech_writer_lanes.sh" \
+  "plugins/fh-meta/skills/meta-prompt-builder/SKILL.md|scripts/test_meta_prompt_restate_lanes.sh" \
   "scripts/absorption_queue.py|scripts/test_absorption_queue_lanes.sh" \
   "scripts/catch_tally.py|scripts/test_catch_tally_lanes.sh" \
+  "scripts/shell_name_boundary_scan.sh|scripts/test_name_boundary_locale_lanes.sh" \
+  "scripts/catch_tally.py|scripts/test_doc_claims_1113_lanes.sh" \
   "scripts/digest_slow_leg.py|scripts/test_digest_slow_leg_lanes.sh" \
   "scripts/script_caller_ratchet.sh|scripts/test_script_caller_ratchet_lanes.sh" \
   "scripts/script_caller_ratchet.sh|scripts/test_runner_surface_index_lanes.sh" \
@@ -1850,6 +1870,52 @@ elif [ -f scripts/test_sidecar_calibrate_lanes.sh ]; then
   fi
 else
   echo "FAIL  test_sidecar_calibrate_lanes.sh: sidecar_calibrate.sh present but its anchor is missing"
+  fail=1
+fi
+# agy launch guard (2026-11-16). The guard is the only thing between an FH script and a cloud agent
+# CLI that reads this machine and sends what it read to the model; its lanes use fake agy stubs only.
+if [ ! -f scripts/agy_launch_guard.sh ]; then
+  _absent_subject_verdict "test_agy_launch_guard_lanes.sh" "scripts/agy_launch_guard.sh" || fail=1
+elif [ -f scripts/test_agy_launch_guard_lanes.sh ]; then
+  if ! bash scripts/test_agy_launch_guard_lanes.sh < /dev/null; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_agy_launch_guard_lanes.sh: agy_launch_guard.sh present but its anchor is missing"
+  fail=1
+fi
+# agy remote runner (2026-11-16) — the only route the guard's remote-os-user marker opens; its lanes use a fake ssh/scp.
+if [ ! -f scripts/agy_remote_run.sh ]; then
+  _absent_subject_verdict "test_agy_remote_run_lanes.sh" "scripts/agy_remote_run.sh" || fail=1
+elif [ -f scripts/test_agy_remote_run_lanes.sh ]; then
+  if ! env -u FH_AGY_REMOTE -u FH_AGY_REMOTE_DENY -u FH_AGY_REMOTE_RECEIPT_DIR bash scripts/test_agy_remote_run_lanes.sh < /dev/null; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_agy_remote_run_lanes.sh: agy_remote_run.sh present but its anchor is missing"
+  fail=1
+fi
+# codex launch guard (2026-11-16) — refuses a codex verifier arm whose prompt/args/cwd name a company root.
+if [ ! -f scripts/codex_launch_guard.sh ]; then
+  _absent_subject_verdict "test_codex_launch_guard_lanes.sh" "scripts/codex_launch_guard.sh" || fail=1
+elif [ -f scripts/test_codex_launch_guard_lanes.sh ]; then
+  if ! bash scripts/test_codex_launch_guard_lanes.sh < /dev/null; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_codex_launch_guard_lanes.sh: codex_launch_guard.sh present but its anchor is missing"
+  fail=1
+fi
+# prepush-guard failure visibility (2026-11-16) — a broken known pair must be named, with rc and
+# elapsed, in the last lines of the check and in selfcheck's own rendering of it.
+if [ ! -f scripts/prepush_guard_check.sh ]; then
+  _absent_subject_verdict "test_prepush_guard_failure_visibility_lanes.sh" "scripts/prepush_guard_check.sh" || fail=1
+elif [ -f scripts/test_prepush_guard_failure_visibility_lanes.sh ]; then
+  if ! bash scripts/test_prepush_guard_failure_visibility_lanes.sh < /dev/null; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_prepush_guard_failure_visibility_lanes.sh: prepush_guard_check.sh present but its anchor is missing"
   fail=1
 fi
 # Squash-merge verification + its merge-path wiring (2026-09-24). Same subject/anchor pairing as above:
@@ -3058,6 +3124,9 @@ else
   echo "SKIP  rules-dotfile (package mode: .git 없음 — 소스 트리 전용 검사)"
 fi
 
+# Lane-identity tripwire — record-only: a WARN line, never a FAIL (a hit is a past event in the
+# repo, not this run's verdict). Runs AFTER the lanes, which is when a leaked commit would have just landed.
+if [ -f scripts/lane_identity_tripwire.sh ]; then bash scripts/lane_identity_tripwire.sh . | grep -v '^LANE-TRIPWIRE ok' ; fi
 if [ "$_CONSUMER" -eq 1 ]; then
   _n=$(printf '%s\n' $CONSUMER_SKIPPED | grep -c .)
   echo "CONSUMER PROFILE — $_n checkout-only suite(s) NOT measured here (not a pass):$CONSUMER_SKIPPED"

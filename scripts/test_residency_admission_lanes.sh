@@ -2,6 +2,7 @@
 # test_residency_admission_lanes.sh — residency_admission_check.sh 의 known-pair 레인.
 # 🟥 컨트롤(감량·무변경)이 없으면 «오탐이 있나» 를 못 잰다. 차단 레인만 있는 스위트는
 #    「막혔다」만 증명하고 「옳게 막혔다」는 못 증명한다(`feedback_gate_verification_must_execute`).
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -uo pipefail
 CHECK="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/residency_admission_check.sh}"
 # 🟥 절대경로로 고정한다. 각 레인은 임시 디렉터리로 `cd` 하므로 상대경로를 받으면

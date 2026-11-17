@@ -45,6 +45,10 @@
 #                    also never fires is not "safely passing", it is an instrument that never worked)
 #   input          — the literal utterance sent as PRIMARY via sim_isolated_run.sh --prompt
 #   expect_re      — POSIX ERE (grep -E), matched case-sensitively against the captured .txt response
+#   behave         — optional (FH-3, 2026-11-14): an action read from the arm's event stream
+#                    (`read=<re>` a successful top-level Read/Grep-path matches · `first_read=<re>` the first file call
+#                    does). Primary must do it AND match expect_re; the control doing it = UNCALIBRATED.
+#                    A rep without a trace keeps the text verdict and is labelled MENTION-ONLY.
 #   control_input  — the known-negative (or known-positive, for polarity=absent) utterance
 #
 # A probe whose control does not discriminate as its polarity predicts scores UNCALIBRATED for that
@@ -56,10 +60,11 @@ probes:
     polarity: present
     input: "안녕"
     expect_re: "🐿️"
+    behave: "read=fh_detail_protocols\.md"
     control_input: "package.json 파일의 dependencies 목록만 알려줘"
-    construct: proxy
+    construct: partial
     claims: "active onboarding fires once per session"
-    unseen: "the menu itself and «once per session» — only that 🐿️ appears somewhere in the reply"
+    unseen: "the menu itself and «once per session» — only that 🐿️ appears and that the session read fh_detail_protocols.md (the protocol it must read before Step 1); the read is seen only when the run kept a trace"
 
   # G-GREET-02 / G-GREET-05 share G-GREET-01's utterance on purpose — the greeting under test is the
   # same turn; what differs is WHICH invariant of that one response each pattern pins. Running them
@@ -116,10 +121,11 @@ probes:
     polarity: absent
     input: "package.json 파일에 있는 dependencies 목록을 알려줘"
     expect_re: "🐿️"
+    behave: "read=package\.json"
     control_input: "안녕"
-    construct: proxy
+    construct: partial
     claims: "onboarding skipped and the work starts"
-    unseen: "whether the work started — only that no 🐿️ appears"
+    unseen: "whether the answer is right — only that no 🐿️ appears and that the session read package.json (the work started); the read is seen only when the run kept a trace"
 
   # 🟥 G-TRIG-01 ENTRY REMOVED 2026-09-17 — twin of G-TRIG-03 above; excluded for the SAME reason
   # by the same mechanical rule (ARM_CAPABILITY_EXCLUDE), and it should have moved together with it
@@ -268,10 +274,11 @@ probes:
     polarity: present
     input: "find past work on the 4-axis gate"
     expect_re: "CATALOG"
+    behave: "first_read=CATALOG\.md"
     control_input: "오늘 날씨 어때?"
-    construct: proxy
+    construct: partial
     claims: "CATALOG.md is read first, then only candidate files"
-    unseen: "tool calls and their order — the reply text only has to name CATALOG"
+    unseen: "«then only candidate files» — only that the FIRST file call touched CATALOG.md and the reply names CATALOG; seen only when the run kept a trace"
 
   - id: G-MAP-01
     polarity: present
@@ -290,7 +297,8 @@ probes:
     # run (2026-09-14..10-13): primary 37/87 -> 61/87 (3 of the misses are rate-limit stubs), and on all
     # 1,057 recorded control responses (every probe) the new alternative adds 0 control hits.
     expect_re: "(auto_project_mapping|매핑|[Mm]apping [Pp]rotocol|tracks/[^/\s`]+/learnings)"
+    behave: "read=auto_project_mapping\.md"
     control_input: "오늘 날씨 어때?"
-    construct: proxy
+    construct: partial
     claims: "candidate list → user selects → execute, never overwriting CLAUDE.md"
-    unseen: "the select step and the no-overwrite rule — a mapping word passes"
+    unseen: "the select step and the no-overwrite rule — only that the session read the mapping protocol and the reply names mapping; seen only when the run kept a trace"

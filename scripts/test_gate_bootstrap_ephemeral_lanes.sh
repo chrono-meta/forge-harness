@@ -9,6 +9,7 @@
 #
 # 되돌림 프로브(L10)가 있다: 로케일 차단 줄을 지운 사본에서 판정이 뒤집히지 않으면
 # 이 레인은 그 줄에 안 묶여 있는 것이다 — 공허한 초록.
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
 SUBJ="$(cd "$(dirname "$0")/.." && pwd)/scripts/gate_bootstrap_ephemeral.sh"
 [ -f "$SUBJ" ] || { echo "❌ INSTRUMENT ERROR — subject not found: $SUBJ"; exit 10; }

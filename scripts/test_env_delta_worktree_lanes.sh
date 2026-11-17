@@ -8,6 +8,7 @@
 #   - its unmapped main repo IS still counted (known-positive — the fix must not hide real repos)
 #   - a `.git` FILE that is not a worktree pointer (submodule shape) still counts (old behaviour kept)
 #   - cwd inside a worktree of a MAPPED repo → silent; of an UNMAPPED repo → names the main repo
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
 HERE="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 SCAN="$HERE/fh_env_delta_scan.sh"

@@ -12,6 +12,7 @@
 #   Advisory by default; FH_DESTRUCTIVE_BLOCK=1 escalates. The FP lanes matter as much as the HIT
 #   lanes: noise trains dismissal of the one warning that will matter (pipe_verdict S5 lesson).
 
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
 G="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/destructive_pre_gate.sh"
 pass=0; fail=0

@@ -18,6 +18,7 @@
 # Surface = the Bash tool call itself (interactively-composed commands), same reasoning as
 # pipe_verdict_guard: every recurrence was in a composed command, none in a shipped file.
 
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
 G="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/backtick_guard.sh"
 pass=0; fail=0

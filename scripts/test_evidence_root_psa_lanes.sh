@@ -14,6 +14,7 @@
 #   E1  워크트리에서 커밋해도 오버라이드를 찾는다 (경고 배너 없음)
 #   E1n CONTROL — 오버라이드를 지우면 같은 실행에서 배너가 **뜬다**(계기가 살아 있다는 증거)
 #   E2  CONTROL — 메인 트리는 종전 그대로 동작한다 (회귀 없음)
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 pass=0; fail=0
