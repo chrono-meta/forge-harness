@@ -439,6 +439,38 @@ score_rc=$?
   done < "$SPEC_DIR/selected_ids.txt"
 } >> "$REPORT_PATH"
 
+# Behaviour profile (2026-11-17, arXiv:2611.17440 — record only, never read by the scorer above).
+# Two arms with the same pass rate can still behave differently — one may skip verification and pass
+# anyway. One line per rep: the arm's top-level tool calls in four bins, counted from the event stream
+# the runner already keeps (bin rules: scripts/live_eval_trace.py). A rep with no stream says MISSING,
+# an unreadable one UNREADABLE — never counts of 0. Appended AFTER score; score_rc is untouched.
+{
+  echo ""
+  echo "## Behaviour profile (record only — not scored)"
+  echo ""
+  if [ -z "$FH_LIVE_TRACE_ARG" ]; then
+    echo "behaviour-profile: not recorded — FH_LIVE_TRACE=0 (no event stream kept)"
+  else
+    while IFS= read -r id; do
+      [ -z "$id" ] && continue
+      for arm in primary control control_b; do
+        [ "$arm" = control_b ] && [ ! -f "$SPEC_DIR/$id.control_b.txt" ] && continue
+        r=1
+        while [ "$r" -le "$REPS" ]; do
+          st="$OUTDIR/$id/${arm}_r${r}.stream.jsonl"
+          if [ ! -f "$st" ]; then
+            echo "behaviour-profile: $id $arm r$r trace=MISSING"
+          else
+            bp="$(python3 "$REPO_ROOT/scripts/live_eval_trace.py" profile "$st" 2>/dev/null)"
+            echo "behaviour-profile: $id $arm r$r ${bp:-trace=UNREADABLE}"
+          fi
+          r=$((r + 1))
+        done
+      done
+    done < "$SPEC_DIR/selected_ids.txt"
+  fi
+} >> "$REPORT_PATH"
+
 if [ -n "$EVIDENCE_DIR" ]; then
   # The report is part of the evidence: a preserved body set with no verdict beside it forces the
   # next reader to re-derive what the run concluded.

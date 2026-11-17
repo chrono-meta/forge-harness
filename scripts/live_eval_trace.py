@@ -11,7 +11,9 @@ Two uses:
   extract <stream.jsonl> <out.txt> <tools.txt>   (runner) write the final result text and the init
       tool/MCP/plugin inventory. Exit 3 on a stream that has no parseable result event — never an empty
       «the session said nothing» (same rule as sim_isolated_run.sh's turns path).
-  library: parse_stream(path) · behave_hit(trace, spec) · inventory(trace)
+  profile <stream.jsonl>   (runner) one record-only line: top-level tool calls in four bins
+      (explore · edit · test-run · other). Exit 3 and «trace=UNREADABLE» on a stream it cannot read.
+  library: parse_stream(path) · behave_hit(trace, spec) · inventory(trace) · profile_bins(trace)
 
 `behave:` grammar (one per probe, value is an ERE, no colon by probes_live.yaml convention):
   read=<re>         some SUCCESSFUL Read (file_path) or Grep (path) call matches — Python `re`, not POSIX
@@ -123,6 +125,137 @@ def behave_hit(trace, spec):
     return any(_read_hit(c, trace, pat) for c in file_calls)
 
 
+# ── Behaviour profile (2026-11-17, record only — never read by a scorer) ─────────────────────────
+# Two arms with the same PASS rate can still behave differently (arXiv:2611.17440): one may skip
+# verification and pass anyway. The profile counts the arm's top-level tool calls in four bins.
+# Every EMITTED call counts, successful or not — an attempted test run is still a test run.
+# Bash is binned by its command text, in this order (first match wins):
+#   test-run  some segment RUNS a test: its command word is a runner (pytest, jest, vitest, npm/pnpm/
+#             yarn test, go/cargo test, make test|check, python -m pytest|unittest), or a test
+#             script (selfcheck.sh, test_*.sh|py, *_lanes.sh) as the command or as the script
+#             argument of bash/sh/zsh/python. Naming a test file as data (`cat test_x.py`) is not a run.
+#   edit      a write shape: a redirect to a file (not /dev/null, not >&N), sed -i / -Ei / --in-place,
+#             tee, or a segment whose command word is mv cp rm mkdir touch chmod ln
+#   explore   the first command after any leading `cd …` is a read-only one (ls cat grep find …,
+#             git log/status/diff/show/…, gh … view/list/status/diff/checks)
+#   other     anything else — running a script that is not a test lands here
+# Named residuals: only the first non-cd segment decides explore, so `ls && ./build.sh` reads as
+# explore; a redirect inside a quoted string reads as edit; a test runner named differently from the
+# list reads as other; a runner inside a shell string (`bash -c 'pytest'`) or behind a wrapper that
+# carries options (`env -i pytest`, `nice -n 10 pytest`, `timeout --signal=TERM 60 pytest`) reads as
+# other; `git branch` / `git remote` read as other even when they only list. These are a heuristic's
+# edges — after two cross-family rounds each found new ones, they are named here, not chased (a static
+# shell-string reader does not converge). The profile is record only, so a misbinned call moves no
+# verdict. Binning is calibrated on two hand-labelled nightly runs (17/17 calls, explore and other
+# bins) — edit and test-run were exercised on fixtures only.
+EXPLORE_TOOLS = ('Read', 'Grep', 'Glob', 'LS', 'NotebookRead', 'WebFetch', 'WebSearch', 'ToolSearch')
+EDIT_TOOLS = ('Edit', 'Write', 'MultiEdit', 'NotebookEdit')
+_TEST_SCRIPT_RE = re.compile(r'^(?:selfcheck\.sh|test_[\w.-]*\.(?:sh|py)|[\w.-]*_lanes?\.sh)$')
+_TEST_RUNNERS = ('pytest', 'py.test', 'jest', 'vitest')
+_SHELLS = ('bash', 'sh', 'zsh', 'python', 'python3')
+_WRITE_RE = re.compile(r'>>?(?!&)\s*(?!/dev/null\b)[^\s&|;>]|\btee\b')
+_EDIT_WORDS = ('mv', 'cp', 'rm', 'mkdir', 'touch', 'chmod', 'ln')
+_EXPLORE_WORDS = ('ls', 'cat', 'head', 'tail', 'grep', 'egrep', 'rg', 'find', 'wc', 'tree', 'stat', 'file',
+                  'pwd', 'which', 'echo', 'printf', 'less', 'diff', 'du', 'sort', 'uniq', 'cut', 'sed', 'awk',
+                  'jq', 'readlink', 'realpath', 'basename', 'dirname', 'date', 'id', 'whoami')
+_GIT_READ = ('log', 'status', 'diff', 'show', 'ls-files', 'ls-tree', 'blame',
+             'rev-parse', 'grep', 'describe', 'shortlog', 'reflog')
+_GH_READ = ('view', 'list', 'status', 'diff', 'checks')
+PROFILE_BINS = ('explore', 'edit', 'test-run', 'other')
+
+
+def _segments(cmd):
+    """Each segment's words, with leading VAR=value assignments and the wrappers env / time / nice /
+    exec / command / timeout <secs> dropped, so the command word is the one that runs; empty
+    segments skipped."""
+    for seg in re.split(r'&&|\|\||;|\n|\|', cmd):
+        words = seg.split()
+        while words:
+            if re.match(r'^[A-Za-z_][A-Za-z0-9_]*=', words[0]) or words[0] in ('env', 'time', 'nice', 'exec', 'command'):
+                words = words[1:]
+            elif words[0] == 'timeout' and len(words) > 1:
+                words = words[2:]
+            else:
+                break
+        if words:
+            yield words
+
+
+def _runs_test(w):
+    base = lambda x: x.rsplit('/', 1)[-1]
+    if w[0] in _TEST_RUNNERS or _TEST_SCRIPT_RE.match(base(w[0])):
+        return True
+    if w[0] in ('npm', 'pnpm', 'yarn') and 'test' in w[1:3]:
+        return True
+    if (w[0] in ('go', 'cargo') and w[1:2] == ['test']) or (w[0] == 'make' and w[1:2] in (['test'], ['check'])):
+        return True
+    if w[0] in _SHELLS:
+        args = [x for x in w[1:] if not x.startswith('-')]
+        if w[0].startswith('python') and '-m' in w and w[w.index('-m') + 1:w.index('-m') + 2] in (['pytest'], ['unittest']):
+            return True
+        return bool(args) and bool(_TEST_SCRIPT_RE.match(base(args[0])))
+    return False
+
+
+def _sed_in_place(w):
+    return w[0] == 'sed' and any(x.startswith('--in-place') or re.match(r'^-[a-zA-Z]*i', x) for x in w[1:])
+
+
+def _bash_bin(cmd):
+    cmd = str(cmd or '')
+    segs = list(_segments(cmd))
+    if any(_runs_test(w) for w in segs):
+        return 'test-run'
+    if _WRITE_RE.search(cmd) or any(w[0] in _EDIT_WORDS or _sed_in_place(w) for w in segs):
+        return 'edit'
+    first = next((w for w in segs if w[0] != 'cd'), None)
+    if not first:
+        return 'other'
+    if first[0] in _EXPLORE_WORDS:
+        return 'explore'
+    if first[0] == 'git' and any(w in _GIT_READ for w in first[1:3] if not w.startswith('-')):
+        return 'explore'
+    if first[0] == 'gh' and any(w in _GH_READ for w in first[1:4]):
+        return 'explore'
+    return 'other'
+
+
+def profile_bins(trace):
+    """{bin: count} over the top-level calls of a parsed trace."""
+    out = dict.fromkeys(PROFILE_BINS, 0)
+    for name, inp, _ in trace['calls']:
+        if name in EXPLORE_TOOLS:
+            b = 'explore'
+        elif name in EDIT_TOOLS:
+            b = 'edit'
+        elif name == 'Bash':
+            b = _bash_bin((inp or {}).get('command') if isinstance(inp, dict) else '')
+        else:
+            b = 'other'
+        out[b] += 1
+    return out
+
+
+def _profile(src):
+    """One line for the report. A stream that cannot be read says so (exit 3) — never counts of 0.
+    A stream with no result event or damaged lines keeps its counts and says they are a lower bound."""
+    tr = parse_stream(src)
+    if tr is None:
+        print('trace=UNREADABLE')
+        return 3
+    p = profile_bins(tr)
+    line = ' '.join('%s=%d' % (b, p[b]) for b in PROFILE_BINS) + ' total=%d' % sum(p.values())
+    flags = []
+    if tr['result'] is None:
+        flags.append('result=MISSING')
+    if tr['damaged']:
+        flags.append('damaged=%d' % tr['damaged'])
+    if flags:
+        line += ' ' + ' '.join(flags) + ' (counts are a lower bound)'
+    print(line)
+    return 0
+
+
 def _extract(src, dst_txt, dst_tools):
     tr = parse_stream(src)
     if tr is None or tr['result'] is None or tr['damaged']:
@@ -137,5 +270,7 @@ def _extract(src, dst_txt, dst_tools):
 if __name__ == '__main__':
     if len(sys.argv) == 5 and sys.argv[1] == 'extract':
         sys.exit(_extract(*sys.argv[2:5]))
+    if len(sys.argv) == 3 and sys.argv[1] == 'profile':
+        sys.exit(_profile(sys.argv[2]))
     print(__doc__, file=sys.stderr)
     sys.exit(2)
