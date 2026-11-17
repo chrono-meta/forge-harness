@@ -7,6 +7,10 @@
 #    verifier that cannot be reached, a family grading its own findings. Each lane below pins one of
 #    those, and the mutant lane checks that removing the guard actually turns a lane red.
 set -uo pipefail
+# Every agy in this file is a FAKE (a stub script), and agy_launch_guard.sh refuses any agy launch
+# without an isolation marker. The guard's own refusal is tested in test_agy_launch_guard_lanes.sh;
+# here the marker only lets the fakes through so these lanes keep measuring what they measure.
+export FH_AGY_ISOLATION=container
 HERE="$(cd "$(dirname "$0")" && pwd)"
 FLEET="$HERE/finding_fleet.sh"; VERIFY="$HERE/finding_verify.py"
 PASS=0; FAIL=0
@@ -244,7 +248,7 @@ bash "$PIPE" "$D/tgt.py" --out "$D/pipe22" --fleet "$D/fleet0.tbl" >"$D/p22" 2>&
 #    verifier 를 찾으므로, 뮤턴트만 임시 디렉터리에 두면 프로브는 «가드가 죽었나» 가 아니라
 #    «파일이 없나» 를 잰다 — 빨간색이 나오지만 이유가 다르다(실측 2026-09-09, 이 레인의 첫 판).
 MUTD="$D/mut"; mkdir -p "$MUTD"
-cp "$HERE/finding_fleet.sh" "$HERE/finding_verify.py" "$HERE/finding_verifier.sh" "$MUTD/"
+cp "$HERE/finding_fleet.sh" "$HERE/finding_verify.py" "$HERE/finding_verifier.sh" "$HERE/agy_launch_guard.sh" "$MUTD/"
 MUTP="$MUTD/finding_pipeline.sh"
 MUT_ERR="$D/mut23.err"
 /usr/bin/python3 - "$PIPE" "$MUTP" 2>"$MUT_ERR" <<'PY'
@@ -1113,7 +1117,7 @@ fi
 # 🟥 사본의 HERE 는 사본이 있는 디렉터리다 — 형제 스크립트를 같이 옮기지 않으면 «missing …
 #   skipped, NOT passed» 로 exit 3 이 나서 rc 만 맞는 거짓 초록이 된다(초판이 그랬고, 아래
 #   coverage 단언이 그것을 잡았다 — rc 하나만 봤으면 통과했다).
-/bin/cp "$HERE/finding_fleet.sh" "$HERE/finding_verify.py" "$HERE/finding_verifier.sh" "$D/" 2>/dev/null
+/bin/cp "$HERE/finding_fleet.sh" "$HERE/finding_verify.py" "$HERE/finding_verifier.sh" "$HERE/agy_launch_guard.sh" "$D/" 2>/dev/null
 /usr/bin/sed 's|done < "$ROSTER"|done < "$OUT/families.txt"|g' "$PIPE" > "$D/pipe_rev.sh"
 NREV=$(/usr/bin/grep -c 'done < "\$OUT/families.txt"' "$D/pipe_rev.sh" 2>/dev/null); NREV=${NREV:-0}
 if [ "$NREV" -ge 2 ]; then

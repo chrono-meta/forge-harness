@@ -513,12 +513,15 @@ if [ ! -f scripts/prepush_guard_check.sh ]; then
   _absent_subject_verdict "prepush-guard known-pair" "scripts/prepush_guard_check.sh" || fail=1
 else
   # 🟥 파이프 앞에서 rc 를 잡는다 — 표시 필터의 rc 를 읽으면 실패가 0 으로 보인다.
+  # 🟥 tail -12 로 자르지 않는다 — 하위 소비자가 «BLOCKED — a known pair broke» 만 받고 어느 쌍인지
+  # 못 읽은 실사고(2026-11-16, 원인은 UNMEASURED). ❌ 줄을 뽑는 _show_failure 로 보이고, 전체 경과도 찍는다.
+  _pg_t0=$SECONDS
   _pg_out="$(bash scripts/prepush_guard_check.sh 2>&1)"; _pg_rc=$?
   if [ "$_pg_rc" -eq 0 ]; then
     echo "PASS  prepush-guard known-pair"
   else
-    echo "FAIL  prepush-guard known-pair (rc=$_pg_rc)"
-    [ -n "$_pg_out" ] && printf '%s\n' "$_pg_out" | tail -12 | sed 's/^/      /'
+    echo "FAIL  prepush-guard known-pair (rc=$_pg_rc, $((SECONDS - _pg_t0))s)"
+    _show_failure "$_pg_out"
     fail=1
   fi
 fi
@@ -1866,6 +1869,52 @@ elif [ -f scripts/test_sidecar_calibrate_lanes.sh ]; then
   fi
 else
   echo "FAIL  test_sidecar_calibrate_lanes.sh: sidecar_calibrate.sh present but its anchor is missing"
+  fail=1
+fi
+# agy launch guard (2026-11-16). The guard is the only thing between an FH script and a cloud agent
+# CLI that reads this machine and sends what it read to the model; its lanes use fake agy stubs only.
+if [ ! -f scripts/agy_launch_guard.sh ]; then
+  _absent_subject_verdict "test_agy_launch_guard_lanes.sh" "scripts/agy_launch_guard.sh" || fail=1
+elif [ -f scripts/test_agy_launch_guard_lanes.sh ]; then
+  if ! bash scripts/test_agy_launch_guard_lanes.sh < /dev/null; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_agy_launch_guard_lanes.sh: agy_launch_guard.sh present but its anchor is missing"
+  fail=1
+fi
+# agy remote runner (2026-11-16) — the only route the guard's remote-os-user marker opens; its lanes use a fake ssh/scp.
+if [ ! -f scripts/agy_remote_run.sh ]; then
+  _absent_subject_verdict "test_agy_remote_run_lanes.sh" "scripts/agy_remote_run.sh" || fail=1
+elif [ -f scripts/test_agy_remote_run_lanes.sh ]; then
+  if ! env -u FH_AGY_REMOTE -u FH_AGY_REMOTE_DENY -u FH_AGY_REMOTE_RECEIPT_DIR bash scripts/test_agy_remote_run_lanes.sh < /dev/null; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_agy_remote_run_lanes.sh: agy_remote_run.sh present but its anchor is missing"
+  fail=1
+fi
+# codex launch guard (2026-11-16) — refuses a codex verifier arm whose prompt/args/cwd name a company root.
+if [ ! -f scripts/codex_launch_guard.sh ]; then
+  _absent_subject_verdict "test_codex_launch_guard_lanes.sh" "scripts/codex_launch_guard.sh" || fail=1
+elif [ -f scripts/test_codex_launch_guard_lanes.sh ]; then
+  if ! bash scripts/test_codex_launch_guard_lanes.sh < /dev/null; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_codex_launch_guard_lanes.sh: codex_launch_guard.sh present but its anchor is missing"
+  fail=1
+fi
+# prepush-guard failure visibility (2026-11-16) — a broken known pair must be named, with rc and
+# elapsed, in the last lines of the check and in selfcheck's own rendering of it.
+if [ ! -f scripts/prepush_guard_check.sh ]; then
+  _absent_subject_verdict "test_prepush_guard_failure_visibility_lanes.sh" "scripts/prepush_guard_check.sh" || fail=1
+elif [ -f scripts/test_prepush_guard_failure_visibility_lanes.sh ]; then
+  if ! bash scripts/test_prepush_guard_failure_visibility_lanes.sh < /dev/null; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_prepush_guard_failure_visibility_lanes.sh: prepush_guard_check.sh present but its anchor is missing"
   fail=1
 fi
 # Squash-merge verification + its merge-path wiring (2026-09-24). Same subject/anchor pairing as above:

@@ -138,7 +138,7 @@ MODEL="sonnet"
 #   ⚠️ 비용: reps=3 이면 프로브당 `claude -p` 호출이 2 → 6 이다(12 프로브 = 24 → 72).
 REPS=1
 # §TRACE (2026-11-14, FH-3): arms keep their event stream so the scorer can read tool calls and the
-# init tool/MCP list (behave: probes · INVALID-COMPARISON). FH_LIVE_TRACE=0 restores text-only runs.
+# init tool/MCP/plugin lists (behave: probes · INVALID-COMPARISON). FH_LIVE_TRACE=0 restores text-only runs.
 if [ "${FH_LIVE_TRACE:-1}" = 0 ]; then FH_LIVE_TRACE_ARG=""; else FH_LIVE_TRACE_ARG="--trace"; fi
 DRYRUN=0
 SUBSET=""

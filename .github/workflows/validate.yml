@@ -32,6 +32,15 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2, 3, 4]
+    # One output per leg, each under its own key. A matrix job keeps one value per output key, so legs that
+    # shared a key would overwrite each other; distinct keys let `validate` read every leg without any API call
+    # (a downstream consumer on GitHub Enterprise got HTTP 401 from the jobs listing with the job token).
+    # Keep these keys equal to the matrix list: test_ci_validate_shard_count_lanes.sh checks that they match.
+    outputs:
+      leg_1: ${{ steps.leg_passed.outputs.leg_1 }}
+      leg_2: ${{ steps.leg_passed.outputs.leg_2 }}
+      leg_3: ${{ steps.leg_passed.outputs.leg_3 }}
+      leg_4: ${{ steps.leg_passed.outputs.leg_4 }}
     runs-on: ubuntu-24.04  # pinned 2026-10-20: ubuntu-latest moved to 26.04 and the locale-invariance lane could not measure there (rc=2), which turned main red
     # The cause was uutils `wc` (no locale split); the suite now builds its control from a GNU wc when one exists
     # (26.04 ships it as `gnuwc`). Keep this pin until newest-runner-canary.yml is green on the newest image — unpin from that run.
@@ -321,6 +330,13 @@ jobs:
           fi
           exit $rc
 
+      # LAST step of every leg, on purpose: it runs only when every earlier step succeeded (default `if: success()`),
+      # so a leg that failed, was cancelled, or never got a runner writes nothing — `validate` then finds its key
+      # missing and stays red. The value names the leg and the total so a mislabelled leg is caught too.
+      - name: Record that this leg passed
+        id: leg_passed
+        run: echo "leg_${{ matrix.shard }}=passed:${{ matrix.shard }}/${{ strategy.job-total }}" >> "$GITHUB_OUTPUT"
+
   # The ONE required-check name. Branch protection used to require the single job called `validate`;
   # splitting it into `selfcheck (shard i/N)` legs would leave that required name never reported (a PR then
   # waits forever, or — worse — is mergeable if the rule is dropped to get unstuck). This job keeps the name
@@ -330,40 +346,38 @@ jobs:
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     permissions:
-      actions: read
       contents: read
     steps:
       - name: Every selfcheck shard passed
         env:
           SHARDS_RESULT: ${{ needs.selfcheck.result }}
-          GH_TOKEN: ${{ github.token }}
+          LEGS_JSON: ${{ toJSON(needs.selfcheck.outputs) }}
           EXPECTED_SHARDS: "4"   # keep equal to the matrix length above
         run: |
           echo "selfcheck shards: ${SHARDS_RESULT}"
           [ "${SHARDS_RESULT}" = "success" ] || { echo "::error::at least one selfcheck shard did not succeed (${SHARDS_RESULT}) — not a pass"; exit 1; }
-          # `needs.<job>.result` can read success when a leg was cancelled before a runner took it (codex R1 2026-10-31):
-          # count the legs of THIS run attempt and require every one to have concluded success.
-          # The jobs listing can lag behind `needs`: right after the last leg ends it may still be short or carry a
-          # null conclusion (#1029: «legs 3/3 → 2/2, expected 4» while all 4 legs had succeeded). Re-query ONLY while
-          # the listing is incomplete (fewer legs than expected, or a null conclusion) — never on a recorded
-          # failure — at most SHARD_REQUERY_MAX times, then judge exactly as before (fail-closed).
-          tries=0
-          while :; do
-            out=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}/jobs" --paginate \
-                    --jq '.jobs[] | select(.name | startswith("selfcheck (shard ")) | .conclusion'); rc=$?
-            [ "$rc" -eq 0 ] || { echo "::error::could not list this run's jobs (rc=$rc) — shards not verified, not a pass"; exit 1; }
-            # grep -c exits 1 on 0 matches and the step runs under bash -e — every count needs «|| true»
-            total=$(printf '%s\n' "$out" | grep -c . || true); ok=$(printf '%s\n' "$out" | grep -cx success || true)
-            pending=$(printf '%s\n' "$out" | grep -cx null || true)
-            recorded_bad=$(printf '%s\n' "$out" | grep . | grep -cvxE 'success|null' || true)
-            # a recorded failure/cancel/skip is judged now — a later listing must never wash it out (codex R1)
-            if [ "$recorded_bad" -eq 0 ] && { [ "$total" -lt "$EXPECTED_SHARDS" ] || [ "$pending" -gt 0 ]; } \
-               && [ "$tries" -lt "${SHARD_REQUERY_MAX:-6}" ]; then
-              tries=$((tries + 1))
-              echo "selfcheck legs listed ${total}/${EXPECTED_SHARDS} (${pending} without a conclusion) — listing incomplete, re-query ${tries}/${SHARD_REQUERY_MAX:-6}"
-              sleep "${SHARD_REQUERY_SLEEP:-5}"; continue
-            fi
-            break
-          done
-          echo "selfcheck legs: ${ok}/${total} success (expected ${EXPECTED_SHARDS})"
-          [ "$total" -eq "$EXPECTED_SHARDS" ] && [ "$ok" -eq "$EXPECTED_SHARDS" ] || { echo "::error::selfcheck legs ${ok}/${total}, expected ${EXPECTED_SHARDS}/${EXPECTED_SHARDS} — not a pass"; exit 1; }
+          # `needs.<job>.result` can read success when a leg was cancelled before a runner took it (codex R1 2026-10-31),
+          # so every leg must also have written its own key from its last step: leg_<i>=passed:<i>/<N>, for i = 1..N.
+          # Read from `needs.selfcheck.outputs` only — no API call and no token. The old proof listed this run's jobs
+          # with `gh api`, which a GitHub Enterprise job token was refused (HTTP 401) although every leg had passed.
+          # A missing, extra or mislabelled key is red; there is no «could not check → pass» path.
+          python3 - <<'PY'
+          import json, os, sys
+          n = int(os.environ["EXPECTED_SHARDS"])
+          try:
+              legs = json.loads(os.environ.get("LEGS_JSON") or "")
+          except ValueError:
+              print("::error::selfcheck leg outputs are not readable JSON — shards not verified, not a pass"); sys.exit(1)
+          if not isinstance(legs, dict):
+              print("::error::selfcheck leg outputs are not a map — shards not verified, not a pass"); sys.exit(1)
+          seen = {k: v for k, v in legs.items() if v not in (None, "")}
+          want = {"leg_%d" % i: "passed:%d/%d" % (i, n) for i in range(1, n + 1)}
+          missing = sorted(k for k in want if k not in seen)
+          wrong = sorted("%s=%s" % (k, seen[k]) for k in want if k in seen and seen[k] != want[k])
+          extra = sorted("%s=%s" % (k, v) for k, v in legs.items() if k not in want)   # any extra key, even empty
+          ok = len(want) - len(missing) - len(wrong)
+          print("selfcheck legs: %d/%d recorded passed (expected %d)" % (ok, n, n))
+          for name, items in (("missing", missing), ("mislabelled", wrong), ("unexpected", extra)):
+              if items: print("::error::selfcheck legs %s: %s — not a pass" % (name, ", ".join(items)))
+          sys.exit(1 if (missing or wrong or extra) else 0)
+          PY

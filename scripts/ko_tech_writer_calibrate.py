@@ -253,6 +253,36 @@ def heading_dense(path, common=None, st=None):
     return out
 
 
+# ── S35 낱말 뜻 흔들림 — (a) 기계 단계: 가벼운 동사·명사의 «모든 등장»을 활용형까지 문맥과 함께 늘어놓는다.
+# 🟥 이 함수는 뜻을 가르지 않는다. 뜻 묶기(b)는 판단이다 — 사람 또는 모델이 낱말마다 등장을 뜻별로 묶고 소수 뜻을 표시한다.
+# 레인(C22)이 재는 것은 «늘어놓기의 재현율»뿐이다: 활용형 픽스처의 모든 줄을 잡는가 · 겹치는 다른 낱말(쓰레기 · 세계 · 재료 …)을 안 잡는가.
+# 출발점(2026-11-16): 정규식 하나가 「쓰던 · 쓰면 · 쓰고 · 쓰되」를 놓쳤다 — 활용형 열거가 이 레인의 핵심이다.
+# 낱말을 늘리려면 픽스처 두 파일에 활용형 줄과 겹치는 낱말 줄을 먼저 넣고, 레인이 초록일 때만 여기에 더한다.
+# 앞 경계 (?<![가-힣]) 때문에 합성어(글쓰기 · 덮어쓰기 · 공작기계)는 안 잡는다 — 알려진 잔여.
+SENSE_WORDS = [
+    # 쓰다 = 어간 일치 + 이름 붙인 제외(쓰레기 · 쓰나미 · 쓰러지다 · 쓰라리다 · 쓰다듬다 · 씁쓸). 활용형을 열거하지 않는다 —
+    #        열거형은 라운드마다 새 활용형을 놓쳤다(쓰던 → 쓰인 → 쓰였다). 대신 과다 나열(쓸모 · 쓴맛 …)을 받아들이고 (b)가 가른다.
+    ("쓰다", r"(?<![가-힣])(?:쓰(?!레|나미|러|라리|라린|다듬)|써(?![클머핀드])|썼|씁(?!쓸)|쓴|쓸(?!쓸)|씀)"),
+    # 세다 · 재다 = 「세 · 재」로 시작하는 다른 낱말이 너무 많아(세계 · 세션 · 재료 · 재현 …) 어미 첫 음절 목록 + 이름 붙인 제외로 둔다.
+    #        이 둘은 열거형이다 — 목록 밖 활용형은 조용히 빠진다(--senses 출력이 그렇게 적는다).
+    ("세다", r"(?<![가-힣])(?:세(?:다(?!리)|는|어|었|고|면(?!대)|며|서|던|지|도(?!정)|려|되|겠|니|야|거|봤|보|셨|죠|네|든|기로|길)|센(?:다|(?![가-힣]))|셀(?:까|지|(?![가-힣]))|셉|셌)"),
+    ("재다", r"(?<![가-힣])(?:재(?:다|는|어|었|고(?!품)|면(?!접)|며|서|던|지(?!정|원|급)|도(?!전|입)|려|되|겠|니|야|거(?!래)|봤|보(?!험)|셨|죠|든|기로|길)|잰(?:다|(?![가-힣]))|잴|잽(?!싸)|쟀)"),
+    ("기계", r"(?<![가-힣])기계"),
+]
+
+
+def sense_hits(path, st=None):
+    """[(낱말, 줄번호, 문맥)] — 펜스 · 그림 블록은 뺀다. 문맥 = 맞은 자리 앞뒤 20자."""
+    out = []
+    for i, line in scan_lines(path, True, st or Blocks()):
+        line = re.sub(r"<!--.*?-->", "", line)   # 주석 안 낱말은 독자 본문이 아니다(픽스처의 기대 표지도 주석이다)
+        for lemma, pat in SENSE_WORDS:
+            for m in re.finditer(pat, line):
+                a, b = max(0, m.start() - 20), min(len(line), m.end() + 20)
+                out.append((lemma, i, line[a:b].strip()))
+    return out
+
+
 # 함수형 레인 레지스트리: 플래그 -> f(path, common) -> [(키, 줄번호, 종류)]
 FUNC_LANES = {"s7": lambda path, common=None: s7_candidates(path, common),
               "hdens": lambda path, common=None: heading_dense(path)}
@@ -524,13 +554,42 @@ def scan_main(args):
     return 0
 
 
+def senses_main(args):
+    """--senses FILE — S35 (a) 단계: 낱말별 모든 등장을 줄번호 · 문맥과 함께. 뜻 묶기(b)는 이 출력을 읽는 사람/모델의 몫이다."""
+    if len(args) != 1 or args[0].startswith("--"):
+        sys.stderr.write("usage: ko_tech_writer_calibrate.py --senses FILE\n")
+        return 10
+    st = Blocks()
+    try:
+        hits = sense_hits(args[0], st)
+    except (OSError, UnicodeDecodeError) as e:
+        sys.stderr.write("harness error: cannot scan %s: %s\n" % (args[0], e))
+        return 10
+    print("scanned: %s %d lines (fence/fig skipped: %d)" % (args[0], st.total, st.skipped))
+    print("words: %s -- listing only; group each word's lines by sense and flag the minority sense (judgment)" % ", ".join(w for w, _ in SENSE_WORDS))
+    print("coverage: 쓰다 · 기계 = stem match (over-lists; step b sorts it out) · 세다 · 재다 = enumerated endings -- a form outside the list is silently absent, so 0 here is not 'none'")
+    for lemma, _ in SENSE_WORDS:
+        rows = [(i, c) for w, i, c in hits if w == lemma]
+        print("== %s (%d)" % (lemma, len(rows)))
+        for i, c in rows:
+            print("%d\t%s" % (i, c))
+    bad = unclosed(st)
+    if bad:
+        for b in bad:
+            sys.stderr.write("WARNING unclosed block at EOF: %s -- listing after it is NOT valid\n" % b)
+        return 3
+    return 0
+
+
 def main():
     if len(sys.argv) > 1:
         if sys.argv[1] == "--scan":
             return scan_main(sys.argv[2:])
         if sys.argv[1] == "--check-rewrite":
             return check_main(sys.argv[2:])
-        sys.stderr.write("usage: ko_tech_writer_calibrate.py [--scan FILE [--s7-common LIST] | --check-rewrite ...]\n")
+        if sys.argv[1] == "--senses":
+            return senses_main(sys.argv[2:])
+        sys.stderr.write("usage: ko_tech_writer_calibrate.py [--scan FILE [--s7-common LIST] | --check-rewrite ... | --senses FILE]\n")
         return 10
     for p in (POS, NEG):
         if not os.path.isfile(p):
@@ -650,6 +709,33 @@ def main():
             print("FAIL RW2 %s" % name)
             nfail += 1
 
+    # C22 S35 낱말 뜻 늘어놓기 — 활용형 픽스처의 «모든» 줄을 기대 낱말로 잡는가(재현율) · 겹치는 다른 낱말을 0건 잡는가.
+    # 🟥 판별하는 것은 늘어놓기(a)뿐이다. 뜻 묶기(b)는 판단이라 이 레인이 재지 않는다 — 초록이어도 «뜻 흔들림 검출»을 주장하지 마라.
+    sp, sn = os.path.join(FIX, "sense_positive.md"), os.path.join(FIX, "sense_negative.md")
+    if not (os.path.isfile(sp) and os.path.isfile(sn)):
+        print("FAIL C22 word-sense listing -- fixture missing (%s / %s)" % (sp, sn))
+        nfail += 1
+    else:
+        exp = {}
+        for i, l in enumerate(read_lines(sp), 1):
+            m = re.search(r"<!-- (\S+) -->\s*$", l)
+            if m:
+                exp[i] = m.group(1)
+        got = {}
+        for lemma, i, _ in sense_hits(sp):
+            got.setdefault(i, set()).add(lemma)
+        miss = sorted(i for i, e in exp.items() if e not in got.get(i, set()))
+        extra = sorted(i for i in got if got[i] != {exp.get(i)})
+        neg = sense_hits(sn)
+        if exp and not miss and not extra and not neg:
+            print("OK   C22 낱말 뜻 늘어놓기(S35 a단계) -- recall %d/%d lines of a constructed inflection fixture (%s) / negative 0 (listing discriminates there; "
+                  "sense grouping is judgment, NOT measured here)" % (len(exp), len(exp), ", ".join(w for w, _ in SENSE_WORDS)))
+            npass += 1
+        else:
+            print("FAIL C22 낱말 뜻 늘어놓기 -- expected %d, missed lines %s, wrong-lemma lines %s, negative hits %d"
+                  % (len(exp), miss, extra, len(neg)))
+            nfail += 1
+
     # META 컨트롤 1 — 없는 토큰이 양쪽 다 0인가 (계기가 «늘 잡는다» 를 내지 않는다)
     if count(POS, NEVER) == 0 and count(NEG, NEVER) == 0:
         print("OK   META control -- an absent token matches nothing in either fixture")
@@ -675,6 +761,7 @@ def main():
         print("  NOT proven: 'zero residue' in any real document. That is measured per document.")
         print("  C7-C12 positives are the harvest's own 'before' sentences (re-built short); C13-C14 positives are constructed (no harvest pair), so")
         print("  false-positive rate on out-of-distribution text is UNMEASURED. C9 over-blocks by design.")
+        print("  C22 measures listing recall on a constructed inflection fixture only; grouping occurrences by sense (S35 step b) is judgment and has no lane.")
         print("  Citing this suite as evidence of 'zero residue' reproduces the very downgrade")
         print("  recorded in harness_terminal_correlation_and_recommendations.md.")
         return 0

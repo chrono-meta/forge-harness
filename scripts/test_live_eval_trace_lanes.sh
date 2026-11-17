@@ -13,6 +13,11 @@
 #   TR8 the runner refuses --trace with --turns (rc 2), never ignores it
 #   TR13 ablation_calibrate.sh (direct claude -p measurement path) pins MCP in every arm
 #   TR9 revert probe: a scorer without the «said, not done → FAIL» line turns TR2 red
+#   TR14 arms equal in tools/MCP but one loaded an extra plugin → INVALID-COMPARISON (2026-11-15 nightly shape)
+#   TR15 control: arms with the same plugin set stay comparable (PASS), also reordered or with a duplicate entry
+#   TR16 same plugin, different version → INVALID-COMPARISON (an auto-update moved a version mid-run)
+#   TR17 one arm's init carries a plugin list (or an empty one), the other's none → INVALID-COMPARISON (UNKNOWN ≠ «no plugins»)
+#   TR18 revert probe: an inventory without plugins turns TR14 back to comparable → TR14 would be red
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LIB="${LIVE_EVAL_LIB_DIR:-$HERE}"
@@ -23,7 +28,8 @@ python3 "$HERE/live_eval_trace.py" extract /dev/null /dev/null /dev/null >/dev/n
   && ok "TR0 the shipped file runs by its own path (empty stream → rc 3)" || bad "TR0 direct run"
 if [ -n "${LIVE_TRACE_REAL:-}" ]; then
   r=$(python3 "$HERE/live_eval_trace.py" extract "$LIVE_TRACE_REAL" "$T/real.txt" "$T/real.tools" ; echo "rc=$?")
-  grep -q '^tools=.*Read' "$T/real.tools" && [ -s "$T/real.txt" ] && echo "  ℹ️  TR0b real stream shape read ($r)" \
+  grep -q '^tools=.*Read' "$T/real.tools" && [ -s "$T/real.txt" ] && grep -q '| plugins=\[' "$T/real.tools" \
+    && echo "  ℹ️  TR0b real stream shape read, plugin list included ($r)" \
     || echo "  ⚠️  TR0b real stream NOT read ($r) — fixtures may not match the real shape"
 else
   echo "  ℹ️  TR0b real-shape re-check UNMEASURED this run (LIVE_TRACE_REAL unset) — not a pass"
@@ -33,10 +39,19 @@ fi
 cat > "$T/mk.py" <<'PY'
 import json, sys
 f, tools, mcp, res = sys.argv[1:5]
+import os
 ev = [{"type": "system", "subtype": "hook_started", "hook_name": "SessionStart"}]
 if tools != "NOINIT":
-    ev.append({"type": "system", "subtype": "init", "tools": [t for t in tools.split(",") if t],
-               "mcp_servers": [{"name": m.split(":")[0], "status": (m.split(":") + ["connected"])[1]} for m in mcp.split(",") if m]})
+    init = {"type": "system", "subtype": "init", "tools": [t for t in tools.split(",") if t],
+            "mcp_servers": [{"name": m.split(":")[0], "status": (m.split(":") + ["connected"])[1]} for m in mcp.split(",") if m]}
+    # MK_PLUGINS: unset/empty = no plugins key (older shape); "-" = empty list; else csv of
+    # source[=version] — the real init carries {name, path, source, version?} per plugin.
+    pl = os.environ.get("MK_PLUGINS", "")
+    if pl:
+        init["plugins"] = [] if pl == "-" else [
+            dict({"name": x.split("=")[0].split("@")[0], "path": "/fixture", "source": x.split("=")[0]},
+                 **({"version": x.split("=")[1]} if "=" in x else {})) for x in pl.split(",")]
+    ev.append(init)
 # call forms: Read=path · ERR:Read=path (tool_result is_error) · SUB:Read=path (inside a subagent)
 for n, c in enumerate(sys.argv[5:]):
     flag = ""
@@ -58,7 +73,7 @@ mk "$T/a.jsonl" "Read,Grep,Glob" "" "CATALOG says x" Read=CATALOG.md
 python3 "$HERE/live_eval_trace.py" extract "$T/a.jsonl" "$T/a.txt" "$T/a.tools"; xrc=$?
 printf '%s\n' '{"type":"system","subtype":"init","tools":["Read"]}' > "$T/nores.jsonl"
 python3 "$HERE/live_eval_trace.py" extract "$T/nores.jsonl" "$T/n.txt" "$T/n.tools"; nrc=$?
-[ $xrc -eq 0 ] && [ "$(cat "$T/a.txt")" = "CATALOG says x" ] && grep -qx 'tools=Glob,Grep,Read | mcp=' "$T/a.tools" \
+[ $xrc -eq 0 ] && [ "$(cat "$T/a.txt")" = "CATALOG says x" ] && grep -qx 'tools=Glob,Grep,Read | mcp= | plugins=UNKNOWN' "$T/a.tools" \
   && [ $nrc -eq 3 ] && [ ! -s "$T/n.txt" ] \
   && ok "TR1 extract writes result + inventory; no result event → rc 3, empty text" \
   || bad "TR1 xrc=$xrc nrc=$nrc txt=$(cat "$T/a.txt") tools=$(cat "$T/a.tools")"
@@ -69,9 +84,11 @@ build(){ local root="$1" pid="$2" reps="$3" ps="$4" cs="$5" i arm spec
   for i in $(seq 1 "$reps"); do
     for arm in primary control; do
       [ $arm = primary ] && spec="$ps" || spec="$cs"
-      IFS='|' read -r tl mc tx calls <<<"$spec"
+      IFS='|' read -r tl mc tx calls pl <<<"$spec"
+      # 5th field = plugins for rep 1 only when it starts with «r1:» (a set that changed in one rep)
+      case "$pl" in r1:*) if [ "$i" -eq 1 ]; then pl="${pl#r1:}"; else pl="${PL_BASE:-}"; fi ;; esac
       printf '%s' "$tx" > "$root/$pid/${arm}_r$i.txt"
-      if [ "$tl" != "-" ]; then set -f; mk "$root/$pid/${arm}_r$i.stream.jsonl" "$tl" "$mc" "$tx" $calls; set +f; fi
+      if [ "$tl" != "-" ]; then set -f; MK_PLUGINS="$pl" mk "$root/$pid/${arm}_r$i.stream.jsonl" "$tl" "$mc" "$tx" $calls; set +f; fi
     done
   done; }
 score(){ python3 - "$LIB" "$1" "$2" "$3" "${4:-}" <<'PY'
@@ -106,7 +123,7 @@ m=$(score "$T/old" P 'read=CATALOG\.md'); m0=$(score "$T/old" P '')
 
 build "$T/inv" P 3 "Read,Grep,Glob|drive,wiki|CATALOG has it|Read=CATALOG.md" "$RT||오늘 맑아|"
 v=$(score "$T/inv" P 'read=CATALOG\.md')
-[[ "$v" == "INVALID-COMPARISON MENTION-ONLY INVALID-COMPARISON None "* || "$v" == "INVALID-COMPARISON BEHAVIOUR INVALID-COMPARISON None "* ]] && [[ "$v" == *"different tool/MCP lists"* ]] \
+[[ "$v" == "INVALID-COMPARISON MENTION-ONLY INVALID-COMPARISON None "* || "$v" == "INVALID-COMPARISON BEHAVIOUR INVALID-COMPARISON None "* ]] && [[ "$v" == *"different tool/MCP/plugin lists"* ]] \
   && ok "TR6 arms with different tool/MCP lists → INVALID-COMPARISON, no pass_rate" || bad "TR6 [$v]"
 
 b=$(score "$T/did" P 'reads=CATALOG')
@@ -141,5 +158,34 @@ hf=$(score "$T/half" P 'read=CATALOG\.md')
 npin=$(grep -cE '^  (allowlist|denylist|baseline)\) +FLAGS=\(.*--strict-mcp-config' "$HERE/ablation_calibrate.sh")
 [ "$npin" -eq 3 ] && ok "TR13 ablation_calibrate.sh pins MCP (--strict-mcp-config) in all 3 arms" || bad "TR13 pinned arms=$npin/3"
 
-[ $pass -eq 14 ] || bad "lane count $pass != 14 — a case did not run"
+# ── plugins (2026-11-15): the nightly's G-GREET-01 / G-TRIG-05 had tools and MCP equal in every arm and
+# one rep (primary_r1) with one extra builtin plugin; the scorer reported «1 distinct». Names below are
+# synthetic — the shape (source@version, builtin with no version) is the real init's.
+PB='fx-core@hub=3.42.0,fx-lsp@official=1.0.0,fx-telemetry@builtin'
+PL_BASE="$PB" build "$T/plg" P 3 "$RT||CATALOG has it|Read=CATALOG.md|r1:$PB,fx-chart@builtin" "$RT||오늘 맑아||$PB"
+pg=$(score "$T/plg" P 'read=CATALOG\.md')
+[[ "$pg" == INVALID-COMPARISON* ]] && [[ "$pg" == *"saw 2 different"*"plugin lists"* ]] && [[ "$pg" != *UNKNOWN* ]] \
+  && ok "TR14 one rep with an extra plugin (tools/MCP equal) → INVALID-COMPARISON" || bad "TR14 [$pg]"
+build "$T/plq" P 3 "$RT||CATALOG has it|Read=CATALOG.md|$PB" "$RT||오늘 맑아||$PB"
+pq=$(score "$T/plq" P 'read=CATALOG\.md')
+PR='fx-telemetry@builtin,fx-lsp@official=1.0.0,fx-core@hub=3.42.0,fx-lsp@official=1.0.0'   # same set: reordered + a duplicate
+build "$T/plr" P 3 "$RT||CATALOG has it|Read=CATALOG.md|$PB" "$RT||오늘 맑아||$PR"
+pr=$(score "$T/plr" P 'read=CATALOG\.md')
+[[ "$pq" == "PASS BEHAVIOUR PASS 1.0 "* ]] && [[ "$pr" == "PASS BEHAVIOUR PASS 1.0 "* ]] && ok "TR15 control: same plugin set in every arm → comparable, PASS" || bad "TR15 same=[$pq] reordered+dup=[$pr]"
+build "$T/plv" P 3 "$RT||CATALOG has it|Read=CATALOG.md|${PB/3.42.0/3.43.0}" "$RT||오늘 맑아||$PB"
+pv=$(score "$T/plv" P 'read=CATALOG\.md')
+[[ "$pv" == INVALID-COMPARISON* ]] && [[ "$pv" == *"saw 2 different"* ]] && [[ "$pv" != *UNKNOWN* ]] && ok "TR16 same plugin, different version → INVALID-COMPARISON" || bad "TR16 [$pv]"
+build "$T/plu" P 3 "$RT||CATALOG has it|Read=CATALOG.md|$PB" "$RT||오늘 맑아|"
+pu=$(score "$T/plu" P 'read=CATALOG\.md')
+build "$T/ple" P 3 "$RT||CATALOG has it|Read=CATALOG.md|-" "$RT||오늘 맑아|"
+pe=$(score "$T/ple" P 'read=CATALOG\.md')
+[[ "$pu" == INVALID-COMPARISON* ]] && [[ "$pe" == INVALID-COMPARISON* ]] && ok "TR17 one arm with a plugin list, one without → INVALID-COMPARISON (UNKNOWN, not 0)" || bad "TR17 list=[$pu] empty-list=[$pe]"
+mkdir -p "$T/mut2"; cp "$LIB/probe_live_eval_lib.py" "$T/mut2/"
+sed "s/^\( *\)plug = 'UNKNOWN' if trace.get('plugins') is None else ','.join(trace\['plugins'\])$/\1plug = ''/" \
+  "$LIB/live_eval_trace.py" > "$T/mut2/live_eval_trace.py"
+if grep -q "trace.get('plugins') is None" "$T/mut2/live_eval_trace.py"; then bad "TR18 mutation did not apply (instrument error, not a pass)"
+else mp=$(LIB="$T/mut2" score "$T/plg" P 'read=CATALOG\.md')
+  [[ "$mp" == "PASS "* ]] && ok "TR18 revert probe: inventory without plugins → TR14's pair scores PASS (TR14 would be red)" || bad "TR18 mutant still [$mp]"; fi
+
+[ $pass -eq 19 ] || bad "lane count $pass != 19 — a case did not run"
 echo "live_eval_trace lanes: $pass passed, $fail failed"; [ $fail -eq 0 ]
