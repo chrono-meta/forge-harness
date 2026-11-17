@@ -2174,6 +2174,17 @@ else
   fail=1
 fi
 
+# guard_anchor_override_env — the two guard anchors (universal_guard_check.sh · prepush_guard_check.sh)
+# must measure the hook's default whatever override the caller exported (PUBLIC_SURFACE_OK=1 …).
+if [ -f scripts/test_guard_anchor_override_env_lanes.sh ]; then
+  if ! bash scripts/test_guard_anchor_override_env_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_guard_anchor_override_env_lanes.sh: absent — the anchors' override scrub has no lane"
+  fail=1
+fi
+
 # And the ablation calibrator, for the third instance of the same reason. Its whole job is telling
 # apart states that look identical from outside — "the arm could not answer" vs "the runner is dead"
 # vs "the runner read the answer off disk" — and round 2 of its own adversarial review found that
