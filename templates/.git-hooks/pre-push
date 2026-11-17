@@ -609,7 +609,7 @@ _LB_FILES=$(printf '%s\n' "$_LB_RAW" \
 # the repo hostile to contribution while protecting nothing they could act on.
 if [ -n "$PUSH_RANGES" ] && [ -n "$_LB_FILES" ] && [ -d "$EVIDENCE_ROOT/tracks/_meta" ]; then
   # The marker is bound to the branch being pushed and read where pre-commit writes it (2026-11-15). It used to be
-  # «the newest marker of any branch under $REPO_ROOT»: a worktree push was blocked although its marker existed in
+  # «the newest marker of any branch under ${REPO_ROOT}»: a worktree push was blocked although its marker existed in
   # the main checkout, and a main-checkout push passed on another branch's marker. Every pushed branch needs its own;
   # a push that updates no branch (tags only) falls back to the current branch. Lane: scripts/test_prepush_marker_lookup_lanes.sh.
   # 🟥 Named residual: the marker's owner is read from its file name, and «/» → «_» is not one-to-one. If two branches
