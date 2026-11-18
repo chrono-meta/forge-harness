@@ -140,6 +140,14 @@ e="$(mktemp -d)"; cp "$CHK" "$e/"; printf '%s\n' 'raise ImportError("모듈 깨�
 o="$(PYTHONIOENCODING=ascii python3 "$e/heavy_skill_smell.py" "$HEAVY" 2>&1)"; r=$?; rm -rf "$e"
 [ "$r" = 2 ] && ! printf '%s' "$o" | grep -q Traceback && printf '%s' "$o" | grep -q UNMEASURED \
   && ok "H28 shared-list import failure with non-ASCII text on ascii stdout = rc 2 UNMEASURED, no traceback" || bad "H28 rc=$r"
+# H29: the worked example's own known pair (its fh-module.yaml calibration) runs and passes — the guide cites it
+o="$(python3 "$HERE/fixtures/heavy_skill_smell/clean/tidy-notes/scripts/test_check_refs.py" 2>&1)"; r=$?
+[ "$r" = 0 ] && [ "$(printf '%s\n' "$o" | grep -c '^PASS')" = 3 ] && ok "H29 worked example calibration: check_refs.py known pair 3/3 (pass / fail / unreadable)" \
+  || bad "H29 worked example calibration rc=$r out=«$o»"
+# H30: the worked example's check, called directly — a cited PR missing from the log must exit 1 and name it
+e="$(mktemp -d)"; printf '%s\n' "- Export (#12)" "- Ghost (#99)" > "$e/notes.md"; printf '%s\n' "a1 feat: export (#12)" > "$e/log.txt"
+o="$(python3 "$HERE/fixtures/heavy_skill_smell/clean/tidy-notes/scripts/check_refs.py" "$e/notes.md" "$e/log.txt" 2>&1)"; r=$?; rm -rf "$e"
+[ "$r" = 1 ] && [ "$o" = "MISSING #99" ] && ok "H30 worked example check_refs.py: #99 not in the log → rc 1, «MISSING #99»" || bad "H30 check_refs.py rc=$r out=«$o»"
 # H15 (optional): a real clean cartridge
 if [ -n "${HEAVY_SMELL_REAL_CLEAN:-}" ]; then
   nr="$(python3 "$CHK" "$HEAVY_SMELL_REAL_CLEAN" --json 2>/dev/null | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["smells"]))' 2>/dev/null || echo ERR)"
