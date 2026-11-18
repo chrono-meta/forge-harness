@@ -730,5 +730,48 @@ run_sut --arm a --reps 1 --prompt p --setting-sources 'project local' --out "$WO
 run_sut --arm a --reps 1 --prompt p --setting-sources ',,,' --out "$WORKROOT/o31k2"; _rk2=$RC
 { [ "$_rk1" = 2 ] && [ "$_rk2" = 2 ]; } && ok "L31k 'project local' and ',,,' → rc 2" || no "L31k malformed source list accepted (rc=$_rk1/$_rk2)"
 
+# ── L32 run-level tally (2026-11-19, AQ-20261108-6) — a run where NO rep produced output is
+#    FAILED-TO-RUN, never a quiet «RESULT: CLEAN» that a scorer folds to 0/N. Known-positive: every
+#    rep dies (rc 7, 0 bytes). Known-negative: every rep answers. Exit code stays 0 in both (L9).
+OUTDIR="$WORKROOT/o32a"
+OUT=$( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=die \
+   bash "$SUT" --arm a --reps 2 --prompt p --out "$OUTDIR" 2>&1 ); RC=$?
+{ [ "$RC" = 0 ] && printf '%s' "$OUT" | grep -q "^RUN: FAILED-TO-RUN" \
+  && printf '%s' "$OUT" | grep -q "^REPS: captured=0 empty=0 unmeasured=2 not_launched=0 of 2$"; } \
+  && ok "L32a every rep dead → RUN: FAILED-TO-RUN + tally unmeasured=2 of 2 (exit 0 kept)" \
+  || no "L32a all-dead run not named FAILED-TO-RUN (rc=$RC): $(printf '%s' "$OUT" | grep -E '^(REPS|RUN):' | tr '\n' ' ')"
+OUTDIR="$WORKROOT/o32b"
+OUT=$( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say \
+   bash "$SUT" --arm a --reps 2 --prompt p --out "$OUTDIR" 2>&1 )
+{ ! printf '%s' "$OUT" | grep -q "FAILED-TO-RUN" \
+  && printf '%s' "$OUT" | grep -q "^REPS: captured=2 empty=0 unmeasured=0 not_launched=0 of 2$"; } \
+  && ok "L32b CONTROL — healthy run carries no FAILED-TO-RUN, tally captured=2 of 2" \
+  || no "L32b CONTROL — FAILED-TO-RUN fired on a healthy run, or the tally is wrong"
+OUTDIR="$WORKROOT/o32c"
+OUT=$( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=silent \
+   bash "$SUT" --arm a --reps 2 --prompt p --out "$OUTDIR" 2>&1 )
+{ ! printf '%s' "$OUT" | grep -q "FAILED-TO-RUN" \
+  && printf '%s' "$OUT" | grep -q "^REPS: captured=0 empty=2 unmeasured=0 not_launched=0 of 2$"; } \
+  && ok "L32c all-EMPTY (rc 0) is not FAILED-TO-RUN — it ran and said nothing; tally empty=2" \
+  || no "L32c EMPTY reps folded into FAILED-TO-RUN, or tally wrong"
+
+# L32d/e — the two routes the challenger review (2026-11-19) found around L32a: a multi-turn rep
+#    whose every turn died (turn headers make bytes>0) and reps that never launched (clone failure).
+printf 't1\nt2\n' > "$WORKROOT/t32.txt"
+OUTDIR="$WORKROOT/o32d"
+OUT=$( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=die \
+   bash "$SUT" --arm a --reps 2 --turns "$WORKROOT/t32.txt" --out "$OUTDIR" 2>&1 )
+{ printf '%s' "$OUT" | grep -q "^RUN: FAILED-TO-RUN" \
+  && printf '%s' "$OUT" | grep -q "^REPS: captured=0 empty=0 unmeasured=2 not_launched=0 of 2$"; } \
+  && ok "L32d --turns with every turn dead → unmeasured=2 + FAILED-TO-RUN (turn headers are not output)" \
+  || no "L32d multi-turn all-dead run counted as captured: $(printf '%s' "$OUT" | grep -E '^(REPS|RUN):' | tr '\n' ' ')"
+OUTDIR="$WORKROOT/o32e"
+OUT=$( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say \
+   bash "$SUT" --arm a --reps 2 --prompt p --base-ref no-such-ref-32e --base-sha deadbeef --out "$OUTDIR" 2>&1 )
+{ printf '%s' "$OUT" | grep -q "^RUN: FAILED-TO-RUN" \
+  && printf '%s' "$OUT" | grep -q "^REPS: captured=0 empty=0 unmeasured=0 not_launched=2 of 2$"; } \
+  && ok "L32e every clone failed → not_launched=2 + FAILED-TO-RUN (not a quiet CLEAN)" \
+  || no "L32e never-launched reps not counted: $(printf '%s' "$OUT" | grep -E '^(REPS|RUN):' | tr '\n' ' ')"
+
 echo "sim_isolated_run lanes: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1
