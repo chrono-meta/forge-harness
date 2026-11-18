@@ -44,6 +44,16 @@ set -uo pipefail
 
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || true)
 [ -z "$REPO_ROOT" ] && { echo "  ❌ pre-push: not in a git repo — fail-closed (block)"; exit 1; }
+# Where the pre-commit hook writes markers: the main checkout (git common dir's parent), not a worktree's own
+# folder. Same derivation as pre-commit's EVIDENCE_ROOT.
+_gcd=$(git rev-parse --git-common-dir 2>/dev/null || echo "")
+case "$_gcd" in
+  "") EVIDENCE_ROOT="$REPO_ROOT" ;;
+  /*) EVIDENCE_ROOT=$(dirname "$_gcd") ;;
+  *)  EVIDENCE_ROOT=$(dirname "$REPO_ROOT/$_gcd") ;;
+esac
+[ -d "$EVIDENCE_ROOT" ] || EVIDENCE_ROOT="$REPO_ROOT"
+PUSHED_BRANCHES=""   # local branch names this push updates (the Load-Bearing gate binds its marker to these)
 ZERO="0000000000000000000000000000000000000000"
 PUSH_REMOTE="${1:-origin}"   # git passes the remote NAME as $1; ranges are scoped to it (see below)
 
@@ -254,6 +264,14 @@ fh_stacked_branch_advisory() {
 
 while read -r local_ref local_sha remote_ref remote_sha; do
   [ -z "${remote_ref:-}" ] && continue
+  # Branch identity for the Load-Bearing marker: the local branch, or — for a commit-expression refspec such as
+  # <sha>:refs/heads/topic — the destination branch (codex R2: it used to fall back to the CURRENT branch's marker).
+  if [ "$local_sha" != "$ZERO" ]; then
+    case "$local_ref" in
+      refs/heads/*) PUSHED_BRANCHES="${PUSHED_BRANCHES}${PUSHED_BRANCHES:+$'\n'}${local_ref#refs/heads/}" ;;
+      *) case "$remote_ref" in refs/heads/*) PUSHED_BRANCHES="${PUSHED_BRANCHES}${PUSHED_BRANCHES:+$'\n'}${remote_ref#refs/heads/}" ;; esac ;;
+    esac
+  fi
   # Advisory first — it can never alter the verdict, and it must be visible even when a guard
   # below blocks (the two findings are independent and the operator wants both at once).
   [ "$local_sha" = "$ZERO" ] || fh_stacked_branch_advisory "$local_ref" "$local_sha"
@@ -589,10 +607,49 @@ _LB_FILES=$(printf '%s\n' "$_LB_RAW" \
 # Also FH-dev-scoped: the marker this requires lives in tracks/_meta, which only an FH checkout has.
 # An outside contributor pushing a gate file cannot produce an FH marker, and blocking them would make
 # the repo hostile to contribution while protecting nothing they could act on.
-if [ -n "$PUSH_RANGES" ] && [ -n "$_LB_FILES" ] && [ -d "$REPO_ROOT/tracks/_meta" ]; then
-  _cf_marker=$(ls -t "$REPO_ROOT"/tracks/_meta/.axes_23_passed_*.marker 2>/dev/null | head -1)
-  _cf_line=$(grep -m1 -E '^[[:space:]]*crossfamily:[[:space:]]*[^[:space:]]' "$_cf_marker" 2>/dev/null || true)
+if [ -n "$PUSH_RANGES" ] && [ -n "$_LB_FILES" ] && [ -d "$EVIDENCE_ROOT/tracks/_meta" ]; then
+  # The marker is bound to the branch being pushed and read where pre-commit writes it (2026-11-15). It used to be
+  # «the newest marker of any branch under ${REPO_ROOT}»: a worktree push was blocked although its marker existed in
+  # the main checkout, and a main-checkout push passed on another branch's marker. Every pushed branch needs its own;
+  # a push that updates no branch (tags only) falls back to the current branch. Lane: scripts/test_prepush_marker_lookup_lanes.sh.
+  # 🟥 Named residual: the marker's owner is read from its file name, and «/» → «_» is not one-to-one. If two branches
+  # once shared a name (feature/a · feature_a) and one was deleted, the survivor reads the deleted one's marker as its own.
+  # Closing that needs the writer (pre-commit) to put an unambiguous branch identity inside the marker — not done here.
+  _cf_find_marker() {   # $1 = marker dir · $2 = slug → newest «.axes_23_passed_<slug>_YYYY-MM-DD.marker», exact
+    # (a function, not inline in $( ): bash 3.2 mis-parses a `case … )` inside a command substitution)
+    local _p _s
+    ls -t "$1"/.axes_23_passed_*.marker 2>/dev/null | while IFS= read -r _p; do
+      _s="${_p##*/}"; _s="${_s#.axes_23_passed_}"
+      case "$_s" in *_[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].marker) ;; *) continue ;; esac
+      [ "${_s%_????-??-??.marker}" = "$2" ] && { printf '%s\n' "$_p"; break; }
+    done
+  }
+  _cf_branches="$PUSHED_BRANCHES"
+  [ -n "$_cf_branches" ] || _cf_branches=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+  _cf_line=""; _cf_missing=""
+  while IFS= read -r _cf_br; do
+    [ -z "$_cf_br" ] && continue
+    _cf_slug="${_cf_br//\//_}"
+    # The marker name is <slug>_<YYYY-MM-DD>.marker exactly: a glob on «<slug>_*» also matched a longer branch's
+    # marker (lane/foo ⊂ lane_foo_bar — codex R1). And «/» → «_» is not one-to-one (feature/a = feature_a): when
+    # another local branch maps to the same slug, its marker cannot be told apart, so it does not count.
+    _cf_marker=""
+    # %(refname) with the literal prefix stripped: %(refname:short) can print «heads/x» when a tag x exists (codex R2).
+    # Any OTHER local branch with the same slug makes the marker unattributable — even when the pushed branch does not
+    # exist locally (a <sha>:refs/heads/x push next to a local x-with-underscores — codex R3).
+    if [ "$(git for-each-ref --format='%(refname)' refs/heads/ 2>/dev/null | while IFS= read -r _b; do _b="${_b#refs/heads/}"; [ "${_b//\//_}" = "$_cf_slug" ] && [ "$_b" != "$_cf_br" ] && echo "$_b"; done | grep -c .)" -eq 0 ]; then
+      _cf_marker=$(_cf_find_marker "$EVIDENCE_ROOT/tracks/_meta" "$_cf_slug")
+    else
+      echo "  (branch '$_cf_br' shares its marker name with another local branch — its marker cannot be attributed)"
+    fi
+    _cf_one=$(grep -m1 -E '^[[:space:]]*crossfamily:[[:space:]]*[^[:space:]]' "$_cf_marker" 2>/dev/null || true)
+    if [ -n "$_cf_one" ]; then _cf_line="${_cf_line:-$_cf_one}"; else _cf_missing="$_cf_missing $_cf_br"; fi
+  done <<CFB
+$_cf_branches
+CFB
+  [ -n "$_cf_missing" ] && _cf_line=""
   if [ -z "$_cf_line" ]; then
+    [ -n "$_cf_missing" ] && echo "  (no marker with a crossfamily: line for:$_cf_missing — looked in $EVIDENCE_ROOT/tracks/_meta)"
     echo ""
     echo "══════════════════════════════════════════════"
     echo " ⛔ FH Load-Bearing Change Gate (pre-push) — no cross-family leg recorded"

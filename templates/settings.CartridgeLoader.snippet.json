@@ -1,0 +1,28 @@
+{
+  "_README": [
+    "SessionStart hook snippet for the core cartridge loader (scripts/cartridge_loader.py) — TRACKED source.",
+    "install-wizard discovers every templates/settings.*.snippet.json and merges it into the project's",
+    ".claude/settings.json only after the user answers Y to its SessionStart step; this file itself registers nothing.",
+    "",
+    "What the hook does: reads the operator's enabled list ($FH_CARTRIDGES_ENABLED, else",
+    "$CLAUDE_PROJECT_DIR/.claude/cartridges.enabled), and for each line whose admitted snapshot still hashes to the",
+    "listed sha256, adds that cartridge's skill text to the session context. kind: activity cartridges are skipped",
+    "(they route themselves). No list = nothing injected, one stderr line. Always exits 0. Writes nothing.",
+    "Example list: templates/cartridges.enabled.example. Lanes: scripts/test_cartridge_loader_lanes.sh."
+  ],
+  "project_settings_json": {
+    "hooks": {
+      "SessionStart": [
+        {
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/cartridge_loader.sh\"",
+              "timeout": 10
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

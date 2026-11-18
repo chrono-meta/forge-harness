@@ -57,6 +57,8 @@
 4 test_degrade_scan_shell_probes.sh
 4 test_destructive_pre_gate_lanes.sh
 4 test_fh_module_check_lanes.sh
+3 test_heavy_skill_smell_lanes.sh
+4 test_cartridge_loader_lanes.sh
 4 test_heavy_classifier_lanes.sh
 4 test_marker_first_use_lanes.sh
 4 test_memory_link_check.sh

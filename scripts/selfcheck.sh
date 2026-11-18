@@ -1186,6 +1186,7 @@ for _pair in \
   "scripts/probe_live_eval_lib.py|scripts/test_live_eval_transitions_lanes.sh" \
   "scripts/correction_moments.py|scripts/test_correction_moments_lanes.sh" \
   "scripts/probe_live_eval_lib.py|scripts/test_live_eval_construct_lanes.sh" \
+  "scripts/live_eval_matrix.py|scripts/test_live_eval_matrix_lanes.sh" \
   "scripts/live_eval_trace.py|scripts/test_live_eval_trace_lanes.sh" \
   "scripts/probe_live_eval_lib.py|scripts/test_live_eval_trace_lanes.sh" \
   "scripts/sim_isolated_run.sh|scripts/test_live_eval_trace_lanes.sh" \
@@ -1224,6 +1225,8 @@ for _pair in \
   "plugins/fh-meta/skills/frontier-digest/SKILL.md|scripts/test_frontier_digest_recall.sh" \
   "scripts/test_frontier_digest_recall.sh|scripts/test_frontier_digest_recall_negctl.sh" \
   "scripts/fh_module_check.py|scripts/test_fh_module_check_lanes.sh" \
+  "scripts/heavy_skill_smell.py|scripts/test_heavy_skill_smell_lanes.sh" \
+  "scripts/cartridge_loader.py|scripts/test_cartridge_loader_lanes.sh" \
   "scripts/knowledge_seam_check.sh|scripts/test_knowledge_seam_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_crossfamily_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_floor_lanes.sh" \
@@ -2220,6 +2223,28 @@ elif [ -f scripts/test_target_freeze_lanes.sh ]; then
   fi
 else
   echo "FAIL  test_target_freeze_lanes.sh: target_freeze.sh present but its anchor is missing"
+  fail=1
+fi
+
+# prepush_marker_lookup — the pre-push Load-Bearing gate reads this branch's marker where pre-commit
+# writes it (the evidence root), not a path only the main checkout has.
+if [ -f scripts/test_prepush_marker_lookup_lanes.sh ]; then
+  if ! bash scripts/test_prepush_marker_lookup_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_prepush_marker_lookup_lanes.sh: absent — the pre-push marker lookup has no lane"
+  fail=1
+fi
+
+# guard_anchor_override_env — the two guard anchors (universal_guard_check.sh · prepush_guard_check.sh)
+# must measure the hook's default whatever override the caller exported (PUBLIC_SURFACE_OK=1 …).
+if [ -f scripts/test_guard_anchor_override_env_lanes.sh ]; then
+  if ! bash scripts/test_guard_anchor_override_env_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_guard_anchor_override_env_lanes.sh: absent — the anchors' override scrub has no lane"
   fail=1
 fi
 

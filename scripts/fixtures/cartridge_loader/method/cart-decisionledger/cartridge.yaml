@@ -1,0 +1,13 @@
+schema_version: 1
+plugin: cart-decisionledger
+load:
+  entry: [skills/decision-ledger/SKILL.md]
+constraints:
+  approval: ask
+  writes: write-local
+  reversibility: reversible
+  residency: public
+purpose: "Keep decisions the user states for later work in DECISIONS.md, in the user's own words"
+intents: ["remember this decision for later", "keep that for future exports"]
+kind: method
+applies_when: "the user states a decision meant for later work that the code does not show yet"

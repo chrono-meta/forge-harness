@@ -591,6 +591,10 @@ fi
 # skill's own Per-item-approval principle). Ask BEFORE running the python:
 #   "Register the SessionStart hooks (floor check · env-delta · companion load) into
 #    .claude/settings.json? (Y/N)
+#    [only when templates/settings.CartridgeLoader.snippet.json exists — a hub checkout, not the npm
+#    package:] This also registers the cartridge loader. It injects nothing until you write
+#    .claude/cartridges.enabled yourself (example: templates/cartridges.enabled.example) — it
+#    loads only admitted snapshots you list.
 #    On N: you get no turn-0 mechanical signal — floor gaps, env changes and companion freshness
 #    fall back to session prose, and some of FH's intended features will not run as designed.
 #    The decline is recorded and a one-line per-session reminder will note the state
