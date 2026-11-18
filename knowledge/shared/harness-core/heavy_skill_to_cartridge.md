@@ -106,11 +106,15 @@ rule that was dropped and one that was forgotten look the same.
 `export` copies only what the manifest declares and runs the calibration in a fresh folder with a fresh HOME:
 
 ```bash
-# the worked example's manifest; use your own (export needs the files committed, and an empty --out outside the repo)
-M=scripts/fixtures/heavy_skill_smell/clean/tidy-notes/skills/tidy-notes/fh-module.yaml
+M=plugins/my-plugin/skills/my-skill/fh-module.yaml   # your manifest
 python3 scripts/fh_module_check.py check  "$M"
-python3 scripts/fh_module_check.py export "$M" --out "$(mktemp -d)/tidy-notes-standalone"
+python3 scripts/fh_module_check.py export "$M" --out "$(mktemp -d)/my-skill-standalone"
 ```
+
+`export` finds a skill only at `plugins/<plugin>/skills/<name>/`, copies only committed files, and wants an empty
+`--out` outside the repo — otherwise it answers UNMEASURED, not STANDALONE. (The worked example in §6 lives under
+`scripts/fixtures/`, so there `check` is OK and `export` is UNMEASURED; laid out as a plugin, the blind-sim cartridges
+exported STANDALONE.)
 
 List every file the calibration needs under `files:`. Then write one line in the README: **«Without the core, this
 loses: …»** — the core floor is not in the export. Shape (b): it loses the gate on the hand-off step (a standalone user
