@@ -39,30 +39,30 @@ print(sum(1 for s in d.get("smells", []) if s["class"] == cls and s["file"].ends
 for spec in "P1:scripts/guard_push.py" "P2:hooks/hooks.json" "P3:scripts/install.sh" "P4:scripts/ship.sh" \
             "P5:SKILL.md" "P6:SKILL.md" "P7:SKILL.md"; do
   cls="${spec%%:*}"; f="${spec#*:}"; n="$(count "$out_h" "$cls" "$f")"
-  case "$n" in ''|ERR|*[!0-9]*) bad "H-$cls unreadable count «$n»";;
+  case "$n" in ''|ERR|*[!0-9]*) bad "H-$cls unreadable count «${n}»";;
     *) [ "$n" -ge 1 ] && ok "H-$cls fires on $f ($n)" || bad "H-$cls did not fire on $f";; esac
 done
 # H8: the known negative carries zero smells (and the control value is printed next to it)
 nc="$(printf '%s' "$out_c" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["smells"]))' 2>/dev/null || echo ERR)"
 nh="$(printf '%s' "$out_h" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["smells"]))' 2>/dev/null || echo ERR)"
-[ "$nc" = "0" ] && ok "H8 clean example: 0 smells (heavy control in the same run: $nh)" || bad "H8 clean example: «$nc» smells"
+[ "$nc" = "0" ] && ok "H8 clean example: 0 smells (heavy control in the same run: $nh)" || bad "H8 clean example: «${nc}» smells"
 # H9/H10: advisory — rc 0 on both, whatever was found
 [ "$rc_h" = 0 ] && ok "H9 heavy input exits 0 (advisory, never blocks)" || bad "H9 heavy input rc=$rc_h"
 [ "$rc_c" = 0 ] && ok "H10 clean input exits 0" || bad "H10 clean input rc=$rc_c"
 # H11/H12: unreadable is rc 2, never a «0 smells» reading
 o="$(python3 "$CHK" "$FX/does-not-exist" 2>&1)"; r=$?
 [ "$r" = 2 ] && printf '%s' "$o" | grep -q UNMEASURED && ! printf '%s' "$o" | grep -q SUMMARY \
-  && ok "H11 missing folder = rc 2, says UNMEASURED, no SUMMARY" || bad "H11 missing folder rc=$r out=«$o»"
+  && ok "H11 missing folder = rc 2, says UNMEASURED, no SUMMARY" || bad "H11 missing folder rc=$r out=«${o}»"
 empty="$(mktemp -d)"; o="$(python3 "$CHK" "$empty" 2>&1)"; r=$?; rmdir "$empty"
 [ "$r" = 2 ] && printf '%s' "$o" | grep -q UNMEASURED && ! printf '%s' "$o" | grep -q SUMMARY \
-  && ok "H12 folder with no readable files = rc 2, says UNMEASURED, no SUMMARY" || bad "H12 empty folder rc=$r out=«$o»"
+  && ok "H12 folder with no readable files = rc 2, says UNMEASURED, no SUMMARY" || bad "H12 empty folder rc=$r out=«${o}»"
 # H13: the text report says the zero is scoped to its patterns, never «clean»
 txt="$(python3 "$CHK" "$CLEAN" 2>&1)"
 printf '%s' "$txt" | grep -q "NOT-DETECTED" && ok "H13 zero is reported as NOT-DETECTED by named patterns" || bad "H13 zero reported without scope"
 # H14: a proposed split is printed for the heavy skill (craft / checks / floor)
 txt_h="$(python3 "$CHK" "$HEAVY" 2>&1)"
 for part in craft checks floor; do
-  printf '%s' "$txt_h" | grep -q "^  $part:" || { bad "H14 split part «$part» missing"; continue; }
+  printf '%s' "$txt_h" | grep -q "^  $part:" || { bad "H14 split part «${part}» missing"; continue; }
 done
 printf '%s' "$txt_h" | grep -q "^  floor:" && ok "H14 split proposed (craft/checks/floor)"
 # H16: shape (a) — a markdown line telling the session to run the command is ROUTED by a valid manifest pair; the
@@ -79,8 +79,8 @@ a2="$(mktemp -d)"; mk_a "$a2" destructive-op
 r16="$(python3 "$CHK" "$a1" --json 2>/dev/null | python3 -c 'import json,sys; d=json.load(sys.stdin); print(len(d["routed"]), sum(1 for s in d["smells"] if s["class"]=="P4" and s["file"].endswith("ship.sh")))' 2>/dev/null || echo "ERR ERR")"
 r16b="$(python3 "$CHK" "$a2" --json 2>/dev/null | python3 -c 'import json,sys; d=json.load(sys.stdin); print(len(d["routed"]), d["counts"]["P4"])' 2>/dev/null || echo "ERR ERR")"
 rm -rf "$a1" "$a2"
-[ "$r16" = "1 1" ] && ok "H16 shape (a): SKILL.md line ROUTED, same command in a script still P4" || bad "H16 shape (a) routed/script-P4 = «$r16» (expected «1 1»)"
-[ "$r16b" = "0 2" ] && ok "H16b mismatched pair (publish → destructive-op) routes nothing (P4=2)" || bad "H16b mismatched pair routed/P4 = «$r16b» (expected «0 2»)"
+[ "$r16" = "1 1" ] && ok "H16 shape (a): SKILL.md line ROUTED, same command in a script still P4" || bad "H16 shape (a) routed/script-P4 = «${r16}» (expected «1 1»)"
+[ "$r16b" = "0 2" ] && ok "H16b mismatched pair (publish → destructive-op) routes nothing (P4=2)" || bad "H16b mismatched pair routed/P4 = «${r16b}» (expected «0 2»)"
 # H17: a second invented heavy skill (written after the patterns were tuned — it caught the «before …, confirm with
 # the user» word order P5 had missed). Every class fires; P5 on that SKILL.md line specifically.
 HEAVY2="$FX/heavy/docs-publisher-pro"
@@ -132,10 +132,10 @@ rr=sum(1 for r in d["routed"] if r["file"]=="skills/README.md")
 print(ra, pa, pb, rr)' 2>/dev/null || echo ERR)"
 rm -rf "$e"
 [ "$r25" = "1 1 1 1" ] && ok "H25/H26 publish line ROUTED (1); rm line under a publish route stays P4 (1); sibling skill without a manifest is not routed (1); skills/README.md uses the single-manifest fallback (1)" \
-  || bad "H25/H26 routed-a / P4-a / P4-b / routed-skills-README = «$r25» (expected «1 1 1 1»)"
+  || bad "H25/H26 routed-a / P4-a / P4-b / routed-skills-README = «${r25}» (expected «1 1 1 1»)"
 e="$(mktemp -d)"; printf '%s\n' "#!/usr/bin/env bash" 'rm -rf "$W" /customer-data' 'rm -rf "$W"' > "$e/test_x.sh"
 n="$(cls_count "$e" P4)"; rm -rf "$e"
-[ "$n" = "1" ] && ok "H27 «rm -rf \$W /abs» in a test file is P4 (1); «rm -rf \$W» alone is not" || bad "H27 P4=$n (expected 1)"
+[ "$n" = "1" ] && ok "H27 «rm -rf \$W /abs» in a test file is P4 (1); «rm -rf \${W}» alone is not" || bad "H27 P4=$n (expected 1)"
 e="$(mktemp -d)"; cp "$CHK" "$e/"; printf '%s\n' 'raise ImportError("모듈 깨짐 — 시험")' > "$e/fh_module_check.py"
 o="$(PYTHONIOENCODING=ascii python3 "$e/heavy_skill_smell.py" "$HEAVY" 2>&1)"; r=$?; rm -rf "$e"
 [ "$r" = 2 ] && ! printf '%s' "$o" | grep -q Traceback && printf '%s' "$o" | grep -q UNMEASURED \
@@ -143,15 +143,15 @@ o="$(PYTHONIOENCODING=ascii python3 "$e/heavy_skill_smell.py" "$HEAVY" 2>&1)"; r
 # H29: the worked example's own known pair (its fh-module.yaml calibration) runs and passes — the guide cites it
 o="$(python3 "$HERE/fixtures/heavy_skill_smell/clean/tidy-notes/scripts/test_check_refs.py" 2>&1)"; r=$?
 [ "$r" = 0 ] && [ "$(printf '%s\n' "$o" | grep -c '^PASS')" = 3 ] && ok "H29 worked example calibration: check_refs.py known pair 3/3 (pass / fail / unreadable)" \
-  || bad "H29 worked example calibration rc=$r out=«$o»"
+  || bad "H29 worked example calibration rc=$r out=«${o}»"
 # H30: the worked example's check, called directly — a cited PR missing from the log must exit 1 and name it
 e="$(mktemp -d)"; printf '%s\n' "- Export (#12)" "- Ghost (#99)" > "$e/notes.md"; printf '%s\n' "a1 feat: export (#12)" > "$e/log.txt"
 o="$(python3 "$HERE/fixtures/heavy_skill_smell/clean/tidy-notes/scripts/check_refs.py" "$e/notes.md" "$e/log.txt" 2>&1)"; r=$?; rm -rf "$e"
-[ "$r" = 1 ] && [ "$o" = "MISSING #99" ] && ok "H30 worked example check_refs.py: #99 not in the log → rc 1, «MISSING #99»" || bad "H30 check_refs.py rc=$r out=«$o»"
+[ "$r" = 1 ] && [ "$o" = "MISSING #99" ] && ok "H30 worked example check_refs.py: #99 not in the log → rc 1, «MISSING #99»" || bad "H30 check_refs.py rc=$r out=«${o}»"
 # H15 (optional): a real clean cartridge
 if [ -n "${HEAVY_SMELL_REAL_CLEAN:-}" ]; then
   nr="$(python3 "$CHK" "$HEAVY_SMELL_REAL_CLEAN" --json 2>/dev/null | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["smells"]))' 2>/dev/null || echo ERR)"
-  [ "$nr" = "0" ] && ok "H15 real cartridge $HEAVY_SMELL_REAL_CLEAN: 0 smells" || bad "H15 real cartridge: «$nr» smells"
+  [ "$nr" = "0" ] && ok "H15 real cartridge $HEAVY_SMELL_REAL_CLEAN: 0 smells" || bad "H15 real cartridge: «${nr}» smells"
 else
   skip=$((skip+1)); echo "SKIP H15 real cartridge (set HEAVY_SMELL_REAL_CLEAN) — SKIP is not PASS"
 fi
