@@ -1,0 +1,12 @@
+schema_version: 1
+plugin: cart-notecheck
+load:
+  entry: [skills/notecheck/SKILL.md]
+constraints:
+  approval: auto
+  writes: read-only
+  reversibility: reversible
+  residency: public
+purpose: "Check release notes for bullets without a PR number"
+intents: ["check these release notes"]
+kind: activity

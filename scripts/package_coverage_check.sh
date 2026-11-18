@@ -84,6 +84,14 @@ ACCEPTED_ABSENT=(
   #    release by default. selfcheck resolves its row as SKIP («not in files[], and absent») on a consumer tree.
   "scripts/cartridge_admit.py"
   "scripts/test_cartridge_admit_lanes.sh"
+  # 2026-11-18 — core cartridge loader (SessionStart hook), its snippet, example list and lanes. The loader only loads
+  #    snapshots that cartridge_admit.py admitted (the list carries its snapshot_sha256), and that checker is not
+  #    shipped (above) — so ship all of them together when the operator decides to publish cartridges, or none.
+  #    Shipping the snippet alone would make install-wizard register a hook for consumers who cannot admit anything.
+  "scripts/cartridge_loader.py"
+  "scripts/cartridge_loader.sh"
+  "scripts/test_cartridge_loader_lanes.sh"
+  "templates/settings.CartridgeLoader.snippet.json"
   # 🟥 2026-09-21 (야간) — 정책렌즈 채점기와 그 레인. **FH 자기 연구의 실험 기록**이지 소비자
   #    능력이 아니다: 판정 대상이 `scripts/fixtures/policy_lens_knownpair_2026-09-21/` 안의
   #    1차 런 48개 파일(236K)이고, 그것까지 실어 보내면 아무도 안 쓰는 실험 아카이브가 패키지
