@@ -2224,6 +2224,17 @@ else
   fail=1
 fi
 
+# prepush_marker_lookup — the pre-push Load-Bearing gate reads this branch's marker where pre-commit
+# writes it (the evidence root), not a path only the main checkout has.
+if [ -f scripts/test_prepush_marker_lookup_lanes.sh ]; then
+  if ! bash scripts/test_prepush_marker_lookup_lanes.sh; then
+    fail=1
+  fi
+else
+  echo "FAIL  test_prepush_marker_lookup_lanes.sh: absent — the pre-push marker lookup has no lane"
+  fail=1
+fi
+
 # guard_anchor_override_env — the two guard anchors (universal_guard_check.sh · prepush_guard_check.sh)
 # must measure the hook's default whatever override the caller exported (PUBLIC_SURFACE_OK=1 …).
 if [ -f scripts/test_guard_anchor_override_env_lanes.sh ]; then
