@@ -58,11 +58,16 @@ command -v claude >/dev/null 2>&1 || _unexercised "the \`claude\` CLI is not on 
 # C: instant + exit 0 — the sibling that must survive B.
 # D: a command pointing at a script that DOES NOT EXIST (bash exits 127). This is not hypothetical:
 #    it is the shape of a stale settings.json entry, and this repo has one today.
-#    🟥 D is the ONE hook here that prints no marker of its own, so the queries below find its
-#    row by ELIMINATION. Do not re-key it to the row's stderr: the CLI substitutes its own sentence
-#    there for a 127 ("exit 127, a shell's code for a program it could not run; the hook's stderr is
-#    left out", measured on 2.1.319), so bash's own message — and any substring of this fixture's
-#    path — is not in the stream at all.
+#    🟥 D prints no marker of its own, and neither of the two ways to find its row works on every
+#    CLI, so the queries below try them in order:
+#      1. STDERR MARKER — the one row whose stderr carries D's full path under this run's mktemp
+#         dir (bash's own "No such file" line prints it). 2.1.325 keeps that line (measured 2026-11-19); 2.1.319
+#         replaced it with the CLI's own sentence ("exit 127, a shell's code for a program it could
+#         not run; the hook's stderr is left out"), so on such a CLI there is no such row.
+#      2. ELIMINATION — the one row left once A, B and C are accounted for. This only isolates D
+#         when the session runs no OTHER SessionStart hook; a real HOME with user or plugin hooks
+#         adds rows (2026-11-19: 4 extra, so `rest=5`), and then step 2 cannot decide either.
+#    Neither works → UNIDENTIFIED → UNMEASURED, never a verdict about the CLI.
 _fixture() {  # $1=name $2=B's exit code → echoes project dir
   local P="$TMPROOT/$1" n ec slp
   mkdir -p "$P/.claude" "$P/h"
@@ -132,21 +137,31 @@ if q == "count":                      # how many of OUR hooks reported at all
     print(sum(1 for m in ("HOOK_A_", "HOOK_B_", "HOOK_C_") if find(m)))
 elif q == "order":                    # arrival order of our markers in the typed stream
     print(",".join(n for h in hks for n in ("A", "B", "C") if "HOOK_%s_STDOUT" % n in (h.get("stdout") or "")))
-elif q in ("err127", "err127stderr"):  # the nonexistent-script hook, found by ELIMINATION
-    # It is the only one of the four that prints no marker, so it is whatever row is left once A, B
-    # and C are accounted for. Identifying it by its stderr text put the lane at the mercy of the
-    # CLI's wording for a 127 (see the fixture comment above).
+elif q in ("err127", "err127stderr"):  # the nonexistent-script hook — see the fixture comment
+    # 1. stderr marker first; 2. elimination only when step 1 finds no single row.
+    # The marker is D's FULL path — this run's mktemp dir, so no user or plugin hook can carry it
+    # by accident. The bare word `MISSING_ON_PURPOSE` could (cross-family R1, S). The path is taken
+    # as written (stream.jsonl sits in the fixture dir; no normalisation — `$TMPDIR` may end in `/`
+    # and bash prints the path exactly as the command spelled it).
+    import os
+    dpath = os.path.dirname(sys.argv[1]) + "/h/MISSING_ON_PURPOSE.sh"
+    marked = [h for h in hks if dpath in (h.get("stderr") or "")]
     named = [i for i, h in enumerate(hks)
              if any(("HOOK_%s_STDOUT" % n) in (h.get("stdout") or "") for n in ("A", "B", "C"))]
     rest = [h for i, h in enumerate(hks) if i not in named]
-    if len(named) != 3 or len(rest) != 1:
+    if len(marked) == 1:
+        row, how = marked[0], "stderr-marker"
+    elif len(named) == 3 and len(rest) == 1:
+        row, how = rest[0], "elimination"
+    else:
         # Cannot isolate it — so say that, and let the caller route it to UNMEASURED. Printing
         # ABSENT here would read as a measurement of the subject.
-        print("UNIDENTIFIED:named=%d,rest=%d" % (len(named), len(rest)))
-    elif q == "err127":
-        print("%s|%s" % (rest[0].get("exit_code"), rest[0].get("outcome")))
-    else:
-        print((rest[0].get("stderr") or "").strip().replace("\n", " ⏎")[:200] or "(empty)")
+        row, how = None, None
+        print("UNIDENTIFIED:marked=%d,named=%d,rest=%d" % (len(marked), len(named), len(rest)))
+    if row is not None and q == "err127":
+        print("%s|%s" % (row.get("exit_code"), row.get("outcome")))
+    elif row is not None:
+        print("[found by %s] %s" % (how, (row.get("stderr") or "").strip().replace("\n", " ⏎")[:200] or "(empty)"))
 elif q.startswith("exit:"):
     f = find(q[5:]); print(f[0].get("exit_code") if f else "ABSENT")
 elif q.startswith("outcome:"):
@@ -188,7 +203,7 @@ _eq "MH-3 → sibling A is labelled success (paired)"   "$(_q "$PN/stream.jsonl"
 _eq "MH-3 → sibling C is labelled success (paired)"   "$(_q "$PN/stream.jsonl" outcome:HOOK_C_STDOUT_MARKER)" success
 
 _eq_id "MH-4 nonexistent hook script → exit 127 / error on the typed channel" "$(_q "$PN/stream.jsonl" err127)" "127|error"
-echo "   ↳ what the CLI puts on that row's stderr (recorded, never matched on): $(_q "$PN/stream.jsonl" err127stderr)"
+echo "   ↳ how that row was found, and what the CLI puts on its stderr: $(_q "$PN/stream.jsonl" err127stderr)"
 
 # DELIVERY — the separate proposition. In-run control: A and C must be present in the same reply.
 _eq "MH-5 sibling A's output reached the agent (in-run control)" "$(_q "$PN/stream.jsonl" delivered:HOOK_A_STDOUT_MARKER)" 1
