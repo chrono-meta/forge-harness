@@ -1186,6 +1186,7 @@ for _pair in \
   "scripts/probe_live_eval_lib.py|scripts/test_live_eval_transitions_lanes.sh" \
   "scripts/correction_moments.py|scripts/test_correction_moments_lanes.sh" \
   "scripts/probe_live_eval_lib.py|scripts/test_live_eval_construct_lanes.sh" \
+  "scripts/live_eval_matrix.py|scripts/test_live_eval_matrix_lanes.sh" \
   "scripts/live_eval_trace.py|scripts/test_live_eval_trace_lanes.sh" \
   "scripts/probe_live_eval_lib.py|scripts/test_live_eval_trace_lanes.sh" \
   "scripts/sim_isolated_run.sh|scripts/test_live_eval_trace_lanes.sh" \
