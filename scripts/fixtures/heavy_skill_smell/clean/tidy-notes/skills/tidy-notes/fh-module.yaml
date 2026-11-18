@@ -1,0 +1,20 @@
+# Worked example for knowledge/shared/harness-core/heavy_skill_to_cartridge.md — the «after» of the invented
+# release-notes-pro heavy skill (scripts/fixtures/heavy_skill_smell/heavy/). Not an installed module.
+id: tidy-notes
+version: 0.1.0
+provides:
+  skills: [tidy-notes]
+  agents: []
+  hooks: []
+  verdicts: []     # check_refs.py exits 0 only when every cited PR is found — but it reports, the caller decides
+adds_constraints: []
+touches_irreversible: none   # shape (b): ends with a ready: hand-off, runs nothing irreversible
+data_class: public
+requires:
+  modules: []
+  core_min: 3.0.0
+calibration:
+  command: python3 scripts/fixtures/heavy_skill_smell/clean/tidy-notes/scripts/test_check_refs.py
+files:
+  - scripts/fixtures/heavy_skill_smell/clean/tidy-notes/scripts/check_refs.py
+  - scripts/fixtures/heavy_skill_smell/clean/tidy-notes/scripts/test_check_refs.py
