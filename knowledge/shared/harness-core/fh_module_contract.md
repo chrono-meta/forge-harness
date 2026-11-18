@@ -110,6 +110,14 @@ migration wipe data?») called it **1/9, 0/9, 0/9** — answered directly, the l
 
 ## 2d. Before building — measure the bare model on the real path
 
+**The module's declared purpose picks what gets measured.** The declared purpose is the one sentence the module
+states, in writing, before any measurement: what it is for (its description or README). There are three classes
+below. A module that declares more than one purpose is measured once per purpose, on that purpose's axis, and graded
+per purpose. It is built as a module if any declared purpose earns **module**; otherwise its skill text ships if any
+purpose earns **skill**; otherwise it is not built. Every purpose's result is recorded, including the ones that lost.
+
+### Accuracy modules
+
 Before building a module whose purpose is **accuracy** (it exists so the model gets an answer right that it would
 otherwise get wrong), measure the bare model on the **real path** first: the module's own target tasks, run the way a
 user runs them (a real session or `claude -p`, nothing installed, no hint in the prompt that a module or a check
@@ -123,9 +131,64 @@ exists). If the bare model is at the **ceiling** there, record the negative resu
 - **A proxy metric at ceiling does not stop a build.** A no-token proxy (§2c: subagents shown a listing, 9/9) did not
   reproduce the live failure; only the real path can say «already solved». The positive case looks like fh-cartridges
   #25: the bare arm gave a silent wrong answer 7/7/7 on frozen fixtures, the module 0/0/0 — that gap is why it was built.
-- **Out of scope**: modules whose value is not accuracy — determinism, a gate, an audit trail, a refusal at an
-  irreversible edge. A bare model that «usually gets it right» is not a substitute for those, so they are built without
-  this measurement.
+
+### Role and interaction modules
+
+Some modules exist to change how a session works **with a person**, not to get one answer right. Examples: onboarding,
+guided design, helping an author build up a canon over many turns. Their value is fewer round trips and fewer
+corrections, so the accuracy test above does not measure it. Measure them with a **persona sim** instead:
+
+- **Persona**: a simulated author or user, run as its own agent from a sealed brief that the arms never see. The brief
+  holds **hidden preferences** (things the persona wants but only reveals when asked or when a draft gets them wrong)
+  and **at least one late change of mind** (a preference the persona reverses after the work has started).
+- **Three arms**, same brief, same task, same tier: **bare** (nothing installed, no hint), **skill-only** (the module's
+  skill text available, none of its scripts, hooks, verdict entries or manifest constraints), **module** (installed).
+- **Size**: ≥ 3 runs per arm on each of ≥ 3 persona briefs, at the cheapest tier the module claims to help (and at
+  Sonnet when that is a different tier) — the same minimum as the accuracy ceiling.
+- **Before the runs**, write down: the persona briefs, the rubric, a **turn cap**, which of the four metrics is
+  **primary** (the one the declared purpose names; turns to approval if it names none), and a better/≈ threshold
+  for each metric.
+- **Metrics**, all four recorded per run:
+  - **turns to approval**: how many persona turns until the persona approves the artifact. A run that reaches the
+    turn cap without approval is recorded as «no approval» and counts as worse than any run that was approved;
+  - **corrections**: how many persona turns correct the arm;
+  - **artifact structure**: the artifact scored against the brief's preferences with a rubric written before the runs;
+  - **downstream contradictions**: places where the artifact, or later output built on it, contradicts what the persona
+    settled, the late change included.
+- **Scorer**: a separate agent that gets the sealed briefs, the rubric, and the transcripts and artifacts with the arm
+  labels removed. It is not the persona, not an arm, and not the author of the module. If the scorer could not run,
+  the purpose is `UNMEASURED`: it gets no grade, and nothing is built on it until a rerun is scored.
+- **Comparing two arms**: arm X is **better** than arm Y when, at each tier, X beats Y on the primary metric by the
+  declared threshold on every brief, and is not worse than Y beyond its threshold on any other metric. Anything else
+  is not «better» — a mixed result across briefs counts as ≈. If no threshold was declared before the runs, two arms
+  whose per-run ranges overlap on a brief count as ≈ on that brief.
+- **Grade**, per declared purpose — take the first rule that holds:
+  1. module better than skill-only **and** better than bare → **module**: build it as a module.
+  2. otherwise, skill-only better than bare → **skill**: ship the skill text, not a module.
+  3. otherwise → **neither**: record the null at that size (e.g. «≈ on the primary metric, 9 runs per arm —
+     NOT-DETECTED@9») and do not build.
+  - The grade decides what gets built. It does not approve a merge.
+
+### A ceiling belongs to one axis
+
+A ceiling on one axis applies to that axis only. For example, a bare model at ceiling on finding defects in a story
+canon says nothing about whether a module shortens the author's back-and-forth while the canon is being built. If
+that is the module's declared purpose, the defect-finding result neither stops the module nor licenses it; the
+role measurement above decides. Changing the declared purpose after seeing a result is the same mistake as choosing a
+threshold after the results. Keep the first result as recorded, and measure the new purpose from scratch.
+
+This works in one direction only. When every purpose the module declared before measurement has hit its ceiling
+(accuracy) or graded **neither** (role), the answer for this proposal is **do not build**. Do not go looking for another
+purpose to rescue it. If someone does want the module for a different purpose, that is a **new proposal**: write the
+purpose down first, then measure it from scratch. The recorded result of the first proposal stays as it is.
+
+### Out of scope
+
+Modules whose value is a property rather than a measured gain — determinism, a gate, an audit trail, a refusal at an
+irreversible edge. A bare model that «usually gets it right» is not a substitute for those, so they are built without
+this measurement. The exemption covers that property only. If the module's text also promises a gain — fewer turns,
+fewer corrections, a smoother onboarding, a right answer — that promise is a declared purpose and is measured on its
+own axis above.
 
 ## 3. Install-time check (`scripts/fh_module_check.py check`)
 
