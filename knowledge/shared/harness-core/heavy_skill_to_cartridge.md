@@ -151,7 +151,7 @@ After: `scripts/fixtures/heavy_skill_smell/clean/tidy-notes/`, shape (b). Its `R
 `python3 scripts/fh_module_check.py check` on the after-manifest: `RESULT: OK`. The smell checker: 0 smells, 1 HANDOFF
 line. Lanes: `bash scripts/test_heavy_skill_smell_lanes.sh`.
 
-## 7. When does the core use a worn cartridge? (open)
+## 7. When does the core use a worn cartridge?
 
 Nothing in contract v0 runs a cartridge on its own. Its checks run when the skill text tells the session to run them, or
 when someone runs the calibration; a declared observe-only hook runs only once something installs it, and v0 installs
@@ -165,8 +165,21 @@ which core gate owns the irreversible actions, nothing more. Measured so far (fh
   of that run (Haiku; installed-only arm 4/18 tasks passed against 18/18 when the skill text was loaded explicitly). The
   same cartridge injected at session start by a hook passed 12/12 tasks, off 0/12 (Haiku).
 
-The admission schema already carries the fields a router would read (`kind: activity | method`, `applies_when`). What
-is missing is a core-owned loader that reads them; modules may not open `SessionStart` themselves (contract §1.5). That
-loader is a core hook and therefore an operator decision — not built here. Until it exists, a method cartridge does
-nothing unless it is loaded explicitly. When you refactor a heavy skill, state its `kind`; if it is `method`, say so in
-its README so a team does not assume it runs on its own.
+**The core loader.** `scripts/cartridge_loader.py` is a core SessionStart hook (registered from
+`templates/settings.CartridgeLoader.snippet.json` when install-wizard's SessionStart step gets a Y). It reads a list the
+operator writes — `$FH_CARTRIDGES_ENABLED`, else `<project>/.claude/cartridges.enabled`; example in
+`templates/cartridges.enabled.example` — one line per admitted snapshot folder and the `snapshot_sha256` that
+`cartridge_admit.py --json --keep-snapshot` printed for it. Each listed folder is read once, re-hashed, and its
+`load.entry` text injected only when the hash still matches. A cartridge whose `cartridge.yaml` says `kind: activity` is
+skipped (it routes itself); manifest prose such as `applies_when` is never injected. No list: nothing loads, one line
+on stderr. It always exits 0 and writes nothing. Lanes: `scripts/test_cartridge_loader_lanes.sh`.
+
+Measured (blind Sonnet, pre-registered, 2026-11-18): the same coding request with a stated decision for later work, the
+invented method cartridge `decision-ledger` listed vs not — its method (the decision written to `DECISIONS.md` in the
+user's words) appeared in 3/3 listed runs and 0/3 unlisted. That run fed the loader's real output into a subagent prompt;
+the hook channel itself was measured earlier (12/12 vs 0/12, Haiku).
+
+Residual: whoever can write the list, a listed snapshot folder, or the loader itself (it runs from the project, like
+every FH core hook) can change what loads. The digest pins the content the list names, not who wrote the list.
+
+When you refactor a heavy skill, state its `kind`. A `method` cartridge does nothing until the operator lists it.

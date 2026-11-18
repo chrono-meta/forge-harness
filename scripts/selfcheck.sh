@@ -1226,6 +1226,7 @@ for _pair in \
   "scripts/test_frontier_digest_recall.sh|scripts/test_frontier_digest_recall_negctl.sh" \
   "scripts/fh_module_check.py|scripts/test_fh_module_check_lanes.sh" \
   "scripts/heavy_skill_smell.py|scripts/test_heavy_skill_smell_lanes.sh" \
+  "scripts/cartridge_loader.py|scripts/test_cartridge_loader_lanes.sh" \
   "scripts/knowledge_seam_check.sh|scripts/test_knowledge_seam_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_crossfamily_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_floor_lanes.sh" \

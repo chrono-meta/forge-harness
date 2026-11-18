@@ -1,0 +1,22 @@
+# cartridges.enabled — which cartridges the core loads into every session (scripts/cartridge_loader.py).
+#
+# This is an EXAMPLE. Your own list goes in ONE of:
+#   - the path in $FH_CARTRIDGES_ENABLED, or
+#   - <your project>/.claude/cartridges.enabled
+# You write it yourself; a cartridge never does. No list = nothing is loaded (one stderr line, not an error).
+#
+# One line per cartridge:  <admitted snapshot folder> sha256:<64 hex>
+# Get both from cartridge_admit — admit the plugin and keep the verified snapshot:
+#   python3 scripts/cartridge_admit.py <plugin dir> --json --keep-snapshot ~/fh-cartridges-admitted
+#   → on ADMIT it prints "snapshot_sha256" and copies a read-only snapshot to
+#     ~/fh-cartridges-admitted/snapshot-<first 12 hex>
+# List that snapshot folder (not the plugin source) with that digest. If the folder changes, the hash no longer
+# matches and the loader skips it — re-admit and update the line.
+#
+# Which cartridges to list: method cartridges (they change how work is done — e.g. a decision ledger, a memory
+# bank). Activity cartridges (the request names the job — review, OCR, changelog) are called from their own
+# description; the loader skips a cartridge whose cartridge.yaml says `kind: activity`.
+#
+# Relative folders are relative to this file; ~ expands. Lines starting with # are ignored.
+
+# ~/fh-cartridges-admitted/snapshot-0123456789ab sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
