@@ -22,6 +22,9 @@ entries. Same class as the 2026-08-20 entry below (index drift on `knowledge/`);
   contract v0: a module is a cartridge that plugs into FH and can be pulled out; it may add constraints
   but never weaken the core floor. Closed-enum manifest (`fh-module.yaml`), install-time check, removal
   rule. Checker: `scripts/fh_module_check.py`.
+- `knowledge/shared/harness-core/heavy_skill_to_cartridge.md` — #module, #cartridge, #refactoring. Turning a
+  «heavy skill» (own gates, hooks, floor rules) into a cartridge: craft / checks / floor split, `ready:` hand-off or
+  core-routed commands, standalone export limits, known-pair lane. Advisory checker: `scripts/heavy_skill_smell.py`.
 - `knowledge/shared/harness-core/governance_engineering_definition.md` — #governance-engineering,
   #identity, #naming. Names the discipline this hub practices: moving an error rate toward 0.x% and
   blocking at the surfaces where that number may not buy passage. Distinct from harness engineering
