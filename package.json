@@ -333,6 +333,7 @@
     "scripts/test_gate_shape_scan_lanes.sh",
     "scripts/test_generated_harness_check_lanes.sh",
     "scripts/test_gate_two_verdicts_lanes.sh",
+    "scripts/test_guard_anchor_override_env_lanes.sh",
     "scripts/test_halffix_lanes.sh",
     "scripts/test_heavy_classifier_lanes.sh",
     "scripts/test_axis23_skip_reason_lanes.sh",

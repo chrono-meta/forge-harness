@@ -24,6 +24,14 @@
 set -uo pipefail
 
 unset GIT_INDEX_FILE GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR 2>/dev/null || true
+# The anchor measures the hook as it behaves by DEFAULT. A caller that exported an override (a commit made with
+# PUBLIC_SURFACE_OK=1 that stages the hook) used to pass it into the sandboxed hook, which then let its own
+# planted leaks through and broke the known pairs (rc=1 for a reason unrelated to the change — pmh-dev #91 ②,
+# 2026-11-15). Lane: scripts/test_guard_anchor_override_env_lanes.sh.
+unset PUBLIC_SURFACE_OK DESTRUCTIVE_OP_OK FH_NOVELTY_OK MAIN_PUSH_OK PUSH_ZONE_OK TAG_VERSION_OK TRACKS_GITLINK_OK TRACKS_PUBLIC_OK 2>/dev/null || true
+# Every PSA_* input too (codex R2: PSA_ALLOWLIST suppressed a planted positive) — by prefix, so a new PSA_ input
+# cannot slip past a hand-written list. The scan library sets the ones it needs itself.
+for _v in $(compgen -v | grep '^PSA_'); do unset "$_v"; done; unset _v
 
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 HOOK="$REPO_ROOT/templates/.git-hooks/pre-commit"
