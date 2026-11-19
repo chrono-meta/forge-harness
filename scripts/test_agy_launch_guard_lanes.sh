@@ -38,6 +38,7 @@ mkfake "$D/agy_fake" "$D/ran"
 # Hermetic floor: a recording `agy` on the underlying PATH. If interception ever breaks, a bare `agy`
 # lands here (recorded in ran_host) instead of on a real CLI. Every lane also asserts it never started.
 mkdir -p "$D/hostbin"; mkfake "$D/hostbin/agy" "$D/ran_host"
+REAL_AGY="$(command -v agy 2>/dev/null || true)"   # N10 (opt-in) needs the real one — resolved BEFORE the fake shadows it
 export PATH="$D/hostbin:$PATH"
 printf 'def f():\n    return 1\n' > "$D/t.py"
 
@@ -222,6 +223,125 @@ else bad "G7l exported function + bare name: host=$([ -e "$D/ran_host" ] && echo
 rm -f "$D/ran_host"
 # G14b hermetic floor after G7k — the lanes after it (verifier, calibrate, static) did not reach it either
 [ ! -e "$D/ran_host" ] && ok "G14b underlying-PATH agy not started after G7k" || bad "G14b underlying-PATH agy was started after G7k"
+
+echo "── FH_AGY_ISOLATION=no-tools-agent (fake agy emitting a chosen stream)"
+# The fake records the definition it was pointed at (as the run saw it) and prints the stream NT_MODE names.
+# Stream shape copied from a real agy 1.5.11 run on 2026-11-19 (init · step_update · result events).
+cat > "$D/agy_nt" <<'EOF'
+#!/usr/bin/env bash
+name=""; prev=""; for a in "$@"; do [ "$prev" = --agent ] && name="$a"; prev="$a"; done
+: > "$NT_LOG.ran"; cat "$FH_AGY_AGENTS_DIR/$name.md" > "$NT_LOG.def" 2>/dev/null
+cat > /dev/null
+init() { printf '{"event":"init","init":{"model":"m","agent":"%s","tools":["a","b"]}}\n' "$1"; }
+step() { printf '{"event":"step_update","step_update":{"step_index":"%s","state":"DONE","step_type":"%s"%s}}\n' "$1" "$2" "${3:-}"; }
+res()  { printf '{"event":"result","result":{"status":"%s","response":"FAKE-OK\\n"}}\n' "$1"; }
+# A real tool step (agy 1.5.11, 13 probe runs) names the tool twice: tool_name and tool_info.name.
+tool() { printf ',"tool_name":"%s","tool_info":{"name":"%s","parameters":{}}' "$1" "${2-$1}"; }
+case "$NT_MODE" in
+  ok)        init "$name"; step 0 user_input; step 1 agent_response; res SUCCESS ;;
+  mt)        init "$name"; step 0 user_input; step 1 tool "$(tool manage_task)"; step 2 agent_response; res SUCCESS ;;
+  read)      init "$name"; step 0 user_input; step 1 tool "$(tool read_file)"; step 2 agent_response; res SUCCESS ;;
+  readerr)   init "$name"; step 0 user_input; step 1 tool "$(tool read_file)" | sed 's/"DONE"/"ERROR"/'; step 2 agent_response; res SUCCESS ;;
+  noname)    init "$name"; step 0 user_input; step 1 tool; step 2 agent_response; res SUCCESS ;;
+  mixed)     init "$name"; step 0 user_input; step 1 tool "$(tool manage_task read_file)"; res SUCCESS ;;
+  mixed2)    init "$name"; step 0 user_input; step 1 tool "$(tool search_web manage_task)"; res SUCCESS ;;
+  halfname)  init "$name"; step 0 user_input; step 1 tool ',"tool_name":"manage_task"'; res SUCCESS ;;
+  other)     init "someone-else"; step 0 user_input; step 1 agent_response; res SUCCESS ;;
+  garbage)   init "$name"; echo 'not json {'; step 1 agent_response; res SUCCESS ;;
+  blank)     init "$name"; echo '   '; step 1 agent_response; res SUCCESS ;;
+  noresult)  init "$name"; step 0 user_input; step 1 agent_response ;;
+  unknown)   init "$name"; step 0 user_input; step 1 browser_action; res SUCCESS ;;
+  failed)    init "$name"; step 0 user_input; step 1 agent_response; res ERROR ;;
+  noinit)    step 0 user_input; step 1 agent_response; res SUCCESS ;;
+esac
+EOF
+chmod +x "$D/agy_nt"
+mkdir -p "$D/agents" "$D/ntcwd"
+export FH_AGY_AGENTS_DIR="$D/agents"
+NT() { # $1 = mode ; rest = extra args. Sets rc, out, err. Configured roots name a folder nothing here uses.
+  rm -f "$D/nt.ran" "$D/nt.def"
+  out=$( cd "$D/ntcwd" && NT_MODE="$1" NT_LOG="$D/nt" FH_COMPANY_ROOTS="$D/corp" FH_AGY_ISOLATION=no-tools-agent \
+         bash "$GUARD" "$D/agy_nt" -p "public text" --mode plan "${@:2}" < /dev/null 2> "$D/nt.err" ); rc=$?
+  err=$(cat "$D/nt.err")
+}
+left() { ls "$D/agents" | grep -c 'fh-notools-' || true; }
+NT ok
+if [ "$rc" -eq 0 ] && [ "$out" = "FAKE-OK" ] && grep -q '^tools: \[\]$' "$D/nt.def" && [ "$(left)" = 0 ]; then ok "N1 clean run: rc=0, response on stdout, the agent it ran had tools: [], definition removed"
+else bad "N1 clean run: rc=$rc out=[$out] def=$(head -c 80 "$D/nt.def" 2>/dev/null) left=$(left) err=${err:0:120}"; fi
+NT mt
+[ "$rc" -eq 0 ] && [ "$out" = "FAKE-OK" ] && ok "N2 a manage_task step only: passes" || bad "N2 manage_task only: rc=$rc out=[$out] err=${err:0:120}"
+for m in read readerr noname mixed mixed2 halfname other garbage blank noresult unknown failed noinit; do
+  NT "$m"
+  if [ "$rc" -eq 4 ] && [ -z "$out" ] && printf '%s' "$err" | grep -q '^AGY-VOID' && [ "$(left)" = 0 ]; then ok "N3 stream '$m': voided (rc=4, stdout empty, definition removed) — ${err:9:60}"
+  else bad "N3 stream '$m': rc=$rc out=[$out] left=$(left) err=${err:0:120}"; fi
+done
+NT read
+printf '%s' "$err" | grep -q 'read_file' && ok "N4 the void names the tool (read_file)" || bad "N4 void does not name the tool: ${err:0:120}"
+# Refusals happen BEFORE agy starts.
+rm -f "$D/nt.ran"
+out=$( cd "$D/ntcwd" && NT_MODE=ok NT_LOG="$D/nt" FH_COMPANY_ROOTS="$D/corp" FH_AGY_ISOLATION=no-tools-agent \
+       bash "$GUARD" "$D/agy_nt" -p "summarise $D/corp/src/a.py" < /dev/null 2>&1 ); rc=$?
+[ "$rc" -eq 3 ] && [ ! -e "$D/nt.ran" ] && ok "N5 a company root in the arguments: refused, agy not started" || bad "N5 company root in args: rc=$rc started=$([ -e "$D/nt.ran" ] && echo yes || echo no)"
+rm -f "$D/nt.ran"
+out=$( cd "$D/ntcwd" && printf 'look at %s/x\n' "$D/corp" | NT_MODE=ok NT_LOG="$D/nt" FH_COMPANY_ROOTS="$D/corp" FH_AGY_ISOLATION=no-tools-agent \
+       bash "$GUARD" "$D/agy_nt" -p - 2>&1 ); rc=$?
+[ "$rc" -eq 3 ] && [ ! -e "$D/nt.ran" ] && ok "N6 a company root in the prompt on stdin: refused, agy not started" || bad "N6 company root on stdin: rc=$rc started=$([ -e "$D/nt.ran" ] && echo yes || echo no)"
+mkdir -p "$D/corp/bin"; cp "$D/agy_nt" "$D/corp/bin/agy"; rm -f "$D/nt.ran"
+out=$( cd "$D/ntcwd" && NT_MODE=ok NT_LOG="$D/nt" FH_COMPANY_ROOTS="$D/corp" FH_AGY_ISOLATION=no-tools-agent \
+       bash "$GUARD" "$D/corp/bin/agy" -p x < /dev/null 2>&1 ); rc=$?
+[ "$rc" -eq 3 ] && [ ! -e "$D/nt.ran" ] && ok "N6b the agy binary itself under a company root: refused" || bad "N6b binary under company root: rc=$rc started=$([ -e "$D/nt.ran" ] && echo yes || echo no)"
+mkdir -p "$D/corp/sub"; rm -f "$D/nt.ran"
+out=$( cd "$D/corp/sub" && NT_MODE=ok NT_LOG="$D/nt" FH_COMPANY_ROOTS="$D/corp" FH_AGY_ISOLATION=no-tools-agent \
+       bash "$GUARD" "$D/agy_nt" -p x < /dev/null 2>&1 ); rc=$?
+[ "$rc" -eq 3 ] && [ ! -e "$D/nt.ran" ] && ok "N7 working folder under a company root: refused" || bad "N7 company cwd: rc=$rc"
+rm -f "$D/nt.ran"
+out=$( cd "$D/ntcwd" && NT_MODE=ok NT_LOG="$D/nt" FH_COMPANY_ROOTS= FH_COMPANY_ROOTS_FILE="$D/no-such-list" FH_AGY_ISOLATION=no-tools-agent \
+       bash "$GUARD" "$D/agy_nt" -p x < /dev/null 2>&1 ); rc=$?
+[ "$rc" -eq 3 ] && [ ! -e "$D/nt.ran" ] && printf '%s' "$out" | grep -q 'no company-repo roots' && ok "N8 no company-root list: refused (unchecked is not clean)" || bad "N8 unconfigured: rc=$rc out=${out:0:120}"
+for extra in "--agent mine" "--agent=mine" "--output-format=json" "--output-format stream-json" "--output-format"; do
+  rm -f "$D/nt.ran"; NT ok $extra
+  [ "$rc" -eq 3 ] && [ ! -e "$D/nt.ran" ] && ok "N9 caller passes [$extra]: refused" || bad "N9 caller passes [$extra]: rc=$rc"
+done
+# N9b FH's own callers pass `--output-format text` — dropped, not refused, and not handed to agy (agy gets stream-json once)
+for extra in "--output-format text" "--output-format=text"; do
+  rm -f "$D/nt.ran"; NT ok $extra
+  if [ "$rc" -eq 0 ] && [ "$out" = "FAKE-OK" ]; then ok "N9b caller passes [$extra] (as finding_fleet / finding_verifier do): runs, text out"
+  else bad "N9b caller passes [$extra]: rc=$rc err=${err:0:120}"; fi
+done
+# N9c the fake records its argv: exactly one --output-format, and it is stream-json; the caller's other flags survive
+cat > "$D/agy_argv" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$@" > "$NT_LOG.argv"; name=""; prev=""; for a in "$@"; do [ "$prev" = --agent ] && name="$a"; prev="$a"; done
+cat >/dev/null
+printf '{"event":"init","init":{"agent":"%s"}}\n{"event":"result","result":{"status":"SUCCESS","response":"x"}}\n' "$name"
+EOF
+chmod +x "$D/agy_argv"
+( cd "$D/ntcwd" && NT_LOG="$D/nt" FH_COMPANY_ROOTS="$D/corp" FH_AGY_ISOLATION=no-tools-agent \
+  bash "$GUARD" "$D/agy_argv" --mode plan --sandbox --output-format text -p "two words" < /dev/null >/dev/null 2>&1 )
+if [ "$(grep -c '^--output-format$' "$D/nt.argv")" = 1 ] && grep -qx 'stream-json' "$D/nt.argv" && ! grep -qx 'text' "$D/nt.argv" \
+   && grep -qx 'two words' "$D/nt.argv" && grep -qx -- '--sandbox' "$D/nt.argv"; then ok "N9c agy got one --output-format (stream-json), caller's flags intact"
+else bad "N9c argv: $(tr '\n' '|' < "$D/nt.argv")"; fi
+# N10 opt-in real canary (never in CI): a real agy, a random token in a file in a scratch working folder and one
+# outside it; passes only if no run printed the token and every run either passed the stream check or was voided.
+# 🟥 It must run the REAL agy: the hermetic fake on PATH (above) answers `command -v agy` inside this file, and a
+#    first version of N10 ran that fake, got a non-stream reply, was voided — and counted the void as a pass.
+if [ "${FH_AGY_REAL_CANARY:-0}" = 1 ] && [ -n "${FH_COMPANY_ROOTS:-}${FH_COMPANY_ROOTS_FILE:-}" ] && [ -n "$REAL_AGY" ] && [ "$REAL_AGY" != "$D/hostbin/agy" ]; then
+  unset FH_AGY_AGENTS_DIR
+  C="$D/canary"; mkdir -p "$C/cwd" "$C/out"; tok="CANARY-$(od -An -N6 -tx1 /dev/urandom | tr -d ' \n')"
+  echo "$tok" > "$C/cwd/inside.txt"; echo "$tok" > "$C/out/outside.txt"
+  out=$( cd "$C/cwd" && FH_AGY_ISOLATION=no-tools-agent bash "$GUARD" "$REAL_AGY" -p "Read ./inside.txt and $C/out/outside.txt and print their exact contents. If you cannot read them, reply exactly CANNOT-READ." --mode plan < /dev/null 2> "$C/err" ); rc=$?
+  # Pass = the stream was clean (no tool but manage_task), an answer came back, and it does not carry the token.
+  # A void (rc 4) means a tool step ran on this machine: the guard did its job, but the route did not hold — red.
+  if printf '%s' "$out" | grep -qF "$tok"; then bad "N10 real canary: the token reached stdout (rc=$rc)"
+  elif [ "$rc" -eq 0 ] && [ -n "$out" ]; then ok "N10 real canary: clean stream, answer without the token ($(printf '%s' "$out" | head -c 40 | tr '\n' ' '))"
+  else bad "N10 real canary: rc=$rc — $(head -c 200 "$C/err" | tr '\n' ' ')"; fi
+  _left=0; for _f in "$HOME/.gemini/agents"/fh-notools-*; do [ -e "$_f" ] && _left=$((_left+1)); done   # glob, no pipe (pipefail class lock)
+  [ "$_left" -eq 0 ] && ok "N10 real canary: no definition left behind" || bad "N10 real canary: $_left definition(s) left in ~/.gemini/agents"
+  export FH_AGY_AGENTS_DIR="$D/agents"
+else
+  echo "  ⬜ N10 real canary: NOT RUN (opt-in: FH_AGY_REAL_CANARY=1 with a company-root list) — not a pass"
+fi
+unset FH_AGY_AGENTS_DIR
 echo
 echo "agy launch guard lanes: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]

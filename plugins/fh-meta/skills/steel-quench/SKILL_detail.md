@@ -365,7 +365,8 @@ fi
 # (intermittent hang class, ~50% observed 2026-06-11); -p auto-approves tool execution,
 # so feed only trusted artifacts — never untrusted external content. 🟥 Its tools also READ the
 # machine and send what they print to the cloud model: start it only through
-# scripts/agy_launch_guard.sh, which refuses unless FH_AGY_ISOLATION=container|os-user — never on a
+# scripts/agy_launch_guard.sh, which refuses unless FH_AGY_ISOLATION=container|os-user (or no-tools-agent,
+# a tools: [] agent with every run checked — public material only) — never on a
 # host where company repositories are readable (auto-decorrelation §Step 2). Serial by design
 # (worst case ~6 min if the hang class fires on every call) — do NOT copy the T1-T4
 # `VAR=$(...) &` pattern: it assigns inside a background subshell.

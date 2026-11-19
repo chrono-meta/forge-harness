@@ -20,7 +20,8 @@ set -uo pipefail
 
 CODEX="${FH_CODEX_BIN:-$(command -v codex 2>/dev/null || echo "$HOME/.npm-global/bin/codex")}"
 AGY="${FH_AGY_BIN:-$(command -v agy 2>/dev/null || echo "$HOME/.local/bin/agy")}"
-# Every agy launch goes through the isolation guard (refuses unless FH_AGY_ISOLATION=container|os-user).
+# Every agy launch goes through the isolation guard (refuses unless FH_AGY_ISOLATION=container|os-user, or
+# no-tools-agent — a tools: [] agent whose every run is checked; see agy_launch_guard.sh).
 AGY_GUARD="$(cd "$(dirname "$0")" && pwd)/agy_launch_guard.sh"
 # codex goes through the lighter guard: refused when the prompt, an argument or the cwd names a company root
 CODEX_GUARD="$(cd "$(dirname "$0")" && pwd)/codex_launch_guard.sh"
