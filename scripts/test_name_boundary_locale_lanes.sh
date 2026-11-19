@@ -36,14 +36,45 @@ out=$(bash "$SCAN" --nonascii-only "$T/hash.sh"); rc=$?
 out=$(bash "$SCAN" --nonascii-only 2>&1); rc=$?
 [ "$rc" -eq 2 ] && ok "B2e the mode flag with no files → rc 2, never «0 hits»" || bad "B2e rc=$rc out=$out"
 
-sh_files=$(git ls-files '*.sh') || bad "B3 git ls-files '*.sh' failed — file list incomplete"
-all_files=$(git ls-files) || bad "B3 git ls-files failed — file list incomplete"
+# B3's corpus: `git ls-files` in a checkout, `find` where there is no checkout. This suite SHIPS, and
+# the tree an npm consumer receives has no .git — measured 2026-11-16 in the extracted npm pack
+# (clean-room audit round 9), where the two `git ls-files` calls printed a fatal each and the lane
+# then read `files=0 rc=123` and went red THREE times about a scanner that is sound. The real corpus
+# is the whole point of B3 (the header says so: the static lane is what keeps this fixed on Linux),
+# so it falls back to a file walk rather than folding to a pass or skipping the lane.
+# 🟥 `--is-inside-work-tree` is the WRONG test here and a blind reader of this change caught it: an
+# extracted tarball under someone's node_modules is inside THEIR work tree, so `git ls-files` would
+# answer with their repo's files and B3 would scan a corpus that is not this package's. The test is
+# therefore "this directory IS the top of a checkout".
+if [ "$(git rev-parse --show-toplevel 2>/dev/null)" = "$PWD" ]; then
+  corpus=checkout
+  sh_files=$(git ls-files '*.sh'); gl1=$?
+  all_files=$(git ls-files); gl2=$?
+  if [ "$gl1" -ne 0 ] || [ "$gl2" -ne 0 ]; then
+    corpus=BROKEN
+    bad "B3 git ls-files failed inside a checkout (rc $gl1/$gl2) — file list incomplete, so B3 measured nothing"
+  fi
+else
+  corpus=walk
+  # no .git: list the tree itself. Prune the directories a packed install carries that are not this
+  # repo's own shell code, so the count means the same thing it means in a checkout.
+  sh_files=$(find . -type d \( -name node_modules -o -name .git \) -prune -o -type f -name '*.sh' -print | sed 's|^\./||')
+  all_files=$(find . -type d \( -name node_modules -o -name .git \) -prune -o -type f -print | sed 's|^\./||')
+fi
+if [ "$corpus" != BROKEN ]; then
 files=$(printf '%s\n' "$sh_files"; printf '%s\n' "$all_files" | grep -v '\.sh$' | while IFS= read -r f; do
   [ -f "$f" ] && head -1 "$f" | grep -qE '^#!.*(bash|/sh)( |$)' && printf '%s\n' "$f"; done)
 n=$(printf '%s\n' "$files" | grep -c .)
-out=$(printf '%s\n' "$files" | tr '\n' '\0' | xargs -0 bash "$SCAN" --nonascii-only); rc=$?
-{ [ "$rc" -eq 0 ] && [ "$n" -gt 100 ]; } && ok "B3 $n tracked shell files → 0 code-line hits" \
-  || bad "B3 files=$n rc=$rc — brace them as \${NAME}:"$'\n'"$(printf '%s' "$out" | grep '🟥' | head -20)"
+if [ "$n" -le 100 ]; then
+  # a working file list that is this short is not this repo's shell set, so the lane has no corpus to
+  # judge — named, and not a pass.
+  skip "B3 — only $n shell files found via $corpus; too few to be this repo's shell set, so nothing was scanned"
+else
+  out=$(printf '%s\n' "$files" | tr '\n' '\0' | xargs -0 bash "$SCAN" --nonascii-only); rc=$?
+  [ "$rc" -eq 0 ] && ok "B3 $n shell files ($corpus) → 0 code-line hits" \
+    || bad "B3 files=$n rc=$rc ($corpus) — brace them as \${NAME}:"$'\n'"$(printf '%s' "$out" | grep '🟥' | head -20)"
+fi
+fi
 
 LOCALES=$(locale -a 2>/dev/null)   # captured first: grep -q under pipefail would SIGPIPE locale -a into a false SKIP
 if [ -x /bin/bash ] && printf "%s\n" "$LOCALES" | grep -iE '^ko_KR\.utf-?8$' >/dev/null; then

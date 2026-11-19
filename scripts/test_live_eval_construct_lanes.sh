@@ -37,13 +37,14 @@ probes:
     construct: obviously-fine
 EOF
 python3 - "$HERE" "$W" <<'PY'
-import sys; sys.path.insert(0, sys.argv[1])
+import os, sys; sys.path.insert(0, sys.argv[1])
 import probe_live_eval_lib as L
 W = sys.argv[2]
 md, live = L.parse_probes_md(W + "/probes.md"), L.parse_probes_live(W + "/live.yaml")
 r = L.build_selection(md, live)
 sel = {e["id"]: e for e in r["selected"]}
 fails = 0
+unmeas = 0
 def lane(name, ok):
     global fails
     print(("  ✅ " if ok else "  ❌ ") + name)
@@ -62,9 +63,31 @@ keys = ("id", "input", "control_input", "polarity", "expect_re", "control_input_
 strip = lambda es: [{k: e.get(k) for k in keys} for e in es]
 lane("K5 record only — with and without the declarations, the selection and every scoring field are identical", strip(r["selected"]) == strip(rb["selected"]) and [e["id"] for e in r["excluded"]] == [e["id"] for e in rb["excluded"]])
 lane("K7 the nightly report itself carries the section (not only the helper)", "## Construct validity (record only" in L.render_report_md(r, None, "2026-11-06"))
-real = L.build_selection(L.parse_probes_md(sys.argv[1] + "/../.claude/regression/probes.md"), L.parse_probes_live(sys.argv[1] + "/../.claude/regression/probes_live.yaml"))
-und = [e["id"] for e in real["selected"] if e.get("construct") == "UNDECLARED"]
-lane("K6 the real probes_live.yaml declares every selected probe (%d selected, undeclared=%s)" % (len(real["selected"]), und or 0), len(real["selected"]) > 0 and not und)
-print("live-eval construct lanes: %d passed · %d failed" % (7 - fails, fails))
-sys.exit(1 if fails else 0)
+# K6 is the only lane that reads the HUB's real corpus. 🟥 `.claude/regression/probes.md` is
+# deliberately not shipped — `probe_scope_check.sh`, which reads the same file, is ACCEPTED_ABSENT
+# for exactly that reason, and selfcheck refuses a tree that carries the probe set without its
+# checker ("probe set present but the scope checker is missing"). So in a git-less consumer tree
+# this read used to RAISE, killing the whole python block: no lane summary at all, and selfcheck
+# then printed `FAIL … subject: scripts/probe_live_eval_lib.py`, naming a sound library. An absent
+# corpus is UNMEASURED — not a pass, and not a verdict about the library. Measured 2026-11-09 in
+# the extracted tarball; shipping the corpus was tried first and is what produced that refusal.
+real_md   = sys.argv[1] + "/../.claude/regression/probes.md"
+real_live = sys.argv[1] + "/../.claude/regression/probes_live.yaml"
+missing = [os.path.basename(f) for f in (real_md, real_live) if not os.path.exists(f)]
+if missing:
+    unmeas += 1
+    print("  ⬜ K6 the hub's real probe corpus is not in this tree (%s absent) — lane NOT RUN; nothing is claimed about probe_live_eval_lib.py, and this is NOT a pass" % ", ".join(missing))
+else:
+    real = L.build_selection(L.parse_probes_md(real_md), L.parse_probes_live(real_live))
+    und = [e["id"] for e in real["selected"] if e.get("construct") == "UNDECLARED"]
+    lane("K6 the real probes_live.yaml declares every selected probe (%d selected, undeclared=%s)" % (len(real["selected"]), und or 0), len(real["selected"]) > 0 and not und)
+print("live-eval construct lanes: %d passed · %d failed%s" % (7 - fails - unmeas, fails, (" · %d unmeasured" % unmeas) if unmeas else ""))
+if fails:
+    sys.exit(1)
+if unmeas:
+    # line-head `INCOMPLETE  <subject>:` is this repo's aggregate vocabulary for "ran, measured
+    # nothing, not a pass" (test_fh_detach_lanes.sh, test_mutation_probe_lanes.sh).
+    print("INCOMPLETE  live-eval construct: %d lane(s) could not reach their subject in this tree — not a pass" % unmeas)
+    sys.exit(1)
+sys.exit(0)
 PY
