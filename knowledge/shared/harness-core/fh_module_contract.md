@@ -190,6 +190,46 @@ this measurement. The exemption covers that property only. If the module's text 
 fewer corrections, a smoother onboarding, a right answer — that promise is a declared purpose and is measured on its
 own axis above.
 
+## 2e. Near-miss requests — say so, never answer as checked
+
+A **near-miss request** lands near a module but outside what its check can verify: a file of another kind or
+language than the one the check reads, a platform or failure the run cannot reproduce, or a question about the target
+when the module checks an instrument. The failure this clause guards against is the module answering it in its own
+confident voice («checked», «clean») although nothing was checked. That is a silent pass, which the core floor already
+forbids (§1 item 4).
+
+**Modules that verify** — a `provides.verdicts` entry, or any script whose output a caller reads as «checked» — do
+three things:
+
+1. **The SKILL has one section naming the near-miss kinds** (the module's author names them; there is no global list).
+   For each kind it gives the exact sentence the module says, and that sentence either **routes** (names the module,
+   skill or person that can check it) or **asks** whether to go on unverified. It never states a result for that
+   input. Example, after fh-cartridges-lab `cart-winport` §4: «cart-winport does not check <kind>; it is not verified
+   for Windows. Go on without a check, or check it another way?»
+2. **The script refuses outside its definition with a typed non-pass exit.** It recognises what it checks positively
+   (a file kind, a parsed shape) and refuses everything else, including kinds nobody named, with **exit 2** — the
+   `unmeasured` code of §2 — and one line naming the input and «NOT checked». Never 0. Never 1 either: 1 means «found
+   a defect», and a near-miss is not a finding. This holds for a measurement engine too (§2): its 0 means «measured and
+   reported»; a near-miss input was not measured, so it also exits 2.
+   The script's line and the SKILL's sentence name the same kind and both say it was not checked; the wording may
+   differ.
+   **Kinds the script cannot tell from its input** — a platform or failure the run did not reproduce, a question about
+   the target instead of the instrument — are handled by the SKILL's sentence alone. For those, the script's passing
+   output names what it did not exercise («checked on macOS; Windows-only modes not exercised»), so a pass is never read
+   as covering them. Only kinds the script can recognise get the exit rule and a lane.
+3. **One lane per named kind the script can recognise keeps the refusal from rotting.** Feed an input of that kind; assert exit 2, the line
+   that names it as not checked, and the absence of the module's pass word. Pair it with one in-definition input that
+   still passes, so the refusal cannot spread. Template: `cart-winport`'s `H1` lane (exit 2, `HARNESS-ERROR`, no
+   `WINPORT PASS`). That lane covers an unparsable `.py`; the module's non-`.py` refusal has no lane of its own yet —
+   exactly the gap this rule closes.
+
+**Prose and role modules** (no verdict, no checking script): name the near-miss kinds and their sentences in the
+SKILL's prose. No exit rule applies.
+
+**Not checked by `cartridge_admit.py` or `fh_module_check.py` in v0.** A presence check (the section exists; its
+sentences route or ask) would be record-only — present / absent — never a judgment of the sentences' quality. It is a
+named candidate, not built.
+
 ## 3. Install-time check (`scripts/fh_module_check.py check`)
 
 Exit codes: **0 OK, 1 BLOCK, 2 UNMEASURED, 3 OK-but-UNCALIBRATED** (valid, no verdict entry points, `calibration: UNCALIBRATED`; callers must not treat 3 as a clean pass). Unreadable, empty, or non-mapping input is 2; PyYAML missing is 2; an internal error is 2. Nothing unreadable or unknown exits 0. Exit code 3 means different things in different FH scripts (in `governor_landing_check.py` it is LATE); read each script's own exit table, never assume 3 means the same thing.
