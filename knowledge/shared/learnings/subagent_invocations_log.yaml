@@ -5513,3 +5513,9 @@
   outcome: "no page states it in one sentence; nearest verbatim lines: best-practices «can end up slower than doing the task where you are», multi-agent research «are not a good fit»; summary-only lines flagged and not used"
   evidence: "docs/USER_GUIDE.md §4 «세 가지 일하는 방식»"
   tokens: "66577"
+- date: 2026-11-20
+  agent: "fh-meta:challenger (opus) — axis 2 for fh-gate/fh-goal NUL-delimited listings, AQ-20261119-8 (purpose: independence)"
+  task: "regressions vs old listing code, fail-closed paths, fh-goal → fh-gate hand-off, bash 3.2, set -euo pipefail, porcelain -z renames, lanes green under revert"
+  outcome: "A1 C3 — A: a change whose only name holds a newline left an empty list → fh-goal exit 0 / fh-gate fell back to dirty files (fixed: both fail closed, lanes added, guard-off probes red) · C: ARM F green pre-fix (labelled) · C: list temp file outside cleanup trap (fixed) · C: pre-existing single spaced missing path split (not changed)"
+  evidence: "PR body (auto/selfdev-2026-11-20-1)"
+  tokens: "46587"

@@ -144,7 +144,8 @@ START_COMMIT="$(git -C "$WORK_ROOT" rev-parse HEAD 2>/dev/null || true)"
 PROMPT_FILE=$(mktemp "${_TMPDIR}/fh_goal_prompt_XXXXXX")
 OUTPUT_FILE=$(mktemp "${_TMPDIR}/fh_goal_output_XXXXXX")
 ERR_FILE=$(mktemp "${_TMPDIR}/fh_goal_err_XXXXXX")
-cleanup() { rm -f "$PROMPT_FILE" "$OUTPUT_FILE" "$ERR_FILE"; }
+_fg_lst=""
+cleanup() { rm -f "$PROMPT_FILE" "$OUTPUT_FILE" "$ERR_FILE"; [[ -n "$_fg_lst" ]] && rm -f "$_fg_lst" "$_fg_lst.dropped"; return 0; }
 trap cleanup EXIT
 
 cat > "$PROMPT_FILE" <<PROMPT
@@ -197,6 +198,27 @@ fi
 [[ "$FH_VERBOSE" == "1" ]] && cat "$ERR_FILE" >&2
 cat "$OUTPUT_FILE"
 
+# NUL-delimited git listing on stdin → newline-delimited names. $1 = name | porcelain (strip «XY », skip the
+# old-path field after a rename/copy). A name holding a newline cannot travel in the list: a WARN names it.
+_FG_DROPPED=0
+_fg_z_to_lines() {
+  local _n _skip=0
+  while IFS= read -r -d '' _n; do
+    if [[ "$_skip" -eq 1 ]]; then _skip=0; continue; fi
+    if [[ "$1" == porcelain ]]; then
+      case "${_n:0:2}" in R*|C*|?R|?C) _skip=1 ;; esac
+      _n="${_n:3}"
+    fi
+    [[ -z "$_n" ]] && continue
+    if [[ "$_n" == *$'\n'* ]]; then
+      echo "WARN: changed file name contains a newline and is not reviewed: $(printf '%q' "$_n")" >&2
+      echo x >>"$_fg_lst.dropped"   # the caller runs this in a subshell; the count goes through a file
+      continue
+    fi
+    printf '%s\n' "$_n"
+  done
+}
+
 if [[ -z "$TARGET_FILES" ]]; then
   # No git → no change detection → no basis for "nothing changed". Say so and fail closed
   # instead of reporting the clean-run exit the caller reads as "gate passed".
@@ -216,26 +238,41 @@ if [[ -z "$TARGET_FILES" ]]; then
   # Capture the git rc SEPARATELY from the transform — `|| true` on the whole pipeline is what
   # ate it, and `pipefail` had been faithfully propagating it right up to that point.
   if [[ -n "$START_COMMIT" ]]; then
-    # core.quotePath=false: a non-ASCII name is otherwise printed quoted and names no file (see fh-gate.sh, 2026-11-19).
-    if ! _fg_raw=$(git -C "$WORK_ROOT" -c core.quotePath=false diff "$START_COMMIT"..HEAD --name-only 2>/dev/null); then
+    # -z (AQ-20261119-8): git prints every name raw, NUL-delimited. The old path joined names with `xargs`,
+    # which aborts on a quote in a name; `|| true` folded that into an empty list → «no changed files» → exit 0,
+    # fh-gate never ran. Names now go to fh-gate newline-delimited (fh-gate's multi-line form); command
+    # substitution drops NUL bytes, so the raw listing goes through a temp file.
+    _fg_lst=$(mktemp "${_TMPDIR}/fh_goal_list_XXXXXX")
+    if ! git -C "$WORK_ROOT" -c core.quotePath=false diff -z "$START_COMMIT"..HEAD --name-only >"$_fg_lst" 2>/dev/null; then
+      rm -f "$_fg_lst"
       echo "ERROR: cannot detect changed files (git diff failed in ${WORK_ROOT})." >&2
       echo "  The backend may well have changed code; fh-gate never ran. Pass --files explicitly." >&2
       exit 10
     fi
-    TARGET_FILES=$(printf '%s\n' "$_fg_raw" | tr '\n' ' ' | xargs || true)
+    TARGET_FILES=$(_fg_z_to_lines name <"$_fg_lst")
+    [[ -f "$_fg_lst.dropped" ]] && _FG_DROPPED=$((_FG_DROPPED + $(wc -l <"$_fg_lst.dropped")))
+    rm -f "$_fg_lst" "$_fg_lst.dropped"
   fi
-  if [[ -z "$TARGET_FILES" ]]; then
-    # `--porcelain` + strip the 2-char status field. `awk '{print $2}'` used to take the OLD
-    # path of a rename ("R old -> new") and split names containing spaces.
-    if ! _fg_raw=$(git -C "$WORK_ROOT" -c core.quotePath=false status --porcelain 2>/dev/null); then
+  if [[ -z "$TARGET_FILES" && "$_FG_DROPPED" -eq 0 ]]; then
+    # `--porcelain -z`: each entry is «XY path»; a rename/copy entry is followed by its OLD path as a separate
+    # field, which is skipped (the new path is the one to review).
+    _fg_lst=$(mktemp "${_TMPDIR}/fh_goal_list_XXXXXX")
+    if ! git -C "$WORK_ROOT" -c core.quotePath=false status --porcelain -z >"$_fg_lst" 2>/dev/null; then
+      rm -f "$_fg_lst"
       echo "ERROR: cannot detect changed files (git status failed in ${WORK_ROOT})." >&2
       echo "  The backend may well have changed code; fh-gate never ran. Pass --files explicitly." >&2
       exit 10
     fi
-    TARGET_FILES=$(printf '%s\n' "$_fg_raw" \
-      | sed -e 's/^.\{3\}//' -e 's/^.* -> //' -e 's/^"\(.*\)"$/\1/' \
-      | tr '\n' ' ' | xargs || true)
+    TARGET_FILES=$(_fg_z_to_lines porcelain <"$_fg_lst")
+    [[ -f "$_fg_lst.dropped" ]] && _FG_DROPPED=$((_FG_DROPPED + $(wc -l <"$_fg_lst.dropped")))
+    rm -f "$_fg_lst" "$_fg_lst.dropped"
   fi
+fi
+
+if [[ -z "$TARGET_FILES" && "$_FG_DROPPED" -gt 0 ]]; then
+  echo "ERROR: every changed file name holds a newline (${_FG_DROPPED}) — fh-gate cannot review them." >&2
+  echo "  Failing closed rather than reporting «no changed files». Rename the file(s) or pass --files." >&2
+  exit 10
 fi
 
 if [[ -z "$TARGET_FILES" ]]; then
@@ -243,5 +280,5 @@ if [[ -z "$TARGET_FILES" ]]; then
   exit 0
 fi
 
-echo "→ fh-goal: running fh-gate on ${TARGET_FILES}" >&2
+echo "→ fh-goal: running fh-gate on $(printf '%s' "$TARGET_FILES" | tr '\n' ' ')" >&2
 FH_BACKEND="$FH_BACKEND" "$FH_ROOT/scripts/fh-gate.sh" "$TARGET_FILES" "$FH_GATE_LEVEL" "$FH_CALLER"
