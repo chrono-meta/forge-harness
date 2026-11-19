@@ -21,6 +21,18 @@ pass=0; fail=0
 TMPROOT=$(mktemp -d "${TMPDIR:-/tmp}/fh_gate_test_XXXXXX")
 trap 'rm -rf "$TMPROOT"' EXIT
 
+# 🟥 The gate APPENDS every invocation to $FH_RECORD_BASE/governance_log_<date>.yaml, defaulting to
+# the hub's own tracks/_meta. Measured 2026-11-16 (clean-room audit round 9): one run of this suite
+# added 19 rows to the live dated ledger (57 -> 76), and every row in every governance_log_*.yaml in
+# a fresh container was `caller: test · model: fake` — 57, 57, 95, 57 across four rounds, 19 per
+# selfcheck run, with zero real gate runs among them. So a reader opening that ledger as evidence of
+# gate activity reads dozens of fixture PASSes, which is this audit's own defect class one step over:
+# a record channel that renders "never ran for real" as "57 PASS". fh-gate.sh:30 documents
+# FH_RECORD_BASE for exactly this, and this suite simply was not using it. The ledger is not asserted
+# on anywhere in this file, so redirecting it changes no lane's verdict.
+export FH_RECORD_BASE="$TMPROOT/records"
+mkdir -p "$FH_RECORD_BASE"
+
 # Review SUBJECT — a fixture this suite creates, NOT a file it hopes the repo has.
 # Every gate invocation below used the literal `package.json` as its subject. That is an npm-package
 # assumption smuggled into a test: this suite passed here only because this repo happens to ship one.
@@ -324,8 +336,13 @@ case "$_sc" in
   0|10) printf 'PASS  %-58s (exit %s)\n' "stderr closed + PASS run → 0 or 10, never a lower verdict" "$_sc"; pass=$((pass + 1)) ;;
   *)    printf 'FAIL  %-58s expected 0 or 10, got %s\n' "stderr closed + PASS run → 0 or 10, never a lower verdict" "$_sc"; fail=$((fail + 1)) ;;
 esac
+# 🟥 `-u FH_RECORD_BASE` is load-bearing: this lane's whole subject is the $HOME fallback the record
+# base takes outside a checkout, so the suite-wide FH_RECORD_BASE export (added above to keep fixture
+# rows out of the hub's live ledger) has to be dropped for this one invocation or the fallback never
+# runs. Measured: with it inherited the lane reads 12 instead of 10 — i.e. the lane went green-adjacent
+# about a path it no longer visited. The suite caught the masking itself.
 check "unbound variable (HOME unset, outside a checkout) → HARNESS_ERROR" 10 \
-  env -u HOME FH_DRY_RUN=1 bash -c 'cd "$1" && exec bash "$2" "$3" quick test' _ "$TMPROOT" "$PWD/$GATE" "$SUBJECT"
+  env -u HOME -u FH_RECORD_BASE FH_DRY_RUN=1 bash -c 'cd "$1" && exec bash "$2" "$3" quick test' _ "$TMPROOT" "$PWD/$GATE" "$SUBJECT"
 
 echo
 echo "────────────────────────────────────────────────────────────────────"
