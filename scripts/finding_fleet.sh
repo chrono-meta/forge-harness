@@ -34,7 +34,8 @@ CODEX="${FH_CODEX_BIN:-$(command -v codex 2>/dev/null || echo "$HOME/.npm-global
 # A function named agy (exported into this shell) would outrank PATH and fool `command -v`: drop it first.
 unset -f agy codex 2>/dev/null || true
 AGY="${FH_AGY_BIN:-$(command -v agy 2>/dev/null || echo "$HOME/.local/bin/agy")}"
-# Every agy launch goes through the isolation guard (refuses unless FH_AGY_ISOLATION=container|os-user).
+# Every agy launch goes through the isolation guard (refuses unless FH_AGY_ISOLATION=container|os-user, or
+# no-tools-agent — a tools: [] agent whose every run is checked; see agy_launch_guard.sh).
 # How: a shim named `agy` in a private temp dir is put FIRST on PATH, and the fleet token AGY_BIN
 # becomes that shim's path. So a default row, a custom row that writes AGY_BIN (quoted or not, under
 # `timeout`/`env`), and a custom row that calls `agy` by name all reach the guard; and no path chosen by

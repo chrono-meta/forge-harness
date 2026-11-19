@@ -67,6 +67,19 @@ fails). Being
 discovered below makes agy a *candidate*, not a recruit: on the host, without the marker, it is not
 recruitable. Lanes: `scripts/test_agy_launch_guard_lanes.sh`.
 
+**On this machine, for public material only: `FH_AGY_ISOLATION=no-tools-agent`** (2026-11-19). This is the one
+marker the guard partly checks instead of taking on trust. Measured with canaries: a custom agent whose
+definition says `tools: []` made 0 file reads in 4 of 4 runs, while a control with the same body read
+both canaries; settings keys and `permissions.deny` did not stop reads. On this route the guard:
+- refuses when the prompt, an argument or the working folder names a company-repo root (codex guard's
+  list; an unconfigured list is refused);
+- writes a `tools: []` agent definition under a unique name into `~/.gemini/agents`, runs agy with it,
+  and removes the definition;
+- reads every run's stream-json and **voids** the run (exit 4, nothing printed) on any tool step other
+  than `manage_task`, another agent, or a stream it cannot parse.
+
+A void cannot un-send what a tool already read, which is why company paths are refused before the start.
+
 **The route FH ships for agy: a separate OS user on another machine** — `scripts/agy_remote_run.sh` (the `container` / `os-user` markers remain for an isolated environment you built yourself, and the guard cannot check those).
 Set `FH_AGY_BIN=<repo>/scripts/agy_remote_run.sh` and `FH_AGY_ISOLATION=remote-os-user` (the guard honours
 that value only for this runner). Configuration is environment-only (`FH_AGY_REMOTE` = ssh target,
