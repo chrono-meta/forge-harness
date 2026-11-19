@@ -92,6 +92,11 @@ ACCEPTED_ABSENT=(
   "scripts/cartridge_loader.sh"
   "scripts/test_cartridge_loader_lanes.sh"
   "templates/settings.CartridgeLoader.snippet.json"
+  # 2026-11-19 — measurement scoreboard renderer and its lanes. It reads the operator's sealed measurement records across
+  #    their own repositories; a consumer has none of those records, so it is not shipped. selfcheck resolves the anchor
+  #    row as SKIP («not in files[], and absent»).
+  "scripts/scoreboard_render.py"
+  "scripts/test_scoreboard_render_lanes.sh"
   # 2026-11-19 — FH-side check that the published fh-techwriter copy of ko-tech-writer still matches FH's export,
   #    and its lanes. A maintainer tool for this repository's own export, not a consumer capability: a consumer has
   #    no fh-techwriter copy to compare. selfcheck resolves its anchor row as SKIP («not in files[], and absent»).
