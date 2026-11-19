@@ -28,8 +28,8 @@ mkdir -p "$FIX/bin" "$FIX/work"
 # --- git shim: real enough to pass the GIT_OK probe, scriptable for diff/status -------------
 cat > "$FIX/bin/git" <<'GIT'
 #!/usr/bin/env bash
-# args may be prefixed with -C <dir>
-while [[ "${1:-}" == "-C" ]]; do shift 2; done
+# args may be prefixed with -C <dir> and -c <key=value> (fh-goal passes -c core.quotePath=false)
+while [[ "${1:-}" == "-C" || "${1:-}" == "-c" ]]; do shift 2; done
 case "${1:-}" in
   rev-parse)
     case "${2:-}" in
@@ -84,6 +84,26 @@ if grep -q "running fh-gate on" "$FIX/err"; then
 else
   no "ARM C control: never reached fh-gate — ARM A/B results are UNINTERPRETABLE (rc=$RC)"
   sed -n 1,6p "$FIX/err" | sed 's/^/       /'
+fi
+
+# ARM D — real git, a Korean-named untracked file: fh-goal must hand fh-gate the name itself, not git's quoted
+# octal form («"\355\225…"») — 2026-11-19, the same defect fh-gate had with core.quotePath.
+if command -v git >/dev/null 2>&1; then
+  mkdir -p "$FIX/realbin" "$FIX/realwork"; cp "$FIX/bin/codex" "$FIX/realbin/codex"
+  git -C "$FIX/realwork" init -q; echo seed > "$FIX/realwork/README"   # a HEAD for fh-goal's diff to start from
+  git -C "$FIX/realwork" add README; git -C "$FIX/realwork" -c user.name=lane -c user.email=lane@example.invalid commit -qm seed
+  echo "본문" > "$FIX/realwork/한글문서.md"
+  # run from inside the scratch repo: fh-goal takes the work tree from the caller's folder
+  ( cd "$FIX/realwork" && env PATH="$FIX/realbin:$PATH" FH_BACKEND=codex FH_TIMEOUT=20 \
+      bash "$TARGET" --prompt "noop" --root "$FIX/realwork" ) >"$FIX/out" 2>"$FIX/err"
+  if grep -qF "running fh-gate on 한글문서.md" "$FIX/err"; then
+    ok "ARM D real git: a Korean file name reaches fh-gate as itself"
+  else
+    no "ARM D real git: the Korean name did not reach fh-gate as itself"
+    grep -m2 "running fh-gate on\|no changed files" "$FIX/err" | sed 's/^/       /'
+  fi
+else
+  echo "  ⬜ ARM D NOT RUN: no git on PATH — not a pass"
 fi
 
 echo "fh-goal change-detection: $PASS passed, $FAIL failed"

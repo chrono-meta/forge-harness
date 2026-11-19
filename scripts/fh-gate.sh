@@ -305,7 +305,7 @@ fi
 
 if [[ -z "${FH_MODEL:-}" ]]; then
   case "$FH_BACKEND" in
-    claude) FH_MODEL="claude-sonnet-4-6" ;;
+    claude) FH_MODEL="claude-sonnet-5-5" ;;
     codex)  FH_MODEL="gpt-5.5" ;;
   esac
 fi
@@ -339,9 +339,11 @@ fi
 # Auto-detect files from git diff (B1: configurable base branch)
 FH_BASE_BRANCH="${FH_BASE_BRANCH:-main}"
 if [[ -z "$TARGET_FILES" ]]; then
-  TARGET_FILES=$(git -C "$WORK_ROOT" diff "${FH_BASE_BRANCH}..HEAD" --name-only 2>/dev/null || true)
+  # core.quotePath=false: by default git prints a non-ASCII name quoted («"\355\225…"»), which then names no file —
+  # a Korean-only change exited 10 «nothing was reviewed», and a mixed change reviewed only the ASCII files (2026-11-19).
+  TARGET_FILES=$(git -C "$WORK_ROOT" -c core.quotePath=false diff "${FH_BASE_BRANCH}..HEAD" --name-only 2>/dev/null || true)
   if [[ -z "$TARGET_FILES" ]]; then
-    TARGET_FILES=$(git -C "$WORK_ROOT" ls-files --modified --others --exclude-standard 2>/dev/null || true)
+    TARGET_FILES=$(git -C "$WORK_ROOT" -c core.quotePath=false ls-files --modified --others --exclude-standard 2>/dev/null || true)
   fi
 elif [[ "$TARGET_FILES" != *$'\n'* ]] && ! path_exists_in_context "$TARGET_FILES"; then
   # Backward compatibility for v1.1 examples like "src/a.ts src/b.ts".
