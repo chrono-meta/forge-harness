@@ -1227,6 +1227,7 @@ for _pair in \
   "scripts/fh_module_check.py|scripts/test_fh_module_check_lanes.sh" \
   "scripts/heavy_skill_smell.py|scripts/test_heavy_skill_smell_lanes.sh" \
   "scripts/cartridge_loader.py|scripts/test_cartridge_loader_lanes.sh" \
+  "scripts/fh_techwriter_sync_check.sh|scripts/test_fh_techwriter_sync_lanes.sh" \
   "scripts/knowledge_seam_check.sh|scripts/test_knowledge_seam_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_crossfamily_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_floor_lanes.sh" \
@@ -3207,6 +3208,17 @@ fi
 # Lane-identity tripwire — record-only: a WARN line, never a FAIL (a hit is a past event in the
 # repo, not this run's verdict). Runs AFTER the lanes, which is when a leaked commit would have just landed.
 if [ -f scripts/lane_identity_tripwire.sh ]; then bash scripts/lane_identity_tripwire.sh . | grep -v '^LANE-TRIPWIRE ok' ; fi
+# fh-techwriter copy sync (2026-11-19) — record-only: an INFO line, never a FAIL. The copy lives in another
+# repository and is regenerated and pushed there by a human, so its state is not this tree's verdict. Shard 1
+# only, source tree only. Exit 2 (no copy here, export failed) prints «not measured», never «in sync».
+if [ -f scripts/fh_techwriter_sync_check.sh ] && [ "$_CONSUMER" -ne 1 ] && { [ -z "${_SHARD_N:-}" ] || [ "${_SHARD_I:-1}" = 1 ]; }; then
+  _tw=$(bash scripts/fh_techwriter_sync_check.sh </dev/null 2>&1); _twrc=$?
+  case "$_twrc" in
+    0) echo "INFO  fh-techwriter copy: in sync — $(printf '%s\n' "$_tw" | grep '^fh-techwriter sync:' | cut -c21-)";;
+    1) printf '%s\n' "$_tw" | sed 's/^/INFO  fh-techwriter copy: /';;
+    *) echo "INFO  fh-techwriter copy: not measured — $(printf '%s\n' "$_tw" | tail -1)";;
+  esac
+fi
 if [ "$_CONSUMER" -eq 1 ]; then
   _n=$(printf '%s\n' $CONSUMER_SKIPPED | grep -c .)
   echo "CONSUMER PROFILE — $_n checkout-only suite(s) NOT measured here (not a pass):$CONSUMER_SKIPPED"

@@ -28,6 +28,10 @@ entries. Same class as the 2026-08-20 entry below (index drift on `knowledge/`);
 - `scripts/cartridge_loader.py` — #module, #cartridge, #routing, #hook. Core SessionStart hook: loads the cartridges
   the operator lists (admitted snapshot + sha256) into the session; activity cartridges skipped. Hub-only for now
   (ships with `cartridge_admit.py`). Lanes: `scripts/test_cartridge_loader_lanes.sh`.
+- `scripts/fh_techwriter_sync_check.sh` — #export, #drift, #ko-tech-writer. Names the files where the published
+  fh-techwriter copy (its committed HEAD) differs from FH's own export of ko-tech-writer — DRIFT · MISSING · EXTRA —
+  and prints the regen command for a human; never writes to the copy. selfcheck prints it as an INFO line.
+  Lanes: `scripts/test_fh_techwriter_sync_lanes.sh`.
 - `knowledge/shared/harness-core/governance_engineering_definition.md` — #governance-engineering,
   #identity, #naming. Names the discipline this hub practices: moving an error rate toward 0.x% and
   blocking at the surfaces where that number may not buy passage. Distinct from harness engineering
