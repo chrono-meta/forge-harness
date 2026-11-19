@@ -116,11 +116,11 @@ out=$(python3 "$R" "$T/idx.json" --exclude-patterns "$T/pat" 2>"$T/err"); rc=$?
 row() { grep -F "| m $1 |" <<< "$out"; }
 exc() { grep -F "| $1 |" <<< "$(sed -n '/## Excluded/,$p' <<< "$out")"; }
 shown() { local r; r=$(row "$1"); if [ -n "$r" ]; then _pass "$2"; else _fail "$2 — not rendered ($(exc "$1"))"; fi; }
-gone()  { local r; r=$(row "$1"); if [ -z "$r" ] && exc "$1" | grep -qF -- "$3"; then _pass "$2"; else _fail "$2 — rendered=${r:+yes} reason=[$(exc "$1")]"; fi; }
+gone()  { local r; r=$(row "$1"); if [ -z "$r" ] && grep -qF -- "$3" <<< "$(exc "$1")"; then _pass "$2"; else _fail "$2 — rendered=${r:+yes} reason=[$(exc "$1")]"; fi; }
 
 shown sealed-win      "K1 sealed result renders"
 shown planted-null    "K2 planted NULL (NO DIFFERENCE) renders — nulls are not dropped"
-grep -F "| m planted-null |" <<< "$out" | grep -qF "NO DIFFERENCE" && _pass "K2b … with its outcome word" || _fail "K2b planted null lost its outcome word"
+grep -qF "NO DIFFERENCE" <<< "$(row planted-null)" && _pass "K2b … with its outcome word" || _fail "K2b planted null lost its outcome word"
 gone planted-unsealed "K3 planted UNSEALED result (same commit as prereg) does not render" "same commit"
 shown appended-result "K4 result appended to the prereg file later renders (sealed by the earlier commit)"
 gone unpushed-seal    "K5 seal never pushed does not render" "on no remote branch"
