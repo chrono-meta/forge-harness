@@ -28,6 +28,21 @@
 #   FH_TIMEOUT=120                seconds before backend is killed (default: 120)
 #   FH_VERBOSE=1                  print full backend stderr to stderr
 #   FH_RECORD_BASE=<p>  directory for governance_log YAML (default: FH_ROOT/tracks/_meta)
+#   FH_REVIEWER=code-review|fh    review stage. Default on the claude backend: the built-in `/code-review`
+#                                 (its findings are carried as they come — severity Important → B, Nit and
+#                                 Pre-existing → C — and the verdict is derived from the grades). `fh` = the
+#                                 older FH review pass. codex has no /code-review, so it uses `fh` and says
+#                                 so on FH_GATE_REVIEWER. FH_REVIEWER=code-review on codex is an argument error.
+#   FH_GATE_EXEC=on|off           execution layer (scripts/fh_gate_exec.sh, token-free): E0 static class
+#                                 scanners and E1 target lanes, run against this change in a COPY of the
+#                                 tree. A lane this change turns red → A (BLOCKED). It runs the change's own
+#                                 lane scripts — set off where the change is not trusted. Default on.
+#   FH_GATE_BASE=<ref>            what the execution layer measures the change against. Default: HEAD when
+#                                 the tree has uncommitted changes, else merge-base(FH_BASE_BRANCH, HEAD).
+#   FH_GATE_LANES / FH_LANE_TIMEOUT / FH_GATE_MAX_LANES   see scripts/fh_gate_exec.sh
+#
+# Provenance lines (after FH_RECORD_PATH): FH_GATE_REVIEWER · FH_GATE_E0 · FH_GATE_E1 · FH_GATE_LAYERS_NOT_BUILT.
+# A step that did not run says NOT RUN and why — never «0 findings».
 
 set -euo pipefail
 # Unexpected failure → HARNESS_ERROR (10), never PENDING (1). Under `set -e` a command that fails where
@@ -139,6 +154,9 @@ case "${1:-}" in
     printf '%s\n' "  FH_DRY_RUN=1                         emit the prompt only; exits 12"
     printf '%s\n' "  FH_TIMEOUT=<seconds>                 backend kill deadline (default: 120)"
     printf '%s\n' "  FH_VERBOSE=1                         print full backend stderr"
+    printf '%s\n' "  FH_REVIEWER=code-review|fh           review stage (default on claude: built-in /code-review)"
+    printf '%s\n' "  FH_GATE_EXEC=on|off                  execution layer: scanners + target lanes in a copy (default on)"
+    printf '%s\n' "  FH_GATE_BASE=<ref>                   base the execution layer measures the change against"
     printf '%s\n' ""
     printf '%s\n' "  https://github.com/chrono-meta/forge-harness"
     _FH_VERDICT_EXIT=1; exit 0
@@ -157,7 +175,10 @@ FH_CALLER="${FH_CALLER:-${3:-ci}}"
 
 FH_DRY_RUN="${FH_DRY_RUN:-0}"
 FH_BACKEND="${FH_BACKEND:-claude}"
+_FH_TIMEOUT_SET="${FH_TIMEOUT:+x}"   # /code-review runs longer than one pass; its default is 900 unless the caller set one
 FH_TIMEOUT="${FH_TIMEOUT:-120}"
+FH_REVIEWER="${FH_REVIEWER:-}"
+FH_GATE_EXEC="${FH_GATE_EXEC:-on}"
 FH_VERBOSE="${FH_VERBOSE:-0}"
 FH_TASK_DESCRIPTION="${FH_TASK_DESCRIPTION:-}"
 FH_DIFF_PATH="${FH_DIFF_PATH:-}"
@@ -168,6 +189,14 @@ case "$FH_BACKEND" in
     echo "ERROR: FH_BACKEND must be 'claude', 'codex', 'auto', or 'cross' (got: $FH_BACKEND)" >&2
     exit $EXIT_ARG_ERROR
     ;;
+esac
+case "$FH_REVIEWER" in
+  ""|code-review|fh) ;;
+  *) echo "ERROR: FH_REVIEWER must be 'code-review' or 'fh' (got: $FH_REVIEWER)" >&2; exit $EXIT_ARG_ERROR ;;
+esac
+case "$FH_GATE_EXEC" in
+  on|off) ;;
+  *) echo "ERROR: FH_GATE_EXEC must be 'on' or 'off' (got: $FH_GATE_EXEC)" >&2; exit $EXIT_ARG_ERROR ;;
 esac
 
 # ── FH_BACKEND=cross — decorrelated review (2026-07-26) ───────────────────────────────────────
@@ -192,7 +221,7 @@ esac
 # it for load-bearing verdict/gate/irreversible-surface changes, which is exactly the trigger the
 # pre-commit load-bearing leg already computes.
 if [[ "$FH_BACKEND" == "cross" ]]; then
-  _CROSS_LEGS=""; _CROSS_OUT=""; _CROSS_WORST="PASS"; _CROSS_RAN=0; _CROSS_ERR=""
+  _CROSS_LEGS=""; _CROSS_OUT=""; _CROSS_WORST="PASS"; _CROSS_RAN=0; _CROSS_ERR=""; _CROSS_EXEC="$FH_GATE_EXEC"
   _sev_rank() { case "$1" in PASS) echo 0 ;; PENDING) echo 1 ;; ESCALATE) echo 2 ;; BLOCKED) echo 3 ;; *) echo -1 ;; esac; }
   for _leg in claude codex; do
     command -v "$_leg" >/dev/null 2>&1 || { _CROSS_ERR="${_CROSS_ERR}${_CROSS_ERR:+, }$_leg (not installed)"; continue; }
@@ -202,7 +231,7 @@ if [[ "$FH_BACKEND" == "cross" ]]; then
     # i.e. cross would work only when there was nothing to find. `|| _legrc=$?` keeps the status
     # without letting it abort. Verified against a BLOCKED leg, not assumed.
     _legrc=0
-    _legout=$(FH_BACKEND="$_leg" "$0" "$@" 2>/dev/null) || _legrc=$?
+    _legout=$(FH_BACKEND="$_leg" FH_GATE_EXEC="$_CROSS_EXEC" "$0" "$@" 2>/dev/null) || _legrc=$?
     # 11 (argument error) and 12 (dry-run) are not a leg failing — every leg gets the same arguments, so
     # every leg would say the same. Pass them through instead of folding them into "harness error 10"
     # (found 2026-10-20 by a local-model self-audit candidate, reproduced: cross + bad level → 10, not 11;
@@ -219,9 +248,12 @@ if [[ "$FH_BACKEND" == "cross" ]]; then
     [ -z "$_legverdict" ] && { _CROSS_ERR="${_CROSS_ERR}${_CROSS_ERR:+, }$_leg (no verdict line)"; continue; }
     _CROSS_RAN=$((_CROSS_RAN+1))
     _CROSS_LEGS="${_CROSS_LEGS}${_CROSS_LEGS:+,}$_leg"
+    _CROSS_EXEC=off   # the layer is the same for every leg: it runs in the first leg that REACHES A VERDICT. A leg that fails
+                      # before its verdict does not count, so the next leg runs the layer again (into its own temp copy).
     [ "$(_sev_rank "$_legverdict")" -gt "$(_sev_rank "$_CROSS_WORST")" ] && _CROSS_WORST="$_legverdict"
     _CROSS_OUT="${_CROSS_OUT}
 # ── leg: $_leg (verdict $_legverdict) ──
+$( { printf '%s\n' "$_legout" | grep -E '^FH_GATE_(REVIEWER|E0|E1|LAYERS_NOT_BUILT):' || true; } | sed 's/^/# /')
 $(printf '%s' "$_legout" | sed -n '/^---$/,$p')"
   done
 
@@ -308,6 +340,34 @@ if [[ -z "${FH_MODEL:-}" ]]; then
     claude) FH_MODEL="claude-sonnet-5-5" ;;
     codex)  FH_MODEL="gpt-5.5" ;;
   esac
+fi
+
+# ── Review stage (2026-11-19) ─────────────────────────────────────────────────────────────────────
+# The 2026-11-19 comparison (lab evidence/cr, sealed) measured this gate's own one-pass review against the
+# built-in /code-review on 8 real past diff bugs × 3: recall 0.417 each (EQUIVALENT), and the gate cost about
+# 4.8× as much. So on the claude backend the review stage IS /code-review, carried as it comes; what this
+# gate adds is the closed verdict, the exit codes, the record, the cross leg — and the execution layer
+# (fh_gate_exec.sh), which a reader cannot replace. The older pass stays as FH_REVIEWER=fh. codex has no
+# /code-review: it falls back to the FH pass and the output says so — never silently.
+if [[ -z "$FH_REVIEWER" ]]; then
+  if [[ "$FH_BACKEND" == "claude" ]]; then
+    FH_REVIEWER="code-review"
+  else
+    FH_REVIEWER="fh"; _REVIEWER_FALLBACK=1
+  fi
+fi
+if [[ "$FH_REVIEWER" == "code-review" && "$FH_BACKEND" != "claude" ]]; then
+  echo "ERROR: FH_REVIEWER=code-review needs the claude backend (/code-review is a Claude Code built-in); got FH_BACKEND=$FH_BACKEND" >&2
+  exit $EXIT_ARG_ERROR
+fi
+if [[ "$FH_REVIEWER" == "code-review" ]]; then
+  CR_EFFORT="high"; [[ "$GATE_LEVEL" == "quick" ]] && CR_EFFORT="medium"
+  REVIEWER_NOTE="/code-review ${CR_EFFORT} (built-in) · findings carried as reported · Important→B, Nit/Pre-existing→C"
+  [[ -z "$_FH_TIMEOUT_SET" ]] && FH_TIMEOUT=900
+elif [[ "${_REVIEWER_FALLBACK:-0}" == 1 ]]; then
+  REVIEWER_NOTE="fh (fallback — /code-review unavailable on ${FH_BACKEND})"
+else
+  REVIEWER_NOTE="fh (FH_REVIEWER=fh)"
 fi
 
 WORK_ROOT="$(git -C "$CALLER_CWD" rev-parse --show-toplevel 2>/dev/null || printf '%s' "$CALLER_CWD")"
@@ -496,7 +556,7 @@ else
   TASK_BLOCK="Task description: (not provided)"
 fi
 
-cleanup() { rm -f "$PROMPT_FILE" "$OUTPUT_FILE" "$ERR_FILE" "$PARSE_FILE" "$SCHEMA_FILE" "$CODEX_LAST"; }
+cleanup() { rm -f "$PROMPT_FILE" "$OUTPUT_FILE" "$ERR_FILE" "$PARSE_FILE" "$SCHEMA_FILE" "$CODEX_LAST" "${CR_SCHEMA_FILE:-}"; }
 _FH_CLEANUP=1                                   # _fh_on_exit (top of file) calls cleanup from here on
 
 # --- Build prompt ---
@@ -569,11 +629,53 @@ PASS=ship | PENDING=proceed with awareness | BLOCKED=fix first | ESCALATE=human 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PROMPT
 
-# --- Dry-run: prompt to stdout only (v0.1 behavior) ---
+# --- Execution layer (E0 · E1) — token-free, runs before any model call ---
+# It runs first so a broken copy or a red lane is known before tokens are spent, and so a dry run can
+# show exactly what would run. Its findings join the review's; the verdict takes the worse of the two.
+EXEC_JSON='{"e0":{"status":"not-run","detail":"NOT RUN"},"e1":{"status":"not-run","detail":"NOT RUN"},"findings":[]}'
+_EXEC_SCRIPT="${FH_ROOT}/scripts/fh_gate_exec.sh"
+_exec_lines() { EXEC_JSON=$(jq -cn --arg d "$1" '{e0:{status:"not-run",detail:$d},e1:{status:"not-run",detail:$d},findings:[]}'); }
+if [[ "$FH_GATE_EXEC" == "off" ]]; then
+  EXEC_JSON=$(printf '%s' "$EXEC_JSON" | sed 's/"NOT RUN"/"NOT RUN (FH_GATE_EXEC=off)"/g')
+elif ! command -v jq &>/dev/null; then
+  EXEC_JSON=$(printf '%s' "$EXEC_JSON" | sed 's/"NOT RUN"/"NOT RUN (jq missing)"/g')
+elif [[ ! -f "$_EXEC_SCRIPT" ]]; then
+  # a copy of this gate carried into another repo without its sibling script
+  _exec_lines "NOT RUN (fh_gate_exec.sh not shipped beside this gate)"
+else
+  if [[ -n "${FH_GATE_BASE:-}" ]]; then
+    _GATE_BASE="$FH_GATE_BASE"
+  elif ! git -C "$WORK_ROOT" diff --quiet HEAD 2>/dev/null; then
+    _GATE_BASE="HEAD"
+  else
+    _GATE_BASE="$(git -C "$WORK_ROOT" merge-base "$FH_BASE_BRANCH" HEAD 2>/dev/null || printf '%s' "$FH_BASE_BRANCH")"
+  fi
+  _exec_mode=""; [[ "$FH_DRY_RUN" == "1" ]] && _exec_mode="--plan"
+  _exec_rc=0
+  EXEC_JSON=$(bash "$_EXEC_SCRIPT" "$WORK_ROOT" "$_GATE_BASE" $_exec_mode 2>"$ERR_FILE") || _exec_rc=$?
+  if [[ "$_exec_rc" -ne 0 ]] || ! printf '%s' "$EXEC_JSON" | jq -e '(.e0.status|type)=="string" and (.e1.status|type)=="string" and (.findings|type)=="array"' >/dev/null 2>&1; then
+    echo "ERROR: execution layer failed (rc ${_exec_rc}) — failing closed" >&2
+    cat "$ERR_FILE" >&2
+    exit $EXIT_HARNESS_ERROR
+  fi
+fi
+_exec_get() { printf '%s' "$EXEC_JSON" | jq -r "$1" 2>/dev/null || true; }
+E0_LINE="$(_exec_get '.e0.status + " — " + .e0.detail')"
+E1_LINE="$(_exec_get '.e1.status + " — " + .e1.detail')"
+LAYERS_NOT_BUILT_LINE="E2 (declared real input) · E3 (revert probe) · E4 (repetition) — not built yet"
+
+# --- Dry-run: prompt (or the /code-review command) to stdout only ---
 # Exits 12, NOT 0: no review ran, so this must not be readable as PASS by any caller
 # that gates on the documented exit contract.
 if [[ "$FH_DRY_RUN" == "1" ]]; then
-  cat "$PROMPT_FILE"
+  if [[ "$FH_REVIEWER" == "code-review" ]]; then
+    printf 'FH_GATE_DRY_RUN: review = claude --print --model %s --output-format json --json-schema <findings schema> "/code-review %s" (cwd %s)\n' "$FH_MODEL" "$CR_EFFORT" "$WORK_ROOT"
+  else
+    cat "$PROMPT_FILE"
+  fi
+  printf 'FH_GATE_REVIEWER: %s\n' "$REVIEWER_NOTE"
+  printf 'FH_GATE_E0: %s\n' "$E0_LINE"
+  printf 'FH_GATE_E1: %s\n' "$E1_LINE"
   echo "→ fh-gate: DRY-RUN — prompt emitted, no review performed (exit ${EXIT_DRY_RUN}, not PASS)" >&2
   exit $EXIT_DRY_RUN
 fi
@@ -630,6 +732,25 @@ cat > "$SCHEMA_FILE" <<'SCHEMA'
         "evidence":{"type":"string"},
         "fix":{"type":"string"}}}}}}
 SCHEMA
+CR_SCHEMA_FILE=$(mktemp "${_TMPDIR}/fh_gate_crschema_XXXXXX")
+cat > "$CR_SCHEMA_FILE" <<'SCHEMA'
+{ "type":"object","additionalProperties":false,
+  "required":["status","findings"],
+  "properties":{
+    "status":{"type":"string","enum":["SUCCESS","ERROR"],
+      "description":"SUCCESS when the code review ran to the end; ERROR only if it could not run."},
+    "findings":{"type":"array",
+      "description":"Every finding the code review reported, in its order — none added, none dropped, none merged.",
+      "items":{"type":"object","additionalProperties":false,
+        "required":["file","line","severity","summary","failure_scenario"],
+        "properties":{
+          "file":{"type":"string"},
+          "line":{"type":"integer","minimum":0,"description":"0 when the finding names no line"},
+          "severity":{"type":"string","enum":["important","nit","pre_existing"],
+            "description":"Exactly the label the code review gave this finding: Important → important, Nit → nit, Pre-existing → pre_existing. Do not re-grade."},
+          "summary":{"type":"string","description":"The finding's own text, as the code review wrote it."},
+          "failure_scenario":{"type":"string","description":"The code review's failure scenario for this finding, as written; empty if it gave none."}}}}}}
+SCHEMA
 
 # --- Invoke ---
 echo "→ fh-gate v${VERSION} [${GATE_LEVEL_UPPER}] backend=${FH_BACKEND} model=${FH_MODEL} caller=${FH_CALLER} security=${SECURITY_LENS}" >&2
@@ -645,6 +766,68 @@ else
   echo "WARN: no gtimeout/timeout found — backend hang is NOT time-bounded (FH_TIMEOUT=${FH_TIMEOUT}s unenforced). Install coreutils for the liveness guarantee." >&2
 fi
 
+if [[ "$FH_REVIEWER" == "code-review" ]]; then
+  # ── Review stage R: the built-in /code-review, typed channel ─────────────────────────────────────
+  # Same principle as the FH pass below: the findings ride a schema-constrained object, never prose the
+  # reviewed content could imitate. Tools are limited: no Write/Edit/NotebookEdit/WebFetch/WebSearch, and the
+  # shell only for git's read commands — the reviewed change is untrusted input.
+  # 🟥 NOT read-only (cross-family review 2026-11-19): git diff/show accept `--output=<file>`, and a permission
+  #    prefix rule cannot forbid an option that may come anywhere in the argument list. A reviewer the reviewed
+  #    content talks into it can write one file with diff output. The older FH pass had no shell at all.
+  # Pre-existing, unchanged: with neither `timeout` nor `gtimeout` installed the call has no deadline (a hang is a
+  # hang — it never reads as a verdict); the warning above says so.
+  # Severity is /code-review's own label, mapped one way and never re-judged: Important → B, Nit and
+  # Pre-existing → C. Why not Important → A: in the 2026-11-19 comparison /code-review marked at least one
+  # finding Important on 9 of 12 runs over later fix commits (negatives); a gate that blocks there blocks
+  # three changes in four. A BLOCK here comes from mechanical evidence — a lane this change turns red.
+  _CR_OK=0
+  ( cd "$WORK_ROOT" && ${_TIMEOUT_CMD} claude --print --model "$FH_MODEL" --output-format json \
+      --json-schema "$(cat "$CR_SCHEMA_FILE")" \
+      --allowedTools "Read,Glob,Grep,Agent,Task,Skill,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git rev-parse:*),Bash(git merge-base:*),Bash(git blame:*)" \
+      --disallowedTools "Write,Edit,NotebookEdit,WebFetch,WebSearch" \
+      "/code-review ${CR_EFFORT}" < /dev/null ) > "$OUTPUT_FILE" 2>"$ERR_FILE" && _CR_OK=1
+  if [[ "$_CR_OK" != 1 ]]; then
+    echo "ERROR: /code-review (claude backend) failed or timed out (${FH_TIMEOUT}s) — failing closed" >&2
+    cat "$ERR_FILE" >&2
+    exit $EXIT_HARNESS_ERROR
+  fi
+  [[ "$FH_VERBOSE" == "1" ]] && cat "$ERR_FILE" >&2
+  _clean=$(grep -vE '^hook:' "$OUTPUT_FILE" 2>/dev/null | grep -vE '^[[:space:]]*$' | tail -1 || true)
+  _env_ok=$(printf '%s' "$_clean" | jq -r 'if (.is_error==false and .subtype=="success") then "ok" else "bad" end' 2>/dev/null || echo bad)
+  if [[ "$_env_ok" != "ok" ]]; then
+    echo "ERROR: /code-review did not return a successful structured result (is_error/subtype) — failing closed" >&2
+    cat "$OUTPUT_FILE" >&2
+    exit $EXIT_HARNESS_ERROR
+  fi
+  STRUCT_JSON=$(printf '%s' "$_clean" | jq -ce '.structured_output' 2>/dev/null || true)
+  if [[ -z "$STRUCT_JSON" || "$STRUCT_JSON" == "null" ]]; then
+    echo "ERROR: /code-review returned no structured findings object — failing closed (no fallback to another reviewer)" >&2
+    cat "$OUTPUT_FILE" >&2
+    exit $EXIT_HARNESS_ERROR
+  fi
+  if ! printf '%s' "$STRUCT_JSON" | jq -e '
+        (.status == "SUCCESS")
+        and ((keys - ["findings","status"]) == [])
+        and ((.findings|type) == "array")
+        and (.findings | all(
+              ((keys - ["failure_scenario","file","line","severity","summary"]) == []) and
+              ((.severity|type)=="string") and (.severity | IN("important","nit","pre_existing"))
+              and ((.file|type)=="string") and ((.summary|type)=="string") and ((.failure_scenario|type)=="string")
+              and ((.line|type)=="number") and ((.line|floor)==.line) and (.line >= 0)))' >/dev/null 2>&1; then
+    echo "ERROR: /code-review findings object is not SUCCESS or violates the findings schema — failing closed" >&2
+    exit $EXIT_HARNESS_ERROR
+  fi
+  REVIEW_FINDINGS=$(printf '%s' "$STRUCT_JSON" | jq -c '[.findings[] | {
+      grade: (if .severity=="important" then "B" else "C" end),
+      source: "review",
+      location: (if .line > 0 then "\(.file):\(.line)" else .file end),
+      title: .summary,
+      evidence: ("/code-review severity: " + .severity + (if .failure_scenario != "" then " · failure scenario: " + .failure_scenario else "" end)),
+      fix: "" }]')
+  # The review verdict is derived from /code-review's own labels and nothing else: Important (B) → PENDING.
+  REVIEW_VERDICT="PASS"
+  [ "$(printf '%s' "$REVIEW_FINDINGS" | jq -r '[.[]|select(.grade=="B")]|length')" -gt 0 ] && REVIEW_VERDICT="PENDING"
+else
 run_backend() {
   case "$FH_BACKEND" in
     claude) ${_TIMEOUT_CMD} claude --print --model "$FH_MODEL" \
@@ -782,6 +965,33 @@ if [ "$_FB" -gt 0 ] && [[ "$VERDICT" == "PASS" ]]; then
   exit $EXIT_HARNESS_ERROR
 fi
 
+REVIEW_FINDINGS=$(printf '%s' "$STRUCT_JSON" | jq -c '[(.findings // [])[] | . + {source:"review"}]')
+REVIEW_VERDICT="$VERDICT"
+fi
+
+# --- Merge: review findings + execution-layer findings → one verdict ---
+# The verdict is the worse of (a) the review stage's verdict and (b) the verdict the EXECUTION layer's grades
+# require (A → BLOCKED, B → PENDING, none → PASS). The review's own grades are not re-applied: on the FH pass
+# the model may answer an ambiguous A with ESCALATE, and that stays ESCALATE (regression lane «ambiguous A →
+# ESCALATE preserved»). A C finding (a note, or a lane red before this change) never moves anything. So the
+# execution layer can only make a verdict stricter.
+ALL_FINDINGS=$(jq -cn --argjson r "$REVIEW_FINDINGS" --argjson e "$(printf '%s' "$EXEC_JSON" | jq -c '.findings')" '$r + $e')
+_FA=$(printf '%s' "$ALL_FINDINGS" | jq -r '[.[]|select(.grade=="A")]|length')
+_FB=$(printf '%s' "$ALL_FINDINGS" | jq -r '[.[]|select(.grade=="B")]|length')
+_FN=$(printf '%s' "$ALL_FINDINGS" | jq -r 'length')
+_rank() { case "$1" in PASS) echo 0 ;; PENDING) echo 1 ;; ESCALATE) echo 2 ;; BLOCKED) echo 3 ;; *) echo 9 ;; esac; }
+_EA=$(printf '%s' "$EXEC_JSON" | jq -r '[.findings[]|select(.grade=="A")]|length')
+_EB=$(printf '%s' "$EXEC_JSON" | jq -r '[.findings[]|select(.grade=="B")]|length')
+_GRADE_VERDICT="PASS"
+[ "$_EB" -gt 0 ] && _GRADE_VERDICT="PENDING"
+[ "$_EA" -gt 0 ] && _GRADE_VERDICT="BLOCKED"
+VERDICT="$REVIEW_VERDICT"
+[ "$(_rank "$_GRADE_VERDICT")" -gt "$(_rank "$VERDICT")" ] && VERDICT="$_GRADE_VERDICT"
+case "$VERDICT" in
+  PASS|PENDING|BLOCKED|ESCALATE) ;;
+  *) echo "ERROR: merged verdict not in the enum (got: ${VERDICT:-EMPTY}) — failing closed" >&2; exit $EXIT_HARNESS_ERROR ;;
+esac
+
 # Reconstruct the legacy text contract into PARSE_FILE so the public output shape
 # (README/CHEATSHEET/v0.1 caller spec: FH_STATUS:/FH_GATE_VERDICT: + findings YAML) and
 # the governance-log writer below stay byte-compatible — external callers are unaffected
@@ -796,10 +1006,14 @@ fi
   printf 'FH_FINDINGS_A: %s\n' "$_FA"
   printf 'FH_FINDINGS_B: %s\n' "$_FB"
   printf 'FH_RECORD_PATH: %s\n' "$RECORD_PATH"
+  printf 'FH_GATE_REVIEWER: %s\n' "$REVIEWER_NOTE"
+  printf 'FH_GATE_E0: %s\n' "$E0_LINE"
+  printf 'FH_GATE_E1: %s\n' "$E1_LINE"
+  printf 'FH_GATE_LAYERS_NOT_BUILT: %s\n' "$LAYERS_NOT_BUILT_LINE"
   printf -- '---\nfindings:\n'
-  printf '%s' "$STRUCT_JSON" | jq -r '
-    (.findings // [])[] |
-    "  - grade: \(.grade)\n    location: \(.location|@json)\n    title: \(.title|@json)\n    evidence: \(.evidence|@json)\n    fix: \(.fix|@json)"' 2>/dev/null || true
+  printf '%s' "$ALL_FINDINGS" | jq -r '
+    .[] |
+    "  - grade: \(.grade)\n    source: \(.source|@json)\n    location: \(.location|@json)\n    title: \(.title|@json)\n    evidence: \(.evidence|@json)\n    fix: \(.fix|@json)"' 2>/dev/null || true
 } > "$PARSE_FILE"
 
 # Emit structured output to stdout
@@ -813,6 +1027,9 @@ FINDINGS_N_LOG=$(grep -m 1 "^FH_FINDINGS_COUNT:" "$PARSE_FILE" 2>/dev/null | awk
   printf -- "- timestamp: %s\n" "$TIMESTAMP"
   printf "  caller: %s\n" "$FH_CALLER"
   printf "  backend: %s\n" "$FH_BACKEND"
+  printf "  reviewer: %s\n" "$FH_REVIEWER"
+  printf "  e0: %s\n" "$(_exec_get '.e0.status')"
+  printf "  e1: %s\n" "$(_exec_get '.e1.status')"
   printf "  model: %s\n" "$FH_MODEL"
   printf "  gate_level: %s\n" "$GATE_LEVEL"
   printf "  verdict: %s\n" "$VERDICT"
