@@ -12,10 +12,13 @@ file, and carries the k/n it claims plus an exact quote from the result. A row i
            (git log -S; a result appended to the pre-registration file later counts from that later commit);
            different repos -> its commit time is earlier than that commit's time (named residual: commit times
            can be set by hand; ancestry cannot be checked across repositories).
-  ANCHOR   the quote occurs verbatim in the result file at the stated ref, and every declared «k/n» occurs in the quote
-           (an entry without k/n arms shows a «value» that must itself occur in the quote). The seal commit must touch
-           the named pre-registration file.
-  OUTCOME  one of WIN · NO-DIFFERENCE · NOT-DETECTED · CEILING · CLAIM-NOT-SUPPORTED.
+  ANCHOR   the quote occurs verbatim in the result file at the stated ref, and every declared «k/n» occurs in the quote,
+           written «k/n» or «k of n» (an arm may instead carry a printed «value» such as 0.417, which must occur in the
+           quote as a whole number; an entry without arms shows a «value» that must itself occur in the quote). The seal
+           commit must touch the named pre-registration file.
+  OUTCOME  one of WIN · NO-DIFFERENCE · NOT-DETECTED · CEILING · CLAIM-NOT-SUPPORTED — the result's pre-registered
+           decision. A number that comes from a section the result itself marks exploratory carries «exploratory: true»
+           and outcome EXPLORATORY; it is rendered in its own section and never counted with the decisions.
   NOT COMPANY  the entry's repo is not marked company, and no exclude pattern matches its paths or quote.
 
   PUSHED   the result commit is on a remote branch too: a public page does not cite an unpushed result.
@@ -38,6 +41,7 @@ import subprocess
 import sys
 
 OUTCOMES = ("WIN", "NO-DIFFERENCE", "NOT-DETECTED", "CEILING", "CLAIM-NOT-SUPPORTED")
+EXPLORATORY = "EXPLORATORY"   # not a decision: its own section, never in the outcome counts
 LABEL = {"WIN": "win", "NO-DIFFERENCE": "NO DIFFERENCE", "NOT-DETECTED": "NOT-DETECTED", "CEILING": "CEILING",
          "CLAIM-NOT-SUPPORTED": "claim not supported"}
 
@@ -57,9 +61,61 @@ def git(repo, *args):
     return p.returncode, p.stdout.strip()
 
 
-def frac_in(frac, text):
-    """k/n as a whole number pair: «2/10» does not match inside «12/100» (cross-family R1)."""
-    return re.search(r"(?<![\d.])" + re.escape(frac) + r"(?!\d|\.\d)", text) is not None   # not inside 2/10.5 either
+def num_in(lit, text):
+    """A printed number (or k/n pair) as a whole: «2/10» not inside «12/100» or «2/10.5», «0.41» not inside «0.417»
+    (cross-family R1)."""
+    return re.search(r"(?<![\d.+\-−])" + re.escape(lit) + r"(?!\d|\.\d)", text) is not None   # not «-0.417» either
+
+
+VALUE_SHAPE = re.compile(r"[-−+]?\d+(?:\.\d+)?%?")   # a printed number, nothing that can span two quotes
+EXPLORE_HEAD = re.compile(r"exploratory|탐색", re.I)
+
+
+def headings(body):
+    """(offset, level, text) for every markdown heading: ATX (up to 3 spaces of indent) and setext (=== / ---)."""
+    out, pos, prev = [], 0, None
+    for line in body.splitlines(keepends=True):
+        m = re.match(r" {0,3}(#{1,6})(?:[ \t]+(.*?))?[ \t#]*$", line.rstrip("\r\n"))
+        if m:
+            out.append((pos, len(m.group(1)), m.group(2) or ""))
+            prev = None
+        elif prev is not None and re.fullmatch(r" {0,3}(=+|-+)[ \t]*", line.rstrip("\r\n")):
+            out.append((prev[0], 1 if "=" in line else 2, prev[1].strip()))
+            prev = None
+        else:
+            stripped = line.strip()
+            prev = (pos, stripped) if stripped and not stripped.startswith("|") else None
+        pos += len(line)
+    return out
+
+
+def exploratory_at(heads, offset):
+    """Is the nearest heading before offset, or any shallower ancestor of it, marked exploratory?"""
+    level = 7
+    for off, lv, text in reversed([h for h in heads if h[0] < offset]):
+        if lv < level:
+            if EXPLORE_HEAD.search(text):
+                return True
+            level = lv
+    return False
+
+
+def under_exploratory_heading(body, quote):
+    """True if any occurrence of the quote starts under, ends under, or crosses a heading that the result itself
+    marks exploratory — such a number is not a pre-registered decision, whatever the index says."""
+    heads, start = headings(body), 0
+    while (i := body.find(quote, start)) != -1:
+        j = i + len(quote)
+        if exploratory_at(heads, i + 1) or exploratory_at(heads, j) or \
+                any(i <= off < j and EXPLORE_HEAD.search(text) for off, _, text in heads):
+            return True
+        start = i + 1
+    return False
+
+
+def frac_in(k, n, text):
+    """k/n as a whole number pair, written «k/n» or «k of n» (results print both)."""
+    return num_in(f"{k}/{n}", text) or num_in(f"{k} of {n}", text)
 
 
 def first_quote(repo, ref, path, quote):
@@ -88,8 +144,12 @@ def check(e, repos, patterns):
     for k in ("id", "group", "measure", "outcome", "model", "date", "prereg", "result", "quote"):
         if not e.get(k):
             return f"missing field {k}"
-    if e["outcome"] not in OUTCOMES:
-        return f"outcome {e['outcome']!r} is not one of {', '.join(OUTCOMES)}"
+    if e.get("exploratory") is True:
+        if e["outcome"] != EXPLORATORY:
+            return f"an exploratory entry carries outcome {EXPLORATORY}, not {e['outcome']!r} (it is not a decision)"
+    elif e["outcome"] not in OUTCOMES:
+        return f"outcome {e['outcome']!r} is not one of {', '.join(OUTCOMES)}" + (
+            " (EXPLORATORY needs «exploratory: true»)" if e["outcome"] == EXPLORATORY else "")
     pr, rs = e["prereg"], e["result"]
     for side in (pr, rs):
         r = repos.get(side.get("repo"))
@@ -145,16 +205,24 @@ def check(e, repos, patterns):
     if any(q not in body for q in quotes):
         return "quote not found verbatim in the result file"
     joined = "\n".join(quotes)
+    if e.get("exploratory") is not True and any(under_exploratory_heading(body, q) for q in quotes):
+        return "quote sits under a heading the result marks exploratory — flag the entry «exploratory: true»"
     for arm in e.get("arms", []):
+        if "value" in arm and "k" not in arm and "n" not in arm:
+            v = arm["value"]
+            if not isinstance(v, str) or not VALUE_SHAPE.fullmatch(v):
+                return f"arm {arm.get('label')!r} value must be a printed number"
+            if not any(num_in(v, q) for q in quotes):
+                return f"declared value {v} ({arm.get('label')}) not in the quote as a whole number"
+            continue
         if not isinstance(arm.get("k"), int) or not isinstance(arm.get("n"), int) or arm["n"] <= 0 or arm["k"] < 0:
             return f"arm {arm.get('label')!r} needs whole numbers with n > 0 (a 0/0 has no percentage)"
-        frac = f"{arm['k']}/{arm['n']}"
-        if not frac_in(frac, joined):
-            return f"declared {frac} ({arm['label']}) not in the quote"
-    if e.get("ci") and e["ci"] not in joined:
+        if not any(frac_in(arm["k"], arm["n"], q) for q in quotes):
+            return f"declared {arm['k']}/{arm['n']} ({arm['label']}) not in the quote"
+    if e.get("ci") and not any(e["ci"] in q for q in quotes):
         return "the CI shown is not in the quote (this script computes none and copies none it cannot find)"
     if not e.get("arms"):
-        if not e.get("value") or e["value"] not in joined:
+        if not e.get("value") or not any(e["value"] in q for q in quotes):
             return "no k/n arms, and the displayed value is not a substring of the quote"
     return None
 
@@ -167,6 +235,9 @@ def cell(v):
 def fmt_arms(e):
     out = []
     for a in e.get("arms", []):
+        if "k" not in a:
+            out.append(f"{cell(a['label'])} {cell(a['value'])}")
+            continue
         pct = 100.0 * a["k"] / a["n"] if a["n"] else 0.0
         out.append(f"{cell(a['label'])} {a['k']}/{a['n']} ({pct:.0f}%)")
     return " vs ".join(out) if out else cell(e.get("value", ""))
@@ -220,10 +291,13 @@ def main(argv):
          "> Generated by `scripts/scoreboard_render.py` from sealed measurement records. Do not edit by hand.",
          "> A row appears only if its pre-registration was pushed before the result, and its numbers are quoted",
          "> verbatim from that result. Every outcome shows; unlike measures are never pooled into one figure.", ""]
+    explore = [e for e, _ in shown if e.get("exploratory") is True]
+    shown = [(e, w) for e, w in shown if e.get("exploratory") is not True]
     counts = {o: 0 for o in OUTCOMES}
     for e, _ in shown:
         counts[e["outcome"]] += 1
-    L.append("Rows by outcome: " + " · ".join(f"{LABEL[o]} {counts[o]}" for o in OUTCOMES) + f" · excluded {len(excluded)}")
+    L.append("Rows by outcome: " + " · ".join(f"{LABEL[o]} {counts[o]}" for o in OUTCOMES)
+             + f" · exploratory {len(explore)} · excluded {len(excluded)}")
     L.append("")
     for g in order:
         rows = [e for e, _ in shown if e["group"] == g]
@@ -240,6 +314,17 @@ def main(argv):
             L.append(f"| {cell(e['measure'])} | {fmt_arms(e)} | {ci} | {LABEL[e['outcome']]} | {cell(e['model'])} | {cell(e['date'])} "
                      f"| {link(e['prereg'])} | {link(e['result'])} |")
         L.append("")
+    if explore:
+        L += ["## Exploratory (not a pre-registered decision)", "",
+              "> Numbers the result itself marks exploratory. They are quoted and sealed like the rows above, but no",
+              "> decision rule was set for them in advance, so they carry no outcome and are not in the counts.", "",
+              "| Measure | Result | 95% CI | Group | Model | Date | Pre-registration | Result file |",
+              "|---|---|---|---|---|---|---|---|"]
+        for e in explore:
+            ci = cell(e.get("ci") or "CI not computed")
+            L.append(f"| {cell(e['measure'])} | {fmt_arms(e)} | {ci} | {cell(groups.get(e['group'], e['group']))} "
+                     f"| {cell(e['model'])} | {cell(e['date'])} | {link(e['prereg'])} | {link(e['result'])} |")
+        L.append("")
     if excluded:
         L += ["## Excluded (not rendered)", "", "| Entry | Reason |", "|---|---|"]
         for e, why in excluded:
@@ -250,7 +335,7 @@ def main(argv):
         open(out_path, "w", encoding="utf-8").write(page)
     else:
         print(page)
-    print(f"scoreboard: rendered {len(shown)} · excluded {len(excluded)} · " +
+    print(f"scoreboard: rendered {len(shown)} · exploratory {len(explore)} · excluded {len(excluded)} · " +
           " · ".join(f"{o} {counts[o]}" for o in OUTCOMES), file=sys.stderr)
     return 0
 
