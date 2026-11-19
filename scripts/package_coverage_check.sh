@@ -92,6 +92,11 @@ ACCEPTED_ABSENT=(
   "scripts/cartridge_loader.sh"
   "scripts/test_cartridge_loader_lanes.sh"
   "templates/settings.CartridgeLoader.snippet.json"
+  # 2026-11-19 — FH-side check that the published fh-techwriter copy of ko-tech-writer still matches FH's export,
+  #    and its lanes. A maintainer tool for this repository's own export, not a consumer capability: a consumer has
+  #    no fh-techwriter copy to compare. selfcheck resolves its anchor row as SKIP («not in files[], and absent»).
+  "scripts/fh_techwriter_sync_check.sh"
+  "scripts/test_fh_techwriter_sync_lanes.sh"
   # 🟥 2026-09-21 (야간) — 정책렌즈 채점기와 그 레인. **FH 자기 연구의 실험 기록**이지 소비자
   #    능력이 아니다: 판정 대상이 `scripts/fixtures/policy_lens_knownpair_2026-09-21/` 안의
   #    1차 런 48개 파일(236K)이고, 그것까지 실어 보내면 아무도 안 쓰는 실험 아카이브가 패키지
