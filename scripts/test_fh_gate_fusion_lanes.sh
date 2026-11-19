@@ -9,8 +9,8 @@
 #   F5  a severity outside the label set → 10
 #   F5b keys outside the schema (top level or in a finding) → 10
 #   F6  status ERROR → 10
-#   F7  FH_REVIEWER=fh → the older FH pass (its prompt on stdin, its verdict)
-#   F8  codex backend → FH pass, and FH_GATE_REVIEWER says «fallback — /code-review unavailable»
+#   F7  FH_REVIEWER=fh-legacy → the older FH pass (its prompt on stdin, its verdict)
+#   F8  codex backend → the absorbed FH pass, and FH_GATE_REVIEWER says «fallback — /code-review unavailable»
 #   F9  FH_REVIEWER=code-review on codex → 11
 #   F10 FH_REVIEWER / FH_GATE_EXEC outside their sets → 11
 #   F11 a change that turns its lane red, /code-review with no finding → BLOCKED (2), finding source E1
@@ -37,10 +37,12 @@ g() { git -c user.name=t -c user.email=t@t -c commit.gpgsign=false -c core.hooks
 FAKEBIN="$TMPROOT/bin"; mkdir -p "$FAKEBIN"
 cat > "$FAKEBIN/claude" <<'FAKE'
 #!/usr/bin/env bash
-printf '%s\n' "$@" > "${ARGV_LOG:-/dev/null}"
+printf '%s\n' "$@" >> "${ARGV_LOG:-/dev/null}"   # append: one gate run may call the backend more than once
 pwd -P > "${PWD_LOG:-/dev/null}"
-cat > "${STDIN_LOG:-/dev/null}"
+in=$(cat); printf '%s\n' "$in" > "${STDIN_LOG:-/dev/null}"
 [ -n "${FAKE_RC:-}" ] && exit "$FAKE_RC"
+case "$in" in *"FH ELEPHANT PASS"*|*"FH REVIEW PASS"*)
+  printf '{"is_error":false,"subtype":"success","structured_output":{"status":"SUCCESS","findings":[]}}\n'; exit 0 ;; esac
 if [ -n "${FAKE_ENVELOPE:-}" ]; then printf '%s\n' "$FAKE_ENVELOPE"; exit 0; fi
 cr="${FAKE_CR:-}"; [ -n "$cr" ] || cr='{"status":"SUCCESS","findings":[]}'
 case " $* " in
@@ -52,8 +54,10 @@ cat > "$FAKEBIN/codex" <<'FAKE'
 #!/usr/bin/env bash
 out=""
 while [ $# -gt 0 ]; do case "$1" in -o) out="$2"; shift 2 ;; *) shift ;; esac; done
-cat > "${CODEX_STDIN_LOG:-/dev/null}"
-[ -n "$out" ] && printf '%s' "$FAKE_PAYLOAD" > "$out"
+in=$(cat); printf '%s\n' "$in" > "${CODEX_STDIN_LOG:-/dev/null}"
+p="$FAKE_PAYLOAD"
+case "$in" in *"FH REVIEW PASS"*|*"FH ELEPHANT PASS"*) p='{"status":"SUCCESS","findings":[]}' ;; esac
+[ -n "$out" ] && printf '%s' "$p" > "$out"
 exit 0
 FAKE
 chmod +x "$FAKEBIN/claude" "$FAKEBIN/codex"
@@ -119,16 +123,16 @@ gate f6 FH_GATE_EXEC=off FAKE_CR='{"status":"ERROR","findings":[]}'
 if [ "$RC" -eq 10 ]; then ok "F6 status ERROR → 10"; else bad "F6 status ERROR → 10" "rc=$RC"; fi
 
 # F7
-gate f7 FH_GATE_EXEC=off FH_REVIEWER=fh STDIN_LOG="$TMPROOT/f7.stdin" \
+gate f7 FH_GATE_EXEC=off FH_REVIEWER=fh-legacy STDIN_LOG="$TMPROOT/f7.stdin" \
   FAKE_PAYLOAD='{"status":"SUCCESS","verdict":"PENDING","findings_count":1,"findings_a":0,"findings_b":1,"findings":[{"grade":"B","location":"x","title":"t","evidence":"e","fix":"f"}]}'
-if [ "$RC" -eq 1 ] && grep -q 'FH GOVERNANCE GATE' "$TMPROOT/f7.stdin" && has f7 'FH_GATE_REVIEWER: fh (FH_REVIEWER=fh)'; then
-  ok "F7 FH_REVIEWER=fh → the older FH pass"
-else bad "F7 FH_REVIEWER=fh → FH pass" "rc=$RC"; fi
+if [ "$RC" -eq 1 ] && grep -q 'FH GOVERNANCE GATE' "$TMPROOT/f7.stdin" && has f7 'FH_GATE_REVIEWER: fh-legacy'; then
+  ok "F7 FH_REVIEWER=fh-legacy → the older FH pass"
+else bad "F7 FH_REVIEWER=fh-legacy → FH pass" "rc=$RC"; fi
 
 # F8
 gate f8 FH_GATE_EXEC=off FH_BACKEND=codex CODEX_STDIN_LOG="$TMPROOT/f8.stdin"
-if [ "$RC" -eq 0 ] && has f8 'FH_GATE_REVIEWER: fh (fallback — /code-review unavailable on codex)' && grep -q 'FH GOVERNANCE GATE' "$TMPROOT/f8.stdin"; then
-  ok "F8 codex → FH pass, labelled fallback"
+if [ "$RC" -eq 0 ] && has f8 '(fallback — /code-review unavailable on codex)' && grep -q 'FH REVIEW PASS' "$TMPROOT/f8.stdin"; then
+  ok "F8 codex → the absorbed FH pass, labelled fallback"
 else bad "F8 codex → labelled fallback" "rc=$RC $(grep REVIEWER "$TMPROOT/f8.out")"; fi
 
 # F9
@@ -164,7 +168,7 @@ else bad "F13 exec off lines" "$(grep -E 'E0|E1' "$TMPROOT/f13.out")"; fi
 
 # F14 — cross: the red lane is seen once, both reviewer lines are kept
 gate f14 FH_BACKEND=cross
-if [ "$RC" -eq 2 ] && has f14 '# FH_GATE_REVIEWER: /code-review' && has f14 '# FH_GATE_REVIEWER: fh (fallback — /code-review unavailable on codex)' \
+if [ "$RC" -eq 2 ] && has f14 '# FH_GATE_REVIEWER: /code-review' && has f14 '(fallback — /code-review unavailable on codex)' \
    && has f14 '# FH_GATE_E1: not-run — NOT RUN (FH_GATE_EXEC=off)' && [ "$(grep -c 'source: "E1"' "$TMPROOT/f14.out")" -eq 1 ]; then
   ok "F14 cross keeps both reviewer lines; execution layer runs once"
 else bad "F14 cross" "rc=$RC $(grep -E 'REVIEWER|E1|source' "$TMPROOT/f14.out" | head -8)"; fi
