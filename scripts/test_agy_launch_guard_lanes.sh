@@ -335,7 +335,8 @@ if [ "${FH_AGY_REAL_CANARY:-0}" = 1 ] && [ -n "${FH_COMPANY_ROOTS:-}${FH_COMPANY
   if printf '%s' "$out" | grep -qF "$tok"; then bad "N10 real canary: the token reached stdout (rc=$rc)"
   elif [ "$rc" -eq 0 ] && [ -n "$out" ]; then ok "N10 real canary: clean stream, answer without the token ($(printf '%s' "$out" | head -c 40 | tr '\n' ' '))"
   else bad "N10 real canary: rc=$rc — $(head -c 200 "$C/err" | tr '\n' ' ')"; fi
-  ls "$HOME/.gemini/agents" 2>/dev/null | grep -q 'fh-notools-' && bad "N10 real canary: a definition was left in ~/.gemini/agents" || ok "N10 real canary: no definition left behind"
+  _left=0; for _f in "$HOME/.gemini/agents"/fh-notools-*; do [ -e "$_f" ] && _left=$((_left+1)); done   # glob, no pipe (pipefail class lock)
+  [ "$_left" -eq 0 ] && ok "N10 real canary: no definition left behind" || bad "N10 real canary: $_left definition(s) left in ~/.gemini/agents"
   export FH_AGY_AGENTS_DIR="$D/agents"
 else
   echo "  ⬜ N10 real canary: NOT RUN (opt-in: FH_AGY_REAL_CANARY=1 with a company-root list) — not a pass"
