@@ -49,7 +49,7 @@ Caller reads verdict, decides: merge / hold / escalate
 | `FH_TASK_DESCRIPTION` | string | What the caller was trying to accomplish (context for adversarial pass) |
 | `FH_SECURITY_LENS` | `on` or `off` (default `off`) | Force security-adjacent focus in steel-quench |
 | `FH_BACKEND` | `claude`, `codex`, or `auto` (default `claude`) | Runtime backend. `auto` prefers Codex if installed, otherwise Claude |
-| `FH_MODEL` | model id | Overrides backend default (`claude-sonnet-4-6` for Claude, `gpt-5.5` for Codex) |
+| `FH_MODEL` | model id | Overrides backend default (`claude-sonnet-5-5` for Claude, `gpt-5.5` for Codex) |
 
 ### Capture pattern (caller's responsibility)
 

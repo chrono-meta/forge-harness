@@ -14,6 +14,7 @@
 # Run: bash scripts/test_fh_gate_regressions.sh
 
 set -uo pipefail
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || { echo "FATAL: cannot cd to repo root"; exit 1; }
 
 GATE="scripts/fh-gate.sh"
@@ -123,6 +124,29 @@ echo
 echo "── impossible-zero: an unperformed review is not a verdict ──"
 check "0 of N targets resolved → harness error" 10 \
   env FH_DRY_RUN=1 bash "$GATE" "no_such_file_xyz.md" quick test
+
+echo
+echo "── non-ASCII target names (2026-11-19: Korean names came back quoted, so they were never reviewed) ──"
+# Auto-detected targets come from `git diff --name-only` / `git ls-files`. Under git's default core.quotePath a
+# Korean name is printed as "\355\225…" in quotes; the gate then cannot open it. A Korean-only change exited 10
+# («0 of N … nothing was reviewed»); a mixed change reviewed only the ASCII file.
+ABS_GATE="$(pwd -P)/$GATE"
+NA="$TMPROOT/nonascii"; mkdir -p "$NA"
+_ng() { git -C "$NA" -c user.name=lane -c user.email=lane@example.invalid -c commit.gpgsign=false "$@"; }
+_ng init -q -b main; echo seed > "$NA/README"; _ng add README; _ng commit -qm seed
+_ng switch -q -c change; echo "본문" > "$NA/한글문서.md"; _ng add "한글문서.md"; _ng commit -qm ko
+check "Korean-only change: the file is resolved (dry-run 12, not 10)" 12 \
+  env -C "$NA" FH_DRY_RUN=1 FH_BASE_BRANCH=main bash "$ABS_GATE"
+echo "x" > "$NA/ascii.md"; _ng add ascii.md; _ng commit -qm ascii
+check "Korean + ASCII change: still dry-run 12" 12 env -C "$NA" FH_DRY_RUN=1 FH_BASE_BRANCH=main bash "$ABS_GATE"
+if grep -q "only 1/2 target file" "$TMPROOT/err"; then
+  printf 'FAIL  %-58s %s\n' "Korean + ASCII change: both files resolved" "a WARN says only 1/2 resolved"; fail=$((fail + 1))
+else
+  printf 'PASS  %-58s\n' "Korean + ASCII change: both files resolved (no partial-review WARN)"; pass=$((pass + 1))
+fi
+_ng switch -q main; echo "작업중" > "$NA/미추적.md"
+check "Korean untracked file (ls-files path): resolved (dry-run 12)" 12 \
+  env -C "$NA" FH_DRY_RUN=1 FH_BASE_BRANCH=main bash "$ABS_GATE"
 
 echo
 echo "── cross-field verdict invariants (the gate's own worst class) ──"

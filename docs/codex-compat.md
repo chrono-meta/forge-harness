@@ -62,7 +62,7 @@ Backend defaults:
 
 | `FH_BACKEND` | Command | Default model |
 |---|---|---|
-| `claude` | `claude --print --model "$FH_MODEL"` | `claude-sonnet-4-6` |
+| `claude` | `claude --print --model "$FH_MODEL"` | `claude-sonnet-5-5` |
 | `codex` | `codex exec -m "$FH_MODEL" -` | `gpt-5.5` |
 | `auto` | `codex` if present, otherwise `claude` | backend default |
 

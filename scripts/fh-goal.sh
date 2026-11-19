@@ -119,7 +119,7 @@ fi
 if [[ -z "${FH_MODEL:-}" ]]; then
   case "$FH_BACKEND" in
     codex) FH_MODEL="gpt-5.5" ;;
-    claude) FH_MODEL="claude-sonnet-4-6" ;;
+    claude) FH_MODEL="claude-sonnet-5-5" ;;
   esac
 fi
 
@@ -216,7 +216,8 @@ if [[ -z "$TARGET_FILES" ]]; then
   # Capture the git rc SEPARATELY from the transform — `|| true` on the whole pipeline is what
   # ate it, and `pipefail` had been faithfully propagating it right up to that point.
   if [[ -n "$START_COMMIT" ]]; then
-    if ! _fg_raw=$(git -C "$WORK_ROOT" diff "$START_COMMIT"..HEAD --name-only 2>/dev/null); then
+    # core.quotePath=false: a non-ASCII name is otherwise printed quoted and names no file (see fh-gate.sh, 2026-11-19).
+    if ! _fg_raw=$(git -C "$WORK_ROOT" -c core.quotePath=false diff "$START_COMMIT"..HEAD --name-only 2>/dev/null); then
       echo "ERROR: cannot detect changed files (git diff failed in ${WORK_ROOT})." >&2
       echo "  The backend may well have changed code; fh-gate never ran. Pass --files explicitly." >&2
       exit 10
@@ -226,7 +227,7 @@ if [[ -z "$TARGET_FILES" ]]; then
   if [[ -z "$TARGET_FILES" ]]; then
     # `--porcelain` + strip the 2-char status field. `awk '{print $2}'` used to take the OLD
     # path of a rename ("R old -> new") and split names containing spaces.
-    if ! _fg_raw=$(git -C "$WORK_ROOT" status --porcelain 2>/dev/null); then
+    if ! _fg_raw=$(git -C "$WORK_ROOT" -c core.quotePath=false status --porcelain 2>/dev/null); then
       echo "ERROR: cannot detect changed files (git status failed in ${WORK_ROOT})." >&2
       echo "  The backend may well have changed code; fh-gate never ran. Pass --files explicitly." >&2
       exit 10

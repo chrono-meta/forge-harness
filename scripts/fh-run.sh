@@ -144,7 +144,7 @@ fi
 if [[ -z "${FH_MODEL:-}" ]]; then
   case "$FH_BACKEND" in
     codex) FH_MODEL="gpt-5.5" ;;
-    claude) FH_MODEL="claude-sonnet-4-6" ;;
+    claude) FH_MODEL="claude-sonnet-5-5" ;;
   esac
 fi
 
