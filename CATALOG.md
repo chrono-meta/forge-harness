@@ -28,6 +28,10 @@ entries. Same class as the 2026-08-20 entry below (index drift on `knowledge/`);
 - `scripts/cartridge_loader.py` — #module, #cartridge, #routing, #hook. Core SessionStart hook: loads the cartridges
   the operator lists (admitted snapshot + sha256) into the session; activity cartridges skipped. Hub-only for now
   (ships with `cartridge_admit.py`). Lanes: `scripts/test_cartridge_loader_lanes.sh`.
+- `scripts/scoreboard_render.py` — #scoreboard, #measurement, #seal. Renders a «what FH / FoD gives a person» page from
+  an index of sealed records: a row shows only if its pre-registration commit was pushed before the result and its k/n
+  are quoted verbatim from the result; every outcome shows (win · no difference · not detected · ceiling · claim not
+  supported); groups never pool. Lanes: `scripts/test_scoreboard_render_lanes.sh`.
 - `scripts/fh_techwriter_sync_check.sh` — #export, #drift, #ko-tech-writer. Names the files where the published
   fh-techwriter copy (its committed HEAD) differs from FH's own export of ko-tech-writer — DRIFT · MISSING · EXTRA —
   and prints the regen command for a human; never writes to the copy. selfcheck prints it as an INFO line.
