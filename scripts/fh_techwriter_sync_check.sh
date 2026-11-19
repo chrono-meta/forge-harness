@@ -58,16 +58,18 @@ copyfiles="$(printf '%s\n' "$copyfiles" | LC_ALL=C sort -u)"
 n=0; drift=0; missing=0; extra=0
 while IFS= read -r p; do
   n=$((n+1))
-  if ! printf '%s\n' "$copyfiles" | grep -qxF -- "$p"; then echo "MISSING  $p"; missing=$((missing+1)); continue; fi
+  if ! grep -qxF -- "$p" <<< "$copyfiles"; then echo "MISSING  $p"; missing=$((missing+1)); continue; fi
   git -C "$COPY" show "$head:$p" > "$tmp/copyfile" 2>/dev/null || { echo "UNMEASURED: could not read $p from the copy at $head — not compared"; exit 2; }
   cmp -s "$tmp/copyfile" "$tmp/out/$p" || { echo "DRIFT    $p"; drift=$((drift+1)); }
 done <<< "$exported"
 while IFS= read -r p; do
   [ -n "$p" ] || continue
-  printf '%s\n' "$exported" | grep -qxF -- "$p" || { echo "EXTRA    $p"; extra=$((extra+1)); }
+  grep -qxF -- "$p" <<< "$exported" || { echo "EXTRA    $p"; extra=$((extra+1)); }
 done <<< "$copyfiles"
 
-gen="$(git -C "$COPY" show "$head:GENERATED_FROM_FH.txt" 2>/dev/null | head -1 | grep -oE '[0-9a-f]{40}' | head -1)"
+# No pipes into early-exit readers here or below (pipefail × SIGPIPE class lock): here-strings and bash regex.
+genfile="$(git -C "$COPY" show "$head:GENERATED_FROM_FH.txt" 2>/dev/null)"
+gen=""; [[ "${genfile%%$'\n'*}" =~ [0-9a-f]{40} ]] && gen="${BASH_REMATCH[0]}"
 echo "fh-techwriter sync: fh=$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo '?') copy=$COPY@$(git -C "$COPY" rev-parse --short "$head") origin=$(git -C "$COPY" remote get-url origin 2>/dev/null || echo none) generated_from=${gen:-unknown} exported=$n drift=$drift missing=$missing extra=$extra"
 if [ $((drift+missing+extra)) -eq 0 ]; then echo "IN-SYNC"; exit 0; fi
 # The comparison used THIS working tree; the regen script exports a REF. Say which tree was compared, so a

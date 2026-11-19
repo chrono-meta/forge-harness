@@ -16,7 +16,7 @@ _run() {  # $1=label $2=expected rc $3=expected line (fixed string, '' = none) ;
   local label="$1" erc="$2" eline="$3"; shift 3
   local out rc; out="$(env -u FH_TECHWRITER_HOME HOME="$T/home" "$@" 2>&1)"; rc=$?
   if [ "$rc" != "$erc" ]; then _fail "$label — rc $rc, expected $erc"; printf '%s\n' "$out" | tail -5 | sed 's/^/     /'; return; fi
-  if [ -n "$eline" ] && ! printf '%s\n' "$out" | grep -qF -- "$eline"; then
+  if [ -n "$eline" ] && ! grep -qF -- "$eline" <<< "$out"; then
     _fail "$label — rc $rc ok, but no line [$eline]"; printf '%s\n' "$out" | tail -5 | sed 's/^/     /'; return; fi
   _pass "$label (rc $rc${eline:+, $eline})"
 }
