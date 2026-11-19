@@ -113,11 +113,11 @@ else
   HEAD_REF="${2:-}"   # empty = working tree
 fi
 
-# 게이트 커버 자산 = 4축 정본(.claude/rules/fh_4axis_gate.md §48)이 선언한 목록과 맞춘다.
+# 게이트 커버 자산 = 4축 정본(.claude/rules/fh_4axis_gate.md 첫 절 «Whenever the AI modifies FH assets» 줄)이 선언한 목록과 맞춘다.
 # 2026-07-22 수리: AGENTS.md · knowledge/** · docs/*.md 가 여기 없어서, 정본이 "커버한다"고
 # 선언한 자산을 Axis 1 이 **아예 보지 못했다**. 그리고 그 미검사가 호출부(pre-commit)에서
 # `✅ PASS` 로 렌더됐다 = 검사 안 함이 통과로 보고되는 fail-open.
-# 새 경로를 추가할 때는 반드시 fh_4axis_gate.md §48 과 대조할 것 — 두 목록이 갈리면
+# 새 경로를 추가할 때는 반드시 fh_4axis_gate.md 의 그 자산 목록 줄과 대조할 것 — 두 목록이 갈리면
 # 갈린 쪽이 조용히 무검사 구간이 된다.
 # 2026-07-26 수리 (2차 — 이름 열거에서 디렉토리 스코프로): 처음엔 `SKILL_detail.md` 를 이름으로
 # 추가했으나, Axis-2 적대 패스가 "이름을 하나씩 막는 방식은 원리적으로 이 클래스를 못 닫는다"고
@@ -427,8 +427,8 @@ print('OK')
   # salience-splitter is designed to reverse.
   # The resident/reference pair (2026-10-16): CLAUDE.md keeps a ~95-line resident core and the full
   # ruleset lives in claude_md_full_reference.md with section names unchanged — the same split
-  # shape as SKILL.md/SKILL_detail.md, so it gets the same symmetric lookup. Only these two exact
-  # paths pair; any other file keeps an empty sibling, so this does not widen what counts as a move.
+  # shape as SKILL.md/SKILL_detail.md, so it gets the same symmetric lookup. Only the exact path pairs
+  # listed in the case below pair; any other file keeps an empty sibling, so this does not widen what counts as a move.
   #
   # 🟥 Credit only what the sibling GAINED in this change (2026-10-16, cross-family codex HIGH).
   # The lookup used to compare against the sibling's CURRENT total, so a sibling that already held
@@ -442,6 +442,10 @@ print('OK')
     */SKILL_detail.md) sib="$(dirname "$f")/SKILL.md" ;;
     CLAUDE.md)         sib="knowledge/shared/harness-core/claude_md_full_reference.md" ;;
     knowledge/shared/harness-core/claude_md_full_reference.md) sib="CLAUDE.md" ;;
+    # 2026-11-19: the path-scoped 4-axis rule became a thin layer (it attaches on every READ of a
+    # matching file); its body moved verbatim to the detail file. Same pair shape, same gain rule.
+    .claude/rules/fh_4axis_gate.md) sib="knowledge/shared/harness-core/fh_4axis_gate_detail.md" ;;
+    knowledge/shared/harness-core/fh_4axis_gate_detail.md) sib=".claude/rules/fh_4axis_gate.md" ;;
   esac
   if [ -n "$sib" ]; then detail_content=$(read_after "$sib"); detail_before=$(read_before "$sib"); fi
   _gain() {  # $1=counter fn  $2=pattern -> max(0, count in sibling after − count in sibling before)

@@ -5513,3 +5513,9 @@
   outcome: "no page states it in one sentence; nearest verbatim lines: best-practices «can end up slower than doing the task where you are», multi-agent research «are not a good fit»; summary-only lines flagged and not used"
   evidence: "docs/USER_GUIDE.md §4 «세 가지 일하는 방식»"
   tokens: "66577"
+- date: 2026-11-19
+  agent: "general-purpose (sonnet) — soul: restatement read for the 4-axis rule thin split (purpose: independence)"
+  task: "restate the soul: line alone as success / never-do, mark RESTATABLE or GUESS, list the questions needed"
+  outcome: "both GUESS — measuring instrument and baseline, which field list and who scores, how «verbatim» and «no lost § heading» are checked; the line was rewritten with file-char size, a fixed 8/11-field grep scorer, a byte diff and probe_scope_check + grep before design"
+  evidence: "PR body capsule (trim/4axis-rule-thin-resident)"
+  tokens: "258837"
