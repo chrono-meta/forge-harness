@@ -464,6 +464,13 @@ if [[ -z "$TARGET_FILES" ]]; then
     echo "  Failing closed: an unperformed review must not be reported as a verdict. Rename the file(s)." >&2
     exit $EXIT_HARNESS_ERROR
   fi
+  # A dropped name beside reviewable ones is not a smaller problem: the verdict would cover part of the change and
+  # read as the whole (security review 2026-11-20: PASS / exit 0 with the newline-named file unreviewed).
+  if [[ "$_GZ_DROPPED" -gt 0 ]]; then
+    echo "ERROR: ${_GZ_DROPPED} changed file name(s) hold a newline and cannot be reviewed — a verdict on the rest would" >&2
+    echo "  cover only part of the change. Failing closed. Rename the file(s), or name the files to review explicitly." >&2
+    exit $EXIT_HARNESS_ERROR
+  fi
 elif [[ "$TARGET_FILES" != *$'\n'* ]] && ! path_exists_in_context "$TARGET_FILES"; then
   # Backward compatibility for v1.1 examples like "src/a.ts src/b.ts".
   # Paths containing spaces should be passed with FH_TARGET_FILES as newline-delimited input.
