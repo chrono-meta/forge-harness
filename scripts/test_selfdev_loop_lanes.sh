@@ -387,6 +387,21 @@ holdnot "LC24 file list shorter than changedFiles (gh's 100-file page) → HOLD"
 cand c21; sed -i.bak 's/else print "OK" }/}/' "$W/c21/live/scripts/selfdev_loop.sh"; grep -q 'else print "OK"' "$W/c21/live/scripts/selfdev_loop.sh" && { echo "HARNESS-ERROR: LC21 mutant not applied"; exit 2; }
 run c21; holdnot "LC21 a candidate check that prints nothing → HOLD (only an explicit OK clears it)" "candidate-check-failed"
 
-[ $((pass+fail)) -eq 57 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 57"; exit 2; }
+# LT1–LT3 (2026-11-20 weekly audit: 7 selfdev PRs, AUTO 0 — and no report said so): every merge pass
+# ends with a tally line — AUTO-eligible k of n reviewed · PRs opened this run · HOLD reasons by count —
+# so the operator can set the allow-list from weeks of numbers. Measuring only: no tier or merge change.
+# The reports are the ones LP1 / LP4 / LP6 already wrote above.
+tal() { cat "$W/$1/live/tracks/_meta/selfdev/report_$DATE.md" 2>/dev/null | grep -F -- '- tier tally:'; }
+t1=$(tal p1); t4=$(tal p4); t6=$(tal p6)
+[[ "$t1" == *"AUTO-eligible 1 of 1 reviewed"*"HOLD reasons (tags; a PR can carry several): none"* ]] && ok "LT1 control: an all-pass PR counts as AUTO-eligible (1 of 1), no HOLD reason" || bad "LT1 [$t1]"
+[[ "$t4" == *"AUTO-eligible 0 of 1 reviewed"*"ci-fail-or-skipped=1"* ]] && ok "LT2 a HOLD PR counts 0 of 1 and names its reason with a count" || bad "LT2 [$t4]"
+[[ "$t6" == *"tier:HOLD=1"* ]] && [[ "$t6" == *"PRs opened this run: "* ]] && ok "LT3 a tier HOLD is tallied as tier:HOLD; the opened-this-run count is on the same line" || bad "LT3 [$t6]"
+
+# LT4: a final-snapshot HOLD is tallied too (LP11's report); LT5: two PRs, the second stopped by the cap —
+# both AUTO-eligible, the cap named as a tag (LC20's report)
+t11=$(tal p11); t20=$(tal c20)
+[[ "$t11" == *"AUTO-eligible 0 of 1 reviewed"*"request-changed=1"* ]] && ok "LT4 a HOLD at the final snapshot (request changed) is tallied" || bad "LT4 [$t11]"
+[[ "$t20" == *"AUTO-eligible 2 of 2 reviewed"*"auto-merge-cap=1"* ]] && ok "LT5 two PRs: both eligible, the capped one tagged auto-merge-cap" || bad "LT5 [$t20]"
+[ $((pass+fail)) -eq 62 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 62"; exit 2; }
 echo "selfdev_loop lanes: $pass passed · $fail failed"
 [ "$fail" -eq 0 ]
