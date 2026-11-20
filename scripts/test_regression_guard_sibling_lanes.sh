@@ -8,7 +8,8 @@
 # SKILL pair — so these lanes cover both pairs and both directions:
 #   moved into the sibling  -> no M-tier (exit != 2)
 #   dropped from both       -> M-tier block (exit 2)   <- the lookup must not become a free pass
-# plus a REVERT PROBE: the CLAUDE.md case is deleted from a copy of the guard and lane S1 must turn red.
+# plus REVERT PROBES: each pair arm is deleted from a copy of the guard and its lane must turn red.
+# 2026-11-19: third pair, .claude/rules/fh_4axis_gate.md <-> fh_4axis_gate_detail.md (S11-S13, R4-R5).
 #
 # Usage: bash scripts/test_regression_guard_sibling_lanes.sh   Exit: 0 = all behave; 1 = regression.
 
@@ -186,6 +187,56 @@ else
   if [ "$rc" -gt 2 ] || ! grep -q "claude_md_full_reference.md" <<<"$out"; then echo "  ❌ R3 revert probe: mutated guard did not run or never examined the reference (rc=$rc) — HARNESS-ERROR"; FAIL=1
   elif sec=$(grep -A60 "claude_md_full_reference.md" <<<"$out"); [[ "$sec" == *"moved to"* ]]; then echo "  ❌ R3 revert probe: reverse move still recognised without the reverse arm"; FAIL=1
   else echo "  ✅ R3 revert probe: without the reverse arm the reference side no longer sees a move"; fi
+fi
+
+# S11 (2026-11-19): the 4-axis rule became a thin resident layer; its body moved verbatim to
+# knowledge/shared/harness-core/fh_4axis_gate_detail.md. Same pair shape, so the same lookup.
+RULE=.claude/rules/fh_4axis_gate.md; RDET=knowledge/shared/harness-core/fh_4axis_gate_detail.md
+mkrule() { local d=$1; mkrepo "$d"; mkdir -p "$d/.claude/rules"; printf '# gate\n%s' "$BODY" > "$d/$RULE"; git -C "$d" add -A && git -C "$d" commit -q -m rule; }
+d=$T/s11; mkrule "$d"
+printf '# gate\nthin layer only.\n' > "$d/$RULE"; printf '# gate detail\n%s' "$BODY" > "$d/$RDET"
+git -C "$d" add -A
+run_lane "S11 4-axis rule -> detail move" "$d" "$GUARD" pass
+
+# S12: rule slimmed, detail file absent -> real loss still blocks
+d=$T/s12; mkrule "$d"
+printf '# gate\nthin layer only.\n' > "$d/$RULE"; git -C "$d" add -A
+run_lane "S12 4-axis rule loss, detail absent" "$d" "$GUARD" block
+
+# R4: revert probe — delete the rule arm from a copy of the guard; S11 must now block
+G5=$T/guard_norule.sh
+grep -v '^    .claude/rules/fh_4axis_gate.md) ' "$GUARD" > "$G5"
+if cmp -s "$GUARD" "$G5"; then echo "  ❌ R4 revert probe: the mutation did not apply (pattern drift) — HARNESS-ERROR"; FAIL=1
+else
+  d=$T/r4; mkrule "$d"
+  printf '# gate\nthin layer only.\n' > "$d/$RULE"; printf '# gate detail\n%s' "$BODY" > "$d/$RDET"
+  git -C "$d" add -A
+  run_lane "R4 revert probe: without the rule pair, S11 blocks" "$d" "$G5" block
+fi
+
+# S13: reverse — detail content moved back into the rule -> move recognised on the detail side
+d=$T/s13; mkrule "$d"
+printf '# gate\nthin layer only.\n' > "$d/$RULE"; printf '# gate detail\n%s' "$BODY" > "$d/$RDET"
+git -C "$d" add -A; git -C "$d" commit -q -m split
+printf '# gate\n%s' "$BODY" > "$d/$RULE"; printf '# gate detail\nmoved back.\n' > "$d/$RDET"; git -C "$d" add -A
+out=$(cd "$d" && bash "$GUARD" --staged 2>&1)
+sec=$(grep -A60 "fh_4axis_gate_detail.md ===" <<<"$out"); if [[ "$sec" == *"moved to"* ]] && [[ "$sec" != *"M-TIER"* ]]; then
+  echo "  ✅ S13 detail -> rule reverse move recognised"
+else echo "  ❌ S13 reverse move not recognised on the detail side"; FAIL=1; fi
+
+# R5: revert probe — drop the detail-side arm; S13 must fail
+G6=$T/guard_nodetailarm.sh
+grep -v 'fh_4axis_gate_detail.md) sib=".claude/rules/fh_4axis_gate.md"' "$GUARD" > "$G6"
+if cmp -s "$GUARD" "$G6"; then echo "  ❌ R5 revert probe: the mutation did not apply (pattern drift) — HARNESS-ERROR"; FAIL=1
+else
+  d=$T/r5; mkrule "$d"
+  printf '# gate\nthin layer only.\n' > "$d/$RULE"; printf '# gate detail\n%s' "$BODY" > "$d/$RDET"
+  git -C "$d" add -A; git -C "$d" commit -q -m split
+  printf '# gate\n%s' "$BODY" > "$d/$RULE"; printf '# gate detail\nmoved back.\n' > "$d/$RDET"; git -C "$d" add -A
+  rc=0; out=$(cd "$d" && bash "$G6" --staged 2>&1) || rc=$?
+  if [ "$rc" -gt 2 ] || ! grep -q "fh_4axis_gate_detail.md ===" <<<"$out"; then echo "  ❌ R5 revert probe: mutated guard did not run or never examined the detail file (rc=$rc) — HARNESS-ERROR"; FAIL=1
+  elif sec=$(grep -A60 "fh_4axis_gate_detail.md ===" <<<"$out"); [[ "$sec" == *"moved to"* ]]; then echo "  ❌ R5 revert probe: reverse move still recognised without the detail-side arm"; FAIL=1
+  else echo "  ✅ R5 revert probe: without the detail-side arm the detail file no longer sees a move"; fi
 fi
 
 echo

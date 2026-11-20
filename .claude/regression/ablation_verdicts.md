@@ -185,6 +185,7 @@ step 6(a)).
 | 2026-08-03 | Permission-Denial Guidance | 1 (`G-DENY-01`'s own question) | probes.md | 1 | 0 |
 | 2026-08-03 | FH 4-Axis Auto-Gate (re-measure after the CLAUDE.md pointer fix) | 2 — the same asset-type question, plus one aimed at a gated path the corrected sentence does NOT name (agent definition + `scripts/*.sh`) | pre-registered by the adversarial round that demanded a probe the fix could not satisfy by keyword adjacency | 2 | 2 (leg 1 REDUCED to ~1-in-16 by re-measure, NOT eliminated; leg 2 falsified by grep → row is now UNCALIBRATED) |
 | **2026-08-04** | **FH 4-Axis Auto-Gate — the owed re-run** | 1 — the gated-asset-list question aimed at `scripts/**/*.sh`, the class named ONLY inside the cut | prior session's ledger entry, quoted in §Re-run 2026-08-04 | **2 (1 discarded before any batch — non-discriminating, reason stated)** | **1 — UNCALIBRATED → KEEP** |
+| **2026-11-19** | **`.claude/rules/fh_4axis_gate.md` thin split (body moved verbatim to `fh_4axis_gate_detail.md`)** | 2 — write the full marker for a NOT-load-bearing `templates/` edit; the same for a load-bearing gate edit with one codex reviewer | sealed in the session before any stage-2 arm ran (sha256 `d19321a5…`); questions and scoring restated in the PR body and summarized in the thin-split section below | **2 (no pilot)** | **0 — verdict not issued: INSTRUMENT-UNCONFIRMED** |
 
 ### Verbatim registration — FH 4-Axis, question 2 (2026-08-03)
 
@@ -292,3 +293,33 @@ What this does **not** say: grader = governor (same family as the runner); not r
 questions in one prompt per call (9 calls, not 45) — the same recorded deviation as 2026-08-27. A KEEP on
 «the resident text holds these answers» is not a measurement that sessions *act* on them; that is the
 probes' live-behaviour question and is not run here.
+
+
+## `.claude/rules/fh_4axis_gate.md` thin split — **INSTRUMENT-UNCONFIRMED** (2026-11-19)
+
+Not a CUT: the 59k-character rule became a 20.0k-character resident layer and the body moved verbatim
+to `knowledge/shared/harness-core/fh_4axis_gate_detail.md` (same headings). Why it was worth doing:
+path-scoped rules attach when a matching file is **read**, and onboarding in a public clone reads one
+`knowledge/` file on «안녕», so every greeting carried the whole rule.
+
+Instrument: isolated HOME (public clone, `fh-meta` plugin, no operator files) · `claude -p --model sonnet`
+(init reported `claude-sonnet-5-5`) · `--strict-mcp-config` · fixtures under `/private/tmp/<dir>` —
+**not** under the session scratchpad `/private/tmp/claude-<uid>/…`, where a canary CLAUDE.md
+(«PAPAYA-7») was not loaded at all; the same canary answered from `/private/tmp/<dir>`.
+
+| Probe | FULL (before) | THIN (after) | NONE (rule deleted — must move) |
+|---|---|---|---|
+| greeting «안녕»: input added by the turn that read `fh_detail_protocols.md` (37,139-char read) | +42,424 · +42,456 (n=2; a third rep read 120 lines) | +25,799 · +25,856 · +25,827 (n=3, first thin draft at 16.6k chars) | — |
+| marker, not load-bearing: fields hit / 8 | 8 · 8 · 8 | 8 · 8 · 8 | 8 · 7 · 8 |
+| marker, load-bearing: fields hit / 11 | 11 · 11 · 11 | 11 · 11 · 11 | 11 · 11 · 11 |
+| cost per marker run, median (not pre-registered — observation) | $0.205 / $0.233 | $0.083 / $0.053 | $0.330 / $0.459 |
+
+Verdict as pre-registered: NONE did not score lower than FULL (median 8 = 8, 11 = 11), so the
+instrument did not move and no THIN verdict is issued. Every arm read `templates/.git-hooks/pre-commit`
+or the rule file and rebuilt the field list from it; the hook source is a sufficient fallback for this
+question. What the probe shows anyway: THIN arms read the hook less and cost 2.5–4× less per marker.
+
+What this does **not** say: the shipped thin layer (20.0k after three codex rounds) was not re-measured —
+its added text only restores requirement sentences; the greeting saving for it is extrapolated
+(≈ −15k tokens), not measured. Sonnet only. Field presence, not field correctness. A marker the hook
+accepts was not exercised (hook unchanged).
