@@ -13,6 +13,7 @@
 #   D5  FH_GATE_ELEPHANT=auto at level full (opt-in) → the elephant pass is made
 #   D6  FH_GATE_EXEC=on (opt-in) → E1 is not «NOT RUN (off by default …)»
 #   D8  cross with nothing set → the legs say the execution layer is off by default (cross-family R1)
+#   D9  --help names fh-legacy as the default reviewer
 #   D7  action.yml does not put FH_TIMEOUT in the step env; it exports it only when the `timeout` input (default '') is non-empty
 #       (known pair: the shipped file passes; a planted «FH_TIMEOUT: ${{ inputs.timeout }}» env line is caught)
 # Token-free: claude and codex are stubs that answer by request kind and log what they were asked.
@@ -105,6 +106,12 @@ gate d8 FH_BACKEND=cross FH_GATE_CROSS_ALLOW_SINGLE=1
 if grep -qF '# FH_GATE_E1: not-run — NOT RUN (off by default' "$TMPROOT/d8.out" && ! grep -qF 'NOT RUN (FH_GATE_EXEC=off)' "$TMPROOT/d8.out"; then
   ok "D8 cross, nothing set → the legs say the execution layer is off by default"
 else bad "D8 cross defaults" "rc=$RC $(grep -E 'E1' "$TMPROOT/d8.out" | tr '\n' '|')"; fi
+
+# D9 — --help states the default reviewer the code applies (Area B 3.45.0: --help still said /code-review)
+bash "$GATE" --help > "$TMPROOT/help.out" 2>&1
+if grep -qF 'FH_REVIEWER=fh-legacy|code-review|fh review stage (default: fh-legacy' "$TMPROOT/help.out" && ! grep -qF 'default on claude: built-in /code-review' "$TMPROOT/help.out"; then
+  ok "D9 --help names fh-legacy as the default reviewer"
+else bad "D9 --help default reviewer" "$(grep -F 'FH_REVIEWER' "$TMPROOT/help.out" | head -2 | tr '\n' '|')"; fi
 
 # D7 — action.yml's step env must not carry FH_TIMEOUT; the run block exports it only from a non-empty input.
 envblock() { awk '/^ *env: *$/{e=1; next} e && /^ *run: *\|/{exit} e{print}' "$1"; }

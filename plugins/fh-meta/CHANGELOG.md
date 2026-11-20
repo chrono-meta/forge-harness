@@ -2,6 +2,94 @@
 
 ### [Unreleased]
 
+### [3.45.0] — 2026-11-20
+
+Minor by the version policy: fh-gate gains an execution layer, a review pass that follows `/code-review`'s method, a history-aware «elephant» pass and `/code-review` itself as an opt-in reviewer (#1147, #1156). There are also new shipped tools and lanes (`live_eval_matrix.py`, `heavy_skill_smell.py`, `job_heartbeat.py`), a new `FH_AGY_ISOLATION=no-tools-agent` route, and judged procedure changes in shipped skills and canon.
+
+**fh-gate defaults, stated plainly.** A caller who sets nothing gets the 3.44.0 review, with three exceptions: the default Claude model is now `claude-sonnet-5-5` (#1142), and file names with non-ASCII characters (#1142) or with quotes, backslashes or tabs (#1146) are now reviewed. Otherwise:
+- the reviewer is `fh-legacy` on every backend;
+- the elephant pass is off;
+- the execution layer is off.
+
+Terms: the *goldfish* pass is a reviewer that sees only the diff and the files, never the author's explanation. The *elephant* pass also sees the task description and the files' git history. *fh-legacy* is the original angle pass. Grades: A blocks, B means proceed with care (PENDING), C is a note.
+
+Each new layer is opt-in: `FH_REVIEWER=code-review` (claude backend only) or `FH_REVIEWER=fh`, `FH_GATE_ELEPHANT=auto|on`, `FH_GATE_EXEC=on`. Why: whether a headless `/code-review` call, or the `fh` pass, returns the structured object the gate needs on every runner is UNMEASURED, and `FH_GATE_EXEC=on` runs the repository's own lane scripts.
+
+Two changes make a shipped gate refuse more by default; see their `BREAKING (gate):` entries:
+- the pre-push Load-Bearing gate reads each pushed branch's own marker (#1119; FH-checkout pushes of gate files only);
+- `fh-goal` and `fh-gate` fail closed when every changed file name holds a newline (#1146).
+
+Items marked «not in the npm package» are in the repository checkout only.
+
+### Added
+- fh-gate review layers, all opt-in (#1147, #1156):
+  - `FH_GATE_EXEC=on` runs `scripts/fh_gate_exec.sh` (shipped) in a copy of the tree. It makes no model call, but the lanes it runs may use the network or secrets the way your CI does:
+    - E0 runs FH's pipefail early-exit class scanner against the change; a new site it flags is B. The scanner is not in the npm package, so from npm E0 prints `NOT RUN (scanner not shipped here)` and only E1 runs.
+    - E1 runs the change's target lanes. A lane this change turns red is graded A (BLOCKED); a lane already red before the change is C; a lane that did not finish or could not run is B.
+    - It runs the repository's own lane scripts: use it only where the change is trusted. The copy is not a sandbox.
+  - `FH_REVIEWER=code-review` (claude backend only) calls the built-in `/code-review` (medium at `quick`, high at `full`) with a JSON schema and read-only tools. Its findings are carried as reported: Important → B, Nit and Pre-existing → C.
+  - `FH_REVIEWER=fh` runs a «goldfish» pass modelled on the phase structure of `/code-review` as shipped in Claude Code 2.1.328, written in FH's words:
+    - eight finder angles;
+    - one CONFIRMED / PLAUSIBLE / REFUTED vote per candidate;
+    - at most 10 findings at `full`, 8 at `quick`;
+    - it never receives `FH_TASK_DESCRIPTION`, in its prompt or in its process environment.
+  - `FH_GATE_ELEPHANT=auto` (on at `full`) or `on` adds an «elephant» pass:
+    - it gets the task description and the touched files' git history;
+    - it looks only for a past fix re-opened, a recorded decision undone or the task contradicted;
+    - it can only make the verdict stricter.
+  - Shared rules:
+    - Any failure of the opt-in passes exits 10.
+    - When a pass that reads the change diff runs (an opt-in reviewer, or the elephant), a diff that cannot be computed is a B. With `fh-legacy` and the elephant off, it is only named on the reviewer line.
+    - The elephant under `fh-legacy` keeps the 120 s default timeout; the 900 s default applies only to `code-review` and `fh`.
+    - Output gains `FH_GATE_REVIEWER` · `FH_GATE_ELEPHANT` · `FH_GATE_E0` · `FH_GATE_E1` · `FH_GATE_LAYERS_NOT_BUILT`, and a `source:` per finding. Verdicts, exit codes 0/1/2/3/10/11/12 and the record keep their meaning.
+  - In `cross` mode with `FH_REVIEWER=code-review`, the codex leg runs the goldfish pass, labelled `fallback`.
+  - Lanes (shipped): `test_fh_gate_defaults_lanes.sh` · `test_fh_gate_exec_lanes.sh` · `test_fh_gate_fusion_lanes.sh` · `test_fh_gate_absorb_lanes.sh`.
+- `FH_AGY_ISOLATION=no-tools-agent` in `agy_launch_guard.sh` (shipped), for a machine where company repositories are readable. Its callers (`finding_fleet.sh`, `finding_verifier.sh`, `sidecar_calibrate.sh`) and the `auto-decorrelation` and `steel-quench` docs name the new route. In order:
+  1. It refuses before agy starts when the prompt, an argument, the agy binary path or the working folder names a company-repo root. An unconfigured list is refused.
+  2. It writes a `tools: []` agent definition under a unique name and runs agy with it and `--output-format stream-json`.
+  3. It voids any run whose stream shows a tool step other than `manage_task`, or that does not end in one SUCCESS result: exit 4, nothing on stdout.
+  4. It removes the definition.
+
+  The `container` / `os-user` / `remote-os-user` routes are unchanged. (#1140)
+- `scripts/live_eval_matrix.py` (shipped): a probe × date matrix across nightly live-eval reports, with always-pass / never-pass / mixed / too-few lists. Record only; UNCALIBRATED and FAILED-TO-RUN rows count as not scored. (#1082)
+- Live-eval behaviour profile (record only). The nightly report gains, per probe, arm and rep, the arm's top-level tool calls in four bins (explore · edit · test-run · other), counted by `live_eval_trace.py profile`. The bins are a heuristic calibrated on 17 real calls (edit and test-run on fixtures only). A rep with no stream says `trace=MISSING`, never 0. (#1133)
+- `knowledge/shared/harness-core/heavy_skill_to_cartridge.md` and `scripts/heavy_skill_smell.py` (shipped). A guide for splitting a skill that carries its own gates and hooks into craft / checks / floor. The checker flags seven smell families and is advisory: exit 0 when it read everything, 2 when it could not, never 1. (#1135)
+- `scripts/job_heartbeat.py` (shipped), wired into the session-start load. Per installed FH nightly job (`com.forge-harness.*` launchd jobs; silent where there are none), it lists the last 3 days with no output; days inside a row of `tracks/_meta/job_pauses.tsv` print as «paused (recorded)». It never judges a gap; always exit 0. (#1154)
+- Cartridge loader (not in the npm package; the shipped `heavy_skill_to_cartridge.md` and install-wizard detail name it): `scripts/cartridge_loader.py` / `.sh`, a SessionStart hook. It injects the entry text of the cartridges the operator lists in `.claude/cartridges.enabled`, each pinned by a tree hash. No list means nothing is injected. (#1137)
+- `scripts/fh_techwriter_sync_check.sh` (not in the npm package): names the files where the published fh-techwriter copy differs from FH's own export of ko-tech-writer (DRIFT · MISSING · EXTRA). Record only. (#1139)
+- `scripts/scoreboard_render.py` (not in the npm package): renders a measurement scoreboard only from sealed, quoted records, and lists everything else as excluded with its reason. (#1143, #1144)
+
+### Changed
+- fh-gate, fh-goal and fh-run: the default Claude model moves from `claude-sonnet-4-6` to `claude-sonnet-5-5`. Verdict rules and exit codes are unchanged. (#1142)
+- `action.yml`: the `timeout` input defaults to empty and becomes `FH_TIMEOUT` only when given; it is read through an env var, not a `${{ }}` in the shell. With no `timeout`, the gate uses its own default for the review it runs: 120 s for `fh-legacy`, 900 s for an opted-in `code-review` or `fh` reviewer. Callers who set `timeout` are unchanged. (#1156)
+- BREAKING (gate): `templates/.git-hooks/pre-push` (shipped), the Load-Bearing Change Gate.
+  - Scope: it binds only when the push carries load-bearing gate files and the repository has a `tracks/_meta` folder (an FH checkout).
+  - What changed: every branch the push updates needs its own marker, named exactly `.axes_23_passed_<slug>_YYYY-MM-DD.marker` and carrying a `crossfamily:` line, read from where pre-commit writes it (the main checkout's `tracks/_meta` when you push from a worktree).
+  - Why: before, it took the newest marker of any branch, so a main-checkout push could pass on another branch's marker.
+  - What now blocks: a push whose branch has no marker of its own, or whose marker name another local branch shares.
+  - Remedy: record the marker for the branch you push, or use the logged `PUBLIC_SURFACE_OK=1` exception.
+  - Repositories without `tracks/_meta` are not newly blocked. (#1119)
+- `fh_module_contract.md` (shipped):
+  - §2d: the declared purpose picks the measurement axis. Role and interaction modules get a persona simulation with three arms (bare / skill-only / module). (#1136)
+  - §2e: a module that verifies names its near-miss request kinds and refuses them with exit 2 and «NOT checked», never 0 or 1, with one lane per kind. (#1141)
+- `ko-tech-writer` (shipped): scope words (지원하는 · 어디서나 · 모든 · 항상) need evidence for that scope. S20 drops a bracketed exit code only when the sentence already states the result. Operator examples are added to S18 · S19 · S23 · S30. (#1134)
+- `.claude/rules/fh_4axis_gate.md` (shipped) is a thin resident layer: 59 KB → 20 KB. It is written to keep every hook-enforced requirement; the pre-registered probe of that was INSTRUMENT-UNCONFIRMED (its control also scored full). The previous body moved to `knowledge/shared/harness-core/fh_4axis_gate_detail.md`, byte-identical below a new header. `templates/regression_guard.sh` (shipped) credits that move as a sibling pair. (#1145)
+- `templates/.claude/rules/mcp_tool_gating.md` (shipped) gains step 6 for npx/uvx servers, which is advisory: a pinned version is not a dependency freeze. (#1132)
+- Live-eval `INVALID-COMPARISON` now starts with the elements not present in every arm («not in every arm: tools=…; mcp=…; plugins=…»). Verdict and rc are unchanged. (#1152)
+- `sim_isolated_run.sh` (shipped) prints a run-level tally, and `RUN: FAILED-TO-RUN` when no rep was captured or ended empty; exit code unchanged. (#1138)
+- The self-dev nightly report ends with a tier tally (not in the npm package; measuring only). (#1153)
+
+### Fixed
+- BREAKING (gate): `fh-goal` and `fh-gate` (shipped bins) read changed files NUL-delimited. Before, a name with a quote made `fh-goal`'s `xargs` abort, and it reported «no changed files» with exit 0, so fh-gate never ran. `fh-gate` used to only warn about names with a quote, backslash or tab; now it reviews them. In both, a change whose every name holds a newline exits 10 instead of passing through («every changed file name holds a newline … Failing closed»). Remedy: rename the file, or pass the files explicitly. A newline-holding name next to others is named in a WARN. (#1146)
+- `fh-gate` and `fh-goal` review files with non-ASCII names. They used to be quoted with octal escapes and could not be opened; a Korean-only change exited 10 with «nothing was reviewed». (#1142)
+- The guard anchors `universal_guard_check.sh` and `prepush_guard_check.sh` (shipped) unset every override the hooks read before building their sandbox. A commit made with `PUBLIC_SURFACE_OK=1` no longer turns them red for an unrelated reason. (#1118)
+- `fh-gate --help` and the Action's `backend` description name the 3.45.0 defaults (fh-legacy; `FH_GATE_EXEC=on` runs the repository's own scripts; the opt-in layers are set in the step env), and lane D9 pins the help line (this release).
+- `test_finding_pipeline_lanes.sh` (shipped) runs its stub pipelines from its own temp folder. A checkout that lists its own root in `.claude/rules/.company-roots` no longer turns 7 lanes red, and the codex guard still refuses a launch from the checkout (L128, L129). (#1155)
+- `below_floor_scan.sh` (shipped): from a git worktree it reads the main checkout's markers, or says NOT READ, instead of printing «0 total» from the worktree's empty folder. (#1151)
+- `correction_moments.py` (shipped): a long prompt that repeats 3+ times, such as a scheduled trigger, is no longer counted as an operator correction. (#1150)
+- Clean-room audit rounds 8–9: two lanes that reported an absence about sound subjects now find the row by elimination or name the premise. A LaneGap snippet template now ships with the lane that reads it. (#1062)
+- `state_claim_recheck_hook.sh` (not in the npm package) also reads the lease archive and tags its lines as expired. (#1148)
+
 ### [3.44.0] — 2026-11-17
 
 Minor by the version policy: new shipped guards and a remote runner for the cross-family sidecars (#1123, #1125, #1127), a new `--senses` listing and lane in `ko-tech-writer` (#1128), and judged procedure changes in shipped skills and canon. One change makes an existing path refuse more by default — FH scripts now start `agy` only through `agy_launch_guard.sh`, so a gemini fleet member you ran on purpose fails as refused until it runs isolated; see the `BREAKING (gate):` entry for the remedy (#1123). The same change makes `finding_fleet.sh` stop with exit 1 before any member runs when it cannot create or prove its agy shim (for example a read-only or noexec `/tmp`), so a codex-only fleet on such a machine stops too (#1123). Two other refusals are new and narrower: a codex arm is refused when its prompt, arguments or working folder name a configured company-repo root (#1127), and `sidecar_wait.sh` now reports a sidecar that rejected its model as `HARNESS-ERROR` instead of `COMPLETE` (#1127). The live-eval report can now exit 2 (`INVALID-COMPARISON`) when its arms loaded different plugin sets — a report verdict, not a commit or publish gate (#1121). This repository's own required `validate` check now proves every selfcheck shard passed without the GitHub API (#1130) — repository CI only, nothing shipped changes.
