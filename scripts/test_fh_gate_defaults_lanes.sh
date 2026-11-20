@@ -14,6 +14,8 @@
 #   D6  FH_GATE_EXEC=on (opt-in) → E1 is not «NOT RUN (off by default …)»
 #   D8  cross with nothing set → the legs say the execution layer is off by default (cross-family R1)
 #   D9  --help names fh-legacy as the default reviewer
+#   D10 FH_REVIEWER=fh and the elephant pass get exactly Read/Glob/Grep — no shell, no MCP, no skill (D10b: control)
+#   D11 FH_REVIEWER=code-review keeps git but runs without the five GITHUB_* command-file variables
 #   D7  action.yml does not put FH_TIMEOUT in the step env; it exports it only when the `timeout` input (default '') is non-empty
 #       (known pair: the shipped file passes; a planted «FH_TIMEOUT: ${{ inputs.timeout }}» env line is caught)
 # Token-free: claude and codex are stubs that answer by request kind and log what they were asked.
@@ -37,6 +39,7 @@ in=$(cat); args=" $* "; kind=legacy
 case "$args" in *"/code-review "*) kind=cr ;; esac
 case "$in" in *"FH ELEPHANT PASS"*) kind=ele ;; *"FH REVIEW PASS"*) kind=abs ;; esac
 : > "${LOGDIR:-/tmp}/claude_${kind}.called"
+printf '%s\n' "$@" > "${LOGDIR:-/tmp}/claude_${kind}.args"; env > "${LOGDIR:-/tmp}/claude_${kind}.env"
 empty='{"status":"SUCCESS","findings":[]}'
 case "$kind" in legacy) p="$FAKE_PAYLOAD" ;; *) p="$empty" ;; esac
 printf '{"is_error":false,"subtype":"success","structured_output":%s}\n' "$p"
@@ -112,6 +115,41 @@ bash "$GATE" --help > "$TMPROOT/help.out" 2>&1
 if grep -qF 'FH_REVIEWER=fh-legacy|code-review|fh review stage (default: fh-legacy' "$TMPROOT/help.out" && ! grep -qF 'default on claude: built-in /code-review' "$TMPROOT/help.out"; then
   ok "D9 --help names fh-legacy as the default reviewer"
 else bad "D9 --help default reviewer" "$(grep -m2 -F 'FH_REVIEWER' "$TMPROOT/help.out" | tr '\n' '|')"; fi
+
+# D10 — the goldfish (FH_REVIEWER=fh) and elephant passes get exactly Read/Glob/Grep: the built-in set limited by
+#       --tools, no MCP server (--strict-mcp-config), no skill or command (--disable-slash-commands), and shells and
+#       writers denied. An allow list alone is additive (settings, MCP write tools, skills, PowerShell stay reachable),
+#       and git's read commands write files through --output=. The whole policy is asserted, not one token of it.
+#       Known pair: on the 3.45.0 merge (7c5a6b7) both calls allow Bash(git diff:*) and carry none of the three flags.
+argv_after() { awk -v f="$2" 'p{print; exit} $0==f{p=1}' "$1"; }
+has_flag()   { grep -qxF -- "$2" "$1"; }
+policy_ok() {   # policy_ok <args file> — prints what is wrong, nothing when the policy holds
+  local a="$1" t al d need
+  [ -s "$a" ] || { echo "no call recorded"; return; }
+  t=$(argv_after "$a" --tools); al=$(argv_after "$a" --allowedTools); d=$(argv_after "$a" --disallowedTools)
+  [ "$t" = "Read,Glob,Grep" ] || echo "tools=[$t]"
+  [ "$al" = "Read,Glob,Grep" ] || echo "allow=[$al]"
+  for need in Bash PowerShell Write Edit NotebookEdit WebFetch WebSearch; do [[ ",$d," == *",$need,"* ]] || echo "deny lacks $need"; done
+  has_flag "$a" --strict-mcp-config || echo "no --strict-mcp-config"
+  has_flag "$a" --disable-slash-commands || echo "no --disable-slash-commands"
+  ! has_flag "$a" --mcp-config || echo "an --mcp-config was passed"
+}
+gate d10 FH_REVIEWER=fh FH_GATE_ELEPHANT=on
+p_abs=$(policy_ok "$TMPROOT/d10/claude_abs.args" | tr '\n' ' '); p_ele=$(policy_ok "$TMPROOT/d10/claude_ele.args" | tr '\n' ' ')
+if [ "$RC" -eq 0 ] && [ -z "$p_abs" ] && [ -z "$p_ele" ]; then ok "D10 goldfish and elephant passes: exactly Read/Glob/Grep — no shell, no MCP, no skill"
+else bad "D10 reviewer tool policy" "rc=$RC goldfish: ${p_abs:-ok} · elephant: ${p_ele:-ok}"; fi
+# D10b — the checker itself sees a planted widening (control: one extra allowed tool on an otherwise good call)
+printf '%s\n' --tools Read,Glob,Grep --strict-mcp-config --disable-slash-commands --allowedTools Read,Glob,Grep,Write \
+  --disallowedTools Bash,PowerShell,Write,Edit,NotebookEdit,WebFetch,WebSearch > "$TMPROOT/planted.args"
+[ -n "$(policy_ok "$TMPROOT/planted.args")" ] && ok "D10b the policy check catches a planted extra allowed tool (control alive)" || bad "D10b policy check blind" "planted Write in the allow list passed"
+
+# D11 — /code-review keeps git (it needs it), so its call runs without the runner's five command-file variables.
+#       (This only removes the direct reference — the path stays labelled not read-only.)
+gate d11 FH_REVIEWER=code-review GITHUB_ENV="$TMPROOT/gh1" GITHUB_PATH="$TMPROOT/gh2" GITHUB_OUTPUT="$TMPROOT/gh3" GITHUB_STATE="$TMPROOT/gh4" GITHUB_STEP_SUMMARY="$TMPROOT/gh5"
+if [ "$RC" -eq 0 ] && [ -s "$TMPROOT/d11/claude_cr.env" ] && ! grep -qE '^GITHUB_(ENV|PATH|OUTPUT|STATE|STEP_SUMMARY)=' "$TMPROOT/d11/claude_cr.env" \
+   && [[ "$(argv_after "$TMPROOT/d11/claude_cr.args" --allowedTools)" == *"Bash(git diff:*)"* ]]; then
+  ok "D11 /code-review call: git kept, none of the five GITHUB_* command-file variables in its environment"
+else bad "D11 code-review env" "rc=$RC $(grep -E '^GITHUB_(ENV|PATH|OUTPUT|STATE|STEP_SUMMARY)=' "$TMPROOT/d11/claude_cr.env" 2>/dev/null | cut -d= -f1 | tr '\n' ' ')"; fi
 
 # D7 — action.yml's step env must not carry FH_TIMEOUT; the run block exports it only from a non-empty input.
 envblock() { awk '/^ *env: *$/{e=1; next} e && /^ *run: *\|/{exit} e{print}' "$1"; }
