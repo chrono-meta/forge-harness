@@ -159,6 +159,7 @@
     "scripts/adapters/qasp_web_rules.sh",
     "scripts/backtick_guard.sh",
     "scripts/below_floor_scan.sh",
+    "scripts/test_below_floor_scan_lanes.sh",
     "scripts/branch_claim.sh",
     "scripts/capability_effect_probe.sh",
     "scripts/capability_registry_check.sh",
