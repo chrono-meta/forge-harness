@@ -227,6 +227,23 @@ if [ -d "$_AUDIT_DIR" ] && fh_cadence_due "$_FH_HOOK_SRC"; then
   fi
 fi
 
+# 1-b1) Nightly-job heartbeat (2026-11-20 weekly audit) — an installed nightly job that left no output
+# file says nothing: frontier-digest's autopilot went 25 nights SKIPPED unread (10-11..11-04), and on
+# 11-18 live-eval + selfdev produced nothing (a planned pause recorded only in the lease archive, so the
+# audit first read it as a failure). Dates only, days in a recorded pause (tracks/_meta/job_pauses.tsv)
+# set apart; advisory, silent when every day has output or no job is installed (a fresh clone or a
+# machine without the plists prints nothing). frontier-digest is checked by its own block above.
+# No --meta: the script reads the MAIN checkout's tracks/_meta, so a worktree session (empty tracks/)
+# does not report every job missing. Bounded by a 5 s perl alarm (macOS has no coreutils timeout);
+# without perl it runs unbounded rather than not at all.
+if [ -f "$FH/scripts/job_heartbeat.py" ] && fh_cadence_due "$_FH_HOOK_SRC"; then
+  if command -v perl >/dev/null 2>&1; then
+    perl -e 'alarm shift @ARGV; exec @ARGV' 5 python3 "$FH/scripts/job_heartbeat.py" 2>/dev/null || true
+  else
+    python3 "$FH/scripts/job_heartbeat.py" 2>/dev/null || true
+  fi
+fi
+
 # 1-b2) 흡수 대기열 (2026-10-28) — 바깥에서 온 «가져올 것» (digest 후보 · 외부 자산 감사의 가져올
 # 목록 · 운영자가 건넨 링크) 이 열린 채 남아 있으면 한 줄. MEASURED: techwriting 감사의 «가져올 것 5»
 # 가 하루 동안 아무도 안 집었고, 다음 날 운영자가 직접 발표 요약을 들고 와서야 ko-tech-writer 가
