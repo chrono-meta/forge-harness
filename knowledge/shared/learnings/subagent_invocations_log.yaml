@@ -5519,3 +5519,9 @@
   outcome: "both GUESS — measuring instrument and baseline, which field list and who scores, how «verbatim» and «no lost § heading» are checked; the line was rewritten with file-char size, a fixed 8/11-field grep scorer, a byte diff and probe_scope_check + grep before design"
   evidence: "PR body capsule (trim/4axis-rule-thin-resident)"
   tokens: "258837"
+- date: 2026-11-20
+  agent: "fh-meta:challenger (opus) — axis 2 for fh-gate/fh-goal NUL-delimited listings, AQ-20261119-8 (purpose: independence)"
+  task: "regressions vs old listing code, fail-closed paths, fh-goal → fh-gate hand-off, bash 3.2, set -euo pipefail, porcelain -z renames, lanes green under revert"
+  outcome: "A1 C3 — A: a change whose only name holds a newline left an empty list → fh-goal exit 0 / fh-gate fell back to dirty files (fixed: both fail closed, lanes added, guard-off probes red) · C: ARM F green pre-fix (labelled) · C: list temp file outside cleanup trap (fixed) · C: pre-existing single spaced missing path split (not changed)"
+  evidence: "PR body (auto/selfdev-2026-11-20-1)"
+  tokens: "46587"
