@@ -1196,6 +1196,7 @@ for _pair in \
   "scripts/destructive_pre_gate.sh|scripts/test_destructive_pre_gate_lanes.sh" \
   "scripts/probe_live_eval_lib.py|scripts/test_live_eval_transitions_lanes.sh" \
   "scripts/correction_moments.py|scripts/test_correction_moments_lanes.sh" \
+  "scripts/below_floor_scan.sh|scripts/test_below_floor_scan_lanes.sh" \
   "scripts/probe_live_eval_lib.py|scripts/test_live_eval_construct_lanes.sh" \
   "scripts/live_eval_matrix.py|scripts/test_live_eval_matrix_lanes.sh" \
   "scripts/live_eval_trace.py|scripts/test_live_eval_trace_lanes.sh" \
