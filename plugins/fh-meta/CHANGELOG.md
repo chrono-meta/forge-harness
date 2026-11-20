@@ -34,7 +34,7 @@ Items marked «not in the npm package» are in the repository checkout only.
     - one CONFIRMED / PLAUSIBLE / REFUTED vote per candidate;
     - at most 10 findings at `full`, 8 at `quick`;
     - it never receives `FH_TASK_DESCRIPTION`, in its prompt or in its process environment.
-  - it gets only Read · Glob · Grep: no shell, no MCP server, no skill (`--tools`, `--strict-mcp-config`, `--disable-slash-commands`; the change and the target content are in its prompt). A Claude Code too old for these flags fails the call (exit 10). The elephant pass below is the same.
+  - on the claude backend it gets only Read · Glob · Grep: no shell, no MCP server, no skill (`--tools`, `--strict-mcp-config`, `--disable-slash-commands`; the change and the target content are in its prompt). A Claude Code too old for these flags fails the call (exit 10). On codex it runs in `codex exec -s read-only`, codex's sandbox. The elephant pass below is the same.
   - `FH_GATE_ELEPHANT=auto` (on at `full`) or `on` adds an «elephant» pass:
     - it gets the task description and the touched files' git history;
     - it looks only for a past fix re-opened, a recorded decision undone or the task contradicted;

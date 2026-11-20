@@ -38,7 +38,8 @@
 #                                 the default. FH_REVIEWER=code-review on codex is an argument error.
 #                                 `code-review` is NOT read-only: /code-review needs git's read commands, and those
 #                                 can write a file (`--output=`); opt into it for trusted changes only. The `fh` and
-#                                 elephant passes get only Read · Glob · Grep (no shell, no MCP server, no skill).
+#                                 elephant passes get only Read · Glob · Grep on the claude backend (no shell, no MCP
+#                                 server, no skill); on codex they run in `codex exec -s read-only`, codex's sandbox.
 #   FH_GATE_ELEPHANT=off|auto|on  the elephant pass (default off; auto = on at level full): task description + the touched
 #                                 files' git history; looks only for a past fix re-opened, a recorded decision
 #                                 undone, or the stated task contradicted.
