@@ -39,7 +39,7 @@ inputs:
     required: false
     default: 'quick'
   backend:
-    description: 'AI backend: claude | codex | auto. Needs the matching credential in env.'
+    description: 'AI backend: claude | codex | auto | cross. Needs the matching credential in env. The opt-in review layers (FH_REVIEWER, FH_GATE_ELEPHANT, FH_GATE_EXEC) are not inputs: set them in the step env. FH_GATE_EXEC=on runs your repository''s own lane scripts.'
     required: false
     default: 'claude'
   model:
