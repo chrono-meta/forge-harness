@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# test_fh_gate_fusion_lanes.sh — lanes for fh-gate's review stage (built-in /code-review by default) and its
+# test_fh_gate_fusion_lanes.sh — lanes for fh-gate's opt-in /code-review review stage (FH_REVIEWER=code-review) and its
 # merge with the execution layer. Token-free: `claude` and `codex` are stubs on PATH.
 #
-#   F1  default claude backend calls «/code-review medium» (quick) / «high» (full) with a schema, read-only tools
+#   F1  FH_REVIEWER=code-review calls «/code-review medium» (quick) / «high» (full) with a schema, read-only tools
 #   F2  Important + Nit → PENDING (exit 1), grades B and C, the summary carried verbatim
 #   F3  Nit + Pre-existing only → PASS (exit 0)
 #   F4  no structured object → 10, no fallback to another reviewer
@@ -10,13 +10,14 @@
 #   F5b keys outside the schema (top level or in a finding) → 10
 #   F6  status ERROR → 10
 #   F7  FH_REVIEWER=fh-legacy → the older FH pass (its prompt on stdin, its verdict)
-#   F8  codex backend → the absorbed FH pass, and FH_GATE_REVIEWER says «fallback — /code-review unavailable»
+#   F8  codex backend with FH_REVIEWER=fh → the absorbed FH pass, not labelled fallback (it was asked for)
 #   F9  FH_REVIEWER=code-review on codex → 11
 #   F10 FH_REVIEWER / FH_GATE_EXEC outside their sets → 11
 #   F11 a change that turns its lane red, /code-review with no finding → BLOCKED (2), finding source E1
 #   F12 dry run → 12, the reviewer is not called, E1 «planned»
 #   F13 FH_GATE_EXEC=off → E0/E1 lines say NOT RUN (FH_GATE_EXEC=off)
-#   F14 cross → both legs' reviewer lines kept; the execution layer runs once
+#   F14 cross with FH_REVIEWER=code-review → the codex leg gets the goldfish pass, labelled fallback; both lines kept;
+#       the execution layer runs once
 #   F15 /code-review call fails (rc ≠ 0) → 10
 #   F16 /code-review runs in the repository root even when fh-gate is called from a subfolder
 #   F17 a Nit-only review cannot be lifted to PASS past a red lane, and a C lane note does not move PASS
@@ -29,6 +30,9 @@ GATE="$HERE/fh-gate.sh"
 TMPROOT=$(mktemp -d "${TMPDIR:-/tmp}/fh_gate_fusion_XXXXXX")
 trap 'rm -rf "$TMPROOT"' EXIT
 export FH_RECORD_BASE="$TMPROOT/records"; mkdir -p "$FH_RECORD_BASE"
+# These lanes exercise the opt-in review and execution layer (3.45.0: defaults are fh-legacy · exec off · elephant
+# off — pinned by test_fh_gate_defaults_lanes.sh). Each lane that needs otherwise sets its own value.
+export FH_REVIEWER=code-review FH_GATE_EXEC=on
 pass=0; fail=0
 ok()  { printf 'PASS  %s\n' "$1"; pass=$((pass + 1)); }
 bad() { printf 'FAIL  %s — %s\n' "$1" "$2"; fail=$((fail + 1)); }
@@ -90,8 +94,8 @@ gate f1b FH_GATE_EXEC=off FH_GATE_LEVEL=full ARGV_LOG="$TMPROOT/f1b.argv"
 if [ "$RC" -eq 0 ] && grep -qx '/code-review medium' "$TMPROOT/f1.argv" && grep -qx '/code-review high' "$TMPROOT/f1b.argv" \
    && grep -qx -- '--json-schema' "$TMPROOT/f1.argv" && grep -q 'Write,Edit' "$TMPROOT/f1.argv" \
    && has f1 'FH_GATE_REVIEWER: /code-review medium (built-in)'; then
-  ok "F1 claude backend calls /code-review (medium quick · high full), schema, read-only tools"
-else bad "F1 default reviewer is /code-review" "rc=$RC argv=$(tr '\n' ' ' < "$TMPROOT/f1.argv" 2>/dev/null)"; fi
+  ok "F1 FH_REVIEWER=code-review calls /code-review (medium quick · high full), schema, read-only tools"
+else bad "F1 /code-review opt-in" "rc=$RC argv=$(tr '\n' ' ' < "$TMPROOT/f1.argv" 2>/dev/null)"; fi
 
 # F2
 gate f2 FH_GATE_EXEC=off FAKE_CR="$CR_IMP_NIT"
@@ -130,10 +134,10 @@ if [ "$RC" -eq 1 ] && grep -q 'FH GOVERNANCE GATE' "$TMPROOT/f7.stdin" && has f7
 else bad "F7 FH_REVIEWER=fh-legacy → FH pass" "rc=$RC"; fi
 
 # F8
-gate f8 FH_GATE_EXEC=off FH_BACKEND=codex CODEX_STDIN_LOG="$TMPROOT/f8.stdin"
-if [ "$RC" -eq 0 ] && has f8 '(fallback — /code-review unavailable on codex)' && grep -q 'FH REVIEW PASS' "$TMPROOT/f8.stdin"; then
-  ok "F8 codex → the absorbed FH pass, labelled fallback"
-else bad "F8 codex → labelled fallback" "rc=$RC $(grep REVIEWER "$TMPROOT/f8.out")"; fi
+gate f8 FH_GATE_EXEC=off FH_BACKEND=codex FH_REVIEWER=fh CODEX_STDIN_LOG="$TMPROOT/f8.stdin"
+if [ "$RC" -eq 0 ] && has f8 'FH_GATE_REVIEWER: fh — goldfish pass' && ! has f8 'fallback' && grep -q 'FH REVIEW PASS' "$TMPROOT/f8.stdin"; then
+  ok "F8 codex + FH_REVIEWER=fh → the absorbed FH pass, not labelled fallback"
+else bad "F8 codex + fh" "rc=$RC $(grep REVIEWER "$TMPROOT/f8.out")"; fi
 
 # F9
 gate f9 FH_GATE_EXEC=off FH_BACKEND=codex FH_REVIEWER=code-review

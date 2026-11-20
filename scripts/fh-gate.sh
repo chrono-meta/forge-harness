@@ -28,19 +28,22 @@
 #   FH_TIMEOUT=120                seconds before backend is killed (default: 120)
 #   FH_VERBOSE=1                  print full backend stderr to stderr
 #   FH_RECORD_BASE=<p>  directory for governance_log YAML (default: FH_ROOT/tracks/_meta)
-#   FH_REVIEWER=code-review|fh|fh-legacy   review stage. Default on the claude backend: the built-in
-#                                 `/code-review` (findings carried as they come — Important → B, Nit and
-#                                 Pre-existing → C — and the verdict derived from the grades). `fh` = FH's own
-#                                 goldfish pass, /code-review's method absorbed (no author description); codex
-#                                 uses it and says so on FH_GATE_REVIEWER. `fh-legacy` = the older steel-quench
-#                                 angle pass. FH_REVIEWER=code-review on codex is an argument error.
-#   FH_GATE_ELEPHANT=auto|on|off  the elephant pass (auto = on at level full): task description + the touched
+#   FH_REVIEWER=fh-legacy|code-review|fh   review stage. Default (every backend): `fh-legacy`, the steel-quench
+#                                 angle pass the gate shipped before 3.45.0. Opt-in: `code-review` = the built-in
+#                                 `/code-review` (claude backend only; findings carried as they come — Important →
+#                                 B, Nit and Pre-existing → C — and the verdict derived from the grades); `fh` =
+#                                 FH's own goldfish pass, /code-review's method absorbed (no author description).
+#                                 UNMEASURED: whether a headless /code-review call, or the goldfish pass, returns
+#                                 the structured object the gate needs on every runner — which is why neither is
+#                                 the default. FH_REVIEWER=code-review on codex is an argument error.
+#   FH_GATE_ELEPHANT=off|auto|on  the elephant pass (default off; auto = on at level full): task description + the touched
 #                                 files' git history; looks only for a past fix re-opened, a recorded decision
 #                                 undone, or the stated task contradicted.
 #   FH_GATE_EXEC=on|off           execution layer (scripts/fh_gate_exec.sh, token-free): E0 static class
 #                                 scanners and E1 target lanes, run against this change in a COPY of the
 #                                 tree. A lane this change turns red → A (BLOCKED). It runs the change's own
-#                                 lane scripts — set off where the change is not trusted. Default on.
+#                                 lane scripts, so it is opt-in: default off (on = run them, only where the change
+#                                 is trusted).
 #   FH_GATE_BASE=<ref>            what the execution layer measures the change against. Default: HEAD when
 #                                 the tree has uncommitted changes, else merge-base(FH_BASE_BRANCH, HEAD).
 #   FH_GATE_LANES / FH_LANE_TIMEOUT / FH_GATE_MAX_LANES   see scripts/fh_gate_exec.sh
@@ -160,8 +163,8 @@ case "${1:-}" in
     printf '%s\n' "  FH_TIMEOUT=<seconds>                 backend kill deadline (default: 120)"
     printf '%s\n' "  FH_VERBOSE=1                         print full backend stderr"
     printf '%s\n' "  FH_REVIEWER=code-review|fh|fh-legacy review stage (default on claude: built-in /code-review)"
-    printf '%s\n' "  FH_GATE_ELEPHANT=auto|on|off         history-aware pass (auto: on at level full)"
-    printf '%s\n' "  FH_GATE_EXEC=on|off                  execution layer: scanners + target lanes in a copy (default on)"
+    printf '%s\n' "  FH_GATE_ELEPHANT=off|auto|on         history-aware pass (default off; auto: on at level full)"
+    printf '%s\n' "  FH_GATE_EXEC=off|on                  execution layer: scanners + target lanes in a copy (default off)"
     printf '%s\n' "  FH_GATE_BASE=<ref>                   base the execution layer measures the change against"
     printf '%s\n' ""
     printf '%s\n' "  https://github.com/chrono-meta/forge-harness"
@@ -184,8 +187,11 @@ FH_BACKEND="${FH_BACKEND:-claude}"
 _FH_TIMEOUT_SET="${FH_TIMEOUT:+x}"   # /code-review runs longer than one pass; its default is 900 unless the caller set one
 FH_TIMEOUT="${FH_TIMEOUT:-120}"
 FH_REVIEWER="${FH_REVIEWER:-}"
-FH_GATE_EXEC="${FH_GATE_EXEC:-on}"
-FH_GATE_ELEPHANT="${FH_GATE_ELEPHANT:-auto}"
+# The two layers added in 3.45.0 are opt-in: a caller who sets nothing gets the 3.44.0 review (see FH_REVIEWER).
+_EXEC_DEFAULTED=""; [[ -z "${FH_GATE_EXEC:-}" ]] && _EXEC_DEFAULTED=1
+_ELE_DEFAULTED=""; [[ -z "${FH_GATE_ELEPHANT:-}" ]] && _ELE_DEFAULTED=1
+FH_GATE_EXEC="${FH_GATE_EXEC:-off}"
+FH_GATE_ELEPHANT="${FH_GATE_ELEPHANT:-off}"
 FH_VERBOSE="${FH_VERBOSE:-0}"
 FH_TASK_DESCRIPTION="${FH_TASK_DESCRIPTION:-}"
 FH_DIFF_PATH="${FH_DIFF_PATH:-}"
@@ -233,6 +239,9 @@ esac
 # pre-commit load-bearing leg already computes.
 if [[ "$FH_BACKEND" == "cross" ]]; then
   _CROSS_LEGS=""; _CROSS_OUT=""; _CROSS_WORST="PASS"; _CROSS_RAN=0; _CROSS_ERR=""; _CROSS_EXEC="$FH_GATE_EXEC"
+  [[ -n "$_EXEC_DEFAULTED" ]] && _CROSS_EXEC=""   # a defaulted off stays «off by default» in the legs (cross-family R1)
+  # a timeout the caller did not set must stay unset in the legs, so each picks its own per-review default (cross-family R1)
+  _legunset=(); [[ -z "$_FH_TIMEOUT_SET" ]] && _legunset=(-u FH_TIMEOUT)
   _sev_rank() { case "$1" in PASS) echo 0 ;; PENDING) echo 1 ;; ESCALATE) echo 2 ;; BLOCKED) echo 3 ;; *) echo -1 ;; esac; }
   for _leg in claude codex; do
     command -v "$_leg" >/dev/null 2>&1 || { _CROSS_ERR="${_CROSS_ERR}${_CROSS_ERR:+, }$_leg (not installed)"; continue; }
@@ -242,7 +251,10 @@ if [[ "$FH_BACKEND" == "cross" ]]; then
     # i.e. cross would work only when there was nothing to find. `|| _legrc=$?` keeps the status
     # without letting it abort. Verified against a BLOCKED leg, not assumed.
     _legrc=0
-    _legout=$(FH_BACKEND="$_leg" FH_GATE_EXEC="$_CROSS_EXEC" "$0" "$@" 2>/dev/null) || _legrc=$?
+    # /code-review is claude-only: a cross run that opted into it gives the codex leg the goldfish pass, labelled.
+    _legrev="${FH_REVIEWER:-}"; _legfb=""
+    if [[ "$_leg" == codex && "$_legrev" == code-review ]]; then _legrev=fh; _legfb=1; fi
+    _legout=$(env ${_legunset[@]+"${_legunset[@]}"} FH_BACKEND="$_leg" FH_GATE_EXEC="$_CROSS_EXEC" FH_REVIEWER="$_legrev" _FH_CROSS_LEG_FALLBACK="$_legfb" "$0" "$@" 2>/dev/null) || _legrc=$?
     # 11 (argument error) and 12 (dry-run) are not a leg failing — every leg gets the same arguments, so
     # every leg would say the same. Pass them through instead of folding them into "harness error 10"
     # (found 2026-10-20 by a local-model self-audit candidate, reproduced: cross + bad level → 10, not 11;
@@ -259,7 +271,7 @@ if [[ "$FH_BACKEND" == "cross" ]]; then
     [ -z "$_legverdict" ] && { _CROSS_ERR="${_CROSS_ERR}${_CROSS_ERR:+, }$_leg (no verdict line)"; continue; }
     _CROSS_RAN=$((_CROSS_RAN+1))
     _CROSS_LEGS="${_CROSS_LEGS}${_CROSS_LEGS:+,}$_leg"
-    _CROSS_EXEC=off   # the layer is the same for every leg: it runs in the first leg that REACHES A VERDICT. A leg that fails
+    [[ -z "$_EXEC_DEFAULTED" ]] && _CROSS_EXEC=off   # the layer is the same for every leg: it runs in the first leg that REACHES A VERDICT. A leg that fails
                       # before its verdict does not count, so the next leg runs the layer again (into its own temp copy).
     [ "$(_sev_rank "$_legverdict")" -gt "$(_sev_rank "$_CROSS_WORST")" ] && _CROSS_WORST="$_legverdict"
     _CROSS_OUT="${_CROSS_OUT}
@@ -367,13 +379,9 @@ fi
 # pass (EGM's split: the goldfish reviews without the author's explanation, the elephant remembers the repository):
 # it gets the task description and the touched files' history and looks only for a past fix re-opened, a recorded
 # decision undone, or the stated task contradicted.
-if [[ -z "$FH_REVIEWER" ]]; then
-  if [[ "$FH_BACKEND" == "claude" ]]; then
-    FH_REVIEWER="code-review"
-  else
-    FH_REVIEWER="fh"; _REVIEWER_FALLBACK=1
-  fi
-fi
+# Default: fh-legacy on every backend (3.45.0). /code-review and the goldfish pass are opt-in until a headless run
+# shows they return the structured object on the runners consumers use — that has not been measured.
+[[ -z "$FH_REVIEWER" ]] && FH_REVIEWER="fh-legacy"
 if [[ "$FH_REVIEWER" == "code-review" && "$FH_BACKEND" != "claude" ]]; then
   echo "ERROR: FH_REVIEWER=code-review needs the claude backend (/code-review is a Claude Code built-in); got FH_BACKEND=$FH_BACKEND" >&2
   exit $EXIT_ARG_ERROR
@@ -385,7 +393,7 @@ if [[ "$FH_REVIEWER" == "code-review" ]]; then
   [[ -z "$_FH_TIMEOUT_SET" ]] && FH_TIMEOUT=900
 elif [[ "$FH_REVIEWER" == "fh" ]]; then
   REVIEWER_NOTE="fh — goldfish pass, /code-review method absorbed (${CR_EFFORT}: 8 angles · 1-vote verify · ≤${ABS_CAP}; no author description)"
-  [[ "${_REVIEWER_FALLBACK:-0}" == 1 ]] && REVIEWER_NOTE="${REVIEWER_NOTE} (fallback — /code-review unavailable on ${FH_BACKEND})"
+  [[ "${_FH_CROSS_LEG_FALLBACK:-}" == 1 ]] && REVIEWER_NOTE="${REVIEWER_NOTE} (fallback — /code-review unavailable on ${FH_BACKEND})"
   [[ -z "$_FH_TIMEOUT_SET" ]] && FH_TIMEOUT=900
 else
   REVIEWER_NOTE="fh-legacy (FH_REVIEWER=fh-legacy — steel-quench angle pass)"
@@ -700,7 +708,9 @@ fi
 EXEC_JSON='{"e0":{"status":"not-run","detail":"NOT RUN"},"e1":{"status":"not-run","detail":"NOT RUN"},"findings":[]}'
 _EXEC_SCRIPT="${FH_ROOT}/scripts/fh_gate_exec.sh"
 _exec_lines() { EXEC_JSON=$(jq -cn --arg d "$1" '{e0:{status:"not-run",detail:$d},e1:{status:"not-run",detail:$d},findings:[]}'); }
-if [[ "$FH_GATE_EXEC" == "off" ]]; then
+if [[ "$FH_GATE_EXEC" == "off" && -n "$_EXEC_DEFAULTED" ]]; then
+  EXEC_JSON=$(printf '%s' "$EXEC_JSON" | sed 's/"NOT RUN"/"NOT RUN (off by default — FH_GATE_EXEC=on runs it; it executes this repository'"'"'s own lanes)"/g')
+elif [[ "$FH_GATE_EXEC" == "off" ]]; then
   EXEC_JSON=$(printf '%s' "$EXEC_JSON" | sed 's/"NOT RUN"/"NOT RUN (FH_GATE_EXEC=off)"/g')
 elif ! command -v jq &>/dev/null; then
   EXEC_JSON=$(printf '%s' "$EXEC_JSON" | sed 's/"NOT RUN"/"NOT RUN (jq missing)"/g')
@@ -898,7 +908,8 @@ PROMPT
 if [[ "$_IS_GIT" != 1 ]]; then
   ELEPHANT_LINE="not-run — NOT RUN (not a git repository)"; ELE_ON=0
 elif [[ "$ELE_ON" != 1 ]]; then
-  if [[ "$FH_GATE_ELEPHANT" == "off" ]]; then ELEPHANT_LINE="not-run — NOT RUN (FH_GATE_ELEPHANT=off)"
+  if [[ "$FH_GATE_ELEPHANT" == "off" && -n "$_ELE_DEFAULTED" ]]; then ELEPHANT_LINE="not-run — NOT RUN (off by default — FH_GATE_ELEPHANT=auto runs it at level full)"
+  elif [[ "$FH_GATE_ELEPHANT" == "off" ]]; then ELEPHANT_LINE="not-run — NOT RUN (FH_GATE_ELEPHANT=off)"
   else ELEPHANT_LINE="not-run — NOT RUN (level quick; FH_GATE_ELEPHANT=on runs it)"; fi
 else
   ELEPHANT_LINE="planned — history of ${ELE_NFILES} file(s), ${ELE_NCOMMITS} commit(s)"

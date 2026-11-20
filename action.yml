@@ -47,9 +47,9 @@ inputs:
     required: false
     default: ''
   timeout:
-    description: 'Seconds before the backend is killed. A timeout is a HARNESS_ERROR, not a pass.'
+    description: "Seconds before the backend is killed. A timeout is a HARNESS_ERROR, not a pass. Empty (default) = the gate's own default for the review it runs: 120 for the default fh-legacy pass, 900 for an opted-in /code-review or goldfish pass. Before 3.45.0 the action always sent 120, which the longer opt-in reviews do not fit."
     required: false
-    default: '120'
+    default: ''
   dry-run:
     description: 'true = emit the prompt and do NOT review (exit 12). Never reported as PASS.'
     required: false
@@ -87,11 +87,13 @@ runs:
       env:
         FH_BACKEND: ${{ inputs.backend }}
         FH_MODEL: ${{ inputs.model }}
-        FH_TIMEOUT: ${{ inputs.timeout }}
+        FH_ACTION_TIMEOUT: ${{ inputs.timeout }}
         FH_CALLER: github-action
       run: |
         set -uo pipefail   # NOT -e: a non-zero exit is the payload, not a crash
         [ "${{ inputs.dry-run }}" = "true" ] && export FH_DRY_RUN=1
+        # FH_TIMEOUT only when the caller gave one: a set FH_TIMEOUT stops the gate from choosing its own per review.
+        if [ -n "${FH_ACTION_TIMEOUT:-}" ]; then export FH_TIMEOUT="$FH_ACTION_TIMEOUT"; fi
         rc=0
         npx --yes --package "@chrono-meta/fh-gate@${{ inputs.version }}" fh-gate "${{ inputs.files }}" "${{ inputs.level }}" github-action || rc=$?
         # ── the mapping table. UNKNOWN is fail-closed on purpose (see header). ──
