@@ -5525,3 +5525,200 @@
   outcome: "A1 C3 — A: a change whose only name holds a newline left an empty list → fh-goal exit 0 / fh-gate fell back to dirty files (fixed: both fail closed, lanes added, guard-off probes red) · C: ARM F green pre-fix (labelled) · C: list temp file outside cleanup trap (fixed) · C: pre-existing single spaced missing path split (not changed)"
   evidence: "PR body (auto/selfdev-2026-11-20-1)"
   tokens: "46587"
+- {"ts":"2026-11-17T18:36:00+0900","session":"7ce75c66","agent":"general-purpose","model":"sonnet","purpose":"independence","task":"FH HOLD PR 5 audit (#1119 #1118 #1110 #1082 #1062) read-only"}
+- date: 2026-11-19
+  session: 7ce75c66
+  agent: general-purpose
+  model: sonnet
+  purpose: independence — sister-asset audit of affaan-m/ECC (public repo, read-only)
+  output: tracks/_meta/sister_asset_ECC_2026-11-19.md
+  lease: operator 2026-11-19 «추천대로 가고 둘다시작»
+- date: 2026-11-19
+  session: 7ce75c66
+  agent: fh-meta:hub-persona-auditor
+  model: sonnet
+  purpose: independence — pre-publication persona audit of external comment draft for google/elephant-goldfish-model#61
+  output: verdict «post after mandatory fixes» — 5 mandatory fixes applied in tracks/_meta/egm61_comment_draft_2026-11-19.md v2
+- date: 2026-11-19
+  session: 7ce75c66
+  agent: general-purpose
+  model: sonnet
+  purpose: independence — human-voice / naturalness edit of the EGM #61 comment draft v2 (facts and numbers fixed)
+  output: v3 applied in tracks/_meta/egm61_comment_draft_2026-11-19.md (pairing checked vs W-C · paper 4.2)
+  lease: operator 2026-11-19 «한글로 한번 보여줘 그리고 사람이 쓰것처럼 자연스러운지 테크라이터로 한번 걸러주면좋을듯»
+- date: 2026-11-19
+  session: 7ce75c66
+  agent: general-purpose
+  model: sonnet
+  purpose: independence — public landscape scan of governance engineering and meta-harness work (axes A–G vs FH), web only, generic search terms
+  output: tracks/_meta/landscape_governance_metaharness_2026-11-19.md — 13 systems x axes A–G, 47 links; root spot-check §5
+  lease: operator 2026-11-19 «둘 다 시작»
+- date: 2026-11-19
+  session: 7ce75c66
+  agent: web-fetch
+  model: haiku
+  purpose: independence — spot-check 4 papers cited by the landscape scan (existence + claim support)
+  output: tracks/_meta/landscape_governance_metaharness_2026-11-19.md §5 — all 4 exist; 2 claims narrower than stated
+  lease: operator 2026-11-19 «둘 다 시작»
+- date: 2026-11-19
+  session: c141cffa-child (qasp discussion)
+  agent: Explore
+  model: sonnet
+  purpose: qasp baseline audit, area 1 of 4 (preparation lane) — read-only on a local clean worktree, no web
+  output: done — findings kept in the qasp session's private notes; headline claims reproduced by the session before use
+  lease: operator 2026-11-19 «별도 내부 워크플로나 서브 에이전트를 활용해서 ... 점검해보고 보강도 해줘»
+- date: 2026-11-19
+  session: c141cffa-child (qasp discussion)
+  agent: Explore
+  model: sonnet
+  purpose: qasp baseline audit, area 2 of 4 (augmentation tools) — read-only on a local clean worktree, no web
+  output: done — findings kept in the qasp session's private notes; headline claims reproduced by the session before use
+  lease: operator 2026-11-19 «별도 내부 워크플로나 서브 에이전트를 활용해서 ... 점검해보고 보강도 해줘»
+- date: 2026-11-19
+  session: c141cffa-child (qasp discussion)
+  agent: Explore
+  model: sonnet
+  purpose: qasp baseline audit, area 3 of 4 (pattern library) — read-only on a local clean worktree, no web
+  output: done — findings kept in the qasp session's private notes; headline claims reproduced by the session before use
+  lease: operator 2026-11-19 «별도 내부 워크플로나 서브 에이전트를 활용해서 ... 점검해보고 보강도 해줘»
+- date: 2026-11-19
+  session: c141cffa-child (qasp discussion)
+  agent: Explore
+  model: sonnet
+  purpose: qasp baseline audit, area 4 of 4 (first use on a fresh copy) — read-only, temp copy under TMPDIR, no web
+  output: done — findings kept in the qasp session's private notes; headline claims reproduced by the session before use
+  lease: operator 2026-11-19 «별도 내부 워크플로나 서브 에이전트를 활용해서 ... 점검해보고 보강도 해줘»
+- date: 2026-11-19
+  session: c141cffa-child (FoD gate real-traffic error rates)
+  agent: general-purpose
+  model: sonnet
+  purpose: "Labeller calibration A — 30 planted redacted command shapes (15 should-pause, 15 not), blind to truth"
+  prompt_summary: "Rubric (pause / no-pause / indeterminate) + 30 closed-vocabulary shapes inline; no tools"
+  outcome: accepted
+  finding: "30/30 correct — calibrated by the pre-registered rule (acc >= 0.85, both recalls >= 0.8)"
+  note: "Redacted shapes only: no real path, name or command text reached the subagent"
+- date: 2026-11-19
+  session: c141cffa-child (FoD gate real-traffic error rates)
+  agent: general-purpose
+  model: sonnet
+  purpose: "Labeller calibration B — same 30 planted cards, independent fresh context"
+  prompt_summary: "Same as A"
+  outcome: accepted
+  finding: "30/30 correct — calibrated"
+  note: "Redacted shapes only"
+- date: 2026-11-19
+  session: c141cffa-child (FoD gate real-traffic error rates)
+  agent: general-purpose
+  model: sonnet
+  purpose: "Real-batch labeller A — 190 redacted cards (180 sampled gate decisions + 10 hidden planted), blind to the gate's decision and rule"
+  prompt_summary: "Read exactly two redacted files (rubric, cards) and label each card"
+  outcome: accepted
+  finding: "Hidden planted 10/10 (consensus); agreement with B 85.8%, kappa 0.71"
+  note: "Read access limited to the two redacted files; deviation from tool-free calibration calls, logged in the report"
+- date: 2026-11-19
+  session: c141cffa-child (FoD gate real-traffic error rates)
+  agent: general-purpose
+  model: sonnet
+  purpose: "Real-batch labeller B — same 190 cards, independent fresh context"
+  prompt_summary: "Same as A"
+  outcome: accepted
+  finding: "Fewer INDETERMINATE than A (23 vs 49); decided rates within 10 points of A"
+  note: "Redacted files only"
+- date: 2026-11-19
+  session: c141cffa-child (qasp discussion)
+  agent: web-fetch
+  model: haiku
+  purpose: read one public page (KASI 2027 calendar data) for national public holiday dates; generic query, no project content sent
+  output: 2027 weekday public holidays list; page notes it is pre-official (official = 월력요항)
+  lease: operator 2026-11-19 «점검해보고 보강도 해줘»
+- date: 2026-11-19
+  session: c141cffa-child (qasp discussion)
+  agent: general-purpose
+  model: sonnet
+  purpose: cold read (first-time reader persona) of a private planning document, one local file only, no web
+  output: done — 15 findings (S9 A5 R1); 14 applied, 1 turned into a decision item
+  lease: operator 2026-11-19 «계획서는 테크라이터 잘 돌려서 내가 다시 고쳐 쓸 일 없게 해줘»
+- date: 2026-11-19
+  session: c141cffa-child (qasp discussion)
+  agent: general-purpose
+  model: sonnet
+  purpose: second cold read (fresh first-time reader) of the revised private planning document, one local file only, no web
+  output: done — 12 findings (S9 A2 R1); 11 applied, staffing person-months left as a listed decision
+  lease: operator 2026-11-19 «계획서는 테크라이터 잘 돌려서 내가 다시 고쳐 쓸 일 없게 해줘»
+- date: 2026-11-19
+  session: c141cffa-child (qasp discussion)
+  agent: general-purpose
+  model: sonnet
+  purpose: third cold read (fresh first-time reader) of the revised private planning document, one local file only, no web
+  output: done — 10 findings (S6 A4) + 3 rhythm notes; all applied (two as new decision rows)
+  lease: operator 2026-11-19 «계획서는 테크라이터 잘 돌려서 내가 다시 고쳐 쓸 일 없게 해줘»
+- date: 2026-11-19
+  session: c141cffa-child (qasp discussion)
+  agent: general-purpose
+  model: sonnet
+  purpose: fourth cold read (fresh first-time reader) of the revised private planning document, one local file only, no web
+  output: done — 10 findings (S4 A6 R0); all applied
+  lease: operator 2026-11-19 «계획서는 테크라이터 잘 돌려서 내가 다시 고쳐 쓸 일 없게 해줘»
+- date: 2026-11-19
+  session: c141cffa-child (qasp discussion)
+  agent: general-purpose
+  model: sonnet
+  purpose: fifth cold read (fresh first-time reader) of the revised private planning document, one local file only, no web
+  output: done — 10 findings (S4 A4 R2); all applied
+  lease: operator 2026-11-19 «계획서는 테크라이터 잘 돌려서 내가 다시 고쳐 쓸 일 없게 해줘»
+- date: 2026-11-19
+  session: c141cffa-child (qasp discussion)
+  agent: general-purpose
+  model: sonnet
+  purpose: sixth cold read (fresh first-time reader) of the revised private planning document, one local file only, no web
+  output: done — 10 findings (S3 A6 R1); all applied
+  lease: operator 2026-11-19 «계획서는 테크라이터 잘 돌려서 내가 다시 고쳐 쓸 일 없게 해줘»
+- date: 2026-11-19
+  session: c141cffa-child (qasp discussion)
+  agent: general-purpose
+  model: sonnet
+  purpose: seventh cold read (fresh first-time reader) of the revised private planning document, one local file only, no web
+  output: done — 10 findings (S2 A7 R1); all applied
+  lease: operator 2026-11-19 «계획서는 테크라이터 잘 돌려서 내가 다시 고쳐 쓸 일 없게 해줘»
+- date: 2026-11-19
+  session: c141cffa-child (qasp discussion)
+  agent: general-purpose
+  model: sonnet
+  purpose: eighth cold read (fresh first-time reader) of the revised private planning document, one local file only, no web
+  output: done — 10 findings (S4 A5 R1); all applied
+  lease: operator 2026-11-19 «계획서는 테크라이터 잘 돌려서 내가 다시 고쳐 쓸 일 없게 해줘»
+- date: 2026-11-19
+  session: c141cffa-child (qasp discussion)
+  agent: general-purpose
+  model: sonnet
+  purpose: ninth cold read, contradiction-focused (fresh first-time reader) of the revised private planning document, one local file only, no web
+  output: done — S 0; 3 wording notes applied
+  lease: operator 2026-11-19 «계획서는 테크라이터 잘 돌려서 내가 다시 고쳐 쓸 일 없게 해줘»
+- date: 2026-11-19
+  session: c141cffa-child (qasp discussion)
+  agent: general-purpose
+  model: sonnet
+  purpose: tenth read, contradiction-only confirmation after final wording edits, one local file only, no web
+  output: done — S 0; 2 notes applied as one-line wording edits (not re-read)
+  lease: operator 2026-11-19 «계획서는 테크라이터 잘 돌려서 내가 다시 고쳐 쓸 일 없게 해줘»
+- date: 2026-11-20
+  session: 7ce75c66 (root)
+  agent: general-purpose
+  model: sonnet
+  purpose: rebuild 12 known defect pairs from public forge-harness fix commits and run Gemini 4 Hydrogen vs 3.8 Flash through agy_launch_guard FH_AGY_ISOLATION=no-tools-agent (answer key in a separate folder, no grading)
+  output: interim — 12 pairs built, 96-call run detached (hydrogen median 71.5 s, flash 377 s), 0 guard refusals, 0 voids; found the guard appends --agent after caller args so a bare -p breaks (use -p=<text>)
+  lease: operator 2026-11-20 «지금돌려» (Hydrogen vs 3.8 Flash comparison)
+- date: 2026-11-20
+  session: 7ce75c66 (root)
+  agent: general-purpose
+  model: sonnet
+  purpose: blind grading of the Gemini Hydrogen arm on 12 public FH defect pairs (sheet A, 24 arm items + 24 planted controls, reviewer identity hidden, reads one local file only)
+  output: done — controls 24/24 correct (12 HIT, 12 MISS); Hydrogen arm 5/24 HIT on pre-fix excerpts; spot-check of P01/P10 rationales agreed with raw answers
+  lease: operator 2026-11-20 «지금돌려» (Hydrogen vs 3.8 Flash comparison)
+- date: 2026-11-20
+  session: 7ce75c66 (root)
+  agent: general-purpose
+  model: sonnet
+  purpose: blind grading of the Gemini 3.8 Flash arm on the same 12 public FH defect pairs (sheet B, 24 arm items + 24 planted controls, reviewer identity hidden, reads one local file only)
+  output: done — controls 24/24 correct (12 HIT, 12 MISS); Flash arm 2/24 HIT on pre-fix excerpts (P05 both reps)
+  lease: operator 2026-11-20 «지금돌려» (Hydrogen vs 3.8 Flash comparison)
