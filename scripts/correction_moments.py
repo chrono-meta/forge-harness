@@ -14,6 +14,15 @@ What it claims and what it does not:
   · "recurring" = two cue hits on different days that share >= --min-shared content words. Word
     overlap is a candidate filter, not a topic judgment — the reader decides whether a group is one rule.
   · every exclusion is counted and printed (malformed rows, short rows), never dropped silently.
+  · scheduled-trigger prompts (cron / self-scheduled check-ins) land in the ledger as if the operator
+    typed them. A row is a `repeated-prompt` (excluded, counted) when its whole text — whitespace
+    collapsed, digits removed so a time or counter inside it does not hide the repeat — is at least
+    REPEAT_MIN_CHARS long and occurs >= REPEAT_MIN times across ALL parseable ledger rows (counted
+    before --since, so the verdict does not depend on the window). Short texts are never excluded:
+    a short correction said three times is the signal this tool exists for. 2026-11-20 weekly audit:
+    24 of 24 «recurring pairs» were two cron prompts pairing on «linked list_sessions».
+    Residual: a long correction pasted verbatim three times is excluded (counted, so it is visible);
+    a cron prompt over MAX_CHARS is counted under `long`, not here.
 
 usage: python3 scripts/correction_moments.py [ledger_dir] [--since YYYY-MM-DD] [--min-shared N] [--all]
 exit:  0 = ran · 2 = ledger dir missing or holds no rows (NOT a "no corrections" result)
@@ -27,6 +36,8 @@ STOP = set("그리고 그런데 그러면 이거 이건 그거 그건 저거 지
            "있어 있는 없어 없는 아니 아냐 아니야 아니라 말고 다시 정정 해줘 해봐 한번 모두 전부 같은 같아 "
            "this that with from have what when which there would could about into than then also only does your will".split())
 MIN_CHARS = 6
+REPEAT_MIN_CHARS = 40   # shorter texts are never treated as scheduled prompts
+REPEAT_MIN = 3          # occurrences across all ledger rows that make a text a scheduled prompt
 MAX_CHARS = 600   # longer rows are almost always pasted reports or documents, not a correction in the operator's words
 
 
@@ -54,6 +65,8 @@ def main(argv):
     min_shared = int(opt.get("--min-shared", "2"))
     files = sorted(glob.glob(os.path.join(d, "*.jsonl")))
     rows, bad, short, envelope, long_ = [], 0, 0, 0, 0
+    norm = lambda t: re.sub(r"\d+", "", " ".join(t.split()))
+    seen = {}
     for f in files:
         sess = os.path.basename(f)[:8]
         for line in open(f, encoding="utf-8", errors="replace"):
@@ -64,6 +77,7 @@ def main(argv):
             t, ts = x.get("text"), x.get("ts")
             if not isinstance(t, str) or not isinstance(ts, str):
                 bad += 1; continue
+            seen[norm(t)] = seen.get(norm(t), 0) + 1
             if ts[:10] < since:
                 continue
             if t.lstrip().startswith("<"):
@@ -74,6 +88,13 @@ def main(argv):
             if len(t) > MAX_CHARS:
                 long_ += 1; continue
             rows.append((ts, sess, t))
+    is_rep = lambda t: len(norm(t)) >= REPEAT_MIN_CHARS and seen[norm(t)] >= REPEAT_MIN
+    repeated = sum(1 for _, _, t in rows if is_rep(t))
+    rows = [r for r in rows if not is_rep(r[2])]
+    if not rows and repeated:
+        print("⬜ every row is a repeated scheduled prompt (repeated-prompt=%d, envelope=%d short=%d long=%d malformed=%d)"
+              " — NOT MEASURED, not «no corrections»" % (repeated, envelope, short, long_, bad))
+        return 2
     if not rows:
         print("⬜ no ledger rows under %s (files=%d) — NOT MEASURED, not «no corrections»" % (d, len(files)))
         return 2
@@ -94,9 +115,9 @@ def main(argv):
     recurring.sort(key=lambda p: -len(p[2]))
     days = sorted({r[0][:10] for r in rows})
     print("# correction moments — %s .. %s (%d days)" % (days[0], days[-1], len(days)))
-    print("ledgers=%d · utterances=%d · excluded: envelope=%d short(<%d chars)=%d long(>%d chars)=%d malformed=%d · cue hits=%d · "
+    print("ledgers=%d · utterances=%d · excluded: envelope=%d short(<%d chars)=%d long(>%d chars)=%d malformed=%d repeated-prompt=%d · cue hits=%d · "
           "recurring pairs (different days, >=%d shared words)=%d · re-pasted pairs dropped=%d" % (len(files), len(rows), envelope, MIN_CHARS, short, MAX_CHARS, long_, bad,
-                                                                len(hits), min_shared, len(recurring), repaste))
+                                                                repeated, len(hits), min_shared, len(recurring), repaste))
     print("limits: cue-word recall only (a correction with no cue word is invisible — e.g. «영어로 써졌네», 2026-10-18) · word overlap is a candidate filter\n")
     for k, (i, j, sh) in enumerate(recurring, 1):
         print("## R%d — shared: %s" % (k, " ".join(sorted(sh)[:8])))
