@@ -21,7 +21,13 @@
 # Named residual: an answer that states a PR's status without the «#N» form, or without one of the
 # words below, is not seen (word recall is the instrument's limit).
 #
-# Env: FH_LEASE_FILE (default $HUB/CLAUDE.local.md) · FH_STATE_CLAIM_DIR (pending notes; default
+# ARCHIVE. Expired lease lines are moved verbatim into a gitignored archive (2026-11-20: 225 lines of
+# 2026-11-06..11-19). Its «utterance» lines are searched too and labelled «보관 · 만료» — an expired
+# record, not a live grant. Resident-file hits come first and their wording is unchanged; the archive
+# only adds lines under the same 8-line cap. Archive missing (general users have none) → silent.
+#
+# Env: FH_LEASE_FILE (default $HUB/CLAUDE.local.md) ·
+#      FH_LEASE_ARCHIVE (default $HUB/tracks/_meta/claude_local_lease_archive.md) · FH_STATE_CLAIM_DIR (pending notes; default
 #      ${TMPDIR:-/tmp}/fh_state_claim). Tests: scripts/test_state_claim_recheck_lanes.sh
 set -uo pipefail
 
@@ -32,6 +38,7 @@ command -v python3 >/dev/null 2>&1 || exit 0
 HUB="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || echo "$HOME/projects/forge-harness")}"
 export FH_SC_MODE="$MODE"
 export FH_SC_LEASE="${FH_LEASE_FILE:-$HUB/CLAUDE.local.md}"
+export FH_SC_ARCHIVE="${FH_LEASE_ARCHIVE:-$HUB/tracks/_meta/claude_local_lease_archive.md}"
 export FH_SC_DIR="${FH_STATE_CLAIM_DIR:-${TMPDIR:-/tmp}/fh_state_claim}"
 
 # The hook payload arrives on stdin; the program goes in by -c so the two never compete for stdin.
@@ -112,7 +119,7 @@ def main():
         s = m.group(0)
         return " " if re.search(r"#\d", s) and re.search(r"\s", s.strip("`«»“”\"「」")) else s
     text = QUOTED.sub(_drop, text)
-    NOTE = re.compile(r"\[state-claim\]|^\s*#\d+ · L\d+: |^\s*… 그 밖 \d+줄|기계는 «줄이 있다»")
+    NOTE = re.compile(r"\[state-claim\]|^\s*(?:\[보관 · 만료\] )?#\d+ · L\d+: |^\s*… 그 밖 \d+줄|기계는 «줄이 있다»")
     text = "\n".join(l for l in text.split("\n") if not NOTE.search(l))
     nums = set()
     clauses = re.split(r"[.!?。;；]+|\n+", text)
@@ -124,29 +131,40 @@ def main():
     nums = sorted(nums, key=int)
     if not nums:
         sys.exit(0)
-    try:
-        with open(lease, encoding="utf-8") as f:
-            lines = f.read().splitlines()
-    except Exception:
-        sys.exit(0)
+    ARCHIVE_ON = True
+    archive = os.environ.get("FH_SC_ARCHIVE", "")
+    sources = [(lease, "")]
+    if ARCHIVE_ON and archive and os.path.isfile(archive) and os.path.realpath(archive) != os.path.realpath(lease):
+        sources.append((archive, "[보관 · 만료] "))
 
-    hits, matched = [], []
-    for n in nums:
-        pat = re.compile(r"#" + n + r"(?!\d)")
-        for i, ln in enumerate(lines, 1):
-            if "utterance" in ln and pat.search(ln):
-                s = ln.strip()
-                hits.append("  #%s · L%d: %s" % (n, i, s[:160] + ("…" if len(s) > 160 else "")))
-                if n not in matched:
-                    matched.append(n)
+    hits, matched, read_from = [], [], []
+    for path, tag in sources:
+        try:
+            with open(path, encoding="utf-8", errors=("replace" if tag else "strict")) as f:
+                lines = f.read().splitlines()
+        except Exception:
+            continue   # either file may be absent; a missing one is silent
+        found = False
+        for n in nums:
+            pat = re.compile(r"#" + n + r"(?!\d)")
+            for i, ln in enumerate(lines, 1):
+                if "utterance" in ln and pat.search(ln):
+                    s = ln.strip()
+                    hits.append("  %s#%s · L%d: %s" % (tag, n, i, s[:160] + ("…" if len(s) > 160 else "")))
+                    found = True
+                    if n not in matched:
+                        matched.append(n)
+        if found:
+            read_from.append(path + (" (보관 파일 — 만료된 기록, 지금 유효한 허락 아님)" if tag else ""))
     if not hits:
         sys.exit(0)
     shown = hits[:8]
     more = len(hits) - len(shown)
     note = ("\U0001f50e [state-claim] 직전 답이 " + ", ".join("#" + n for n in matched) +
-            " 의 머지·허락·아침류 상태를 말했다. 리스 파일에 그 번호 «utterance» 줄이 있다 — "
-            "상태를 다시 말하기 전에 그 줄을 열어라(" + lease + "):\n" + "\n".join(shown) +
+            " 의 머지·허락·아침류 상태를 말했다. " + ("리스·보관 파일" if len(read_from) > 1 or (read_from and "보관 파일" in read_from[0]) else "리스 파일") + "에 그 번호 «utterance» 줄이 있다 — "
+            "상태를 다시 말하기 전에 그 줄을 열어라(" + " · ".join(read_from) + "):\n" + "\n".join(shown) +
             ("\n  … 그 밖 %d줄" % more if more > 0 else "") +
+            ("\n[보관 · 만료] 줄은 이미 만료된 기록이다 — 지금 유효한 허락으로 읽지 마라." if any(r.endswith("허락 아님)") for r in read_from) else "") +
             "\n기계는 «줄이 있다» 만 말한다. 직전 주장이 틀렸는지는 판단하지 않는다(번호가 다른 레포 것일 수 있다).")
     try:
         os.makedirs(pdir, exist_ok=True)

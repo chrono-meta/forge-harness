@@ -128,5 +128,69 @@ if cmp -s "$SUBJ" "$M2"; then ko "R2 mutation did not apply (HARNESS-ERROR)"; el
   [ -n "$out" ] && ok "mutant speaks on Q1 → Q1 would be red" || ko "R2 mutant still silent (lane does not see the drop)"
 fi
 
+echo "A1–A4 lease archive (expired utterance lines moved out of the lease file)"
+printf '%s\n' "# archive" '```' \
+  "            추가 utterance 2026-11-12 «머지해» (물음: FH #1101 머지할까) ⇒ #1101 머지" '```' > "$T/archive.md"
+arun() {  # $1 subj $2 lease $3 archive $4 dir $5 mode $6 json
+  FH_LEASE_FILE="$2" FH_LEASE_ARCHIVE="$3" FH_STATE_CLAIM_DIR="$4" bash "$1" "$5" <<<"$6"
+}
+ANS_A='{"session_id":"s1","last_assistant_message":"FH #1101 은 머지는 아침에 묻는다."}'
+D="$T/a1"; arun "$SUBJ" "$T/lease_yes.md" "$T/archive.md" "$D" stop "$ANS_A" >/dev/null
+out="$(arun "$SUBJ" "$T/lease_yes.md" "$T/archive.md" "$D" prompt "$P")"
+printf '%s' "$out" | grep -q '\[보관 · 만료\] #1101 · L3: ' && printf '%s' "$out" | grep -q '만료된 기록이다' \
+  && printf '%s' "$out" | grep -q 'archive.md' && ok "A1 archive-only number → note names the archive" || ko "A1 archive hit missing: ${out:0:200}"
+D="$T/a2"; arun "$SUBJ" "$T/lease_yes.md" "$T/archive.md" "$D" stop "$ANS" >/dev/null
+with_a="$(arun "$SUBJ" "$T/lease_yes.md" "$T/archive.md" "$D" prompt "$P")"
+D="$T/a2b"; run "$SUBJ" "$T/lease_yes.md" "$D" stop "$ANS" >/dev/null
+no_a="$(FH_LEASE_ARCHIVE="$T/absent_archive.md" FH_LEASE_FILE="$T/lease_yes.md" FH_STATE_CLAIM_DIR="$D" bash "$SUBJ" prompt <<<"$P")"
+[ -n "$with_a" ] && [ "$with_a" = "$no_a" ] && ! printf '%s' "$with_a" | grep -q '보관' \
+  && ok "A2 resident-file hit → output identical with or without the archive" || ko "A2 resident output changed: ${with_a:0:160}"
+D="$T/a3"; err="$(arun "$SUBJ" "$T/lease_yes.md" "$T/absent_archive.md" "$D" stop "$ANS_A" 2>&1 >/dev/null)"; rc=$?
+out="$(arun "$SUBJ" "$T/lease_yes.md" "$T/absent_archive.md" "$D" prompt "$P")"
+[ "$rc" -eq 0 ] && [ -z "$err$out" ] && ok "A3 archive absent → silent rc 0" || ko "A3 rc=$rc err=${err:0:80} out=${out:0:80}"
+D="$T/a4"; arun "$SUBJ" "$T/lease_yes.md" "$T/archive.md" "$D" stop '{"session_id":"s1","last_assistant_message":"FH #2222 머지는 아침에."}' >/dev/null
+out="$(arun "$SUBJ" "$T/lease_yes.md" "$T/archive.md" "$D" prompt "$P")"
+[ -z "$out" ] && ok "A4 number in neither file → silent" || ko "A4 spoke: ${out:0:80}"
+D="$T/a5"; arun "$SUBJ" "$T/absent.md" "$T/archive.md" "$D" stop "$ANS_A" >/dev/null
+out="$(arun "$SUBJ" "$T/absent.md" "$T/archive.md" "$D" prompt "$P")"
+printf '%s' "$out" | grep -q '#1101' && ok "A5 lease file absent, archive present → archive still read" || ko "A5 silent"
+
+printf '%s\n' "# archive" "            추가 utterance 2026-11-12 «머지 보류» (물음: #387 머지할까)" > "$T/archive387.md"
+D="$T/a6"; arun "$SUBJ" "$T/lease_yes.md" "$T/archive387.md" "$D" stop "$ANS" >/dev/null
+out="$(arun "$SUBJ" "$T/lease_yes.md" "$T/archive387.md" "$D" prompt "$P")"
+body="$(printf '%s' "$out" | python3 -c 'import json,sys;print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])' 2>/dev/null)"
+first="$(printf '%s\n' "$body" | grep -E '^  (\[보관 · 만료\] )?#387 · L' | head -1)"
+case "$first" in "  #387 · L3: "*) f_ok=1 ;; *) f_ok=0 ;; esac
+[ "$f_ok" = 1 ] && printf '%s' "$body" | grep -q '^  \[보관 · 만료\] #387 · L2: ' \
+  && ok "A6 both files hit → resident line first and untagged, archive line tagged" || ko "A6 order/tag wrong: ${body:0:240}"
+D="$T/a7"; arun "$SUBJ" "$T/lease_yes.md" "$T/archive.md" "$D" stop '{"session_id":"s1","last_assistant_message":"알림 받았어.\n  [보관 · 만료] #1101 · L3: 추가 utterance 2026-11-12 «머지해» (물음: FH #1101 머지할까) ⇒ #1101 머지"}' >/dev/null
+out="$(arun "$SUBJ" "$T/lease_yes.md" "$T/archive.md" "$D" prompt "$P")"
+[ -z "$out" ] && ok "A7 echoed archive note line → silent (no feedback loop)" || ko "A7 echo re-fired: ${out:0:120}"
+D="$T/a8"; mkdir -p "$T/archdir"; err="$(arun "$SUBJ" "$T/lease_yes.md" "$T/archdir" "$D" stop "$ANS_A" 2>&1 >/dev/null)"; rc=$?
+out="$(arun "$SUBJ" "$T/lease_yes.md" "$T/archdir" "$D" prompt "$P")"
+[ "$rc" -eq 0 ] && [ -z "$err$out" ] && ok "A8 archive path is a directory → silent rc 0" || ko "A8 rc=$rc err=${err:0:80}"
+D="$T/a9"; arun "$SUBJ" "$T/lease_yes.md" "$T/lease_yes.md" "$D" stop "$ANS" >/dev/null
+out="$(arun "$SUBJ" "$T/lease_yes.md" "$T/lease_yes.md" "$D" prompt "$P")"
+[ "$out" = "$with_a" ] && ok "A9 archive == lease file → no duplicate, resident output unchanged" || ko "A9 output: ${out:0:160}"
+
+echo "R3 revert probe (archive read disabled)"
+M3="$T/mutant3.sh"; sed 's/^    ARCHIVE_ON = True$/    ARCHIVE_ON = False/' "$SUBJ" > "$M3"
+if cmp -s "$SUBJ" "$M3"; then ko "R3 mutation did not apply (HARNESS-ERROR)"; else
+  D="$T/r3"; arun "$M3" "$T/lease_yes.md" "$T/archive.md" "$D" stop "$ANS_A" >/dev/null
+  out="$(arun "$M3" "$T/lease_yes.md" "$T/archive.md" "$D" prompt "$P")"
+  [ -z "$out" ] && ok "mutant silent → A1 would be red" || ko "R3 mutant still reports the archive line"
+  D="$T/r3b"; arun "$M3" "$T/lease_yes.md" "$T/archive.md" "$D" stop "$ANS" >/dev/null
+  out="$(arun "$M3" "$T/lease_yes.md" "$T/archive.md" "$D" prompt "$P")"
+  [ "$out" = "$with_a" ] && ok "mutant keeps A2 green (resident path untouched)" || ko "R3 mutant changed the resident output"
+fi
+
+echo "R4 revert probe (note-echo filter without the archive tag)"
+M4="$T/mutant4.sh"; sed 's/(?:\\\[보관 · 만료\\\] )?#/#/' "$SUBJ" > "$M4"
+if cmp -s "$SUBJ" "$M4"; then ko "R4 mutation did not apply (HARNESS-ERROR)"; else
+  D="$T/r4"; arun "$M4" "$T/lease_yes.md" "$T/archive.md" "$D" stop '{"session_id":"s1","last_assistant_message":"알림 받았어.\n  [보관 · 만료] #1101 · L3: 추가 utterance 2026-11-12 «머지해» (물음: FH #1101 머지할까) ⇒ #1101 머지"}' >/dev/null
+  out="$(arun "$M4" "$T/lease_yes.md" "$T/archive.md" "$D" prompt "$P")"
+  [ -n "$out" ] && ok "mutant re-fires on the echo → A7 would be red" || ko "R4 mutant still silent"
+fi
+
 echo "state_claim_recheck lanes: $pass passed · $fail failed"
 [ "$fail" -eq 0 ]
