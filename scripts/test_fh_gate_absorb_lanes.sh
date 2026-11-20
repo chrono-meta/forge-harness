@@ -12,8 +12,8 @@
 #   A7  elephant: on at full, off at quick, FH_GATE_ELEPHANT=off/on overrides, its line says which
 #   A8  the elephant prompt carries the touched file's history, including a past fix commit
 #   A9  an elephant finding (important) → PENDING, source elephant; an elephant with no structured object → 10
-#   A10 with /code-review as reviewer (default on claude) the elephant pass still runs at full
-#   A11 codex backend → the absorbed pass, labelled fallback; its call is read-only
+#   A10 with /code-review as reviewer (FH_REVIEWER=code-review) the elephant pass still runs at full
+#   A11 codex backend with FH_REVIEWER=fh → the absorbed pass; its call is read-only
 #   A12 FH_REVIEWER=fh-legacy → the older steel-quench prompt
 #   A13 not a git repository → elephant NOT RUN (not applicable), no finding
 #   A14 FH_GATE_ELEPHANT outside its set → 11 · FH_REVIEWER outside its set → 11
@@ -34,6 +34,9 @@ TMPROOT=$(mktemp -d "${TMPDIR:-/tmp}/fh_gate_absorb_XXXXXX")
 trap 'rm -rf "$TMPROOT"' EXIT
 export FH_RECORD_BASE="$TMPROOT/records"; mkdir -p "$FH_RECORD_BASE"
 export FH_GATE_EXEC=off
+# The elephant is opt-in since 3.45.0 (default off — pinned by test_fh_gate_defaults_lanes.sh); these lanes test it
+# at its «auto» setting (on at level full). Lanes that test another setting pass their own.
+export FH_GATE_ELEPHANT=auto
 pass=0; fail=0
 ok()  { printf 'PASS  %s\n' "$1"; pass=$((pass + 1)); }
 bad() { printf 'FAIL  %s — %s\n' "$1" "$2"; fail=$((fail + 1)); }
@@ -158,15 +161,15 @@ if [ "$r1" -eq 1 ] && has a9 'source: "elephant"' && has a9 'FH_GATE_VERDICT: PE
 else bad "A9 elephant mapping / fail-closed" "found=$r1 none=$r2"; fi
 
 # A10
-gate a10 FH_GATE_LEVEL=full
+gate a10 FH_REVIEWER=code-review FH_GATE_LEVEL=full
 if [ -e "$TMPROOT/a10/claude_cr.argv" ] && [ -e "$TMPROOT/a10/claude_ele.stdin" ] && has a10 'FH_GATE_REVIEWER: /code-review high'; then
   ok "A10 /code-review reviewer + elephant both run at full"
 else bad "A10 cr + elephant" "cr=$([ -e "$TMPROOT/a10/claude_cr.argv" ] && echo y || echo n) ele=$([ -e "$TMPROOT/a10/claude_ele.stdin" ] && echo y || echo n)"; fi
 
 # A11
-gate a11 FH_BACKEND=codex
-if [ "$RC" -eq 0 ] && has a11 'fallback — /code-review unavailable on codex' && logh a11 codex_abs.stdin 'FH REVIEW PASS' && logh a11 codex_abs.argv 'read-only'; then
-  ok "A11 codex → absorbed pass, labelled fallback, read-only"
+gate a11 FH_BACKEND=codex FH_REVIEWER=fh
+if [ "$RC" -eq 0 ] && has a11 'FH_GATE_REVIEWER: fh — goldfish pass' && logh a11 codex_abs.stdin 'FH REVIEW PASS' && logh a11 codex_abs.argv 'read-only'; then
+  ok "A11 codex + FH_REVIEWER=fh → absorbed pass, read-only"
 else bad "A11 codex absorbed" "rc=$RC $(grep REVIEWER "$TMPROOT/a11.out")"; fi
 
 # A12
@@ -218,7 +221,7 @@ if logh a18 claude_abs.stdin 'TRUNCATED: 80000 of' && has a18 'diff truncated in
 else bad "A18 truncation note" "$(grep REVIEWER "$TMPROOT/a18.out")"; fi
 
 # A19 — codex writes two JSON values → not exactly one object → 10
-gate a19 FH_BACKEND=codex FAKE_CODEX_TWICE=1
+gate a19 FH_BACKEND=codex FH_REVIEWER=fh FAKE_CODEX_TWICE=1
 # (the ERR trap would also turn the later merge crash into 10 — check that the single-value guard is what fired)
 if [ "$RC" -eq 10 ] && grep -qF 'not exactly one' "$TMPROOT/a19.err"; then ok "A19 codex output with two JSON values → 10, by the single-value guard"
 else bad "A19 two values → 10 by the guard" "rc=$RC"; fi
@@ -233,7 +236,7 @@ C1="$TMPROOT/ci_with_remote"; g clone -q --no-local "$REPO" "$C1"; g -C "$C1" ch
 C2="$TMPROOT/ci_single_branch"; g clone -q --no-local --single-branch --branch feat "$REPO" "$C2"; g -C "$C2" checkout -q --detach
 RUN_DIR="$C1" gate a20a FH_REVIEWER=fh FH_TARGET_FILES=scripts/foo.sh
 RUN_DIR="$C2" gate a20b FH_REVIEWER=fh-legacy FH_TARGET_FILES=scripts/foo.sh;  rc_b=$RC
-RUN_DIR="$C2" gate a20c FH_TARGET_FILES=scripts/foo.sh;                        rc_c=$RC   # /code-review, quick: no elephant
+RUN_DIR="$C2" gate a20c FH_REVIEWER=code-review FH_TARGET_FILES=scripts/foo.sh; rc_c=$RC   # /code-review, quick: no elephant
 RUN_DIR="$C2" gate a20d FH_REVIEWER=fh FH_TARGET_FILES=scripts/foo.sh;         rc_d=$RC
 if grep -qF 'The change (git diff against' "$TMPROOT/a20a/claude_abs.stdin" 2>/dev/null \
    && grep -qF -- '-[ -n "$1" ] || exit 2' "$TMPROOT/a20a/claude_abs.stdin" 2>/dev/null \

@@ -202,6 +202,7 @@
     "scripts/test_fh_gate_exec_lanes.sh",
     "scripts/test_fh_gate_fusion_lanes.sh",
     "scripts/test_fh_gate_absorb_lanes.sh",
+    "scripts/test_fh_gate_defaults_lanes.sh",
     "scripts/fh-goal.sh",
     "scripts/fh-run.sh",
     "scripts/fh_env_delta_scan.sh",
