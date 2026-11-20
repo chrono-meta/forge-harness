@@ -111,7 +111,7 @@ else bad "D8 cross defaults" "rc=$RC $(grep -E 'E1' "$TMPROOT/d8.out" | tr '\n' 
 bash "$GATE" --help > "$TMPROOT/help.out" 2>&1
 if grep -qF 'FH_REVIEWER=fh-legacy|code-review|fh review stage (default: fh-legacy' "$TMPROOT/help.out" && ! grep -qF 'default on claude: built-in /code-review' "$TMPROOT/help.out"; then
   ok "D9 --help names fh-legacy as the default reviewer"
-else bad "D9 --help default reviewer" "$(grep -F 'FH_REVIEWER' "$TMPROOT/help.out" | head -2 | tr '\n' '|')"; fi
+else bad "D9 --help default reviewer" "$(grep -m2 -F 'FH_REVIEWER' "$TMPROOT/help.out" | tr '\n' '|')"; fi
 
 # D7 — action.yml's step env must not carry FH_TIMEOUT; the run block exports it only from a non-empty input.
 envblock() { awk '/^ *env: *$/{e=1; next} e && /^ *run: *\|/{exit} e{print}' "$1"; }
