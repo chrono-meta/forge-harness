@@ -18,6 +18,8 @@
 #   TR16 same plugin, different version → INVALID-COMPARISON (an auto-update moved a version mid-run)
 #   TR17 one arm's init carries a plugin list (or an empty one), the other's none → INVALID-COMPARISON (UNKNOWN ≠ «no plugins»)
 #   TR18 revert probe: an inventory without plugins turns TR14 back to comparable → TR14 would be red
+#   TR23 the INVALID reason names the elements not in every arm (mcp · plugin · two versions), full lists kept; TR15 has none
+#   TR24 revert probe: surface_diff → '' drops the named plugin → TR23 would be red
 set -u
 . "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088); TR19's fixture names `git status` as data
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -265,7 +267,29 @@ b2=$(python3 "$HERE/live_eval_trace.py" profile "$T/bp2.jsonl")
 
 # the count has to add the named skips, or a lane that correctly declined would read as a lane that
 # silently did not run — which is the thing this counter exists to catch.
-[ $((pass + fail + skipped)) -eq 23 ] || bad "lane count $pass passed + $fail failed + $skipped skipped != 23 — a case did not run"
+# ── TR23 (2026-11-20 weekly audit): the INVALID reason names what differs. The nightly printed two
+# 840-character plugin lists side by side and left the diff to a human — INVALID rose 0→3 of 12 over
+# 11-17..11-20 and nobody had named the plugin (real 11-20 streams: cc-plugin-easel@builtin in some arms). The reason must carry the elements that are not in
+# every arm, before the full lists (which stay — nothing hidden or shortened).
+#   TR6 shape  : MCP drive,wiki in one arm only            → «not in every arm: mcp=drive:connected,wiki:connected»
+#   TR14 shape : one extra builtin plugin in one rep        → «plugins=fx-chart@builtin»
+#   TR16 shape : same plugin, two versions                  → both versions named
+#   control    : TR15 (same set) carries no such clause
+if [[ "$v" == *"not in every arm: "*"mcp=drive:connected,wiki:connected — tools="* ]] && [[ "$pg" == *"not in every arm: plugins=fx-chart@builtin — "* ]] \
+   && [[ "$pv" == *"not in every arm: plugins=fx-core@hub=3.42.0,fx-core@hub=3.43.0 — "* ]] \
+   && [[ "$pg" == *"plugins="*" ≠ tools="* ]] \
+   && [[ "$pq" != *"not in every arm"* ]] && [[ "$pr" != *"not in every arm"* ]]; then
+  ok "TR23 INVALID-COMPARISON names the elements not in every arm (TR6 mcp · TR14 plugin · TR16 versions); TR15 control has none"
+else bad "TR23 v=[${v#*|}] pg=[${pg#*|}] pv=[${pv#*|}]"; fi
+
+# TR24 revert probe for TR23: surface_diff returning '' must turn TR14's reason back into a bare list pair
+mkdir -p "$T/mut3"; cp "$LIB/probe_live_eval_lib.py" "$T/mut3/"
+sed "s/^\( *\)return '; '.join(out)   # SURFACE_DIFF_RETURN.*/\1return ''/" "$LIB/live_eval_trace.py" > "$T/mut3/live_eval_trace.py"
+if grep -q 'SURFACE_DIFF_RETURN' "$T/mut3/live_eval_trace.py"; then bad "TR24 mutation did not apply (instrument error, not a pass)"
+else m3=$(LIB="$T/mut3" score "$T/plg" P 'read=CATALOG\.md')
+  [[ "$m3" != *"plugins=fx-chart@builtin — "* ]] && [[ "$m3" == INVALID-COMPARISON* ]] && ok "TR24 revert probe: surface_diff → '' drops the named plugin (TR23 would be red), verdict unchanged" || bad "TR24 mutant still [$m3]"; fi
+
+[ $((pass + fail + skipped)) -eq 25 ] || bad "lane count $pass passed + $fail failed + $skipped skipped != 25 — a case did not run"
 if [ "$skipped" -gt 0 ]; then
   echo "live_eval_trace lanes: $pass passed, $fail failed, $skipped skipped (named, not a pass)"
 else

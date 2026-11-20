@@ -529,6 +529,7 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
             except (ValueError, re.error) as e:
                 behave_err, behave = str(e), None
         inventories, inv_unknown, traces, no_trace, b_reps = set(), 0, {}, 0, []
+        inv_parts = {}   # inventory string → its three sets, so the INVALID reason can name the difference
         damaged, any_trace = 0, False
         ctrl_b_absent = False   # rep-1 only, diagnostic: which arm actually produced nothing
         per_rep = []          # [(verdict, phit, chit, primary_text, control_text)]
@@ -569,6 +570,7 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
                 inv = _trace.inventory(tr)
                 if inv is not None:
                     inventories.add(inv)
+                    inv_parts[inv] = _trace.inventory_parts(tr)
                 elif tr is not None:
                     inv_unknown += 1
                 traces[(arm, i)] = tr
@@ -633,8 +635,12 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
         elif behave and any_trace and (no_trace or damaged):
             row['reason'] = 'TRACE-INCOMPLETE: %d rep(s) missing an arm trace · %d damaged stream(s)' % (no_trace, damaged)
         elif len(inventories) > 1:
-            row['reason'] = 'INVALID-COMPARISON: arms saw %d different tool/MCP/plugin lists — %s' % (
-                len(inventories), ' ≠ '.join(sorted(inventories)))
+            # Name what differs FIRST (2026-11-20 weekly audit: two 840-char lists side by side, the
+            # diff left to a human, INVALID rose 0→3/12 unexplained); the full lists still follow.
+            _d = _trace.surface_diff([inv_parts[x] for x in sorted(inventories)])
+            row['reason'] = 'INVALID-COMPARISON: arms saw %d different tool/MCP/plugin lists — %s%s' % (
+                len(inventories), ('not in every arm: %s — ' % (_d or 'none — the lists differ only in duplicates or count')),
+                ' ≠ '.join(sorted(inventories)))
         if len(ran_reps) > 1 and 0 < len(pass_reps) < len(ran_reps):
             flaky = 'FLAKY across reps (%s)' % ','.join(r[0] for r in per_rep)
             # an INVALID-COMPARISON reason must survive: the surface mismatch is why there is no number

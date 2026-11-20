@@ -91,6 +91,46 @@ def parse_stream(path):
     return out
 
 
+def inventory_parts(trace):
+    """The arm's surface as three sets — the same elements `inventory` joins — so a reader can be told
+    WHICH ones differ. None when the init event was absent. plugins=None means UNKNOWN (no list)."""
+    if trace is None or trace['tools'] is None:
+        return None
+    return {'tools': set(trace['tools']), 'mcp': set(trace['mcp'] or []),
+            'plugins': set(trace['plugins']) if trace.get('plugins') is not None else None}
+
+
+def _plugin_label(entry):
+    """«source[=version]» for a plugin entry (the JSON array [name, source, version]); the source
+    already carries the name in the real init (name@marketplace). Anything else is shown as stored —
+    including a multi-init mismatch blob (named residual: it is not broken down per plugin)."""
+    try:
+        n, src, ver = json.loads(entry)
+    except Exception:
+        return entry
+    src = str(src or '')   # unvalidated init JSON: a non-string source must not raise (it would change rc)
+    lab = src if src.startswith('%s@' % n) else ('%s@%s' % (n, src) if src else str(n))
+    return lab + ('=%s' % ver if ver else '')
+
+
+def surface_diff(parts_list):
+    """Elements that are not in every arm, per kind — «mcp=a,b; plugins=x@y=1.0» — or '' when the
+    sets agree. Nothing is dropped: an UNKNOWN plugin list in some arm is named as such."""
+    out = []
+    for key in ('tools', 'mcp', 'plugins'):
+        sets = [p[key] for p in parts_list]
+        unknown = key == 'plugins' and any(x is None for x in sets)
+        sets = [x for x in sets if x is not None]
+        if unknown and sets:
+            out.append('plugins=UNKNOWN in some arm')
+        # among the arms whose list is known (codex R1: an UNKNOWN arm must not hide a known difference)
+        diff = set().union(*sets) - set.intersection(*sets) if sets else set()
+        if diff:
+            shown = sorted(_plugin_label(e) for e in diff) if key == 'plugins' else sorted(diff)
+            out.append('%s=%s' % (key, ','.join(shown)))
+    return '; '.join(out)   # SURFACE_DIFF_RETURN (TR24 mutates this line)
+
+
 def inventory(trace):
     """One comparable string for the arm's tool/MCP/plugin surface, or None when the init event was
     absent. An init without a plugin list reads plugins=UNKNOWN, so it never equals an arm that has one."""
