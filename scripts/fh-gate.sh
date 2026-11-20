@@ -690,7 +690,11 @@ if [[ "$_IS_GIT" == 1 ]]; then
   elif ! git -C "$WORK_ROOT" diff --quiet HEAD 2>/dev/null; then
     _GATE_BASE="HEAD"
   else
-    _GATE_BASE="$(git -C "$WORK_ROOT" merge-base "$FH_BASE_BRANCH" HEAD 2>/dev/null || printf '%s' "$FH_BASE_BRANCH")"
+    # A pull-request checkout in CI has a detached HEAD and no local base branch, only origin/<base>
+    # (found on #1147: `merge-base main HEAD` failed there). Try the local branch, then the remote-tracking one.
+    _GATE_BASE="$(git -C "$WORK_ROOT" merge-base "$FH_BASE_BRANCH" HEAD 2>/dev/null \
+      || git -C "$WORK_ROOT" merge-base "origin/$FH_BASE_BRANCH" HEAD 2>/dev/null \
+      || printf '%s' "$FH_BASE_BRANCH")"
   fi
 fi
 EXEC_JSON='{"e0":{"status":"not-run","detail":"NOT RUN"},"e1":{"status":"not-run","detail":"NOT RUN"},"findings":[]}'
@@ -743,6 +747,11 @@ The change (git diff against ${_GATE_BASE}${_trunc}):
 ${_chg}
 ===== END CHANGE ${FENCE} =====
 "
+  elif [[ "$FH_REVIEWER" == "fh-legacy" && "$ELE_ON" != 1 ]]; then
+    # The older pass reads the target files, never the change diff, and the elephant is off: the missing diff
+    # changes nothing that was reviewed, so it is named, not graded (found on #1147 in CI). /code-review stays
+    # graded: it finds the change on its own, and nothing here shows that it did (cross-family review).
+    CHANGE_NOTE=" · no change diff (git diff against '${_GATE_BASE}' failed; fh-legacy does not read it)"
   else
     # a review that could not be shown the change must not be able to come back PASS
     CHANGE_NOTE=" · NO CHANGE DIFF (git diff against '${_GATE_BASE}' failed)"

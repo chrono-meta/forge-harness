@@ -22,6 +22,8 @@
 #   A17 the change's diff cannot be computed → a B finding, said on the reviewer line
 #   A18 a diff past 80000 bytes is truncated aloud (prompt and reviewer line)
 #   A19 codex output with more than one JSON value → 10
+#   A20 CI-shaped checkout (detached, no local base branch): base falls back to origin/<base>; with no base at all
+#       the missing diff is named, not graded, only for fh-legacy with the elephant off
 #
 # Run: bash scripts/test_fh_gate_absorb_lanes.sh
 set -uo pipefail
@@ -220,6 +222,31 @@ gate a19 FH_BACKEND=codex FAKE_CODEX_TWICE=1
 # (the ERR trap would also turn the later merge crash into 10 — check that the single-value guard is what fired)
 if [ "$RC" -eq 10 ] && grep -qF 'not exactly one' "$TMPROOT/a19.err"; then ok "A19 codex output with two JSON values → 10, by the single-value guard"
 else bad "A19 two values → 10 by the guard" "rc=$RC"; fi
+
+# A20 — a CI-shaped checkout: a detached HEAD with no local base branch (actions/checkout on a pull request).
+# Found 2026-11-20 on #1147: CI ran the regression lanes in such a checkout, `merge-base main HEAD` failed, the
+# missing change diff became a B, and five clean-PASS lanes came back PENDING. Two rules are pinned:
+#   (a) the base falls back to the remote-tracking branch (origin/<base>) when the local branch is absent
+#   (b) when no base resolves at all, the missing diff is named, not graded, only for fh-legacy with the elephant
+#       off (that pass never reads it). The FH pass and /code-review stay graded B: they review the change.
+C1="$TMPROOT/ci_with_remote"; g clone -q --no-local "$REPO" "$C1"; g -C "$C1" checkout -q --detach
+C2="$TMPROOT/ci_single_branch"; g clone -q --no-local --single-branch --branch feat "$REPO" "$C2"; g -C "$C2" checkout -q --detach
+RUN_DIR="$C1" gate a20a FH_REVIEWER=fh FH_TARGET_FILES=scripts/foo.sh
+RUN_DIR="$C2" gate a20b FH_REVIEWER=fh-legacy FH_TARGET_FILES=scripts/foo.sh;  rc_b=$RC
+RUN_DIR="$C2" gate a20c FH_TARGET_FILES=scripts/foo.sh;                        rc_c=$RC   # /code-review, quick: no elephant
+RUN_DIR="$C2" gate a20d FH_REVIEWER=fh FH_TARGET_FILES=scripts/foo.sh;         rc_d=$RC
+if grep -qF 'The change (git diff against' "$TMPROOT/a20a/claude_abs.stdin" 2>/dev/null \
+   && grep -qF -- '-[ -n "$1" ] || exit 2' "$TMPROOT/a20a/claude_abs.stdin" 2>/dev/null \
+   && ! has a20a 'NO CHANGE DIFF' && has a20a 'FH_GATE_VERDICT: PASS'; then
+  ok "A20a no local base branch → the change is diffed against origin/main, clean PASS stays PASS"
+else bad "A20a origin/<base> fallback" "$(grep -E 'REVIEWER|VERDICT' "$TMPROOT/a20a.out" | tr '\n' '|')"; fi
+if [ "$rc_b" -eq 0 ] && has a20b 'no change diff' && ! has a20b 'location: "(diff)"' \
+   && [ "$rc_c" -eq 1 ] && has a20c 'NO CHANGE DIFF' && has a20c 'location: "(diff)"'; then
+  ok "A20b no base at all → fh-legacy keeps a clean PASS and names the gap; /code-review stays B"
+else bad "A20b no base: legacy named, /code-review graded" "legacy rc=$rc_b cr rc=$rc_c $(grep REVIEWER "$TMPROOT/a20b.out" "$TMPROOT/a20c.out" | tr '\n' '|')"; fi
+if [ "$rc_d" -eq 1 ] && has a20d 'NO CHANGE DIFF' && has a20d 'location: "(diff)"'; then
+  ok "A20c no base at all → the FH pass (which reads the diff) still cannot come back PASS"
+else bad "A20c FH pass without its diff" "rc=$rc_d $(grep -E 'REVIEWER|VERDICT' "$TMPROOT/a20d.out" | tr '\n' '|')"; fi
 
 echo "absorb lanes: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
