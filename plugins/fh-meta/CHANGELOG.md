@@ -15,9 +15,10 @@ Terms: the *goldfish* pass is a reviewer that sees only the diff and the files, 
 
 Each new layer is opt-in: `FH_REVIEWER=code-review` (claude backend only) or `FH_REVIEWER=fh`, `FH_GATE_ELEPHANT=auto|on`, `FH_GATE_EXEC=on`. Why: whether a headless `/code-review` call, or the `fh` pass, returns the structured object the gate needs on every runner is UNMEASURED, and `FH_GATE_EXEC=on` runs the repository's own lane scripts.
 
-Two changes make a shipped gate refuse more by default; see their `BREAKING (gate):` entries:
+Three changes make a shipped gate refuse more by default; see their `BREAKING (gate):` entries:
 - the pre-push Load-Bearing gate reads each pushed branch's own marker (#1119; FH-checkout pushes of gate files only);
-- `fh-goal` and `fh-gate` fail closed when every changed file name holds a newline (#1146).
+- `fh-goal` and `fh-gate` fail closed when every changed file name holds a newline (#1146);
+- `codex_launch_guard.sh` refuses a stdin that does not end in time, or is closed, instead of waiting forever or starting codex with an empty prompt (#1158).
 
 Items marked «not in the npm package» are in the repository checkout only.
 
@@ -80,6 +81,11 @@ Items marked «not in the npm package» are in the repository checkout only.
 - The self-dev nightly report ends with a tier tally (not in the npm package; measuring only). (#1153)
 
 ### Fixed
+- BREAKING (gate): `scripts/codex_launch_guard.sh` (shipped since 3.44.0), which FH scripts start codex through.
+  - What changed: it reads the prompt from stdin with an idle limit (`FH_GUARD_STDIN_IDLE_S`, default 60 s) and a total limit (`FH_GUARD_STDIN_MAX_S`, default 600 s).
+  - Why: it used to read stdin with `cat`. A stdin that stays open and never ends — an agent's background shell hands its commands one — made it wait forever, and everything that started codex through it with it (measured: a selfcheck stuck 2 h 30 min in the `sidecar_calibrate.sh` lane).
+  - What now blocks: a stdin silent past the idle limit or not ended by the total limit, a limit outside 1–86400, a read error, or a closed stdin (`<&-`, which used to start codex with an empty prompt). Each is a refusal by name: exit 3, codex not started, nothing partial passed on.
+  - Remedy: pipe in a prompt that ends, or run the caller with `< /dev/null` when the prompt is an argument. `sidecar_calibrate.sh` now does this for its probes. (#1158)
 - BREAKING (gate): `fh-goal` and `fh-gate` (shipped bins) read changed files NUL-delimited. Before, a name with a quote made `fh-goal`'s `xargs` abort, and it reported «no changed files» with exit 0, so fh-gate never ran. `fh-gate` used to only warn about names with a quote, backslash or tab; now it reviews them. In both, a change whose every name holds a newline exits 10 instead of passing through («every changed file name holds a newline … Failing closed»). Remedy: rename the file, or pass the files explicitly. A newline-holding name next to others is named in a WARN. (#1146)
 - `fh-gate` and `fh-goal` review files with non-ASCII names. They used to be quoted with octal escapes and could not be opened; a Korean-only change exited 10 with «nothing was reviewed». (#1142)
 - The guard anchors `universal_guard_check.sh` and `prepush_guard_check.sh` (shipped) unset every override the hooks read before building their sandbox. A commit made with `PUBLIC_SURFACE_OK=1` no longer turns them red for an unrelated reason. (#1118)
@@ -89,9 +95,6 @@ Items marked «not in the npm package» are in the repository checkout only.
 - `correction_moments.py` (shipped): a long prompt that repeats 3+ times, such as a scheduled trigger, is no longer counted as an operator correction. (#1150)
 - Clean-room audit rounds 8–9: two lanes that reported an absence about sound subjects now find the row by elimination or name the premise. A LaneGap snippet template now ships with the lane that reads it. (#1062)
 - `state_claim_recheck_hook.sh` (not in the npm package) also reads the lease archive and tags its lines as expired. (#1148)
-
-### Known issues
-- `scripts/codex_launch_guard.sh` (shipped since 3.44.0, #1127) reads the prompt from stdin until it ends. When stdin is open, is not a terminal and never ends — an agent's background shell hands its commands such a stdin — the guard waits forever, and so does anything that starts codex through it, including `sidecar_calibrate.sh` and its lane. A terminal, a pipe that ends, a file or `/dev/null` are not affected, so CI is not. Workaround: run the caller with `< /dev/null`, for example `bash scripts/selfcheck.sh < /dev/null`. A fix that bounds the read and refuses instead of waiting is a separate pull request.
 
 ### [3.44.0] — 2026-11-17
 

@@ -22,7 +22,7 @@
 # UNCONFIGURED. No list, or an empty one: codex runs and the guard prints «CODEX-GUARD: no company roots
 # configured — not checked» on stderr. That is said out loud, never shown as clean.
 #
-# Usage:  bash scripts/codex_launch_guard.sh <codex-binary> [codex arguments...]   (prompt on stdin)
+# Usage:  bash scripts/codex_launch_guard.sh <codex-binary> [codex arguments...]   (prompt on stdin; see STDIN below)
 # Exit:   3 = refused (codex not started; stderr starts «HARNESS-ERROR: CODEX-REFUSED») · 2 = usage
 #         · otherwise codex's own exit code (a codex exit of 3 is told apart by the missing CODEX-REFUSED line)
 set -uo pipefail
@@ -31,7 +31,43 @@ _here="$(cd "$(dirname "$0")" && pwd -P)"
 _rootsfile="${FH_COMPANY_ROOTS_FILE:-$_here/../.claude/rules/.company-roots}"
 _tmp="$(mktemp "${TMPDIR:-/tmp}/fh_codex_prompt.XXXXXX")" || { echo "HARNESS-ERROR: codex_launch_guard cannot create a temp file — codex not started" >&2; exit 3; }
 trap 'rm -f "$_tmp"' EXIT
-if [ -t 0 ]; then : > "$_tmp"; else cat > "$_tmp"; fi
+# STDIN. A terminal means no prompt (nothing is read). Anything else is read until it ends — but not forever:
+# a stdin that sends nothing new for FH_GUARD_STDIN_IDLE_S seconds (default 60), or has not ended after
+# FH_GUARD_STDIN_MAX_S seconds in all (default 600), is a refusal — never a partial or empty prompt passed on,
+# never a hang. An agent's background shell hands its children a stdin that stays open and never ends;
+# measured 2026-11-20, a plain `cat` here waited 2 h 30 min and, after the guard was killed, still held the
+# caller's output pipe open. Each limit is a whole number of seconds from 1 to 86400 (unset or empty = the
+# default); anything else is refused.
+if [ -t 0 ]; then : > "$_tmp"
+else
+  _idle="${FH_GUARD_STDIN_IDLE_S:-60}"; _max="${FH_GUARD_STDIN_MAX_S:-600}"
+  for _lim in "FH_GUARD_STDIN_IDLE_S=$_idle" "FH_GUARD_STDIN_MAX_S=$_max"; do
+    _v="${_lim#*=}"
+    case "$_v" in ''|*[!0-9]*) _v=x ;; *) [ "${#_v}" -le 5 ] && [ "$((10#$_v))" -ge 1 ] && [ "$((10#$_v))" -le 86400 ] || _v=x ;; esac
+    [ "$_v" = x ] && { echo "HARNESS-ERROR: CODEX-REFUSED — ${_lim%%=*}='${_lim#*=}' is not a whole number of seconds from 1 to 86400; codex was not started." >&2; exit 3; }
+  done
+  python3 -c '
+import os, select, sys, time
+idle, total = int(sys.argv[1], 10), int(sys.argv[2], 10); out = sys.stdout.buffer
+end = time.monotonic() + total
+try:
+    while True:
+        left = end - time.monotonic()
+        if left <= 0: sys.exit(125)
+        if not select.select([0], [], [], min(idle, left))[0]:
+            sys.exit(125 if time.monotonic() >= end else 124)
+        b = os.read(0, 65536)
+        if not b: break
+        out.write(b)
+except OSError: sys.exit(5)
+' "$_idle" "$_max" > "$_tmp"
+  case $? in
+    0) ;;
+    124) echo "HARNESS-ERROR: CODEX-REFUSED — stdin is open but sent nothing for ${_idle} s and never ended (an agent background shell does this); codex was not started. Pipe the prompt in, or run with < /dev/null." >&2; exit 3 ;;
+    125) echo "HARNESS-ERROR: CODEX-REFUSED — stdin had not ended after ${_max} s in all; codex was not started. Pipe in a prompt that ends, or run with < /dev/null." >&2; exit 3 ;;
+    *) echo "HARNESS-ERROR: CODEX-REFUSED — codex_launch_guard could not read the prompt from stdin; codex was not started." >&2; exit 3 ;;
+  esac
+fi
 _verdict="$(FH_GUARD_PROMPT="$_tmp" FH_GUARD_ROOTS_FILE="$_rootsfile" python3 - "${@:2}" <<'PY'
 import os, re, sys
 def roots():

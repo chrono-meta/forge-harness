@@ -9,6 +9,9 @@
 # WHAT IS NOT CHECKED: a company path the prompt carries in another shape (relative path, file content
 # pasted without its path, encoding) — the guard matches root paths as strings, nothing more.
 #
+# Also checked: a stdin that is open but never ends (an agent background shell's) is refused within the idle
+# limit instead of hanging (C12–C12f).
+#
 # Usage: bash scripts/test_codex_launch_guard_lanes.sh      Exit: 0 all pass · 1 any fail
 set -uo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -57,6 +60,48 @@ run bash "$GUARD" "$D/codex_fake" exec -C "$ROOT" - <<< "hello"
 
 run bash -c 'cd "$1" && bash "$2" "$3" exec - <<< "hello"' _ "$ROOT/src" "$GUARD" "$D/codex_fake"
 [ "$rc" -eq 3 ] && [ ! -e "$D/ran" ] && printf '%s' "$err" | grep -q 'working folder' && ok "C5 working folder inside a company root: refused" || bad "C5 cwd: rc=$rc err=${err:0:100}"
+
+echo "── stdin that never ends (an agent background shell's stdin: open, not a terminal)"
+# Known pair: on the guard before 2026-11-20 C12 does not return until the writer goes away (a plain `cat`
+# read stdin), and then codex starts — red on «returned within 10 s» and on «not started».
+# The writer holds a FIFO open for 20 s; each lane kills it afterwards.
+mkfifo "$D/fifo"
+# The guard runs under a 15 s watchdog, so a guard that waits forever turns these lanes red instead of hanging them.
+command -v perl >/dev/null 2>&1 || bad "C12* not measured: perl (the watchdog) is missing"
+held() {   # held <writer command...> — guard reads a FIFO the writer keeps open; sets rc, err, secs
+  bash -c 'exec "$@"' _ "$@" > "$D/fifo" & local wpid=$!
+  local t0=$SECONDS
+  run env FH_GUARD_STDIN_IDLE_S=2 perl -e 'alarm 15; exec @ARGV' bash "$GUARD" "$D/codex_fake" exec - < "$D/fifo"
+  secs=$((SECONDS - t0)); kill "$wpid" 2>/dev/null; wait "$wpid" 2>/dev/null
+}
+held sleep 20
+if [ "$rc" -eq 3 ] && [ ! -e "$D/ran" ] && [ "$secs" -le 10 ] && printf '%s' "$err" | grep -q 'CODEX-REFUSED' && printf '%s' "$err" | grep -q 'never ended'; then ok "C12 open stdin, nothing sent: refused rc=3 within ${secs} s, codex not started"
+else bad "C12 open stdin: rc=$rc secs=$secs ran=$([ -e "$D/ran" ] && echo yes || echo no) err=${err:0:120}"; fi
+
+held bash -c 'printf "review this public diff\n"; exec sleep 20'
+if [ "$rc" -eq 3 ] && [ ! -e "$D/ran" ] && [ "$secs" -le 10 ]; then ok "C12b part of a prompt, then open and silent: refused, the partial prompt is not passed on"
+else bad "C12b partial prompt: rc=$rc secs=$secs ran=$([ -e "$D/ran" ] && echo yes || echo no)"; fi
+
+printf 'slow but ending\n' > "$D/slow.expect"
+rm -f "$D/ran" "$D/stdin_seen"
+out=$( { sleep 1; printf 'slow but ending\n'; } | FH_GUARD_STDIN_IDLE_S=3 bash "$GUARD" "$D/codex_fake" exec - 2>"$D/err"); rc=$?
+if [ "$rc" -eq 0 ] && [ -e "$D/ran" ] && cmp -s "$D/stdin_seen" "$D/slow.expect"; then ok "C12c a slow writer that ends inside the idle limit: codex runs with the prompt intact (control alive)"
+else bad "C12c slow writer: rc=$rc ran=$([ -e "$D/ran" ] && echo yes || echo no) err=$(head -c 120 "$D/err")"; fi
+
+bad_lim=""
+for v in soon 00 0 99999999999999999999 86401; do
+  run env FH_GUARD_STDIN_IDLE_S="$v" bash "$GUARD" "$D/codex_fake" exec - <<< "hello"
+  { [ "$rc" -eq 3 ] && [ ! -e "$D/ran" ] && printf '%s' "$err" | grep -q "FH_GUARD_STDIN_IDLE_S='$v' is not"; } || bad_lim="$bad_lim idle=$v:rc=$rc"
+done
+run env FH_GUARD_STDIN_MAX_S=0 bash "$GUARD" "$D/codex_fake" exec - <<< "hello"
+{ [ "$rc" -eq 3 ] && [ ! -e "$D/ran" ] && printf '%s' "$err" | grep -q "FH_GUARD_STDIN_MAX_S='0' is not"; } || bad_lim="$bad_lim max=0:rc=$rc"
+[ -z "$bad_lim" ] && ok "C12d a malformed, zero or out-of-range limit is a refusal by name, not a default (soon · 00 · 0 · 20 digits · 86401 · max 0)" || bad "C12d limits:$bad_lim"
+
+# C12f a writer that keeps sending a little and never ends: the idle limit never fires, the total one does.
+FH_GUARD_STDIN_MAX_S=3 held bash -c 'while :; do printf x; sleep 0.5; done'
+if [ "$rc" -eq 3 ] && [ ! -e "$D/ran" ] && [ "$secs" -le 10 ] && printf '%s' "$err" | grep -q 'had not ended after 3 s'; then ok "C12f a trickling writer that never ends: refused on the total limit within ${secs} s"
+else bad "C12f trickle: rc=$rc secs=$secs ran=$([ -e "$D/ran" ] && echo yes || echo no) err=${err:0:120}"; fi
+
 
 # C6 the same root written another way: /private stripped (macOS /tmp = /private/tmp) and ~ for $HOME
 case "$ROOT" in
