@@ -2117,11 +2117,15 @@ fi
 # variable is allowed only inside L128's own `env ... FH_COMPANY_ROOTS_FILE="$D/roots128"` prefixes. Planted line = known positive.
 SELF129="$HERE/$(basename "${BASH_SOURCE[0]}")"   # absolute: the suite has cd-ed into its lane folder, so $0 may no longer resolve
 ROOTS_ASSIGN_RE='(^|[^A-Za-z_])(export[[:space:]]+|unset[[:space:]]+|declare[^=]*[[:space:]])?FH_COMPANY_ROOTS(_FILE)?([=[:space:]]|$)'
-n129=$(grep -vF -e 'roots128' -e 'planted129' "$SELF129" | grep -v '^ *#' | grep -v 'ROOTS_ASSIGN_RE=' | grep -cE "$ROOTS_ASSIGN_RE" || true)
+grep -vF -e 'roots128' -e 'planted129' "$SELF129" > "$D/self129a" 2>/dev/null
+grep -v -e '^ *#' -e 'ROOTS_ASSIGN_RE=' "$D/self129a" > "$D/self129b"
+grep -nE "$ROOTS_ASSIGN_RE" "$D/self129b" > "$D/hits129"
+n129=$(wc -l < "$D/hits129" | tr -d ' ')
 printf 'export FH_COMPANY_ROOTS_FILE=/dev/null\n' > "$D/planted129.sh"
-p129=$(grep -cE "$ROOTS_ASSIGN_RE" "$D/planted129.sh" || true)
-if [ -r "$SELF129" ] && [ "${n129:-x}" = 0 ] && [ "${p129:-0}" = 1 ]; then ok "L129 이 스위트는 회사 루트 설정(FH_COMPANY_ROOTS[_FILE])을 L128 밖에서 바꾸지 않는다 (심은 줄은 잡힘)"
-else no "L129 루트 설정 바꿔치기" "self=$SELF129 suite=$n129 planted=$p129 · $(grep -vF -e 'roots128' -e 'planted129' "$SELF129" | grep -v '^ *#' | grep -v 'ROOTS_ASSIGN_RE=' | grep -nE "$ROOTS_ASSIGN_RE" | head -2 | tr '\n' ' ')"; fi
+grep -E "$ROOTS_ASSIGN_RE" "$D/planted129.sh" > "$D/phits129"
+p129=$(wc -l < "$D/phits129" | tr -d ' ')
+if [ -r "$SELF129" ] && [ -s "$D/self129a" ] && [ "${n129:-x}" = 0 ] && [ "${p129:-0}" = 1 ]; then ok "L129 이 스위트는 회사 루트 설정(FH_COMPANY_ROOTS[_FILE])을 L128 밖에서 바꾸지 않는다 (심은 줄은 잡힘)"
+else no "L129 루트 설정 바꿔치기" "self=$SELF129 suite=$n129 planted=$p129 · $(sed -n '1,2p' "$D/hits129" | tr '\n' ' ')"; fi
 
 cd / && /bin/rm -rf "$D"
 echo "PASS=$PASS FAIL=$FAIL"
