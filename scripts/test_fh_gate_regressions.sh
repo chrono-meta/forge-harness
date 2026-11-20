@@ -34,6 +34,13 @@ trap 'rm -rf "$TMPROOT"' EXIT
 export FH_RECORD_BASE="$TMPROOT/records"
 mkdir -p "$FH_RECORD_BASE"
 
+# This suite anchors the older FH review pass (FH_REVIEWER=fh-legacy: its prompt, its schema, its cross-field
+# verdict invariants). Since
+# 2026-11-19 the claude backend reviews with the built-in /code-review by default — that path has its own
+# lanes in scripts/test_fh_gate_fusion_lanes.sh. Pin the FH pass here, and keep the execution layer off: this
+# suite runs from the repo root, so the layer would test whatever the developer's tree happens to change.
+export FH_REVIEWER=fh-legacy FH_GATE_EXEC=off FH_GATE_ELEPHANT=off
+
 # Review SUBJECT — a fixture this suite creates, NOT a file it hopes the repo has.
 # Every gate invocation below used the literal `package.json` as its subject. That is an npm-package
 # assumption smuggled into a test: this suite passed here only because this repo happens to ship one.

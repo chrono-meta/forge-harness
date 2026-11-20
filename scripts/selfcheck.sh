@@ -397,6 +397,17 @@ else
   fail=1
 fi
 
+# fh-gate review stage + execution layer (2026-11-19): the built-in /code-review is the default reviewer on
+# the claude backend, its findings carried as labelled; E0 scanners and E1 target lanes run in a copy. Both
+# suites are token-free (stub backends, scratch repos) and ship with the package, as the gate does.
+for _fhg_lane in scripts/test_fh_gate_exec_lanes.sh scripts/test_fh_gate_fusion_lanes.sh scripts/test_fh_gate_absorb_lanes.sh; do
+  if [ -f "$_fhg_lane" ]; then
+    bash "$_fhg_lane" || fail=1
+  else
+    echo "FAIL  fh-gate: $_fhg_lane missing"; fail=1
+  fi
+done
+
 # pre-push stdin integrity — anchors the 2026-07-20 fail-open hole (a stdin-inheriting subprocess
 # above the ref loop drains git's ref list → Destructive-Op gate silently allows a delete/force push).
 # Wired here, not left standalone: an unwired checker is the exact defect this session found in
@@ -1228,6 +1239,9 @@ for _pair in \
   "scripts/heavy_skill_smell.py|scripts/test_heavy_skill_smell_lanes.sh" \
   "scripts/cartridge_loader.py|scripts/test_cartridge_loader_lanes.sh" \
   "scripts/scoreboard_render.py|scripts/test_scoreboard_render_lanes.sh" \
+  "scripts/fh_gate_exec.sh|scripts/test_fh_gate_exec_lanes.sh" \
+  "scripts/fh-gate.sh|scripts/test_fh_gate_fusion_lanes.sh" \
+  "scripts/fh-gate.sh|scripts/test_fh_gate_absorb_lanes.sh" \
   "scripts/fh_techwriter_sync_check.sh|scripts/test_fh_techwriter_sync_lanes.sh" \
   "scripts/knowledge_seam_check.sh|scripts/test_knowledge_seam_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_marker_crossfamily_lanes.sh" \

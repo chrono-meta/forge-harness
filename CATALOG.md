@@ -32,6 +32,12 @@ entries. Same class as the 2026-08-20 entry below (index drift on `knowledge/`);
   an index of sealed records: a row shows only if its pre-registration commit was pushed before the result and its k/n
   are quoted verbatim from the result; every outcome shows (win · no difference · not detected · ceiling · claim not
   supported); groups never pool. Lanes: `scripts/test_scoreboard_render_lanes.sh`.
+- `scripts/fh_gate_exec.sh` — #fh-gate, #execution-layer, #lanes, #code-review. fh-gate's token-free execution layer:
+  E0 runs FH's class scanners (pipefail early-exit) against the change, E1 runs the change's target lanes in a copy
+  (red by this change → A · red before → C · did not finish → B). Since 2026-11-19 fh-gate's review stage on the
+  claude backend is the built-in `/code-review`; without it (`FH_REVIEWER=fh`, codex) a «goldfish» pass that follows
+  `/code-review`'s method, and at level full an «elephant» pass over the touched files' history. Lanes:
+  `scripts/test_fh_gate_exec_lanes.sh` · `scripts/test_fh_gate_fusion_lanes.sh` · `scripts/test_fh_gate_absorb_lanes.sh`.
 - `scripts/fh_techwriter_sync_check.sh` — #export, #drift, #ko-tech-writer. Names the files where the published
   fh-techwriter copy (its committed HEAD) differs from FH's own export of ko-tech-writer — DRIFT · MISSING · EXTRA —
   and prints the regen command for a human; never writes to the copy. selfcheck prints it as an INFO line.
