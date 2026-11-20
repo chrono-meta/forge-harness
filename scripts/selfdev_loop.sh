@@ -249,6 +249,7 @@ Never run gh pr merge, never push to main, never force-push, never tag. The merg
   created="$(gh pr list -R "$REPO_SLUG" --state all --limit 200 --json number,headRefName,createdAt \
     -q "[.[] | select((.headRefName | startswith(\"auto/selfdev-$DATE\")) and .createdAt >= \"$bstart\")] | .[].number" 2>/dev/null)"; crc=$?
   if [ $crc -ne 0 ]; then
+    nopen=UNMEASURED
     rep "- PRs opened this run: UNMEASURED (gh pr list failed after the build)"
   else
     opened="$(printf '%s\n' "$created" | grep . | sed 's/^/#/' | tr '\n' ' ')"
@@ -331,9 +332,15 @@ candidate_refusal() {
 # a check that printed nothing did not run — only an explicit OK clears a candidate (codex R2)
 candidate_check() { local r; r="$(candidate_refusal "$@")"; case "$r" in OK) ;; '') echo "candidate-check-failed" ;; *) echo "$r" ;; esac; }
 auto_n=0
+# tier tally (2026-11-20 weekly audit: 7 selfdev PRs over 16 nights, AUTO 0, and no report said so).
+# Measuring only — the operator sets the allow-list from these numbers; nothing here changes a tier.
+tally_n=0; tally_elig=0; tally_why=""
+# words split on spaces with globbing off (a reason never expands against the cwd — codex R1); one per line
+tally_hold() { local w; set -f; for w in $*; do tally_why="$tally_why${w%%(*}
+"; done; set +f; }
 MERGE_LIST="$(open_auto)" || { say "HARNESS-ERROR: cannot list open selfdev PRs for the merge pass"; rep "- HARNESS-ERROR: merge pass could not list PRs"; exit 2; }
 for pr in $MERGE_LIST; do
-  reasons=""
+  reasons=""; tally_n=$((tally_n + 1))
   # bind every check below to ONE head commit; re-read just before merging (codex R1 #5)
   head_oid="$(gh pr view "$pr" -R "$REPO_SLUG" --json headRefOid -q .headRefOid 2>/dev/null)"
   [ -z "$head_oid" ] && reasons="$reasons head-unreadable"
@@ -371,6 +378,7 @@ for pr in $MERGE_LIST; do
   [ "$DEMOTED" = 1 ] && reasons="$reasons demoted"
 
   if [ -n "$reasons" ]; then
+    tally_hold "$reasons"
     rep "- #$pr HOLD:$reasons"
     printf '%s\n' "$tier_out" | grep '^reason:' | sed 's/^/    /' >> "$REPORT"
     continue
@@ -379,17 +387,18 @@ for pr in $MERGE_LIST; do
   # a body edited after the first read must not ride on the old check)
   snap="$(gh pr view "$pr" -R "$REPO_SLUG" --json headRefOid,body -q '.headRefOid + "\n" + .body' 2>/dev/null)"
   now_oid="$(printf '%s\n' "$snap" | head -1)"
-  if [ "$now_oid" != "$head_oid" ]; then rep "- #$pr HOLD: head moved during checks ($head_oid → ${now_oid:-?})"; continue; fi
+  if [ "$now_oid" != "$head_oid" ]; then tally_hold head-moved; rep "- #$pr HOLD: head moved during checks ($head_oid → ${now_oid:-?})"; continue; fi
   body2="$(printf '%s\n' "$snap" | tail -n +2)"
-  if [ "$(seed_of "$body2")" != "$seed" ]; then rep "- #$pr HOLD: seed changed at final snapshot"; continue; fi
+  if [ "$(seed_of "$body2")" != "$seed" ]; then tally_hold seed-changed; rep "- #$pr HOLD: seed changed at final snapshot"; continue; fi
   if [ "$seed" = human ]; then
     req2="$(printf '%s\n' "$body2" | sed -nE 's/^request: «(.*)»[[:space:]]*$/\1/p' | head -1)"
-    if [ "$req2" != "$req" ] || ! printf '%s\n' "$human_rows" | grep -qxF -- "$req2"; then rep "- #$pr HOLD: request changed or unauthorized at final snapshot"; continue; fi
+    if [ "$req2" != "$req" ] || ! printf '%s\n' "$human_rows" | grep -qxF -- "$req2"; then tally_hold request-changed; rep "- #$pr HOLD: request changed or unauthorized at final snapshot"; continue; fi
   else
     cr2="$(candidate_check "$pr" "$body2" "$head_oid")"
-    if [ -n "$cr2" ]; then rep "- #$pr HOLD: $cr2 at final snapshot"; continue; fi
+    if [ -n "$cr2" ]; then tally_hold "$cr2"; rep "- #$pr HOLD: $cr2 at final snapshot"; continue; fi
   fi
-  if [ "$auto_n" -ge "$MAX_AUTO" ]; then rep "- #$pr HOLD: auto-merge cap reached ($auto_n of $MAX_AUTO this run; head $head_oid, seed $seed)"; continue; fi
+  tally_elig=$((tally_elig + 1))   # every check passed: AUTO-eligible whether or not the cap lets it merge
+  if [ "$auto_n" -ge "$MAX_AUTO" ]; then tally_hold auto-merge-cap; rep "- #$pr HOLD: auto-merge cap reached ($auto_n of $MAX_AUTO this run; head $head_oid, seed $seed)"; continue; fi
   # PR-only mode: the first real nights open PRs and stop here; the operator picks merges in the morning
   if [ "$NO_MERGE" = 1 ]; then rep "- #$pr ELIGIBLE (no-merge mode — every check passed; operator merges, head $head_oid, seed $seed)"; auto_n=$((auto_n + 1)); continue; fi
   if [ "$DRY" = 1 ]; then rep "- #$pr WOULD MERGE (dry-run, head $head_oid, seed $seed)"; auto_n=$((auto_n + 1)); continue; fi
@@ -420,6 +429,13 @@ for pr in $MERGE_LIST; do
     fi
   fi
 done
+
+# awk alone, so an empty tally is not a failing grep (codex R1 — this file has no errexit, kept robust anyway)
+tally_by="$(printf '%s' "$tally_why" | sort | awk 'NF { c[$0]++; if (!($0 in o)) { o[$0] = ++n; k[n] = $0 } }
+  END { for (i = 1; i <= n; i++) printf "%s%s=%s", (i > 1 ? " · " : ""), k[i], c[k[i]] }')"
+# tags, not PRs: one PR can carry several; an eligible PR stopped by the cap is tagged auto-merge-cap.
+# Not written on the «cannot list open PRs» exit 2 above (that report already says HARNESS-ERROR).
+rep "- tier tally: AUTO-eligible $tally_elig of $tally_n reviewed · PRs opened this run: ${nopen:-not built} · HOLD reasons (tags; a PR can carry several): ${tally_by:-none}"
 
 # signals the builder wrote inside the clone come home
 for s in "$CLONE"/tracks/_meta/fh_signal_"$DATE"_*.md; do [ -f "$s" ] && cp -n "$s" "$LIVE/tracks/_meta/"; done

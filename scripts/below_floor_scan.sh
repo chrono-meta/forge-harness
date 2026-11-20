@@ -23,7 +23,37 @@ MARKER_DIR="$REPO_ROOT/tracks/_meta"
 PENDING=0
 TOTAL=0
 
+# Worktree redirect (2026-11-20 weekly audit): tracks/ is gitignored, so a git worktree has no
+# markers of its own and the scan printed «0 total, 0 pending» rc 0 while the main checkout held
+# 4 markers — «not read» rendered as «clean». The pre-commit hook WRITES markers to EVIDENCE_ROOT
+# (the main checkout, via --git-common-dir), so with no root argument a worktree reads exactly
+# there — the same rule, so writer and reader agree. If that place has no tracks/_meta, say
+# NOT READ (rc unchanged — a CI worktree must not turn red). An explicit root is never redirected;
+# a main checkout and a fresh clone are unchanged. The common dir is resolved to an absolute path
+# from the cwd (git prints it relative to the cwd, not to the top level) and must be a `.git`
+# directory, so a bare repo, --separate-git-dir or a submodule never names an unrelated parent.
+WT_NOTE=""
+if [ -z "${1:-}" ]; then
+  _gcd=$(git rev-parse --git-common-dir 2>/dev/null); _rc=$?
+  if [ "$_rc" -eq 0 ] && [ -n "$_gcd" ]; then
+    _gcd=$(cd "$_gcd" 2>/dev/null && pwd -P) || _gcd=""
+    _here=$(cd "$REPO_ROOT" 2>/dev/null && pwd -P) || _here="$REPO_ROOT"
+    if [ -n "$_gcd" ] && [ "$(basename "$_gcd")" = .git ]; then
+      _hub=$(dirname "$_gcd")
+      if [ "$_hub" != "$_here" ]; then
+        if [ -d "$_hub/tracks/_meta" ]; then
+          MARKER_DIR="$_hub/tracks/_meta"
+          WT_NOTE="   (git worktree — read the main checkout's tracks/_meta, where the pre-commit hook writes markers)"
+        else
+          WT_NOTE="   (git worktree — the main checkout has no tracks/_meta: markers NOT READ, the counts below are not a clean result)"
+        fi
+      fi
+    fi
+  fi
+fi
+
 echo "── below-floor marker scan: $MARKER_DIR ──"
+[ -n "$WT_NOTE" ] && echo "$WT_NOTE"
 
 if [ ! -d "$MARKER_DIR" ]; then
   echo "   (no tracks/_meta directory — nothing to scan)"
