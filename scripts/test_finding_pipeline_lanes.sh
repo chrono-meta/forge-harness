@@ -28,6 +28,11 @@ OUT=$(bash "$HERE/finding_fleet.sh" --selftest 2>&1); RC=$?
 
 D="$(mktemp -d 2>/dev/null)" || D=""
 [ -n "$D" ] && [ -w "$D" ] || { no "L3 환경" "mktemp -d 불가 — 레인 미측정(통과 아님)"; echo "PASS=$PASS FAIL=$FAIL"; echo "FAILED=1"; exit 1; }
+# Work from the lane's own folder, never from the checkout (pmh-dev #106). codex_launch_guard.sh refuses a launch
+# whose working folder is a configured company-repo root, and a company checkout lists itself there — so every stub
+# pipeline below was refused when the suite ran from the checkout root (7 lanes red). The roots list stays as
+# configured: the guard keeps refusing a company working folder, a company path in a prompt or an argument (L128).
+cd "$D" || { no "L3 환경" "레인 작업 폴더로 이동 불가 — 레인 미측정(통과 아님)"; echo "PASS=$PASS FAIL=$FAIL"; echo "FAILED=1"; exit 1; }
 
 cat > "$D/f.jsonl" <<'EOS'
 {"id":"a1","title":"real defect","file":"x.py","line":3,"severity":"A","producer_family":"alpha"}
@@ -2093,6 +2098,35 @@ else
   no "L127 맨 앞 한 발견 철회" "failed:$r127"
 fi
 
-/bin/rm -rf "$D"
+# L128 (pmh-dev #106) — with the checkout listed as a company root (through a roots FILE, the way a company checkout
+# configures it), a stub pipeline runs from the lane's folder, and the same stub launched from the checkout itself is
+# still refused. Known pair: a fix that blanks the list or skips the guard for stub binaries passes (a) but fails (b);
+# the unfixed suite (run from the checkout) fails (a).
+REPO_ROOT="$(cd "$HERE/.." && pwd -P)"
+printf '%s\n' "$REPO_ROOT" > "$D/roots128"
+V128=$(env -u FH_COMPANY_ROOTS FH_COMPANY_ROOTS_FILE="$D/roots128" FH_CODEX_BIN="$D/fake_ok.sh" bash "$VERIFIER" --family codex --target "$D/tgt.py" < "$D/f.jsonl" 2>"$D/e128a"); R128A=$?
+N128=$(printf '%s\n' "$V128" | grep -c '^{')
+( cd "$REPO_ROOT" && env -u FH_COMPANY_ROOTS FH_COMPANY_ROOTS_FILE="$D/roots128" FH_CODEX_BIN="$D/fake_ok.sh" bash "$VERIFIER" --family codex --target "$D/tgt.py" < "$D/f.jsonl" ) >/dev/null 2>"$D/e128b"; R128B=$?
+if [ "$R128A" -eq 0 ] && [ "$N128" = 2 ] && [ "$R128B" -ne 0 ] && grep -q 'CODEX-REFUSED' "$D/e128b"; then
+  ok "L128 회사 루트로 등록된 체크아웃(목록 파일): 레인 폴더의 스텁 파이프라인은 돈다 · 체크아웃 안에서 띄운 같은 스텁은 여전히 거부 (가드 무장 유지)"
+else
+  no "L128 회사 루트 + 레인 폴더" "lane-folder rc=$R128A n=$N128 · checkout rc=$R128B · $(grep -m1 -E 'CODEX|HARNESS' "$D/e128a" "$D/e128b" | tr '\n' ' ')"
+fi
+# L129 — the suite itself never re-points or blanks the roots configuration (cross-family R1: L128 alone would not
+# catch a suite-wide FH_COMPANY_ROOTS_FILE=/dev/null). Shape check over this file: an assignment or export of either
+# variable is allowed only inside L128's own `env ... FH_COMPANY_ROOTS_FILE="$D/roots128"` prefixes. Planted line = known positive.
+SELF129="$HERE/$(basename "${BASH_SOURCE[0]}")"   # absolute: the suite has cd-ed into its lane folder, so $0 may no longer resolve
+ROOTS_ASSIGN_RE='(^|[^A-Za-z_])(export[[:space:]]+|unset[[:space:]]+|declare[^=]*[[:space:]])?FH_COMPANY_ROOTS(_FILE)?([=[:space:]]|$)'
+grep -vF -e 'roots128' -e 'planted129' "$SELF129" > "$D/self129a" 2>/dev/null
+grep -v -e '^ *#' -e 'ROOTS_ASSIGN_RE=' "$D/self129a" > "$D/self129b"
+grep -nE "$ROOTS_ASSIGN_RE" "$D/self129b" > "$D/hits129"
+n129=$(wc -l < "$D/hits129" | tr -d ' ')
+printf 'export FH_COMPANY_ROOTS_FILE=/dev/null\n' > "$D/planted129.sh"
+grep -E "$ROOTS_ASSIGN_RE" "$D/planted129.sh" > "$D/phits129"
+p129=$(wc -l < "$D/phits129" | tr -d ' ')
+if [ -r "$SELF129" ] && [ -s "$D/self129a" ] && [ "${n129:-x}" = 0 ] && [ "${p129:-0}" = 1 ]; then ok "L129 이 스위트는 회사 루트 설정(FH_COMPANY_ROOTS[_FILE])을 L128 밖에서 바꾸지 않는다 (심은 줄은 잡힘)"
+else no "L129 루트 설정 바꿔치기" "self=$SELF129 suite=$n129 planted=$p129 · $(sed -n '1,2p' "$D/hits129" | tr '\n' ' ')"; fi
+
+cd / && /bin/rm -rf "$D"
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ] && { echo "FAILED=0"; exit 0; } || { echo "FAILED=1"; exit 1; }
