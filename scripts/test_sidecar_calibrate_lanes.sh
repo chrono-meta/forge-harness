@@ -101,7 +101,7 @@ STUB
 # not: "absent" is simulated by NOT creating a stub, so the real codex/agy further down $PATH were
 # found instead and the lanes fired REAL, billed API calls (measured: a lane run hung past 120s
 # against live runtimes). A test that can reach production is not a test.
-run_cal() { PATH="$TMP/bin:/usr/bin:/bin:/usr/sbin:/sbin" bash "$CAL" --stub-model "stub-pro-3.1" "$@" 2>&1; }
+run_cal() { PATH="$TMP/bin:/usr/bin:/bin:/usr/sbin:/sbin" bash "$CAL" --stub-model "stub-pro-3.1" "$@" 2>&1 < /dev/null; }
 
 echo "── sidecar-calibrate lanes ──"
 

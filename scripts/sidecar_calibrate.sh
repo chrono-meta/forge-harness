@@ -59,11 +59,13 @@ command -v gtimeout >/dev/null 2>&1 && TIMEOUT_BIN="gtimeout"
 # No coreutils timeout on stock macOS. perl's alarm is the portable watchdog; if perl is missing too,
 # run WITHOUT a deadline rather than skipping the probe — a missing watchdog must never become a
 # silently skipped measurement reported as absence (the same rule fh_session_load.sh applies).
+# Every probe passes its prompt as an argument, so the runtime gets a closed stdin: inheriting the caller's
+# stdin let codex_launch_guard.sh wait on an agent shell's never-ending one (2026-11-20, 2 h 30 min).
 _run() {
   local secs="$1"; shift
-  if [ -n "$TIMEOUT_BIN" ]; then "$TIMEOUT_BIN" "$secs" "$@"
-  elif command -v perl >/dev/null 2>&1; then perl -e 'alarm shift @ARGV; exec @ARGV' "$secs" "$@"
-  else "$@"; fi
+  if [ -n "$TIMEOUT_BIN" ]; then "$TIMEOUT_BIN" "$secs" "$@" < /dev/null
+  elif command -v perl >/dev/null 2>&1; then perl -e 'alarm shift @ARGV; exec @ARGV' "$secs" "$@" < /dev/null
+  else "$@" < /dev/null; fi
 }
 
 # _answer — reduce a runtime's stdout to THE MODEL'S ANSWER.
