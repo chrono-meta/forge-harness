@@ -64,6 +64,11 @@ mkrepo b; B="$T/b"
 printf '| bare | 7/10 |\n' > "$A/r7early.md"; G -C "$A" add r7early.md; C "$A" r7early; G -C "$A" push -q origin HEAD:main
 echo "prereg x" > "$B/px.md"; G -C "$B" add px.md; C "$B" px; SX=$(sha "$B"); G -C "$B" push -q origin HEAD:main
 printf '| bare | 8/10 |\n' > "$A/r7late.md"; G -C "$A" add r7late.md; C "$A" r7late; G -C "$A" push -q origin HEAD:main
+# «k of n» and printed-rate results, and one exploratory section (#scoreboard-cr)
+echo "prereg words" > "$A/p12.md"; G -C "$A" add p12.md; C "$A" p12; S12=$(sha "$A"); G -C "$A" push -q origin HEAD:main
+printf '# Results\n| tool | 4 of 6 |\n| bare | 14 of 60 |\n| rate | 0.417 |\n| one | 1 |\n| two | 2 |\n## EXPLORATORY\n| judged | 0.208 |\n### detail\n| deep | 0.555 |\n## Limits\n| after | 0.777 |\n' > "$A/r12.md"; G -C "$A" add r12.md; C "$A" r12; G -C "$A" push -q origin HEAD:main
+echo "prereg heads" > "$A/p13.md"; G -C "$A" add p13.md; C "$A" p13; S13=$(sha "$A"); G -C "$A" push -q origin HEAD:main
+printf '# R\n| neg | -0.417 |\n| span-a | 1.11 |\n## EXPLORATORY\n| span-b | 2.22 |\n# Clean\nExploratory notes\n=================\n| setext | 0.444 |\n# Other\n   ## 탐색\n| indent | 0.666 |\n' > "$A/r13.md"; G -C "$A" add r13.md; C "$A" r13; G -C "$A" push -q origin HEAD:main
 G -C "$A" fetch -q origin; G -C "$B" fetch -q origin
 
 E() {  # id outcome prereg_repo prereg_path seal result_repo result_path ref quote_json arms_json [value]
@@ -101,10 +106,31 @@ ENTRIES=$(printf '%s,' \
   "$(E side-seal WIN a p8.md "$S8" a r8.md origin/main '"| bare | 2/9 |"' '[]' "2/9")" \
   "$(E edited-away WIN a p9.md "$S9" a r9.md origin/main '"| bare | 3/9 |"' '[]' "3/9")" \
   | sed 's/,$//')
+ENTRIES="$ENTRIES,$(printf '%s,' \
+  "$(E k-of-n WIN a p12.md "$S12" a r12.md origin/main '"| tool | 4 of 6 |"' '[{"label":"tool","k":4,"n":6}]')" \
+  "$(E k-of-n-inside WIN a p12.md "$S12" a r12.md origin/main '"| bare | 14 of 60 |"' '[{"label":"bare","k":4,"n":6}]')" \
+  "$(E value-arm NO-DIFFERENCE a p12.md "$S12" a r12.md origin/main '"| rate | 0.417 |"' '[{"label":"CR","value":"0.417"},{"label":"FHG","value":"0.417"}]')" \
+  "$(E value-arm-inside NO-DIFFERENCE a p12.md "$S12" a r12.md origin/main '"| rate | 0.417 |"' '[{"label":"CR","value":"0.41"}]')" \
+  "$(E value-arm-word NO-DIFFERENCE a p12.md "$S12" a r12.md origin/main '"| rate | 0.417 |"' '[{"label":"CR","value":"rate"}]')" \
+  "$(E explore-flag EXPLORATORY a p12.md "$S12" a r12.md origin/main '"| judged | 0.208 |"' '[{"label":"judged","value":"0.208"}]')" \
+  "$(E explore-no-flag EXPLORATORY a p12.md "$S12" a r12.md origin/main '"| judged | 0.208 |"' '[{"label":"judged","value":"0.208"}]')" \
+  "$(E explore-flag-win WIN a p12.md "$S12" a r12.md origin/main '"| judged | 0.208 |"' '[{"label":"judged","value":"0.208"}]')" \
+  "$(E split-value WIN a p12.md "$S12" a r12.md origin/main '["| one | 1 |","| two | 2 |"]' '[{"label":"x","value":"1\n| two | 2"}]')" \
+  "$(E explore-hidden WIN a p12.md "$S12" a r12.md origin/main '"| judged | 0.208 |"' '[{"label":"judged","value":"0.208"}]')" \
+  "$(E explore-hidden-sub WIN a p12.md "$S12" a r12.md origin/main '"| deep | 0.555 |"' '[{"label":"deep","value":"0.555"}]')" \
+  "$(E after-explore WIN a p12.md "$S12" a r12.md origin/main '"| after | 0.777 |"' '[{"label":"after","value":"0.777"}]')" \
+  "$(E neg-sign WIN a p13.md "$S13" a r13.md origin/main '"| neg | -0.417 |"' '[{"label":"x","value":"0.417"}]')" \
+  "$(E span-explore WIN a p13.md "$S13" a r13.md origin/main '"| span-a | 1.11 |\n## EXPLORATORY\n| span-b | 2.22 |"' '[{"label":"b","value":"2.22"}]')" \
+  "$(E setext-explore WIN a p13.md "$S13" a r13.md origin/main '"| setext | 0.444 |"' '[{"label":"s","value":"0.444"}]')" \
+  "$(E indent-explore WIN a p13.md "$S13" a r13.md origin/main '"| indent | 0.666 |"' '[{"label":"i","value":"0.666"}]')" \
+  | sed 's/,$//')"
+# the two flagged exploratory entries: add «exploratory: true» after the fact
+ENTRIES=$(sed -e 's/"id":"explore-flag",/"id":"explore-flag","exploratory":true,/' -e 's/"id":"explore-flag-win",/"id":"explore-flag-win","exploratory":true,/' <<< "$ENTRIES")
 # pattern-hit and pooled-check differ only by measure text; the pattern file matches «pattern-hit»
 # CI entries are appended raw: one whose CI is in the quote, one whose CI is not
 ENTRIES="$ENTRIES,$(printf '{"id":"ci-in-quote","group":"g","measure":"m ci-in-quote","outcome":"WIN","model":"x","date":"d","prereg":{"repo":"a","path":"p10.md","seal":"%s"},"result":{"repo":"a","path":"r10.md","ref":"origin/main"},"quote":"| tool | 9/10 = 90%% (60–98) |","arms":[{"label":"tool","k":9,"n":10}],"ci":"60–98"}' "$S10")"
 ENTRIES="$ENTRIES,$(printf '{"id":"ci-not-in-quote","group":"g","measure":"m ci-not-in-quote","outcome":"WIN","model":"x","date":"d","prereg":{"repo":"a","path":"p10.md","seal":"%s"},"result":{"repo":"a","path":"r10.md","ref":"origin/main"},"quote":"| tool | 9/10 = 90%% (60–98) |","arms":[{"label":"tool","k":9,"n":10}],"ci":"50–99"}' "$S10")"
+ENTRIES="$ENTRIES,$(printf '{"id":"ci-stitched","group":"g","measure":"m ci-stitched","outcome":"WIN","model":"x","date":"d","prereg":{"repo":"a","path":"p12.md","seal":"%s"},"result":{"repo":"a","path":"r12.md","ref":"origin/main"},"quote":["| one | 1 |","| two | 2 |"],"arms":[{"label":"one","value":"1"}],"ci":"1 |\\n| two"}' "$S12")"
 cat > "$T/idx.json" <<EOF
 {"title":"t","repos":{"a":{"path":"$A"},"a2":{"path":"$A"},"b":{"path":"$B"},"co":{"path":"$A","company":true}},
  "groups":{"g":"Group"},"slots":[{"group":"g","measure":"reserved slot"},{"group":"only-slot","measure":"lonely slot"}],"entries":[$ENTRIES]}
@@ -148,11 +174,32 @@ gone decimal-denominator "K29 a declared 2/10 found only as 2/10.5 does not rend
 prow=$(row pipe-in-label); [ -n "$prow" ] && [ "$(sed 's/\\|//g' <<< "$prow" | tr -cd '|' | wc -c | tr -d ' ')" = 9 ] && _pass "K30 a pipe in index text cannot add table cells" || _fail "K30 pipe escaped badly: [$prow]"
 gone zero-denominator "K31 a 0/0 arm does not render (no percentage to show)" "n > 0"
 gone glob-prereg-path "K32 a pre-registration path is a file, not a glob" "does not touch"
+shown k-of-n         "K33 a k/n printed as «4 of 6» renders"
+gone k-of-n-inside    "K34 a declared 4 of 6 found only inside «14 of 60» does not render" "not in the quote"
+shown value-arm       "K35 an arm with a printed value (0.417) renders"
+gone value-arm-inside "K36 a value found only inside a longer number (0.41 in 0.417) does not render" "not in the quote as a whole number"
+gone value-arm-word   "K37 an arm value with no digit does not render" "printed number"
+xsec=$(sed -n '/## Exploratory/,/## Excluded/p' <<< "$out")
+if grep -qF "| m explore-flag |" <<< "$xsec" && ! grep -qF "| m explore-flag |" <<< "$(sed -n '1,/## Exploratory/p' <<< "$out")"; then
+  _pass "K38 an exploratory entry renders only in the Exploratory section"
+else _fail "K38 exploratory placement: [$(row explore-flag)]"; fi
+gone explore-no-flag  "K39 outcome EXPLORATORY without the flag does not render" "needs «exploratory: true»"
+gone explore-flag-win "K40 a flagged exploratory entry cannot carry a decision outcome" "not a decision"
+gone ci-stitched      "K46 a CI cannot be stitched across two quotes" "CI shown is not in the quote"
+gone split-value      "K42 a value cannot be stitched across two quotes" "printed number"
+gone explore-hidden   "K43 a quote under an EXPLORATORY heading without the flag does not render" "marks exploratory"
+gone explore-hidden-sub "K44 … nor under a sub-heading of an exploratory section" "marks exploratory"
+shown after-explore   "K45 a quote under the next non-exploratory heading still renders"
+gone neg-sign         "K47 a declared 0.417 found only as «-0.417» does not render" "not in the quote as a whole number"
+gone span-explore     "K48 a quote that crosses into an exploratory section does not render unflagged" "marks exploratory"
+gone setext-explore   "K49 an exploratory setext heading (=== underline) counts" "marks exploratory"
+gone indent-explore   "K50 an indented ATX heading counts" "marks exploratory"
+grep -qE "^Rows by outcome: .* · exploratory 1 · excluded" <<< "$out" && _pass "K41 exploratory rows are counted apart from the decisions" || _fail "K41 counts line: $(grep '^Rows by outcome' <<< "$out")"
 grep -qF "lonely slot | *result not landed*" <<< "$out" && _pass "K25 a slot whose group has no rows still renders" || _fail "K25 slot-only group dropped"
 grep -qF "reserved slot | *result not landed*" <<< "$out" && _pass "K16 a reserved slot renders as pending" || _fail "K16 slot missing"
 pct_lines=$(grep -vE '^\|' <<< "$out" | grep -c '%' || true)
 [ "$pct_lines" = 0 ] && _pass "K17 no percentage outside table rows (no pooled headline)" || _fail "K17 $pct_lines line(s) with % outside rows"
-grep -qE "^Rows by outcome: win [0-9]+ · NO DIFFERENCE [0-9]+ · NOT-DETECTED [0-9]+ · CEILING [0-9]+ · claim not supported [0-9]+ · excluded [0-9]+$" <<< "$out" \
+grep -qE "^Rows by outcome: win [0-9]+ · NO DIFFERENCE [0-9]+ · NOT-DETECTED [0-9]+ · CEILING [0-9]+ · claim not supported [0-9]+ · exploratory [0-9]+ · excluded [0-9]+$" <<< "$out" \
   && _pass "K18 outcome counts line names every outcome, including excluded" || _fail "K18 counts line shape"
 
 # UNMEASURED states

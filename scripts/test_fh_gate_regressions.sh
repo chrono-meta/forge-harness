@@ -156,6 +156,47 @@ check "Korean untracked file (ls-files path): resolved (dry-run 12)" 12 \
   env -C "$NA" FH_DRY_RUN=1 FH_BASE_BRANCH=main bash "$ABS_GATE"
 
 echo
+echo "── names git quotes even with core.quotePath=false: quote, backslash, tab (AQ-20261119-8) ──"
+# The plain listing still wraps these in quotes with C escapes («"a\"b.md"»), so the gate could not open them and
+# warned «review is partial». The listings are now read NUL-delimited (-z), where git prints every name raw.
+SQ="$TMPROOT/specialq"; mkdir -p "$SQ"
+_sq() { git -C "$SQ" -c user.name=lane -c user.email=lane@example.invalid -c commit.gpgsign=false "$@"; }
+_sq init -q -b main; echo seed > "$SQ/README"; _sq add README; _sq commit -qm seed
+_sq switch -q -c change
+printf 'q\n' > "$SQ/quo\"te.md"; printf 'b\n' > "$SQ/back\\slash.md"; printf 't\n' > "$SQ/ta$(printf '\t')b.md"
+_sq add -A; _sq commit -qm special
+check "quote/backslash/tab names (diff path): dry-run 12" 12 env -C "$SQ" FH_DRY_RUN=1 FH_BASE_BRANCH=main bash "$ABS_GATE"
+if grep -q "review is partial" "$TMPROOT/err"; then
+  printf 'FAIL  %-58s %s\n' "quote/backslash/tab names: all 3 resolved" "$(grep -m1 'review is partial' "$TMPROOT/err")"; fail=$((fail + 1))
+else
+  printf 'PASS  %-58s\n' "quote/backslash/tab names: all 3 resolved (no partial WARN)"; pass=$((pass + 1))
+fi
+_sq switch -q main; printf 'u\n' > "$SQ/untr\"acked.md"
+check "quote name untracked (ls-files path): dry-run 12" 12 env -C "$SQ" FH_DRY_RUN=1 FH_BASE_BRANCH=main bash "$ABS_GATE"
+if grep -q "review is partial\|could be read" "$TMPROOT/err"; then
+  printf 'FAIL  %-58s\n' "quote name untracked: resolved"; fail=$((fail + 1))
+else
+  printf 'PASS  %-58s\n' "quote name untracked: resolved"; pass=$((pass + 1))
+fi
+rm -f "$SQ/untr\"acked.md"
+# A newline cannot travel in the newline-delimited target list: it must be NAMED in a WARN, never dropped silently.
+_sq switch -q change; printf 'n\n' > "$SQ/new
+line.md"; _sq add -A; _sq commit -qm nl
+check "newline name beside others: still dry-run 12" 12 env -C "$SQ" FH_DRY_RUN=1 FH_BASE_BRANCH=main bash "$ABS_GATE"
+if grep -q "contains a newline" "$TMPROOT/err"; then
+  printf 'PASS  %-58s\n' "newline name: named in a WARN, not dropped silently"; pass=$((pass + 1))
+else
+  printf 'FAIL  %-58s\n' "newline name: no WARN names it"; fail=$((fail + 1))
+fi
+# Only a newline name changed, tree otherwise dirty: must fail closed (10), not fall back to the dirty file.
+NO="$TMPROOT/nlonly"; mkdir -p "$NO"
+_no() { git -C "$NO" -c user.name=lane -c user.email=lane@example.invalid -c commit.gpgsign=false "$@"; }
+_no init -q -b main; echo seed > "$NO/README"; _no add README; _no commit -qm seed
+_no switch -q -c change; printf 'n\n' > "$NO/only
+nl.md"; _no add -A; _no commit -qm nl; echo dirty >> "$NO/README"
+check "newline name is the only change: fails closed (10)" 10 env -C "$NO" FH_DRY_RUN=1 FH_BASE_BRANCH=main bash "$ABS_GATE"
+
+echo
 echo "── cross-field verdict invariants (the gate's own worst class) ──"
 # THE hole: enum-membership passed, verdict dispatched on the enum alone, findings_a was
 # read and printed but never consulted → ship-it while holding blocking evidence.

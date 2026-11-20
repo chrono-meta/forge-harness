@@ -40,7 +40,8 @@ case "${1:-}" in
   diff)   exit "${FAKE_GIT_DIFF_RC:-0}" ;;
   status)
     if [[ "${FAKE_GIT_STATUS_RC:-0}" -ne 0 ]]; then exit "${FAKE_GIT_STATUS_RC}"; fi
-    [[ -n "${FAKE_GIT_STATUS_OUT:-}" ]] && printf '%s\n' "$FAKE_GIT_STATUS_OUT"
+    # fh-goal asks for `status --porcelain -z` (AQ-20261119-8): entries are NUL-terminated, as real git prints them
+    [[ -n "${FAKE_GIT_STATUS_OUT:-}" ]] && printf '%s\0' "$FAKE_GIT_STATUS_OUT"
     exit 0 ;;
 esac
 exit 0
@@ -104,6 +105,66 @@ if command -v git >/dev/null 2>&1; then
   fi
 else
   echo "  ⬜ ARM D NOT RUN: no git on PATH — not a pass"
+fi
+
+# ARM E — real git, untracked names with a quote and a space (AQ-20261119-8). The old path joined names with
+# `xargs`, which aborts on an unmatched quote; `|| true` folded that into an empty list → «no changed files
+# detected» → exit 0, fh-gate never ran. Now: NUL-delimited listing, newline-delimited hand-off to fh-gate.
+if command -v git >/dev/null 2>&1; then
+  mkdir -p "$FIX/realwork2"
+  git -C "$FIX/realwork2" init -q; echo seed > "$FIX/realwork2/README"
+  git -C "$FIX/realwork2" add README; git -C "$FIX/realwork2" -c user.name=lane -c user.email=lane@example.invalid commit -qm seed
+  echo q > "$FIX/realwork2/it's here.md"
+  ( cd "$FIX/realwork2" && env PATH="$FIX/realbin:$PATH" FH_BACKEND=codex FH_TIMEOUT=20 \
+      bash "$TARGET" --prompt "noop" --root "$FIX/realwork2" ) >"$FIX/out" 2>"$FIX/err"
+  if grep -qF "running fh-gate on it's here.md" "$FIX/err" && ! grep -q "review is partial\|could be read" "$FIX/err"; then
+    ok "ARM E real git: a name with a quote and a space reaches fh-gate whole and is read"
+  else
+    no "ARM E real git: the quoted/spaced name did not reach fh-gate whole"
+    grep -m3 "running fh-gate on\|no changed files\|partial\|could be read" "$FIX/err" | sed 's/^/       /'
+  fi
+else
+  echo "  ⬜ ARM E NOT RUN: no git on PATH — not a pass"
+fi
+
+# ARM F — real git, a staged rename: with `status --porcelain -z` the OLD path follows as its own field and must
+# be skipped, not handed to fh-gate as a second (missing) target. Guards the new skip logic only — the old sed
+# path also got renames right, so this arm is green on the pre-fix script too.
+if command -v git >/dev/null 2>&1; then
+  mkdir -p "$FIX/realwork3"
+  git -C "$FIX/realwork3" init -q; echo seed > "$FIX/realwork3/old name.md"
+  git -C "$FIX/realwork3" add .; git -C "$FIX/realwork3" -c user.name=lane -c user.email=lane@example.invalid commit -qm seed
+  git -C "$FIX/realwork3" mv "old name.md" "new name.md"
+  ( cd "$FIX/realwork3" && env PATH="$FIX/realbin:$PATH" FH_BACKEND=codex FH_TIMEOUT=20 \
+      bash "$TARGET" --prompt "noop" --root "$FIX/realwork3" ) >"$FIX/out" 2>"$FIX/err"
+  if grep -qxF "→ fh-goal: running fh-gate on new name.md" "$FIX/err"; then
+    ok "ARM F real git: a rename hands fh-gate the new path only"
+  else
+    no "ARM F real git: a rename did not hand fh-gate exactly the new path"
+    grep -m2 "running fh-gate on\|no changed files" "$FIX/err" | sed 's/^/       /'
+  fi
+else
+  echo "  ⬜ ARM F NOT RUN: no git on PATH — not a pass"
+fi
+
+# ARM G — real git, the only change is a name holding a newline: it cannot travel to fh-gate, and an empty list
+# must not become «no changed files» → exit 0. Must exit 10.
+if command -v git >/dev/null 2>&1; then
+  mkdir -p "$FIX/realwork4"
+  git -C "$FIX/realwork4" init -q; echo seed > "$FIX/realwork4/README"
+  git -C "$FIX/realwork4" add README; git -C "$FIX/realwork4" -c user.name=lane -c user.email=lane@example.invalid commit -qm seed
+  printf 'n\n' > "$FIX/realwork4/new
+line.md"
+  ( cd "$FIX/realwork4" && env PATH="$FIX/realbin:$PATH" FH_BACKEND=codex FH_TIMEOUT=20 \
+      bash "$TARGET" --prompt "noop" --root "$FIX/realwork4" ) >"$FIX/out" 2>"$FIX/err"; RC=$?
+  if [[ "$RC" == "10" ]] && grep -q "holds a newline" "$FIX/err"; then
+    ok "ARM G real git: a newline-only change fails closed (exit 10), not «no changed files»"
+  else
+    no "ARM G real git: a newline-only change gave rc=$RC"
+    grep -m2 "running fh-gate on\|no changed files\|newline" "$FIX/err" | sed 's/^/       /'
+  fi
+else
+  echo "  ⬜ ARM G NOT RUN: no git on PATH — not a pass"
 fi
 
 echo "fh-goal change-detection: $PASS passed, $FAIL failed"

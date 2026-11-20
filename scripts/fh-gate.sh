@@ -425,9 +425,32 @@ FH_BASE_BRANCH="${FH_BASE_BRANCH:-main}"
 if [[ -z "$TARGET_FILES" ]]; then
   # core.quotePath=false: by default git prints a non-ASCII name quoted («"\355\225…"»), which then names no file —
   # a Korean-only change exited 10 «nothing was reviewed», and a mixed change reviewed only the ASCII files (2026-11-19).
-  TARGET_FILES=$(git -C "$WORK_ROOT" -c core.quotePath=false diff "${FH_BASE_BRANCH}..HEAD" --name-only 2>/dev/null || true)
-  if [[ -z "$TARGET_FILES" ]]; then
-    TARGET_FILES=$(git -C "$WORK_ROOT" -c core.quotePath=false ls-files --modified --others --exclude-standard 2>/dev/null || true)
+  # -z: even with quotePath off, git still quotes a name holding a quote, backslash or tab; NUL-delimited output is
+  # always raw (AQ-20261119-8). A name with a newline cannot travel in the newline-delimited list: a WARN names it.
+  # Sets globals (no subshell) so a dropped name is counted: a listing whose every name was dropped fails closed
+  # instead of falling through to the next listing or to «git diff returned empty».
+  _GZ_DROPPED=0
+  _git_z_list() {
+    local _n
+    TARGET_FILES=""
+    while IFS= read -r -d '' _n; do
+      if [[ "$_n" == *$'\n'* ]]; then
+        echo "WARN: changed file name contains a newline and is not reviewed: $(printf '%q' "$_n")" >&2
+        _GZ_DROPPED=$((_GZ_DROPPED + 1))
+        continue
+      fi
+      TARGET_FILES="${TARGET_FILES}${_n}"$'\n'
+    done < <(git -C "$WORK_ROOT" -c core.quotePath=false "$@" 2>/dev/null || true)
+    TARGET_FILES="${TARGET_FILES%$'\n'}"
+  }
+  _git_z_list diff -z "${FH_BASE_BRANCH}..HEAD" --name-only
+  if [[ -z "$TARGET_FILES" && "$_GZ_DROPPED" -eq 0 ]]; then
+    _git_z_list ls-files -z --modified --others --exclude-standard
+  fi
+  if [[ -z "$TARGET_FILES" && "$_GZ_DROPPED" -gt 0 ]]; then
+    echo "ERROR: every changed file name holds a newline (${_GZ_DROPPED}) — nothing can be reviewed." >&2
+    echo "  Failing closed: an unperformed review must not be reported as a verdict. Rename the file(s)." >&2
+    exit $EXIT_HARNESS_ERROR
   fi
 elif [[ "$TARGET_FILES" != *$'\n'* ]] && ! path_exists_in_context "$TARGET_FILES"; then
   # Backward compatibility for v1.1 examples like "src/a.ts src/b.ts".
