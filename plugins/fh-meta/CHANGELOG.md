@@ -2,6 +2,12 @@
 
 ### [Unreleased]
 
+### [3.46.0] — 2026-11-21
+
+Minor by the version policy. Skill behaviour changes: `deep-clarify` saves its spec outside `.claude/` (#1162); `mcp-circuit-breaker` names `WRONG_SHAPE` and trips it on the first failure (#1164, #1171); the close retrospective has five fields (#1166). There is also a new record field on the live-eval behaviour profile (#1167) and a new shipped lane (#1162).
+
+One change makes a shipped helper refuse more by default; see its `BREAKING (gate):` entry: `pr_merge_verified.sh` refuses a commit id that is not full length (#1163).
+
 ### Added
 - Live-eval behaviour profile (record only): each `behaviour-profile:` line that has a stream carries `first_error=` after `total=` — the 1-based position of the first top-level tool call whose result is an error, `none` when every call has a result and none is an error, or `unknown` when a call before that has no result (not measured is not «no error»). Calls inside subagents are not counted. Nothing scores it; verdict rows are unchanged. `live_eval_trace.py profile` (shipped). (#1167)
 
@@ -16,7 +22,12 @@
 ### Fixed
 - `test_fh_gate_defaults_lanes.sh` (shipped) run where there is no `action.yml` — the npm package, or a field harness that syncs FH's lanes — names D7 as skipped («NOT-APPLICABLE … not measured, not a pass») and prints `1 skipped (not a pass)`; before, D7 failed there and the suite exited 1 (3.45.0). In an FH checkout a missing `action.yml` is still reported by `test_action_yml_lanes.sh` (exit 10). New lane D12 runs the lane from a copy without `action.yml`. (#1161)
 - `deep-clarify` (shipped) saves its spec to `specs/{slug}.md` in the work folder instead of `.claude/specs/{slug}.md`. Claude Code treats `.claude/` as sensitive: a headless run had the write refused, and an interactive user got a «modify sensitive file» prompt. The ABORT-if-exists check, the `test -f` save check and the gitignore advice for company projects keep their logic and now name `specs/`; a spec already saved under `.claude/specs/` stays there, and both paths are gitignored in this repo. New lane `scripts/test_deep_clarify_spec_path_lanes.sh` (shipped) runs the skill's own Step 3 commands in an empty folder. (#1162)
-- `pr_merge_verified.sh` (shipped) refuses, before the merge call, a PR head or `--expect-head` that is not a full 40- or 64-character lowercase hex commit id, and says the value may have been cut on the way (PR head: exit 4 · `--expect-head`: exit 2, the existing usage code). A field run saw an output-compression proxy shorten `git rev-parse HEAD` to 37 characters; a short value still resolves locally, so before this the merge call went out with it. A full id behaves as before. `context-doctor` gains one line where it recommends a command-output proxy: values a later step reads as data must bypass the proxy or be checked. (#1163)
+- BREAKING (gate): `pr_merge_verified.sh` (shipped), the merge helper.
+  - What changed: it refuses, before the merge call, a PR head or `--expect-head` that is not a full 40- or 64-character lowercase hex commit id, and says the value may have been cut on the way (PR head: exit 4 · `--expect-head`: exit 2, the existing usage code).
+  - Why: a field run saw an output-compression proxy shorten `git rev-parse HEAD` to 37 characters. A short value still resolves locally, so before this the merge call went out with it and failed later with no hint why.
+  - What now blocks: a shortened or cut commit id. A full id behaves as before.
+  - Remedy: pass the full id (for example from `gh pr view --json headRefOid`); if an output proxy shortens it, run that command through the proxy's raw escape hatch.
+  - `context-doctor` gains one line where it recommends a command-output proxy: values a later step reads as data must bypass the proxy or be checked. (#1163)
 
 ### [3.45.0] — 2026-11-20
 
