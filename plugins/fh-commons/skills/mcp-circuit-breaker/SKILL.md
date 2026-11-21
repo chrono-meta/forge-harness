@@ -40,7 +40,7 @@ HALF-OPEN → Recovery probe (1 test call allowed, resets if success)
 ```
 
 Default thresholds:
-- **Trip threshold**: 3 consecutive failures of the same tool
+- **Trip threshold**: 3 consecutive failures of the same tool for transient types (`TIMEOUT`, `RATE_LIMIT`, and `MALFORMED` / `UNKNOWN` until known); **1** for the non-transient types (`ADMIN_GATED`, `AUTH`, `NOT_FOUND`, `WRONG_SHAPE`) — see Step 2
 - **Half-open probe**: after 60s cooldown (or explicit user command)
 - **Reset**: 1 successful call in HALF-OPEN state → back to CLOSED
 
@@ -81,6 +81,8 @@ Classify failure type:
 
 If failure type cannot be determined: classify as `UNKNOWN`.
 
+`MALFORMED` vs `WRONG_SHAPE`: the answer could not be parsed at all → `MALFORMED`; it parsed (or arrived as a page) but is not what the caller needs → `WRONG_SHAPE`.
+
 > **`ADMIN_GATED` is not a retry case.** Distinguish *capability unavailable* from *MCP transport
 > unavailable*: when the block is an org/admin approval dependency, do not burn retries — route straight
 > to the lower-permission substitute in Step 4 (Priority 1b).
@@ -93,8 +95,8 @@ Count consecutive failures of the identified tool in the current session context
 
 | Count | Action |
 |---|---|
-| 1 | Log warning. Continue — *"MCP tool {name} failed once. Monitoring."* |
-| 2 | Escalate warning. Suggest checking server status. |
+| 1 | Transient type: log warning and continue — *"MCP tool {name} failed once. Monitoring."* Non-transient type (see below): **TRIP CIRCUIT** now |
+| 2 | Transient type: escalate warning. Suggest checking server status. |
 | 3+ | **TRIP CIRCUIT** → output circuit open notice, block further calls to this tool |
 
 > **Non-transient types trip at count 1, not 3.** `ADMIN_GATED`, `AUTH`, `NOT_FOUND` and `WRONG_SHAPE` do not
@@ -129,6 +131,7 @@ cat >> .claude/mcp_circuit/circuit_log.yaml << EOF
   state: OPEN            # OPEN | HALF-OPEN | CLOSED — same enum as Done When
   failure_type: {TYPE}
   failure_count: {N}
+  expected_shape: {content type + the field the caller needs — WRONG_SHAPE only; the Step 5 probe checks against it}
   tripped_at: {ISO-8601}
   reset_at: null
 EOF
@@ -143,6 +146,7 @@ Present the relevant fallback options ranked by effort (at least 3):
 | Priority | Alternative | When to Use |
 |---|---|---|
 | **1 — Substitute tool** | Use a different MCP tool or built-in tool that covers the same task | Tool-specific failure (NOT_FOUND, AUTH) |
+| **1a — Fix the endpoint** | Check the configured host and path against the service's documentation (an API host and a webhook host are often different), correct it, then let the Step 5 probe confirm the expected shape | `WRONG_SHAPE` |
 | **1b — Lower-permission API / workflow substitute** | The MCP mount is gated, but the underlying capability is usually still reachable through a member-scoped path: a Personal-Access-Token REST API call, or a workflow-automation runner. Before relying on it, confirm **credential scope** (a member-level token suffices?), **audit parity** (logged where the MCP path would log?), and **behavior gap** (what the MCP path does that this does not — e.g. natural-language workflow creation vs hand-written JSON). | `ADMIN_GATED` |
 | **2 — Degrade gracefully** | Skip the MCP step, note the gap, continue with available information | TIMEOUT / RATE_LIMIT |
 | **3 — Pause and retry** | Wait for server recovery (HALF-OPEN probe after cooldown) | Transient failure (TIMEOUT, RATE_LIMIT) |

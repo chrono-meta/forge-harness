@@ -16,7 +16,7 @@
 # 🟥 This script does not decide whether to merge. Approval is still yours — it only makes the
 #   verification impossible to forget once you do.
 #
-# USAGE   bash scripts/pr_merge_verified.sh <pr-number> --rerun '<command>' [--repo <path>] [--lease '<label>']
+# USAGE   bash scripts/pr_merge_verified.sh <pr-number> --rerun '<command>' [--repo <path>] [--lease '<label>'] [--expect-head <full sha>]
 # RECEIPT once GitHub has accepted the merge request (every outcome from there: verified · verify failed · queued/not completed ·
 #         merged from another head · not fetchable — never for a refusal or a merge GitHub did not take) one JSON line goes to
 #         ${PMV_RECEIPTS:-<git common dir>/fh-merge-receipts.jsonl} — local, never pushed: pr · head · merge · outcome ·
@@ -25,8 +25,10 @@
 #         Why: arXiv:2610.28683 — 27% of merges that passed a «non-author review» gate rested on an agent approving under a
 #         human account; who decided must be on the record, not inferred later (frontier digest 2026-10-23).
 # EXIT    0 merged + verified · 1 merged but verify FAILED (the merge stands — act on it)
-#         2 usage (nothing merged) · 3 trivial --rerun refused (nothing merged)
-#         4 harness error (see message: before or after the merge)
+#         2 usage (nothing merged) — includes an --expect-head that is not a full 40/64-char lowercase hex id
+#         3 trivial --rerun refused (nothing merged)
+#         4 harness error (see message: before or after the merge) — includes a PR head read from gh that is not a full
+#           40/64-char lowercase hex id (cut on the way, e.g. by an output-compression proxy; nothing merged)
 #         6 merge accepted but not completed (queue/lag) — NOT verified, nothing claimed
 #         7 lease merge refused: a --lease other than «operator…» and selfdev_merge_tier.sh did not say AUTO, or the tier
 #           could not be read (nothing merged)
@@ -48,7 +50,7 @@ while [ $# -gt 0 ]; do
     *) [ -z "$PR" ] || { echo "🟥 one PR number only" >&2; exit 2; }; PR="$1"; shift ;;
   esac
 done
-case "$PR" in ''|*[!0-9]*) echo "🟥 usage: pr_merge_verified.sh <pr-number> --rerun '<cmd>'" >&2; exit 2 ;; esac
+case "$PR" in ''|*[!0-9]*) echo "🟥 usage: pr_merge_verified.sh <pr-number> --rerun '<cmd>' [--repo <path>] [--lease '<label>'] [--expect-head <full sha>]" >&2; exit 2 ;; esac
 [ "$RERUN_SET" -eq 1 ] || { echo "🟥 --rerun is required — checked before merging so the verify half cannot be skipped" >&2; exit 2; }
 # _full_oid <value> — true only for a full commit id: 40 (SHA-1) or 64 (SHA-256) lowercase hex. A shorter value can
 # still resolve locally (git accepts abbreviations), so «resolves» is not «whole». A field run saw an output-compression
