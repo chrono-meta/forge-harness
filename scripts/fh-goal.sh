@@ -274,6 +274,12 @@ if [[ -z "$TARGET_FILES" && "$_FG_DROPPED" -gt 0 ]]; then
   echo "  Failing closed rather than reporting «no changed files». Rename the file(s) or pass --files." >&2
   exit 10
 fi
+# Beside other names, a dropped one would make fh-gate's verdict cover part of the change (security review 2026-11-20).
+if [[ "$_FG_DROPPED" -gt 0 ]]; then
+  echo "ERROR: ${_FG_DROPPED} changed file name(s) hold a newline — fh-gate would review only the rest." >&2
+  echo "  Failing closed rather than reporting a verdict on part of the change. Rename the file(s) or pass --files." >&2
+  exit 10
+fi
 
 if [[ -z "$TARGET_FILES" ]]; then
   echo "→ fh-goal: no changed files detected in ${WORK_ROOT}; skipping fh-gate" >&2

@@ -179,11 +179,13 @@ else
   printf 'PASS  %-58s\n' "quote name untracked: resolved"; pass=$((pass + 1))
 fi
 rm -f "$SQ/untr\"acked.md"
-# A newline cannot travel in the newline-delimited target list: it must be NAMED in a WARN, never dropped silently.
+# A newline cannot travel in the newline-delimited target list: it must be NAMED in a WARN, and since the rest would
+# get a verdict on part of the change, the gate fails closed (10) instead of reviewing the others (security review
+# 2026-11-20; before, this case went on to a dry-run 12 and, with a backend, to PASS).
 _sq switch -q change; printf 'n\n' > "$SQ/new
 line.md"; _sq add -A; _sq commit -qm nl
-check "newline name beside others: still dry-run 12" 12 env -C "$SQ" FH_DRY_RUN=1 FH_BASE_BRANCH=main bash "$ABS_GATE"
-if grep -q "contains a newline" "$TMPROOT/err"; then
+check "newline name beside others: fails closed 10" 10 env -C "$SQ" FH_DRY_RUN=1 FH_BASE_BRANCH=main bash "$ABS_GATE"
+if grep -q "contains a newline" "$TMPROOT/err" && grep -q "cover only part of the change" "$TMPROOT/err"; then
   printf 'PASS  %-58s\n' "newline name: named in a WARN, not dropped silently"; pass=$((pass + 1))
 else
   printf 'FAIL  %-58s\n' "newline name: no WARN names it"; fail=$((fail + 1))

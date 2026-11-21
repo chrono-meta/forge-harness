@@ -167,5 +167,24 @@ else
   echo "  ⬜ ARM G NOT RUN: no git on PATH — not a pass"
 fi
 
+# ARM H — real git, a newline-named file BESIDE a normal one: fh-gate would review only the normal one and its
+# verdict would read as the whole change. Must exit 10 before fh-gate runs (security review 2026-11-20).
+if command -v git >/dev/null 2>&1; then
+  mkdir -p "$FIX/realwork5"
+  git -C "$FIX/realwork5" init -q; echo seed > "$FIX/realwork5/README"
+  git -C "$FIX/realwork5" add README; git -C "$FIX/realwork5" -c user.name=lane -c user.email=lane@example.invalid commit -qm seed
+  printf 'n\n' > "$FIX/realwork5/new
+line.md"; echo two > "$FIX/realwork5/README"
+  ( cd "$FIX/realwork5" && env PATH="$FIX/realbin:$PATH" FH_BACKEND=codex FH_TIMEOUT=20 \
+      bash "$TARGET" --prompt "noop" --root "$FIX/realwork5" ) >"$FIX/out" 2>"$FIX/err"; RC=$?
+  if [[ "$RC" == "10" ]] && grep -q "would review only the rest" "$FIX/err" && ! grep -q "running fh-gate on" "$FIX/err"; then
+    ok "ARM H real git: a newline name beside a normal change fails closed (exit 10) before fh-gate runs"
+  else
+    no "ARM H real git: a newline name beside a normal change gave rc=$RC"
+  fi
+else
+  echo "  ⬜ ARM H NOT RUN: no git on PATH — not a pass"
+fi
+
 echo "fh-goal change-detection: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]] || exit 1
