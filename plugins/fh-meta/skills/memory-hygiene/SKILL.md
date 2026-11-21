@@ -100,6 +100,12 @@ FRESH (<threshold):
 
 ### Step 3 — Re-verify Stale Entries
 
+**Evidence pointer first.** An entry may carry `metadata.evidence:` — one line naming the narrowest source of
+the lesson: a commit hash, a PR number, a log line or a `file:line`. Write it when the memory is created, next to
+the session link it already has. When it is present, re-verify against it before the type method below; it is the
+place to go back to. It is optional and never inferred: an older entry without it is not an error, and a pointer
+that no longer resolves is reported as such, not filled in.
+
 For each stale entry, run the appropriate re-verification:
 
 **Reference type** (URLs, DOIs, GitHub):
