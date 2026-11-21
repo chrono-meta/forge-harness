@@ -1190,12 +1190,16 @@ elif [[ "$FH_REVIEWER" == "code-review" ]]; then
   REVIEW_VERDICT="PASS"
   [ "$(printf '%s' "$REVIEW_FINDINGS" | jq -r '[.[]|select(.grade=="B")]|length')" -gt 0 ] && REVIEW_VERDICT="PENDING"
 else
+# The default (fh-legacy) review gets the same read-only policy as call_structured above, at the repository root:
+# the target content is already in its prompt, so it only needs to read files. Before 2026-11-22 this call passed no
+# tool, MCP or sandbox restriction, so it ran with whatever the backend CLI's own settings allowed.
 run_backend() {
   case "$FH_BACKEND" in
-    claude) ${_TIMEOUT_CMD} claude --print --model "$FH_MODEL" \
-              --output-format json --json-schema "$(cat "$SCHEMA_FILE")" ;;
-    codex)  ${_TIMEOUT_CMD} codex exec -m "$FH_MODEL" --skip-git-repo-check \
-              --output-schema "$SCHEMA_FILE" -o "$CODEX_LAST" - ;;
+    claude) ( cd "$WORK_ROOT" && ${_TIMEOUT_CMD} claude --print --model "$FH_MODEL" \
+              --output-format json --json-schema "$(cat "$SCHEMA_FILE")" --tools "$_RO_TOOLS" --strict-mcp-config \
+              --disable-slash-commands --allowedTools "$_RO_ALLOW" --disallowedTools "$_RO_DENY" ) ;;
+    codex)  ( cd "$WORK_ROOT" && ${_TIMEOUT_CMD} codex exec -m "$FH_MODEL" --skip-git-repo-check -s read-only \
+              --output-schema "$SCHEMA_FILE" -o "$CODEX_LAST" - ) ;;
   esac
 }
 
