@@ -28,12 +28,13 @@ Items marked «not in the npm package» are in the repository checkout only.
     - E0 runs FH's pipefail early-exit class scanner against the change; a new site it flags is B. The scanner is not in the npm package, so from npm E0 prints `NOT RUN (scanner not shipped here)` and only E1 runs.
     - E1 runs the change's target lanes. A lane this change turns red is graded A (BLOCKED); a lane already red before the change is C; a lane that did not finish or could not run is B.
     - It runs the repository's own lane scripts: use it only where the change is trusted. The copy is not a sandbox.
-  - `FH_REVIEWER=code-review` (claude backend only) calls the built-in `/code-review` (medium at `quick`, high at `full`) with a JSON schema and read-only tools. Its findings are carried as reported: Important → B, Nit and Pre-existing → C.
+  - `FH_REVIEWER=code-review` (claude backend only) calls the built-in `/code-review` (medium at `quick`, high at `full`) with a JSON schema. Its tools are not read-only: `/code-review` needs git's read commands, and `git diff/log/show --output=<file>` writes a file, so a reviewed change that talks the model into it could write a file of its choosing. Use it on trusted changes only. The call runs without the runner's command-file variables (`GITHUB_ENV`, `GITHUB_PATH`, `GITHUB_OUTPUT`, `GITHUB_STATE`, `GITHUB_STEP_SUMMARY`); that removes the direct reference only — the files can still be found and written, so it does not make this path safe. Its findings are carried as reported: Important → B, Nit and Pre-existing → C.
   - `FH_REVIEWER=fh` runs a «goldfish» pass modelled on the phase structure of `/code-review` as shipped in Claude Code 2.1.328, written in FH's words:
     - eight finder angles;
     - one CONFIRMED / PLAUSIBLE / REFUTED vote per candidate;
     - at most 10 findings at `full`, 8 at `quick`;
     - it never receives `FH_TASK_DESCRIPTION`, in its prompt or in its process environment.
+  - on the claude backend it gets only Read · Glob · Grep: no shell, no MCP server, no skill (`--tools`, `--strict-mcp-config`, `--disable-slash-commands`; the change and the target content are in its prompt). A Claude Code too old for these flags fails the call (exit 10). On codex it runs in `codex exec -s read-only`, codex's sandbox. The elephant pass below is the same.
   - `FH_GATE_ELEPHANT=auto` (on at `full`) or `on` adds an «elephant» pass:
     - it gets the task description and the touched files' git history;
     - it looks only for a past fix re-opened, a recorded decision undone or the task contradicted;
