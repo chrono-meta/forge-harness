@@ -239,6 +239,8 @@ npx --package @chrono-meta/fh-gate fh-gate "src/foo.ts" full  # explicit files +
 FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-gate   # Codex backend (default: claude)
 # → FH_GATE_VERDICT: PASS | PENDING | BLOCKED | ESCALATE
 # → exit: 0 PASS · 1 PENDING · 2 BLOCKED · 3 ESCALATE · 10 harness error · 11 arg error · 12 dry-run
+# → a changed file whose name holds a newline cannot be passed on: fh-gate (and fh-goal) exit 10
+#   instead of reviewing the rest. Rename the file, or name the files to review explicitly.
 
 # Run a skill or agent doc through a backend, outside Claude Code
 npx --package @chrono-meta/fh-gate fh-run --skill <name>
@@ -526,7 +528,7 @@ Claude agents feature
 | `harness-doctor` | Diagnoses harness structure (L1–L4) on the principle "a good harness gets simpler over time" | "check my Claude setup", "the harness feels complex", "too many skills" |
 | `context-doctor` | Finds the 3 main causes of token waste + prescribes `.claudeignore` / `/clear` timing | "session is slow", "context is getting full", "clean up context" |
 | `install-doctor` | Diagnoses conflicts/duplicates/overwrite risks before installing plugins into a project | "check the install", "verify my setup", "will this overwrite anything" |
-| `mcp-circuit-breaker` *(commons)* | Detects MCP failure loops, trips a breaker to stop retry waste, proposes alternatives | "MCP keeps failing", "same tool error is looping" |
+| `mcp-circuit-breaker` *(commons)* | Detects MCP failure loops, trips a breaker to stop retry waste, proposes alternatives. A success status with the wrong shape (an HTML page where JSON was expected) counts as a failure (`WRONG_SHAPE`) and does not close the breaker | "MCP keeps failing", "same tool error is looping" |
 
 ### Harvesting & learning — *"keep what we learned"*
 
@@ -552,6 +554,8 @@ Claude agents feature
 > **Going public?** Don't run these one at a time — say **"publish"** / **"make this repo public"** and Claude
 > fires the **Pre-Publish Surface Gate** (CLAUDE.md), which runs `public-surface-audit` + `marketplace-gate`
 > Check 5 *before* the irreversible action. Portable checklist: `templates/PRE-PUBLISH-CHECKLIST.md`.
+> Publishing a filtered copy (protected paths stripped, pushed to a second remote)? Its Step 0b checks that
+> the stripped tree did not flow back into your own `main` — a tree diff shows it, commit counts do not.
 
 ### Discovery — *"what's out there?"*
 
@@ -567,7 +571,7 @@ Claude agents feature
 |---|---|---|
 | `sim-conductor` | Profiles a target → derives personas → parallel-agent audit → M/S/R triage. Areas: A external-user · B internal-audit · C ideation | "external user perspective", "run an internal audit", "simulate this" |
 | `apex-review` | Reviews from a top-level decision-maker's lens, not a practitioner's | "will this hold up for leadership", "CTO-level review", "approval deck" |
-| `deep-clarify` | Turns a vague request into an actionable spec through Socratic questioning | "I'm not sure what to build", "help me clarify the requirements" |
+| `deep-clarify` | Turns a vague request into an actionable spec through Socratic questioning, saved to `specs/{slug}.md` in the work folder (not under `.claude/`, where Claude Code asks before writing) | "I'm not sure what to build", "help me clarify the requirements" |
 
 ### Setup & onboarding — *"get started / keep it tidy"*
 
