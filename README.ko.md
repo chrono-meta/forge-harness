@@ -64,6 +64,16 @@ cd your-repo && npx --package @chrono-meta/fh-gate fh-gate     # 현재 레포�
 백엔드 CLI 하나가 필요합니다. `claude`(기본) 또는 `codex`(`FH_BACKEND=codex`)입니다. CI, pre-commit 훅,
 다른 에이전트 옆에서 쓰면 됩니다. GitHub Actions 스텝과 Homebrew tap 도 있습니다 — [게이트 실행하기](docs/REFERENCE.md#run-it-outside-claude-code--the-fh-gate-cli)를 보세요.
 
+**한 번 돌리면 무엇이 일어나고 얼마가 드나.** 실행할 때마다 바뀐 파일을 로그인해 둔 백엔드 CLI 로 보내고, 그쪽에
+리뷰 호출을 한 번 합니다. 그 계정의 다른 호출과 똑같이 과금되거나 사용량에 잡힙니다(`FH_BACKEND=cross` 는 두 번,
+선택 층을 켜면 더 늘어납니다). `FH_DRY_RUN=1` 은 프롬프트만 출력하고 아무것도 호출하지 않습니다(종료 코드 12).
+`FH_GATE_EXEC=on` 을 켜지 않으면 게이트는 여러분의 코드를 하나도 실행하지 않습니다.
+
+**CI 스텝을 실패시키는 종료 코드.** 그냥 스텝으로 돌리면(`npx … fh-gate`) 0 이 아닌 종료 코드는 모두 스텝을 실패시킵니다.
+1 PENDING(B 등급 지적 — 알고 진행)도 실패이고, 2 BLOCKED · 3 ESCALATE · 10 하네스 오류 · 11 인자 오류 · 12 dry run 도
+마찬가지입니다. GitHub Action 은 대신 판정으로 바꿉니다. 기본값에서 BLOCKED · ESCALATE · HARNESS_ERROR · ARG_ERROR ·
+DRY_RUN · 모르는 코드에서 실패하고 PENDING 은 통과시킵니다(`fail-on` 입력으로 바꿀 수 있습니다).
+
 ② 하네스 전체를 Claude Code 안에서.
 
 ```bash

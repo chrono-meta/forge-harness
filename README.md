@@ -66,6 +66,16 @@ It finds your changed files from `git diff`, sends them to a review backend, and
 CLI installed and logged in: `claude` (default) or `codex` (`FH_BACKEND=codex`). Use it in CI, a pre-commit
 hook, or beside another agent. A GitHub Actions step and a Homebrew tap exist too — see [Run the gate](docs/REFERENCE.md#run-it-outside-claude-code--the-fh-gate-cli).
 
+**What a run costs and does.** Each run sends the changed files to the backend CLI you are logged in to and makes
+one review call there, billed or counted against that account like any other call (`FH_BACKEND=cross` makes two, and the
+opt-in layers add more). `FH_DRY_RUN=1` prints the prompt and calls nothing (exit 12). The gate runs none of your
+code unless you set `FH_GATE_EXEC=on`.
+
+**Which exit codes fail a CI step.** Run as a plain step (`npx … fh-gate`), every non-zero exit fails it — including
+1 PENDING (B-grade findings: proceed with care), as well as 2 BLOCKED, 3 ESCALATE, 10 harness error, 11 argument error
+and 12 dry run. The GitHub Action maps them instead: by default it fails on BLOCKED, ESCALATE, HARNESS_ERROR,
+ARG_ERROR, DRY_RUN and an unknown code, and lets PENDING pass (its `fail-on` input).
+
 Door ② — the whole harness, inside Claude Code.
 
 ```bash
