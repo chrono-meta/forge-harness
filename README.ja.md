@@ -58,7 +58,7 @@ cd your-repo && npx --package @chrono-meta/fh-gate fh-gate     # 現在のリポ
 
 `git diff` から変更ファイルを見つけてレビューバックエンドに送り、判定（`FH_GATE_VERDICT: PASS | PENDING | BLOCKED | ESCALATE`）と終了コードを出力します。PASS はレビューが実際に走ったときだけ PASS と数えます。バックエンドが一度も応答しなかった場合、dry run、未知の終了コードは PASS ではなく、GitHub Actions のステップはデフォルトでこれらを失敗として扱います。Node ≥ 16 と、インストールしてログイン済みのバックエンド CLI がひとつ必要です。`claude`（デフォルト）または `codex`（`FH_BACKEND=codex`）です。CI、pre-commit フック、別のエージェントと併用できます。GitHub Actions のステップと Homebrew tap もあります — [ゲートを実行する](docs/REFERENCE.md#run-it-outside-claude-code--the-fh-gate-cli)を参照してください。
 
-**1 回の実行で何が起き、何がかかるか。** 実行のたびに、変更ファイルをログイン済みのバックエンド CLI に送り、そこでレビューを 1 回呼び出します。そのアカウントの他の呼び出しと同じく課金・利用量に計上されます（`FH_BACKEND=cross` は最大 2 回、オプトインの層を有効にするとさらに増えます）。`FH_DRY_RUN=1` はプロンプトを出力するだけで何も呼び出しません（終了コード 12）。`FH_GATE_EXEC=on` にしない限り、ゲートはあなたのコードを一切実行しません。
+**1 回の実行で何が起き、何がかかるか。** 実行のたびに、変更ファイルをログイン済みのバックエンド CLI に送り、そこでレビューを 1 回呼び出します。そのアカウントの他の呼び出しと同じく課金・利用量に計上されます（`FH_BACKEND=cross` は最大 2 回、オプトインの層を有効にするとさらに増えます）。`FH_DRY_RUN=1` はプロンプトを出力するだけで何も呼び出しません（終了コード 12）。リポジトリのスクリプトをコピー上で実行するゲートの実行層は、`FH_GATE_EXEC=on` にしない限りオフです。レビュー呼び出し自体はバックエンド CLI のツール・サンドボックス設定のまま動き、既定の経路ではゲートがそれを制限しません。
 
 **CI ステップを失敗させる終了コード。** そのままステップとして実行すると（`npx … fh-gate`）、0 以外の終了コードはすべてステップを失敗させます。1 PENDING（B グレードの指摘 — 注意して進める）も失敗で、2 BLOCKED・3 ESCALATE・10 ハーネスエラー・11 引数エラー・12 dry run も同じです。GitHub Action は代わりに判定へ変換します。既定では BLOCKED・ESCALATE・HARNESS_ERROR・ARG_ERROR・DRY_RUN・不明なコードで失敗し、PENDING は通します（`fail-on` 入力で変更できます）。
 

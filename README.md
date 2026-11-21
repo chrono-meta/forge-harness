@@ -68,8 +68,9 @@ hook, or beside another agent. A GitHub Actions step and a Homebrew tap exist to
 
 **What a run costs and does.** Each run sends the changed files to the backend CLI you are logged in to and makes
 one review call there, billed or counted against that account like any other call (`FH_BACKEND=cross` makes up to two, and the
-opt-in layers add more). `FH_DRY_RUN=1` prints the prompt and calls nothing (exit 12). The gate runs none of your
-code unless you set `FH_GATE_EXEC=on`.
+opt-in layers add more). `FH_DRY_RUN=1` prints the prompt and calls nothing (exit 12). The gate's execution layer, which runs
+your repository's own scripts in a copy, is off unless you set `FH_GATE_EXEC=on`. The review call itself runs with
+your backend CLI's own tool and sandbox settings; the gate does not restrict them on the default path.
 
 **Which exit codes fail a CI step.** Run as a plain step (`npx … fh-gate`), every non-zero exit fails it — including
 1 PENDING (B-grade findings: proceed with care), as well as 2 BLOCKED, 3 ESCALATE, 10 harness error, 11 argument error
