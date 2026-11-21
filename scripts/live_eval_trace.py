@@ -11,7 +11,7 @@ Two uses:
   extract <stream.jsonl> <out.txt> <tools.txt>   (runner) write the final result text and the init
       tool/MCP/plugin inventory. Exit 3 on a stream that has no parseable result event — never an empty
       «the session said nothing» (same rule as sim_isolated_run.sh's turns path).
-  profile <stream.jsonl>   (runner) one record-only line: top-level tool calls in four bins
+  profile <stream.jsonl>   (runner) one record-only line: top-level tool calls in four bins + first error depth
       (explore · edit · test-run · other). Exit 3 and «trace=UNREADABLE» on a stream it cannot read.
   library: parse_stream(path) · behave_hit(trace, spec) · inventory(trace) · profile_bins(trace)
 
@@ -37,7 +37,8 @@ def parse_stream(path):
         lines = open(path, encoding='utf-8').read().splitlines()
     except (OSError, UnicodeDecodeError):
         return None
-    out = {'result': None, 'tools': None, 'mcp': None, 'plugins': None, 'calls': [], 'damaged': 0, 'ok_ids': set()}
+    out = {'result': None, 'tools': None, 'mcp': None, 'plugins': None, 'calls': [], 'damaged': 0, 'ok_ids': set(),
+           'res_ids': set(), 'err_ids': set()}
     inits = []   # plugin set of every init event, in order
     for ln in lines:
         ln = ln.strip()
@@ -76,8 +77,12 @@ def parse_stream(path):
                     out['calls'].append((str(c.get('name', '')), c.get('input') or {}, c.get('id')))
         elif t == 'user':
             for c in (ev.get('message') or {}).get('content') or []:
-                if isinstance(c, dict) and c.get('type') == 'tool_result' and not c.get('is_error'):
-                    out['ok_ids'].add(c.get('tool_use_id'))
+                if isinstance(c, dict) and c.get('type') == 'tool_result':
+                    out['res_ids'].add(c.get('tool_use_id'))
+                    if c.get('is_error'):
+                        out['err_ids'].add(c.get('tool_use_id'))
+                    else:
+                        out['ok_ids'].add(c.get('tool_use_id'))
         elif t == 'result':
             if ev.get('subtype') not in (None, 'success') or ev.get('is_error'):
                 out['damaged'] += 1   # an error result is not a finished session
@@ -276,6 +281,18 @@ def profile_bins(trace):
     return out
 
 
+def first_error(trace):
+    """1-based position of the first top-level call whose result is an error · 'none' when every top-level call
+    has a result and none is an error · 'unknown' when a call has no result before that (not measured ≠ no error).
+    Record only (AQ-20261101-2): a final PASS can hide a run that hit errors early and recovered by luck."""
+    for i, (_, _, cid) in enumerate(trace['calls'], 1):
+        if cid in trace['err_ids']:
+            return str(i)
+        if cid not in trace['res_ids']:
+            return 'unknown'
+    return 'none'
+
+
 def _profile(src):
     """One line for the report. A stream that cannot be read says so (exit 3) — never counts of 0.
     A stream with no result event or damaged lines keeps its counts and says they are a lower bound."""
@@ -285,6 +302,7 @@ def _profile(src):
         return 3
     p = profile_bins(tr)
     line = ' '.join('%s=%d' % (b, p[b]) for b in PROFILE_BINS) + ' total=%d' % sum(p.values())
+    line += ' first_error=%s' % first_error(tr)
     flags = []
     if tr['result'] is None:
         flags.append('result=MISSING')
