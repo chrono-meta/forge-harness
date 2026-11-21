@@ -53,6 +53,21 @@ grep -rIE '<private-harness-name>|<internal-codename>|<corp-domain>' LICENSE REA
 git ls-files | grep -iE '<internal-acronym>'
 ```
 
+### Step 0b — Publishing a filtered copy only: did the strip flow back?
+
+If you publish a filtered copy — protected paths stripped on a throwaway branch, pushed to a second remote — check
+that your own integration branch did not absorb that stripped tree. In a field run it flowed back into local `main`
+through merges: hundreds of protected files deleted and a few CI and ownership files altered. **The commit counts
+looked normal** — `git log` and ahead/behind showed nothing. Only a tree diff against the upstream showed it:
+
+```bash
+git fetch origin && git diff --name-status origin/main main     # D = deleted · M = modified · A = added, per file
+```
+
+Any `D` on a protected path → stop, restore `main` from the upstream, then publish. This stays a manual check on
+purpose: if the same backflow shows up in a second repository, mechanize it as a shared script that prints
+«deleted N · modified M · added A (protected-path deletions P)» and warns when P > 0, without blocking.
+
 ## Step 1 — Run both gates (must both be non-LEAK)
 
 | Gate | Catches | Pass condition |
