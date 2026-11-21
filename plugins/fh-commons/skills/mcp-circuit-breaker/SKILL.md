@@ -75,6 +75,7 @@ Classify failure type:
 | `AUTH` | 401 / 403 response | Credentials expired or missing |
 | `NOT_FOUND` | 404 / tool not available | Server down / tool removed |
 | `MALFORMED` | Parse error on response | Schema mismatch / API change |
+| `WRONG_SHAPE` | No error and a success status (e.g. HTTP 200), but the answer is not the expected shape — an HTML page where JSON was expected, or an expected field missing | Wrong host or path (a field run: a webhook path called on the API host returned 200 with a generic HTML page, so the call «succeeded» and did nothing) — retrying the same endpoint will not fix it |
 | `RATE_LIMIT` | 429 / quota exceeded | Too many calls |
 | `ADMIN_GATED` | "instance admin approval required" / server pending org enablement / tool unavailable until approved | Capability exists; the **MCP mount** is gated behind instance/admin permission — not a transport failure. Retrying never recovers it (an admin must act) |
 
@@ -179,7 +180,7 @@ Sending HALF-OPEN probe to {tool-name}...
 ```
 
 - 1 minimal test call is allowed through
-- If success: circuit → CLOSED, log updated
+- If success: circuit → CLOSED, log updated. **Success = the answer has the expected shape** (the content type and at least one field the caller needs), not a success status alone — a 200 with an HTML page or without that field is `WRONG_SHAPE`, and the circuit stays OPEN
 - If fail: circuit remains OPEN, cooldown resets
 
 Reset log entry — **append as a NEW list item (`- tool:`), never as bare indented keys**:
