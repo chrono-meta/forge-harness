@@ -175,6 +175,56 @@ for v in PASS PENDING; do
   case ",$_failon," in *",$v,"*) no "fail-on default contains $v (over-blocks a reviewed pass)" ;; *) ok "fail-on default correctly omits $v" ;; esac
 done
 
+echo "── L7 inputs reach the run script as env data, not as substituted shell text (2026-11-22) ──"
+# WHY. GitHub substitutes `${{ inputs.X }}` into the run: script as TEXT before bash sees it, so a
+# caller-controlled value (a file list built from a PR, say) containing `"; cmd; "` runs `cmd` in the
+# workflow (GitHub's own hardening guide: pass untrusted values through `env:`). Found in the 3.45.0
+# security review (LOW — the caller writes these inputs, but `files` is often derived from PR data).
+# HOW. L7b imitates that substitution: every `${{ inputs.X }}` in the run block is replaced by the
+# value as text, every env: entry is exported as data, `npx` is a stub, and one input carries a
+# payload that touches a file. The file must not appear. L7c is the control: the same run with one
+# env reference turned back into an inline expression must create it.
+_RUNBLK="$(awk '/^      run: \|/{f=1; next} f && /^    - /{exit} f{print}' "$A" | sed 's/^        //')"
+_ENVBLK="$(awk '/^      env:/{f=1; next} f && /^      [a-z-]+:/{exit} f{print}' "$A" | sed 's/^ *//')"
+[ -n "$_RUNBLK" ] && [ -n "$_ENVBLK" ]; chk $? "L7-0 CONTROL: run and env blocks extracted (run $(printf '%s\n' "$_RUNBLK" | wc -l | tr -d ' ') lines)"
+# Any expression form counts — `inputs.x`, `inputs['x']`, `github.event…`, `steps…`: each is pasted as text.
+_inline="$(printf '%s\n' "$_RUNBLK" | grep -c '\${{' || true)"
+[ "$_inline" -eq 0 ]; chk $? "L7a no \${{ … }} expression of any form inside the run script (found $_inline)"
+_L7T="$(mktemp -d "${TMPDIR:-/tmp}/action_yml_l7_XXXXXX")"
+mkdir -p "$_L7T/bin"; printf '#!/bin/sh\nexit 0\n' > "$_L7T/bin/npx"; chmod +x "$_L7T/bin/npx"
+# simulate <run script file> — GitHub-style text substitution of inputs, env as data, stub npx
+_l7_sim(){
+  python3 - "$1" "$_L7T" <<'PY'
+import re, sys, os, subprocess
+run = open(sys.argv[1], encoding="utf-8").read(); tmp = sys.argv[2]
+pwn = os.path.join(tmp, "PWNED")
+vals = {"files": 'a.sh"; touch "' + pwn + '"; echo "', "level": "light", "version": "latest",
+        "dry-run": "false", "fail-on": "BLOCKED", "backend": "claude", "model": "", "timeout": ""}
+sub = lambda m: vals.get(m.group(1), "")
+env = dict(os.environ, PATH=os.path.join(tmp, "bin") + ":" + os.environ["PATH"],
+           GITHUB_OUTPUT=os.path.join(tmp, "out"), GITHUB_STEP_SUMMARY=os.path.join(tmp, "sum"))
+for line in open(os.path.join(tmp, "envblk"), encoding="utf-8"):
+    m = re.match(r"([A-Z_]+):\s*(.*)$", line.strip())
+    if m: env[m.group(1)] = re.sub(r"\$\{\{\s*inputs\.([a-z-]+)\s*\}\}", sub, m.group(2))
+script = re.sub(r"\$\{\{\s*inputs\.([a-z-]+)\s*\}\}", sub, run)
+if "${{" in script:  # an expression form this simulator does not substitute: not measured, never «clean»
+    print("UNMEASURED"); sys.exit(0)
+subprocess.run(["bash", "-c", script], env=env, cwd=tmp, capture_output=True)
+print("PWNED" if os.path.exists(pwn) else "clean")
+PY
+}
+printf '%s\n' "$_ENVBLK" > "$_L7T/envblk"
+printf '%s\n' "$_RUNBLK" > "$_L7T/run.sh"
+[ "$(_l7_sim "$_L7T/run.sh")" = "clean" ]; chk $? "L7b a files input carrying '\"; touch …; \"' stays data — no command runs"
+rm -f "$_L7T/PWNED"
+sed 's/"\$FH_ACTION_FILES"/"${{ inputs.files }}"/' "$_L7T/run.sh" > "$_L7T/run_ctl.sh"
+if cmp -s "$_L7T/run.sh" "$_L7T/run_ctl.sh"; then
+  no "L7c CONTROL dead — the run script has no \"\$FH_ACTION_FILES\" to turn back into an inline expression"
+else
+  [ "$(_l7_sim "$_L7T/run_ctl.sh")" = "PWNED" ]; chk $? "L7c CONTROL: the same payload through an inline \${{ inputs.files }} runs the command (the lane can fail)"
+fi
+rm -rf "$_L7T"
+
 echo ""
 echo "── action.yml lanes: $PASS passed · $FAIL failed ──"
 [ "$FAIL" -eq 0 ]
