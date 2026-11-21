@@ -66,8 +66,8 @@ check() {
   for f in abort_path done_path; do
     [ "$(cat "$d/x/$f")" = "$(cat "$d/x/write_path")" ] || echo "$f «$(cat "$d/x/$f")» ≠ write path «$(cat "$d/x/write_path")»"
   done
-  tp=$(sed -n 's/.*test -f \([^ &]*\).*/\1/p' "$d/x/test.sh" | head -n 1)
-  [ "$tp" = "$(cat "$d/x/write_path")" ] || echo "test -f path «$tp» ≠ write path"
+  tp=$(sed -n '/test -f /{s/.*test -f \([^ &]*\).*/\1/p;q;}' "$d/x/test.sh")
+  [ "$tp" = "$(cat "$d/x/write_path")" ] || echo "test -f path «${tp}» ≠ write path"
   [ "$(cat "$d/x/has_ignore")" = 1 ] || echo "the gitignore advice is gone from Step 3"
 }
 
