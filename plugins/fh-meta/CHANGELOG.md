@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### Fixed
+- `test_fh_gate_defaults_lanes.sh` (shipped) run where there is no `action.yml` — the npm package, or a field harness that syncs FH's lanes — names D7 as skipped («NOT-APPLICABLE … not measured, not a pass») and prints `1 skipped (not a pass)`; before, D7 failed there and the suite exited 1 (3.45.0). In an FH checkout a missing `action.yml` is still reported by `test_action_yml_lanes.sh` (exit 10). New lane D12 runs the lane from a copy without `action.yml`.
+
 ### [3.45.0] — 2026-11-20
 
 Minor by the version policy: fh-gate gains an execution layer, a review pass that follows `/code-review`'s method, a history-aware «elephant» pass and `/code-review` itself as an opt-in reviewer (#1147, #1156). There are also new shipped tools and lanes (`live_eval_matrix.py`, `heavy_skill_smell.py`, `job_heartbeat.py`), a new `FH_AGY_ISOLATION=no-tools-agent` route, and judged procedure changes in shipped skills and canon.
