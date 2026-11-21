@@ -1046,9 +1046,16 @@ fi
 # So the built-in tool set itself is limited (--tools), no MCP server is loaded (--strict-mcp-config with no
 # --mcp-config) and skills and commands are off (--disable-slash-commands). A Claude Code too old for these flags
 # fails the call, which fails closed (exit 10).
+# The checkout under review is untrusted input (2026-11-22): its project/local settings and hooks must not load into
+# the reviewer. claude gets --setting-sources user (measured on claude 2.1.330 with a planted checkout and a local
+# fake API: a project SessionStart hook ran without the flag and did not run with it). codex gets
+# -c project_doc_max_bytes=0 (measured on codex 0.164.0 the same way: without it the request carried the checkout's
+# AGENTS.md; with it, it did not). --bare is not used: it also drops OAuth and keychain auth.
 _RO_TOOLS="Read,Glob,Grep"
 _RO_ALLOW="$_RO_TOOLS"
 _RO_DENY="Bash,PowerShell,Write,Edit,NotebookEdit,WebFetch,WebSearch"
+_RO_SOURCES="user"
+_RO_CODEX_NODOC="project_doc_max_bytes=0"
 call_structured() {
   local _ok=0
   : > "$CODEX_LAST"
@@ -1056,10 +1063,10 @@ call_structured() {
     # ${4:-} = "goldfish": the process does not inherit FH_TASK_DESCRIPTION either (not only the prompt)
     claude) ( cd "$WORK_ROOT" && { [[ "${4:-}" == goldfish ]] && unset FH_TASK_DESCRIPTION; :; } && ${_TIMEOUT_CMD} claude --print --model "$FH_MODEL" --output-format json \
                 --json-schema "$(cat "$2")" --tools "$_RO_TOOLS" --strict-mcp-config --disable-slash-commands \
-                --allowedTools "$_RO_ALLOW" --disallowedTools "$_RO_DENY" < "$1" ) \
+                --setting-sources "$_RO_SOURCES" --allowedTools "$_RO_ALLOW" --disallowedTools "$_RO_DENY" < "$1" ) \
               > "$OUTPUT_FILE" 2>"$ERR_FILE" && _ok=1 ;;
     codex)  ( cd "$WORK_ROOT" && { [[ "${4:-}" == goldfish ]] && unset FH_TASK_DESCRIPTION; :; } && ${_TIMEOUT_CMD} codex exec -m "$FH_MODEL" --skip-git-repo-check -s read-only \
-                --output-schema "$2" -o "$CODEX_LAST" - < "$1" ) > "$OUTPUT_FILE" 2>"$ERR_FILE" && _ok=1 ;;
+                -c "$_RO_CODEX_NODOC" --output-schema "$2" -o "$CODEX_LAST" - < "$1" ) > "$OUTPUT_FILE" 2>"$ERR_FILE" && _ok=1 ;;
   esac
   if [[ "$_ok" != 1 ]]; then
     echo "ERROR: ${3} (${FH_BACKEND}) failed or timed out (${FH_TIMEOUT}s) — failing closed" >&2
@@ -1197,9 +1204,9 @@ run_backend() {
   case "$FH_BACKEND" in
     claude) ( cd "$WORK_ROOT" && ${_TIMEOUT_CMD} claude --print --model "$FH_MODEL" \
               --output-format json --json-schema "$(cat "$SCHEMA_FILE")" --tools "$_RO_TOOLS" --strict-mcp-config \
-              --disable-slash-commands --allowedTools "$_RO_ALLOW" --disallowedTools "$_RO_DENY" ) ;;
+              --disable-slash-commands --setting-sources "$_RO_SOURCES" --allowedTools "$_RO_ALLOW" --disallowedTools "$_RO_DENY" ) ;;
     codex)  ( cd "$WORK_ROOT" && ${_TIMEOUT_CMD} codex exec -m "$FH_MODEL" --skip-git-repo-check -s read-only \
-              --output-schema "$SCHEMA_FILE" -o "$CODEX_LAST" - ) ;;
+              -c "$_RO_CODEX_NODOC" --output-schema "$SCHEMA_FILE" -o "$CODEX_LAST" - ) ;;
   esac
 }
 
