@@ -50,6 +50,13 @@ while [ $# -gt 0 ]; do
 done
 case "$PR" in ''|*[!0-9]*) echo "🟥 usage: pr_merge_verified.sh <pr-number> --rerun '<cmd>'" >&2; exit 2 ;; esac
 [ "$RERUN_SET" -eq 1 ] || { echo "🟥 --rerun is required — checked before merging so the verify half cannot be skipped" >&2; exit 2; }
+# _full_oid <value> — true only for a full commit id: 40 (SHA-1) or 64 (SHA-256) lowercase hex. A shorter value can
+# still resolve locally (git accepts abbreviations), so «resolves» is not «whole». A field run saw an output-compression
+# proxy cut `git rev-parse HEAD` to 37 chars, and the API that took it failed later with no hint why.
+_full_oid() { case "$1" in *[!0-9a-f]*|'') return 1 ;; esac; [ "${#1}" -eq 40 ] || [ "${#1}" -eq 64 ]; }
+if [ -n "$EXPECT_HEAD" ] && ! _full_oid "$EXPECT_HEAD"; then
+  echo "🟥 --expect-head is not a full 40- or 64-hex commit id («${EXPECT_HEAD}», ${#EXPECT_HEAD} chars) — a shortened or cut value (an output proxy can do this) cannot pin a merge; not merging" >&2; exit 2
+fi
 PSV="$(cd "$(dirname "$0")" && pwd)/post_squash_verify.sh"
 [ -f "$PSV" ] || { echo "🟥 HARNESS-ERROR (before merge): $PSV missing — not merging" >&2; exit 4; }
 
@@ -96,6 +103,7 @@ _clog() { # outcome-label merge_oid
 # 1. head before merge
 HEAD_OID=$(gh pr view "$PR" --json headRefOid -q .headRefOid < /dev/null) || HEAD_OID=""
 [ -n "$HEAD_OID" ] || { echo "🟥 HARNESS-ERROR (before merge): could not read PR #$PR head" >&2; exit 4; }
+_full_oid "$HEAD_OID" || { echo "🟥 HARNESS-ERROR (before merge): PR #$PR head «${HEAD_OID}» is not a full 40- or 64-hex commit id (${#HEAD_OID} chars) — the value may have been cut on the way (an output proxy can do this); not merging" >&2; exit 4; }
 git fetch -q origin "pull/$PR/head" < /dev/null 2>/dev/null || git fetch -q origin "$HEAD_OID" < /dev/null 2>/dev/null || true
 git cat-file -e "$HEAD_OID^{commit}" 2>/dev/null \
   || { echo "🟥 HARNESS-ERROR (before merge): PR head $HEAD_OID not fetchable — not merging" >&2; exit 4; }

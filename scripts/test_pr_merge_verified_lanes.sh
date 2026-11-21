@@ -46,7 +46,7 @@ setup() {
   git clone -q "$d/origin.git" "$d/work" 2>/dev/null; git -C "$d/work" fetch -q origin feat
   printf '%s' "$(git -C "$d/seed" rev-parse feat)" > "$d/head.oid"
 }
-# fake gh. Behaviour knobs via files in $D: view_fail · merge_fail · drop_b
+# fake gh. Behaviour knobs via files in $D: view_fail · merge_fail · drop_b · trunc (headRefOid cut to 37 chars)
 mkgh() {
   local D="$1"; mkdir -p "$D/bin"
   cat > "$D/bin/gh" <<EOF
@@ -67,7 +67,7 @@ case "\$1 \$2" in
         elif [ -f "\$D/closed" ]; then echo "CLOSED \$(cat "\$D/head.oid")"
         else echo "OPEN \$(cat "\$D/head.oid")"; fi ;;
       *title*) echo "Fake PR title" ;;
-      *headRefOid*) cat "\$D/head.oid"; echo ;;
+      *headRefOid*) if [ -f "\$D/trunc" ]; then cut -c1-37 "\$D/head.oid"; else cat "\$D/head.oid"; echo; fi ;;
       *state*) if [ -f "\$D/merge.oid" ] && [ ! -f "\$D/queued" ]; then echo MERGED; else echo OPEN; fi ;;
       *mergeCommit*) if [ -f "\$D/queued" ]; then echo null; else cat "\$D/merge.oid" 2>/dev/null; echo; fi ;; esac ;;
   "pr merge")
@@ -317,6 +317,19 @@ if [ ! -f "$SC" ]; then bad "L33 subject missing: $SC"
 elif grep -q 'recorded, not enforced' "$SC"; then bad "L33 header still says the lease is «recorded, not enforced»"
 elif ! grep -q '^#.*lease (.*TIER=AUTO, see EXIT 7)' "$SC"; then bad "L33 RECEIPT lease note no longer points at the TIER=AUTO / EXIT 7 enforcement"
 else ok "L33 header does not contradict EXIT 7 (lease is enforced)"; fi
+
+# ── a commit id cut short (an output-compression proxy shortened a hash in a field run: 37 of 40 chars) ──
+# L34 the PR head read from gh is not a full 40/64-hex id → refused BEFORE the merge, by name. A 37-char prefix still
+#     resolves locally (git accepts abbreviations), so without the check the merge call went out with it.
+setup tr; mkgh "$T/tr"; : > "$T/tr/trunc"; run "$T/tr" 7 --rerun "$GOOD"
+{ [ "$RC" -eq 4 ] && ! merged "$T/tr" && printf '%s' "$OUT" | grep -q 'not a full 40- or 64-hex commit id'; } \
+  && ok "L34 PR head cut to 37 chars → rc=4 BEFORE merge, named" \
+  || { bad "L34 truncated head rc=$RC merged=$(merged "$T/tr" && echo yes || echo no)"; printf '%s\n' "$OUT" | tail -3; }
+# L35 the caller's --expect-head cut short → usage refusal (rc=2) before anything is read or merged
+setup te; mkgh "$T/te"; run "$T/te" 7 --rerun "$GOOD" --expect-head "$(cut -c1-37 "$T/te/head.oid")"
+{ [ "$RC" -eq 2 ] && ! merged "$T/te" && printf '%s' "$OUT" | grep -q -- '--expect-head is not a full 40- or 64-hex commit id'; } \
+  && ok "L35 --expect-head cut to 37 chars → rc=2, no merge, named" \
+  || { bad "L35 truncated --expect-head rc=$RC merged=$(merged "$T/te" && echo yes || echo no)"; printf '%s\n' "$OUT" | tail -3; }
 
 printf 'PASS %d · FAIL %d\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
