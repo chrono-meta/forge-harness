@@ -89,7 +89,10 @@ outputs/
 .claude/rules/.public-surface-allowlist
 
 # deep-clarify spec documents — user goals, constraints, and "must not touch" lists.
-# Written per-task in a working project; keep off the tracked surface.
+# Written per-task in a working project; keep off the tracked surface. Saved under /specs/ since
+# 2026-11-21 (outside .claude/, which Claude Code treats as sensitive); .claude/specs/ stays ignored
+# for specs an earlier version saved there.
+/specs/
 .claude/specs/
 
 # prior-art hook runtime sentinels — per-session state written by the hook itself.

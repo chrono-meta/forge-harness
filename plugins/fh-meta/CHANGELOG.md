@@ -2,6 +2,9 @@
 
 ### [Unreleased]
 
+### Fixed
+- `deep-clarify` (shipped) saves its spec to `specs/{slug}.md` in the work folder instead of `.claude/specs/{slug}.md`. Claude Code treats `.claude/` as sensitive: a headless run had the write refused, and an interactive user got a «modify sensitive file» prompt. The ABORT-if-exists check, the `test -f` save check and the gitignore advice for company projects are unchanged; a spec already saved under `.claude/specs/` stays there, and both paths are gitignored in this repo. New lane `scripts/test_deep_clarify_spec_path_lanes.sh` (shipped) runs the skill's own Step 3 commands in an empty folder.
+
 ### [3.45.0] — 2026-11-20
 
 Minor by the version policy: fh-gate gains an execution layer, a review pass that follows `/code-review`'s method, a history-aware «elephant» pass and `/code-review` itself as an opt-in reviewer (#1147, #1156). There are also new shipped tools and lanes (`live_eval_matrix.py`, `heavy_skill_smell.py`, `job_heartbeat.py`), a new `FH_AGY_ISOLATION=no-tools-agent` route, and judged procedure changes in shipped skills and canon.
