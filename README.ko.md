@@ -65,7 +65,7 @@ cd your-repo && npx --package @chrono-meta/fh-gate fh-gate     # 현재 레포�
 다른 에이전트 옆에서 쓰면 됩니다. GitHub Actions 스텝과 Homebrew tap 도 있습니다 — [게이트 실행하기](docs/REFERENCE.md#run-it-outside-claude-code--the-fh-gate-cli)를 보세요.
 
 **한 번 돌리면 무엇이 일어나고 얼마가 드나.** 실행할 때마다 바뀐 파일을 로그인해 둔 백엔드 CLI 로 보내고, 그쪽에
-리뷰 호출을 한 번 합니다. 그 계정의 다른 호출과 똑같이 과금되거나 사용량에 잡힙니다(`FH_BACKEND=cross` 는 두 번,
+리뷰 호출을 한 번 합니다. 그 계정의 다른 호출과 똑같이 과금되거나 사용량에 잡힙니다(`FH_BACKEND=cross` 는 최대 두 번,
 선택 층을 켜면 더 늘어납니다). `FH_DRY_RUN=1` 은 프롬프트만 출력하고 아무것도 호출하지 않습니다(종료 코드 12).
 `FH_GATE_EXEC=on` 을 켜지 않으면 게이트는 여러분의 코드를 하나도 실행하지 않습니다.
 

@@ -67,7 +67,7 @@ CLI installed and logged in: `claude` (default) or `codex` (`FH_BACKEND=codex`).
 hook, or beside another agent. A GitHub Actions step and a Homebrew tap exist too — see [Run the gate](docs/REFERENCE.md#run-it-outside-claude-code--the-fh-gate-cli).
 
 **What a run costs and does.** Each run sends the changed files to the backend CLI you are logged in to and makes
-one review call there, billed or counted against that account like any other call (`FH_BACKEND=cross` makes two, and the
+one review call there, billed or counted against that account like any other call (`FH_BACKEND=cross` makes up to two, and the
 opt-in layers add more). `FH_DRY_RUN=1` prints the prompt and calls nothing (exit 12). The gate runs none of your
 code unless you set `FH_GATE_EXEC=on`.
 
