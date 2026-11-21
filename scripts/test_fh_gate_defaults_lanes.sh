@@ -16,6 +16,7 @@
 #   D9  --help names fh-legacy as the default reviewer
 #   D10 FH_REVIEWER=fh and the elephant pass get exactly Read/Glob/Grep — no shell, no MCP, no skill (D10b: control)
 #   D11 FH_REVIEWER=code-review keeps git but runs without the five GITHUB_* command-file variables
+#   D12 run from a copy with no action.yml (package shape): D7 is SKIPPED by name — not a pass, not a fail
 #   D7  action.yml does not put FH_TIMEOUT in the step env; it exports it only when the `timeout` input (default '') is non-empty
 #       (known pair: the shipped file passes; a planted «FH_TIMEOUT: ${{ inputs.timeout }}» env line is caught)
 # Token-free: claude and codex are stubs that answer by request kind and log what they were asked.
@@ -27,7 +28,7 @@ TMPROOT=$(mktemp -d "${TMPDIR:-/tmp}/fh_gate_defaults_XXXXXX")
 trap 'rm -rf "$TMPROOT"' EXIT
 export FH_RECORD_BASE="$TMPROOT/records"; mkdir -p "$FH_RECORD_BASE"
 unset FH_REVIEWER FH_GATE_ELEPHANT FH_GATE_EXEC FH_TIMEOUT FH_GATE_LEVEL
-pass=0; fail=0
+pass=0; fail=0; skipped=0
 ok()  { printf 'PASS  %s\n' "$1"; pass=$((pass + 1)); }
 bad() { printf 'FAIL  %s — %s\n' "$1" "$2"; fail=$((fail + 1)); }
 g() { git -c user.name=t -c user.email=t@t -c commit.gpgsign=false -c core.hooksPath=/dev/null "$@"; }
@@ -163,7 +164,25 @@ if [ -r "$ACTION" ]; then
      && grep -qE "^ *default: ''" <<<"$(awk '/^  timeout:/{f=1} f&&/default:/{print; exit}' "$ACTION")"; then
     ok "D7 action.yml: FH_TIMEOUT only from a non-empty timeout input (a planted env line is caught)"
   else bad "D7 action timeout pass-through" "env lines with FH_TIMEOUT: shipped=$n_ship planted=$n_plant"; fi
-else bad "D7 action timeout pass-through" "action.yml not readable at $ACTION (not measured)"; fi
+else
+  # No action.yml here: the npm package does not ship it, and a field harness that syncs FH's lanes has none.
+  # Not a pass and not a fail — named. In an FH checkout its absence is caught by test_action_yml_lanes.sh (exit 10).
+  printf '  SKIP  D7 action timeout pass-through — NOT-APPLICABLE: no action.yml at %s (not measured, not a pass)\n' "$ACTION"
+  skipped=$((skipped + 1))
+fi
 
-echo "fh-gate defaults lanes: $pass passed, $fail failed"
+# D12 — the same lane file run from a copy with no action.yml (an installed package's shape) must SKIP D7 by name,
+#       exit 0 and print no PASS for it (3.45.0 shipped this lane failing there: pmh-dev intake 2026-11-21).
+if [ -z "${FHGD_INNER:-}" ]; then
+  mkdir -p "$TMPROOT/pkg"; cp -R "$HERE" "$TMPROOT/pkg/scripts"
+  if [ -e "$TMPROOT/pkg/action.yml" ]; then bad "D12 package-shape copy" "action.yml present in the copy — the fixture is not package-shaped"
+  else
+    ( cd "$TMPROOT/pkg" && FHGD_INNER=1 bash scripts/test_fh_gate_defaults_lanes.sh ) > "$TMPROOT/d12.out" 2>&1 < /dev/null; d12rc=$?
+    if [ "$d12rc" -eq 0 ] && grep -q '^  SKIP  D7 .*NOT-APPLICABLE' "$TMPROOT/d12.out" && ! grep -q '^PASS  D7' "$TMPROOT/d12.out" \
+       && grep -q '1 skipped (not a pass)' "$TMPROOT/d12.out"; then ok "D12 without action.yml: D7 is skipped by name, exit 0, not counted as passed"
+    else bad "D12 package-shape run" "rc=$d12rc $(grep -E 'D7|lanes:' "$TMPROOT/d12.out" | tr '\n' '|')"; fi
+  fi
+fi
+
+echo "fh-gate defaults lanes: $pass passed, $fail failed$( [ "$skipped" -gt 0 ] && printf ', %s skipped (not a pass)' "$skipped")"
 [ "$fail" -eq 0 ]
