@@ -484,6 +484,21 @@ the marker, which is not this hook's job.
 > controls). Extending the format means adding lanes there, and running the **revert probe** — a
 > lane that stays green when you disable the branch it claims to anchor is decoration.
 
+**Gate-repair fixture provenance (record only, new records from 2026-11-22)** — a refinement of the
+existing fail-before practice, not a new instrument: when the change repairs a gate or a lane (a fix
+to a check that let a known input through), at least one fail-before fixture is built from the
+**change record** — the fix commit message, or the issue / review-finding body that reported the
+escape — not only from the author's own idea of the boundary. Its source goes on the first
+`controls:` line, after the alive/dead/n/a token and never in place of it (the hook reads only that
+line and only looks for the liveness token, so a bare sha could carry `dead` by accident), as
+`input-from=<commit sha | issue # | finding id>`, or `input-from=none(self-found)` when no record
+exists — never an invented id. There is no new marker key and the hook does not check it (the
+operator and cross-family review read it). Why: an author's own fixtures sit where the
+author already looked; the change record is where the escape was actually seen. Limit: a lane that
+passes this input has passed **one boundary input** — it is not coverage, and «the gate is safe» is
+never the sentence it supports. Source candidate: self-dev absorption row AQ-20261108-2 (a frontier
+digest item; the cited paper was not read for this change, so no number from it is carried here).
+
 ### Reviewer-visible evidence — the marker is not readable from the other side
 
 **Rule**: a PR touching FH assets carries a **sanitized evidence capsule** in its body — what was

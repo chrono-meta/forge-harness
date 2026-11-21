@@ -5722,3 +5722,17 @@
   purpose: blind grading of the Gemini 3.8 Flash arm on the same 12 public FH defect pairs (sheet B, 24 arm items + 24 planted controls, reviewer identity hidden, reads one local file only)
   output: done — controls 24/24 correct (12 HIT, 12 MISS); Flash arm 2/24 HIT on pre-fix excerpts (P05 both reps)
   lease: operator 2026-11-20 «지금돌려» (Hydrogen vs 3.8 Flash comparison)
+- date: 2026-11-22
+  session: selfdev loop (unattended)
+  agent: fh-commons:quench-challenger
+  model: opus (inherited)
+  purpose: Axis-2 adversarial read of the AQ-20261108-2 gate-rule change (thin + detail text, plus the pre-commit controls check)
+  output: done — S0 A2 B2, all four fixed (repair undefined · no-record case · hook reads first controls line only · bare sha can match the liveness substring); hook claim verified at templates/.git-hooks/pre-commit:2544 → PR #1180
+  lease: selfdev loop standing instruction (operator 2026-11-11, candidate rows)
+- date: 2026-11-22
+  session: selfdev loop (unattended)
+  agent: general-purpose
+  model: sonnet
+  purpose: soul-line restatement (1) and blind firing sims reading only a copy of the rule file — arm 4 (new rule), control 1 (main rule)
+  output: done — soul both RESTATABLE; arm 4/4 wrote input-from on the first controls line, control 0/1 → PR #1180
+  lease: selfdev loop standing instruction (operator 2026-11-11, candidate rows)
