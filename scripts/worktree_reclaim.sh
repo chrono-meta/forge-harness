@@ -30,7 +30,7 @@
 # hole big enough to lose the exact thing this script exists to protect: measured on this repo's
 # own `.gitignore`, a worktree holding ONLY `knowledge/**/*_paper_draft.md` (unpublished drafts)
 # and `outputs/` (field-harness run artifacts) was told **«✅ safe to: git worktree remove»**.
-# `CLAUDE.local.md`, `.claude/specs/`, `.claude/rules/.public-surface-patterns` are the same class
+# `CLAUDE.local.md`, deep-clarify specs (`specs/`, earlier `.claude/specs/`), `.claude/rules/.public-surface-patterns` are the same class
 # — ignored AND irreplaceable, several of them with no undo at all.
 # 🟥 That was the SECOND time in one session that a fix here re-created the disease it was fixing.
 # So the non-blocking set is now a NAMED WHITELIST, not a category:
