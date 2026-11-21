@@ -97,8 +97,9 @@ Count consecutive failures of the identified tool in the current session context
 | 2 | Escalate warning. Suggest checking server status. |
 | 3+ | **TRIP CIRCUIT** → output circuit open notice, block further calls to this tool |
 
-> **Non-transient types trip at count 1, not 3.** `ADMIN_GATED`, `AUTH`, and `NOT_FOUND` do not recover
-> on retry (an admin must act / credentials must change / the tool is gone), so counting to 3 only wastes
+> **Non-transient types trip at count 1, not 3.** `ADMIN_GATED`, `AUTH`, `NOT_FOUND` and `WRONG_SHAPE` do not
+> recover on retry (an admin must act / credentials must change / the tool is gone / the host or path is wrong,
+> so the same call keeps getting the same wrong answer), so counting to 3 only wastes
 > calls. On the first failure of one of these types, trip immediately and go to Step 4. The 1→2→3 ramp is
 > for *transient* types (`TIMEOUT`, `RATE_LIMIT`) where a later call may succeed.
 
