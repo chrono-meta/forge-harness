@@ -72,12 +72,12 @@ Session end
        **운영자 발화가 인용돼 기록되는 순간** 승인된다. 전자는 세션이 자기 권한을 넓히는 형태다.
 
   산출: 오늘자 `tracks/_meta/fh_signal_{date}_{source}.md` 에 `retro: close` 를 달고
-        `## Session Retrospective` 4필드를 채운다(형식 정본 = fh_detail_protocols.md).
+        `## Session Retrospective` 5필드를 채운다(형식 정본 = fh_detail_protocols.md).
         「없음」·「0」도 유효한 값이고, **비우는 것만 안 된다.**
 
   Done When:
     + 오늘자 signal 파일이 존재하고 `retro: close` 를 달고 있다              — mandatory-pass
-    + Session Retrospective 4필드가 전부 채워졌다                             — mandatory-pass
+    + Session Retrospective 5필드가 전부 채워졌다                             — mandatory-pass
     + 정정 건수는 **세었지 회상하지 않았다**                                   — measured
     + FH Registration Candidate 가 비면 그 이유가 한 줄 적혀 있다             — mandatory-pass
 
