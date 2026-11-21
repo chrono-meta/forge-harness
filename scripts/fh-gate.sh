@@ -36,6 +36,10 @@
 #                                 UNMEASURED: whether a headless /code-review call, or the goldfish pass, returns
 #                                 the structured object the gate needs on every runner — which is why neither is
 #                                 the default. FH_REVIEWER=code-review on codex is an argument error.
+#                                 `code-review` is NOT read-only: /code-review needs git's read commands, and those
+#                                 can write a file (`--output=`); opt into it for trusted changes only. The `fh` and
+#                                 elephant passes get only Read · Glob · Grep on the claude backend (no shell, no MCP
+#                                 server, no skill); on codex they run in `codex exec -s read-only`, codex's sandbox.
 #   FH_GATE_ELEPHANT=off|auto|on  the elephant pass (default off; auto = on at level full): task description + the touched
 #                                 files' git history; looks only for a past fix re-opened, a recorded decision
 #                                 undone, or the stated task contradicted.
@@ -163,7 +167,8 @@ case "${1:-}" in
     printf '%s\n' "  FH_TIMEOUT=<seconds>                 backend kill deadline (default: 120; 900 with FH_REVIEWER=code-review|fh)"
     printf '%s\n' "  FH_VERBOSE=1                         print full backend stderr"
     printf '%s\n' "  FH_REVIEWER=fh-legacy|code-review|fh review stage (default: fh-legacy, the original angle pass;"
-    printf '%s\n' "                                       opt-in: code-review = Claude Code's /code-review, claude only ·"
+    printf '%s\n' "                                       opt-in: code-review = Claude Code's /code-review, claude only,"
+    printf '%s\n' "                                       NOT read-only (git can write a file) — trusted changes only ·"
     printf '%s\n' "                                       fh = FH pass modelled on it, sees the diff only)"
     printf '%s\n' "  FH_GATE_ELEPHANT=off|auto|on         history-aware pass (default off; auto: on at level full)"
     printf '%s\n' "  FH_GATE_EXEC=off|on                  execution layer: scanners + target lanes in a copy (default off)."
@@ -812,7 +817,7 @@ cat > "$ABS_PROMPT_FILE" <<PROMPT
 FH REVIEW PASS — goldfish review, ${CR_EFFORT} effort (fh-gate v${VERSION})
 
 You review a change you did not write. You get the change and the repository. You do not get the author's
-explanation, on purpose. Read the repository as you need; your tools are read-only.
+explanation, on purpose. Read the repository as you need; your tools only read files.
 
 Phase 1 — candidates. Work through the eight angles below one at a time, each on its own; one angle's conclusion
 must not silence another's. Each angle raises up to 6 candidates, each with file, line, a one-line summary and a
@@ -894,7 +899,7 @@ past fixes. Look for one thing only: where this change
   - re-opens a defect that a past commit fixed (angle: past-fix-reverted),
   - undoes a decision a past commit recorded (angle: decision-undone), or
   - does what the task description says it must not, or does not do what it says it does (angle: task-contradicted).
-Do not repeat a general code review. Read the repository as you need; your tools are read-only.
+Do not repeat a general code review. Read the repository as you need; your tools only read files.
 Verify each candidate once as CONFIRMED or PLAUSIBLE and leave out what the code refutes. Each finding names in its
 summary the past commit or the sentence of the task description it relies on. severity: important · pre_existing ·
 nit (as a code review uses them). At most 6 findings; an empty list if none. Do not choose a verdict.
@@ -1026,15 +1031,25 @@ fi
 
 # call_structured <prompt file> <schema file> <label> — run the backend read-only in the repository root, leave
 # the schema-typed object in STRUCT_JSON. Any failure — the call, the envelope, no object — fails closed (10).
-_RO_ALLOW="Read,Glob,Grep,Agent,Task,Skill,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git rev-parse:*),Bash(git merge-base:*),Bash(git blame:*)"
-_RO_DENY="Write,Edit,NotebookEdit,WebFetch,WebSearch"
+# Only Read · Glob · Grep exist for the two passes that use this (goldfish · elephant): they get the change, the
+# target content and the history in their prompt, so they only need to read files. Why so narrow (security review
+# 2026-11-20): git's read commands are not read-only — `git diff/log/show --output=<file>` writes a file, and a
+# prefix rule cannot forbid an option that may come anywhere in the argument list — and an allow list is additive,
+# not exclusive: a user settings rule, an MCP server's write tool, a skill or PowerShell would still be reachable.
+# So the built-in tool set itself is limited (--tools), no MCP server is loaded (--strict-mcp-config with no
+# --mcp-config) and skills and commands are off (--disable-slash-commands). A Claude Code too old for these flags
+# fails the call, which fails closed (exit 10).
+_RO_TOOLS="Read,Glob,Grep"
+_RO_ALLOW="$_RO_TOOLS"
+_RO_DENY="Bash,PowerShell,Write,Edit,NotebookEdit,WebFetch,WebSearch"
 call_structured() {
   local _ok=0
   : > "$CODEX_LAST"
   case "$FH_BACKEND" in
     # ${4:-} = "goldfish": the process does not inherit FH_TASK_DESCRIPTION either (not only the prompt)
     claude) ( cd "$WORK_ROOT" && { [[ "${4:-}" == goldfish ]] && unset FH_TASK_DESCRIPTION; :; } && ${_TIMEOUT_CMD} claude --print --model "$FH_MODEL" --output-format json \
-                --json-schema "$(cat "$2")" --allowedTools "$_RO_ALLOW" --disallowedTools "$_RO_DENY" < "$1" ) \
+                --json-schema "$(cat "$2")" --tools "$_RO_TOOLS" --strict-mcp-config --disable-slash-commands \
+                --allowedTools "$_RO_ALLOW" --disallowedTools "$_RO_DENY" < "$1" ) \
               > "$OUTPUT_FILE" 2>"$ERR_FILE" && _ok=1 ;;
     codex)  ( cd "$WORK_ROOT" && { [[ "${4:-}" == goldfish ]] && unset FH_TASK_DESCRIPTION; :; } && ${_TIMEOUT_CMD} codex exec -m "$FH_MODEL" --skip-git-repo-check -s read-only \
                 --output-schema "$2" -o "$CODEX_LAST" - < "$1" ) > "$OUTPUT_FILE" 2>"$ERR_FILE" && _ok=1 ;;
@@ -1118,7 +1133,10 @@ elif [[ "$FH_REVIEWER" == "code-review" ]]; then
   # finding Important on 9 of 12 runs over later fix commits (negatives); a gate that blocks there blocks
   # three changes in four. A BLOCK here comes from mechanical evidence — a lane this change turns red.
   _CR_OK=0
-  ( cd "$WORK_ROOT" && unset FH_TASK_DESCRIPTION && ${_TIMEOUT_CMD} claude --print --model "$FH_MODEL" --output-format json \
+  # The runner's command-file variables are left out of this call's environment. That only removes the direct
+  # reference: the files can still be found (for example under $RUNNER_TEMP) and written through `git … --output=`.
+  # It reduces exposure; it does not make this path safe — which is why it is labelled not read-only.
+  ( cd "$WORK_ROOT" && unset FH_TASK_DESCRIPTION GITHUB_ENV GITHUB_PATH GITHUB_OUTPUT GITHUB_STATE GITHUB_STEP_SUMMARY && ${_TIMEOUT_CMD} claude --print --model "$FH_MODEL" --output-format json \
       --json-schema "$(cat "$CR_SCHEMA_FILE")" \
       --allowedTools "Read,Glob,Grep,Agent,Task,Skill,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git rev-parse:*),Bash(git merge-base:*),Bash(git blame:*)" \
       --disallowedTools "Write,Edit,NotebookEdit,WebFetch,WebSearch" \
