@@ -882,7 +882,8 @@ _lane SF3 state-fp "verdict row identical across runs whose end states differ" "
 # BP1 the budget stub writes no stream → MISSING for both arms (not measured ≠ 0).
 _lane BP1 behave-prof "stub without stream: report carries 'trace=MISSING' for both arms" "2" \
   "$(grep -cE '^behaviour-profile: G-GREET-01 (primary|control) r1 trace=MISSING$' "$T/bud_report.md")"
-# BP2 a stub that writes a stream: primary explores + runs a test, control only explores.
+# BP2 a stub that writes a stream: primary explores + runs a test, control only explores. The stub writes no
+#     tool_result, so first_error is «unknown» (not measured), never «none».
 cat > "$BSTUB/fake_sim_trace.sh" <<'FAKETRACE'
 #!/usr/bin/env bash
 arm=""; out=""
@@ -902,8 +903,8 @@ chmod +x "$BSTUB/fake_sim_trace.sh"
 ( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$BSTUB/fake_sim_trace.sh" \
     bash "$RUNNER" --ids "G-GREET-01" --no-evidence --report-out "$T/bp.md" ) >"$T/bp.log" 2>&1
 _lane BP2 behave-prof "stream present: per-arm counts (primary runs a test, control only explores)" "yes" \
-  "$(grep -qxF 'behaviour-profile: G-GREET-01 primary r1 explore=1 edit=0 test-run=1 other=0 total=2' "$T/bp.md" \
-     && grep -qxF 'behaviour-profile: G-GREET-01 control r1 explore=2 edit=0 test-run=0 other=0 total=2' "$T/bp.md" && echo yes || echo no)"
+  "$(grep -qxF 'behaviour-profile: G-GREET-01 primary r1 explore=1 edit=0 test-run=1 other=0 total=2 first_error=unknown' "$T/bp.md" \
+     && grep -qxF 'behaviour-profile: G-GREET-01 control r1 explore=2 edit=0 test-run=0 other=0 total=2 first_error=unknown' "$T/bp.md" && echo yes || echo no)"
 # BP3 FH_LIVE_TRACE=0 keeps no stream → one «not recorded» line, not a MISSING line per rep
 ( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$BSTUB/fake_sim_trace.sh" FH_LIVE_TRACE=0 \
     bash "$RUNNER" --ids "G-GREET-01" --no-evidence --report-out "$T/bp0.md" ) >"$T/bp0.log" 2>&1

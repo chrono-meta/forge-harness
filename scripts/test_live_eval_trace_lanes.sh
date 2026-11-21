@@ -212,7 +212,8 @@ else mp=$(LIB="$T/mut2" score "$T/plg" P 'read=CATALOG\.md')
   [[ "$mp" == "PASS "* ]] && ok "TR18 revert probe: inventory without plugins → TR14's pair scores PASS (TR14 would be red)" || bad "TR18 mutant still [$mp]"; fi
 
 # ── behaviour profile (2026-11-17, record only): top-level calls in explore · edit · test-run · other.
-# mk2 <file> <json list of [name, input, flag]> [noresult] — flag "SUB" = inside a subagent
+# mk2 <file> <json list of [name, input, flag]> [noresult] — flag "SUB" = inside a subagent · "ERR" = its tool_result
+#   is_error · "NORES" = no tool_result at all
 cat > "$T/mk2.py" <<'PY'
 import json, sys
 f, calls = sys.argv[1], json.loads(sys.argv[2])
@@ -222,7 +223,12 @@ for n, (name, inp, flag) in enumerate(calls):
     if flag == "SUB":
         a["parent_tool_use_id"] = "task0"
     ev.append(a)
-    ev.append({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "b%d" % n}]}})
+    if flag == "NORES":
+        continue
+    r = {"type": "tool_result", "tool_use_id": "b%d" % n}
+    if flag == "ERR":
+        r["is_error"] = True
+    ev.append({"type": "user", "message": {"content": [r]}})
 if len(sys.argv) < 4:
     ev.append({"type": "result", "subtype": "success", "result": "done"})
 open(f, "w").write("".join(json.dumps(e) + "\n" for e in ev))
@@ -235,12 +241,12 @@ B='[["Read",{"file_path":"a.md"},""],["Edit",{"file_path":"a.md"},""],["Write",{
 ["Edit",{"file_path":"c.md"},"SUB"],["Bash",{"command":"pytest"},"SUB"]]'
 python3 "$T/mk2.py" "$T/bp.jsonl" "$B"
 bp=$(python3 "$HERE/live_eval_trace.py" profile "$T/bp.jsonl"; echo "rc=$?")
-[ "$bp" = "explore=4 edit=4 test-run=2 other=2 total=12
+[ "$bp" = "explore=4 edit=4 test-run=2 other=2 total=12 first_error=none
 rc=0" ] && ok "TR19 profile bins: one known call per rule; redirects to /dev/null and 2>&1 stay explore; subagent calls not counted" \
   || bad "TR19 [$bp]"
 python3 "$T/mk2.py" "$T/bpn.jsonl" '[["Read",{"file_path":"a.md"},""]]' noresult
 bn=$(python3 "$HERE/live_eval_trace.py" profile "$T/bpn.jsonl"); bu=$(python3 "$HERE/live_eval_trace.py" profile "$T/absent.jsonl"; echo "rc=$?")
-[ "$bn" = "explore=1 edit=0 test-run=0 other=0 total=1 result=MISSING (counts are a lower bound)" ] \
+[ "$bn" = "explore=1 edit=0 test-run=0 other=0 total=1 first_error=none result=MISSING (counts are a lower bound)" ] \
   && [ "$bu" = "trace=UNREADABLE
 rc=3" ] && ok "TR20 no result event → counts marked a lower bound; unreadable stream → trace=UNREADABLE rc 3, never 0" \
   || bad "TR20 noresult=[$bn] absent=[$bu]"
@@ -250,7 +256,7 @@ mkdir -p "$T/mut3"; sed 's|(?!/dev/null\\b)||' "$LIB/live_eval_trace.py" > "$T/m
 if ! grep -q '(?!/dev/null' "$LIB/live_eval_trace.py"; then bad "TR21 the original has no /dev/null exclusion to revert"
 elif grep -q '(?!/dev/null' "$T/mut3/live_eval_trace.py"; then bad "TR21 mutation did not apply (instrument error, not a pass)"
 else mb=$(python3 "$T/mut3/live_eval_trace.py" profile "$T/bp.jsonl"); mrc=$?
-  [ $mrc -eq 0 ] && [ "$mb" = "explore=3 edit=5 test-run=2 other=2 total=12" ] \
+  [ $mrc -eq 0 ] && [ "$mb" = "explore=3 edit=5 test-run=2 other=2 total=12 first_error=none" ] \
     && ok "TR21 revert probe: without the /dev/null exclusion, 2>/dev/null reads as an edit → TR19 would be red" \
     || bad "TR21 mutant rc=$mrc [$mb]"; fi
 # TR22 (codex R1): naming a test file as data is not a test run; sed -Ei / --in-place are edits;
@@ -261,9 +267,23 @@ B2='[["Bash",{"command":"cat tests/test_example.py"},""],["Bash",{"command":"gre
 ["Bash",{"command":"./scripts/test_z.sh"},""],["Bash",{"command":"npm run test"},""]]'
 python3 "$T/mk2.py" "$T/bp2.jsonl" "$B2"
 b2=$(python3 "$HERE/live_eval_trace.py" profile "$T/bp2.jsonl")
-[ "$b2" = "explore=3 edit=2 test-run=4 other=0 total=9" ] \
+[ "$b2" = "explore=3 edit=2 test-run=4 other=0 total=9 first_error=none" ] \
   && ok "TR22 reading a test file stays explore; sed -Ei/--in-place are edits; timeout/env wrappers keep the runner visible" \
   || bad "TR22 [$b2]"
+
+# TR25 (2026-11-21, absorption AQ-20261101-2): «first error depth» — the 1-based position of the first top-level
+# call whose result is an error. A final PASS hides a run that hit errors early and recovered by luck; the depth is
+# record only, never scored. No error → none. A call with no result → unknown (not measured is not «no error»).
+python3 "$T/mk2.py" "$T/fe.jsonl" '[["Read",{"file_path":"a.md"},""],["Bash",{"command":"pytest"},"ERR"],["Edit",{"file_path":"a.md"},"ERR"]]'
+python3 "$T/mk2.py" "$T/fe0.jsonl" '[["Read",{"file_path":"a.md"},""],["Bash",{"command":"pytest"},""]]'
+python3 "$T/mk2.py" "$T/feu.jsonl" '[["Read",{"file_path":"a.md"},""],["Bash",{"command":"pytest"},"NORES"]]'
+python3 "$T/mk2.py" "$T/fes.jsonl" '[["Read",{"file_path":"a.md"},""],["Bash",{"command":"pytest"},"SUB"]]'
+fe=$(python3 "$HERE/live_eval_trace.py" profile "$T/fe.jsonl"); fe0=$(python3 "$HERE/live_eval_trace.py" profile "$T/fe0.jsonl")
+feu=$(python3 "$HERE/live_eval_trace.py" profile "$T/feu.jsonl"); fes=$(python3 "$HERE/live_eval_trace.py" profile "$T/fes.jsonl")
+[[ "$fe" == *" first_error=2"* ]] && [[ "$fe0" == *" first_error=none"* ]] && [[ "$feu" == *" first_error=unknown"* ]] \
+  && [[ "$fes" == *" first_error=none"* ]] \
+  && ok "TR25 first error depth: error at call 2 → 2 · no error → none · a call with no result → unknown · subagent calls not counted" \
+  || bad "TR25 err=[$fe] none=[$fe0] nores=[$feu] sub=[$fes]"
 
 # the count has to add the named skips, or a lane that correctly declined would read as a lane that
 # silently did not run — which is the thing this counter exists to catch.
@@ -289,7 +309,7 @@ if grep -q 'SURFACE_DIFF_RETURN' "$T/mut3/live_eval_trace.py"; then bad "TR24 mu
 else m3=$(LIB="$T/mut3" score "$T/plg" P 'read=CATALOG\.md')
   [[ "$m3" != *"plugins=fx-chart@builtin — "* ]] && [[ "$m3" == INVALID-COMPARISON* ]] && ok "TR24 revert probe: surface_diff → '' drops the named plugin (TR23 would be red), verdict unchanged" || bad "TR24 mutant still [$m3]"; fi
 
-[ $((pass + fail + skipped)) -eq 25 ] || bad "lane count $pass passed + $fail failed + $skipped skipped != 25 — a case did not run"
+[ $((pass + fail + skipped)) -eq 26 ] || bad "lane count $pass passed + $fail failed + $skipped skipped != 26 — a case did not run"
 if [ "$skipped" -gt 0 ]; then
   echo "live_eval_trace lanes: $pass passed, $fail failed, $skipped skipped (named, not a pass)"
 else
