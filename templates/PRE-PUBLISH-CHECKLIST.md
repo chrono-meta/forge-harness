@@ -64,9 +64,16 @@ looked normal** — `git log` and ahead/behind showed nothing. Only a tree diff 
 git fetch origin && git diff --name-status origin/main main     # D = deleted · M = modified · A = added, per file
 ```
 
-Any `D` on a protected path → stop, restore `main` from the upstream, then publish. This stays a manual check on
-purpose: if the same backflow shows up in a second repository, mechanize it as a shared script that prints
-«deleted N · modified M · added A (protected-path deletions P)» and warns when P > 0, without blocking.
+- `origin` here is the **unfiltered** upstream. If `origin` in your clone is the filtered remote, use the name of the
+  unfiltered one instead — against the filtered remote the stripped tree looks clean.
+- «Protected paths» are the ones your filter strips: read them from the filter's own exclusion list (the script or
+  config that builds the filtered branch).
+
+Any `D` on a protected path → stop before publishing. Put those files back from the upstream, for example
+`git restore --source=origin/main -- <path>` and commit; anything wider (resetting the branch, rewriting history)
+goes through the Destructive-Op gate first. This stays a manual check on purpose: if the same backflow shows up in a
+second repository, mechanize it as a shared script that prints «deleted N · modified M · added A (protected-path
+deletions P)» and warns when P > 0, without blocking.
 
 ## Step 1 — Run both gates (must both be non-LEAK)
 
