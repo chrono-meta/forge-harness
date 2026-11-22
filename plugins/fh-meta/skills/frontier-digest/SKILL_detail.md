@@ -91,12 +91,18 @@ load: on-demand
 
 ```bash
 for KW in "AI agent" "LLM harness" "Claude" "multi-agent" "context engineering"; do
-  curl -s --max-time 8 \
-    "https://hn.algolia.com/api/v1/search_by_date?query=$(echo $KW | tr ' ' '+')&tags=story&hitsPerPage=5&numericFilters=points>30"
+  curl -s --compressed --max-time 8 \
+    "https://hn.algolia.com/api/v1/search_by_date?query=$(echo $KW | tr ' ' '+')&tags=story&hitsPerPage=5&numericFilters=points%3E30"
 done
 ```
 
 Collection criteria: score > 30, keyword-relevant items only. Max 15 items.
+
+> **Write `>` as `%3E` in every URL, and give `curl` `--compressed` (measured 2026-11-22, public endpoints, generic UA).**
+> A raw `numericFilters=points>30` returns **HTTP 400** (273 B «Bad Request»); the same URL with `points%3E30` returns
+> 200 with 5 hits. The un-encoded form sat in this block for three consecutive digest runs (11-20 · 11-21 · 11-22), each
+> run patching it by hand. `--compressed` is a transfer-size saving, not a correctness fix: the HN and arXiv legs answer
+> identically with or without it, while TLDR 7.8 KB → 1.8 KB, The Batch 148 KB → 26 KB, GeekNews 28 KB → 9 KB.
 
 > **`/search_by_date`, not `/search` (revised 2026-09-04; prescribed 2026-09-01, unapplied for 3 runs).**
 > `/search` ranks by relevance and returned items dated 2025-11→2026-06 on 2026-09-01 — a *relevant-but-stale*
@@ -114,7 +120,7 @@ Collection criteria: score > 30, keyword-relevant items only. Max 15 items.
 # gamification, RF fingerprinting). Freshness was fine; relevance was not — so the staleness rule below
 # could not catch it.
 for Q in "LLM agent" "agent harness" "context engineering"; do
-  curl -s --max-time 8 \
+  curl -s --compressed --max-time 8 \
     "https://export.arxiv.org/api/query?search_query=cat:cs.SE+AND+all:%22${Q// /+}%22&max_results=2&sortBy=submittedDate&sortOrder=descending"
 done
 ```
@@ -140,7 +146,7 @@ know the answer to is not filtering — it is generating.
 ### TLDR AI (RSS)
 
 ```bash
-curl -s --max-time 8 "https://tldr.tech/api/rss/ai"
+curl -s --compressed --max-time 8 "https://tldr.tech/api/rss/ai"
 ```
 
 Parse `<item>` → title + link. Max 5 items.
@@ -148,7 +154,7 @@ Parse `<item>` → title + link. Max 5 items.
 ### The Batch — deeplearning.ai (HTML scraping)
 
 ```bash
-curl -s --max-time 10 -L "https://www.deeplearning.ai/the-batch"
+curl -s --compressed --max-time 10 -L "https://www.deeplearning.ai/the-batch"
 ```
 
 ⚠️ **No trailing slash.** `…/the-batch/` returns **HTTP 308** redirecting to the slash-less path (verified
@@ -162,7 +168,7 @@ HTTP 200, ~186 KB, **0 matches**, and the `/the-batch/issue-N` anchors carry no 
 (GeekNews `/rss/news` 2026-06-20 · trailing-slash 308 2026-07-26 · this). Current shape, verified live:
 
 ```bash
-curl -s --max-time 15 -L "https://www.deeplearning.ai/the-batch" \
+curl -s --compressed --max-time 15 -L "https://www.deeplearning.ai/the-batch" \
   | /usr/bin/grep -oE '<a [^>]*aria-label="[^"]+"[^>]*href="/the-batch/issue-[0-9]+"' \
   | sed -E 's/.*aria-label="([^"]+)".*href="(\/the-batch\/issue-[0-9]+)".*/\1\t\2/' | head -5
 ```
@@ -179,7 +185,7 @@ row today; known-negative = an empty body yields the UNMEASURED line, not `0`.
 ### GeekNews — news.hada.io (RSS)
 
 ```bash
-curl -sL --max-time 8 "https://news.hada.io/rss/news"
+curl -sL --compressed --max-time 8 "https://news.hada.io/rss/news"
 ```
 
 🟥 **`-L` is load-bearing (2026-11-04).** `/rss/news` now answers `302 → feeds.feedburner.com/geeknews-feed`;
