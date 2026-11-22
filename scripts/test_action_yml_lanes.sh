@@ -225,6 +225,65 @@ else
 fi
 rm -rf "$_L7T"
 
+echo "── L8 a file list that reads as a help or version flag is not a pass (2026-11-22) ──"
+# WHY. fh-gate printed help and exited 0 for `fh-gate -h <level> <caller>`; the Action always passes three
+# arguments and maps exit 0 to PASS with reviewed=true — so `files: -h` (a file literally named so, or a list
+# built from PR data) gave an unreviewed PASS (3.47.0 security review, MEDIUM-1). Help and version are now
+# honoured only alone. HOW. The run block runs with env as data and an `npx` stub that hands its arguments
+# to the real scripts/fh-gate.sh, under the action's real default fail-on; the verdict is read from GITHUB_OUTPUT
+# and the step's own exit code is checked. L8b: a normal three-argument call still reaches the gate (dry-run → 12).
+# L8-ctl: `fh-gate -h` alone still prints help and exits 0. Named residual: a plain CI step that calls
+# `fh-gate "$FILES"` with ONE argument cannot be told from an intended `fh-gate -h` — FILES=-h still exits 0 there.
+if [ -f "$G" ] && [ -n "$_RUNBLK" ] && [ -n "$_ENVBLK" ]; then
+  _L8T="$(mktemp -d "${TMPDIR:-/tmp}/action_yml_l8_XXXXXX")"
+  mkdir -p "$_L8T/bin"
+  printf '#!/usr/bin/env bash\nwhile [ $# -gt 0 ] && [ "$1" != fh-gate ]; do shift; done; shift\nexec bash "$L8_GATE" "$@"\n' > "$_L8T/bin/npx"
+  chmod +x "$_L8T/bin/npx"
+  printf '%s\n' "$_ENVBLK" > "$_L8T/envblk"
+  printf '%s\n' "$_RUNBLK" > "$_L8T/run.sh"
+  _l8_run(){  # $1 = files input · $2 = dry-run → prints «verdict=… reviewed=… step_rc=…»; fail-on is the real default
+    python3 - "$_L8T" "$1" "$G" "$_failon" "${2:-false}" <<'PY'
+import re, sys, os, subprocess
+tmp, files, gate, failon, dry = sys.argv[1:6]
+vals = {"files": files, "level": "quick", "version": "latest", "dry-run": dry,
+        "fail-on": failon, "backend": "claude", "model": "", "timeout": ""}
+out = os.path.join(tmp, "out"); open(out, "w").close()
+env = dict(os.environ, PATH=os.path.join(tmp, "bin") + ":" + os.environ["PATH"], L8_GATE=gate,
+           GITHUB_OUTPUT=out, GITHUB_STEP_SUMMARY=os.path.join(tmp, "sum"))
+for line in open(os.path.join(tmp, "envblk"), encoding="utf-8"):
+    m = re.match(r"([A-Z_]+):\s*(.*)$", line.strip())
+    if m: env[m.group(1)] = re.sub(r"\$\{\{\s*inputs\.([a-z-]+)\s*\}\}", lambda x: vals.get(x.group(1), ""), m.group(2))
+p = subprocess.run(["bash", os.path.join(tmp, "run.sh")], env=env, cwd=tmp, capture_output=True, timeout=60)
+kv = dict(l.split("=", 1) for l in open(out).read().split() if "=" in l)
+print("verdict=%s reviewed=%s step_rc=%d" % (kv.get("verdict", "NONE"), kv.get("reviewed", "NONE"), p.returncode))
+PY
+  }
+  for _f in -h --help -V --version; do
+    _r="$(_l8_run "$_f")"
+    case "$_r" in
+      "verdict=ARG_ERROR reviewed=false step_rc=1") ok "L8a files: '$_f' → $_r (not a pass; the step fails under the default fail-on)" ;;
+      *) no "L8a files: '$_f' → $_r — an unreviewed run must not read as PASS" ;;
+    esac
+  done
+  # L8b: a normal three-argument call is NOT rejected — the same path with a real file and dry-run reaches the
+  # gate's dry-run exit (12), so L8a is not «every multi-argument call returns 11».
+  printf 'echo hi\n' > "$_L8T/a.sh"
+  _r="$(_l8_run a.sh true)"
+  case "$_r" in
+    "verdict=DRY_RUN reviewed=false step_rc=1") ok "L8b CONTROL files: 'a.sh' + dry-run → $_r (the three-argument path still reaches the gate)" ;;
+    *) no "L8b CONTROL files: 'a.sh' + dry-run → $_r" ;;
+  esac
+  _hl="$(bash "$G" -h 2>/dev/null)"; _hrc=$?; _hl="${_hl%%$'\n'*}"
+  if [ "$_hrc" -eq 0 ] && case "$_hl" in "fh-gate "*) true ;; *) false ;; esac; then
+    ok "L8-ctl fh-gate -h alone still prints help (exit 0)"
+  else
+    no "L8-ctl fh-gate -h alone gave rc=$_hrc '$_hl'"
+  fi
+  rm -rf "$_L8T"
+else
+  echo "  ⬜ L8 SKIPPED (not PASS) — scripts/fh-gate.sh or the run block is absent here"
+fi
+
 echo ""
 echo "── action.yml lanes: $PASS passed · $FAIL failed ──"
 [ "$FAIL" -eq 0 ]
