@@ -67,10 +67,13 @@ cd your-repo && npx --package @chrono-meta/fh-gate fh-gate     # 현재 레포�
 **한 번 돌리면 무엇이 일어나고 얼마가 드나.** 실행할 때마다 바뀐 파일을 로그인해 둔 백엔드 CLI 로 보내고, 그쪽에
 리뷰 호출을 한 번 합니다. 그 계정의 다른 호출과 똑같이 과금되거나 사용량에 잡힙니다(`FH_BACKEND=cross` 는 최대 두 번,
 선택 층을 켜면 더 늘어납니다). `FH_DRY_RUN=1` 은 프롬프트만 출력하고 아무것도 호출하지 않습니다(종료 코드 12).
-레포의 스크립트를 사본에서 돌리는 게이트의 실행 층은 `FH_GATE_EXEC=on` 을 켜야만 켜집니다. 리뷰 호출 자체는 읽기만
+레포의 스크립트를 사본에서 돌리는 게이트의 실행 층은 `FH_GATE_EXEC=on` 을 켜야만 켜집니다. 기본 리뷰 호출 자체는 읽기만
 합니다. `claude` 는 Read · Glob · Grep 만 받고(셸 · 쓰기 · MCP 서버 · 스킬 · 명령 없음), `codex` 는 `-s read-only` 로
-돕니다. 리뷰하는 체크아웃의 프로젝트 설정과 훅은 그 호출에 로드되지 않고(`claude` 는 `--setting-sources user` 로 돕니다), `AGENTS.md` 도 실리지 않습니다(`codex` 는
-`-c project_doc_max_bytes=0` 으로 돕니다). 체크아웃의 `CLAUDE.md` 가 여전히 읽히는지는 아직 재지 않았습니다.
+돕니다. `claude` 에서는 리뷰하는 체크아웃의 프로젝트 설정 · 훅 · `CLAUDE.md` · `.claude/rules` 가 그 호출에 로드되지
+않습니다(`--setting-sources user` 로 돕니다). `codex` 에서는 체크아웃의 `AGENTS.md` 가 실리지 않지만
+(`-c project_doc_max_bytes=0`), 내 codex 설정이 그 체크아웃을 신뢰(trusted)로 적어 두면 codex 는 여전히 그 체크아웃의
+`.codex/config.toml` 을 읽고 거기 적힌 MCP 서버를 읽기 전용 샌드박스 밖에서 띄웁니다. 리뷰하는 체크아웃은 신뢰로 표시하지
+마세요. 선택 호출 `FH_REVIEWER=code-review` 는 읽기 전용이 아닙니다(git 의 읽기 명령을 씁니다). 믿을 수 있는 변경에만 쓰세요.
 
 **CI 스텝을 실패시키는 종료 코드.** 그냥 스텝으로 돌리면(`npx … fh-gate`) 0 이 아닌 종료 코드는 모두 스텝을 실패시킵니다.
 1 PENDING(B 등급 지적 — 알고 진행)도 실패이고, 2 BLOCKED · 3 ESCALATE · 10 하네스 오류 · 11 인자 오류 · 12 dry run 도

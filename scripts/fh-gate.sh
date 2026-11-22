@@ -36,10 +36,16 @@
 #                                 UNMEASURED: whether a headless /code-review call, or the goldfish pass, returns
 #                                 the structured object the gate needs on every runner — which is why neither is
 #                                 the default. FH_REVIEWER=code-review on codex is an argument error.
+#                                 Seen once (2026-11-22, claude 2.1.330, 1 run, not a rate): the headless call ran
+#                                 /code-review as a local command and returned no structured object → exit 10.
 #                                 `code-review` is NOT read-only: /code-review needs git's read commands, and those
 #                                 can write a file (`--output=`); opt into it for trusted changes only. The `fh` and
 #                                 elephant passes get only Read · Glob · Grep on the claude backend (no shell, no MCP
 #                                 server, no skill); on codex they run in `codex exec -s read-only`, codex's sandbox.
+#                                 On claude, every review call (code-review included) runs with user settings only —
+#                                 measured: the checkout's hooks, settings, CLAUDE.md, CLAUDE.local.md, .claude/rules
+#                                 and .mcp.json server do not reach it. On codex the checkout's AGENTS.md is not sent;
+#                                 a checkout codex trusts can still start MCP servers from its .codex/config.toml (OPEN).
 #   FH_GATE_ELEPHANT=off|auto|on  the elephant pass (default off; auto = on at level full): task description + the touched
 #                                 files' git history; looks only for a past fix re-opened, a recorded decision
 #                                 undone, or the stated task contradicted.
@@ -936,7 +942,7 @@ fi
 # that gates on the documented exit contract.
 if [[ "$FH_DRY_RUN" == "1" ]]; then
   if [[ "$FH_REVIEWER" == "code-review" ]]; then
-    printf 'FH_GATE_DRY_RUN: review = claude --print --model %s --output-format json --json-schema <findings schema> "/code-review %s" (cwd %s)\n' "$FH_MODEL" "$CR_EFFORT" "$WORK_ROOT"
+    printf 'FH_GATE_DRY_RUN: review = claude --print --model %s --output-format json --json-schema <findings schema> --setting-sources user <tool policy> -- "/code-review %s" (cwd %s)\n' "$FH_MODEL" "$CR_EFFORT" "$WORK_ROOT"
   elif [[ "$FH_REVIEWER" == "fh" ]]; then
     cat "$ABS_PROMPT_FILE"
   else
@@ -1051,6 +1057,15 @@ fi
 # fake API: a project SessionStart hook ran without the flag and did not run with it). codex gets
 # -c project_doc_max_bytes=0 (measured on codex 0.164.0 the same way: without it the request carried the checkout's
 # AGENTS.md; with it, it did not). --bare is not used: it also drops OAuth and keychain auth.
+# Measured again 2026-11-22 with the real CLIs and a subscription login (planted checkout under /tmp; under the
+# session scratchpad claude loads no CLAUDE.md at all, so a canary there proves nothing): with --setting-sources user
+# the checkout's CLAUDE.md, CLAUDE.local.md and .claude/rules text did not reach the call (0/3; 3/3 without the flag).
+# 🟥 OPEN (codex, measured 2026-11-22 on codex 0.164.0, not fixed here): when the user's codex config marks the
+# checkout trusted, codex loads the checkout's .codex/config.toml and starts the MCP servers it declares — commands
+# from the reviewed checkout, run outside the -s read-only sandbox (3/3). Untrusted, it did not (0/3).
+# `-c mcp_servers={}`, `-c projects={}` and a per-path trust override did not stop it; --ignore-user-config did (0/3),
+# but that also drops the user's model_provider, so a review meant for a proxy could go to codex's default provider
+# instead. Not applied until that is decided. Until then: do not mark a checkout you review as trusted in codex.
 _RO_TOOLS="Read,Glob,Grep"
 _RO_ALLOW="$_RO_TOOLS"
 _RO_DENY="Bash,PowerShell,Write,Edit,NotebookEdit,WebFetch,WebSearch"
@@ -1150,11 +1165,17 @@ elif [[ "$FH_REVIEWER" == "code-review" ]]; then
   # The runner's command-file variables are left out of this call's environment. That only removes the direct
   # reference: the files can still be found (for example under $RUNNER_TEMP) and written through `git … --output=`.
   # It reduces exposure; it does not make this path safe — which is why it is labelled not read-only.
+  # --setting-sources user (2026-11-22, real claude 2.1.330, planted checkout): without it this call ran the checkout's
+  # project and local hooks, started its .mcp.json server and carried its CLAUDE.md, CLAUDE.local.md and .claude/rules
+  # text (3/3); with it, none of them (3/3). The cost: /code-review no longer has the checkout's CLAUDE.md in context;
+  # it can still read the file with Read.
+  # `--` before the prompt: claude reads a word that follows --disallowedTools as that option's value, so without it
+  # this call failed before any review («"/code-review low" was read as a value of --disallowedTools»), exit 10.
   ( cd "$WORK_ROOT" && unset FH_TASK_DESCRIPTION GITHUB_ENV GITHUB_PATH GITHUB_OUTPUT GITHUB_STATE GITHUB_STEP_SUMMARY && ${_TIMEOUT_CMD} claude --print --model "$FH_MODEL" --output-format json \
-      --json-schema "$(cat "$CR_SCHEMA_FILE")" \
+      --json-schema "$(cat "$CR_SCHEMA_FILE")" --setting-sources "$_RO_SOURCES" \
       --allowedTools "Read,Glob,Grep,Agent,Task,Skill,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git rev-parse:*),Bash(git merge-base:*),Bash(git blame:*)" \
       --disallowedTools "Write,Edit,NotebookEdit,WebFetch,WebSearch" \
-      "/code-review ${CR_EFFORT}" < /dev/null ) > "$OUTPUT_FILE" 2>"$ERR_FILE" && _CR_OK=1
+      -- "/code-review ${CR_EFFORT}" < /dev/null ) > "$OUTPUT_FILE" 2>"$ERR_FILE" && _CR_OK=1
   if [[ "$_CR_OK" != 1 ]]; then
     echo "ERROR: /code-review (claude backend) failed or timed out (${FH_TIMEOUT}s) — failing closed" >&2
     cat "$ERR_FILE" >&2
