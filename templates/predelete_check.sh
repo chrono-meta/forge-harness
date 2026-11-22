@@ -95,4 +95,6 @@ EOF
 done <<< "$branches_raw"
 echo "--"
 echo "Gate order: enumerate -> recover -> destroy. REVIEW blocks; CHECK needs a judged look; only then delete."
+# Prose reminder only — no verdict, no exit-code effect (judgment question; this script cannot answer it).
+echo "Also ask, before deleting: is anything else using this target right now (another session or worktree, a live site, a shared database or config)? SAFE means merged, not idle — look (git worktree list, ps/lsof, sibling dirs and notes), do not recall."
 exit $fail

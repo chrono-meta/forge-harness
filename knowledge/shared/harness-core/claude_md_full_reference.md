@@ -750,7 +750,11 @@ force-push, scrub of tracked history, bulk deletion of session records / tracks 
    2026-08-20, residency-ledger pass): `bash templates/predelete_check.sh <repo> [base]` — per branch: commits
    off base + unique paths. Verdicts: SAFE (fully merged) · CHECK (0 unique paths but commits off
    base — shared files may hold *newer* content, e.g. an unmerged session card) · REVIEW (unique
-   paths — recovery mandatory).
+   paths — recovery mandatory). The script lists what would be *lost*; it cannot tell who is *using*
+   the target, so also ask in words, before step 2: **is anything else using this target right now
+   (another session or worktree, a live site, a shared database or config)?** SAFE says «merged», not
+   «idle». Judgment question — answer it by looking (`git worktree list`, `ps`/`lsof` on the path,
+   the sibling session), not by recalling.
 2. **Recover (judged — depth-sensitive)**: every CHECK/REVIEW item gets a content-direction look;
    live un-integrated state (cards · handoffs · signals · session records) is integrated to main
    **before** anything is deleted. This step exists because the loss class is silent — run it at the
