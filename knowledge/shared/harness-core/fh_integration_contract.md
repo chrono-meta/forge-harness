@@ -49,7 +49,7 @@ Caller reads verdict, decides: merge / hold / escalate
 | `FH_TASK_DESCRIPTION` | string | What the caller was trying to accomplish (context for adversarial pass) |
 | `FH_SECURITY_LENS` | `on` or `off` (default `off`) | Force security-adjacent focus in steel-quench |
 | `FH_BACKEND` | `claude`, `codex`, or `auto` (default `claude`) | Runtime backend. `auto` prefers Codex if installed, otherwise Claude |
-| `FH_MODEL` | model id | Overrides backend default (`claude-sonnet-5-5` for Claude). Codex in `fh-gate`: none pinned — with `FH_MODEL` unset no `-m` is passed and the record says `codex default (not pinned, resolved review <model or unknown>)` (one entry per pass, e.g. `, elephant <model>`). `fh-run` / `fh-goal` still default to `gpt-5.5` |
+| `FH_MODEL` | model id | Overrides backend default (`claude-sonnet-5-5` for Claude). Codex in `fh-gate`: none pinned — with `FH_MODEL` unset no `-m` is passed and the record says `codex default (not pinned, resolved review <model or unknown>)` (one entry per pass, e.g. `, elephant <model>`). `fh-run` / `fh-goal`: also not pinned (no `-m` unless `FH_MODEL` is nonempty — API-key users who got `gpt-5.5` now get codex's default; set `FH_MODEL` for a reproducible model); after a successful unpinned codex run they print `→ <script>: codex default (not pinned, resolved <model or unknown>)` on stderr |
 
 ### Capture pattern (caller's responsibility)
 

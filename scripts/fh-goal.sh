@@ -118,10 +118,13 @@ fi
 
 if [[ -z "${FH_MODEL:-}" ]]; then
   case "$FH_BACKEND" in
-    codex) FH_MODEL="gpt-5.5" ;;
+    codex) FH_MODEL="" ;;   # not pinned: codex picks a model the login accepts. The old pin, gpt-5.5, is
+                            # refused for a ChatGPT login (HTTP 400, measured 2026-11-22 via fh-gate #1186).
+                            # FH_MODEL=<id> still passes -m <id>.
     claude) FH_MODEL="claude-sonnet-5-5" ;;
   esac
 fi
+FH_MODEL_LABEL="${FH_MODEL:-codex default (not pinned)}"
 
 if ! command -v "$FH_BACKEND" &>/dev/null; then
   echo "ERROR: '$FH_BACKEND' CLI not found." >&2
@@ -150,7 +153,7 @@ trap cleanup EXIT
 
 cat > "$PROMPT_FILE" <<PROMPT
 FH GOAL RUNNER v${VERSION}
-Backend: ${FH_BACKEND} | Model: ${FH_MODEL}
+Backend: ${FH_BACKEND} | Model: ${FH_MODEL_LABEL}
 
 Task:
 ${GOAL_PROMPT}
@@ -173,7 +176,7 @@ if [[ "$FH_DRY_RUN" == "1" ]]; then
   exit 12
 fi
 
-echo "→ fh-goal v${VERSION} backend=${FH_BACKEND} model=${FH_MODEL} gate=${FH_GATE_LEVEL}" >&2
+echo "→ fh-goal v${VERSION} backend=${FH_BACKEND} model=${FH_MODEL_LABEL} gate=${FH_GATE_LEVEL}" >&2
 
 _TIMEOUT_CMD=""
 if command -v gtimeout &>/dev/null; then
@@ -182,10 +185,19 @@ elif command -v timeout &>/dev/null; then
   _TIMEOUT_CMD="timeout ${FH_TIMEOUT}"
 fi
 
+# With codex unpinned, name the model codex resolved, read from its own stderr banner above the `user` line
+# only (the same rule as fh-gate #1186). Id-shaped or «unknown»; never the prompt or the reply.
+_note_codex_model() {
+  [[ "$FH_BACKEND" == "codex" && -z "${FH_MODEL:-}" ]] || return 0
+  local _m
+  _m=$(awk '/^user$/{exit} /^model: /{sub(/^model: /, ""); print; exit}' "$ERR_FILE" 2>/dev/null || true)
+  [[ "$_m" =~ ^[A-Za-z0-9._:-]{1,64}$ ]] || _m="unknown"
+  echo "→ $1: codex default (not pinned, resolved $_m)" >&2
+}
 run_backend() {
   case "$FH_BACKEND" in
     claude) ${_TIMEOUT_CMD} claude --print --model "$FH_MODEL" ;;
-    codex) ${_TIMEOUT_CMD} codex exec -m "$FH_MODEL" - ;;
+    codex) ${_TIMEOUT_CMD} codex exec ${FH_MODEL:+-m "$FH_MODEL"} - ;;
   esac
 }
 
@@ -195,6 +207,7 @@ if ! run_backend < "$PROMPT_FILE" > "$OUTPUT_FILE" 2>"$ERR_FILE"; then
   exit 10
 fi
 
+_note_codex_model fh-goal
 [[ "$FH_VERBOSE" == "1" ]] && cat "$ERR_FILE" >&2
 cat "$OUTPUT_FILE"
 
