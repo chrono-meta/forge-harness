@@ -17,7 +17,7 @@
 #   3  — ESCALATE  (human decision required)
 #   10 — Harness error (backend unavailable, timeout, missing/invalid structured
 #        verdict, or status != SUCCESS) — always fail-closed, never silent-pass
-#   11 — Argument error (invalid level, no files)
+#   11 — Argument error (invalid level, no files, or a help/version flag given with other arguments)
 #   12 — Dry-run (prompt emitted, NO review performed) — deliberately outside the
 #        verdict range: a check that did not run must never be readable as PASS.
 #
@@ -145,6 +145,18 @@ EXIT_DRY_RUN=12
 # Unknown flags are an ERROR, never a filename. Silently demoting an unrecognized
 # argument to "a file to review" is the same shape as demoting an unknown mode to a
 # weaker check: the run continues, reports something, and the something is wrong.
+# Help and version are honoured only ALONE (2026-11-22, 3.47.0 security review MEDIUM-1). With other arguments the
+# first one is a file list position — the GitHub Action always passes three — and a list that happens to read
+# `-h` (a file literally named so, or a list built from PR data) used to print help and exit 0, which the Action
+# maps to PASS with reviewed=true: no review ran. Now that case is an argument error (exit 11, not a pass).
+case "${1:-}" in
+  --version|-V|--help|-h)
+    if [[ $# -ne 1 ]]; then
+      printf '%s\n' "ERROR: '${1}' is honoured only on its own (got $# arguments)." >&2
+      printf '%s\n' "       In the file-list position it is not a file list, and help is not a review — not a pass." >&2
+      exit 11
+    fi ;;
+esac
 case "${1:-}" in
   --version|-V)
     printf '%s\n' "fh-gate $VERSION"
