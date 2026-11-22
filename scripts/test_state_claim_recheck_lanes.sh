@@ -9,6 +9,12 @@
 #   P2  transcript: no last_assistant_message → last assistant text read from transcript_path
 #   C1  control   : stop_hook_active=true → silent
 #   R1  revert    : the lease-grep step disabled in a copy → P1 goes silent (lane is red on the mutant)
+#   S1–S5 once per session: same claim twice → second silent · new lease line for the same #N fires ·
+#         another session fires · unreadable seen file fails open · lines past the 8-line cap show next time
+#   S6  compaction: a compact_boundary entry in the transcript starts a new seen file → shown again once
+#   S7  ordering  : stop A, stop B, prompt → B injected and only B marked; A shows on its next claim
+#   R5  revert    : the seen filter disabled in a copy → S1 speaks again (lane is red on the mutant)
+#   R6  revert    : the compaction count disabled in a copy → S6 stays silent after compaction
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 2
 SUBJ="scripts/state_claim_recheck_hook.sh"
@@ -190,6 +196,66 @@ if cmp -s "$SUBJ" "$M4"; then ko "R4 mutation did not apply (HARNESS-ERROR)"; el
   D="$T/r4"; arun "$M4" "$T/lease_yes.md" "$T/archive.md" "$D" stop '{"session_id":"s1","last_assistant_message":"알림 받았어.\n  [보관 · 만료] #1101 · L3: 추가 utterance 2026-11-12 «머지해» (물음: FH #1101 머지할까) ⇒ #1101 머지"}' >/dev/null
   out="$(arun "$M4" "$T/lease_yes.md" "$T/archive.md" "$D" prompt "$P")"
   [ -n "$out" ] && ok "mutant re-fires on the echo → A7 would be red" || ko "R4 mutant still silent"
+fi
+
+echo "S1–S5 once per session (AQ-20261107-29 ⓐ: the same note re-sent two turns running)"
+cp "$T/lease_yes.md" "$T/lease_s.md"
+D="$T/s1"; run "$SUBJ" "$T/lease_s.md" "$D" stop "$ANS" >/dev/null
+first="$(run "$SUBJ" "$T/lease_s.md" "$D" prompt "$P")"
+run "$SUBJ" "$T/lease_s.md" "$D" stop "$ANS" >/dev/null
+second="$(run "$SUBJ" "$T/lease_s.md" "$D" prompt "$P")"
+printf '%s' "$first" | grep -q '#387' && [ -z "$second" ] && ok "S1 same claim, same line → shown once" || ko "S1 first=${first:0:60} second=${second:0:120}"
+printf '%s\n' "            추가 utterance 2026-11-08 «머지 보류» (물음: #387 머지할까)" >> "$T/lease_s.md"
+run "$SUBJ" "$T/lease_s.md" "$D" stop "$ANS" >/dev/null
+third="$(run "$SUBJ" "$T/lease_s.md" "$D" prompt "$P")"
+printf '%s' "$third" | grep -q 'L4: ' && ! printf '%s' "$third" | grep -q 'L3: ' \
+  && ok "S2 new lease line for the same #N fires, old line not repeated" || ko "S2 third=${third:0:200}"
+other="$(run "$SUBJ" "$T/lease_s.md" "$D" stop '{"session_id":"s9","last_assistant_message":"qasp-dev #387 은 CI 초록, 머지는 아침에 묻는다."}' >/dev/null; run "$SUBJ" "$T/lease_s.md" "$D" prompt '{"session_id":"s9"}')"
+printf '%s' "$other" | grep -q 'L3: ' && ok "S3 another session id → not suppressed" || ko "S3 other=${other:0:120}"
+D="$T/s4"; mkdir -p "$D"; sid1="$(printf '%s' s1 | python3 -c 'import hashlib,sys;print(hashlib.sha256(sys.stdin.read().encode()).hexdigest()[:32])')"
+mkdir -p "$D/$sid1.c0.seen"
+run "$SUBJ" "$T/lease_yes.md" "$D" stop "$ANS" >/dev/null; a="$(run "$SUBJ" "$T/lease_yes.md" "$D" prompt "$P" 2>&1)"
+run "$SUBJ" "$T/lease_yes.md" "$D" stop "$ANS" >/dev/null; b="$(run "$SUBJ" "$T/lease_yes.md" "$D" prompt "$P" 2>&1)"
+printf '%s' "$a" | grep -q '#387' && printf '%s' "$b" | grep -q '#387' && ok "S4 seen file unreadable → fails open (shows both times, no stderr)" || ko "S4 a=${a:0:80} b=${b:0:80}"
+{ echo "# lease"; for i in 1 2 3 4 5 6 7 8 9 10; do echo "            추가 utterance 2026-11-0$((i%9)) «머지해» 줄$i (물음: #387 머지할까)"; done; } > "$T/lease_cap.md"
+D="$T/s5"; run "$SUBJ" "$T/lease_cap.md" "$D" stop "$ANS" >/dev/null; c1="$(run "$SUBJ" "$T/lease_cap.md" "$D" prompt "$P")"
+run "$SUBJ" "$T/lease_cap.md" "$D" stop "$ANS" >/dev/null; c2="$(run "$SUBJ" "$T/lease_cap.md" "$D" prompt "$P")"
+printf '%s' "$c1" | grep -q '그 밖 2줄' && printf '%s' "$c2" | grep -q 'L10: ' && printf '%s' "$c2" | grep -q 'L11: ' && ! printf '%s' "$c2" | grep -q 'L2: ' \
+  && ok "S5 lines past the cap are not marked seen; they show on the next claim" || ko "S5 c1=${c1:0:80} c2=${c2:0:200}"
+
+echo "S6 compaction resets · S7 stop-stop-prompt ordering"
+printf '%s\n' '{"type":"user","message":{"content":"x"}}' > "$T/trc.jsonl"
+ANS_C="{\"session_id\":\"s1\",\"transcript_path\":\"$T/trc.jsonl\",\"last_assistant_message\":\"qasp-dev #387 은 CI 초록, 머지는 아침에 묻는다.\"}"
+crun() { run "$1" "$T/lease_yes.md" "$2" stop "$ANS_C" >/dev/null; run "$1" "$T/lease_yes.md" "$2" prompt "$P"; }
+D="$T/s6"; c1="$(crun "$SUBJ" "$D")"; c2="$(crun "$SUBJ" "$D")"
+printf '%s\n' '{"type":"system","subtype":"compact_boundary","content":"Conversation compacted"}' >> "$T/trc.jsonl"
+c3="$(crun "$SUBJ" "$D")"; c4="$(crun "$SUBJ" "$D")"
+[ -n "$c1" ] && [ -z "$c2" ] && printf '%s' "$c3" | grep -q 'L3: ' && [ -z "$c4" ] \
+  && ok "S6 shown · silent · compaction → shown again · silent" || ko "S6 c1=${#c1} c2=${#c2} c3=${#c3} c4=${#c4}"
+D="$T/s7"; arun "$SUBJ" "$T/lease_yes.md" "$T/archive.md" "$D" stop "$ANS" >/dev/null
+arun "$SUBJ" "$T/lease_yes.md" "$T/archive.md" "$D" stop "$ANS_A" >/dev/null
+b="$(arun "$SUBJ" "$T/lease_yes.md" "$T/archive.md" "$D" prompt "$P")"
+arun "$SUBJ" "$T/lease_yes.md" "$T/archive.md" "$D" stop "$ANS" >/dev/null
+a="$(arun "$SUBJ" "$T/lease_yes.md" "$T/archive.md" "$D" prompt "$P")"
+printf '%s' "$b" | grep -q '#1101' && printf '%s' "$a" | grep -q '#387' && [ -z "$(ls "$D" | grep -v '\.seen$')" ] \
+  && ok "S7 overwritten note's lines stay unseen; no stray key/tmp files" || ko "S7 b=${b:0:60} a=${a:0:60} files=$(ls "$D")"
+
+echo "R6 revert probe (compaction count disabled)"
+M6="$T/mutant6.sh"; sed 's/^                        ncomp += 1$/                        pass/' "$SUBJ" > "$M6"
+if cmp -s "$SUBJ" "$M6"; then ko "R6 mutation did not apply (HARNESS-ERROR)"; else
+  printf '%s\n' '{"type":"user","message":{"content":"x"}}' > "$T/trc.jsonl"
+  D="$T/r6"; crun "$M6" "$D" >/dev/null
+  printf '%s\n' '{"type":"system","subtype":"compact_boundary","content":"Conversation compacted"}' >> "$T/trc.jsonl"
+  out="$(crun "$M6" "$D")"
+  [ -z "$out" ] && ok "mutant silent after compaction → S6 would be red" || ko "R6 mutant still resets"
+fi
+
+echo "R5 revert probe (seen filter disabled)"
+M5="$T/mutant5.sh"; sed 's/^    SEEN_ON = True$/    SEEN_ON = False/' "$SUBJ" > "$M5"
+if cmp -s "$SUBJ" "$M5"; then ko "R5 mutation did not apply (HARNESS-ERROR)"; else
+  D="$T/r5"; run "$M5" "$T/lease_yes.md" "$D" stop "$ANS" >/dev/null; run "$M5" "$T/lease_yes.md" "$D" prompt "$P" >/dev/null
+  run "$M5" "$T/lease_yes.md" "$D" stop "$ANS" >/dev/null; out="$(run "$M5" "$T/lease_yes.md" "$D" prompt "$P")"
+  [ -n "$out" ] && ok "mutant repeats the note → S1 would be red" || ko "R5 mutant still silent (lane does not see the filter)"
 fi
 
 echo "state_claim_recheck lanes: $pass passed · $fail failed"
