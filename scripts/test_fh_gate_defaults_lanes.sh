@@ -17,6 +17,7 @@
 #   D10 FH_REVIEWER=fh and the elephant pass get exactly Read/Glob/Grep — no shell, no MCP, no skill (D10b: control)
 #   D11 FH_REVIEWER=code-review keeps git but runs without the five GITHUB_* command-file variables
 #   D12 run from a copy with no action.yml (package shape): D7 is SKIPPED by name — not a pass, not a fail
+#   D14 FH_REVIEWER=code-review loads user settings only, and its prompt comes after `--` (the real CLI reads it then)
 #   D7  action.yml does not put FH_TIMEOUT in the step env; it exports it only when the `timeout` input (default '') is non-empty
 #       (known pair: the shipped file passes; a planted «FH_TIMEOUT: ${{ inputs.timeout }}» env line is caught)
 # Token-free: claude and codex are stubs that answer by request kind and log what they were asked.
@@ -190,6 +191,42 @@ if [ "$RC" -eq 0 ] && [ -s "$TMPROOT/d11/claude_cr.env" ] && ! grep -qE '^GITHUB
    && [[ "$(argv_after "$TMPROOT/d11/claude_cr.args" --allowedTools)" == *"Bash(git diff:*)"* ]]; then
   ok "D11 /code-review call: git kept, none of the five GITHUB_* command-file variables in its environment"
 else bad "D11 code-review env" "rc=$RC $(grep -E '^GITHUB_(ENV|PATH|OUTPUT|STATE|STEP_SUMMARY)=' "$TMPROOT/d11/claude_cr.env" 2>/dev/null | cut -d= -f1 | tr '\n' ' ')"; fi
+
+# D14 — the opt-in /code-review call. Measured 2026-11-22 with real claude 2.1.330 on a planted checkout:
+#       ① without --setting-sources user, the checkout's project and local hooks ran, its .mcp.json server started and
+#         its CLAUDE.md, CLAUDE.local.md and .claude/rules text reached the call (3/3); with the flag, none of them (3/3).
+#       ② the CLI reads a word after --disallowedTools as that option's value («"/code-review low" was read as a value
+#         of --disallowedTools, not as a prompt»), so the call failed before any review (exit 10). With `--` in front
+#         the prompt is read as a prompt. This stub does not parse argv like the real CLI, so ② is asserted on the
+#         argv shape: the line before the /code-review prompt must be `--`.
+cr_ok() {   # cr_ok <args file> — prints what is wrong. Options count only before the first `--` (after it, everything
+           # is positional); exactly one `--`, followed by the /code-review prompt and nothing else.
+  [ -s "$1" ] || { echo "no call recorded"; return; }
+  awk '
+    !seen && $0=="--" { seen=NR; next }
+    !seen && prev=="--setting-sources" && $0=="user" { src=1 }
+    seen && NR==seen+1 { if ($0 ~ /^\/code-review /) pr=1 }
+    seen && NR>seen+1 { extra=1 }
+    seen && $0=="--" { dup=1 }
+    { prev=$0 }
+    END {
+      if (!seen) print "no --"
+      if (!src)  print "no --setting-sources user before --"
+      if (!pr)   print "prompt not right after --"
+      if (extra || dup) print "more after the prompt"
+    }' "$1"
+}
+gate d14 FH_REVIEWER=code-review
+z_bad=$(cr_ok "$TMPROOT/d14/claude_cr.args" | tr '\n' ' ')
+if [ "$RC" -eq 0 ] && [ -z "$z_bad" ]; then ok "D14 /code-review call: user settings only, prompt after --"
+else bad "D14 code-review call" "rc=$RC ${z_bad:-ok}"; fi
+# D14b — the checker sees a planted evasion (cross-family R2): --setting-sources user moved after the first `--`
+#        (positional there) with a second `--` before the prompt. Control: the shipped shape passes the same checker.
+printf '%s\n' --print --allowedTools Read --disallowedTools Write -- --setting-sources user -- "/code-review low" > "$TMPROOT/cr_planted.args"
+printf '%s\n' --print --setting-sources user --allowedTools Read --disallowedTools Write -- "/code-review low" > "$TMPROOT/cr_good.args"
+if [ -n "$(cr_ok "$TMPROOT/cr_planted.args")" ] && [ -z "$(cr_ok "$TMPROOT/cr_good.args")" ]; then
+  ok "D14b the /code-review check catches a flag moved after -- (and passes the good shape)"
+else bad "D14b code-review checker" "planted=[$(cr_ok "$TMPROOT/cr_planted.args" | tr '\n' ' ')] good=[$(cr_ok "$TMPROOT/cr_good.args" | tr '\n' ' ')]"; fi
 
 # D7 — action.yml's step env must not carry FH_TIMEOUT; the run block exports it only from a non-empty input.
 envblock() { awk '/^ *env: *$/{e=1; next} e && /^ *run: *\|/{exit} e{print}' "$1"; }
