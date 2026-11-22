@@ -5736,3 +5736,17 @@
   purpose: soul-line restatement (1) and blind firing sims reading only a copy of the rule file — arm 4 (new rule), control 1 (main rule)
   output: done — soul both RESTATABLE; arm 4/4 wrote input-from on the first controls line, control 0/1 → PR #1180
   lease: selfdev loop standing instruction (operator 2026-11-11, candidate rows)
+- date: 2026-11-23
+  session: selfdev loop (unattended)
+  agent: fh-meta:challenger
+  model: opus (inherited)
+  purpose: blind Axis-2 read of the AQ-20261107-29 ⓐ state-claim hook change (diff + stated job only)
+  output: done — 0 blocking, 5 weaker; 3 fixed (mark after print · compaction reset · atomic pending), 2 named as limits → PR #1188
+  lease: selfdev loop standing instruction (operator 2026-11-11, candidate rows)
+- date: 2026-11-23
+  session: selfdev loop (unattended)
+  agent: general-purpose
+  model: sonnet
+  purpose: context-free soul-line restatement for the same change
+  output: done — SUCCESS GUESS (shown? key? unreadable-state direction), NEVER-DO RESTATABLE; line rewritten before design → PR #1188
+  lease: selfdev loop standing instruction (operator 2026-11-11, candidate rows)
