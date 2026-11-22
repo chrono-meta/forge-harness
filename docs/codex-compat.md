@@ -33,10 +33,10 @@ irreversible surface. Source: [Codex sandboxing](https://learn.chatgpt.com/docs/
 ```bash
 # headless, stdin — codex-cli >= 0.135.0
 cat plugins/fh-meta/skills/<skill>/SKILL.md path/to/artifact \
-  | codex exec -m gpt-5.5 -
+  | codex exec -
 ```
 
-- `codex exec -m gpt-5.5 -` reads the combined prompt from stdin and runs headless.
+- `codex exec -` reads the combined prompt from stdin and runs headless. Add `-m <model>` only with a model your login accepts: codex 0.164.0 refuses `gpt-5.5` for a ChatGPT-account login, and with no `-m` it picks one from its own catalog.
 - `npx @openai/codex` (interactive) requires a TTY and is **not** suitable for piped skill application.
 - Inside a git repository (e.g. a clone of this repo) no extra flag is needed. **Outside** a git repo (e.g. running from `/tmp`), add `--skip-git-repo-check`.
 - `codex exec` has its own file-read tools, so a skill that back-traces claims to source files (e.g. `phantom-quench`) can verify paths itself — it produced real `file:line` citations in validation.
@@ -63,7 +63,7 @@ Backend defaults:
 | `FH_BACKEND` | Command | Default model |
 |---|---|---|
 | `claude` | `claude --print --model "$FH_MODEL"` | `claude-sonnet-5-5` |
-| `codex` | `codex exec -m "$FH_MODEL" -` | `gpt-5.5` |
+| `codex` | `codex exec [-m "$FH_MODEL"] -` | `fh-gate`: not pinned — no `-m` unless `FH_MODEL` is set, so codex picks from its own catalog (measured on one ChatGPT login; set `FH_MODEL` for a stable model). `fh-run` and `fh-goal` still default to `gpt-5.5`, which codex 0.164.0 refuses for a ChatGPT-account login — set `FH_MODEL` there |
 | `auto` | `codex` if present, otherwise `claude` | backend default |
 
 ### `fh-run`
@@ -176,7 +176,7 @@ The sibling pattern for Gemini is `gemini -p "$(cat <skill+artifact>)"`. Outside
 
 | Tier | Under Codex | Action |
 |---|---|---|
-| **M1** | Runs fully (`token-budget-gate`, `asset-placement-gate`, `phantom-quench`, `deep-clarify`, `convergence-loop`, `ko-tech-writer` (visual-QA degrades to text-only; the spoken register's Step 5-s renders audio through a shell TTS call — available here — but its **listening** pass is human in every runtime, so it degrades to declared-unmet, not to a Codex-specific gap)) | `cat SKILL.md artifact \| codex exec -m gpt-5.5 -` |
+| **M1** | Runs fully (`token-budget-gate`, `asset-placement-gate`, `phantom-quench`, `deep-clarify`, `convergence-loop`, `ko-tech-writer` (visual-QA degrades to text-only; the spoken register's Step 5-s renders audio through a shell TTS call — available here — but its **listening** pass is human in every runtime, so it degrades to declared-unmet, not to a Codex-specific gap)) | `cat SKILL.md artifact \| codex exec -` |
 | **M2** | Core runs; agent/slash steps via adapter (`deliberation`, `steel-quench`, `harness-doctor`, `context-doctor`, `sim-conductor`, `harvest-loop`, `persona-cast` — its merge engine runs as is, the lens dispatch needs the adapter) | Use a permitted native agent, `fh-run`, or direct `codex exec` reading the spec; preserve dispatch constraints |
 | **M3** | Does not run automatically | Use native Codex session features where available; otherwise read as methodology reference or use a dedicated adapter |
 

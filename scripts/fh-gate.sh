@@ -24,7 +24,7 @@
 # Environment:
 #   FH_DRY_RUN=1        generate prompt only, skip backend invocation; exits 12, not 0
 #   FH_BACKEND=claude|codex|auto  AI backend to use (default: claude)
-#   FH_MODEL=<model>              model to use (default depends on backend)
+#   FH_MODEL=<model>              model to use (claude: claude-sonnet-5-5; codex: not pinned — codex picks its own)
 #   FH_TIMEOUT=120                seconds before backend is killed (default: 120)
 #   FH_VERBOSE=1                  print full backend stderr to stderr
 #   FH_RECORD_BASE=<p>  directory for governance_log YAML (default: FH_ROOT/tracks/_meta)
@@ -36,8 +36,12 @@
 #                                 UNMEASURED: whether a headless /code-review call, or the goldfish pass, returns
 #                                 the structured object the gate needs on every runner — which is why neither is
 #                                 the default. FH_REVIEWER=code-review on codex is an argument error.
-#                                 Seen once (2026-11-22, claude 2.1.330, 1 run, not a rate): the headless call ran
-#                                 /code-review as a local command and returned no structured object → exit 10.
+#                                 Measured 2026-11-22 (claude 2.1.330): no structured object in 0/5 runs through this
+#                                 script (all exit 10) and 0/6 direct runs. Each ran /code-review as a local command
+#                                 (local_command: code_review, num_turns 0) and gave prose: text lines at low effort,
+#                                 a JSON block inside text or only «Command completed» at medium. That it ignores
+#                                 --json-schema is the likely cause, not isolated. Reading that prose would move the
+#                                 verdict off the typed channel, so the opt-in is left failing closed.
 #                                 `code-review` is NOT read-only: /code-review needs git's read commands, and those
 #                                 can write a file (`--output=`); opt into it for trusted changes only. The `fh` and
 #                                 elephant passes get only Read · Glob · Grep on the claude backend (no shell, no MCP
@@ -378,9 +382,16 @@ fi
 if [[ -z "${FH_MODEL:-}" ]]; then
   case "$FH_BACKEND" in
     claude) FH_MODEL="claude-sonnet-5-5" ;;
-    codex)  FH_MODEL="gpt-5.5" ;;
+    # codex: no pinned default (2026-11-22, codex 0.164.0). `-m gpt-5.5`, the old default, is refused for a
+    # ChatGPT-account login («The 'gpt-5.5' model is not supported when using Codex with a ChatGPT account»); with no
+    # -m codex picks a model from its own catalog for that login (gpt-6.1-terra in that run) and answers. Set FH_MODEL
+    # to pin one; it is then passed as -m as before. Measured for one ChatGPT-account login only — API-key logins were
+    # not measured — and the model can change with the codex version or the account: set FH_MODEL for a stable one.
+    # The record names the model codex resolved (or «unknown»).
+    codex)  FH_MODEL="" ;;
   esac
 fi
+FH_MODEL_LABEL="${FH_MODEL:-codex default (not pinned)}"
 
 # ── Review stage (2026-11-19) ─────────────────────────────────────────────────────────────────────
 # The 2026-11-19 comparison (lab evidence/cr, sealed) measured this gate's own one-pass review against the
@@ -644,7 +655,7 @@ cat > "$PROMPT_FILE" <<PROMPT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 FH GOVERNANCE GATE v${VERSION} — ${GATE_LEVEL_UPPER} PASS
 Caller: ${FH_CALLER} | Timestamp: ${TIMESTAMP}
-Backend: ${FH_BACKEND} | Model: ${FH_MODEL}
+Backend: ${FH_BACKEND} | Model: ${FH_MODEL_LABEL}
 Security lens: ${SECURITY_LENS}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -1083,7 +1094,7 @@ cat > "$CR_SCHEMA_FILE" <<'SCHEMA'
 SCHEMA
 
 # --- Invoke ---
-echo "→ fh-gate v${VERSION} [${GATE_LEVEL_UPPER}] backend=${FH_BACKEND} model=${FH_MODEL} caller=${FH_CALLER} security=${SECURITY_LENS}" >&2
+echo "→ fh-gate v${VERSION} [${GATE_LEVEL_UPPER}] backend=${FH_BACKEND} model=${FH_MODEL_LABEL} caller=${FH_CALLER} security=${SECURITY_LENS}" >&2
 printf "  files:\n%s\n" "$FILES_LIST" >&2
 
 # Use gtimeout (macOS coreutils) if available, fall back to timeout, then bare invoke
@@ -1121,12 +1132,28 @@ fi
 # Dropping the user config also drops any provider it names, so the review would go to codex's default provider
 # instead — codex_route_guard (below, before any call) refuses that case. OPENAI_BASE_URL is not a way around it:
 # codex 0.164.0 exec did not follow it, with or without the flag (0/2).
+# Project .rules and hooks of a trusted checkout (measured 2026-11-22, local fake API issuing one command): without
+# --ignore-user-config the checkout's rule refused the command and its SessionStart/PreToolUse hooks ran (4/4); with
+# the flag neither applied (0/3), the same as an untrusted checkout (0/3). Those canaries only (one rule, two hook
+# events); that no other project-scoped codex setting applies is not shown by them.
 _RO_TOOLS="Read,Glob,Grep"
 _RO_ALLOW="$_RO_TOOLS"
 _RO_DENY="Bash,PowerShell,Write,Edit,NotebookEdit,WebFetch,WebSearch"
 _RO_SOURCES="user"
 _RO_CODEX_NODOC="project_doc_max_bytes=0"
 _RO_CODEX_NOUSER="--ignore-user-config"
+# _note_codex_model <pass> — for an unpinned codex call, the model codex chose: the first `model:` line of codex's own
+# stderr banner, read only above the `user` line (below it codex echoes the prompt, which carries the reviewed content),
+# kept only if it looks like a model id; anything else is «unknown» — the record never guesses. Read right after each
+# call, because the next call overwrites ERR_FILE (cross-family R2: the record named only the last pass).
+_CODEX_RESOLVED=""
+_note_codex_model() {
+  [[ "$FH_BACKEND" == "codex" && -z "$FH_MODEL" ]] || return 0
+  local _m
+  _m=$(awk '/^user$/{exit} /^model: /{sub(/^model: /, ""); print; exit}' "$ERR_FILE" 2>/dev/null || true)
+  [[ "$_m" =~ ^[A-Za-z0-9._:-]{1,64}$ ]] || _m="unknown"
+  _CODEX_RESOLVED="${_CODEX_RESOLVED:+${_CODEX_RESOLVED}, }$1 $_m"
+}
 call_structured() {
   local _ok=0
   : > "$CODEX_LAST"
@@ -1136,7 +1163,7 @@ call_structured() {
                 --json-schema "$(cat "$2")" --tools "$_RO_TOOLS" --strict-mcp-config --disable-slash-commands \
                 --setting-sources "$_RO_SOURCES" --allowedTools "$_RO_ALLOW" --disallowedTools "$_RO_DENY" < "$1" ) \
               > "$OUTPUT_FILE" 2>"$ERR_FILE" && _ok=1 ;;
-    codex)  ( cd "$WORK_ROOT" && { [[ "${4:-}" == goldfish ]] && unset FH_TASK_DESCRIPTION; :; } && ${_TIMEOUT_CMD} codex exec -m "$FH_MODEL" --skip-git-repo-check -s read-only \
+    codex)  ( cd "$WORK_ROOT" && { [[ "${4:-}" == goldfish ]] && unset FH_TASK_DESCRIPTION; :; } && ${_TIMEOUT_CMD} codex exec ${FH_MODEL:+-m "$FH_MODEL"} --skip-git-repo-check -s read-only \
                 "$_RO_CODEX_NOUSER" -c "$_RO_CODEX_NODOC" --output-schema "$2" -o "$CODEX_LAST" - < "$1" ) > "$OUTPUT_FILE" 2>"$ERR_FILE" && _ok=1 ;;
   esac
   if [[ "$_ok" != 1 ]]; then
@@ -1144,6 +1171,7 @@ call_structured() {
     cat "$ERR_FILE" >&2
     exit $EXIT_HARNESS_ERROR
   fi
+  if [[ "$3" == *elephant* ]]; then _note_codex_model elephant; else _note_codex_model review; fi
   [[ "$FH_VERBOSE" == "1" ]] && cat "$ERR_FILE" >&2
   STRUCT_JSON=""
   if [[ "$FH_BACKEND" == "claude" ]]; then
@@ -1282,7 +1310,7 @@ run_backend() {
     claude) ( cd "$WORK_ROOT" && ${_TIMEOUT_CMD} claude --print --model "$FH_MODEL" \
               --output-format json --json-schema "$(cat "$SCHEMA_FILE")" --tools "$_RO_TOOLS" --strict-mcp-config \
               --disable-slash-commands --setting-sources "$_RO_SOURCES" --allowedTools "$_RO_ALLOW" --disallowedTools "$_RO_DENY" ) ;;
-    codex)  ( cd "$WORK_ROOT" && ${_TIMEOUT_CMD} codex exec -m "$FH_MODEL" --skip-git-repo-check -s read-only \
+    codex)  ( cd "$WORK_ROOT" && ${_TIMEOUT_CMD} codex exec ${FH_MODEL:+-m "$FH_MODEL"} --skip-git-repo-check -s read-only \
               "$_RO_CODEX_NOUSER" -c "$_RO_CODEX_NODOC" --output-schema "$SCHEMA_FILE" -o "$CODEX_LAST" - ) ;;
   esac
 }
@@ -1292,6 +1320,7 @@ if ! run_backend < "$PROMPT_FILE" > "$OUTPUT_FILE" 2>"$ERR_FILE"; then
   cat "$ERR_FILE" >&2
   exit $EXIT_HARNESS_ERROR
 fi
+_note_codex_model review
 
 [[ "$FH_VERBOSE" == "1" ]] && cat "$ERR_FILE" >&2
 
@@ -1489,6 +1518,11 @@ cat "$PARSE_FILE"
 FINDINGS_A_LOG=$(grep -m 1 "^FH_FINDINGS_A:" "$PARSE_FILE" 2>/dev/null | awk '{print $2}' | tr -d '[:space:]' || echo "0")  # portability-noqa: already ends in `|| echo "0"` (P1's own prescribed remedy) — the assignment cannot die under set -e
 FINDINGS_B_LOG=$(grep -m 1 "^FH_FINDINGS_B:" "$PARSE_FILE" 2>/dev/null | awk '{print $2}' | tr -d '[:space:]' || echo "0")  # portability-noqa: same as FINDINGS_A_LOG above
 FINDINGS_N_LOG=$(grep -m 1 "^FH_FINDINGS_COUNT:" "$PARSE_FILE" 2>/dev/null | awk '{print $2}' | tr -d '[:space:]' || echo "0")  # portability-noqa: same as FINDINGS_A_LOG above
+# An unpinned codex run records which model codex chose for each pass (_note_codex_model, after every codex call).
+# The label carries no «: » so the governance YAML stays a plain scalar (cross-family R2).
+if [[ "$FH_BACKEND" == "codex" && -z "$FH_MODEL" ]]; then
+  FH_MODEL_LABEL="codex default (not pinned, resolved ${_CODEX_RESOLVED:-unknown})"
+fi
 {
   printf -- "- timestamp: %s\n" "$TIMESTAMP"
   printf "  caller: %s\n" "$FH_CALLER"
@@ -1497,7 +1531,7 @@ FINDINGS_N_LOG=$(grep -m 1 "^FH_FINDINGS_COUNT:" "$PARSE_FILE" 2>/dev/null | awk
   printf "  elephant: %s\n" "${ELEPHANT_LINE%% —*}"
   printf "  e0: %s\n" "$(_exec_get '.e0.status')"
   printf "  e1: %s\n" "$(_exec_get '.e1.status')"
-  printf "  model: %s\n" "$FH_MODEL"
+  printf "  model: %s\n" "$FH_MODEL_LABEL"
   printf "  gate_level: %s\n" "$GATE_LEVEL"
   printf "  verdict: %s\n" "$VERDICT"
   printf "  findings_total: %s\n" "$FINDINGS_N_LOG"

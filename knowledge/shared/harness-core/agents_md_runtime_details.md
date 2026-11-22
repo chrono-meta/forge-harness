@@ -209,10 +209,10 @@ Direct headless fallback:
 
 ```bash
 cat plugins/fh-meta/skills/steel-quench/SKILL.md path/to/artifact.md \
-  | codex exec -m gpt-5.5 -
+  | codex exec -
 ```
 
-`codex exec -m gpt-5.5 -` reads stdin headlessly. Interactive `npx @openai/codex` requires a TTY and
+`codex exec -` reads stdin headlessly (add `-m <model>` only with one your login accepts — codex 0.164.0 refuses `gpt-5.5` for a ChatGPT-account login). Interactive `npx @openai/codex` requires a TTY and
 is not the headless substitute.
 
 ## §Compatibility-tiers

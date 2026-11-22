@@ -49,7 +49,7 @@ Caller reads verdict, decides: merge / hold / escalate
 | `FH_TASK_DESCRIPTION` | string | What the caller was trying to accomplish (context for adversarial pass) |
 | `FH_SECURITY_LENS` | `on` or `off` (default `off`) | Force security-adjacent focus in steel-quench |
 | `FH_BACKEND` | `claude`, `codex`, or `auto` (default `claude`) | Runtime backend. `auto` prefers Codex if installed, otherwise Claude |
-| `FH_MODEL` | model id | Overrides backend default (`claude-sonnet-5-5` for Claude, `gpt-5.5` for Codex) |
+| `FH_MODEL` | model id | Overrides backend default (`claude-sonnet-5-5` for Claude). Codex in `fh-gate`: none pinned — with `FH_MODEL` unset no `-m` is passed and the record says `codex default (not pinned, resolved review <model or unknown>)` (one entry per pass, e.g. `, elephant <model>`). `fh-run` / `fh-goal` still default to `gpt-5.5` |
 
 ### Capture pattern (caller's responsibility)
 
@@ -297,7 +297,7 @@ Every binary governance pass writes a compact record entry for calibration and a
 - timestamp: 2026-05-31T12:00:00Z
   caller: opencode
   backend: codex
-  model: gpt-5.5
+  model: codex default (not pinned, resolved review gpt-6.1-terra)
   gate_level: quick
   verdict: BLOCKED
   findings_total: 3
