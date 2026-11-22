@@ -71,7 +71,9 @@ one review call there, billed or counted against that account like any other cal
 opt-in layers add more). `FH_DRY_RUN=1` prints the prompt and calls nothing (exit 12). The gate's execution layer, which runs
 your repository's own scripts in a copy, is off unless you set `FH_GATE_EXEC=on`. The review call itself can only read:
 on `claude` it gets Read, Glob and Grep and nothing else (no shell, no writes, no MCP server, no skill or command);
-on `codex` it runs with `-s read-only`. Settings and hooks of the checkout under review still load for that call.
+on `codex` it runs with `-s read-only`. The project settings and hooks of the checkout under review are not loaded
+for that call (`claude` runs with `--setting-sources user`), and neither is its `AGENTS.md` (`codex` runs with
+`-c project_doc_max_bytes=0`). Whether the checkout's `CLAUDE.md` is still read has not been measured.
 
 **Which exit codes fail a CI step.** Run as a plain step (`npx … fh-gate`), every non-zero exit fails it — including
 1 PENDING (B-grade findings: proceed with care), as well as 2 BLOCKED, 3 ESCALATE, 10 harness error, 11 argument error

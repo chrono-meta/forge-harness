@@ -58,7 +58,7 @@ cd your-repo && npx --package @chrono-meta/fh-gate fh-gate     # 审查当前仓
 
 它通过 `git diff` 找到你改动的文件，发给审查后端，并输出判定（`FH_GATE_VERDICT: PASS | PENDING | BLOCKED | ESCALATE`）和退出码。只有审查真的跑过，PASS 才算数：后端始终没有应答、dry run、或者出现未知退出码，都不是 PASS，而 GitHub Actions 步骤默认会因此失败。需要 Node ≥ 16，以及安装并登录好的一个后端 CLI：`claude`（默认）或 `codex`（`FH_BACKEND=codex`）。可用于 CI、pre-commit 钩子，或放在另一个 agent 旁边。也有 GitHub Actions 步骤和 Homebrew tap——见[运行门禁](docs/REFERENCE.md#run-it-outside-claude-code--the-fh-gate-cli)。
 
-**跑一次会发生什么、花多少。** 每次运行都会把改动的文件发给你已登录的后端 CLI，并在那里调用一次审查，和该账号的其他调用一样计费或计入用量（`FH_BACKEND=cross` 最多两次，打开可选层会更多）。`FH_DRY_RUN=1` 只打印提示词，不调用任何东西（退出码 12）。门禁的执行层（在副本里运行你仓库自己的脚本）只有设置 `FH_GATE_EXEC=on` 才会打开。审查调用本身只能读取：`claude` 只拿到 Read、Glob 和 Grep（没有 shell、写入、MCP 服务器、技能或命令），`codex` 以 `-s read-only` 运行。被审查检出里的设置和钩子仍会在这次调用中加载。
+**跑一次会发生什么、花多少。** 每次运行都会把改动的文件发给你已登录的后端 CLI，并在那里调用一次审查，和该账号的其他调用一样计费或计入用量（`FH_BACKEND=cross` 最多两次，打开可选层会更多）。`FH_DRY_RUN=1` 只打印提示词，不调用任何东西（退出码 12）。门禁的执行层（在副本里运行你仓库自己的脚本）只有设置 `FH_GATE_EXEC=on` 才会打开。审查调用本身只能读取：`claude` 只拿到 Read、Glob 和 Grep（没有 shell、写入、MCP 服务器、技能或命令），`codex` 以 `-s read-only` 运行。被审查检出的项目设置和钩子不会在这次调用中加载（`claude` 以 `--setting-sources user` 运行），它的 `AGENTS.md` 也不会发送（`codex` 以 `-c project_doc_max_bytes=0` 运行）。检出里的 `CLAUDE.md` 是否仍会被读取，还没有测过。
 
 **哪些退出码会让 CI 步骤失败。** 直接作为步骤运行（`npx … fh-gate`）时，任何非 0 退出码都会让步骤失败：1 PENDING（B 级发现——知情后继续）也算失败，2 BLOCKED、3 ESCALATE、10 门禁自身错误、11 参数错误、12 dry run 同样如此。GitHub Action 则会先换成判定：默认在 BLOCKED、ESCALATE、HARNESS_ERROR、ARG_ERROR、DRY_RUN 和未知退出码时失败，PENDING 放行（可通过 `fail-on` 输入修改）。
 

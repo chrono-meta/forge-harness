@@ -69,7 +69,8 @@ cd your-repo && npx --package @chrono-meta/fh-gate fh-gate     # 현재 레포�
 선택 층을 켜면 더 늘어납니다). `FH_DRY_RUN=1` 은 프롬프트만 출력하고 아무것도 호출하지 않습니다(종료 코드 12).
 레포의 스크립트를 사본에서 돌리는 게이트의 실행 층은 `FH_GATE_EXEC=on` 을 켜야만 켜집니다. 리뷰 호출 자체는 읽기만
 합니다. `claude` 는 Read · Glob · Grep 만 받고(셸 · 쓰기 · MCP 서버 · 스킬 · 명령 없음), `codex` 는 `-s read-only` 로
-돕니다. 리뷰하는 체크아웃의 설정과 훅은 그 호출에 여전히 로드됩니다.
+돕니다. 리뷰하는 체크아웃의 프로젝트 설정과 훅은 그 호출에 로드되지 않고(`claude` 는 `--setting-sources user` 로 돕니다), `AGENTS.md` 도 실리지 않습니다(`codex` 는
+`-c project_doc_max_bytes=0` 으로 돕니다). 체크아웃의 `CLAUDE.md` 가 여전히 읽히는지는 아직 재지 않았습니다.
 
 **CI 스텝을 실패시키는 종료 코드.** 그냥 스텝으로 돌리면(`npx … fh-gate`) 0 이 아닌 종료 코드는 모두 스텝을 실패시킵니다.
 1 PENDING(B 등급 지적 — 알고 진행)도 실패이고, 2 BLOCKED · 3 ESCALATE · 10 하네스 오류 · 11 인자 오류 · 12 dry run 도
