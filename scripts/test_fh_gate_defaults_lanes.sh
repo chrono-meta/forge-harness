@@ -19,6 +19,7 @@
 #   D12 run from a copy with no action.yml (package shape): D7 is SKIPPED by name — not a pass, not a fail
 #   D14 FH_REVIEWER=code-review loads user settings only, and its prompt comes after `--` (the real CLI reads it then)
 #   D15 every codex review call (default, goldfish, elephant) has --ignore-user-config before its prompt marker
+#   D17 codex with no FH_MODEL passes no -m (codex picks a model its login accepts); FH_MODEL=x passes -m x
 #   D16 a codex user config that names where requests go (model_provider other than openai, model_providers,
 #       openai_base_url, chatgpt_base_url) or cannot be read → exit 10, no codex call; a plain or absent config proceeds
 #   D7  action.yml does not put FH_TIMEOUT in the step env; it exports it only when the `timeout` input (default '') is non-empty
@@ -57,6 +58,9 @@ out=""; while [ $# -gt 0 ]; do case "$1" in -o) out="$2"; shift 2 ;; *) shift ;;
 in=$(cat); kind=legacy
 case "$in" in *"FH ELEPHANT PASS"*) kind=ele ;; *"FH REVIEW PASS"*) kind=abs ;; esac
 : > "${LOGDIR:-/tmp}/codex_${kind}.called"
+bn="${FAKE_CODEX_BANNER:-}"; [ "$kind" = ele ] && [ -n "${FAKE_CODEX_BANNER_ELE:-}" ] && bn="$FAKE_CODEX_BANNER_ELE"
+if [ -n "$bn" ]; then printf 'OpenAI Codex (stub)\n--------\nmodel: %s\n--------\nuser\nmodel: echoed-from-prompt\n' "$bn" >&2; fi
+if [ -n "${FAKE_CODEX_ECHO_ONLY:-}" ]; then printf 'OpenAI Codex (stub)\n--------\nuser\nmodel: echoed-from-prompt\n' >&2; fi
 printf '%s\n' "$all" > "${LOGDIR:-/tmp}/codex_${kind}.args"; pwd -P > "${LOGDIR:-/tmp}/codex_${kind}.cwd"
 empty='{"status":"SUCCESS","findings":[]}'
 case "$kind" in legacy) p="$FAKE_PAYLOAD" ;; *) p="$empty" ;; esac
@@ -307,6 +311,53 @@ done
 d16 abs -absent; { [ "$RC" -eq 0 ] && [ "$CALLED" = yes ]; } || v_bad="${v_bad}absent(should proceed): rc=$RC called=$CALLED "
 if [ -z "$v_bad" ]; then ok "D16 codex provider guard: 8 route-changing configs, 4 escaped keys, unreadable/locked/dangling → exit 10, no call; plain/openai(3 spellings)/comment/absent proceed"
 else bad "D16 codex provider guard" "$v_bad"; fi
+
+# D17 — the codex default model. Measured 2026-11-22 on codex 0.164.0 with a ChatGPT-account login: `-m gpt-5.5`
+#       (the old default) → 400 «The 'gpt-5.5' model is not supported when using Codex with a ChatGPT account»; no -m
+#       → codex picked gpt-6.1-terra from its own catalog and answered. So with FH_MODEL unset fh-gate passes no -m;
+#       an explicit FH_MODEL is still passed as -m. The governance record names the model codex resolved, read from the
+#       banner line above `user` only (cross-family R1: «not pinned» alone hides which model gave the verdict).
+d17gate() { local n="$1"; shift; mkdir -p "$TMPROOT/rec_$n"; gate "$n" FH_RECORD_BASE="$TMPROOT/rec_$n" "$@"; eval "RC_$n=$RC"; }
+d17rec() { awk '/^  model: /{print; exit}' "$TMPROOT/rec_$1"/governance_log_*.yaml 2>/dev/null || true; }
+d17gate d17  FH_BACKEND=codex FH_MODEL=
+d17gate d17b FH_BACKEND=codex FH_MODEL= FAKE_CODEX_BANNER=gpt-banner-x
+d17gate d17e FH_BACKEND=codex FH_MODEL= "FAKE_CODEX_BANNER=evil; touch /tmp/x"
+d17gate d17n FH_BACKEND=codex FH_MODEL= FAKE_CODEX_ECHO_ONLY=1   # a «model:» only below `user` (prompt echo) must not count
+d17gate d17x FH_BACKEND=codex FH_MODEL=gpt-pinned-x
+d17gate d17y FH_BACKEND=codex FH_REVIEWER=fh FH_GATE_ELEPHANT=on FH_MODEL=
+d17gate d17z FH_BACKEND=codex FH_REVIEWER=fh FH_GATE_ELEPHANT=on FH_MODEL=gpt-pinned-y
+d17gate d17p FH_BACKEND=codex FH_REVIEWER=fh FH_GATE_ELEPHANT=on FH_MODEL= FAKE_CODEX_BANNER=gpt-rev-a FAKE_CODEX_BANNER_ELE=gpt-ele-b
+u_bad=""
+for n in d17 d17b d17e d17n d17x d17y d17z d17p; do eval "r=\$RC_$n"; [ "$r" -eq 0 ] || u_bad="${u_bad}$n rc=$r "; done
+[ -s "$TMPROOT/d17/codex_legacy.args" ] || u_bad="${u_bad}no codex call "
+has_flag "$TMPROOT/d17/codex_legacy.args" -m 2>/dev/null && u_bad="${u_bad}unset FH_MODEL still passes -m "
+for k in abs ele; do
+  [ -s "$TMPROOT/d17y/codex_${k}.args" ] || u_bad="${u_bad}${k}: no call "
+  has_flag "$TMPROOT/d17y/codex_${k}.args" -m 2>/dev/null && u_bad="${u_bad}${k}: unset FH_MODEL still passes -m "
+  has_pair "$TMPROOT/d17z/codex_${k}.args" -m gpt-pinned-y 2>/dev/null || u_bad="${u_bad}${k}: explicit FH_MODEL not passed as -m "
+done
+has_pair "$TMPROOT/d17x/codex_legacy.args" -m gpt-pinned-x 2>/dev/null || u_bad="${u_bad}legacy: explicit FH_MODEL not passed as -m "
+[ "$(d17rec d17)"  = "  model: codex default (not pinned, resolved review unknown)" ]     || u_bad="${u_bad}record(no banner)=[$(d17rec d17)] "
+[ "$(d17rec d17b)" = "  model: codex default (not pinned, resolved review gpt-banner-x)" ] || u_bad="${u_bad}record(banner)=[$(d17rec d17b)] "
+[ "$(d17rec d17e)" = "  model: codex default (not pinned, resolved review unknown)" ]     || u_bad="${u_bad}record(bad banner)=[$(d17rec d17e)] "
+[ "$(d17rec d17n)" = "  model: codex default (not pinned, resolved review unknown)" ]     || u_bad="${u_bad}record(echo only)=[$(d17rec d17n)] "
+[ "$(d17rec d17p)" = "  model: codex default (not pinned, resolved review gpt-rev-a, elephant gpt-ele-b)" ] || u_bad="${u_bad}record(per pass)=[$(d17rec d17p)] "
+# the record stays valid YAML (cross-family R2: «resolved: x» inside a plain scalar broke it): no «: » in any value,
+# and where PyYAML is present the files parse and give the model back as a string
+for n in d17 d17p d17x; do
+  v=$(d17rec "$n"); v="${v#  model: }"; [[ "$v" != *": "* ]] || u_bad="${u_bad}$n model value has «: » "
+  if python3 -c 'import yaml' 2>/dev/null; then
+    python3 - "$TMPROOT/rec_$n" <<'PYY' || u_bad="${u_bad}$n record does not parse as YAML "
+import glob, sys, yaml
+for f in glob.glob(sys.argv[1] + "/governance_log_*.yaml"):
+    d = yaml.safe_load(open(f))
+    assert isinstance(d, list) and all(isinstance(x.get("model"), str) for x in d), f
+PYY
+  fi
+done
+[ "$(d17rec d17x)" = "  model: gpt-pinned-x" ]                                       || u_bad="${u_bad}record(pinned)=[$(d17rec d17x)] "
+if [ -z "$u_bad" ]; then ok "D17 codex: no FH_MODEL → no -m on all three calls, record names the resolved model per pass (unknown if not shown or not an id) and parses as YAML; FH_MODEL=x → -m x everywhere"
+else bad "D17 codex default model" "${u_bad}"; fi
 
 # D7 — action.yml's step env must not carry FH_TIMEOUT; the run block exports it only from a non-empty input.
 envblock() { awk '/^ *env: *$/{e=1; next} e && /^ *run: *\|/{exit} e{print}' "$1"; }

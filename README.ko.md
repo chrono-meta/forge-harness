@@ -78,6 +78,8 @@ cd your-repo && npx --package @chrono-meta/fh-gate fh-gate     # 현재 레포�
 있으면(`openai` 가 아닌 `model_provider` · `model_providers` · `openai_base_url` · `chatgpt_base_url`) 리뷰를 보내지 않고 그 키
 이름과 함께 종료 코드 10 으로 멈춥니다. 줄 끝 주석에 적힌 것도, 이스케이프(`\u` · `\U` · `\x`)로 쓴 키도 셉니다. 파일을 읽을 수
 없을 때도 종료 코드 10 으로 멈춥니다. 선택 호출 `FH_REVIEWER=code-review` 는 읽기 전용이 아닙니다(git 의 읽기 명령을 씁니다). 믿을 수 있는 변경에만 쓰세요.
+그리고 아직 동작하지 않습니다. 헤드리스 `/code-review` 가 fh-gate 에 필요한 구조화된 결과를 돌려주지 않아서(claude 2.1.330 에서
+0/11 — fh-gate 경유 0/5, 직접 0/6), 지금은 `FH_REVIEWER=code-review` 가 언제나 종료 코드 10 으로 멈춥니다.
 
 **CI 스텝을 실패시키는 종료 코드.** 그냥 스텝으로 돌리면(`npx … fh-gate`) 0 이 아닌 종료 코드는 모두 스텝을 실패시킵니다.
 1 PENDING(B 등급 지적 — 알고 진행)도 실패이고, 2 BLOCKED · 3 ESCALATE · 10 하네스 오류 · 11 인자 오류 · 12 dry run 도
