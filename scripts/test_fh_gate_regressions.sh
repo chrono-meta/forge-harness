@@ -21,6 +21,7 @@ GATE="scripts/fh-gate.sh"
 pass=0; fail=0
 TMPROOT=$(mktemp -d "${TMPDIR:-/tmp}/fh_gate_test_XXXXXX")
 trap 'rm -rf "$TMPROOT"' EXIT
+export CODEX_HOME="$TMPROOT/codexhome-none"   # fh-gate reads the codex user config (provider guard): not the runner's
 
 # 🟥 The gate APPENDS every invocation to $FH_RECORD_BASE/governance_log_<date>.yaml, defaulting to
 # the hub's own tracks/_meta. Measured 2026-11-16 (clean-room audit round 9): one run of this suite

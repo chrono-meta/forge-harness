@@ -73,9 +73,14 @@ your repository's own scripts in a copy, is off unless you set `FH_GATE_EXEC=on`
 on `claude` it gets Read, Glob and Grep and nothing else (no shell, no writes, no MCP server, no skill or command);
 on `codex` it runs with `-s read-only`. On `claude`, the project settings, hooks, `CLAUDE.md` and `.claude/rules` of
 the checkout under review are not loaded for that call (it runs with `--setting-sources user`). On `codex`, the
-checkout's `AGENTS.md` is not sent (`-c project_doc_max_bytes=0`), but if your codex config marks that checkout as
-trusted, codex still loads its `.codex/config.toml` and starts any MCP server it declares, outside the read-only
-sandbox, so do not mark a checkout you review as trusted. The opt-in `FH_REVIEWER=code-review` call is not read-only
+checkout's `AGENTS.md` is not sent (`-c project_doc_max_bytes=0`), and your codex `config.toml` is not loaded
+(`--ignore-user-config`). Measured on codex 0.164.0: a checkout your codex config trusts then did not start the MCP
+servers its `.codex/config.toml` declares (its project hooks and `.rules` were not measured). Nothing else in your
+`config.toml` applies to the review call either, including its MCP servers, login-storage, analytics and telemetry
+settings. So that the review is not silently sent somewhere else, fh-gate first reads that file as text. If it mentions
+where requests go (`model_provider` other than `openai`, `model_providers`, `openai_base_url` or `chatgpt_base_url`),
+it does not send the review: it exits 10 and names the key. Any mention counts, even in a trailing comment, and so
+does an escaped key (`\u`, `\U`, `\x`). It also exits 10 if the file cannot be read. The opt-in `FH_REVIEWER=code-review` call is not read-only
 (it keeps git's read commands); use it for trusted changes only.
 
 **Which exit codes fail a CI step.** Run as a plain step (`npx … fh-gate`), every non-zero exit fails it — including

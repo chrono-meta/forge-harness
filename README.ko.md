@@ -70,10 +70,14 @@ cd your-repo && npx --package @chrono-meta/fh-gate fh-gate     # 현재 레포�
 레포의 스크립트를 사본에서 돌리는 게이트의 실행 층은 `FH_GATE_EXEC=on` 을 켜야만 켜집니다. 기본 리뷰 호출 자체는 읽기만
 합니다. `claude` 는 Read · Glob · Grep 만 받고(셸 · 쓰기 · MCP 서버 · 스킬 · 명령 없음), `codex` 는 `-s read-only` 로
 돕니다. `claude` 에서는 리뷰하는 체크아웃의 프로젝트 설정 · 훅 · `CLAUDE.md` · `.claude/rules` 가 그 호출에 로드되지
-않습니다(`--setting-sources user` 로 돕니다). `codex` 에서는 체크아웃의 `AGENTS.md` 가 실리지 않지만
-(`-c project_doc_max_bytes=0`), 내 codex 설정이 그 체크아웃을 신뢰(trusted)로 적어 두면 codex 는 여전히 그 체크아웃의
-`.codex/config.toml` 을 읽고 거기 적힌 MCP 서버를 읽기 전용 샌드박스 밖에서 띄웁니다. 리뷰하는 체크아웃은 신뢰로 표시하지
-마세요. 선택 호출 `FH_REVIEWER=code-review` 는 읽기 전용이 아닙니다(git 의 읽기 명령을 씁니다). 믿을 수 있는 변경에만 쓰세요.
+않습니다(`--setting-sources user` 로 돕니다). `codex` 에서는 체크아웃의 `AGENTS.md` 가 실리지 않고
+(`-c project_doc_max_bytes=0`), 내 codex `config.toml` 도 로드되지 않습니다(`--ignore-user-config`). codex 0.164.0 에서 잰
+결과, 내 codex 설정이 신뢰하는 체크아웃이라도 그 `.codex/config.toml` 에 적힌 MCP 서버가 뜨지 않았습니다(그 체크아웃의
+프로젝트 훅 · `.rules` 는 재지 않았습니다). 내 `config.toml` 의 다른 설정(MCP 서버 · 로그인 저장 방식 · 분석 · 원격 측정 등)도
+그 호출에는 적용되지 않습니다. 리뷰가 몰래 다른 곳으로 가지 않도록 fh-gate 는 먼저 그 파일을 텍스트로 읽습니다. 요청이 갈 곳이 적혀
+있으면(`openai` 가 아닌 `model_provider` · `model_providers` · `openai_base_url` · `chatgpt_base_url`) 리뷰를 보내지 않고 그 키
+이름과 함께 종료 코드 10 으로 멈춥니다. 줄 끝 주석에 적힌 것도, 이스케이프(`\u` · `\U` · `\x`)로 쓴 키도 셉니다. 파일을 읽을 수
+없을 때도 종료 코드 10 으로 멈춥니다. 선택 호출 `FH_REVIEWER=code-review` 는 읽기 전용이 아닙니다(git 의 읽기 명령을 씁니다). 믿을 수 있는 변경에만 쓰세요.
 
 **CI 스텝을 실패시키는 종료 코드.** 그냥 스텝으로 돌리면(`npx … fh-gate`) 0 이 아닌 종료 코드는 모두 스텝을 실패시킵니다.
 1 PENDING(B 등급 지적 — 알고 진행)도 실패이고, 2 BLOCKED · 3 ESCALATE · 10 하네스 오류 · 11 인자 오류 · 12 dry run 도
