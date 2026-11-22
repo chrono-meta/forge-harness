@@ -2,6 +2,68 @@
 
 ### [Unreleased]
 
+### [3.47.0] — 2026-11-22
+
+Minor by the version policy. `fh-gate`'s review calls change behaviour: the default, goldfish and elephant review calls are read-only, and no review call loads the reviewed checkout's settings, hooks or instruction files (#1179, #1181, #1182, #1183). The opt-in `/code-review` call is still not read-only. The codex review no longer pins a model and the record names the model each pass used (#1186). The GitHub Action passes its inputs as data (#1176). There are new shipped lanes (D13–D17 in `test_fh_gate_defaults_lanes.sh`, L7 in `test_action_yml_lanes.sh`, two cases in `templates/predelete_check.test.sh`) and two judged procedure lines (#1180, #1185).
+
+Two changes make a shipped gate refuse more by default; see their `BREAKING (gate):` entries:
+- a codex review refuses (exit 10, nothing sent) when the user's codex config names a provider or base URL (#1183);
+- every claude and codex review call now needs a backend CLI that knows the new flags, and fails closed (exit 10) on one that does not (#1179, #1181, #1183).
+
+`FH_REVIEWER=code-review` currently always exits 10: headless `/code-review` does not return the structured object the gate needs (0 of 11 on claude 2.1.330). It stays opt-in and fails closed (#1186).
+
+Items marked «not in the npm package» are in the repository checkout only.
+
+### Changed
+- BREAKING (gate): `fh-gate` (shipped), codex backend. Applies to `FH_BACKEND=codex`, and to `auto` and `cross` when they pick codex.
+  - What changed: before any codex call, `fh-gate` reads `${CODEX_HOME:-~/.codex}/config.toml` as text and exits 10, with nothing sent, when one of these holds:
+    - a line names `model_provider` (other than `"openai"`), `model_providers`, `openai_base_url` or `chatgpt_base_url`;
+    - a line has a `\u`, `\U` or `\x` escape;
+    - the file cannot be read, or its absence cannot be confirmed.
+
+    The message names the key and line, never the value.
+  - Why: codex review calls now drop the user config (`--ignore-user-config`, see below), and that also drops any provider it names. Without this check, a review meant for a proxy or a company gateway would go to codex's default provider instead. Measured on codex 0.164.0: the provider config sent 3 of 3 reviews to the configured endpoint before, and the escaped-key form sent 8 requests a run; this change closed 3 of 3 with 0 requests. A plain config with a real login gave 4 of 4 SUCCESS. Measured with a file-backed ChatGPT login only; keyring and API-key logins are UNMEASURED. The rest of the user config (model, profiles, MCP servers, login storage) no longer applies to the review call either.
+  - What now blocks: a codex user config that names where requests go, uses one of those escapes, or cannot be read. The match is by text, so a profile table, a trailing comment or a value that merely contains one of those names closes too. In `cross` mode the codex leg then fails, and the run is single-leg and says it is not decorrelated: a single leg's PASS or PENDING becomes ESCALATE `cross-degraded` unless `FH_GATE_CROSS_ALLOW_SINGLE=1`.
+  - Remedy: use the claude backend, or run with a `CODEX_HOME` whose `config.toml` names no provider (#1183).
+- BREAKING (gate): `fh-gate` (shipped), every claude and codex review call.
+  - What changed: the default call now passes the read-only flags, and every review call passes the new checkout flags (see below). claude needs `--tools`, `--strict-mcp-config`, `--disable-slash-commands` and `--setting-sources`; codex needs `-s read-only`, `-c` and `--ignore-user-config`.
+  - What now blocks: a backend CLI too old for one of these flags fails the call, which fails closed (exit 10). In 3.46.0 the default call passed none of them, and the goldfish and elephant passes had only the tool flags and `-s read-only`. Measured working on claude 2.1.330 and codex 0.164.0; the oldest working versions are UNMEASURED.
+  - Remedy: update the backend CLI (#1179, #1181, #1183).
+- `fh-gate` (shipped), default review call: it gets the same read-only policy as the opt-in passes. On claude it runs with `--tools Read,Glob,Grep --strict-mcp-config --disable-slash-commands` and the same allow and deny lists; on codex it runs with `-s read-only`. Both run at the repository root. Verdicts, exit codes, the prompt and outputs are unchanged. Before this, the call ran with whatever the backend CLI's settings allowed (#1179).
+- `fh-gate` (shipped), all review calls: the checkout under review is treated as untrusted input (#1181, #1182, #1183, #1186).
+  - claude gets `--setting-sources user`. Measured on claude 2.1.330 with planted checkouts under `/tmp`: the checkout's `CLAUDE.md`, `CLAUDE.local.md` and `.claude/rules` text did not reach the call (0 of 3; 3 of 3 without the flag), and a project SessionStart hook ran without the flag and not with it (one run each).
+  - codex gets `-c project_doc_max_bytes=0` and `--ignore-user-config`. Measured on codex 0.164.0: the checkout's `AGENTS.md` was not sent, and when the user config marks the checkout trusted, its `.codex/config.toml` MCP servers no longer start outside the sandbox (0 of 3; 3 of 3 before). The canary rule and two hook events in a trusted checkout did not apply either (0 of 3). Those canaries only.
+  - `--bare` is not used: it also drops OAuth and keychain login.
+- `fh-gate` (shipped), opt-in `FH_REVIEWER=code-review`: the call now loads none of the checkout's settings, hooks, `CLAUDE.md` or `.mcp.json` servers (`--setting-sources user`), and its prompt comes after `--`, so claude reads it as a prompt. Before this, claude 2.1.330 read the prompt as the value of `--disallowedTools` and the call never reached `/code-review`. It still exits 10 (see above). The call is still not read-only: `/code-review` needs git's read commands (#1182, #1186).
+- `fh-gate` (shipped), codex model: with `FH_MODEL` unset, codex gets no `-m` and picks its own default. The old default `gpt-5.5` was refused for a ChatGPT login (HTTP 400). Measured: `main` 2 of 2 exit 10, this change 2 of 2 SUCCESS, and codex picked `gpt-6.1-terra`. `FH_MODEL=<id>` still passes `-m <id>`. To keep the old model, set `FH_MODEL=gpt-5.5`. The governance record's `model:` line now reads `codex default (not pinned, resolved review <id>[, elephant <id>])`. Each id is read from codex's own banner and is id-shaped or `unknown`. A parser that matched `gpt-5.5` there sees a new string. `fh-run.sh` and `fh-goal.sh` still default to `gpt-5.5`; this is named here and not changed (#1186).
+- GitHub Action (`action.yml`, not in the npm package): `dry-run`, `version`, `files`, `level` and `fail-on` reach the run script through `env:`, and the script reads them as `"$VAR"`. Before this, GitHub pasted them into the script as text, so a quote in a caller value (a file list built from PR data, say) became shell code. Input names, defaults, the exit-code mapping, `fail-on` and the outputs are unchanged. Behaviour change for callers: a caller whose `files:` value relied on the shell expanding it (`$VAR` or `$(…)` inside the value) now gets the literal text. Compute the list in an earlier step and pass that step's output (#1176).
+- `templates/predelete_check.sh` (shipped) ends with one question: is another session, worktree, live site or shared database or config using the target right now? SAFE means «merged», not «idle». Step 1 of the Destructive-Op Gate in `claude_md_full_reference.md` has the same sentence. Exit codes and the SAFE/CHECK/REVIEW lines are unchanged (#1185).
+- `.claude/rules/fh_4axis_gate.md` and `fh_4axis_gate_detail.md` (shipped): a gate or lane repair takes at least one fail-before input from the change record (fix commit, issue or review finding) and names its source as `input-from=<…>` (or `input-from=none(self-found)`) on the first `controls:` line. Record only: no new key and no hook check (#1180).
+
+### Added
+- `test_fh_gate_defaults_lanes.sh` (shipped) gains:
+  - D13: the default call's flags, and that it runs from the repository root;
+  - D14: the `/code-review` call's `--setting-sources user` and `--`;
+  - D15: `--ignore-user-config` on every codex review call;
+  - D16: the route guard's refusals and passes;
+  - D17: the unpinned codex model and the per-pass record.
+
+  `test_fh_gate_absorb_lanes.sh`, `test_fh_gate_fusion_lanes.sh` and `test_fh_gate_regressions.sh` pin `CODEX_HOME`, so a runner whose codex config names a provider no longer turns them red (#1179, #1181, #1182, #1183, #1186).
+- `test_action_yml_lanes.sh` (shipped; needs the repository's `action.yml`) L7: no `${{ }}` of any form (bracket form included) inside `run:`, and a run that imitates GitHub's substitution with a payload in `files` (#1176).
+- `templates/predelete_check.test.sh` (shipped): two cases for the closing question (#1185).
+
+### Docs
+- `README.md`, `README.ko.md`, `README.ja.md` and `README.zh.md` (shipped), Door ①. Three things are added:
+  - what a run costs: it sends the changed files to the logged-in backend and makes one review call there, up to two with `FH_BACKEND=cross` and more with the opt-in layers; `FH_DRY_RUN=1` makes no call;
+  - what it runs: the default review call can only read and loads nothing from the reviewed checkout; `FH_GATE_EXEC=on` runs the repository's own lane scripts;
+  - which exit codes fail a CI step: a plain step fails on every non-zero exit, `1` PENDING included, while the Action passes PENDING by default.
+
+  The opt-in sentence says `/code-review` is not read-only and currently always exits 10 (#1178, #1182, #1183, #1186).
+- From the release audit (outside reader, before the tag): `fh-gate --help` (shipped) lists the two new causes of exit 10 and says that a plain CI step fails on 1 while the Action lets it pass; `CHEATSHEET.md` (shipped) says the `/code-review` opt-in currently always exits 10; each README says the execution layer's copy is not a sandbox.
+- `docs/codex-compat.md`, `fh_integration_contract.md` and `agents_md_runtime_details.md` (shipped): the codex model row and the record example match the unpinned default. Examples drop `-m gpt-5.5` (#1186).
+- `frontier-digest` `SKILL_detail.md` (shipped): the HackerNews example encodes `>` as `%3E`. The raw form returned HTTP 400 and the encoded one HTTP 200. Every curl example carries `--compressed`, which saves size and fixes nothing (#1184).
+- `builtin_capability_map.md` (shipped): instruction audits route to `/doctor prompt-audit` (Claude Code 2.1.283 or later), and coordinated threads to Projects (public beta). The map says what FH keeps on top of each (#1177).
+
 ### [3.46.0] — 2026-11-21
 
 Minor by the version policy. Skill behaviour changes: `deep-clarify` saves its spec outside `.claude/` (#1162) and changes its interview (#1174); `mcp-circuit-breaker` names `WRONG_SHAPE` and trips it on the first failure (#1164, #1171); the close retrospective has five fields (#1166). There is also a new record field on the live-eval behaviour profile (#1167) and new shipped lanes: new lane files (#1162, #1174) and a new case in an existing one (#1161).

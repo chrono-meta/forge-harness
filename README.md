@@ -69,7 +69,7 @@ hook, or beside another agent. A GitHub Actions step and a Homebrew tap exist to
 **What a run costs and does.** Each run sends the changed files to the backend CLI you are logged in to and makes
 one review call there, billed or counted against that account like any other call (`FH_BACKEND=cross` makes up to two, and the
 opt-in layers add more). `FH_DRY_RUN=1` prints the prompt and calls nothing (exit 12). The gate's execution layer, which runs
-your repository's own scripts in a copy, is off unless you set `FH_GATE_EXEC=on`. The default review call itself can only read:
+your repository's own scripts in a copy (not a sandbox: never on untrusted changes), is off unless you set `FH_GATE_EXEC=on`. The default review call itself can only read:
 on `claude` it gets Read, Glob and Grep and nothing else (no shell, no writes, no MCP server, no skill or command);
 on `codex` it runs with `-s read-only`. On `claude`, the project settings, hooks, `CLAUDE.md` and `.claude/rules` of
 the checkout under review are not loaded for that call (it runs with `--setting-sources user`). On `codex`, the
