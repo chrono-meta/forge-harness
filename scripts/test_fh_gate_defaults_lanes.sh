@@ -126,6 +126,7 @@ else bad "D9 --help default reviewer" "$(grep -m2 -F 'FH_REVIEWER' "$TMPROOT/hel
 #       and git's read commands write files through --output=. The whole policy is asserted, not one token of it.
 #       Known pair: on the 3.45.0 merge (7c5a6b7) both calls allow Bash(git diff:*) and carry none of the three flags.
 argv_after() { awk -v f="$2" 'p{print; exit} $0==f{p=1}' "$1"; }
+has_pair()   { awk -v f="$2" -v v="$3" 'p&&$0==v{ok=1} {p=($0==f)} END{exit !ok}' "$1"; }   # «f v» adjacent in argv
 has_flag()   { grep -qxF -- "$2" "$1"; }
 policy_ok() {   # policy_ok <args file> — prints what is wrong, nothing when the policy holds
   local a="$1" t al d need
@@ -137,6 +138,8 @@ policy_ok() {   # policy_ok <args file> — prints what is wrong, nothing when t
   has_flag "$a" --strict-mcp-config || echo "no --strict-mcp-config"
   has_flag "$a" --disable-slash-commands || echo "no --disable-slash-commands"
   ! has_flag "$a" --mcp-config || echo "an --mcp-config was passed"
+  # the reviewed checkout is untrusted: its project/local settings and hooks must not load (2026-11-22)
+  [ "$(argv_after "$a" --setting-sources)" = "user" ] || echo "setting-sources=[$(argv_after "$a" --setting-sources)]"
 }
 gate d10 FH_REVIEWER=fh FH_GATE_ELEPHANT=on
 p_abs=$(policy_ok "$TMPROOT/d10/claude_abs.args" | tr '\n' ' '); p_ele=$(policy_ok "$TMPROOT/d10/claude_ele.args" | tr '\n' ' ')
@@ -162,8 +165,23 @@ else bad "D13a default claude review policy" "rc=$rc_c ${p_leg:-ok}"; fi
 x_bad=""
 grep -qxF -- "-s" "$TMPROOT/d13x/codex_legacy.args" 2>/dev/null && [ "$(argv_after "$TMPROOT/d13x/codex_legacy.args" -s)" = "read-only" ] || x_bad="no -s read-only "
 [ "$(cat "$TMPROOT/d13x/codex_legacy.cwd" 2>/dev/null)" = "$root_p" ] || x_bad="${x_bad}cwd=[$(cat "$TMPROOT/d13x/codex_legacy.cwd" 2>/dev/null)]"
-if [ "$rc_x" -eq 0 ] && [ -z "$x_bad" ]; then ok "D13b default codex review: -s read-only, at the repo root"
+has_pair "$TMPROOT/d13x/codex_legacy.args" -c "project_doc_max_bytes=0" 2>/dev/null || x_bad="${x_bad}reads the checkout AGENTS.md (no -c project_doc_max_bytes=0) "
+if [ "$rc_x" -eq 0 ] && [ -z "$x_bad" ]; then ok "D13b default codex review: -s read-only, no checkout AGENTS.md, at the repo root"
 else bad "D13b default codex review policy" "rc=$rc_x ${x_bad:-ok}"; fi
+
+# D13c — the opt-in codex goldfish and elephant passes do not read the reviewed checkout's AGENTS.md either.
+#        Measured 2026-11-22 (real codex 0.164.0, local fake API, planted fixture): without the flag the request
+#        carries the checkout's AGENTS.md; with `-c project_doc_max_bytes=0` it does not.
+gate d13y FH_BACKEND=codex FH_REVIEWER=fh FH_GATE_ELEPHANT=on
+y_bad=""
+for k in abs ele; do
+  f="$TMPROOT/d13y/codex_${k}.args"
+  [ -s "$f" ] || { y_bad="${y_bad}${k}: no call recorded "; continue; }
+  has_pair "$f" -c "project_doc_max_bytes=0" || y_bad="${y_bad}${k}: no -c project_doc_max_bytes=0 "
+  [ "$(argv_after "$f" -s)" = "read-only" ] || y_bad="${y_bad}${k}: no -s read-only "
+done
+if [ "$RC" -eq 0 ] && [ -z "$y_bad" ]; then ok "D13c codex goldfish and elephant passes: -s read-only, no checkout AGENTS.md"
+else bad "D13c codex opt-in passes" "rc=$RC ${y_bad:-ok}"; fi
 
 # D11 — /code-review keeps git (it needs it), so its call runs without the runner's five command-file variables.
 #       (This only removes the direct reference — the path stays labelled not read-only.)
