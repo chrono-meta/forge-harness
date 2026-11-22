@@ -33,15 +33,17 @@
 #                                 `/code-review` (claude backend only; findings carried as they come — Important →
 #                                 B, Nit and Pre-existing → C — and the verdict derived from the grades); `fh` =
 #                                 FH's own goldfish pass, /code-review's method absorbed (no author description).
-#                                 UNMEASURED: whether a headless /code-review call, or the goldfish pass, returns
-#                                 the structured object the gate needs on every runner — which is why neither is
-#                                 the default. FH_REVIEWER=code-review on codex is an argument error.
-#                                 Measured 2026-11-22 (claude 2.1.330): no structured object in 0/5 runs through this
+#                                 Neither is the default. FH_REVIEWER=code-review on codex is an argument error.
+#                                 🟥 FH_REVIEWER=code-review CURRENTLY ALWAYS EXITS 10: headless /code-review does not
+#                                 return the structured object the gate needs yet. Measured 2026-11-22 (claude 2.1.330):
+#                                 0/11 runs returned it — no structured object in 0/5 runs through this
 #                                 script (all exit 10) and 0/6 direct runs. Each ran /code-review as a local command
 #                                 (local_command: code_review, num_turns 0) and gave prose: text lines at low effort,
 #                                 a JSON block inside text or only «Command completed» at medium. That it ignores
 #                                 --json-schema is the likely cause, not isolated. Reading that prose would move the
-#                                 verdict off the typed channel, so the opt-in is left failing closed.
+#                                 verdict off the typed channel, so the opt-in is left failing closed (operator
+#                                 decision 2026-11-22: no prose parsing, no new channel now). UNMEASURED: whether the
+#                                 `fh` goldfish pass returns the object on every runner.
 #                                 `code-review` is NOT read-only: /code-review needs git's read commands, and those
 #                                 can write a file (`--output=`); opt into it for trusted changes only. The `fh` and
 #                                 elephant passes get only Read · Glob · Grep on the claude backend (no shell, no MCP
@@ -180,6 +182,8 @@ case "${1:-}" in
     printf '%s\n' "  FH_VERBOSE=1                         print full backend stderr"
     printf '%s\n' "  FH_REVIEWER=fh-legacy|code-review|fh review stage (default: fh-legacy, the original angle pass;"
     printf '%s\n' "                                       opt-in: code-review = Claude Code's /code-review, claude only,"
+    printf '%s\n' "                                       currently ALWAYS exits 10 (headless /code-review returns no"
+    printf '%s\n' "                                       structured object yet — measured 0/11 on claude 2.1.330),"
     printf '%s\n' "                                       NOT read-only (git can write a file) — trusted changes only ·"
     printf '%s\n' "                                       fh = FH pass modelled on it, sees the diff only)"
     printf '%s\n' "  FH_GATE_ELEPHANT=off|auto|on         history-aware pass (default off; auto: on at level full)"

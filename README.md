@@ -81,7 +81,9 @@ settings. So that the review is not silently sent somewhere else, fh-gate first 
 where requests go (`model_provider` other than `openai`, `model_providers`, `openai_base_url` or `chatgpt_base_url`),
 it does not send the review: it exits 10 and names the key. Any mention counts, even in a trailing comment, and so
 does an escaped key (`\u`, `\U`, `\x`). It also exits 10 if the file cannot be read. The opt-in `FH_REVIEWER=code-review` call is not read-only
-(it keeps git's read commands); use it for trusted changes only.
+(it keeps git's read commands); use it for trusted changes only. It also does not work yet: headless `/code-review`
+does not return the structured object fh-gate needs (measured 0/11 on claude 2.1.330: 0/5 through fh-gate, 0/6
+direct), so `FH_REVIEWER=code-review` currently always exits 10.
 
 **Which exit codes fail a CI step.** Run as a plain step (`npx … fh-gate`), every non-zero exit fails it — including
 1 PENDING (B-grade findings: proceed with care), as well as 2 BLOCKED, 3 ESCALATE, 10 harness error, 11 argument error
