@@ -143,10 +143,13 @@ fi
 
 if [[ -z "${FH_MODEL:-}" ]]; then
   case "$FH_BACKEND" in
-    codex) FH_MODEL="gpt-5.5" ;;
+    codex) FH_MODEL="" ;;   # not pinned: codex picks a model the login accepts. The old pin, gpt-5.5, is
+                            # refused for a ChatGPT login (HTTP 400, measured 2026-11-22 via fh-gate #1186).
+                            # FH_MODEL=<id> still passes -m <id>.
     claude) FH_MODEL="claude-sonnet-5-5" ;;
   esac
 fi
+FH_MODEL_LABEL="${FH_MODEL:-codex default (not pinned)}"
 
 resolve_unit() {
   local mode="$1"
@@ -237,7 +240,7 @@ trap cleanup EXIT
 
 {
   printf "FH RUNTIME ADAPTER v%s\n" "$VERSION"
-  printf "Backend: %s | Model: %s\n" "$FH_BACKEND" "$FH_MODEL"
+  printf "Backend: %s | Model: %s\n" "$FH_BACKEND" "$FH_MODEL_LABEL"
   printf "Unit: %s\n" "$UNIT_FILE"
   printf "\n"
   printf "You are executing the FH %s below. Follow its workflow and output contract.\n" "$FH_RUN_MODE"
@@ -287,7 +290,7 @@ if ! command -v "$FH_BACKEND" &>/dev/null; then
   exit 10
 fi
 
-echo "→ fh-run v${VERSION} backend=${FH_BACKEND} model=${FH_MODEL} unit=${FH_RUN_MODE}:${FH_RUN_NAME:-$FH_RUN_UNIT}" >&2
+echo "→ fh-run v${VERSION} backend=${FH_BACKEND} model=${FH_MODEL_LABEL} unit=${FH_RUN_MODE}:${FH_RUN_NAME:-$FH_RUN_UNIT}" >&2
 
 _TIMEOUT_CMD=""
 if command -v gtimeout &>/dev/null; then
@@ -296,10 +299,19 @@ elif command -v timeout &>/dev/null; then
   _TIMEOUT_CMD="timeout ${FH_TIMEOUT}"
 fi
 
+# With codex unpinned, name the model codex resolved, read from its own stderr banner above the `user` line
+# only (the same rule as fh-gate #1186). Id-shaped or «unknown»; never the prompt or the reply.
+_note_codex_model() {
+  [[ "$FH_BACKEND" == "codex" && -z "${FH_MODEL:-}" ]] || return 0
+  local _m
+  _m=$(awk '/^user$/{exit} /^model: /{sub(/^model: /, ""); print; exit}' "$ERR_FILE" 2>/dev/null || true)
+  [[ "$_m" =~ ^[A-Za-z0-9._:-]{1,64}$ ]] || _m="unknown"
+  echo "→ $1: codex default (not pinned, resolved $_m)" >&2
+}
 run_backend() {
   case "$FH_BACKEND" in
     claude) ${_TIMEOUT_CMD} claude --print --model "$FH_MODEL" ;;
-    codex) ${_TIMEOUT_CMD} codex exec -m "$FH_MODEL" - ;;
+    codex) ${_TIMEOUT_CMD} codex exec ${FH_MODEL:+-m "$FH_MODEL"} - ;;
   esac
 }
 
@@ -309,5 +321,6 @@ if ! run_backend < "$PROMPT_FILE" > "$OUTPUT_FILE" 2>"$ERR_FILE"; then
   exit 10
 fi
 
+_note_codex_model fh-run
 [[ "$FH_VERBOSE" == "1" ]] && cat "$ERR_FILE" >&2
 cat "$OUTPUT_FILE"

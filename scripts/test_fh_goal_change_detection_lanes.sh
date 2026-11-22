@@ -186,5 +186,52 @@ else
   echo "  ⬜ ARM H NOT RUN: no git on PATH — not a pass"
 fi
 
+
+# --- codex model (2026-11-22): with FH_MODEL unset no -m is passed and stderr names what codex resolved ---------
+# Stub records its argv one per line and prints a codex-like banner on stderr (`model: <id>` above `user`).
+_MD=$(mktemp -d)
+mkdir -p "$_MD/bin"
+cat > "$_MD/bin/codex" <<'CX'
+#!/usr/bin/env bash
+printf '%s\n' "$@" > "$CODEX_ARGV_FILE"
+[[ -n "${FAKE_CODEX_BANNER:-}" ]] && printf 'model: %s\n' "$FAKE_CODEX_BANNER" >&2
+printf 'user\nmodel: not-this-one\n' >&2
+cat >/dev/null
+echo "stub output"
+exit 0
+CX
+chmod +x "$_MD/bin/codex"
+
+_mrun() {  # $@ = env assignments; argv → $_MD/argv, stderr → $_MD/err
+  env "$@" PATH="$_MD/bin:$PATH" CODEX_ARGV_FILE="$_MD/argv" FH_TIMEOUT=20 PATH="$_MD/bin:$FIX/bin:$PATH" FH_BACKEND=codex FAKE_GIT_STATUS_OUT= bash "$TARGET" --prompt "noop" --root "$FIX/work" >"$_MD/out" 2>"$_MD/err"; _MRC=$?
+}
+: > "$_MD/argv"; _mrun -u FH_MODEL FAKE_CODEX_BANNER=gpt-test-x
+if [[ "$_MRC" -eq 0 ]] && [[ "$(cat "$_MD/argv")" == "$(printf 'exec\n-')" ]] \
+   && /usr/bin/grep -q 'fh-goal: codex default (not pinned, resolved gpt-test-x)' "$_MD/err"; then
+  ok "M1 fh-goal: FH_MODEL unset → no -m to codex, stderr names the resolved model from the banner"
+else
+  no "M1 fh-goal: FH_MODEL unset → argv $(tr '\n' ' ' < "$_MD/argv") · stderr note: $(/usr/bin/grep -c 'not pinned' "$_MD/err")"
+fi
+: > "$_MD/argv"; _mrun FH_MODEL=pin-1 FAKE_CODEX_BANNER=gpt-test-x
+if [[ "$_MRC" -eq 0 ]] && [[ "$(cat "$_MD/argv")" == "$(printf 'exec\n-m\npin-1\n-')" ]] \
+   && ! /usr/bin/grep -q 'not pinned' "$_MD/err"; then
+  ok "M2 fh-goal: FH_MODEL=pin-1 → -m pin-1, no «not pinned» note"
+else
+  no "M2 fh-goal: FH_MODEL=pin-1 → argv $(tr '\n' ' ' < "$_MD/argv")"
+fi
+: > "$_MD/argv"; _mrun -u FH_MODEL FAKE_CODEX_BANNER='bad id; rm'
+if [[ "$_MRC" -eq 0 ]] && [[ -s "$_MD/argv" ]] && /usr/bin/grep -q 'fh-goal: codex default (not pinned, resolved unknown)' "$_MD/err"; then
+  ok "M3 fh-goal: a banner that is not id-shaped → «unknown», never the text (the line after «user» is never read)"
+else
+  no "M3 fh-goal: non-id banner → $(awk '/resolved /{print; exit}' "$_MD/err")"
+fi
+
+: > "$_MD/argv"; _mrun -u FH_MODEL -u FAKE_CODEX_BANNER
+if [[ "$_MRC" -eq 0 ]] && [[ -s "$_MD/argv" ]] && /usr/bin/grep -q 'fh-goal: codex default (not pinned, resolved unknown)' "$_MD/err"; then
+  ok "M4 fh-goal: no model line above «user», an id-shaped one below it → «unknown» (only the banner counts)"
+else
+  no "M4 fh-goal: post-user model line → $(awk '/resolved /{print; exit}' "$_MD/err")"
+fi
+/bin/rm -rf "$_MD"
 echo "fh-goal change-detection: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]] || exit 1

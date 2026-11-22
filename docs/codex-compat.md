@@ -63,7 +63,7 @@ Backend defaults:
 | `FH_BACKEND` | Command | Default model |
 |---|---|---|
 | `claude` | `claude --print --model "$FH_MODEL"` | `claude-sonnet-5-5` |
-| `codex` | `codex exec [-m "$FH_MODEL"] -` | `fh-gate`: not pinned — no `-m` unless `FH_MODEL` is set, so codex picks from its own catalog (measured on one ChatGPT login; set `FH_MODEL` for a stable model). `fh-run` and `fh-goal` still default to `gpt-5.5`, which codex 0.164.0 refuses for a ChatGPT-account login — set `FH_MODEL` there |
+| `codex` | `codex exec [-m "$FH_MODEL"] -` | `fh-gate`, `fh-run` and `fh-goal`: not pinned — no `-m` unless `FH_MODEL` is set and nonempty, so codex picks from its own configuration and catalog (measured on one ChatGPT login). That also applies to API-key logins that used to get `gpt-5.5`: the model, cost and output can change with codex's defaults, so set `FH_MODEL` for a stable, reproducible model. After a successful unpinned codex run, `fh-run` and `fh-goal` print `→ <script>: codex default (not pinned, resolved <model or unknown>)` on stderr; their `model=` progress line and the prompt's `Model:` line now read `codex default (not pinned)` instead of a model id |
 | `auto` | `codex` if present, otherwise `claude` | backend default |
 
 ### `fh-run`
