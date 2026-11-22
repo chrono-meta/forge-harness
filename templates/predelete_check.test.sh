@@ -52,5 +52,15 @@ out=$("$SCRIPT" "$D5/wc" origin/main 2>/dev/null); rc=$?
 { echo "$out" | grep -q "SAFE    merged" && [ "$rc" -eq 0 ]; } \
   && ok "merged branch → SAFE exit 0" || no "merged branch: $out (exit $rc)"
 
+# 6. the closing output asks who else is using the target — on SAFE, REVIEW and the exit-0 path alike,
+#    and asking it changes no exit code (prose reminder only; the verdict above still decides).
+echo "$out" | grep -q "is anything else using this target right now" \
+  && ok "closing output asks the in-use question (SAFE path)" \
+  || no "closing output lacks the in-use question (SAFE path)"
+out4=$("$SCRIPT" "$D4/wc" origin/main 2>/dev/null)
+echo "$out4" | grep -q "is anything else using this target right now" \
+  && ok "closing output asks the in-use question (REVIEW path)" \
+  || no "closing output lacks the in-use question (REVIEW path)"
+
 echo "---- predelete_check.test: $pass passed, $fail failed ----"
 [ "$fail" -eq 0 ]
