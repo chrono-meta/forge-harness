@@ -18,6 +18,9 @@
 #   D11 FH_REVIEWER=code-review keeps git but runs without the five GITHUB_* command-file variables
 #   D12 run from a copy with no action.yml (package shape): D7 is SKIPPED by name — not a pass, not a fail
 #   D14 FH_REVIEWER=code-review loads user settings only, and its prompt comes after `--` (the real CLI reads it then)
+#   D15 every codex review call (default, goldfish, elephant) has --ignore-user-config before its prompt marker
+#   D16 a codex user config that names where requests go (model_provider other than openai, model_providers,
+#       openai_base_url, chatgpt_base_url) or cannot be read → exit 10, no codex call; a plain or absent config proceeds
 #   D7  action.yml does not put FH_TIMEOUT in the step env; it exports it only when the `timeout` input (default '') is non-empty
 #       (known pair: the shipped file passes; a planted «FH_TIMEOUT: ${{ inputs.timeout }}» env line is caught)
 # Token-free: claude and codex are stubs that answer by request kind and log what they were asked.
@@ -62,6 +65,9 @@ exit 0
 FAKE
 chmod +x "$FAKEBIN/claude" "$FAKEBIN/codex"
 export PATH="$FAKEBIN:$PATH"
+# The codex calls read the runner's codex user config (the provider guard does); pin it to an empty home so the lane
+# does not depend on whose machine runs it. D16 points CODEX_HOME at its own fixtures.
+export CODEX_HOME="$TMPROOT/codexhome-none"
 export FAKE_PAYLOAD='{"status":"SUCCESS","verdict":"PASS","findings_count":0,"findings_a":0,"findings_b":0,"findings":[]}'
 
 REPO="$TMPROOT/repo"; mkdir -p "$REPO/scripts"
@@ -227,6 +233,80 @@ printf '%s\n' --print --setting-sources user --allowedTools Read --disallowedToo
 if [ -n "$(cr_ok "$TMPROOT/cr_planted.args")" ] && [ -z "$(cr_ok "$TMPROOT/cr_good.args")" ]; then
   ok "D14b the /code-review check catches a flag moved after -- (and passes the good shape)"
 else bad "D14b code-review checker" "planted=[$(cr_ok "$TMPROOT/cr_planted.args" | tr '\n' ' ')] good=[$(cr_ok "$TMPROOT/cr_good.args" | tr '\n' ' ')]"; fi
+
+# D15 — every codex review call drops the user config layer. Measured 2026-11-22 (real codex 0.164.0, isolated
+#       CODEX_HOME, local fake API): when the user config marks the checkout trusted, the checkout's .codex/config.toml
+#       MCP server starts and writes outside -s read-only (3/3; untrusted 0/3); `-c mcp_servers={}`, `-c projects={}`
+#       and a per-path trust override did not stop it; --ignore-user-config did (0/3). Reuses the D13b/D13c calls.
+#       The flag must come before the `-` prompt marker and with no `--` before it (after `--` it is a positional).
+cx_ok() {   # cx_ok <args file> — prints what is wrong
+  [ -s "$1" ] || { echo "no call recorded"; return; }
+  awk '$0=="--"{dd=1} $0=="--ignore-user-config" && !dd && !dash {f=1} $0=="-"{dash=1}
+       END{ if(!f) print "no --ignore-user-config before the prompt marker" }' "$1"
+}
+w_bad=""
+for k in d13x/codex_legacy d13y/codex_abs d13y/codex_ele; do
+  r=$(cx_ok "$TMPROOT/$k.args" | tr '\n' ' '); [ -z "$r" ] || w_bad="${w_bad}${k##*/}: $r"
+done
+printf '%s\n' exec -m x -s read-only -c project_doc_max_bytes=0 -- --ignore-user-config > "$TMPROOT/cx_planted.args"
+printf '%s\n' exec -m x -s read-only --ignore-user-config -c project_doc_max_bytes=0 - > "$TMPROOT/cx_good.args"
+[ -n "$(cx_ok "$TMPROOT/cx_planted.args")" ] && [ -z "$(cx_ok "$TMPROOT/cx_good.args")" ] || w_bad="${w_bad}checker control dead "
+if [ -z "$w_bad" ]; then ok "D15 codex review calls (default, goldfish, elephant): --ignore-user-config (checker control alive)"
+else bad "D15 codex user config" "$w_bad"; fi
+
+# D16 — with the user config dropped (D15), a config that names where requests go would silently send the review to
+#       codex's default provider instead. fh-gate reads that config first and fails closed (exit 10, no codex call)
+#       when it sets model_provider (other than "openai"), model_providers, openai_base_url or chatgpt_base_url
+#       (codex 0.164.0 config reference), or when it cannot be read. A plain or absent config proceeds.
+d16() {   # d16 <name> <config text|-absent|-unreadable> → sets RC, CALLED
+  local n="$1" t="$2" h="$TMPROOT/d16_$1"; mkdir -p "$h"
+  case "$t" in -absent) ;; -unreadable) printf 'model = "x"\n' > "$h/config.toml"; chmod 000 "$h/config.toml" ;; *) printf '%s\n' "$t" > "$h/config.toml" ;; esac
+  gate "d16$n" FH_BACKEND=codex CODEX_HOME="$h"
+  CALLED=no; called "d16$n" codex_legacy && CALLED=yes
+  chmod 600 "$h/config.toml" 2>/dev/null || true
+}
+v_bad=""
+for c in 'mp|model_provider = "corp-proxy"' 'mpq|"model_provider"="corp"' 'tbl|[model_providers.corp]' 'dot|model_providers.corp.base_url = "https://x"' \
+         'obu|openai_base_url = "https://proxy.example/v1"' 'cbu|chatgpt_base_url = "https://x"' \
+         'prof|[profiles.work]
+model_provider = "corp"' 'inl|profiles = { work = { model_provider = "corp" } }'; do
+  n="${c%%|*}"; d16 "$n" "${c#*|}"
+  { [ "$RC" -eq 10 ] && [ "$CALLED" = no ] && grep -qE 'model_provider|model_providers|openai_base_url|chatgpt_base_url' "$TMPROOT/d16$n.err"; } \
+    || v_bad="${v_bad}${n}: rc=$RC called=$CALLED "
+done
+if [ "$(id -u)" = 0 ]; then
+  printf '  SKIP  D16 unreadable config — NOT-APPLICABLE as root (chmod 000 is still readable; not measured, not a pass)\n'; skipped=$((skipped + 1))
+else
+  # exit 10 alone would not tell the named refusal from fh-gate's generic ERR trap (a failed `cat` trips that too),
+  # so the message that names the reason is asserted as well
+  d16 unr -unreadable
+  { [ "$RC" -eq 10 ] && [ "$CALLED" = no ] && grep -qF 'cannot read the codex user config' "$TMPROOT/d16unr.err"; } \
+    || v_bad="${v_bad}unreadable: rc=$RC called=$CALLED named=$(grep -cF 'cannot read the codex user config' "$TMPROOT/d16unr.err") "
+  # cross-family R1 B: absence counts only when confirmed — a CODEX_HOME that cannot be searched is not «no config»
+  h="$TMPROOT/d16_lockedhome"; mkdir -p "$h"; printf 'model_provider = "corp"\n' > "$h/config.toml"; chmod 000 "$h"
+  gate d16lock FH_BACKEND=codex CODEX_HOME="$h"; chmod 700 "$h"
+  { [ "$RC" -eq 10 ] && ! called d16lock codex_legacy && grep -qF 'cannot read the codex user config' "$TMPROOT/d16lock.err"; } \
+    || v_bad="${v_bad}locked-home: rc=$RC "
+fi
+# a dangling config.toml link is not «no config» either
+h="$TMPROOT/d16_dangling"; mkdir -p "$h"; ln -s "$TMPROOT/nowhere.toml" "$h/config.toml"
+gate d16dang FH_BACKEND=codex CODEX_HOME="$h"
+{ [ "$RC" -eq 10 ] && ! called d16dang codex_legacy && grep -qF 'cannot read the codex user config' "$TMPROOT/d16dang.err"; } \
+  || v_bad="${v_bad}dangling-link: rc=$RC "
+# cross-family R1 A: a quoted key may spell a routing key with an escape (all three are valid TOML for the real key)
+for c in 'esc1|"openai\u005fbase_url" = "https://corp.example/v1"' 'esc2|"model\u005fprovider" = "azure"' \
+         'esc3|"model\U0000005Fproviders".corp.base_url = "https://x"' 'esc4|"chatgpt\x5fbase_url" = "https://x"'; do
+  n="${c%%|*}"; d16 "$n" "${c#*|}"
+  { [ "$RC" -eq 10 ] && [ "$CALLED" = no ] && grep -qF 'escape' "$TMPROOT/d16$n.err"; } || v_bad="${v_bad}${n}: rc=$RC called=$CALLED "
+done
+for c in 'plain|model = "gpt-x"' 'oai|model_provider = "openai"' 'cmt|# model_provider = "corp"' \
+         "oaisq|'model_provider' = 'openai'" 'oaitq|model_provider = """openai"""'; do
+  n="${c%%|*}"; d16 "$n" "${c#*|}"
+  { [ "$RC" -eq 0 ] && [ "$CALLED" = yes ]; } || v_bad="${v_bad}${n}(should proceed): rc=$RC called=$CALLED "
+done
+d16 abs -absent; { [ "$RC" -eq 0 ] && [ "$CALLED" = yes ]; } || v_bad="${v_bad}absent(should proceed): rc=$RC called=$CALLED "
+if [ -z "$v_bad" ]; then ok "D16 codex provider guard: 8 route-changing configs, 4 escaped keys, unreadable/locked/dangling → exit 10, no call; plain/openai(3 spellings)/comment/absent proceed"
+else bad "D16 codex provider guard" "$v_bad"; fi
 
 # D7 — action.yml's step env must not carry FH_TIMEOUT; the run block exports it only from a non-empty input.
 envblock() { awk '/^ *env: *$/{e=1; next} e && /^ *run: *\|/{exit} e{print}' "$1"; }

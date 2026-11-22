@@ -44,8 +44,10 @@
 #                                 server, no skill); on codex they run in `codex exec -s read-only`, codex's sandbox.
 #                                 On claude, every review call (code-review included) runs with user settings only —
 #                                 measured: the checkout's hooks, settings, CLAUDE.md, CLAUDE.local.md, .claude/rules
-#                                 and .mcp.json server do not reach it. On codex the checkout's AGENTS.md is not sent;
-#                                 a checkout codex trusts can still start MCP servers from its .codex/config.toml (OPEN).
+#                                 and .mcp.json server do not reach it. On codex the checkout's AGENTS.md is not sent,
+#                                 and the user config is not loaded (--ignore-user-config), so a checkout codex trusts
+#                                 cannot start MCP servers from its .codex/config.toml. If that user config names a
+#                                 provider or endpoint, the codex review is refused (exit 10) instead of rerouted.
 #   FH_GATE_ELEPHANT=off|auto|on  the elephant pass (default off; auto = on at level full): task description + the touched
 #                                 files' git history; looks only for a past fix re-opened, a recorded decision
 #                                 undone, or the stated task contradicted.
@@ -968,6 +970,58 @@ if ! command -v "$FH_BACKEND" &>/dev/null; then
   exit $EXIT_HARNESS_ERROR
 fi
 
+# --- codex: refuse a review the dropped user config would have sent elsewhere ---
+# Every codex review call runs with --ignore-user-config (see the read-only policy below). Dropping that file also
+# drops any provider it names, so the review would silently go to codex's default provider instead — for a proxy or
+# a company gateway, the reviewed code would leave by another road. So before any codex call, read the user config
+# and fail closed (exit 10, nothing sent) if it names where requests go or cannot be read. The keys are the ones the
+# codex 0.164.0 config reference lists as choosing a provider or an endpoint: model_provider (any value but the
+# built-in "openai"), model_providers (custom providers and the built-in cloud ones), openai_base_url (overrides the
+# built-in openai provider), chatgpt_base_url. A profile file ($CODEX_HOME/<name>.config.toml) applies only with
+# --profile, which fh-gate never passes, and oss_provider only with --oss; neither is read here.
+# Conservative by design (this is a text scan, not a TOML parser — fh-gate takes no python/TOML dependency): a key
+# anywhere on a line counts (an inline table, a profile table, a quoted key, even a trailing comment), so a string
+# value that merely contains one of these words also closes. A quoted key can spell a name with an escape
+# ("openai\u005fbase_url" is openai_base_url — cross-family R1), so any \u, \U or \x escape closes too. Comment-only
+# lines are skipped. Absence counts only when confirmed: a dangling link, or a folder on the way that cannot be
+# searched, is «cannot read», not «no file». The key name and line number are printed, never the value.
+codex_route_guard() {
+  local _h="${CODEX_HOME:-$HOME/.codex}" _cfg _txt _line _s _n=0 _key="" _p
+  local _q='["'"'"']' _v='("openai"|'"'openai'"'|"""openai"""|'"'''openai'''"')'
+  local _openai="^(model_provider|${_q}model_provider${_q})[[:space:]]*=[[:space:]]*${_v}[[:space:]]*\$"
+  _cfg="$_h/config.toml"
+  _codex_cfg_unreadable() {
+    echo "ERROR: cannot read the codex user config ($_cfg) — fh-gate runs codex with --ignore-user-config and must" >&2
+    echo "  first check that file does not name a provider the review would otherwise go to. No review was sent. Failing closed." >&2
+    exit $EXIT_HARNESS_ERROR
+  }
+  if [[ ! -e "$_cfg" && ! -L "$_cfg" ]]; then
+    _p="$_cfg"; while [[ ! -e "$_p" && ! -L "$_p" && "$_p" != / && "$_p" != . ]]; do _p=$(dirname -- "$_p"); done
+    [[ -d "$_p" && -x "$_p" ]] || _codex_cfg_unreadable
+    return 0   # confirmed absent: the nearest existing folder on the way is searchable
+  fi
+  if [[ ! -f "$_cfg" || ! -r "$_cfg" ]] || ! _txt=$(cat -- "$_cfg" 2>/dev/null); then _codex_cfg_unreadable; fi
+  while IFS= read -r _line || [[ -n "$_line" ]]; do
+    _n=$((_n + 1))
+    _s="${_line#"${_line%%[![:space:]]*}"}"
+    [[ -z "$_s" || "$_s" == \#* ]] && continue
+    if   [[ "$_s" == *'\u'* || "$_s" == *'\U'* || "$_s" == *'\x'* ]]; then _key="an escape (\\u, \\U or \\x) the guard cannot decode"
+    elif [[ "$_s" == *model_providers* ]];  then _key=model_providers
+    elif [[ "$_s" == *openai_base_url* ]];  then _key=openai_base_url
+    elif [[ "$_s" == *chatgpt_base_url* ]]; then _key=chatgpt_base_url
+    elif [[ "$_s" == *model_provider* && ! "$_s" =~ $_openai ]]; then _key=model_provider
+    fi
+    [[ -n "$_key" ]] && break
+  done <<< "$_txt"
+  [[ -z "$_key" ]] && return 0
+  echo "ERROR: the codex user config ($_cfg, line $_n) has ${_key}. fh-gate runs codex with --ignore-user-config so a" >&2
+  echo "  trusted checkout's .codex/config.toml cannot start programs, and that would send this review to codex's default" >&2
+  echo "  provider instead of the one your config names. No review was sent. Failing closed." >&2
+  echo "  Use the claude backend, or run with a CODEX_HOME whose config.toml names no provider." >&2
+  exit $EXIT_HARNESS_ERROR
+}
+[[ "$FH_BACKEND" == "codex" ]] && codex_route_guard
+
 # --- Structured-output verdict schema (Typed-Verdict Channel) ---
 # Principle: on a gate that ingests untrusted content, the verdict rides a typed,
 # schema-constrained channel the content cannot occupy — never a grep-able prose line.
@@ -1060,17 +1114,19 @@ fi
 # Measured again 2026-11-22 with the real CLIs and a subscription login (planted checkout under /tmp; under the
 # session scratchpad claude loads no CLAUDE.md at all, so a canary there proves nothing): with --setting-sources user
 # the checkout's CLAUDE.md, CLAUDE.local.md and .claude/rules text did not reach the call (0/3; 3/3 without the flag).
-# 🟥 OPEN (codex, measured 2026-11-22 on codex 0.164.0, not fixed here): when the user's codex config marks the
-# checkout trusted, codex loads the checkout's .codex/config.toml and starts the MCP servers it declares — commands
-# from the reviewed checkout, run outside the -s read-only sandbox (3/3). Untrusted, it did not (0/3).
-# `-c mcp_servers={}`, `-c projects={}` and a per-path trust override did not stop it; --ignore-user-config did (0/3),
-# but that also drops the user's model_provider, so a review meant for a proxy could go to codex's default provider
-# instead. Not applied until that is decided. Until then: do not mark a checkout you review as trusted in codex.
+# codex also gets --ignore-user-config (2026-11-22, codex 0.164.0, isolated CODEX_HOME, local fake API): when the
+# user's codex config marks the checkout trusted, codex loads the checkout's .codex/config.toml and starts the MCP
+# servers it declares — commands from the reviewed checkout, run outside the -s read-only sandbox (3/3; untrusted 0/3).
+# `-c mcp_servers={}`, `-c projects={}` and a per-path trust override did not stop it; --ignore-user-config did (0/3).
+# Dropping the user config also drops any provider it names, so the review would go to codex's default provider
+# instead — codex_route_guard (below, before any call) refuses that case. OPENAI_BASE_URL is not a way around it:
+# codex 0.164.0 exec did not follow it, with or without the flag (0/2).
 _RO_TOOLS="Read,Glob,Grep"
 _RO_ALLOW="$_RO_TOOLS"
 _RO_DENY="Bash,PowerShell,Write,Edit,NotebookEdit,WebFetch,WebSearch"
 _RO_SOURCES="user"
 _RO_CODEX_NODOC="project_doc_max_bytes=0"
+_RO_CODEX_NOUSER="--ignore-user-config"
 call_structured() {
   local _ok=0
   : > "$CODEX_LAST"
@@ -1081,7 +1137,7 @@ call_structured() {
                 --setting-sources "$_RO_SOURCES" --allowedTools "$_RO_ALLOW" --disallowedTools "$_RO_DENY" < "$1" ) \
               > "$OUTPUT_FILE" 2>"$ERR_FILE" && _ok=1 ;;
     codex)  ( cd "$WORK_ROOT" && { [[ "${4:-}" == goldfish ]] && unset FH_TASK_DESCRIPTION; :; } && ${_TIMEOUT_CMD} codex exec -m "$FH_MODEL" --skip-git-repo-check -s read-only \
-                -c "$_RO_CODEX_NODOC" --output-schema "$2" -o "$CODEX_LAST" - < "$1" ) > "$OUTPUT_FILE" 2>"$ERR_FILE" && _ok=1 ;;
+                "$_RO_CODEX_NOUSER" -c "$_RO_CODEX_NODOC" --output-schema "$2" -o "$CODEX_LAST" - < "$1" ) > "$OUTPUT_FILE" 2>"$ERR_FILE" && _ok=1 ;;
   esac
   if [[ "$_ok" != 1 ]]; then
     echo "ERROR: ${3} (${FH_BACKEND}) failed or timed out (${FH_TIMEOUT}s) — failing closed" >&2
@@ -1227,7 +1283,7 @@ run_backend() {
               --output-format json --json-schema "$(cat "$SCHEMA_FILE")" --tools "$_RO_TOOLS" --strict-mcp-config \
               --disable-slash-commands --setting-sources "$_RO_SOURCES" --allowedTools "$_RO_ALLOW" --disallowedTools "$_RO_DENY" ) ;;
     codex)  ( cd "$WORK_ROOT" && ${_TIMEOUT_CMD} codex exec -m "$FH_MODEL" --skip-git-repo-check -s read-only \
-              -c "$_RO_CODEX_NODOC" --output-schema "$SCHEMA_FILE" -o "$CODEX_LAST" - ) ;;
+              "$_RO_CODEX_NOUSER" -c "$_RO_CODEX_NODOC" --output-schema "$SCHEMA_FILE" -o "$CODEX_LAST" - ) ;;
   esac
 }
 

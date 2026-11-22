@@ -32,6 +32,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GATE="$HERE/fh-gate.sh"
 TMPROOT=$(mktemp -d "${TMPDIR:-/tmp}/fh_gate_absorb_XXXXXX")
 trap 'rm -rf "$TMPROOT"' EXIT
+export CODEX_HOME="$TMPROOT/codexhome-none"   # fh-gate reads the codex user config (provider guard): not the runner's
 export FH_RECORD_BASE="$TMPROOT/records"; mkdir -p "$FH_RECORD_BASE"
 export FH_GATE_EXEC=off
 # The elephant is opt-in since 3.45.0 (default off — pinned by test_fh_gate_defaults_lanes.sh); these lanes test it
