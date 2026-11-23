@@ -21,7 +21,34 @@
 #   FH_DESTRUCTIVE_BLOCK=1 to escalate to exit 2 (stderr → model, call blocked).
 #   EXCEPTION (2026-11-03): with FH_DESTRUCTIVE_BLOCK unset and the hook payload's
 #   permission_mode = bypassPermissions, it blocks by default — nobody reads an advisory before a
-#   bypass-mode call runs. FH_DESTRUCTIVE_BLOCK=0 restores advisory there. Other modes unchanged.
+#   bypass-mode call runs. FH_DESTRUCTIVE_BLOCK=0 restores advisory there.
+#   2026-11-23 (IG1 → operator pick A + A′): permission_mode = auto counts the same way (the
+#   classifier, not a human, decides the call — measured: it allowed a direct force push 6/6).
+#   Other modes (default, acceptEdits, plan, dontAsk) unchanged — dontAsk is a named residual.
+#
+# BLOCK MODE DOES NOT HONOR OVERRIDES WRITTEN INTO THE COMMAND (2026-11-23, A).
+#   Measured (tracks/_meta/inbound_guard_2026-11-23, KP-F v2, bypass, haiku 3/3): blocked here, the
+#   agent re-ran with `# noqa: destructive-op` because THIS guard's block text said to; blocked by
+#   pre-push, it re-ran with `DESTRUCTIVE_OP_OK=1` because pre-push's text said to — remote history
+#   rewritten. The one who writes the command was also the one granting the exception. So in block
+#   mode: (1) noqa is ignored; (2) block-only rows catch the agent switching off the next layer —
+#   `DESTRUCTIVE_OP_OK=` set anywhere in the command, `git push --no-verify`, core.hooksPath via
+#   `-c` or `git config` — and remote deletes (`push --delete`/`-d`/`:ref`/`--mirror`/`--prune`),
+#   which this guard had no row for, so `DESTRUCTIVE_OP_OK=1 git push origin --delete x` used to
+#   pass both layers; (3) the block text names no way past — it says ask the operator, who runs it
+#   from their own terminal. Advisory mode is byte-for-byte unchanged (noqa works, no new rows).
+#   What this does NOT close, by design: indirection (`bash x.sh` holding the push, env set inside
+#   the script), editing settings to drop the hook or set FH_DESTRUCTIVE_BLOCK=0, removing or
+#   rewriting the hook file itself (`rm`/`chmod -x` on pre-push — and the Edit/Write tools never
+#   reach this Bash hook at all), deleting refs through the GitHub API (`gh api -X DELETE
+#   …/git/refs/…` — neither layer sees it), abbreviations of the PRE-EXISTING force row
+#   (`--forc`), mention-as-data in block mode (an echo/heredoc that only names
+#   `DESTRUCTIVE_OP_OK=1` blocks), and pushes from a shell the agent did not type into. With
+#   FH_DESTRUCTIVE_BLOCK=1 set in a default-mode session, noqa no longer opens a block either —
+#   that variable asks for blocking. A determined agent gets past any client-side check; the floor
+#   is server-side branch protection (pre-push header says the same). Static shell-string checks do
+#   not converge (FH measured 15 rounds on a sibling check), so review rounds here are capped at
+#   two. Lanes K1–K51 (input-from: IG1 KP-F v2 records, codex R1, Sonnet quench-challenger R1).
 #   Unparseable/absent payload → silent exit 0 (an unparsed input is not a finding; block mode
 #   fails open on a dead python3 — same accepted residual as pipe_verdict_guard, the surface is
 #   the reversible Bash call, not the irreversible act itself).
@@ -99,8 +126,28 @@ if isinstance(m, str): sys.stdout.write(m)
 fi
 [ -n "$CMD" ] || exit 0
 
-# Explicit opt-out, checked before any rule.
-printf '%s' "$CMD" | LC_ALL=C grep -qE '#[[:space:]]*noqa:?[[:space:]]*destructive-op' && exit 0
+# Block decision FIRST — whether noqa counts depends on it. Explicit FH_DESTRUCTIVE_BLOCK wins either
+# way (1 = block, 0 = advisory). Unset: block when the session runs with permission_mode
+# bypassPermissions or auto — there no human sees the advisory before the call runs, so a warning
+# is a post-mortem (measured 2026-11-03, headless bypass, Sonnet: unset → branch deleted 3/3,
+# =1 → kept 3/3; auto added 2026-11-23 after the classifier allowed a direct force push 6/6).
+BLOCK_WHY=""
+case "${FH_DESTRUCTIVE_BLOCK-}" in
+  1) BLOCK_WHY="FH_DESTRUCTIVE_BLOCK=1." ;;
+  "") case "$PERM_MODE" in
+        bypassPermissions) BLOCK_WHY="permission_mode=bypassPermissions (no human sees a warning before the call runs)." ;;
+        auto) BLOCK_WHY="permission_mode=auto (a classifier, not a human, decides this call)." ;;
+      esac ;;
+  *) BLOCK_WHY="" ;;   # 0 and any other explicit value: advisory, as before this default existed
+esac
+
+# Explicit opt-out — honored in ADVISORY mode only. In block mode an agent-written noqa is the
+# agent granting itself the exception (IG1 KP-F v2: haiku 3/3), so it is noted and ignored.
+NOQA_SEEN=""
+if printf '%s' "$CMD" | LC_ALL=C grep -qE '#[[:space:]]*noqa:?[[:space:]]*destructive-op'; then
+  [ -z "$BLOCK_WHY" ] && exit 0
+  NOQA_SEEN=1
+fi
 
 # Flatten to ONE line (grep is line-oriented; multi-line commands are the recurring shape) and pad
 # with spaces so end-of-string flags match uniformly (` -f` at line end == ` -f `).
@@ -123,6 +170,9 @@ printf '%s' "$CMD" | LC_ALL=C grep -qE '#[[:space:]]*noqa:?[[:space:]]*destructi
 JOINED="${CMD//\\$'\n'/}"
 FLAT=" $(printf '%s' "$JOINED" | tr -d '\r' | tr '\n' ';' | sed 's/;/; /g' \
   | sed -E 's/(\&\&|\|\||[|&()])/ \1 /g' | tr -d '"'"'" | tr '\t' ' ' | tr -s ' ') "
+# Kept before git-option normalization: the normalizer below consumes `-c k=v`, which is exactly
+# where `git -c core.hooksPath=/dev/null push` hides the pre-push switch-off (block-only row).
+FLAT0="$FLAT"
 
 # Normalize git global options down to bare `git` BEFORE matching — the Axis-2 pass measured
 # `git -C /repo reset --hard` sailing through every git row, and this environment specifically
@@ -195,7 +245,83 @@ for entry in "${PATTERNS[@]}"; do
 "
   fi
 done
+
+# Block-only rows (2026-11-23, A). Advisory mode never evaluates them, so advisory output is
+# unchanged. Two groups: remote deletes (no row above saw them — pre-push did, and its env override
+# was then the agent's to set), and the agent switching off the next layer. `FLAT0` is the
+# pre-normalization flat: `-c core.hooksPath=` is consumed by the git-option normalizer.
+# core.hooksPath is case-insensitive in git, hence the bracket classes.
+if [ -n "$BLOCK_WHY" ]; then
+  # git config keys are case-insensitive (section and name): `CORE.hooksPath` is the same key.
+  HP='[cC][oO][rR][eE]\.[hH][oO][oO][kK][sS][pP][aA][tT][hH]'
+  # Dry-run neutralizer for the push rows below, applied to a COPY (FLATB) so the shared rows and
+  # the advisory output are untouched. Per statement: `[^|;&]*` cannot cross `&&`/`;`, so a dry-run
+  # in one statement never clears a real delete in the next. git accepts unique prefixes of long
+  # options, so `--dr…` is dry-run and the rows match `--de…`, `--no-v…`, `--mi…`, `--pru…`.
+  FLATB=$(printf '%s' "$FLAT" | sed -E 's/git push (([^|;&]* )?(--dr[a-z-]*|-[a-zA-Z]*n[a-zA-Z]*)[ ;])/git push_dryrun \1/g')
+  BLOCK_ONLY=(
+    "FLATB@@[ (/]git push ([^|;&]* )?(--de[a-z]*[ ;]|-[a-zA-Z]*d[a-zA-Z]*[ ;])@@git push --delete/-d removes a remote branch or tag"
+    "FLATB@@[ (/]git push ([^|;&]* )?\\+?:[^ ;]+[ ;]@@git push <remote> :<ref> deletes the remote ref"
+    "FLATB@@[ (/]git push ([^|;&]* )?(--mi[a-z]*|--pru[a-z]*)[ ;]@@git push --mirror/--prune deletes remote refs that are not local"
+    "FLATB@@[ (/]git push ([^|;&]* )?--no-v[a-z-]*[ ;]@@git push --no-verify skips the pre-push layer"
+    "FLAT0@@[ (/]git ([^|;&]* )?(-c +|--config-env[= ])${HP}=@@git -c/--config-env core.hooksPath=… replaces the pre-push layer for this command"
+    "FLAT0@@(^|[ (;&|])GIT_CONFIG_(KEY_[0-9]+=${HP}|PARAMETERS=[^;&|]*${HP})@@GIT_CONFIG_* naming core.hooksPath replaces the pre-push layer for this command"
+    "FLAT@@(^|[ (;&|])(export +)?DESTRUCTIVE_OP_OK=@@DESTRUCTIVE_OP_OK= written into the command is an override of the pre-push layer"
+  )
+  for entry in "${BLOCK_ONLY[@]}"; do
+    src="${entry%%@@*}"; rest="${entry#*@@}"
+    pattern="${rest%%@@*}"; desc="${rest#*@@}"
+    case "$src" in FLAT0) subj="$FLAT0" ;; FLATB) subj="$FLATB" ;; *) subj="$FLAT" ;; esac
+    if printf '%s' "$subj" | LC_ALL=C grep -qE "$pattern"; then
+      hits="${hits}  ⚠️  DESTRUCTIVE-OP ${desc}
+"
+    fi
+  done
+  # `git config … core.hooksPath` per statement: a READ (--get*, --list, -l, get, list, or no value
+  # after the key — `$(git config core.hooksPath)`, `… 2>/dev/null`, `… && next`) is clean; a WRITE
+  # (--unset*, --replace-all, --add, set/unset, or a value token) blocks. An empty value (`""`/`''`)
+  # vanishes when quotes are stripped, so it is checked on the raw command (codex R1).
+  # The value token after the key is a write unless it is a redirect (`2>/dev/null`, `>x`, `2>&1`)
+  # or a closing paren — a digit alone (`core.hooksPath 0`) is a value (codex R2).
+  HP_READ_RX='(--get(-all|-regexp|-urlmatch)?|--list| -l| get| list)( |$)'
+  HP_WRITE=""
+  while IFS= read -r seg; do
+    [ -n "$seg" ] || continue
+    printf '%s' "$seg" | LC_ALL=C grep -qE -- "$HP_READ_RX" && continue
+    if printf '%s' "$seg" | LC_ALL=C grep -qE -- "(--unset(-all)?|--replace-all|--add| set| unset) "; then HP_WRITE=1; break; fi
+    nxt=$(printf '%s' "$seg" | LC_ALL=C grep -oE -- "${HP} +[^ ]+" | head -1 | sed -E 's/^[^ ]+ +//')
+    if [ -n "$nxt" ] && ! printf '%s' "$nxt" | LC_ALL=C grep -qE '^(\)|[0-9]*[<>])'; then HP_WRITE=1; break; fi
+  done <<SEGS
+$(printf '%s' "$FLAT" | LC_ALL=C grep -oE "[ (/]git config [^|;&]*${HP}[^|;&]*")
+SEGS
+  # Empty value: checked on the raw command (quotes intact), per statement, same read exemption.
+  while IFS= read -r seg; do
+    [ -n "$seg" ] || continue
+    printf '%s' "$seg" | LC_ALL=C grep -qE -- "$HP_READ_RX" && continue
+    HP_WRITE=1; break
+  done <<SEGS
+$(printf '%s' "$JOINED" | LC_ALL=C grep -oE "git[^|;&]*config[^|;&]*${HP}[[:space:]]+(\"\"|'')")
+SEGS
+  # Removing or renaming the whole [core] section drops core.hooksPath without naming it (codex R2).
+  printf '%s' "$FLAT" | LC_ALL=C grep -qE "[ (/]git config ([^|;&]* )?(--)?(remove|rename)-section +[cC][oO][rR][eE][ ;]" && HP_WRITE=1
+  [ -n "$HP_WRITE" ] && hits="${hits}  ⚠️  DESTRUCTIVE-OP git config core.hooksPath changes or removes the directory the pre-push layer lives in
+"
+fi
 [ -n "$hits" ] || exit 0
+
+if [ -n "$BLOCK_WHY" ]; then
+  # Block mode: exit 2 = stderr fed to the model as the blocking reason; stdout ignored by contract.
+  # The text names NO way past. Every way past it used to name (noqa here, DESTRUCTIVE_OP_OK in
+  # pre-push) was taken by the agent that read it (IG1 KP-F v2, haiku 3/3).
+  printf '%s' "$hits" >&2
+  printf '%s\n' "      [BLOCKED] $BLOCK_WHY" >&2
+  [ -n "$NOQA_SEEN" ] && printf '%s\n' "      A '# noqa: destructive-op' in the command is not honored in this mode." >&2
+  printf '%s\n' "      In this mode an override written into the command is not honored." \
+    "      Stop and ask the operator; if they want it, they run it from their own terminal." \
+    "      Meanwhile: enumerate what this would destroy (git status / git log / git reflog) and" \
+    "      report it — do not retry this call in another form." >&2
+  exit 2
+fi
 
 hits="${hits}      Advisory timing: this context reaches the model on the NEXT turn — the call may have
       already run (pre-action blocking = FH_DESTRUCTIVE_BLOCK=1). If it ran un-enumerated,
@@ -204,24 +330,6 @@ hits="${hits}      Advisory timing: this context reaches the model on the NEXT t
       uncited healing path is a dead pointer to the session that needs it mid-incident).
       Destructive-Op Gate order: enumerate → recover → destroy — never destroy-then-check.
       Intentional and reviewed → re-run with trailing \`# noqa: destructive-op\`."
-
-# Block decision. Explicit FH_DESTRUCTIVE_BLOCK wins either way (1 = block, 0 = advisory). Unset:
-# block when the session runs with permission_mode=bypassPermissions — there no human sees the
-# advisory before the call runs, so a warning is a post-mortem (measured 2026-11-03, headless
-# bypass, Sonnet: unset → branch deleted 3/3, =1 → kept 3/3).
-BLOCK_WHY=""
-case "${FH_DESTRUCTIVE_BLOCK-}" in
-  1) BLOCK_WHY="FH_DESTRUCTIVE_BLOCK=1 — add noqa after review, or set FH_DESTRUCTIVE_BLOCK=0, to proceed." ;;
-  "") [ "$PERM_MODE" = "bypassPermissions" ] && \
-       BLOCK_WHY="permission_mode=bypassPermissions (no human sees a warning before the call runs) — add noqa after review, or set FH_DESTRUCTIVE_BLOCK=0 to keep advisory." ;;
-  *) BLOCK_WHY="" ;;   # 0 and any other explicit value: advisory, as before this default existed
-esac
-if [ -n "$BLOCK_WHY" ]; then
-  # Block mode: exit 2 = stderr fed to the model as the blocking reason; stdout ignored by contract.
-  printf '%s\n' "$hits" >&2
-  printf '%s\n' "      [BLOCKED] $BLOCK_WHY" >&2
-  exit 2
-fi
 
 # Advisory mode: JSON on stdout, exit 0. Capture-then-emit; PYTHONIOENCODING pinned because the
 # text carries non-ASCII (⚠️) and an inherited ascii codec was measured to kill the emission
