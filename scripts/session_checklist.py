@@ -456,6 +456,28 @@ def read_hook_channel(path):
     return "read", rows, bad, ""
 
 
+# v13 (2026-11-23): a message from another Claude session reaches UserPromptSubmit too, so the hook record keeps it as
+# bare text. The transcript marks the same turn origin.kind=peer and drops it; the hook channel did not, and it came back
+# as an H row (390 in one governor's record). Envelope-shaped like EXCLUDE_ENVELOPES: it must START with the tag and
+# END with its closing tag. The whole text must be one or more complete envelopes with only whitespace between them
+# (the app batches messages that arrive together into one turn) — an operator turn that mentions the tag mid-text, or
+# that writes its own words after an envelope, is still a request (codex R1). A message longer than the hook keeps is
+# stored truncated, without its closing tag: then the opening tag must carry the sender attribute the app writes.
+PEER_ONE_RE = r"<cross-session-message(?:\s[^>]*)?>(?:(?!</cross-session-message>).)*</cross-session-message>"
+PEER_ENVELOPES_RE = re.compile(r"\s*(?:" + PEER_ONE_RE + r"\s*)+", re.S)
+PEER_OPEN_WITH_SENDER = '<cross-session-message from="'
+
+
+def peer_envelope_count(row):
+    """-> how many peer messages this hook row is (0 = an operator turn)."""
+    t = row.get("text") or ""
+    if row.get("truncated"):
+        return 1 if t.strip().startswith(PEER_OPEN_WITH_SENDER) else 0
+    if not PEER_ENVELOPES_RE.fullmatch(t):
+        return 0
+    return len(re.findall(PEER_ONE_RE, t, re.S))
+
+
 def merge_hook_rows(raw_rows, hook_rows):
     """-> (hook_only, matched_count). Both channels record the same conversation in the same order, so pairing is
     ORDER-PRESERVING, not nearest-first: hook rows in time order each take the EARLIEST unpaired transcript row of equal
@@ -543,6 +565,8 @@ def do_extract(transcript_path, out_path, utterances_path=None):
 
     hook_path = utterances_path or default_hook_path(transcript_path)
     hook_state, hook_rows, hook_bad, hook_detail = read_hook_channel(hook_path)
+    hook_peer = sum(peer_envelope_count(h) for h in hook_rows)
+    hook_rows = [h for h in hook_rows if not peer_envelope_count(h)]   # counted below, never silently
     hook_only, hook_matched = merge_hook_rows(raw_rows, hook_rows)
 
     # summary quotes are compared against the transcript rows only, as before: matching them against hook-only rows
@@ -585,6 +609,8 @@ def do_extract(transcript_path, out_path, utterances_path=None):
         lines_out.append("🟨 훅 기록 채널 안 읽음 — 파일 없음: %s (0건이 아니라 미열람; 훅이 안 걸렸거나 다른 허브일 수 있다)" % hook_path)
     else:
         lines_out.append("🟥 훅 기록 채널 오류 — %s: %s (rc=2; 전사 행은 그대로 아래에 있다)" % (hook_path, hook_detail))
+    if hook_peer:
+        lines_out.append("🪝 훅 기록 중 다른 세션 메시지 %d건은 운영자 발화가 아니라 표에서 뺐다" % hook_peer)
     if hook_bad:
         lines_out.append("🟥 훅 기록 %d줄 해석 실패 — 그 줄의 발화는 이 표에 없을 수 있다 (rc=2)" % hook_bad)
     lines_out.append("")
@@ -673,6 +699,7 @@ _GENERATED_LINE_RES = tuple(re.compile(p) for p in (
     r"^🟨 훅 기록 채널 안 읽음 — 파일 없음: .* \(0건이 아니라 미열람; 훅이 안 걸렸거나 다른 허브일 수 있다\)$",
     r"^🟥 훅 기록 채널 오류 — .*: .* \(rc=2; 전사 행은 그대로 아래에 있다\)$",
     r"^🟥 훅 기록 \d+줄 해석 실패 — 그 줄의 발화는 이 표에 없을 수 있다 \(rc=2\)$",
+    r"^🪝 훅 기록 중 다른 세션 메시지 \d+건은 운영자 발화가 아니라 표에서 뺐다$",
     r"^↩️ 이전 결과서에서 판정 \d+줄 이어받음 · 못 맞춘 판정 \d+줄은 맨 아래 «이전 결과서에서 이어받지 못한 판정»에 보존"
     r"( · 표 밖 줄 \d+줄은 맨 아래 «이전 결과서의 표 밖 내용»에 보존)?$",
 ))
