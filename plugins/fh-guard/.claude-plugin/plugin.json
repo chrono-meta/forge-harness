@@ -1,0 +1,20 @@
+{
+  "name": "fh-guard",
+  "version": "3.47.0",
+  "engines": {
+    "claudeCode": ">=2.1.295"
+  },
+  "description": "fh-guard — install it and every Bash call your Claude Code agent makes, in any repo, goes through the FH destructive-op gate first. In bypassPermissions and auto mode (no human approves the call) it blocks force pushes, remote branch and tag deletes, git reset --hard and the other local destroyers, and the agent switching the next layer off (--no-verify, core.hooksPath, an override written into the command); the block text tells the agent to ask you, never how to get past. In other modes it warns. 0 skills, 0 agents, no network, writes no files. If the gate cannot start or times out, the Bash call is blocked; if python3 is missing, a one-line notice says the gate is not active. Needs bash and python3 (on Windows, Git for Windows).",
+  "author": {
+    "name": "chrono-meta",
+    "email": "chrono-meta@users.noreply.github.com"
+  },
+  "keywords": [
+    "guardrail",
+    "destructive-operations",
+    "force-push",
+    "pretooluse-hook",
+    "bypass-permissions",
+    "git-safety"
+  ]
+}

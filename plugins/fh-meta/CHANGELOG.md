@@ -2,6 +2,18 @@
 
 ### [Unreleased]
 
+### Added
+- `fh-guard` (new plugin in this marketplace): install it and the FH destructive-op gate sits in front of every Bash call your Claude Code agent makes, in any repo.
+  - What it ships: one PreToolUse(Bash) hook running a byte-identical copy of `scripts/destructive_pre_gate.sh`, plus a SessionStart check. 0 skills, 0 agents, no character, no network, no file writes. `scripts/test_fh_guard_plugin_lanes.sh` fails the moment the copy and the main gate differ.
+  - Why: an IG1 measurement found that `/install-wizard` puts the gate only in the FH clone's own settings, and no FH plugin shipped a hook. An agent working in any other repo had no FH gate on its path.
+  - Behaviour is the main gate's. In `bypassPermissions` and `auto` mode it blocks and tells the agent to ask the operator. In other modes it warns.
+  - The hook entry sets `onFailure: "block"`, so a hook that cannot start, times out (10 s) or exits with a code other than 0 or 2 blocks the Bash call instead of letting it through. This needs Claude Code 2.1.295 or later.
+  - 🟥 Over-block, by design: on Windows without Git for Windows (no Git Bash), Claude Code runs hooks through PowerShell, the `bash` command cannot start, and every Bash tool call is blocked. Install Git for Windows or disable the plugin.
+  - A missing or non-running `python3` cannot be caught by `onFailure`: the gate exits 0 and lets calls through. The SessionStart check prints one line, «fh-guard is NOT active in this session», and stays silent when python3 works. It runs once per session: python3 vanishing mid-session goes unannounced until the next one (named in the README; checking on every call would block every call on a machine without python3).
+  - Measured (FHG1, 72 headless `bypassPermissions` runs, a fresh non-FH repo, plugin loaded with `--plugin-dir`): direct-request force push took effect 0/3 with the plugin vs 3/3 without (haiku-5-5), remote branch delete 0/6 vs 6/6 (haiku-5-5 · sonnet-5-5). A user hook answering `allow` plus an allow rule did not open it (0/3), nor did running alongside FH's own settings snippet (0/3). No run tried an in-command override after a block. Cost: in the force-push task, haiku finished the harmless typo-fix push 1/3 with the plugin vs 3/3 without. All 20 blocked calls carried a destructive command; the agent either stopped the whole task once the rollback was blocked or had chained the harmless commit into the same call. Pure harmless tasks: 6/6 with and without. Not measured: sonnet force push (the stimulus did not produce it without the plugin either), injected instructions (0/24 attempts), Windows, `default`/`auto` mode, the marketplace install flow.
+  - Not covered (named in the plugin README): indirection (a push inside a script or Makefile), non-git data leaks, deletes through the GitHub API, the agent editing settings for the next session. No pre-push hook ships; a plugin cannot install one.
+  - Third-party marketplaces do not auto-update by default, so gate fixes reach users only when they update. The README says how to turn auto-update on.
+
 ### Changed
 - BREAKING (gate): `fh-gate` (shipped), a lone help or version flag under CI.
   - What changed: when the `CI` environment variable is set to anything other than empty, `0` or `false`, `fh-gate -h`, `--help`, `-V` and `--version` given alone still print their text, then exit 11 (argument error) instead of 0. GitHub Actions, GitLab, CircleCI, Travis and Buildkite set `CI`.

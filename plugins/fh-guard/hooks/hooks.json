@@ -1,0 +1,29 @@
+{
+  "description": "fh-guard — the FH destructive-op gate on every Bash call, plus a session-start notice when the gate cannot run. No network; writes no files.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/destructive_pre_gate.sh\"",
+            "timeout": 10,
+            "onFailure": "block"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/fh_guard_preflight.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
