@@ -18,6 +18,7 @@
 # R14 «MERGED (auto» quoted inside a HOLD/refused line is not a merge (only a «- #N MERGED (auto» line is)
 # R15 a self-dev report with an invalid UTF-8 byte → not measured, rc 2
 # R10 a checklist with no 상태 table (parsed by session_checklist.py, not a second parser) → not measured, rc 2
+. "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088); the fixture text names `git revert`
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 R="$HERE/review_budget.py"
