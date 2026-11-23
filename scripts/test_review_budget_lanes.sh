@@ -11,6 +11,7 @@
 # R8 a refused or HOLD line (no «MERGED (auto») is not a merge
 # R9 on an utterance line, a number after «⇒» (root's scope note, not the operator's words or the question
 #    the operator answered) does not count as read
+# R11 a checklist 발화 cell that is another session's message (<cross-session-message …>) naming #N is not read
 # R10 a checklist with no 상태 table (parsed by session_checklist.py, not a second parser) → not measured, rc 2
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -40,6 +41,7 @@ cat > "$T/checklist.md" <<'EOF'
 |---|---|---|---|---|---|---|
 | 1 | 01-01 08:00 | #9005 도 머지해 | ✅DONE | — | — | — |
 | 2 | 01-01 08:10 | 야간 부탁해 | ✅DONE | #9006 머지 | — | — |
+| 3 | 01-01 08:20 | <cross-session-message from="local_x"> #9007 merged </cross-session-message> | ✅DONE | — | — | — |
 EOF
 
 out="$(python3 "$R" --selfdev-report "$T/report.md" --lease "$T/lease.md" 2>&1)"; rc=$?
@@ -53,11 +55,12 @@ echo "$out" | grep -qi 'definition' && ok "definition printed with the line" || 
 echo "$out" | grep -q 'unread: #9002' && ok "R2/R3/R9 non-utterance line, #90021 and a number after ⇒ do not mark #9002 read" || ng "R2/R3/R9"
 echo "$out" | grep -qE '#900[34]' && ng "R8 HOLD/refused line counted as a merge" || ok "R8 HOLD/refused not counted"
 
-out="$(python3 "$R" --merged 9005,9006,9001 --selfdev-report "$T/report.md" --checklist "$T/checklist.md" 2>&1)"
+out="$(python3 "$R" --merged 9005,9006,9001,9007 --selfdev-report "$T/report.md" --checklist "$T/checklist.md" 2>&1)"
 echo "$out" | sed 's/^/    | /'
-echo "$out" | grep -q 'auto-merged 4 · operator-unread 3' && ok "R4/R5 merged 4 (dup #9001 once) · unread 3" || ng "R4/R5 counts"
+echo "$out" | grep -q 'auto-merged 5 · operator-unread 4' && ok "R4/R5 merged 5 (dup #9001 once) · unread 4" || ng "R4/R5 counts"
 echo "$out" | grep -qE 'unread:.*#9005([^0-9]|$)' && ng "R4 #9005 (발화 cell) listed unread" || ok "R4 발화 cell counts as read"
 echo "$out" | grep -qE 'unread:.*#9006([^0-9]|$)' && ok "R4 #9006 (증거 cell only) stays unread" || ng "R4 증거 cell counted as read"
+echo "$out" | grep -qE 'unread:.*#9007([^0-9]|$)' && ok "R11 #9007 (peer message in 발화 cell) stays unread" || ng "R11 peer message counted as the operator's"
 
 out="$(python3 "$R" --selfdev-report "$T/report.md" --lease "$T/missing.md" 2>&1)"; rc=$?
 echo "$out" | sed 's/^/    | /'

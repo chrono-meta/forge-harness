@@ -24,6 +24,7 @@ Named residuals:
     toward «read», so the unread count is a lower bound.
   - Records are read as they are at run time; an utterance written after the merge still counts as read.
   - An operator may have read a PR without saying its number; that is not in the records and counts unread.
+  - A checklist 발화 cell holding a message from another session is skipped, not counted as the operator's.
 
 rc: 0 line printed · 2 a record could not be read («not measured», never 0) or bad arguments.
 """
@@ -53,6 +54,15 @@ def utterance_texts_lease(text):
             yield line.split("⇒", 1)[0]
 
 
+# A 발화 cell that is a message from another session (the hook channel records those as rows too) is not the
+# operator's words. Measured 2026-11-23: one checklist carried 383 such rows, and one of them named a PR.
+PEER_PREFIXES = ("<cross-session-message", "<agent-message")
+
+
+def is_peer_message(cell):
+    return cell.strip().startswith(PEER_PREFIXES)
+
+
 def utterance_cells_checklist(path):
     """발화 cells of every 상태 table, through session_checklist's single parser (no second normalizer).
     Returns (cells, None) or (None, reason) — a sheet with no 상태 table or no data rows is not measured."""
@@ -64,7 +74,7 @@ def utterance_cells_checklist(path):
         ui = sc.find_header_index(header, "발화")
         if ui is None or ui < 0:
             return None, "no single 발화 column"
-        cells.extend(r[ui] for r in rows if len(r) > ui)
+        cells.extend(r[ui] for r in rows if len(r) > ui and not is_peer_message(r[ui]))
     return cells, None
 
 
