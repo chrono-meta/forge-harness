@@ -137,6 +137,45 @@ fi
 say "📄 FH 자산 $NCH 개를 건드렸다:"
 printf '%s\n' "$CHANGED" | sed 's/^/     /'
 
+# ── 3-0. pull_request 실행: PR 본문을 «이벤트» 가 아니라 API 에서 새로 읽는다 (2026-11-23) ──
+#    이벤트 본문은 이벤트가 난 순간의 본문이다. 본문을 고치고 «Re-run jobs» 를 눌러도 옛 본문이 다시 실린다 —
+#    #1196 은 그래서 PR 을 닫았다 다시 열어야 했다. 아래 지적 기록 검사(4-b)가 본문을 고치게 만드는 검사라
+#    이 구멍이 흔해진다. 그래서 번호로 지금 본문을 읽는다.
+#    🟥 조회 실패 · 깨진 응답 · 이 채널이 아닌 PR 은 rc=10 — «본문 없음» 으로 접지 않는다.
+if [ -z "$BODY_FILE" ] && [ -n "${RMG_PR_NUMBER:-}" ]; then
+  GH_BIN="${RMG_GH:-gh}"
+  case "$RMG_PR_NUMBER" in ''|*[!0-9]*) say "❌ HARNESS-ERROR — RMG_PR_NUMBER 가 숫자가 아니다: '$RMG_PR_NUMBER'"; exit 10 ;; esac
+  [ -n "${RMG_REPO:-}" ] || { say "❌ HARNESS-ERROR — PR 본문 조회에 RMG_REPO 가 없다."; exit 10; }
+  PRN_DIR=$(mktemp -d 2>/dev/null) || { say "❌ HARNESS-ERROR — 임시 폴더를 못 만든다"; exit 10; }
+  if ! "$GH_BIN" api "repos/$RMG_REPO/pulls/$RMG_PR_NUMBER" > "$PRN_DIR/pr.json" 2> "$PRN_DIR/err.txt"; then
+    say "❌ HARNESS-ERROR — PR #$RMG_PR_NUMBER 본문 조회가 실패했다:"
+    sed 's/^/     /' "$PRN_DIR/err.txt" | head -5
+    say "   🟥 조회 실패를 «본문 없음» 으로 읽지 않는다."
+    rm -rf "$PRN_DIR"; exit 10
+  fi
+  if ! python3 - "$PRN_DIR/pr.json" "$CHANNEL_NAME" "$RMG_REPO" "$PRN_DIR/body.txt" 2>> "$PRN_DIR/err.txt" <<'PRPY'
+import json, sys
+src, ref, repo, out = sys.argv[1:5]
+p = json.load(open(src, encoding="utf-8"))
+h = p.get("head") if isinstance(p, dict) else None
+# the number names exactly one PR of this repo, so its body IS this PR's body — the head ref is checked so a
+# wrong number (another branch's PR) is refused; the head repo is not, so a fork PR is read, not refused
+if not (isinstance(h, dict) and h.get("ref") == ref):
+    raise SystemExit("the PR's head is not this channel (%r)" % (h.get("ref") if isinstance(h, dict) else None))
+b = p.get("body")
+if b is not None and not isinstance(b, str):
+    raise SystemExit("body is not a string or null (%s)" % type(b).__name__)   # codex R1: [] / {} / false read as ""
+open(out, "w", encoding="utf-8").write(b or "")
+PRPY
+  then
+    say "❌ HARNESS-ERROR — PR #$RMG_PR_NUMBER 응답을 못 읽거나 이 채널의 PR 이 아니다:"
+    sed 's/^/     /' "$PRN_DIR/err.txt" | tail -3
+    rm -rf "$PRN_DIR"; exit 10
+  fi
+  BODY_FILE="$PRN_DIR/body.txt"
+  say "🔎 pull_request 실행: PR #$RMG_PR_NUMBER 본문을 API 로 새로 읽었다 (이벤트 본문 아님)."
+fi
+
 # ── 3-a. push 실행: 그 커밋의 PR 본문을 API 로 읽는다 (2026-11-15, AQ-20261114-10) ──
 #    `pull_request` 실행은 본문을 이벤트에서 받지만 `push` 실행에는 본문이 없다. 그래서 같은
 #    HEAD 에 push 실행만 빨갛고 pull_request 실행은 초록인 두 판정이 났다(#1095 · #1103).
@@ -172,7 +211,10 @@ for p in data:
             and isinstance(r, dict) and isinstance(r.get("full_name"), str)):
         raise SystemExit("malformed PR entry (head.ref / head.repo.full_name)")
     if h["ref"] == ref and r["full_name"] == repo:
-        bodies.append(p.get("body") or "")
+        b = p.get("body")
+        if b is not None and not isinstance(b, str):
+            raise SystemExit("PR body is not a string or null")   # codex R2: [] / {} / false read as ""
+        bodies.append(b or "")
 open(out, "w", encoding="utf-8").write("\n".join(bodies))
 print(len(bodies))
 PY
@@ -234,6 +276,126 @@ if [ -n "$MISSING" ] || [ -n "$VACUOUS" ]; then
   say "   정본: CLAUDE.md §FH Improvement 4-Axis Auto-Gate · .claude/rules/fh_4axis_gate.md"
   exit 1
 fi
+
+# ── 4-b. 지적 기록 — 형식만 (2026-11-23, 운영자 (B) «추천대로 b로 가면되겠네») ───────────────
+#    리뷰 지적 센서스: 리뷰가 있었다는 PR 138건 중 59건은 본문이 개수만 적어 무엇이었는지 못 읽었다.
+#    기록 형식 — 한 블록에 개수 줄 + 지적마다 한 줄:
+#        findings: 3
+#        - codex R1 · <메커니즘 한 구절> · fixed@<sha7+>
+#        - sonnet · <메커니즘> · named-residual
+#        - root · <메커니즘> · rejected — <이유>
+#      또는  findings: 0 — <무엇을 돌렸나>   ·   findings: none — <리뷰를 왜 안 돌렸나>
+#    R-a  개수 줄 뒤에 정확히 N 줄, 각 줄이 «출처 · 구절 · 처리» 형식. 근사 키(Findings: · finding: · findings :) 는 실패.
+#    R-b  0 / none 은 대시 뒤 두 낱말 이상의 이유가 있어야 한다(공허 금지).
+#    R-c  개수 줄이 없는데 산문에 «N findings / N 지적» 이 있으면 — FINDINGS_BLOCK_FROM 전에는 경고 + 적중 토큰
+#         (FINDINGS_TRIPWIRE_HIT, 한 주 동안 이 줄로 적중 목록을 모은다), 그 날짜부터는 실패.
+#         날짜는 벽시계가 아니라 범위의 마지막 커밋 날짜로 본다(같은 커밋은 언제 돌려도 같은 판정).
+#         🟥 이름 붙인 놓침: 등급만 적은 본문(«1 A · 2 B», 실측 16/61)과 «N items»(3/61)는 못 본다.
+#    R-d  개수 줄도 산문 개수도 없으면 판정하지 않는다(지금과 같다).
+#    🟥 내용은 안 본다 — 구절이 참인지, sha 가 그 수리를 담는지, N 이 리뷰어가 실제로 낸 수인지는 사람 몫이다.
+FINDINGS_BLOCK_FROM="${RMG_FINDINGS_BLOCK_FROM:-2026-11-30}"
+LAST_DATE=$(git log -1 --format=%cs "$HEAD_REF" 2>/dev/null)
+# 기록은 파일로 넘긴다 — `python3 -` 는 프로그램을 heredoc(stdin)에서 읽으므로 파이프로 준 기록은 가려져
+# 빈 기록(=«NONE», 통과)이 된다. 첫 구현이 실제로 그랬고 레인 F1·F4~F7 이 잡았다.
+REC_FILE=$(mktemp 2>/dev/null) || { say "❌ HARNESS-ERROR — 임시 파일을 못 만든다"; exit 10; }
+printf '%s\n' "$RECORD" > "$REC_FILE"
+FOUT=$(python3 - "$FINDINGS_BLOCK_FROM" "${LAST_DATE:-}" "$REC_FILE" <<'FPY'
+import re, sys
+block_from, last_date, rec = sys.argv[1], sys.argv[2], sys.argv[3]
+lines, fence, hidden = [], None, []
+for l in open(rec, encoding="utf-8", errors="replace").read().splitlines():
+    m = re.match(r"^\s{0,3}(\x60{3,}|~{3,})", l)   # \x60 = backquote; a literal one inside this $( ) heredoc breaks bash
+    if m and (fence is None or m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence)):
+        fence = None if fence else m.group(1)
+        if fence:
+            hidden = []   # only the fence still open at the end counts, not an earlier closed one
+        lines.append("")
+        continue
+    if fence:
+        hidden.append(l)
+    lines.append("" if fence else l)   # an example inside a code fence is not a record (found on this PR's own body)
+EXACT = re.compile(r"^findings: (.*)$")
+NEAR = re.compile(r"^\s*\**\s*findings?\s*\**\s*:", re.I)
+SOURCE = r"(?:sonnet|haiku|opus|root|operator|ci|[A-Za-z][\w.-]* R\d+)"
+# disposition first, an explanation after it is allowed (a blind Sonnet wrote «named-residual (known limitation …)»)
+DISP = r"(?:(?:fixed@[0-9a-f]{7,40}|named-residual)(?=\s|$)|rejected (?:—|-) \S+\s+\S)"   # a token ends at a space or line end (codex R2)
+# the clause is any non-empty text — one word, or Korean without spaces, is a clause (codex R1)
+LINE = re.compile(r"^\s*- " + SOURCE + r" · \S.*? · " + DISP + r".*$")
+ITEM = re.compile(r"^\s*- .* · .* · ")
+REASONED = re.compile(r"^(0|none) (?:—|-) \S+\s+\S")
+errs, blocks = [], 0
+PROSE = re.compile(r"\b[1-9][0-9]*\s+(?:new\s+)?(?:findings?|지적)\b", re.I)
+if fence and any(EXACT.match(h) or NEAR.match(h) or PROSE.search(h) for h in hidden):
+    # a fence left open to the end hid a claim — read as «no claim» it would pass silently (root review)
+    errs.append("unclosed code fence hides a findings claim — close the fence")
+for i, l in enumerate(lines):
+    m = EXACT.match(l)
+    if m and not re.match(r"(?:[0-9]|none\b)", m.group(1).strip()):
+        continue   # wrapped prose that happens to start with «findings: » (seen in a real commit message) — not a record
+    if not m:
+        if NEAR.match(l):
+            errs.append("near-key «%s» — write exactly «findings: …»" % l.strip()[:40])
+        continue
+    blocks += 1
+    v = m.group(1).strip()
+    if re.fullmatch(r"[1-9][0-9]*", v):
+        n = int(v)
+        got = lines[i + 1:i + 1 + n]
+        bad = [g for g in got if not LINE.match(g)]
+        if len(got) < n or bad:
+            errs.append("findings: %d — %d of the next %d lines are not «- <source> · <clause> · <disposition>»%s"
+                        % (n, len(bad) + (n - len(got)), n, (": «%s»" % bad[0].strip()[:60]) if bad else ""))
+        elif i + 1 + n < len(lines) and ITEM.match(lines[i + 1 + n]):
+            errs.append("findings: %d — more finding lines follow than the count says" % n)
+    elif REASONED.match(v):
+        nxt = next((x for x in lines[i + 1:] if x.strip()), "")   # skip blank lines (codex R2)
+        if ITEM.match(nxt):
+            errs.append("findings: %s — declares no findings but a finding line follows" % v.split()[0])   # codex R1
+    else:
+        errs.append("findings: «%s» — a count ≥1, or «0 — <what ran>», or «none — <why no review ran>»" % v[:40])
+if errs:
+    for e in errs:
+        print("ERR " + e)
+    sys.exit(1)
+if blocks == 0:
+    prose = PROSE.search("\n".join(lines))
+    if prose:
+        hit = prose.group(0)
+        if not re.fullmatch(r"\d{4}-\d\d-\d\d", last_date or ""):
+            print("HARNESS the last commit's date is unreadable («%s») — cannot choose warn or block" % last_date)
+            sys.exit(2)   # codex R1: an unread date must not quietly become «warn»
+        if last_date >= block_from:
+            print("ERR the record says «%s» but carries no «findings:» line (blocking since %s)" % (hit, block_from))
+            sys.exit(1)
+        print("WARN «%s» without a «findings:» line — FINDINGS_TRIPWIRE_HIT (warning only until %s)" % (hit, block_from))
+        sys.exit(0)
+    print("NONE")
+    sys.exit(0)
+print("OK %d block(s)" % blocks)
+FPY
+)
+frc=$?
+rm -f "$REC_FILE"
+case "$frc" in 0|1) ;; *) say "❌ HARNESS-ERROR — 지적 기록 검사가 판정을 못 냈다 (rc=$frc · 미측정 ≠ 통과)"
+                        printf '%s\n' "$FOUT" | sed -n 's/^HARNESS /   /p'; exit 10 ;; esac
+if [ "$frc" -ne 0 ]; then
+  say ""
+  say "❌ FAIL — 지적 기록 형식이 아니다:"
+  printf '%s\n' "$FOUT" | sed -n 's/^ERR /   · /p'
+  say ""
+  say "   처방 — 본문(또는 커밋 메시지)에 개수 줄과 지적 한 줄씩:"
+  say "     findings: 2"
+  say "     - codex R1 · <메커니즘 한 구절> · fixed@<sha>"
+  say "     - sonnet · <메커니즘> · named-residual        (또는 rejected — <이유>)"
+  say "   리뷰가 없었으면  findings: none — <이유>   ·   돌렸는데 없었으면  findings: 0 — <무엇을 돌렸나>"
+  say "   🟥 형식만 본다 — 지적 문장이 참인지는 안 본다."
+  exit 1
+fi
+case "$FOUT" in
+  WARN*) say "⚠️  ${FOUT#WARN }"
+         [ -n "${GITHUB_ACTIONS:-}" ] && printf '::warning::%s\n' "${FOUT#WARN }" ;;
+  OK*)   say "🧾 지적 기록: ${FOUT#OK } (형식 확인)" ;;
+esac
 
 say ""
 say "✅ PASS — 마커 3필드가 커밋 기록에 실려 왔다 (axes-run · crossfamily · standpoint)."
