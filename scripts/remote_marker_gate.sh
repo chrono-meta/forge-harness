@@ -330,6 +330,8 @@ if fence and any(EXACT.match(h) or NEAR.match(h) or PROSE.search(h) for h in hid
     errs.append("unclosed code fence hides a findings claim — close the fence")
 for i, l in enumerate(lines):
     m = EXACT.match(l)
+    if m and not re.match(r"(?:[0-9]|none\b)", m.group(1).strip()):
+        continue   # wrapped prose that happens to start with «findings: » (seen in a real commit message) — not a record
     if not m:
         if NEAR.match(l):
             errs.append("near-key «%s» — write exactly «findings: …»" % l.strip()[:40])

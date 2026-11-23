@@ -416,6 +416,15 @@ out=$(fr f18n 'Notes:
 just a log line, no claim'); rc=$?
 [ "$rc" -eq 0 ] && ok "F18n 닫히지 않은 펜스 안에 주장이 없으면 R-d 그대로 통과" || ng "F18n 어긋남 (rc=$rc)"
 
+# F19 — 줄바꿈된 산문이 우연히 «findings: » 로 시작해도 기록이 아니다(이 PR 의 세 번째 커밋 메시지에서 실제로 났다).
+#   값이 숫자 · none 으로 시작할 때만 기록으로 본다. 그 밖은 산문 — 대신 «findings: five» 같은 오타는 못 잡는다(이름 붙인 느슨함).
+out=$(fr f19 'when the hidden part of that fence holds a claim (a
+findings: line, a near-key, or a prose count), R-a fails.'); rc=$?
+[ "$rc" -eq 0 ] && ok "F19 «findings: line, …» 로 시작하는 줄바꿈 산문은 기록이 아니다 → rc=0" || ng "F19 어긋남 (rc=$rc)"
+out=$(fr f19d 'findings: 3x
+- root · a · named-residual'); rc=$?
+[ "$rc" -eq 1 ] && ok "F19d 숫자로 시작하는 깨진 값(3x)은 여전히 기록 오류 → rc=1" || ng "F19d 어긋남 (rc=$rc)"
+
 # F14 — 마지막 커밋 날짜를 못 읽으면(빈 값) 경고로 접지 않고 판정 불가(rc 2 → 스크립트 rc 10). 날짜만 실패하게 만드는 길이
 #   스크립트 실행엔 없어서(앞 단계가 같은 ref 를 이미 읽었다) 파서를 스크립트에서 그대로 떼어 직접 부른다(codex R1).
 awk '/^FOUT=\$\(python3 - /{f=1;next} /^FPY$/{f=0} f' scripts/remote_marker_gate.sh > "$TMPD/findings_parser.py"
