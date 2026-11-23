@@ -281,6 +281,77 @@ PY
 fi
 
 echo
+echo "== 게이트가 자기 판정을 고칠 수 없게 — 기준(base) 사본으로 판정 (2026-11-23, H2) =="
+# 🟥 실측: pull_request 체크아웃은 PR 쪽(merge ref)이라, FH 자산을 마커 없이 바꾸면서 같은 PR 에서 이 스크립트의
+#    필드 루프 한 줄을 지우면 CI 판정이 rc 1 → rc 0 이 됐다(로컬 재현, 세 팔: 위반만 1 · 위반+게이트 수정 0 ·
+#    같은 브랜치에 base 사본 1). 그래서 Floorless 스텝은 base 의 스크립트와 경로 정본을 꺼내 그것으로 판정한다.
+#    🟥 남는 구멍: 워크플로 파일 자체도 PR 쪽이라 validate.yml 을 같이 고치면 이것도 풀린다 — 막는 것은 저장소
+#    설정(base 에서 정의된 필수 검사 · 코드 소유자 리뷰)이고 그건 운영자 결정이다. 이 레인은 «한 줄 지우기» 를
+#    «워크플로까지 고치기» 로 올렸는지만 본다.
+w5(){ python3 - "$1" <<'W5PY'
+import sys
+try:
+    import yaml
+except ImportError:
+    sys.exit(3)
+wf = yaml.safe_load(open(sys.argv[1], encoding="utf-8"))
+for job in (wf.get("jobs") or {}).values():
+    for st in job.get("steps") or []:
+        if str(st.get("name", "")).startswith("Floorless-channel"):
+            run = st.get("run") or ""
+            ok = ("git show" in run and ":scripts/remote_marker_gate.sh" in run
+                  and ":templates/regression_guard.sh" in run and "RMG_GUARD_FILE" in run
+                  and "bash scripts/remote_marker_gate.sh" not in run)
+            sys.exit(0 if ok else 1)
+sys.exit(2)
+W5PY
+}
+if [ -r "$WF" ]; then
+  w5 "$WF"; w5rc=$?
+  [ "$w5rc" -eq 0 ] && ok "W5: Floorless 스텝이 PR 쪽 스크립트가 아니라 base 의 게이트·경로 정본 사본으로 판정한다" \
+                    || ng "W5: Floorless 스텝이 PR 쪽 게이트를 그대로 돌린다 — PR 이 자기 판정을 고칠 수 있다 (rc=$w5rc)"
+fi
+
+# W6 — 행동 레인(codex R1): 워크플로의 그 스텝 블록을 그대로 꺼내 픽스처 레포에서 돌린다.
+#   알려진 쌍: 같은 «위반 + 게이트 한 줄 삭제» 브랜치를 (a) 실물 스텝으로 → rc 1, (b) base 읽기를 뗀 스텝 사본으로 → rc 0.
+#   (b) 가 0 이 아니면 컨트롤이 죽은 것이다 — W6 는 base 읽기가 실제로 판정을 바꾸는지를 본다.
+#   (c) 기준 sha 가 없는 객체면 rc 10 (PR 사본으로 떨어지지 않는다, codex R1).
+stepblk(){ python3 - "$1" "$2" <<'W6PY'
+import sys, yaml, re
+wf = yaml.safe_load(open(sys.argv[1], encoding="utf-8"))
+for job in (wf.get("jobs") or {}).values():
+    for st in job.get("steps") or []:
+        if str(st.get("name", "")).startswith("Floorless-channel"):
+            run = st["run"]
+            run = "\n".join(l for l in run.splitlines() if "git fetch" not in l)
+            if sys.argv[2] == "nobase":   # the control: run the change's own copy, as before this fix
+                run = re.sub(r'bash "\$GATE"', "bash scripts/remote_marker_gate.sh", run)
+            print(run); sys.exit(0)
+sys.exit(2)
+W6PY
+}
+if python3 -c 'import yaml' 2>/dev/null && [ -r "$WF" ]; then
+  stepblk "$WF" real > "$TMPD/step_real.sh"; stepblk "$WF" nobase > "$TMPD/step_nobase.sh"
+  git checkout -q -B claude/w6-self _base
+  printf 'changed %s\n' "$(date +%s%N)" >> plugins/fh-meta/skills/demo/SKILL.md
+  sed -i.bak 's/^for field in "axes-run" "crossfamily" "standpoint"; do$/for field in ; do/' scripts/remote_marker_gate.sh; rm -f scripts/remote_marker_gate.sh.bak
+  git add -A >/dev/null; git commit -qm "violation + gate loosened" --no-verify
+  git update-ref refs/remotes/origin/main "$(git rev-parse _base)"
+  w6(){ RUNNER_TEMP="$TMPD" GATE_BASE_SHA="$2" RMG_CHANNEL_NAME=claude/w6-self RMG_PR_LOOKUP=0 PR_BODY= bash "$1" >/dev/null 2>&1; }
+  w6 "$TMPD/step_real.sh" "$(git rev-parse _base)"; r_real=$?
+  w6 "$TMPD/step_nobase.sh" "$(git rev-parse _base)"; r_ctl=$?
+  w6 "$TMPD/step_real.sh" 1111111111111111111111111111111111111111; r_miss=$?
+  if [ "$r_real" -eq 1 ] && [ "$r_ctl" -eq 0 ] && [ "$r_miss" -eq 10 ]; then
+    ok "W6: 실물 스텝은 «위반 + 게이트 수정» 을 rc 1 로 막고, base 읽기를 뗀 사본은 rc 0(컨트롤 살아 있음), 없는 기준 sha 는 rc 10"
+  else
+    ng "W6 어긋남 — 실물 rc=$r_real (1 이어야) · base 읽기 뗀 사본 rc=$r_ctl (0 이어야) · 없는 sha rc=$r_miss (10 이어야)"
+  fi
+  git checkout -q main 2>/dev/null || true
+else
+  ng "W6 계기 오류 — PyYAML 또는 validate.yml 이 없다"
+fi
+
+echo
 echo "════════════════════════════════════════"
 printf '  PASS %s   FAIL %s\n' "$PASS" "$FAIL"
 echo "════════════════════════════════════════"
