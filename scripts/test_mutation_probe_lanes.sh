@@ -29,6 +29,33 @@ chk() { if [ "$1" -eq 0 ]; then PASS=$((PASS+1)); echo "  ✅ $2"; else FAILED=1
 [ -f "$PROBE" ] || { echo "FAIL  subject $PROBE missing"; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "FAIL  python3 absent — the probe cannot run, so nothing here was verified"; exit 1; }
 
+# 🟥 PREFLIGHT (2026-11-23) — the probe's state directory is container-global (`/tmp/mutation_probe-<uid>`)
+#    and its inode keys are reused once a file is deleted, so a backup left by an earlier run can carry
+#    the same name as a fixture created below. The probe then refuses, correctly, with rc 2 «a previous run
+#    left a backup» — and a lane that expects rc 2 for a different reason prints ❌ for a run that measured
+#    nothing. Measured in the clean-room container: the same bytes gave `PASS  mutation probe: 128 lanes`
+#    with the directory empty and `❌ Z16` / `FAIL  mutation probe` with 52 stale backups in it; a planted
+#    inode-key backup reproduces it alone. This block only DECLARES the condition, once, before any lane
+#    runs, and counts it as UNMEASURED (never PASS — the exit-code rule below is unchanged). It never
+#    empties the directory: those backups may be someone's real originals, and a person looks at them.
+_mp_dir="/tmp/mutation_probe-$(id -u)"
+# One python call, no `| head`: under pipefail an early-closing reader is this repo's known SIGPIPE class.
+read -r _mp_n _mp_old < <(python3 -c '
+import os,sys
+d=sys.argv[1]
+try: fs=[f for f in os.listdir(d) if f.endswith(".backup")]
+except OSError: fs=[]
+fs.sort(key=lambda f: os.lstat(os.path.join(d,f)).st_mtime)
+print(len(fs), fs[0] if fs else "-")' "$_mp_dir")
+case "${_mp_n:-}" in
+  ''|*[!0-9]*) echo "  ⚠️  PREFLIGHT UNMEASURED — could not count the backups in $_mp_dir (a broken reader is named, not read as «clean»)"
+               UNMEASURED=$((UNMEASURED+1)); _mp_n=0;;
+esac
+if [ "$_mp_n" -gt 0 ]; then
+  echo "  ⚠️  PREFLIGHT UNMEASURED — $_mp_n stale backup(s) in $_mp_dir; oldest: $_mp_old — inode keys are reused, so a lane below may be refused for a reason that is not its subject. Empty it and re-run."
+  UNMEASURED=$((UNMEASURED+1))
+fi
+
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 cd "$T" || exit 1
 
@@ -501,8 +528,18 @@ rmdir z15.sh 2>/dev/null; bk=$(bkpath z15.sh); [ -f "$bk" ] && cp "$bk" z15.sh &
 # Z16 — the lane cannot start (interpreter missing) → 2, subject untouched, no leftover
 cp age.sh z16.sh; h0=$(sha_of z16.sh)
 printf '#!/nonexistent/interp\nexit 0\n' > lane_z16.sh
+# Same two-key pre-check as Z17 below, for the same reason (see PREFLIGHT above): a backup already at
+# either key makes the probe refuse with rc 2 for a reason that is not «could not be started», and this
+# lane would print ❌ for a run that measured nothing. The record's existence decides — never the message.
+_z16stale=""
+for _b in "$(bkpath z16.sh)" "$(ibkpath z16.sh)"; do [ -e "$_b" ] && _z16stale="$_b"; done
+if [ -n "$_z16stale" ]; then
+  echo "  ⚠️  Z16 UNMEASURED — a backup is already at $_z16stale; inode keys are reused, so this lane would be refused for a reason that is not its subject. Empty it and re-run."
+  UNMEASURED=$((UNMEASURED+1))
+else
 out=$(python3 "$PROBE" z16.sh lane_z16.sh --timeout 30 2>&1); rc=$?
 [ "$rc" -eq 2 ] && grep -q 'could not be started' <<<"$out" && [ "$(sha_of z16.sh)" = "$h0" ] && [ ! -e "$(bkpath z16.sh)" ] ; chk $? "Z16 a lane that cannot start → 2 with that reason, no backup left behind (v5: traceback rc 1 + blocking leftover)"
+fi
 # Z17 — a closed stdout does not lose the run
 cp age.sh z17.sh; h0=$(sha_of z17.sh)
 sed 's#age\.sh#z17.sh#' lane_strong.sh > lane_z17.sh   # v6 ran lane_strong here, which never sources z17.sh — the v7 control caught it

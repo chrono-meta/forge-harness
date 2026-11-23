@@ -195,7 +195,7 @@ if [ "${FH_SELFCHECK_PROFILE:-full}" = consumer ]; then
   if _package_mode; then _CONSUMER=1
   else echo "⚠️  FH_SELFCHECK_PROFILE=consumer IGNORED — this tree is a git checkout; running the full suite"; fi
 fi
-CHECKOUT_ONLY_SUITES="test_fixture_guard_coverage_lanes.sh test_package_coverage_lanes.sh test_files_manifest_shipping_lanes.sh test_map_postprocess_lanes.sh test_remote_marker_gate_lanes.sh test_worktree_reclaim_lanes.sh test_sim_isolated_run_lanes.sh test_utterance_intake_lanes.sh test_precommit_pointer_index_lanes.sh test_selfcheck_shard_lanes.sh test_ci_validate_shard_count_lanes.sh"
+CHECKOUT_ONLY_SUITES="test_fixture_guard_coverage_lanes.sh test_package_coverage_lanes.sh test_files_manifest_shipping_lanes.sh test_map_postprocess_lanes.sh test_remote_marker_gate_lanes.sh test_worktree_reclaim_lanes.sh test_sim_isolated_run_lanes.sh test_utterance_intake_lanes.sh test_precommit_pointer_index_lanes.sh test_selfcheck_shard_lanes.sh test_ci_validate_shard_count_lanes.sh test_prepush_marker_lookup_lanes.sh"
 CONSUMER_SKIPPED=""
 _consumer_skip() { # $1 = suite basename · rc 0 = skip it (and it has been named)
   [ "$_CONSUMER" -eq 1 ] || return 1
@@ -2249,9 +2249,28 @@ fi
 
 # prepush_marker_lookup — the pre-push Load-Bearing gate reads this branch's marker where pre-commit
 # writes it (the evidence root), not a path only the main checkout has.
+# 🟥 The row matters as much as the rc here. Measured 2026-11-23 (clean-room audit, round 10): on a
+# shallow checkout this suite died at its first fixture printing its own «HARNESS-ERROR: fixture W1»,
+# 0 of its lanes reached a verdict — and because this block set `fail=1` without printing a row, the
+# run's countable vocabulary (`❌` · `FAIL  ` · `TIMEOUT  ` · `HARNESS ERROR  `) carried NO trace of
+# it. The suite's own hyphenated prefix is not that vocabulary, so a round-to-round row diff — the
+# comparison this repo's weekly audit runs on — read «nothing changed» while the gate's 11 lanes were
+# measuring nothing. The exit code knew; the record did not. 22 further blocks in this file have the
+# same silent shape (measured: they invoke a suite that can exit non-zero via its own HARNESS-ERROR
+# text); converting them is a separate, mechanical change and is named in the PR, not done here.
+# 🟥 And the row has to be the RIGHT row. Measured the same day in the tree an npm consumer actually
+# receives (`npm pack` → extracted outside git): this suite's fixture clones the checkout, so there it
+# dies with `fatal: repository '<tree>' does not exist` and the row above named a sound hook —
+# `subject: templates/.git-hooks/pre-push` — as the subject of a failure. It is a checkout-only suite
+# and was missing from CHECKOUT_ONLY_SUITES, so the consumer profile had nothing to declare it with.
 if [ -f scripts/test_prepush_marker_lookup_lanes.sh ]; then
-  if ! bash scripts/test_prepush_marker_lookup_lanes.sh; then
+  if _consumer_skip test_prepush_marker_lookup_lanes.sh; then :
+  else
+  bash scripts/test_prepush_marker_lookup_lanes.sh; _pml_rc=$?
+  if [ "$_pml_rc" -ne 0 ]; then
+    echo "FAIL  test_prepush_marker_lookup_lanes.sh (rc=$_pml_rc) — see that suite's output above; subject: templates/.git-hooks/pre-push"
     fail=1
+  fi
   fi
 else
   echo "FAIL  test_prepush_marker_lookup_lanes.sh: absent — the pre-push marker lookup has no lane"
