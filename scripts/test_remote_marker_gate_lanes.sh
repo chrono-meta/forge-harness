@@ -372,6 +372,23 @@ mkgh badbody json "[{\"head\":{\"ref\":\"$PBR\",\"repo\":{\"full_name\":\"o/r\"}
 out=$(plook badbody); rc=$?
 [ "$rc" -eq 10 ] && ok "L5d push 조회 경로도 본문 값이 문자열·null 이 아니면 rc=10" || ng "L5d 어긋남 (rc=$rc)"
 
+# F17 — 코드 펜스 안의 예시는 기록이 아니다(이 PR 자기 본문의 형식 예시가 기록으로 읽혀 막혔다 — 마지막 라운드 뒤 수리)
+FENCE_BODY='The record looks like this:
+```
+findings: 3
+- codex R1 · <mechanism> · fixed@<sha>
+```
+findings: 1
+- codex R1 · help flag read as a file list · fixed@0123abc'
+out=$(RMG_FINDINGS_BLOCK_FROM=$PAST fr f17 "$FENCE_BODY"); rc=$?
+[ "$rc" -eq 0 ] && ok "F17 펜스 안 예시(findings: 3 + 자리표시자)는 건너뛰고 펜스 밖 진짜 블록만 본다 → rc=0" || ng "F17 어긋남 (rc=$rc)"
+out=$(RMG_FINDINGS_BLOCK_FROM=$PAST fr f17p 'codex R1 5 findings, all fixed.
+```
+findings: 1
+- codex R1 · example · fixed@0123abc
+```'); rc=$?
+[ "$rc" -eq 1 ] && ok "F17p 펜스 안의 findings: 줄은 산문 개수를 덮지 못한다 → rc=1 (R-c 그대로)" || ng "F17p 어긋남 (rc=$rc)"
+
 # F14 — 마지막 커밋 날짜를 못 읽으면(빈 값) 경고로 접지 않고 판정 불가(rc 2 → 스크립트 rc 10). 날짜만 실패하게 만드는 길이
 #   스크립트 실행엔 없어서(앞 단계가 같은 ref 를 이미 읽었다) 파서를 스크립트에서 그대로 떼어 직접 부른다(codex R1).
 awk '/^FOUT=\$\(python3 - /{f=1;next} /^FPY$/{f=0} f' scripts/remote_marker_gate.sh > "$TMPD/findings_parser.py"

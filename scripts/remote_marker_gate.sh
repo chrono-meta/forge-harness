@@ -302,7 +302,14 @@ printf '%s\n' "$RECORD" > "$REC_FILE"
 FOUT=$(python3 - "$FINDINGS_BLOCK_FROM" "${LAST_DATE:-}" "$REC_FILE" <<'FPY'
 import re, sys
 block_from, last_date, rec = sys.argv[1], sys.argv[2], sys.argv[3]
-lines = open(rec, encoding="utf-8", errors="replace").read().splitlines()
+lines, fence = [], None
+for l in open(rec, encoding="utf-8", errors="replace").read().splitlines():
+    m = re.match(r"^\s{0,3}(\x60{3,}|~{3,})", l)   # \x60 = backquote; a literal one inside this $( ) heredoc breaks bash
+    if m and (fence is None or m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence)):
+        fence = None if fence else m.group(1)
+        lines.append("")
+        continue
+    lines.append("" if fence else l)   # an example inside a code fence is not a record (found on this PR's own body)
 EXACT = re.compile(r"^findings: (.*)$")
 NEAR = re.compile(r"^\s*\**\s*findings?\s*\**\s*:", re.I)
 SOURCE = r"(?:sonnet|haiku|opus|root|operator|ci|[A-Za-z][\w.-]* R\d+)"
