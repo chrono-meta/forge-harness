@@ -336,6 +336,56 @@ k_lane "K54 bypass: --rename-section core blocks"           2 "git config --rena
 k_lane "K55 bypass: --get hooksPath \"\" (filter) is clean"   0 'git config --get core.hooksPath ""' bypassPermissions "" "-" "DESTRUCTIVE-OP"
 k_lane "K56 bypass: hooksPath 2>&1 read is clean"           0 "git config core.hooksPath 2>&1" bypassPermissions "" "-" "DESTRUCTIVE-OP"
 k_lane "K57 bypass: --remove-section other is clean"        0 "git config --remove-section alias" bypassPermissions "" "-" "DESTRUCTIVE-OP"
+echo "-- K58+: holes after #1192 (Sonnet review, reproduced on merged gate) --"
+# Hole 1: a read verb AFTER the key is the value — `git config core.hooksPath get` SETS hooksPath to «get».
+k_lane "K58 bypass: hooksPath get (value) blocks"           2 "git config core.hooksPath get" bypassPermissions "" "pre-push" "-"
+k_lane "K59 bypass: hooksPath list (value) blocks"          2 "git config core.hooksPath list" bypassPermissions "" "pre-push" "-"
+k_lane "K60 bypass: hooksPath --get (trailing) blocks"      2 "git config core.hooksPath --get" bypassPermissions "" "pre-push" "-"
+k_lane "K61 bypass: hooksPath -l (trailing) blocks"         2 "git config core.hooksPath -l" bypassPermissions "" "pre-push" "-"
+k_lane "K62 bypass: hooksPath get \"\" blocks"                2 'git config core.hooksPath get ""' bypassPermissions "" "pre-push" "-"
+k_lane "K63 bypass: config get hooksPath read is clean"     0 "git config get core.hooksPath" bypassPermissions "" "-" "DESTRUCTIVE-OP"
+k_lane "K64 bypass: config --get hooksPath read is clean"   0 "git config --get core.hooksPath" bypassPermissions "" "-" "DESTRUCTIVE-OP"
+k_lane "K65 bypass: config --get-all hooksPath is clean"    0 "git config --get-all core.hooksPath" bypassPermissions "" "-" "DESTRUCTIVE-OP"
+k_lane "K66 bypass: config --list | grep hooksPath clean"   0 "git config --list | grep -i core.hooksPath" bypassPermissions "" "-" "DESTRUCTIVE-OP"
+k_lane "K67 bypass: config -l --show-origin key clean"      0 "git config -l --show-origin core.hooksPath" bypassPermissions "" "-" "DESTRUCTIVE-OP"
+# Hole 2: a push-option VALUE (`-o -n`) is not a dry-run flag.
+k_lane "K68 bypass: --delete … -o -n blocks"                2 "git push --delete origin x -o -n" bypassPermissions "" "remote" "-"
+k_lane "K69 bypass: --delete … --push-option -n blocks"     2 "git push --delete origin x --push-option -n" bypassPermissions "" "remote" "-"
+k_lane "K70 bypass: --delete … --push-option=-n blocks"     2 "git push --delete origin x --push-option=-n" bypassPermissions "" "remote" "-"
+k_lane "K71 bypass: :ref -o --dry-run blocks"               2 "git push origin :x -o --dry-run" bypassPermissions "" "remote" "-"
+k_lane "K72 bypass: --dry-run --delete is clean"            0 "git push --dry-run --delete origin x" bypassPermissions "" "-" "DESTRUCTIVE-OP"
+# A push option in the statement turns the dry-run exemption off (codex R1: -on, --push -n, quoted values).
+k_lane "K73 bypass: -o foo --delete -n blocks (no dry exempt)" 2 "git push -o foo --delete -n origin x" bypassPermissions "" "remote" "-"
+k_lane "K74 bypass: -o foo without delete is clean"         0 "git push -o foo origin main" bypassPermissions "" "-" "DESTRUCTIVE-OP"
+# Hole 3 (pre-existing): backtick substitution is a command position, like $(...).
+k_lane "K75 bypass: \`push --delete\` in backticks blocks"   2 'echo `git push origin --delete x`' bypassPermissions "" "remote" "-"
+k_lane "K76 bypass: \`reset --hard\` in backticks blocks"    2 'x=`git reset --hard HEAD~1`' bypassPermissions "" "[BLOCKED]" "-"
+k_lane "K77 bypass: backtick read is clean"                 0 'echo `git rev-parse HEAD`' bypassPermissions "" "-" "DESTRUCTIVE-OP"
+k_lane "K78 bypass: --comment get <key> x blocks"           2 "git config --comment get core.hooksPath x" bypassPermissions "" "pre-push" "-"
+k_lane "K79 bypass: --comment=--get <key> x blocks"         2 "git config --comment=--get core.hooksPath x" bypassPermissions "" "pre-push" "-"
+k_lane "K80 bypass: --file get <key> x stays clean (other file)" 0 "git config --file get core.hooksPath x" bypassPermissions "" "-" "DESTRUCTIVE-OP"
+k_lane "K81 bypass: --comment get <key> \"\" blocks"          2 'git config --comment get core.hooksPath ""' bypassPermissions "" "pre-push" "-"
+# codex R1 on this change
+k_lane "K82 bypass: --delete … -on (attached value) blocks"  2 "git push --delete origin x -on" bypassPermissions "" "remote" "-"
+k_lane "K83 bypass: --delete … --push -n (abbrev) blocks"    2 "git push --delete origin x --push -n" bypassPermissions "" "remote" "-"
+k_lane "K84 bypass: --delete … -o \"foo -n\" blocks"         2 'git push --delete origin x -o "foo -n"' bypassPermissions "" "remote" "-"
+k_lane "K85 bypass: --comment \"foo get\" <key> x blocks"    2 'git config --comment "foo get" core.hooksPath x' bypassPermissions "" "pre-push" "-"
+k_lane "K86 bypass: dry-run in another backtick blocks"      2 'echo `git push --delete origin x` `git push --dry-run origin main`' bypassPermissions "" "remote" "-"
+k_lane "K87 bypass: dry-run in another \$( ) blocks"          2 'echo $(git push --delete origin x) $(git push --dry-run origin main)' bypassPermissions "" "remote" "-"
+k_lane "K88 bypass: hooksPath read in backticks is clean"    0 'echo `git config core.hooksPath`' bypassPermissions "" "-" "DESTRUCTIVE-OP"
+k_lane "K89 bypass: --get in one \` \`, write in next blocks" 2 'echo `git config --get x` `git config core.hooksPath y`' bypassPermissions "" "pre-push" "-"
+# Known false positive, kept on purpose: a push-option VALUE shaped like `:ref` reads as a delete (blocked on main too).
+k_lane "K90 bypass: -o :x value blocks (named FP)"           2 "git push origin main -o :x" bypassPermissions "" "remote" "-"
+k_lane "K91 bypass: --get in one \` \`, \"\" in next blocks"  2 'echo `git config --get x` `git config core.hooksPath ""`' bypassPermissions "" "pre-push" "-"
+# codex R2 on this change
+k_lane "K92 bypass: hooksPath \`printf …\` value blocks"    2 'git config core.hooksPath `printf /dev/null`' bypassPermissions "" "pre-push" "-"
+k_lane "K93 bypass: hooksPath \"(disabled)\" value blocks"   2 'git config core.hooksPath "(disabled)"' bypassPermissions "" "pre-push" "-"
+k_lane "K94 bypass: hooksPath \$(…) value blocks"            2 'git config core.hooksPath $(printf /dev/null)' bypassPermissions "" "pre-push" "-"
+k_lane "K95 bypass: \$(git config hooksPath) read is clean"   0 'h=$(git config core.hooksPath)' bypassPermissions "" "-" "DESTRUCTIVE-OP"
+k_lane "K96 bypass: --delete origin -- -n blocks"            2 "git push --delete origin -- -n" bypassPermissions "" "remote" "-"
+k_lane "K97 bypass: --dry-run --delete x is still clean"     0 "git push --dry-run --delete origin x" bypassPermissions "" "-" "DESTRUCTIVE-OP"
+k_lane "K98 bypass: --get <key> \`…\` (pattern) is clean"    0 'git config --get core.hooksPath `echo x`' bypassPermissions "" "-" "DESTRUCTIVE-OP"
+k_lane "K99 bypass: --comment get <key> (x) blocks"          2 'git config --comment get core.hooksPath "(x)"' bypassPermissions "" "pre-push" "-"
 
 # C3 — clean command: NO emission at all (silence must stay silent).
 c_out=$(payload 'git status' | bash "$G" 2>"$c_errf"); c_rc=$?
