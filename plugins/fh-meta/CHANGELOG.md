@@ -2,13 +2,27 @@
 
 ### [Unreleased]
 
+### [3.48.0] — 2026-11-23
+
+Minor by the version policy. Two `fh-gate` changes make it refuse more by default: a help or version flag is honoured only on its own (#1190), and under CI even a lone one exits 11 (#1191). Both close the same hole, where a file list that reads as a flag printed help, exited 0 and was read as a pass with no review. They close it in the GitHub Action and in CI systems that set `CI`; it stays open in CI systems that do not set `CI` and in local hooks or scripts (named in the second entry). See their `BREAKING (gate):` entries. `fh-run` and `fh-goal` stop pinning a codex model (#1189). The new shipped lanes are L8 and L9 in `test_action_yml_lanes.sh`, and M1–M4 in `test_fh_run_resolver_lanes.sh` and `test_fh_goal_change_detection_lanes.sh`. Items marked «not in the npm package» are in the repository checkout only.
+
 ### Changed
-- BREAKING (gate): `fh-gate` (shipped), a lone help or version flag under CI.
+- BREAKING (gate): `fh-gate` (shipped), help and version flags with other arguments (#1190).
+  - What changed: `-h`, `--help`, `-V` and `--version` are honoured only as the sole argument. With any other argument, `fh-gate` exits 11 (argument error). In the GitHub Action (not in the npm package), exit 11 maps to `ARG_ERROR` with `reviewed=false`, and the step fails under the default `fail-on`.
+  - Why: the Action always calls `fh-gate "$FILES" "$LEVEL" github-action` and maps exit 0 to `verdict=PASS`, `reviewed=true`. A `files` input of `-h`, `--help`, `-V` or `--version` (a file literally named so, or a list built from PR data) printed help, exited 0 and was reported as a reviewed PASS (3.47.0 release security review, MEDIUM-1).
+  - What breaks: help or version with trailing arguments, including `FH_TARGET_FILES=x fh-gate -h quick`, now exits 11. `fh-gate -h` and `fh-gate --version` alone behave as before outside CI (see the next entry).
+  - Lanes: L8 in `scripts/test_action_yml_lanes.sh` runs the Action's run block against the real `fh-gate.sh`.
+- BREAKING (gate): `fh-gate` (shipped), a lone help or version flag under CI (#1191).
   - What changed: when the `CI` environment variable is set to anything other than empty, `0` or `false`, `fh-gate -h`, `--help`, `-V` and `--version` given alone still print their text, then exit 11 (argument error) instead of 0. GitHub Actions, GitLab, CircleCI, Travis and Buildkite set `CI`.
-  - Why: a plain CI step that runs `fh-gate "$FILES"` with `FILES=-h` (a file literally named so, or a list built from PR data) passes the same arguments as a person typing `fh-gate -h`, so it printed help and exited 0: the step passed and nothing was reviewed. This is the residual #1190 named; #1190 closed the GitHub Action path, which always passes three arguments.
+  - Why: a plain CI step that runs `fh-gate "$FILES"` with `FILES=-h` passes the same arguments as a person typing `fh-gate -h`, so the rule above cannot see it: it printed help and exited 0, so the step passed and nothing was reviewed.
   - What breaks: a deliberate `fh-gate --version` or `--help` in a CI step now fails that step. Workaround: `CI= fh-gate --version`.
-  - Still open: CI systems that do not set `CI` (Jenkins; Azure Pipelines sets `TF_BUILD` instead) and local git hooks or scripts that call `fh-gate "$FILES"` with one argument. There, `FILES=-h` still exits 0.
+  - Still open: CI systems that do not set `CI` (Jenkins; Azure Pipelines sets `TF_BUILD` instead) and local git hooks or scripts that call `fh-gate "$FILES"` with one argument. There, `FILES=-h` still exits 0; check yourself that the file list does not start with `-` before calling `fh-gate`.
   - Outside CI, and with `CI` empty, `0` or `false`, nothing changes. Lanes: L9 in `scripts/test_action_yml_lanes.sh`.
+- `fh-run` and `fh-goal` (shipped) no longer pass `-m gpt-5.5` to codex when `FH_MODEL` is unset or empty; codex picks its own default, as `fh-gate` has done since #1186. Before, codex 0.164.0 refused `gpt-5.5` for a ChatGPT-account login (HTTP 400). `FH_MODEL=<id>` still passes `-m <id>`, and the claude default (`claude-sonnet-5-5`) is unchanged (#1189).
+  - After a successful unpinned codex run, each script prints one stderr line: `→ fh-run: codex default (not pinned, resolved <id>)` (or `fh-goal`). The id is read from codex's own stderr banner above the first `user` line, and must be id-shaped, or the line says `unknown`.
+  - The `model=` progress line and the prompt's `Model:` line now read `codex default (not pinned)` instead of a model id. A script that greps `model=gpt-5.5` there stops matching.
+  - API-key users who got `gpt-5.5` before now get codex's default, so the model, cost and output can change. Set `FH_MODEL` for a reproducible model. Both points are in `docs/codex-compat.md` and in `knowledge/shared/harness-core/fh_integration_contract.md`.
+  - `fh-goal` never exported its default, so the `fh-gate` step it runs was already unpinned. That is unchanged.
 
 ### [3.47.0] — 2026-11-22
 
