@@ -45,7 +45,9 @@
 #   (`--forc`), mention-as-data in block mode (an echo/heredoc that only names
 #   `DESTRUCTIVE_OP_OK=1` blocks), and pushes from a shell the agent did not type into. With
 #   FH_DESTRUCTIVE_BLOCK=1 set in a default-mode session, noqa no longer opens a block either —
-#   that variable asks for blocking. A determined agent gets past any client-side check; the floor
+#   that variable asks for blocking. Fail-closed on purpose (block mode, follow-up to #1192): a push
+#   with a push option or `--` gets no dry-run exemption, and a push-option value shaped like `:ref`
+#   reads as a delete. A determined agent gets past any client-side check; the floor
 #   is server-side branch protection (pre-push header says the same). Static shell-string checks do
 #   not converge (FH measured 15 rounds on a sibling check), so review rounds here are capped at
 #   two. Lanes K1–K51 (input-from: IG1 KP-F v2 records, codex R1, Sonnet quench-challenger R1).
@@ -167,9 +169,11 @@ fi
 #   `git re\` + newline + `set --hard` split the token and miss (measured bypass).
 #   Separators `&& || | & ( )` are space-padded so `:&&git reset --hard` and `--force|cat`
 #   satisfy the leading/trailing boundary classes without whitespace in the original.
+#   A backtick is padded too: `` `git push origin --delete x` `` is a command substitution like
+#   `$(...)`, and before 2026-11-23 the backtick in front of `git` defeated every row's `[ (/]`.
 JOINED="${CMD//\\$'\n'/}"
 FLAT=" $(printf '%s' "$JOINED" | tr -d '\r' | tr '\n' ';' | sed 's/;/; /g' \
-  | sed -E 's/(\&\&|\|\||[|&()])/ \1 /g' | tr -d '"'"'" | tr '\t' ' ' | tr -s ' ') "
+  | sed -E 's/(\&\&|\|\||[|&()`])/ \1 /g' | tr -d '"'"'" | tr '\t' ' ' | tr -s ' ') "
 # Kept before git-option normalization: the normalizer below consumes `-c k=v`, which is exactly
 # where `git -c core.hooksPath=/dev/null push` hides the pre-push switch-off (block-only row).
 FLAT0="$FLAT"
@@ -258,7 +262,14 @@ if [ -n "$BLOCK_WHY" ]; then
   # the advisory output are untouched. Per statement: `[^|;&]*` cannot cross `&&`/`;`, so a dry-run
   # in one statement never clears a real delete in the next. git accepts unique prefixes of long
   # options, so `--dr…` is dry-run and the rows match `--de…`, `--no-v…`, `--mi…`, `--pru…`.
-  FLATB=$(printf '%s' "$FLAT" | sed -E 's/git push (([^|;&]* )?(--dr[a-z-]*|-[a-zA-Z]*n[a-zA-Z]*)[ ;])/git push_dryrun \1/g')
+  # A statement ends at `| ; &`, and also at a paren or backtick: a dry-run in one `$(...)` or
+  # backtick substitution must not clear a real delete in the next one (codex R1).
+  # A push option in the statement turns the exemption back off. Its value can carry `-n` as data
+  # (`-o -n`, `-on`, `--push -n`, `-o "foo -n"` once quotes are stripped) and no regex here can
+  # tell that value from a flag, so the call fails closed: it blocks (Sonnet review of #1192, codex R1).
+  # So does `--`: after it every word is a ref, and `refs/heads/-n` is a valid name (codex R2).
+  FLATB=$(printf '%s' "$FLAT" | sed -E 's/git push (([^|;&()`]* )?(--dr[a-z-]*|-[a-zA-Z]*n[a-zA-Z]*)[ ;])/git push_dryrun \1/g' \
+    | sed -E 's/git push_dryrun (([^|;&()`]* )?((-[a-zA-Z]*o|--pu[a-z-]*)([ =;]|[^ ;])|--[ ;]))/git push \1/g')
   BLOCK_ONLY=(
     "FLATB@@[ (/]git push ([^|;&]* )?(--de[a-z]*[ ;]|-[a-zA-Z]*d[a-zA-Z]*[ ;])@@git push --delete/-d removes a remote branch or tag"
     "FLATB@@[ (/]git push ([^|;&]* )?\\+?:[^ ;]+[ ;]@@git push <remote> :<ref> deletes the remote ref"
@@ -283,24 +294,53 @@ if [ -n "$BLOCK_WHY" ]; then
   # vanishes when quotes are stripped, so it is checked on the raw command (codex R1).
   # The value token after the key is a write unless it is a redirect (`2>/dev/null`, `>x`, `2>&1`)
   # or a closing paren — a digit alone (`core.hooksPath 0`) is a value (codex R2).
+  # A read verb counts only BEFORE the key: after it, the word is the value — `git config
+  # core.hooksPath get` (or `… --get`, `… -l`) SETS hooksPath to «get» (Sonnet review of #1192).
   HP_READ_RX='(--get(-all|-regexp|-urlmatch)?|--list| -l| get| list)( |$)'
+  # `--comment <text>` is for writes only, and its text can hold `get` (`--comment get`,
+  # `--comment "foo get"` once quotes are stripped): a segment with `--comm…` before the key is
+  # never a read (measured on git 2.50: both forms set hooksPath; codex R1).
+  hp_is_read() {
+    local pre; pre=$(printf '%s' "$1" | sed -E "s/${HP}.*//")
+    printf '%s' "$pre" | LC_ALL=C grep -qE -- '--comm' && return 1
+    printf '%s' "$pre" | LC_ALL=C grep -qE -- "$HP_READ_RX"
+  }
   HP_WRITE=""
   while IFS= read -r seg; do
     [ -n "$seg" ] || continue
-    printf '%s' "$seg" | LC_ALL=C grep -qE -- "$HP_READ_RX" && continue
+    hp_is_read "$seg" && continue
     if printf '%s' "$seg" | LC_ALL=C grep -qE -- "(--unset(-all)?|--replace-all|--add| set| unset) "; then HP_WRITE=1; break; fi
     nxt=$(printf '%s' "$seg" | LC_ALL=C grep -oE -- "${HP} +[^ ]+" | head -1 | sed -E 's/^[^ ]+ +//')
     if [ -n "$nxt" ] && ! printf '%s' "$nxt" | LC_ALL=C grep -qE '^(\)|[0-9]*[<>])'; then HP_WRITE=1; break; fi
   done <<SEGS
-$(printf '%s' "$FLAT" | LC_ALL=C grep -oE "[ (/]git config [^|;&]*${HP}[^|;&]*")
+$(printf '%s' "$FLAT" | LC_ALL=C grep -oE "[ (/]git config [^|;&()\`]*${HP}[^|;&()\`]*")
 SEGS
+  # A value that starts with `(` or a backtick ends the segment above before any value is seen
+  # (`core.hooksPath `printf x``, `"(disabled)"` once quotes are stripped; codex R2). The key then
+  # followed by `(` is a write; followed by a backtick it is a write unless that backtick CLOSES a
+  # substitution the key sits in (an odd count of backticks before it). Reads keep their exemption.
+  # Runs only when that shape is present; if python fails there, it counts as a write.
+  if [ -z "$HP_WRITE" ] && printf '%s' "$FLAT" | LC_ALL=C grep -qE "${HP} +[(\`]"; then
+    hp_tail=$(printf '%s' "$FLAT" | python3 -c '
+import re, sys
+f = sys.stdin.read()
+read_rx = re.compile(r"(--get(-all|-regexp|-urlmatch)?|--list| -l| get| list)( |$)")
+for m in re.finditer(r"[ (/]git config ([^|;&()`]*?)core\.hookspath +([(`])", f, re.I):
+    pre = m.group(1)
+    if "--comm" not in pre and read_rx.search(" " + pre):
+        continue
+    if m.group(2) == "(" or f[:m.start(2)].count("`") % 2 == 0:
+        print("W"); break
+' 2>/dev/null) || hp_tail=W
+    [ "$hp_tail" = W ] && HP_WRITE=1
+  fi
   # Empty value: checked on the raw command (quotes intact), per statement, same read exemption.
   while IFS= read -r seg; do
     [ -n "$seg" ] || continue
-    printf '%s' "$seg" | LC_ALL=C grep -qE -- "$HP_READ_RX" && continue
+    hp_is_read "$seg" && continue
     HP_WRITE=1; break
   done <<SEGS
-$(printf '%s' "$JOINED" | LC_ALL=C grep -oE "git[^|;&]*config[^|;&]*${HP}[[:space:]]+(\"\"|'')")
+$(printf '%s' "$JOINED" | LC_ALL=C grep -oE "git[^|;&()\`]*config[^|;&()\`]*${HP}[[:space:]]+(\"\"|'')")
 SEGS
   # Removing or renaming the whole [core] section drops core.hooksPath without naming it (codex R2).
   printf '%s' "$FLAT" | LC_ALL=C grep -qE "[ (/]git config ([^|;&]* )?(--)?(remove|rename)-section +[cC][oO][rR][eE][ ;]" && HP_WRITE=1
