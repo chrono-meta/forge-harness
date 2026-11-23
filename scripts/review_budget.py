@@ -32,6 +32,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import session_checklist as sc  # single source for checklist table parsing
+
 MERGED_RE = re.compile(r"#(\d+)\s+MERGED \(auto")
 
 
@@ -50,28 +53,19 @@ def utterance_texts_lease(text):
             yield line.split("⇒", 1)[0]
 
 
-def find_header_index(cells, name):
-    for i, c in enumerate(cells):
-        if c.strip().startswith(name):
-            return i
-    return None
-
-
-def utterance_texts_checklist(text):
-    ui = None
-    for line in text.splitlines():
-        s = line.strip()
-        if not s.startswith("|"):
-            ui = None if not s else ui
-            continue
-        cells = s.strip("|").split("|")
-        if ui is None:
-            ui = find_header_index(cells, "발화")
-            continue
-        if set(s.replace("|", "").strip()) <= set("-: "):
-            continue
-        if ui < len(cells):
-            yield cells[ui]
+def utterance_cells_checklist(path):
+    """발화 cells of every 상태 table, through session_checklist's single parser (no second normalizer).
+    Returns (cells, None) or (None, reason) — a sheet with no 상태 table or no data rows is not measured."""
+    tables, rc = sc.load_tables(path)
+    if rc is not None or not tables:
+        return None, "no readable 상태 table" if rc in (None, 10) else "상태 table with no data rows"
+    cells = []
+    for header, rows in tables:
+        ui = sc.find_header_index(header, "발화")
+        if ui is None or ui < 0:
+            return None, "no single 발화 column"
+        cells.extend(r[ui] for r in rows if len(r) > ui)
+    return cells, None
 
 
 def main(argv=None):
@@ -97,6 +91,13 @@ def main(argv=None):
     texts = []
     for kind, paths in (("report", a.selfdev_report), ("lease", a.lease), ("checklist", a.checklist)):
         for p in paths:
+            if kind == "checklist":
+                cells, why = (None, "FileNotFoundError") if not os.path.isfile(p) else utterance_cells_checklist(p)
+                if cells is None:
+                    unreadable.append(f"{os.path.basename(p)} ({why})")
+                    continue
+                texts.append((kind, cells))
+                continue
             try:
                 t = read(p)
             except (OSError, UnicodeDecodeError) as e:
@@ -117,7 +118,7 @@ def main(argv=None):
         elif kind == "lease":
             operator.extend(utterance_texts_lease(t))
         else:
-            operator.extend(utterance_texts_checklist(t))
+            operator.extend(t)
 
     unread = sorted(n for n in merged if not any(num_re(n).search(u) for u in operator))
     line = f"review budget: auto-merged {len(merged)} · operator-unread {len(unread)}"

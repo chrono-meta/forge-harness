@@ -11,6 +11,7 @@
 # R8 a refused or HOLD line (no «MERGED (auto») is not a merge
 # R9 on an utterance line, a number after «⇒» (root's scope note, not the operator's words or the question
 #    the operator answered) does not count as read
+# R10 a checklist with no 상태 table (parsed by session_checklist.py, not a second parser) → not measured, rc 2
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 R="$HERE/review_budget.py"
@@ -66,6 +67,10 @@ echo "$out" | sed 's/^/    | /'
 : > "$T/empty_report.md"
 out="$(python3 "$R" --selfdev-report "$T/empty_report.md" --lease "$T/lease.md" 2>&1)"; rc=$?
 [ "$rc" = 0 ] && echo "$out" | grep -q 'auto-merged 0 · operator-unread 0' && ok "R7 no merges → real 0, rc 0" || ng "R7 rc=$rc"
+
+printf '# notes\n\n#9001 is fine\n' > "$T/notable.md"
+out="$(python3 "$R" --selfdev-report "$T/report.md" --checklist "$T/notable.md" 2>&1)"; rc=$?
+[ "$rc" = 2 ] && echo "$out" | grep -q 'not measured' && ok "R10 checklist without a 상태 table → not measured, rc 2" || ng "R10 rc=$rc"
 
 echo "review_budget lanes: pass=$pass fail=$fail"
 [ "$fail" = 0 ]
