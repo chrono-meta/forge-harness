@@ -79,12 +79,13 @@ These are named on purpose, not overlooked:
 The hard floor for your remote is server-side branch protection: restrict force pushes and deletions
 in your Git host's settings. No client-side hook replaces it.
 
-Two lines in the block text are written for an FH checkout, not for your repo:
-- «pre-push hook will also gate this». fh-guard ships no pre-push hook (a plugin cannot install one), so
-  in your repo this hook is the only layer.
-- The pointer to `templates/predelete_check.sh`. That path exists in the FH repo, not in yours.
+Some of the gate's text is written for an FH checkout, not for your repo:
+- The warning text points at `templates/predelete_check.sh`. That path exists in the FH repo, not in yours.
+- The rows for `--no-verify`, `git -c core.hooksPath=…` / `GIT_CONFIG_*`, and `DESTRUCTIVE_OP_OK=` speak of
+  «the pre-push layer». fh-guard ships no pre-push hook (a plugin cannot install one), so in your repo
+  this hook is the only layer.
 
-The copy is kept byte-identical to the FH gate, so the text cannot change here.
+The copy is kept byte-identical to the FH gate, so the text changes only when the FH gate changes.
 
 ## If you also use FH itself
 

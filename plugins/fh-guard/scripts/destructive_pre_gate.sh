@@ -230,7 +230,7 @@ PATTERNS=(
   '[ (/]git checkout ([^|;&]* )?\.\/? @@git checkout . reverts every local modification'
   '[ (/]git restore ([^|;&]* )?(--worktree|-[a-zA-Z]*W[a-zA-Z]*[ ;])@@git restore --worktree reverts working-tree changes'
   '[ (/]git restore ([^|;&]* )?\.\/? @@git restore . reverts every local modification'
-  '[ (/]git push ([^|;&]* )?(--force(-with-lease(=[^ ;]+)?)?[ ;]|-[a-zA-Z]*f[a-zA-Z]*[ ;]|\+[^ ;]+[ ;])@@force push rewrites remote history (pre-push hook will also gate this — enumerate first)'
+  '[ (/]git push ([^|;&]* )?(--force(-with-lease(=[^ ;]+)?)?[ ;]|-[a-zA-Z]*f[a-zA-Z]*[ ;]|\+[^ ;]+[ ;])@@force push rewrites remote history — enumerate first'
   '[ (/]git branch ([^|;&]* )?(-[a-zA-Z]*D[ ;]|--delete( [^|;&]*)? --force[ ;]|--force( [^|;&]*)? --delete[ ;])@@git branch -D force-deletes a branch without merge check'
   '[ (/]git stash (drop|clear)[ ;]@@git stash drop/clear permanently discards stashed work'
   '[ (/]git worktree remove ([^|;&]* )?(--force[ ;]|-[a-zA-Z]*f[a-zA-Z]*[ ;])@@git worktree remove --force discards a dirty worktree'
@@ -344,7 +344,7 @@ $(printf '%s' "$JOINED" | LC_ALL=C grep -oE "git[^|;&()\`]*config[^|;&()\`]*${HP
 SEGS
   # Removing or renaming the whole [core] section drops core.hooksPath without naming it (codex R2).
   printf '%s' "$FLAT" | LC_ALL=C grep -qE "[ (/]git config ([^|;&]* )?(--)?(remove|rename)-section +[cC][oO][rR][eE][ ;]" && HP_WRITE=1
-  [ -n "$HP_WRITE" ] && hits="${hits}  ⚠️  DESTRUCTIVE-OP git config core.hooksPath changes or removes the directory the pre-push layer lives in
+  [ -n "$HP_WRITE" ] && hits="${hits}  ⚠️  DESTRUCTIVE-OP git config core.hooksPath changes or removes where git looks for hooks (a pre-push hook, if this repo has one, stops running)
 "
 fi
 [ -n "$hits" ] || exit 0
@@ -359,7 +359,9 @@ if [ -n "$BLOCK_WHY" ]; then
   printf '%s\n' "      In this mode an override written into the command is not honored." \
     "      Stop and ask the operator; if they want it, they run it from their own terminal." \
     "      Meanwhile: enumerate what this would destroy (git status / git log / git reflog) and" \
-    "      report it — do not retry this call in another form." >&2
+    "      report it — do not retry this call in another form." \
+    "      Finish the harmless parts of the task separately, in their own calls; only the" \
+    "      destructive command waits for the operator." >&2
   exit 2
 fi
 
