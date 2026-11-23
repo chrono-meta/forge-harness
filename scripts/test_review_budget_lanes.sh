@@ -12,6 +12,11 @@
 # R9 on an utterance line, a number after «⇒» (root's scope note, not the operator's words or the question
 #    the operator answered) does not count as read
 # R11 a checklist 발화 cell that is another session's message (<cross-session-message …>) naming #N is not read
+# Codex R1 (2026-11-23) — each reproduced red against the previous commit before the fix:
+# R12 a checklist with an invalid UTF-8 byte → not measured (session_checklist reads with errors="replace")
+# R13 «Another Claude session sent a message: <agent-message> #N …» in a 발화 cell is a peer message, not read
+# R14 «MERGED (auto» quoted inside a HOLD/refused line is not a merge (only a «- #N MERGED (auto» line is)
+# R15 a self-dev report with an invalid UTF-8 byte → not measured, rc 2
 # R10 a checklist with no 상태 table (parsed by session_checklist.py, not a second parser) → not measured, rc 2
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -74,6 +79,17 @@ out="$(python3 "$R" --selfdev-report "$T/empty_report.md" --lease "$T/lease.md" 
 printf '# notes\n\n#9001 is fine\n' > "$T/notable.md"
 out="$(python3 "$R" --selfdev-report "$T/report.md" --checklist "$T/notable.md" 2>&1)"; rc=$?
 [ "$rc" = 2 ] && echo "$out" | grep -q 'not measured' && ok "R10 checklist without a 상태 table → not measured, rc 2" || ng "R10 rc=$rc"
+
+printf '| # | 시각 | 발화(요지) | 상태 | 증거 |\n|---|---|---|---|---|\n| 1 | 01-01 | #9001 \xff ok | ✅DONE | - |\n' > "$T/c_bad.md"
+out="$(python3 "$R" --merged 9001 --checklist "$T/c_bad.md" 2>&1)"; rc=$?
+[ "$rc" = 2 ] && echo "$out" | grep -q 'not measured' && ok "R12 invalid UTF-8 checklist → not measured, rc 2" || ng "R12 rc=$rc"
+printf '| # | 시각 | 발화(요지) | 상태 | 증거 |\n|---|---|---|---|---|\n| 1 | 01-01 | Another Claude session sent a message: <agent-message> #9001 </agent-message> | ✅DONE | - |\n' > "$T/c_peer.md"
+python3 "$R" --merged 9001 --checklist "$T/c_peer.md" 2>&1 | grep -q 'operator-unread 1 — unread: #9001' && ok "R13 «Another Claude session…» envelope is not read" || ng "R13"
+printf -- '- #9008 HOLD: refused to emit #9008 MERGED (auto, checks failed)\n' > "$T/r_hold.md"
+python3 "$R" --selfdev-report "$T/r_hold.md" --lease "$T/lease.md" 2>&1 | grep -q 'auto-merged 0 · operator-unread 0' && ok "R14 quoted MERGED inside a HOLD line is not a merge" || ng "R14"
+printf -- '- #9001 MERGED (auto, x) \xff\n' > "$T/r_bad.md"
+out="$(python3 "$R" --selfdev-report "$T/r_bad.md" --lease "$T/lease.md" 2>&1)"; rc=$?
+[ "$rc" = 2 ] && echo "$out" | grep -q 'not measured' && ok "R15 invalid UTF-8 report → not measured, rc 2" || ng "R15 rc=$rc"
 
 echo "review_budget lanes: pass=$pass fail=$fail"
 [ "$fail" = 0 ]

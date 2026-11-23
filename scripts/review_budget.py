@@ -36,7 +36,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import session_checklist as sc  # single source for checklist table parsing
 
-MERGED_RE = re.compile(r"#(\d+)\s+MERGED \(auto")
+MERGED_RE = re.compile(r"^\s*-\s*#(\d+)\s+MERGED \(auto", re.M)  # the loop's own line shape only (codex R1: a quoted
+# «#N MERGED (auto» inside a HOLD/refused line is not a merge)
 
 
 def num_re(n):
@@ -57,10 +58,14 @@ def utterance_texts_lease(text):
 # A 발화 cell that is a message from another session (the hook channel records those as rows too) is not the
 # operator's words. Measured 2026-11-23: one checklist carried 383 such rows, and one of them named a PR.
 PEER_PREFIXES = ("<cross-session-message", "<agent-message")
+PEER_BANNER = "Another Claude session sent a message:"   # same rule as session_checklist.py's peer test
 
 
 def is_peer_message(cell):
-    return cell.strip().startswith(PEER_PREFIXES)
+    c = cell.strip()
+    if c.startswith(PEER_PREFIXES):
+        return True
+    return c.startswith(PEER_BANNER) and ("<agent-message" in c or "<cross-session-message" in c)
 
 
 def utterance_cells_checklist(path):
@@ -102,7 +107,14 @@ def main(argv=None):
     for kind, paths in (("report", a.selfdev_report), ("lease", a.lease), ("checklist", a.checklist)):
         for p in paths:
             if kind == "checklist":
-                cells, why = (None, "FileNotFoundError") if not os.path.isfile(p) else utterance_cells_checklist(p)
+                # session_checklist reads with errors="replace"; a strict read first keeps a bad byte from
+                # passing as text (codex R1)
+                try:
+                    read(p)
+                except (OSError, UnicodeDecodeError) as e:
+                    unreadable.append(f"{os.path.basename(p)} ({e.__class__.__name__})")
+                    continue
+                cells, why = utterance_cells_checklist(p)
                 if cells is None:
                     unreadable.append(f"{os.path.basename(p)} ({why})")
                     continue
