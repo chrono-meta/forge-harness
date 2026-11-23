@@ -56,6 +56,7 @@ case "\$1 \$2" in
   "pr view")
     [ -f "\$D/view_fail" ] && exit 1
     case "\$*" in *--json\ files*) cat "\$D/files.tsv"; exit 0 ;; esac
+    case "\$*" in *--json\ body*) [ -f "\$D/body_fail" ] && exit 1; cat "\$D/body.txt" 2>/dev/null; exit 0 ;; esac
     [ -f "\$D/view_fail_after_merge" ] && [ -s "\$D/merge.log" ] && exit 1
     case "\$*" in
       *state,headRefOid*)
@@ -220,6 +221,42 @@ run "$T/s7h" 7 --rerun "$GOOD" --lease 'selfdev standing 2026-11-04'
 # S5 the tier judges the RECORDED head: a live PR whose file list says docs-only cannot launder a head that changes a, b
 setup sl; mkgh "$T/sl"; printf 'MODIFIED\tdocs/x.md\t1\t1\n' > "$T/sl/files.tsv"; run "$T/sl" 7 --rerun "$GOOD" --lease 'selfdev standing 2026-11-04'
 { [ "$RC" -eq 7 ] && ! merged "$T/sl"; } && ok "S5 tier reads the recorded head, not the live file list → rc 7" || bad "S5 rc=$RC"
+# ── verifier family on the receipt (2026-11-23, article insight H1 — who verified must be on the record) ──
+# The receipt names the verifier family from the PR body's «crossfamily:» line (the review backend actually used) and the
+# builder family (claude when the merge runs in a Claude Code session). A merge whose only verifier is the builder's own
+# family gets a warning — never a block, never a different rc.
+vf() { # vf <name> <body text> [agent] → runs a merge, sets RC/OUT
+  setup "$1"; mkgh "$T/$1"; printf '%s\n' "$2" > "$T/$1/body.txt"
+  if [ -n "${3:-}" ]; then OUT=$(cd "$T/$1/work" && CLAUDECODE=1 PATH="$T/$1/bin:$PATH" PMV_RETRY_SLEEP=0 PMV_RECEIPTS="$T/$1/receipts.jsonl" bash "$SC" 7 --rerun "$GOOD" 2>&1); RC=$?
+  else run "$T/$1" 7 --rerun "$GOOD"; fi; }
+vf vfx 'crossfamily: panel(codex) — residency=CLEAN(files=1) · evidence=SHARED(diff) · R1 2 fixed' agent
+{ [ "$RC" -eq 0 ] && [ "$(rcpt "$T/vfx" verifier_family)" = "codex" ] && [ "$(rcpt "$T/vfx" builder_family)" = "claude" ] \
+  && ! printf '%s' "$OUT" | grep -qF 'verifier family'; } \
+  && ok "V1 panel(codex) + agent session → receipt verifier_family=codex · builder_family=claude · no warning" || bad "V1 rc=$RC receipt=$(cat "$T/vfx/receipts.jsonl" 2>/dev/null)"
+vf vfd 'crossfamily: DEGRADED_PANEL_UNUSED — skill prose only' agent
+{ [ "$RC" -eq 0 ] && [ "$(rcpt "$T/vfd" verifier_family)" = "none" ] && printf '%s' "$OUT" | grep -qF 'verifier family'; } \
+  && ok "V2 DEGRADED_* → verifier_family=none · warning · rc still 0 (warn only)" || bad "V2 rc=$RC receipt=$(cat "$T/vfd/receipts.jsonl" 2>/dev/null)"
+vf vfs 'crossfamily: panel(claude) — residency=CLEAN(files=1) · evidence=SHARED(diff) · R1 0' agent
+{ [ "$RC" -eq 0 ] && [ "$(rcpt "$T/vfs" verifier_family)" = "claude" ] && printf '%s' "$OUT" | grep -qF 'verifier family'; } \
+  && ok "V3 panel(claude) by a claude builder → same family → warning, rc 0" || bad "V3 rc=$RC receipt=$(cat "$T/vfs/receipts.jsonl" 2>/dev/null)"
+vf vfn 'No marker lines in this body.' agent
+{ [ "$RC" -eq 0 ] && [ "$(rcpt "$T/vfn" verifier_family)" = "unrecorded" ] && printf '%s' "$OUT" | grep -qF 'verifier family'; } \
+  && ok "V4 no crossfamily: line → verifier_family=unrecorded · warning" || bad "V4 rc=$RC receipt=$(cat "$T/vfn/receipts.jsonl" 2>/dev/null)"
+setup vfu; mkgh "$T/vfu"; : > "$T/vfu/body_fail"; OUT=$(cd "$T/vfu/work" && CLAUDECODE=1 PATH="$T/vfu/bin:$PATH" PMV_RETRY_SLEEP=0 PMV_RECEIPTS="$T/vfu/receipts.jsonl" bash "$SC" 7 --rerun "$GOOD" 2>&1); RC=$?
+{ [ "$RC" -eq 0 ] && [ "$(rcpt "$T/vfu" verifier_family)" = "unread" ]; } \
+  && ok "V5 PR body unreadable → verifier_family=unread (not «none»), merge unaffected" || bad "V5 rc=$RC receipt=$(cat "$T/vfu/receipts.jsonl" 2>/dev/null)"
+# codex R1 — each reproduced before the fix
+vf vfsp 'crossfamily: panel(claude, codex) — residency=CLEAN(files=1) · evidence=SHARED(diff)' agent
+{ [ "$(rcpt "$T/vfsp" verifier_family)" = "claude,codex" ] && ! printf '%s' "$OUT" | grep -qF 'verifier family'; } \
+  && ok "V7 panel(claude, codex) with a space → claude,codex · no warning" || bad "V7 receipt=$(cat "$T/vfsp/receipts.jsonl" 2>/dev/null)"
+vf vfe 'crossfamily:
+crossfamily: panel(codex) — residency=CLEAN(files=1)' agent
+{ [ "$(rcpt "$T/vfe" verifier_family)" = "none" ] && printf '%s' "$OUT" | grep -qF 'verifier family'; } \
+  && ok "V8 the FIRST crossfamily: line counts even when empty → none · warning (a later line does not override it)" || bad "V8 receipt=$(cat "$T/vfe/receipts.jsonl" 2>/dev/null)"
+vf vfh 'crossfamily: DEGRADED_PANEL_UNUSED — skill prose only'
+{ [ "$RC" -eq 0 ] && [ "$(rcpt "$T/vfh" builder_family)" = "unknown" ] && ! printf '%s' "$OUT" | grep -qF 'verifier family'; } \
+  && ok "V6 no agent marker → builder_family=unknown · no family warning (cannot compare)" || bad "V6 rc=$RC receipt=$(cat "$T/vfh/receipts.jsonl" 2>/dev/null)"
+
 # L19 negative control — a refusal BEFORE the merge, or a merge GitHub did not take, leaves no receipt. It cannot detect the feature
 #     being removed on its own (codex R1); L17 · L18 · L21 are its positive pair.
 { [ ! -s "$T/nore/receipts.jsonl" ] && [ ! -s "$T/triv/receipts.jsonl" ] && [ ! -s "$T/mf/receipts.jsonl" ]; } \
