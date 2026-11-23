@@ -1194,6 +1194,8 @@ for _pair in \
   "scripts/chamber_run.sh|scripts/test_chamber_run_lanes.sh" \
   "scripts/chamber_candidate_collect.sh|scripts/test_chamber_sig_lanes.sh" \
   "scripts/destructive_pre_gate.sh|scripts/test_destructive_pre_gate_lanes.sh" \
+  `# fh-guard 플러그인 (2026-11-23 신설). 본체 게이트의 바이트 사본 + hooks.json 배선 + 세션 시작 python3 안내. 사본이 썩으면 필드 레포가 옛 판정으로 «지켜지는 것처럼» 돈다.` \
+  "plugins/fh-guard/scripts/destructive_pre_gate.sh|scripts/test_fh_guard_plugin_lanes.sh" \
   "scripts/probe_live_eval_lib.py|scripts/test_live_eval_transitions_lanes.sh" \
   "scripts/correction_moments.py|scripts/test_correction_moments_lanes.sh" \
   "scripts/below_floor_scan.sh|scripts/test_below_floor_scan_lanes.sh" \

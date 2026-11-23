@@ -32,6 +32,12 @@
       "version": "3.48.0",
       "description": "preprep — a presentation-preparation harness. 1 skill. One CLI over 17 lanes (7 built-in + 10 module) that reads a declared surface manifest and checks a talk's assets against each other: canonical terms, jargon glosses, retired vocabulary, inter-slide dependencies, pacing, get/put round-trips, adjacent duplication, slide relations, geometry, attribute consistency, fonts, diagrams, slide refs, and screen-parity between manuscript and deck. Verdict contract: exit 0 pass / 1 findings / 2 cannot-judge — a surface that could not be read is UNMEASURED, never 0. Promoted out of fh-commons 2026-09-13 after the skill grew past one role (routing / lane modules / fixtures).",
       "source": "./plugins/fh-preprep"
+    },
+    {
+      "name": "fh-guard",
+      "version": "3.48.0",
+      "description": "fh-guard — installable, character-free FH gate. One PreToolUse(Bash) hook runs a byte-identical copy of FH's destructive-op gate on every Bash call in any repo: in bypassPermissions and auto mode it blocks force pushes, remote deletes, local destroyers and the agent switching the next layer off (--no-verify, core.hooksPath, an in-command override), and tells the agent to ask you; in other modes it warns. A hook that cannot start or times out blocks the call (onFailure: block); a missing python3 is reported at session start. 0 skills, 0 agents, no network, no file writes. Needs bash + python3 (Windows: Git for Windows).",
+      "source": "./plugins/fh-guard"
     }
   ]
 }
