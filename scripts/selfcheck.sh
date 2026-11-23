@@ -1296,6 +1296,8 @@ for _pair in \
   #   SUBJECT 를 session_checklist.py 로 잡는다 — 이 레인이 재는 것은 그 도구의 판정이다.` \
   "scripts/session_checklist.py|scripts/test_checklist_unblocked_lanes.sh" \
   "scripts/claim_precision_report.py|scripts/test_claim_precision_report_lanes.sh" \
+  `# 리뷰 예산(2026-11-23) — 아침 보고의 «자동 머지 N · 운영자 안 읽음 N» 한 줄. 기록 속성만 센다(판정 아님).` \
+  "scripts/review_budget.py|scripts/test_review_budget_lanes.sh" \
   "templates/.git-hooks/pre-commit|scripts/test_hook_leg_wiring_lanes.sh" \
   ".claude/soul_tenets.txt|scripts/test_marker_soul_tenet_lanes.sh" \
   "docs/map/fh_assets.architecture.json|scripts/test_fh_map_paths_lanes.sh" \
