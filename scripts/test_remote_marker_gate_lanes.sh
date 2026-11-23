@@ -389,6 +389,33 @@ findings: 1
 ```'); rc=$?
 [ "$rc" -eq 1 ] && ok "F17p 펜스 안의 findings: 줄은 산문 개수를 덮지 못한다 → rc=1 (R-c 그대로)" || ng "F17p 어긋남 (rc=$rc)"
 
+# F18 — 닫히지 않은 펜스(루트 지적, 읽기로 발견): 끝까지 열린 펜스가 그 뒤 주장(산문 개수 · findings: 줄)을 가리면
+#   «주장 없음» 으로 조용히 통과했다 → 형식 오류. 가린 구간에 주장이 없으면 R-d 그대로(통과).
+out=$(RMG_FINDINGS_BLOCK_FROM=$FUTURE fr f18 'Notes:
+```
+codex R1 3 findings, all fixed.'); rc=$?
+[ "$rc" -eq 1 ] && printf '%s' "$out" | /usr/bin/grep -q 'unclosed code fence' \
+  && ok "F18 닫히지 않은 펜스가 산문 «3 findings» 를 가리면 rc=1 «unclosed code fence» (경고 주간에도)" || ng "F18 어긋남 (rc=$rc)"
+out=$(RMG_FINDINGS_BLOCK_FROM=$FUTURE fr f18c 'Notes:
+```
+an example
+```
+codex R1 3 findings, all fixed.'); rc=$?
+[ "$rc" -eq 0 ] && printf '%s' "$out" | /usr/bin/grep -q 'FINDINGS_TRIPWIRE_HIT' \
+  && ok "F18c 같은 본문, 펜스를 닫으면 지금 동작(경고 주간 → 경고 + rc=0)" || ng "F18c 어긋남 (rc=$rc)"
+out=$(fr f18e 'Example:
+```
+codex R1 3 findings
+```
+Log:
+```
+just a log line, no claim'); rc=$?
+[ "$rc" -eq 0 ] && ok "F18e 앞의 닫힌 펜스 안 «3 findings» 는 뒤의 열린 펜스 판정에 안 섞인다 → rc=0" || ng "F18e 어긋남 (rc=$rc)"
+out=$(fr f18n 'Notes:
+```
+just a log line, no claim'); rc=$?
+[ "$rc" -eq 0 ] && ok "F18n 닫히지 않은 펜스 안에 주장이 없으면 R-d 그대로 통과" || ng "F18n 어긋남 (rc=$rc)"
+
 # F14 — 마지막 커밋 날짜를 못 읽으면(빈 값) 경고로 접지 않고 판정 불가(rc 2 → 스크립트 rc 10). 날짜만 실패하게 만드는 길이
 #   스크립트 실행엔 없어서(앞 단계가 같은 ref 를 이미 읽었다) 파서를 스크립트에서 그대로 떼어 직접 부른다(codex R1).
 awk '/^FOUT=\$\(python3 - /{f=1;next} /^FPY$/{f=0} f' scripts/remote_marker_gate.sh > "$TMPD/findings_parser.py"

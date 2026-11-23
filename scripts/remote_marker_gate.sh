@@ -302,13 +302,17 @@ printf '%s\n' "$RECORD" > "$REC_FILE"
 FOUT=$(python3 - "$FINDINGS_BLOCK_FROM" "${LAST_DATE:-}" "$REC_FILE" <<'FPY'
 import re, sys
 block_from, last_date, rec = sys.argv[1], sys.argv[2], sys.argv[3]
-lines, fence = [], None
+lines, fence, hidden = [], None, []
 for l in open(rec, encoding="utf-8", errors="replace").read().splitlines():
     m = re.match(r"^\s{0,3}(\x60{3,}|~{3,})", l)   # \x60 = backquote; a literal one inside this $( ) heredoc breaks bash
     if m and (fence is None or m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence)):
         fence = None if fence else m.group(1)
+        if fence:
+            hidden = []   # only the fence still open at the end counts, not an earlier closed one
         lines.append("")
         continue
+    if fence:
+        hidden.append(l)
     lines.append("" if fence else l)   # an example inside a code fence is not a record (found on this PR's own body)
 EXACT = re.compile(r"^findings: (.*)$")
 NEAR = re.compile(r"^\s*\**\s*findings?\s*\**\s*:", re.I)
@@ -320,6 +324,10 @@ LINE = re.compile(r"^\s*- " + SOURCE + r" · \S.*? · " + DISP + r".*$")
 ITEM = re.compile(r"^\s*- .* · .* · ")
 REASONED = re.compile(r"^(0|none) (?:—|-) \S+\s+\S")
 errs, blocks = [], 0
+PROSE = re.compile(r"\b[1-9][0-9]*\s+(?:new\s+)?(?:findings?|지적)\b", re.I)
+if fence and any(EXACT.match(h) or NEAR.match(h) or PROSE.search(h) for h in hidden):
+    # a fence left open to the end hid a claim — read as «no claim» it would pass silently (root review)
+    errs.append("unclosed code fence hides a findings claim — close the fence")
 for i, l in enumerate(lines):
     m = EXACT.match(l)
     if not m:
@@ -348,7 +356,7 @@ if errs:
         print("ERR " + e)
     sys.exit(1)
 if blocks == 0:
-    prose = re.search(r"\b[1-9][0-9]*\s+(?:new\s+)?(?:findings?|지적)\b", "\n".join(lines), re.I)
+    prose = PROSE.search("\n".join(lines))
     if prose:
         hit = prose.group(0)
         if not re.fullmatch(r"\d{4}-\d\d-\d\d", last_date or ""):
