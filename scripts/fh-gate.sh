@@ -17,7 +17,8 @@
 #   3  — ESCALATE  (human decision required)
 #   10 — Harness error (backend unavailable, timeout, missing/invalid structured
 #        verdict, or status != SUCCESS) — always fail-closed, never silent-pass
-#   11 — Argument error (invalid level, no files, or a help/version flag given with other arguments)
+#   11 — Argument error (invalid level, no files, or a help/version flag given with other arguments;
+#        also -h/--help/-V/--version alone when CI is set to anything but empty, 0 or false)
 #   12 — Dry-run (prompt emitted, NO review performed) — deliberately outside the
 #        verdict range: a check that did not run must never be readable as PASS.
 #
@@ -157,10 +158,24 @@ case "${1:-}" in
       exit 11
     fi ;;
 esac
+# Under CI the same flag ALONE is not a pass either (2026-11-23, the residual named in #1190). A plain CI step
+# that runs `fh-gate "$FILES"` with FILES=-h hands this script argv identical to a person typing `fh-gate -h`,
+# so the argument count cannot tell them apart; the environment can. With CI set to anything but empty, 0 or
+# false (GitHub Actions, GitLab, CircleCI, Travis and Buildkite set it), help and version still print, then exit
+# 11. A deliberate call in CI: `CI= fh-gate --version`. Still open, by name: CI systems that do not set CI
+# (Jenkins; Azure Pipelines sets TF_BUILD) and local git hooks or scripts that call `fh-gate "$FILES"`.
+_fh_info_exit() {
+  case "${CI:-}" in
+    ''|0|false) _FH_VERDICT_EXIT=1; exit 0 ;;
+  esac
+  printf '%s\n' "ERROR: CI is set, so '${1}' printed above but exits 11 — under CI a lone help or version flag" >&2
+  printf '%s\n' "       may be a file list that reads as a flag, and help is not a review. For a deliberate call: CI= fh-gate ${1}" >&2
+  exit 11
+}
 case "${1:-}" in
   --version|-V)
     printf '%s\n' "fh-gate $VERSION"
-    _FH_VERDICT_EXIT=1; exit 0
+    _fh_info_exit "$1"
     ;;
   --help|-h)
     printf '%s\n' "fh-gate $VERSION — FH governance gate"
@@ -173,6 +188,8 @@ case "${1:-}" in
     printf '%s\n' "  fh-gate \"<files>\"           review an explicit space-separated file list"
     printf '%s\n' "  fh-gate \"<files>\" <level>   level: quick (default) or full"
     printf '%s\n' "  fh-gate --version | --help"
+    printf '%s\n' "                              (alone; under CI — CI set, not empty/0/false — they exit 11:"
+    printf '%s\n' "                              use CI= fh-gate --version for a deliberate call)"
     printf '%s\n' ""
     printf '%s\n' "Exit codes"
     printf '%s\n' "  0   PASS       no findings"
@@ -209,7 +226,7 @@ case "${1:-}" in
     printf '%s\n' "  FH_GATE_BASE=<ref>                   base the execution layer measures the change against"
     printf '%s\n' ""
     printf '%s\n' "  https://github.com/chrono-meta/forge-harness"
-    _FH_VERDICT_EXIT=1; exit 0
+    _fh_info_exit "$1"
     ;;
   -*)
     printf '%s\n' "ERROR: unrecognized option '${1}'." >&2

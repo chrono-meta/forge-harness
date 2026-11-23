@@ -232,8 +232,8 @@ echo "── L8 a file list that reads as a help or version flag is not a pass (
 # honoured only alone. HOW. The run block runs with env as data and an `npx` stub that hands its arguments
 # to the real scripts/fh-gate.sh, under the action's real default fail-on; the verdict is read from GITHUB_OUTPUT
 # and the step's own exit code is checked. L8b: a normal three-argument call still reaches the gate (dry-run → 12).
-# L8-ctl: `fh-gate -h` alone still prints help and exits 0. Named residual: a plain CI step that calls
-# `fh-gate "$FILES"` with ONE argument cannot be told from an intended `fh-gate -h` — FILES=-h still exits 0 there.
+# L8-ctl: `fh-gate -h` alone, with CI unset, still prints help and exits 0. A plain CI step that calls
+# `fh-gate "$FILES"` with ONE argument cannot be told from an intended `fh-gate -h` by argv — L9 covers it by CI.
 if [ -f "$G" ] && [ -n "$_RUNBLK" ] && [ -n "$_ENVBLK" ]; then
   _L8T="$(mktemp -d "${TMPDIR:-/tmp}/action_yml_l8_XXXXXX")"
   mkdir -p "$_L8T/bin"
@@ -273,7 +273,7 @@ PY
     "verdict=DRY_RUN reviewed=false step_rc=1") ok "L8b CONTROL files: 'a.sh' + dry-run → $_r (the three-argument path still reaches the gate)" ;;
     *) no "L8b CONTROL files: 'a.sh' + dry-run → $_r" ;;
   esac
-  _hl="$(bash "$G" -h 2>/dev/null)"; _hrc=$?; _hl="${_hl%%$'\n'*}"
+  _hl="$(env -u CI bash "$G" -h 2>/dev/null)"; _hrc=$?; _hl="${_hl%%$'\n'*}"
   if [ "$_hrc" -eq 0 ] && case "$_hl" in "fh-gate "*) true ;; *) false ;; esac; then
     ok "L8-ctl fh-gate -h alone still prints help (exit 0)"
   else
@@ -282,6 +282,59 @@ PY
   rm -rf "$_L8T"
 else
   echo "  ⬜ L8 SKIPPED (not PASS) — scripts/fh-gate.sh or the run block is absent here"
+fi
+
+echo "── L9 under CI a lone help or version flag is not a pass either (2026-11-23, the L8 residual) ──"
+# WHY. A plain CI step `fh-gate "$FILES"` with FILES=-h hands fh-gate argv identical to a person typing
+# `fh-gate -h`, so L8's argument count cannot see it and it printed help and exited 0: the step passed with no
+# review. fh-gate now reads CI: set to anything but empty, 0 or false, a lone -h/--help/-V/--version still
+# prints, then exits 11. HOW. Each case runs the plain-CI shape (`FILES=<x>; fh-gate "$FILES"`, one argument)
+# against the real scripts/fh-gate.sh. L9a: the four flags under CI=true → 11 with the text still on stdout.
+# L9b: CI=1 → 11 (any other value counts). L9-ctl: CI unset, '', 0, false → 0. L9c CONTROL: a real file +
+# dry-run under CI=true through the same one-argument shape reaches the gate (12), so L9a is not «CI breaks
+# every call». Still open, by name: CI systems that do not set CI, local git hooks and scripts.
+if [ -f "$G" ]; then
+  _L9T="$(mktemp -d "${TMPDIR:-/tmp}/action_yml_l9_XXXXXX")"
+  _l9(){  # $1 = CI value or the word unset · $2 = files → prints «rc=<n> out=<first stdout line>»
+    local _o _rc
+    if [ "$1" = unset ]; then
+      _o="$(cd "$_L9T" && env -u CI -u FH_DRY_RUN bash -c 'FILES="$1"; bash "$2" "$FILES"' _ "$2" "$G" 2>/dev/null)"; _rc=$?
+    else
+      _o="$(cd "$_L9T" && env -u FH_DRY_RUN CI="$1" bash -c 'FILES="$1"; bash "$2" "$FILES"' _ "$2" "$G" 2>/dev/null)"; _rc=$?
+    fi
+    printf 'rc=%s out=%s\n' "$_rc" "${_o%%$'\n'*}"
+  }
+  for _f in -h --help -V --version; do
+    _r="$(_l9 true "$_f")"
+    case "$_r" in
+      "rc=11 out=fh-gate "*) ok "L9a CI=true, FILES='$_f' → $_r (printed, then not a pass)" ;;
+      *) no "L9a CI=true, FILES='$_f' → $_r — under CI a lone flag must not exit 0" ;;
+    esac
+  done
+  _r="$(_l9 1 -h)"
+  case "$_r" in
+    "rc=11 out=fh-gate "*) ok "L9b CI=1, FILES='-h' → $_r (any value other than empty, 0 or false)" ;;
+    *) no "L9b CI=1, FILES='-h' → $_r" ;;
+  esac
+  for _c in unset '' 0 false; do
+    for _f in -h --version; do
+      _r="$(_l9 "$_c" "$_f")"
+      case "$_r" in
+        "rc=0 out=fh-gate "*) ok "L9-ctl CI=[$_c], '$_f' → $_r (help and version still work outside CI)" ;;
+        *) no "L9-ctl CI=[$_c], '$_f' → $_r" ;;
+      esac
+    done
+  done
+  printf 'echo hi\n' > "$_L9T/a.sh"
+  _rc=0; (cd "$_L9T" && CI=true FH_DRY_RUN=1 bash -c 'FILES="$1"; bash "$2" "$FILES"' _ a.sh "$G" >/dev/null 2>&1) || _rc=$?
+  if [ "$_rc" -eq 12 ]; then
+    ok "L9c CONTROL CI=true, FILES='a.sh' + dry-run → rc=12 (a real file list still reaches the gate under CI)"
+  else
+    no "L9c CONTROL CI=true, FILES='a.sh' + dry-run → rc=$_rc"
+  fi
+  rm -rf "$_L9T"
+else
+  echo "  ⬜ L9 SKIPPED (not PASS) — scripts/fh-gate.sh is absent here"
 fi
 
 echo ""

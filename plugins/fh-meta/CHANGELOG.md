@@ -2,6 +2,14 @@
 
 ### [Unreleased]
 
+### Changed
+- BREAKING (gate): `fh-gate` (shipped), a lone help or version flag under CI.
+  - What changed: when the `CI` environment variable is set to anything other than empty, `0` or `false`, `fh-gate -h`, `--help`, `-V` and `--version` given alone still print their text, then exit 11 (argument error) instead of 0. GitHub Actions, GitLab, CircleCI, Travis and Buildkite set `CI`.
+  - Why: a plain CI step that runs `fh-gate "$FILES"` with `FILES=-h` (a file literally named so, or a list built from PR data) passes the same arguments as a person typing `fh-gate -h`, so it printed help and exited 0: the step passed and nothing was reviewed. This is the residual #1190 named; #1190 closed the GitHub Action path, which always passes three arguments.
+  - What breaks: a deliberate `fh-gate --version` or `--help` in a CI step now fails that step. Workaround: `CI= fh-gate --version`.
+  - Still open: CI systems that do not set `CI` (Jenkins; Azure Pipelines sets `TF_BUILD` instead) and local git hooks or scripts that call `fh-gate "$FILES"` with one argument. There, `FILES=-h` still exits 0.
+  - Outside CI, and with `CI` empty, `0` or `false`, nothing changes. Lanes: L9 in `scripts/test_action_yml_lanes.sh`.
+
 ### [3.47.0] — 2026-11-22
 
 Minor by the version policy. `fh-gate`'s review calls change behaviour: the default, goldfish and elephant review calls are read-only, and no review call loads the reviewed checkout's settings, hooks or instruction files (#1179, #1181, #1182, #1183). The opt-in `/code-review` call is still not read-only. The codex review no longer pins a model and the record names the model each pass used (#1186). The GitHub Action passes its inputs as data (#1176). There are new shipped lanes (D13–D17 in `test_fh_gate_defaults_lanes.sh`, L7 in `test_action_yml_lanes.sh`, two cases in `templates/predelete_check.test.sh`) and two judged procedure lines (#1180, #1185).
