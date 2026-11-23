@@ -1168,6 +1168,83 @@ else
   fail "L58 rc=$L58_RCS mine=$L58_MINE (see $L58)"
 fi
 
+# L59 — a peer-session message in the HOOK channel is not an operator utterance (2026-11-23). The transcript marks it
+# origin.kind=peer and drops it, but the UserPromptSubmit hook record keeps the bare text, so it came back as an H row:
+# 390 such rows in one governor's record. Known pair: a real operator turn (kept, also mentioning the tag mid-text)
+# and a cross-session envelope (dropped, and counted in its own header line, never silently).
+python3 - "$TMPDIR_ROOT" <<'PYEOF'
+import json, sys, datetime
+d = sys.argv[1]
+def loc(z):
+    t = datetime.datetime.strptime(z, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc).astimezone()
+    return t.strftime("%Y-%m-%dT%H:%M:%S")
+with open(d + "/l59_tr.jsonl", "w", encoding="utf-8") as f:
+    f.write(json.dumps({"type": "user", "timestamp": "2026-10-02T09:00:00Z", "message": {"role": "user", "content": "omega request kept in both"}}) + "\n")
+    f.write(json.dumps({"type": "user", "timestamp": "2026-10-02T09:10:00Z", "origin": {"kind": "peer"}, "isMeta": True,
+                        "message": {"role": "user", "content": "Another Claude session sent a message:\n<cross-session-message from=\"local_x\" from-name=\"root\">\nsigma relay merged #9001\n</cross-session-message>"}}) + "\n")
+with open(d + "/l59_hook.jsonl", "w", encoding="utf-8") as f:
+    f.write(json.dumps({"ts": loc("2026-10-02T09:00:00Z"), "n": 1, "text": "omega request kept in both"}) + "\n")
+    f.write(json.dumps({"ts": loc("2026-10-02T09:10:00Z"), "n": 2, "text": "<cross-session-message from=\"local_x\" from-name=\"root\">\nsigma relay merged #9001\n</cross-session-message>"}) + "\n")
+    f.write(json.dumps({"ts": loc("2026-10-02T09:20:00Z"), "n": 3, "text": "tau: why did the <cross-session-message> from root not arrive?"}) + "\n")
+    f.write(json.dumps({"ts": loc("2026-10-02T09:30:00Z"), "n": 4, "text": "<cross-session-message> upsilon: the tag alone, never closed, is still my question"}) + "\n")
+PYEOF
+run "$TMPDIR_ROOT/l59.out" extract --transcript "$TMPDIR_ROOT/l59_tr.jsonl" --utterances "$TMPDIR_ROOT/l59_hook.jsonl"
+if [ "$RC" -eq 0 ] && ! grep -q 'sigma relay' "$TMPDIR_ROOT/l59.out" \
+   && grep -q '^| 1 | .*omega request' "$TMPDIR_ROOT/l59.out" \
+   && grep -q '^| H1 | .*tau: why did' "$TMPDIR_ROOT/l59.out" \
+   && grep -q '^| H2 | .*upsilon: the tag alone' "$TMPDIR_ROOT/l59.out" \
+   && grep -q '훅 기록 중 다른 세션 메시지 1건은 운영자 발화가 아니라 표에서 뺐다' "$TMPDIR_ROOT/l59.out"; then
+  pass "L59 hook channel: a cross-session envelope is not a row (counted in its own line); an operator turn naming the tag mid-text stays"
+else
+  fail "L59 rc=$RC (see $TMPDIR_ROOT/l59.out)"
+fi
+# L59b — re-extract onto the same sheet after one more peer message arrived: the count line is the tool's own, so the
+# stale «1건» is regenerated as «2건», never kept beside it (an identical line is skipped anyway; only a changed count
+# reaches the generated-line pattern, so the lane changes it)
+L59S="$TMPDIR_ROOT/l59_sheet.md"
+run "$TMPDIR_ROOT/l59b1.out" extract --transcript "$TMPDIR_ROOT/l59_tr.jsonl" --utterances "$TMPDIR_ROOT/l59_hook.jsonl" --out "$L59S"; L59B="$RC"
+python3 - "$TMPDIR_ROOT" <<'PYEOF'
+import json, sys, datetime
+t = datetime.datetime(2026, 10, 2, 9, 40, tzinfo=datetime.timezone.utc).astimezone().strftime("%Y-%m-%dT%H:%M:%S")
+with open(sys.argv[1] + "/l59_hook.jsonl", "a", encoding="utf-8") as f:
+    f.write(json.dumps({"ts": t, "n": 5, "text": "<cross-session-message from=\"local_x\">\nphi relay\n</cross-session-message>"}) + "\n")
+PYEOF
+run "$TMPDIR_ROOT/l59b2.out" extract --transcript "$TMPDIR_ROOT/l59_tr.jsonl" --utterances "$TMPDIR_ROOT/l59_hook.jsonl" --out "$L59S"; L59B="$L59B/$RC"
+if [ "$L59B" = "0/0" ] && [ "$(grep -c '다른 세션 메시지' "$L59S")" -eq 1 ] && grep -q '다른 세션 메시지 2건은' "$L59S"; then
+  pass "L59b re-extract after a count change keeps exactly one peer-count line (2건), not the stale 1건 beside it"
+else
+  fail "L59b rc=$L59B count=$(grep -c '다른 세션 메시지' "$L59S") (see $L59S)"
+fi
+
+# L59c/L59d — codex R1 (2026-11-23), each reproduced red before the fix:
+#   c: an envelope followed by the operator's own words in the same turn is a request (text outside the envelope)
+#   d: a long peer message the hook truncated (no closing tag, truncated=true) is still a peer message, counted;
+#      two envelopes batched into one turn are two peer messages (found on real records after the c fix)
+python3 - "$TMPDIR_ROOT" <<'PYEOF'
+import json, sys, datetime
+d = sys.argv[1]
+def loc(h, m):
+    return datetime.datetime(2026, 10, 3, h, m, tzinfo=datetime.timezone.utc).astimezone().strftime("%Y-%m-%dT%H:%M:%S")
+with open(d + "/l59c_tr.jsonl", "w", encoding="utf-8") as f:
+    f.write(json.dumps({"type": "user", "timestamp": "2026-10-03T08:00:00Z", "message": {"role": "user", "content": "chi request kept"}}) + "\n")
+with open(d + "/l59c_hook.jsonl", "w", encoding="utf-8") as f:
+    f.write(json.dumps({"ts": loc(8, 0), "n": 1, "text": "chi request kept"}) + "\n")
+    f.write(json.dumps({"ts": loc(8, 10), "n": 2, "text": "<cross-session-message>example</cross-session-message>\npsi: please explain why this parser needs </cross-session-message>"}) + "\n")
+    f.write(json.dumps({"ts": loc(8, 30), "n": 4, "text": "<cross-session-message from=\"local_a\">\nkappa one\n</cross-session-message>\n<cross-session-message from=\"local_b\">\nkappa two\n</cross-session-message>"}) + "\n")
+    f.write(json.dumps({"ts": loc(8, 20), "n": 3, "truncated": True, "text": "<cross-session-message from=\"local_y\" from-name=\"root\">\nomega-long relay " + "x" * 300}) + "\n")
+PYEOF
+run "$TMPDIR_ROOT/l59c.out" extract --transcript "$TMPDIR_ROOT/l59c_tr.jsonl" --utterances "$TMPDIR_ROOT/l59c_hook.jsonl"
+if [ "$RC" -eq 0 ] && grep -q '^| H1 | .*psi: please explain' "$TMPDIR_ROOT/l59c.out"; then
+  pass "L59c an envelope followed by the operator's own words stays a request row"
+else
+  fail "L59c rc=$RC (see $TMPDIR_ROOT/l59c.out)"
+fi
+if ! grep -qE 'omega-long relay|kappa (one|two)' "$TMPDIR_ROOT/l59c.out" && grep -q '다른 세션 메시지 3건은' "$TMPDIR_ROOT/l59c.out"; then
+  pass "L59d a truncated peer message and a batched pair of envelopes are dropped and counted (3)"
+else
+  fail "L59d (see $TMPDIR_ROOT/l59c.out)"
+fi
+
 # KR1 — KNOWN RESIDUAL (round 4, 2026-11-15), not a pass claim. A person's 7-column table whose header is NOT the
 #   checklist header («| Name | Owner | … |»): its header and filled rows are carried as orphan judgments with the first
 #   cell replaced by «-» (Name · alpha lost), and an empty «| 2 | … |» row is dropped. Measured on the same fixture
