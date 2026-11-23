@@ -305,9 +305,12 @@ jobs:
         if: matrix.shard == 1
         env:
           RMG_CHANNEL_NAME: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
-          PR_BODY: ${{ github.event.pull_request.body }}
+          # pull_request 실행: 이벤트 본문(github.event.pull_request.body)은 이벤트가 난 순간의 것이라, 본문을
+          # 고친 뒤 «Re-run jobs» 를 눌러도 옛 본문이 실린다(#1196 은 닫았다 다시 열어야 했다). 그래서 PR 번호로
+          # 지금 본문을 API 에서 읽는다(조회 실패 = 빨강, rc=10). push 실행은 번호가 없으니 아래 조회 경로를 쓴다.
+          RMG_PR_NUMBER: ${{ github.event.pull_request.number }}
           # push 실행엔 이벤트 본문이 없다 — 그 커밋의 PR 본문을 API 로 읽는다(조회 실패 = 빨강).
-          # pull_request 실행은 이벤트 본문을 쓰므로 조회하지 않는다. (AQ-20261114-10, #1095 · #1103)
+          # (AQ-20261114-10, #1095 · #1103)
           RMG_PR_LOOKUP: ${{ github.event_name == 'push' && '1' || '0' }}
           RMG_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
@@ -316,12 +319,7 @@ jobs:
           # 얕은 클론이라 base 를 직접 받아온다. 못 받으면 그건 HARNESS-ERROR 로 떨어져야지
           # «비교할 게 없다 → 통과» 로 접히면 안 된다.
           git fetch --no-tags --depth=50 origin main 2>/dev/null || true
-          BODY_FILE=""
-          if [ -n "${PR_BODY:-}" ]; then
-            BODY_FILE="$RUNNER_TEMP/pr_body.txt"
-            printf '%s' "$PR_BODY" > "$BODY_FILE"
-          fi
-          RMG_BASE_REF=origin/main RMG_HEAD_REF=HEAD RMG_BODY_FILE="$BODY_FILE" \
+          RMG_BASE_REF=origin/main RMG_HEAD_REF=HEAD \
             bash scripts/remote_marker_gate.sh
           rc=$?
           # 10 = 계기 고장. 조용한 통과가 아니라 빨강으로 띄운다.
