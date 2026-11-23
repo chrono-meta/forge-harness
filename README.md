@@ -86,7 +86,7 @@ does not return the structured object fh-gate needs (measured 0/11 on claude 2.1
 direct), so `FH_REVIEWER=code-review` currently always exits 10.
 
 **Which exit codes fail a CI step.** Run as a plain step (`npx … fh-gate`), every non-zero exit fails it — including
-1 PENDING (B-grade findings: proceed with care), as well as 2 BLOCKED, 3 ESCALATE, 10 harness error, 11 argument error
+1 PENDING (B-grade findings: proceed with care), as well as 2 BLOCKED, 3 ESCALATE, 10 harness error, 11 argument error (also a lone `--help` or `--version` under CI; for a deliberate call use `CI= fh-gate --version`)
 and 12 dry run. The GitHub Action maps them instead: by default it fails on BLOCKED, ESCALATE, HARNESS_ERROR,
 ARG_ERROR, DRY_RUN and an unknown code, and lets PENDING pass (its `fail-on` input).
 

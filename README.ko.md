@@ -82,7 +82,7 @@ cd your-repo && npx --package @chrono-meta/fh-gate fh-gate     # 현재 레포�
 0/11 — fh-gate 경유 0/5, 직접 0/6), 지금은 `FH_REVIEWER=code-review` 가 언제나 종료 코드 10 으로 멈춥니다.
 
 **CI 스텝을 실패시키는 종료 코드.** 그냥 스텝으로 돌리면(`npx … fh-gate`) 0 이 아닌 종료 코드는 모두 스텝을 실패시킵니다.
-1 PENDING(B 등급 지적 — 알고 진행)도 실패이고, 2 BLOCKED · 3 ESCALATE · 10 하네스 오류 · 11 인자 오류 · 12 dry run 도
+1 PENDING(B 등급 지적 — 알고 진행)도 실패이고, 2 BLOCKED · 3 ESCALATE · 10 하네스 오류 · 11 인자 오류(CI 아래에서 `--help` · `--version` 을 홀로 줘도 — 일부러 부를 땐 `CI= fh-gate --version`) · 12 dry run 도
 마찬가지입니다. GitHub Action 은 대신 판정으로 바꿉니다. 기본값에서 BLOCKED · ESCALATE · HARNESS_ERROR · ARG_ERROR ·
 DRY_RUN · 모르는 코드에서 실패하고 PENDING 은 통과시킵니다(`fail-on` 입력으로 바꿀 수 있습니다).
 

@@ -24,7 +24,7 @@ branding:
 
 inputs:
   files:
-    description: 'Space-separated files to review. Empty = the gate derives them itself from the working tree.'
+    description: 'Space-separated files to review. Empty = the gate derives them itself from the working tree. A value that reads as a help or version flag (-h, --help, -V, --version) is an argument error (ARG_ERROR), not a review.'
     required: false
     default: ''
   level:
