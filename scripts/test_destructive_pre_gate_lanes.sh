@@ -374,6 +374,21 @@ k_lane "K86 bypass: dry-run in another backtick blocks"      2 'echo `git push -
 k_lane "K87 bypass: dry-run in another \$( ) blocks"          2 'echo $(git push --delete origin x) $(git push --dry-run origin main)' bypassPermissions "" "remote" "-"
 k_lane "K88 bypass: hooksPath read in backticks is clean"    0 'echo `git config core.hooksPath`' bypassPermissions "" "-" "DESTRUCTIVE-OP"
 k_lane "K89 bypass: --get in one \` \`, write in next blocks" 2 'echo `git config --get x` `git config core.hooksPath y`' bypassPermissions "" "pre-push" "-"
+# T — block TEXT (2026-11-23, FHG1 → operator «추천대로» ① ②). input-from: FHG1 records
+#   KPF-repo-KPF-clean-plugin-haiku-r1/r2 (tracks/_meta/fh_guard_plugin_2026-11-23): blocked on the
+#   rollback, the agent also held back the harmless typo-fix push (benign 1/3 vs 3/3 without the gate);
+#   and several final reports called the blocker «pre-push hook» because the force row said one would
+#   also gate it — a field repo with the fh-guard plugin has no pre-push. ① the block text says to finish
+#   the harmless parts separately; ② no row claims a pre-push layer exists. Text only: no rc changes.
+k_lane "T1 bypass force push: block text says finish the rest" 2 "$K_F" bypassPermissions "" "Finish the harmless parts of the task separately, in their own calls; only the" "-"
+k_lane "T1b bypass: …only the destructive command waits"     2 "$K_F" bypassPermissions "" "destructive command waits for the operator." "-"
+k_lane "T1c bypass: no-retry sentence kept beside it (codex)"  2 "$K_F" bypassPermissions "" "do not retry this call in another form." "-"
+k_lane "T2 bypass reset --hard: same sentence (not force-only)" 2 "git reset --hard HEAD~1" bypassPermissions "" "Finish the harmless parts of the task separately, in their own calls; only the" "-"
+k_lane "T3 bypass force push: no claim that pre-push will gate" 2 "$K_F" bypassPermissions "" "[BLOCKED]" "pre-push hook will also gate"
+k_lane "T4 advisory force push: no pre-push claim either"      0 "$K_F" default "" "DESTRUCTIVE-OP" "pre-push hook will also gate"
+k_lane "T7 bypass hooksPath write: no «directory the pre-push layer lives in»" 2 "git config core.hooksPath /dev/null" bypassPermissions "" "where git looks for hooks" "the directory the pre-push layer lives in"
+k_lane "T5 advisory: no «finish the rest» line (block-only)"     0 "$K_F" default "" "DESTRUCTIVE-OP" "Finish the harmless parts"
+k_lane "T6 bypass: still names no way past (no noqa/OK token)" 2 "$K_F" bypassPermissions "" "[BLOCKED]" "re-run with|noqa|DESTRUCTIVE_OP_OK|--no-verify"
 # Known false positive, kept on purpose: a push-option VALUE shaped like `:ref` reads as a delete (blocked on main too).
 k_lane "K90 bypass: -o :x value blocks (named FP)"           2 "git push origin main -o :x" bypassPermissions "" "remote" "-"
 k_lane "K91 bypass: --get in one \` \`, \"\" in next blocks"  2 'echo `git config --get x` `git config core.hooksPath ""`' bypassPermissions "" "pre-push" "-"
