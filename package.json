@@ -298,6 +298,8 @@
     "scripts/test_agent_tools_pin_lanes.sh",
     "scripts/claim_precision_report.py",
     "scripts/test_claim_precision_report_lanes.sh",
+    "scripts/review_budget.py",
+    "scripts/test_review_budget_lanes.sh",
     "scripts/checklist_unblocked_hook.sh",
     "scripts/convergence_verdict.py",
     "scripts/session_close_check.sh",

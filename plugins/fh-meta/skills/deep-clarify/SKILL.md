@@ -62,7 +62,8 @@ record your guess as `(inferred: …)` in the spec and list it under Open questi
 
 **Direct entry conditions** (skip Rounds 1–2 and go straight to Round 3):
 - Request is specific and completion criteria are clear → draft the spec (Step 3's format), then run Round 3's
-  understanding check; Step 3 saves the result
+  understanding check; Step 3 saves the result. If the request touches money or personal data, ask Round 2's
+  binding question first
 - Clarity at the level of "add Y feature to file X"
 
 ---
@@ -85,8 +86,9 @@ Skip a question the request already answers. A textbook phrase (Step 1) takes th
 
 ### Round 2 — Scope / Constraints / Priority (only if needed)
 
-Skip if Round 1 resolves everything. Ask at most two of the items still open — scope, what must not be done,
-priority, a textbook phrase — and infer the rest as `(inferred: X)`.
+Skip if Round 1 resolves everything — unless the money · personal-data question below applies. Ask at most
+two of the items still open — scope, what must not be done, priority, a textbook phrase — and infer the rest
+as `(inferred: X)`.
 
 ```
 1. Scope: Which of [A / B / C] takes priority?
@@ -94,6 +96,18 @@ priority, a textbook phrase — and infer the rest as `(inferred: X)`.
 2. Is there anything this task must absolutely not do?
    (or, if that is already clear: Which takes priority — fast completion vs solid design?)
 ```
+
+**Money · personal data — what is it bound to?** When the request touches payments or billing, accounts
+(sign-up, login) or personal data (name, email, phone, address) — a borderline case included — Round 2 asks
+this once, in one of its two slots, ahead of the other open items:
+*"Which unique key are money and personal data bound to — and is anything matched on a value that can change,
+such as an email address? (inferred: [an internal ID that never changes; email used only for contact])"*
+A wrong binding is costly to undo once data exists (a balance or record attached to the wrong person,
+accounts merged or split when an email changes), so it is asked, not inferred. If Round 1 settled everything,
+or the request went straight to the spec, this is Round 2's only question; the round and question caps do not
+change. "Don't know" does not hold up the spec: record the guess as `(inferred: …)` and list it under Open
+questions. A request that touches none of these never gets this question, and it does not grow into a
+security review.
 
 ### Round 3 — Understanding Check (always — one question, a second only on a contradiction)
 

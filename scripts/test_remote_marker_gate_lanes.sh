@@ -281,6 +281,209 @@ PY
 fi
 
 echo
+echo "== 지적 기록 (findings:) — 형식만, 내용 아님 (2026-11-23, 운영자 (B)) =="
+# 🟥 왜: 리뷰 지적 센서스(2026-11-23) — 리뷰가 있었다는 PR 138건 중 59건은 본문이 «codex R1 5 findings, all fixed» 처럼
+#    개수만 적어 무엇이었는지 읽을 수 없었다. 본문 195건 실측: 산문 «N findings» 42 · 등급만 «1 A · 2 B» 16 · «N items» 3.
+#    그래서 개수는 «타입 줄» 로 받고(R-a/R-b, 첫날부터 막음), 산문 개수 감지(R-c)는 한 주 경고만 낸다.
+#    판정 대상은 형식뿐이다 — 지적 문장이 참인지, sha 가 그 수리를 담는지는 안 본다.
+fr(){ # $1=브랜치 꼬리 $2=커밋 메시지에 FULL 뒤로 붙일 텍스트 · 나머지 env 는 호출자가
+  mk "claude/frr-$1" plugins/fh-meta/skills/demo/SKILL.md "$FULL
+$2"
+  RMG_BASE_REF=_base RMG_HEAD_REF="$(git rev-parse --abbrev-ref HEAD)" bash scripts/remote_marker_gate.sh 2>&1; }
+PAST=2000-01-01; FUTURE=2999-01-01
+FIVE='findings: 5
+- codex R1 · help flag read as a file list · fixed@0123abc
+- codex R1 · CI unset passes · fixed@0123abd
+- sonnet · README overstates the scope · fixed@0123abe
+- root · lane control dead on macOS · named-residual
+- codex R2 · near-key not caught · rejected — the hook already blocks it'
+out=$(RMG_FINDINGS_BLOCK_FROM=$PAST fr f1 'codex R1 5 findings, all fixed.'); rc=$?
+[ "$rc" -eq 1 ] && printf '%s' "$out" | /usr/bin/grep -q 'findings:' \
+  && ok "F1 (R-c) 산문 «5 findings» + 타입 줄 없음 · 차단일 이후 → rc=1" \
+  || ng "F1 어긋남 (rc=$rc) — 개수만 적은 본문이 통과했다"
+out=$(RMG_FINDINGS_BLOCK_FROM=$FUTURE fr f1w 'codex R1 5 findings, all fixed.'); rc=$?
+[ "$rc" -eq 0 ] && printf '%s' "$out" | /usr/bin/grep -q 'FINDINGS_TRIPWIRE_HIT' \
+  && ok "F1w (R-c) 같은 본문 · 차단일 이전 → rc=0 + 경고 토큰 FINDINGS_TRIPWIRE_HIT(적중 목록)" \
+  || ng "F1w 어긋남 (rc=$rc) — 경고 주간에 막았거나 적중을 안 남겼다"
+out=$(RMG_FINDINGS_BLOCK_FROM=$PAST fr f2 "$FIVE"); rc=$?
+[ "$rc" -eq 0 ] && ok "F2 (R-a) findings: 5 + 형식 맞는 5줄 → rc=0" || ng "F2 어긋남 (rc=$rc): $(printf '%s' "$out" | tail -3)"
+out=$(RMG_FINDINGS_BLOCK_FROM=$PAST fr f3 'findings: none — no review ran, doc-only change'); rc=$?
+[ "$rc" -eq 0 ] && ok "F3 (R-b) findings: none — 이유 → rc=0 (리뷰 안 돌았다는 기록)" || ng "F3 어긋남 (rc=$rc)"
+out=$(RMG_FINDINGS_BLOCK_FROM=$PAST fr f3z 'findings: 0 — codex R2 found nothing new'); rc=$?
+[ "$rc" -eq 0 ] && ok "F3z (R-b) findings: 0 — 무엇을 돌렸나 → rc=0" || ng "F3z 어긋남 (rc=$rc)"
+out=$(fr f4 'findings: 2
+- codex R1 · help flag read as a file list · fixed@0123abc'); rc=$?
+[ "$rc" -eq 1 ] && ok "F4 (R-a) findings: 2 인데 1줄 → rc=1" || ng "F4 어긋남 (rc=$rc)"
+out=$(fr f4b 'findings: 1
+- codex R1 · help flag read as a file list · fixed@0123abc
+- codex R1 · CI unset passes · fixed@0123abd'); rc=$?
+[ "$rc" -eq 1 ] && ok "F4b (R-a) findings: 1 인데 지적 줄 2개 → rc=1" || ng "F4b 어긋남 (rc=$rc)"
+out=$(fr f5 'findings: 1
+- codex R1 · help flag read as a file list · done'); rc=$?
+[ "$rc" -eq 1 ] && ok "F5 (R-a) 처리 칸이 enum 밖(done) → rc=1" || ng "F5 어긋남 (rc=$rc)"
+out=$(fr f5s 'findings: 1
+- reviewer · help flag read as a file list · fixed@0123abc'); rc=$?
+[ "$rc" -eq 1 ] && ok "F5s (R-a) 출처 칸이 형식 밖(라운드 없는 이름) → rc=1" || ng "F5s 어긋남 (rc=$rc)"
+out=$(fr f6 'Findings: 1
+- codex R1 · help flag read as a file list · fixed@0123abc'); rc=$?
+[ "$rc" -eq 1 ] && ok "F6 (R-a) 근사 키 «Findings:» → rc=1" || ng "F6 어긋남 (rc=$rc)"
+out=$(fr f7 'findings: none'); rc=$?
+[ "$rc" -eq 1 ] && ok "F7 (R-b) 이유 없는 «findings: none» → rc=1 (공허)" || ng "F7 어긋남 (rc=$rc)"
+out=$(fr f7z 'findings: 0'); rc=$?
+[ "$rc" -eq 1 ] && ok "F7z (R-b) 이유 없는 «findings: 0» → rc=1" || ng "F7z 어긋남 (rc=$rc)"
+out=$(RMG_FINDINGS_BLOCK_FROM=$PAST fr f8 'codex R1: 1 A · 2 B, all fixed.'); rc=$?
+[ "$rc" -eq 0 ] && ok "F8 이름 붙인 놓침: 등급만(«1 A · 2 B») 쓴 본문은 R-c 가 못 본다 → rc=0 (측정된 한계, 통과 주장 아님)" \
+                || ng "F8 어긋남 (rc=$rc) — 등급 표기를 잡기 시작했다면 이 레인과 PR 본문의 «놓침» 문장을 같이 고쳐라"
+out=$(RMG_FINDINGS_BLOCK_FROM=$PAST fr f9 'Nothing was reviewed here.'); rc=$?
+[ "$rc" -eq 0 ] && ! printf '%s' "$out" | /usr/bin/grep -q 'FINDINGS_TRIPWIRE_HIT' \
+  && ok "F9 (R-d) 타입 줄도 산문 개수도 없음 → rc=0, 경고 없음 (침묵은 판정 안 함)" || ng "F9 어긋남 (rc=$rc)"
+
+# codex R1 · blind Sonnet (2026-11-23) — 각각 고치기 전에 재현했다
+out=$(fr f10 'findings: 0 — root reviewed it
+- root · crashes on startup · named-residual'); rc=$?
+[ "$rc" -eq 1 ] && ok "F10 «findings: 0» 뒤에 지적 줄이 따라오면 rc=1 (codex R1)" || ng "F10 어긋남 (rc=$rc)"
+out=$(fr f10n 'findings: none — no review ran
+- root · crashes on startup · named-residual'); rc=$?
+[ "$rc" -eq 1 ] && ok "F10n «findings: none» 뒤에 지적 줄 → rc=1" || ng "F10n 어긋남 (rc=$rc)"
+out=$(fr f11 'findings: 2
+- root · crashes · named-residual
+- codex R1 · 도움말플래그를파일목록으로읽음 · fixed@0123abc'); rc=$?
+[ "$rc" -eq 0 ] && ok "F11 한 낱말 구절 · 띄어쓰기 없는 한국어 구절도 형식이다 → rc=0 (codex R1)" || ng "F11 어긋남 (rc=$rc)"
+out=$(fr f12 'findings: 2
+- codex R1 · bash 4 claim not backed by a run · named-residual (known limitation, not verified here)
+- codex R1 · a 0 read as not run · fixed@4f2a9c1 — counter now keeps the value'); rc=$?
+[ "$rc" -eq 0 ] && ok "F12 처리 칸 뒤의 설명(«named-residual (…)» · «fixed@sha — …») 허용 → rc=0 (블라인드 Sonnet 이 쓴 모양)" || ng "F12 어긋남 (rc=$rc)"
+out=$(fr f12r 'findings: 1
+- codex R1 · bash 4 claim · rejected'); rc=$?
+[ "$rc" -eq 1 ] && ok "F12r 이유 없는 «rejected» → rc=1" || ng "F12r 어긋남 (rc=$rc)"
+
+# codex R2 (2026-11-23) — 각각 고치기 전에 재현했다(마지막 라운드라 이 수리는 재검토 안 됨 — PR 본문에 적는다)
+out=$(fr f15 'findings: 1
+- root · crashes · fixed@0123abcXYZ'); rc=$?
+[ "$rc" -eq 1 ] && ok "F15 처리 토큰에 글자가 붙으면(fixed@…XYZ) rc=1" || ng "F15 어긋남 (rc=$rc)"
+out=$(fr f15n 'findings: 1
+- root · crashes · named-residual-invalid'); rc=$?
+[ "$rc" -eq 1 ] && ok "F15n named-residual-invalid → rc=1" || ng "F15n 어긋남 (rc=$rc)"
+out=$(fr f16 'findings: 0 — root reviewed it
+
+- root · crashes · named-residual'); rc=$?
+[ "$rc" -eq 1 ] && ok "F16 «findings: 0» 뒤 빈 줄 다음의 지적 줄도 모순 → rc=1" || ng "F16 어긋남 (rc=$rc)"
+mkgh badbody json "[{\"head\":{\"ref\":\"$PBR\",\"repo\":{\"full_name\":\"o/r\"}},\"body\":[]}]"
+out=$(plook badbody); rc=$?
+[ "$rc" -eq 10 ] && ok "L5d push 조회 경로도 본문 값이 문자열·null 이 아니면 rc=10" || ng "L5d 어긋남 (rc=$rc)"
+
+# F17 — 코드 펜스 안의 예시는 기록이 아니다(이 PR 자기 본문의 형식 예시가 기록으로 읽혀 막혔다 — 마지막 라운드 뒤 수리)
+FENCE_BODY='The record looks like this:
+```
+findings: 3
+- codex R1 · <mechanism> · fixed@<sha>
+```
+findings: 1
+- codex R1 · help flag read as a file list · fixed@0123abc'
+out=$(RMG_FINDINGS_BLOCK_FROM=$PAST fr f17 "$FENCE_BODY"); rc=$?
+[ "$rc" -eq 0 ] && ok "F17 펜스 안 예시(findings: 3 + 자리표시자)는 건너뛰고 펜스 밖 진짜 블록만 본다 → rc=0" || ng "F17 어긋남 (rc=$rc)"
+out=$(RMG_FINDINGS_BLOCK_FROM=$PAST fr f17p 'codex R1 5 findings, all fixed.
+```
+findings: 1
+- codex R1 · example · fixed@0123abc
+```'); rc=$?
+[ "$rc" -eq 1 ] && ok "F17p 펜스 안의 findings: 줄은 산문 개수를 덮지 못한다 → rc=1 (R-c 그대로)" || ng "F17p 어긋남 (rc=$rc)"
+
+# F18 — 닫히지 않은 펜스(루트 지적, 읽기로 발견): 끝까지 열린 펜스가 그 뒤 주장(산문 개수 · findings: 줄)을 가리면
+#   «주장 없음» 으로 조용히 통과했다 → 형식 오류. 가린 구간에 주장이 없으면 R-d 그대로(통과).
+out=$(RMG_FINDINGS_BLOCK_FROM=$FUTURE fr f18 'Notes:
+```
+codex R1 3 findings, all fixed.'); rc=$?
+[ "$rc" -eq 1 ] && printf '%s' "$out" | /usr/bin/grep -q 'unclosed code fence' \
+  && ok "F18 닫히지 않은 펜스가 산문 «3 findings» 를 가리면 rc=1 «unclosed code fence» (경고 주간에도)" || ng "F18 어긋남 (rc=$rc)"
+out=$(RMG_FINDINGS_BLOCK_FROM=$FUTURE fr f18c 'Notes:
+```
+an example
+```
+codex R1 3 findings, all fixed.'); rc=$?
+[ "$rc" -eq 0 ] && printf '%s' "$out" | /usr/bin/grep -q 'FINDINGS_TRIPWIRE_HIT' \
+  && ok "F18c 같은 본문, 펜스를 닫으면 지금 동작(경고 주간 → 경고 + rc=0)" || ng "F18c 어긋남 (rc=$rc)"
+out=$(fr f18e 'Example:
+```
+codex R1 3 findings
+```
+Log:
+```
+just a log line, no claim'); rc=$?
+[ "$rc" -eq 0 ] && ok "F18e 앞의 닫힌 펜스 안 «3 findings» 는 뒤의 열린 펜스 판정에 안 섞인다 → rc=0" || ng "F18e 어긋남 (rc=$rc)"
+out=$(fr f18n 'Notes:
+```
+just a log line, no claim'); rc=$?
+[ "$rc" -eq 0 ] && ok "F18n 닫히지 않은 펜스 안에 주장이 없으면 R-d 그대로 통과" || ng "F18n 어긋남 (rc=$rc)"
+
+# F19 — 줄바꿈된 산문이 우연히 «findings: » 로 시작해도 기록이 아니다(이 PR 의 세 번째 커밋 메시지에서 실제로 났다).
+#   값이 숫자 · none 으로 시작할 때만 기록으로 본다. 그 밖은 산문 — 대신 «findings: five» 같은 오타는 못 잡는다(이름 붙인 느슨함).
+out=$(fr f19 'when the hidden part of that fence holds a claim (a
+findings: line, a near-key, or a prose count), R-a fails.'); rc=$?
+[ "$rc" -eq 0 ] && ok "F19 «findings: line, …» 로 시작하는 줄바꿈 산문은 기록이 아니다 → rc=0" || ng "F19 어긋남 (rc=$rc)"
+out=$(fr f19d 'findings: 3x
+- root · a · named-residual'); rc=$?
+[ "$rc" -eq 1 ] && ok "F19d 숫자로 시작하는 깨진 값(3x)은 여전히 기록 오류 → rc=1" || ng "F19d 어긋남 (rc=$rc)"
+
+# F14 — 마지막 커밋 날짜를 못 읽으면(빈 값) 경고로 접지 않고 판정 불가(rc 2 → 스크립트 rc 10). 날짜만 실패하게 만드는 길이
+#   스크립트 실행엔 없어서(앞 단계가 같은 ref 를 이미 읽었다) 파서를 스크립트에서 그대로 떼어 직접 부른다(codex R1).
+awk '/^FOUT=\$\(python3 - /{f=1;next} /^FPY$/{f=0} f' scripts/remote_marker_gate.sh > "$TMPD/findings_parser.py"
+printf 'codex R1 5 findings, all fixed.\n' > "$TMPD/rec_prose.txt"
+if /usr/bin/grep -q 'block_from, last_date, rec' "$TMPD/findings_parser.py"; then
+  python3 "$TMPD/findings_parser.py" 2000-01-01 "" "$TMPD/rec_prose.txt" >/dev/null 2>&1; r14=$?
+  python3 "$TMPD/findings_parser.py" 2000-01-01 2026-11-23 "$TMPD/rec_prose.txt" >/dev/null 2>&1; r14c=$?
+  [ "$r14" -eq 2 ] && [ "$r14c" -eq 1 ] && ok "F14 날짜를 못 읽으면 rc 2(판정 불가) · 같은 기록에 날짜가 있으면 rc 1(차단) — 컨트롤 살아 있음" \
+                                        || ng "F14 어긋남 (빈 날짜 rc=$r14 · 날짜 있음 rc=$r14c)"
+else
+  ng "F14 계기 오류 — 파서를 스크립트에서 떼어 내지 못했다(표기가 바뀌었나)"
+fi
+
+echo
+echo "== pull_request 실행의 본문은 이벤트가 아니라 API 에서 새로 읽는다 (#1196 — 고친 본문이 재실행에 안 실렸다) =="
+mk claude/frr-fresh plugins/fh-meta/skills/demo/SKILL.md "frontier-auto: 마커는 PR 본문에만 (pull_request)"
+FBR=$(git rev-parse --abbrev-ref HEAD)
+mkgh prok    json "{\"number\":7,\"head\":{\"ref\":\"$FBR\",\"repo\":{\"full_name\":\"o/r\"}},\"body\":$BODY_JSON}"
+mkgh prfork  json "{\"number\":7,\"head\":{\"ref\":\"$FBR\",\"repo\":{\"full_name\":\"x/fork\"}},\"body\":$BODY_JSON}"
+mkgh prbadbody json "{\"number\":7,\"head\":{\"ref\":\"$FBR\",\"repo\":{\"full_name\":\"o/r\"}},\"body\":[]}"
+mkgh prwrong json "{\"number\":7,\"head\":{\"ref\":\"claude/other\",\"repo\":{\"full_name\":\"o/r\"}},\"body\":$BODY_JSON}"
+prnum(){ RMG_PR_NUMBER=7 RMG_REPO=o/r RMG_GH="$FAKEGH/$1" RMG_BASE_REF=_base RMG_HEAD_REF="$FBR" bash "${2:-scripts/remote_marker_gate.sh}" 2>&1; }
+out=$(prnum prok); rc=$?
+[ "$rc" -eq 0 ] && printf '%s' "$out" | /usr/bin/grep -q 'PR #7 본문을 API 로 새로 읽었다' \
+  && ok "P7a pull_request: PR 번호로 본문을 새로 읽는다 → 본문의 마커로 rc=0" \
+  || ng "P7a 어긋남 (rc=$rc): $(printf '%s' "$out" | tail -2)"
+out=$(prnum prfork); rc=$?
+[ "$rc" -eq 0 ] && ok "P7e 포크에서 온 PR(같은 번호 · 같은 head ref) 본문도 읽는다 → rc=0 (번호가 PR 을 정확히 가리킨다)" || ng "P7e 어긋남 (rc=$rc) — 포크 PR 을 거절했다"
+out=$(prnum prbadbody); rc=$?
+[ "$rc" -eq 10 ] && ok "P7f 본문 값이 문자열·null 이 아니면([]) rc=10 (codex R1 — 빈 본문으로 접히던 자리)" || ng "P7f 어긋남 (rc=$rc)"
+out=$(prnum fail); rc=$?
+[ "$rc" -eq 10 ] && ok "P7b 본문 조회 실패 → rc=10 («본문 없음» 으로 안 접는다)" || ng "P7b 어긋남 (rc=$rc)"
+out=$(prnum junk); rc=$?
+[ "$rc" -eq 10 ] && ok "P7c 응답이 JSON 이 아님 → rc=10" || ng "P7c 어긋남 (rc=$rc)"
+out=$(prnum prwrong); rc=$?
+[ "$rc" -eq 10 ] && ok "P7d 그 번호의 PR head 가 이 채널이 아님 → rc=10 (남의 본문으로 통과 안 함)" || ng "P7d 어긋남 (rc=$rc)"
+w4(){ python3 - "$1" <<'W4PY'
+import sys
+try:
+    import yaml
+except ImportError:
+    sys.exit(3)
+wf = yaml.safe_load(open(sys.argv[1], encoding="utf-8"))
+for job in (wf.get("jobs") or {}).values():
+    for st in job.get("steps") or []:
+        if str(st.get("name", "")).startswith("Floorless-channel"):
+            env = st.get("env") or {}
+            ok = env.get("RMG_PR_NUMBER") == "${{ github.event.pull_request.number }}" and "PR_BODY" not in env
+            sys.exit(0 if ok else 1)
+sys.exit(2)
+W4PY
+}
+if [ -r "$WF" ]; then
+  w4 "$WF"; w4rc=$?
+  [ "$w4rc" -eq 0 ] && ok "W4: Floorless 스텝이 이벤트 본문(PR_BODY) 대신 RMG_PR_NUMBER 로 새로 읽는다" \
+                    || ng "W4: Floorless 스텝이 아직 이벤트 본문을 쓴다 (rc=$w4rc — 3 = PyYAML 없음)"
+fi
+
+echo
 echo "== 게이트가 자기 판정을 고칠 수 없게 — 기준(base) 사본으로 판정 (2026-11-23, H2) =="
 # 🟥 실측: pull_request 체크아웃은 PR 쪽(merge ref)이라, FH 자산을 마커 없이 바꾸면서 같은 PR 에서 이 스크립트의
 #    필드 루프 한 줄을 지우면 CI 판정이 rc 1 → rc 0 이 됐다(로컬 재현, 세 팔: 위반만 1 · 위반+게이트 수정 0 ·

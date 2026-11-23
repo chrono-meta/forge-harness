@@ -14,9 +14,12 @@
 #   I4  Step 4's first (default) row is a new session that reads only the saved spec; «Start
 #       implementation directly» is still there and marked not the default
 #   I5  the spec format carries `## Why` and `## Understanding check`
+#   I6  (2026-11-23) Round 2 has the money · personal-data binding question: when the request touches payments,
+#       accounts or personal data, ask which unique key they are bound to and whether anything is matched on a
+#       changeable value such as email; a request that touches none of these never gets it
 #   K1  kept: «maximum 3 rounds, maximum 2 questions per round», `(inferred:`, `Excluded:`, `specs/{slug}.md`
 #   K2  no round template holds more than 2 numbered questions (the cap holds after adding the Why)
-#   C   controls: a copy with each of I1–I4 removed goes red on that case alone
+#   C   controls: a copy with each of I1–I4 and I6 removed goes red on that case alone
 # NOT CHECKED: whether a real session asks these questions — that is the blind Sonnet sim recorded in the
 # PR, not this lane. A green run here means the template says it, not that a model does it.
 #
@@ -63,6 +66,10 @@ say("I4", re.search(r"new session", first, re.I) and re.search(r"only the saved 
     and direct and re.search(r"not the default", direct[0], re.I),
     f"Step 4 first row «{first[:60]}» is not the new-session default, or «Start implementation directly» is gone / not marked")
 fmt = sec("### Spec Document Format", "\n## Step 4")
+r2 = sec("### Round 2", "\n### Round 3")
+say("I6", bool(r2) and re.search(r"[Pp]ayment", r2) and re.search(r"personal data", r2) and re.search(r"unique key", r2)
+    and re.search(r"email", r2) and re.search(r"none of these", r2),
+    "Round 2 lacks the money · personal-data binding question (payments · personal data · unique key · email · not asked otherwise)")
 say("I5", "## Why" in fmt and "## Understanding check" in fmt, "spec format lacks ## Why or ## Understanding check")
 keep = ["maximum 3 rounds, maximum 2 questions per round", "(inferred:", "Excluded:", "specs/{slug}.md"]
 miss = [k for k in keep if k not in t]
@@ -100,6 +107,7 @@ if [ "$fail" -eq 0 ]; then
   control I2 't = t.replace("### Textbook phrases", "### Plain phrases").replace("Textbook phrase", "Plain phrase")'
   control I3 't = re.sub(r"(### Round 3)(.*?)(\n## )", lambda m: m.group(1) + "\n\nDraft the spec, then confirm once.\n" + m.group(3), t, count=1, flags=re.S)'
   control I4 't = re.sub(r"(## Step 4\..*?\|---\|---\|\n)\|[^\n]*\n", r"\1", t, count=1, flags=re.S)'
+  control I6 't = re.sub(r"\*\*Money · personal data.*?(?=\n### Round 3)", "", t, count=1, flags=re.S)'
 else
   echo "SKIP  controls — the shipped skill is already red (a control on a red subject proves nothing)"
 fi

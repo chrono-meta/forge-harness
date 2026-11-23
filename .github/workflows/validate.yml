@@ -305,9 +305,12 @@ jobs:
         if: matrix.shard == 1
         env:
           RMG_CHANNEL_NAME: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
-          PR_BODY: ${{ github.event.pull_request.body }}
+          # pull_request 실행: 이벤트 본문(github.event.pull_request.body)은 이벤트가 난 순간의 것이라, 본문을
+          # 고친 뒤 «Re-run jobs» 를 눌러도 옛 본문이 실린다(#1196 은 닫았다 다시 열어야 했다). 그래서 PR 번호로
+          # 지금 본문을 API 에서 읽는다(조회 실패 = 빨강, rc=10). push 실행은 번호가 없으니 아래 조회 경로를 쓴다.
+          RMG_PR_NUMBER: ${{ github.event.pull_request.number }}
           # push 실행엔 이벤트 본문이 없다 — 그 커밋의 PR 본문을 API 로 읽는다(조회 실패 = 빨강).
-          # pull_request 실행은 이벤트 본문을 쓰므로 조회하지 않는다. (AQ-20261114-10, #1095 · #1103)
+          # (AQ-20261114-10, #1095 · #1103)
           RMG_PR_LOOKUP: ${{ github.event_name == 'push' && '1' || '0' }}
           RMG_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
@@ -317,11 +320,6 @@ jobs:
           # 얕은 클론이라 base 를 직접 받아온다. 못 받으면 그건 HARNESS-ERROR 로 떨어져야지
           # «비교할 게 없다 → 통과» 로 접히면 안 된다.
           git fetch --no-tags --depth=50 origin main 2>/dev/null || true
-          BODY_FILE=""
-          if [ -n "${PR_BODY:-}" ]; then
-            BODY_FILE="$RUNNER_TEMP/pr_body.txt"
-            printf '%s' "$PR_BODY" > "$BODY_FILE"
-          fi
           # 🟥 판정은 base 의 게이트로 한다(2026-11-23, H2). 체크아웃은 PR 쪽이라, PR 이 이 스크립트의 검사 한 줄을
           #    지우면 자기 위반이 초록이 됐다(로컬 실측: 위반만 rc 1 · 위반+게이트 수정 rc 0 · 같은 브랜치에 base 사본 rc 1).
           #    base 사본을 못 꺼내면 rc 10. base 에 그 파일이 없을 때만(이 PR 이 게이트를 처음 들이는 경우) PR 사본을 쓴다.
@@ -342,7 +340,7 @@ jobs:
             echo "::warning::base ($GATE_REF) has no scripts/remote_marker_gate.sh — running this change's copy"
             cp scripts/remote_marker_gate.sh "$GATE"
           fi
-          RMG_BASE_REF=origin/main RMG_HEAD_REF=HEAD RMG_BODY_FILE="$BODY_FILE" \
+          RMG_BASE_REF=origin/main RMG_HEAD_REF=HEAD \
             bash "$GATE"
           rc=$?
           rm -f "$GATE"
