@@ -5736,6 +5736,20 @@
   purpose: soul-line restatement (1) and blind firing sims reading only a copy of the rule file — arm 4 (new rule), control 1 (main rule)
   output: done — soul both RESTATABLE; arm 4/4 wrote input-from on the first controls line, control 0/1 → PR #1180
   lease: selfdev loop standing instruction (operator 2026-11-11, candidate rows)
+- date: 2026-11-24
+  session: selfdev loop (unattended)
+  agent: general-purpose
+  model: sonnet
+  purpose: soul-line restatement (1) and blind shrink-task sims reading only a copy of salience-splitter SKILL.md — arm 3 (new text), control 3 (main text)
+  output: done — soul first read SUCCESS=GUESS (deliverable · placement · proof · length), rewritten before design; arm 3/3 named the cutting-model caution (2 explicit, 1 implicit), control 0/3; Sonnet-pinned sim reader 3/3 in both arms (not discriminating)
+  lease: selfdev loop standing instruction (operator 2026-11-11, candidate rows)
+- date: 2026-11-24
+  session: selfdev loop (unattended)
+  agent: fh-meta:challenger
+  model: opus (inherited)
+  purpose: Axis-2 adversarial read of the AQ-20261121-2 salience-splitter caution
+  output: done — 0 blocking, 3 weaker, 2 nit; fixed ① sim-row pin claim half false (sim-conductor is session-inherit) ② «model doing the cut» clashes with frontmatter model sonnet ③ «both rows above» ambiguous; ④ tier narrower than line 268 fixed by the same rewording; ⑤ claim unmeasured kept as named residual
+  lease: selfdev loop standing instruction (operator 2026-11-11, candidate rows)
 - date: 2026-11-23
   session: selfdev loop (unattended)
   agent: fh-meta:challenger

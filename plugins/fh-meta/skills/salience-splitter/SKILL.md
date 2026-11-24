@@ -87,6 +87,11 @@ decided.
 whole reason the arm is isolated. The same reading applies to the sim: a consumer that improvises
 plausibly without the moved rule is grade P, not F.
 
+**The cutting session's own «I would not need this» is not the filter.** A model asked to shorten
+text drops first what it would not use itself — often what a weaker or cold reader still needs (a
+definition, a worked example, why a step exists). So the reader in the ablation and cold-start sim
+rows is a fresh one at the tier the text must survive on, never the session doing the cut.
+
 This skill is the one that executes resident removal, so the procedure is named *here* rather than
 assumed — an earlier version left the judgment "mentally", which is exactly the eyeball path both
 branches exist to replace. **Do not read the resident row onto the SKILL.md row**: requiring a full
