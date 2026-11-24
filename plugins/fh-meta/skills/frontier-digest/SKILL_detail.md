@@ -194,6 +194,8 @@ without `-L` the body is **0 bytes**, with `-L` it was 28,635 B / 20 `<entry>` (
 
 Korean dev-news aggregator (HN-equivalent), AI-heavy. **The `/rss/news` path serves an Atom feed** (`<feed>`/`<entry>`, NOT RSS `<item>` — verified 2026-06-20: 50 `<entry>` elements, 0 `<item>`; 2026-11-04 after the redirect: 20 `<entry>`, 0 `<item>`). Parse `<entry>` → `<title>` + `<link href>`; keep AI/agent/LLM/harness-relevant items only. `/rss/news` is a *general* dev-news feed, so if 0 AI-relevant items remain after filtering, **drop GeekNews from this run's progress line rather than padding to 5**. Endpoint verified HTTP 200 (2026-06-20); `/rss/new` and `/rss/topics` 404 — use `/rss/news`. Max 5 items.
 
+🟥 **Do not fetch GeekNews article pages (`news.hada.io/topic?id=…`) (2026-11-24).** Use the feed `<entry>` `<title>` + `<link href>` only. The site answers article-page fetches from this runner with 403 and a notice that repeated automated access gets reported (11-22: 1 page, 11-23: 3 pages, 708–789 B each — recorded in that day's digest, `tracks/_meta/frontier_digest_<date>.md`). That is an explicit refusal, so the identity rule above applies: do not retry, do not switch clients. An item whose substance you need goes to Step 0.5 as an operator hand-in; until then it is cited by title only and marked `UNVERIFIED-ANCHOR`, never summarized from the title as if the article had been read. A page that was requested anyway and refused is still written `UNREACHABLE(403)` as above; `UNVERIFIED-ANCHOR` labels the item, it does not replace the refusal record.
+
 ### Launch channels and vendor feeds (added 2026-10-17; ids match SKILL.md Step 1)
 
 Why: the digest missed «Aside» (YC-backed agent browser) because HN/arXiv/GitHub-style legs do not carry
