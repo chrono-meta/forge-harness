@@ -23,6 +23,8 @@
 
 . "$(dirname "${BASH_SOURCE[0]}")/fixture_guard_lib.sh"   # scrub inherited GIT_* env first (#1088)
 set -u
+# a lane run inside a hook-launched shell must never append to that session's real env file (L7)
+unset CLAUDE_ENV_FILE
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 P="$ROOT/plugins/fh-guard"
 MAIN_GATE="$ROOT/scripts/destructive_pre_gate.sh"
@@ -190,6 +192,66 @@ if [ -f "$COPY" ] && [ -f "$PRE" ]; then
   [ -n "$ctl" ] && ok "L6a-ctl find sees a file written after the stamp" || bad "L6a-ctl find is blind"
   hits=$(grep -nE '(^|[^[:alnum:]_])(curl|wget|nc|ncat|socat|ssh)([[:space:]]|$)|/dev/tcp' "$PRE" | grep -v '^[0-9]*:[[:space:]]*#' || true)
   [ -z "$hits" ] && ok "L6b preflight carries no network tool" || bad "L6b network tool in preflight" "$hits"
+fi
+
+echo "-- L7 preflight unsets the messaging socket for Bash children (IG3 §2, H5) --"
+# IG3 measured that `claude -p` children inherit CLAUDE_CODE_MESSAGING_SOCKET and ..._TOKEN, and that an
+# `unset` line in the SessionStart env file brings direct and make-child counts to 0. Claude Code sources
+# that file before each Bash command; here a child shell sources it the same way. NOT CHECKED HERE: that
+# Claude Code really gives a plugin hook the file and sources it — that is the claude -p --plugin-dir smoke
+# recorded in the PR (with plugin 0/0 ×3, without 2/2 ×3, CLI 2.1.330, macOS).
+case "${OS:-}:$(uname -s 2>/dev/null)" in Windows_NT:*|*:MINGW*|*:MSYS*|*:CYGWIN*) ON_WIN=1 ;; *) ON_WIN=0 ;; esac
+if [ ! -f "$PRE" ] || [ -z "$PRE_RUN" ]; then
+  bad "L7 preflight exists" "missing: $PRE"
+elif [ "$ON_WIN" = 1 ]; then
+  echo "  ⏭  L7a-d skipped on Windows by name — the preflight writes nothing there (not a pass)"
+else
+  cnt() { # $1=env file to source ('' = none) → count of CLAUDE_CODE_MESSAGING_* names a grandchild shell sees
+    CLAUDE_CODE_MESSAGING_SOCKET=/tmp/fake.sock CLAUDE_CODE_MESSAGING_TOKEN=fake-token \
+      bash -c '[ -n "$1" ] && . "$1"; bash -c "env" | grep -c "^CLAUDE_CODE_MESSAGING_"' _ "$1"
+  }
+  : > "$TMP/env_ctl"
+  n=$(cnt "$TMP/env_ctl")
+  [ "$n" = 2 ] && ok "L7-ctl without the unset line a grandchild shell sees both names (2)" \
+               || bad "L7-ctl control did not see the inherited names" "count=$n (want 2) — the lane cannot discriminate"
+  : > "$TMP/env_file"
+  out=$(CLAUDE_ENV_FILE="$TMP/env_file" CLAUDE_PLUGIN_ROOT="$P" sh -c "$PRE_RUN" </dev/null 2>&1); rc=$?
+  [ "$rc" = 0 ] && [ -z "$out" ] && ok "L7a with CLAUDE_ENV_FILE the preflight stays silent, exit 0" \
+                                 || bad "L7a preflight with env file" "rc=$rc out=$out"
+  n=$(cnt "$TMP/env_file")
+  [ "$n" = 0 ] && ok "L7b after the preflight a grandchild shell sees neither name (0)" \
+               || bad "L7b messaging names still reach a Bash child" "count=$n (want 0); env file: $(cat "$TMP/env_file")"
+  # append, never overwrite — and another hook's last line may lack a newline (codex R1: `export X=1unset …`)
+  for tail in nl nonl; do
+    if [ "$tail" = nl ]; then printf 'export OTHER_HOOK=1\n' > "$TMP/env_app_$tail"; else printf 'export OTHER_HOOK=1' > "$TMP/env_app_$tail"; fi
+    CLAUDE_ENV_FILE="$TMP/env_app_$tail" CLAUDE_PLUGIN_ROOT="$P" sh -c "$PRE_RUN" </dev/null >/dev/null 2>&1
+    got=$(CLAUDE_CODE_MESSAGING_SOCKET=/tmp/fake.sock CLAUDE_CODE_MESSAGING_TOKEN=fake-token \
+      bash -c '. "$1"; bash -c "env" | grep -cE "^(CLAUDE_CODE_MESSAGING_|OTHER_HOOK=1$)"; bash -c "env" | grep -c "^OTHER_HOOK=1$"' _ "$TMP/env_app_$tail" | tr '\n' ' ')
+    [ "$got" = "1 1 " ] && ok "L7c[$tail] other hook's export still runs and both messaging names are gone" \
+                        || bad "L7c[$tail] append broke the other hook or kept the names" "counts(all, other)=$got (want 1 1); file: $(cat "$TMP/env_app_$tail")"
+  done
+  # a destination that cannot be written (a directory) → silent, exit 0 (the session is not broken)
+  mkdir -p "$TMP/env_dir"
+  out=$(CLAUDE_ENV_FILE="$TMP/env_dir" CLAUDE_PLUGIN_ROOT="$P" sh -c "$PRE_RUN" </dev/null 2>&1); rc=$?
+  [ "$rc" = 0 ] && [ -z "$out" ] && ok "L7f unwritable env file → silent, exit 0 (named: the channel then stays inherited)" \
+                                 || bad "L7f unwritable env file" "rc=$rc out=$out"
+  # no CLAUDE_ENV_FILE (older Claude Code, or a non-SessionStart caller) → silent, exit 0
+  out=$(env -u CLAUDE_ENV_FILE CLAUDE_PLUGIN_ROOT="$P" sh -c "$PRE_RUN" </dev/null 2>&1); rc=$?
+  [ "$rc" = 0 ] && [ -z "$out" ] && ok "L7d without CLAUDE_ENV_FILE → silent, exit 0" \
+                                 || bad "L7d no env file" "rc=$rc out=$out"
+fi
+# Windows: an unset line would stop PowerShell receiving other hooks' plain exports → write nothing there.
+# Both arms of the platform check: OS=Windows_NT, and a uname that says MINGW (Git Bash) — Sonnet R1.
+if [ -f "$PRE" ] && [ -n "$PRE_RUN" ]; then
+  : > "$TMP/env_win"
+  OS=Windows_NT CLAUDE_ENV_FILE="$TMP/env_win" CLAUDE_PLUGIN_ROOT="$P" sh -c "$PRE_RUN" </dev/null >/dev/null 2>&1
+  [ ! -s "$TMP/env_win" ] && ok "L7e on Windows (OS=Windows_NT) nothing is written — named gap, not a pass" \
+                          || bad "L7e wrote to the env file on Windows" "$(cat "$TMP/env_win")"
+  mkdir -p "$TMP/mingwbin"; printf '#!/bin/sh\necho MINGW64_NT-10.0-19045\n' > "$TMP/mingwbin/uname"; chmod +x "$TMP/mingwbin/uname"
+  : > "$TMP/env_mingw"
+  env -u OS PATH="$TMP/mingwbin:$PATH" CLAUDE_ENV_FILE="$TMP/env_mingw" CLAUDE_PLUGIN_ROOT="$P" sh -c "$PRE_RUN" </dev/null >/dev/null 2>&1
+  [ ! -s "$TMP/env_mingw" ] && ok "L7e2 on Git Bash (uname MINGW64, OS unset) nothing is written" \
+                            || bad "L7e2 wrote to the env file on Git Bash" "$(cat "$TMP/env_mingw")"
 fi
 
 echo

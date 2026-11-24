@@ -36,7 +36,7 @@
     {
       "name": "fh-guard",
       "version": "3.48.0",
-      "description": "fh-guard — installable, character-free FH gate. One PreToolUse(Bash) hook runs a byte-identical copy of FH's destructive-op gate on every Bash call in any repo: in bypassPermissions and auto mode it blocks force pushes, remote deletes, local destroyers and the agent switching the next layer off (--no-verify, core.hooksPath, an in-command override), and tells the agent to ask you; in other modes it warns. A hook that cannot start or times out blocks the call (onFailure: block); a missing python3 is reported at session start. 0 skills, 0 agents, no network, no file writes. Needs bash + python3 (Windows: Git for Windows).",
+      "description": "fh-guard — installable, character-free FH gate. One PreToolUse(Bash) hook runs a byte-identical copy of FH's destructive-op gate on every Bash call in any repo: in bypassPermissions and auto mode it blocks force pushes, remote deletes, local destroyers and the agent switching the next layer off (--no-verify, core.hooksPath, an in-command override), and tells the agent to ask you; in other modes it warns. A hook that cannot start or times out blocks the call (onFailure: block); a missing python3 is reported at session start. 0 skills, 0 agents, no network; the only write is one line in the session env file, when Claude Code provides it, so Bash calls and their children stop inheriting the session's message channel (macOS/Linux; not Windows). Needs bash + python3 (Windows: Git for Windows).",
       "source": "./plugins/fh-guard"
     }
   ]
