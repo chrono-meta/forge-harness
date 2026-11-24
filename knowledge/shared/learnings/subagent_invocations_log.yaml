@@ -5750,3 +5750,17 @@
   purpose: Axis-2 adversarial read of the AQ-20261121-2 salience-splitter caution
   output: done — 0 blocking, 3 weaker, 2 nit; fixed ① sim-row pin claim half false (sim-conductor is session-inherit) ② «model doing the cut» clashes with frontmatter model sonnet ③ «both rows above» ambiguous; ④ tier narrower than line 268 fixed by the same rewording; ⑤ claim unmeasured kept as named residual
   lease: selfdev loop standing instruction (operator 2026-11-11, candidate rows)
+- date: 2026-11-23
+  session: selfdev loop (unattended)
+  agent: fh-meta:challenger
+  model: opus (inherited)
+  purpose: blind Axis-2 read of the AQ-20261107-29 ⓐ state-claim hook change (diff + stated job only)
+  output: done — 0 blocking, 5 weaker; 3 fixed (mark after print · compaction reset · atomic pending), 2 named as limits → PR #1188
+  lease: selfdev loop standing instruction (operator 2026-11-11, candidate rows)
+- date: 2026-11-23
+  session: selfdev loop (unattended)
+  agent: general-purpose
+  model: sonnet
+  purpose: context-free soul-line restatement for the same change
+  output: done — SUCCESS GUESS (shown? key? unreadable-state direction), NEVER-DO RESTATABLE; line rewritten before design → PR #1188
+  lease: selfdev loop standing instruction (operator 2026-11-11, candidate rows)

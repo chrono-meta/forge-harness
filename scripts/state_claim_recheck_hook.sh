@@ -26,6 +26,18 @@
 # record, not a live grant. Resident-file hits come first and their wording is unchanged; the archive
 # only adds lines under the same 8-line cap. Archive missing (general users have none) → silent.
 #
+# ONCE PER CONTEXT (2026-11-23, AQ-20261107-29 ⓐ). First live use re-sent the same #1048 note two turns
+# running. A lease line is now shown at most once per session *between compactions*: after a note is printed,
+# the keys of the lines it showed (#N + the line text, not its line number) go to <sid>.c<K>.seen, where K is
+# the number of compact_boundary entries in the transcript (a compaction drops the earlier note from the
+# model's context, so it starts a new seen file). A later stop drops hits whose key is there; a new or edited
+# lease line for the same #N has a new key and fires. Only shown lines are marked (lines past the 8-line cap
+# stay unseen), and only after the print. The note and its keys are one file written by rename.
+# Fails open: seen file unreadable → empty; transcript unreadable → K=0. Named limits: a line removed and
+# re-added verbatim stays seen until the next compaction; the header names only the not-yet-seen numbers;
+# seen files are small and left in FH_STATE_CLAIM_DIR; an edit past the 160-char display cut re-fires a line
+# that looks unchanged.
+#
 # Env: FH_LEASE_FILE (default $HUB/CLAUDE.local.md) ·
 #      FH_LEASE_ARCHIVE (default $HUB/tracks/_meta/claude_local_lease_archive.md) · FH_STATE_CLAIM_DIR (pending notes; default
 #      ${TMPDIR:-/tmp}/fh_state_claim). Tests: scripts/test_state_claim_recheck_lanes.sh
@@ -56,17 +68,30 @@ def main():
         sys.exit(0)   # no session id → no safe pending file (sessions must not share one)
     sid = hashlib.sha256(ev["session_id"].encode("utf-8")).hexdigest()[:32]
     pending = os.path.join(pdir, sid + ".txt")
+    SEP = "\n\x1f"   # pending file = note + SEP + seen-file name + TAB + keys (comma-joined)
 
     if mode == "prompt":
         try:
             with open(pending, encoding="utf-8") as f:
-                note = f.read().strip()
+                raw = f.read()
             os.remove(pending)
         except Exception:
             sys.exit(0)
+        note, _, tail = raw.partition(SEP)
+        note = note.strip()
         if note:
             print(json.dumps({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit",
                                                      "additionalContext": note}}, ensure_ascii=False))
+            sys.stdout.flush()
+            # mark only after the note went out; any failure leaves the lines unseen (fail open)
+            try:
+                name, _, keys = tail.strip().partition("\t")
+                keys = [k for k in keys.split(",") if re.fullmatch(r"[0-9a-f]{24}", k)]
+                if keys and re.fullmatch(re.escape(sid) + r"\.c\d+\.seen", name):
+                    with open(os.path.join(pdir, name), "a", encoding="utf-8") as f:
+                        f.write("\n".join(keys) + "\n")
+            except Exception:
+                pass
         sys.exit(0)
 
     # mode == stop
@@ -137,7 +162,31 @@ def main():
     if ARCHIVE_ON and archive and os.path.isfile(archive) and os.path.realpath(archive) != os.path.realpath(lease):
         sources.append((archive, "[보관 · 만료] "))
 
-    hits, matched, read_from = [], [], []
+    # compaction count: a compact_boundary entry means the earlier notes left the model context
+    ncomp = 0
+    try:
+        with open(ev.get("transcript_path") or "", "rb") as f:
+            for bl in f:
+                if b"compact_boundary" in bl:
+                    try:
+                        o = json.loads(bl)
+                    except Exception:
+                        continue
+                    if isinstance(o, dict) and o.get("type") == "system" and o.get("subtype") == "compact_boundary":
+                        ncomp += 1
+    except Exception:
+        ncomp = 0
+    seenname = "%s.c%d.seen" % (sid, ncomp)
+    seenf = os.path.join(pdir, seenname)
+    SEEN_ON = True
+    seen = set()
+    if SEEN_ON:
+        try:
+            with open(seenf, encoding="utf-8") as f:
+                seen = set(l.strip() for l in f if l.strip())
+        except Exception:
+            seen = set()   # unreadable or absent → nothing is suppressed
+    hits, matched, read_from, keys = [], [], [], []
     for path, tag in sources:
         try:
             with open(path, encoding="utf-8", errors=("replace" if tag else "strict")) as f:
@@ -150,6 +199,10 @@ def main():
             for i, ln in enumerate(lines, 1):
                 if "utterance" in ln and pat.search(ln):
                     s = ln.strip()
+                    key = hashlib.sha256(("%s\x00%s\x00%s" % (tag, n, s)).encode("utf-8")).hexdigest()[:24]
+                    if key in seen:
+                        continue   # this line was already shown in this session
+                    keys.append(key)
                     hits.append("  %s#%s · L%d: %s" % (tag, n, i, s[:160] + ("…" if len(s) > 160 else "")))
                     found = True
                     if n not in matched:
@@ -159,6 +212,7 @@ def main():
     if not hits:
         sys.exit(0)
     shown = hits[:8]
+    shown_keys = keys[:8]
     more = len(hits) - len(shown)
     note = ("\U0001f50e [state-claim] 직전 답이 " + ", ".join("#" + n for n in matched) +
             " 의 머지·허락·아침류 상태를 말했다. " + ("리스·보관 파일" if len(read_from) > 1 or (read_from and "보관 파일" in read_from[0]) else "리스 파일") + "에 그 번호 «utterance» 줄이 있다 — "
@@ -168,8 +222,10 @@ def main():
             "\n기계는 «줄이 있다» 만 말한다. 직전 주장이 틀렸는지는 판단하지 않는다(번호가 다른 레포 것일 수 있다).")
     try:
         os.makedirs(pdir, exist_ok=True)
-        with open(pending, "w", encoding="utf-8") as f:
-            f.write(note + "\n")
+        tmp = pending + ".tmp%d" % os.getpid()
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(note + SEP + seenname + "\t" + ",".join(shown_keys) + "\n")
+        os.replace(tmp, pending)
     except Exception:
         pass
     sys.exit(0)

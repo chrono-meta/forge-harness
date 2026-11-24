@@ -314,14 +314,36 @@ jobs:
           RMG_PR_LOOKUP: ${{ github.event_name == 'push' && '1' || '0' }}
           RMG_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
+          GATE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -uo pipefail
           # 얕은 클론이라 base 를 직접 받아온다. 못 받으면 그건 HARNESS-ERROR 로 떨어져야지
           # «비교할 게 없다 → 통과» 로 접히면 안 된다.
           git fetch --no-tags --depth=50 origin main 2>/dev/null || true
+          # 🟥 판정은 base 의 게이트로 한다(2026-11-23, H2). 체크아웃은 PR 쪽이라, PR 이 이 스크립트의 검사 한 줄을
+          #    지우면 자기 위반이 초록이 됐다(로컬 실측: 위반만 rc 1 · 위반+게이트 수정 rc 0 · 같은 브랜치에 base 사본 rc 1).
+          #    base 사본을 못 꺼내면 rc 10. base 에 그 파일이 없을 때만(이 PR 이 게이트를 처음 들이는 경우) PR 사본을 쓴다.
+          #    남는 구멍: 이 워크플로 파일도 PR 쪽이다 — 이 블록을 고치면 풀린다. 그건 저장소 설정 몫이다.
+          GATE_REF="${GATE_BASE_SHA:-origin/main}"
+          GATE_DIR="$RUNNER_TEMP/gate_from_base"; mkdir -p "$GATE_DIR"
+          GATE="scripts/.remote_marker_gate.base.sh"
+          # the base commit itself must exist first — a missing object is not «base has no gate» (codex R1)
+          git cat-file -e "$GATE_REF^{commit}" 2>/dev/null || { echo "::error::base $GATE_REF is not a readable commit — cannot judge with the base gate (unmeasured, not a pass)"; exit 10; }
+          if git cat-file -e "$GATE_REF:scripts/remote_marker_gate.sh" 2>/dev/null; then
+            git show "$GATE_REF:scripts/remote_marker_gate.sh" > "$GATE" || { echo "::error::base gate copy failed"; exit 10; }
+            git show "$GATE_REF:templates/regression_guard.sh" > "$GATE_DIR/regression_guard.sh" || { echo "::error::base pathspec copy failed"; exit 10; }
+            export RMG_GUARD_FILE="$GATE_DIR/regression_guard.sh"
+            for _g in scripts/remote_marker_gate.sh templates/regression_guard.sh; do
+              git diff --quiet "$GATE_REF" HEAD -- "$_g" || echo "::notice::GATE-SELF-EDIT — this change edits $_g; it is judged by the base copy ($GATE_REF), its own version applies after merge"
+            done
+          else
+            echo "::warning::base ($GATE_REF) has no scripts/remote_marker_gate.sh — running this change's copy"
+            cp scripts/remote_marker_gate.sh "$GATE"
+          fi
           RMG_BASE_REF=origin/main RMG_HEAD_REF=HEAD \
-            bash scripts/remote_marker_gate.sh
+            bash "$GATE"
           rc=$?
+          rm -f "$GATE"
           # 10 = 계기 고장. 조용한 통과가 아니라 빨강으로 띄운다.
           if [ "$rc" -eq 10 ]; then
             echo "::error::remote_marker_gate HARNESS-ERROR — 계기가 고장났다(미측정 ≠ 통과)"

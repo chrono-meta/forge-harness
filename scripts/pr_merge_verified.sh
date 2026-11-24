@@ -21,6 +21,8 @@
 #         merged from another head · not fetchable — never for a refusal or a merge GitHub did not take) one JSON line goes to
 #         ${PMV_RECEIPTS:-<git common dir>/fh-merge-receipts.jsonl} — local, never pushed: pr · head · merge · outcome ·
 #         actor (agent-session:claude-code when CLAUDECODE is set, else human-or-unknown — a human cannot be proven) ·
+#         verifier_family (from the PR body's crossfamily: line — panel families · none · unrecorded · unread) ·
+#         builder_family (claude in a Claude Code session, else unknown; same family alone → a warning, never a refusal) ·
 #         lease (the --lease label of the standing approval the caller merges under, else NONE — recorded; any label other than NONE or a case-insensitive «operator…» prefix is also enforced: the merge needs selfdev_merge_tier.sh TIER=AUTO, see EXIT 7) · rerun.
 #         Why: arXiv:2610.28683 — 27% of merges that passed a «non-author review» gate rested on an agent approving under a
 #         human account; who decided must be on the record, not inferred later (frontier digest 2026-10-23).
@@ -75,10 +77,11 @@ _receipt() { # outcome merge_oid
   if [ -z "$f" ]; then local gd; gd=$(git rev-parse --git-common-dir 2>/dev/null) || gd=""; [ -n "$gd" ] && f="$gd/fh-merge-receipts.jsonl"; fi
   local actor="human-or-unknown"; [ -n "${CLAUDECODE:-}" ] && actor="agent-session:claude-code"
   if [ -z "$f" ] || ! PMV_R_PR="$PR" PMV_R_HEAD="$HEAD_OID" PMV_R_MERGE="${2:-}" PMV_R_OUT="$1" PMV_R_ACTOR="$actor" PMV_R_LEASE="$LEASE" \
-       PMV_R_RERUN="$RERUN" python3 -c 'import json,os,time
+       PMV_R_RERUN="$RERUN" PMV_R_VF="${VERIFIER_FAMILY:-unset}" PMV_R_BF="${BUILDER_FAMILY:-unset}" python3 -c 'import json,os,time
 e=os.environ
 print(json.dumps({"at":time.strftime("%Y-%m-%dT%H:%M:%S%z"),"pr":int(e["PMV_R_PR"]),"head":e["PMV_R_HEAD"],"merge":e["PMV_R_MERGE"] or None,
-"outcome":e["PMV_R_OUT"],"actor":e["PMV_R_ACTOR"],"lease":e["PMV_R_LEASE"],"rerun":e["PMV_R_RERUN"]},ensure_ascii=False))' >> "$f" 2>/dev/null; then
+"outcome":e["PMV_R_OUT"],"actor":e["PMV_R_ACTOR"],"lease":e["PMV_R_LEASE"],"rerun":e["PMV_R_RERUN"],
+"verifier_family":e["PMV_R_VF"],"builder_family":e["PMV_R_BF"]},ensure_ascii=False))' >> "$f" 2>/dev/null; then
     echo "⚠️  merge receipt NOT written (${f:-no git dir}) — record by hand: PR #$PR $1 actor=$actor lease=$LEASE" >&2
   else
     echo "── receipt: $f (actor=$actor · lease=$LEASE · $1)"
@@ -116,6 +119,39 @@ if [ -n "$EXPECT_HEAD" ] && [ "$HEAD_OID" != "$EXPECT_HEAD" ]; then
   echo "🟥 PR #$PR head is $HEAD_OID, not the checked $EXPECT_HEAD — not merging" >&2; exit 2
 fi
 echo "── PR #$PR head recorded: $HEAD_OID"
+
+# 1b. who verified (2026-11-23, article insight H1): the receipt records the verifier family from the PR body's
+#   «crossfamily:» line — the review backend that actually ran — and the builder family (claude in a Claude Code
+#   session, else unknown). When the only verifier is the builder's own family, or none is recorded, say so. A warning
+#   only: it never refuses, never changes the exit code (the findings-record rule's (B) spirit). A body that cannot be
+#   read is «unread», never «none».
+BUILDER_FAMILY="unknown"; [ -n "${CLAUDECODE:-}" ] && BUILDER_FAMILY="claude"
+if _body=$(gh pr view "$PR" --json body -q .body < /dev/null 2>/dev/null); then
+  VERIFIER_FAMILY=$(printf '%s\n' "$_body" | python3 -c '
+import re, sys
+for l in sys.stdin.read().splitlines():
+    m = re.match(r"^\s*crossfamily:(.*)$", l)
+    if not m:
+        continue
+    v = m.group(1).strip()   # the FIRST crossfamily: line decides, even an empty one (codex R1)
+    p = re.match(r"panel\(([^)]*)\)", v)   # families may be written with spaces: panel(claude, codex)
+    if p:
+        fams = sorted({f.strip().lower() for f in p.group(1).split(",") if f.strip()})
+        print(",".join(fams) or "none")
+    else:
+        print("none")
+    sys.exit(0)
+print("unrecorded")' 2>/dev/null) || VERIFIER_FAMILY="unread"
+  [ -n "$VERIFIER_FAMILY" ] || VERIFIER_FAMILY="unread"
+else
+  VERIFIER_FAMILY="unread"
+fi
+if [ "$BUILDER_FAMILY" != "unknown" ]; then
+  case "$VERIFIER_FAMILY" in
+    none|unrecorded|"$BUILDER_FAMILY")
+      echo "⚠️  verifier family = ${VERIFIER_FAMILY} · builder family = ${BUILDER_FAMILY}: no reviewer from another model family is on the record for this PR (warning only — the merge is not refused)" >&2 ;;
+  esac
+fi
 # 1a. no --lease → say so, before the merge (AQ-20261109-5). The receipt still records NONE and the merge still runs:
 #   most merges rest on the operator's per-PR answer, which is fine to leave unnamed. What must not stay silent is a merge
 #   that rested on a STANDING approval and recorded none — #1063 was merged on the self-dev lease with lease=NONE and the
