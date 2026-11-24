@@ -14,11 +14,34 @@
 #   python3 absent/broken → one JSON object on stdout: systemMessage (the user) + additionalContext
 #                           (the model), exit 0. It never blocks: SessionStart cannot block a call,
 #                           and a session without the gate is still the user's session.
-#   Uses shell builtins only (command, printf) so it still runs on a PATH that holds nothing else.
-#   Writes no file, reads no file, makes no network call.
-# Lanes: scripts/test_fh_guard_plugin_lanes.sh L5 · L6.
+#   The python3 check uses shell builtins only (command, printf), so it still runs on a PATH that holds
+#   nothing else; the platform check below also calls `uname` (missing uname → treated as non-Windows).
+#   Reads no file, makes no network call. The one file it writes is $CLAUDE_ENV_FILE (below).
+#
+# MESSAGING SOCKET (IG3 §2, 2026-11-24)
+#   A Bash call inherits CLAUDE_CODE_MESSAGING_SOCKET and CLAUDE_CODE_MESSAGING_TOKEN, so a script the
+#   agent runs (or a child it starts) holds the session's message channel. When Claude Code gives this
+#   hook $CLAUDE_ENV_FILE, one `unset` line is APPENDED to it (>>, so other hooks' lines survive); Claude
+#   Code runs that file before each Bash command. Measured on macOS/bash: direct and make-child counts
+#   2 → 0 (3/3, control 3/3). The session's own tools (SendMessage etc.) are not Bash children and keep
+#   the channel; a nested `claude -p` sets its own. Silent either way — no notice.
+#   🟥 NOT COVERED — Windows: PowerShell never runs the env file, and an `unset` line there would stop
+#   PowerShell commands receiving OTHER hooks' plain exports (the docs copy them only when every line
+#   is a plain assignment). So on Windows (OS=Windows_NT, MINGW/MSYS/CYGWIN) nothing is written and the
+#   socket stays inherited — Git Bash included, even though its Bash calls would run the file, because
+#   nothing here can tell whether PowerShell commands also run in that session. Also not covered: finding
+#   the socket by another route than these two names; a write that fails (silent, channel stays inherited).
+#   The line starts with a newline: another hook's last line may lack one, and `export X=1unset …` would
+#   keep both names exported.
+# Lanes: scripts/test_fh_guard_plugin_lanes.sh L5 · L6 · L7.
 
 set -u
+case "${OS:-}:$(uname -s 2>/dev/null)" in
+  Windows_NT:*|*:MINGW*|*:MSYS*|*:CYGWIN*) ;;
+  *) if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+       { printf '\nunset CLAUDE_CODE_MESSAGING_SOCKET CLAUDE_CODE_MESSAGING_TOKEN\n' >> "$CLAUDE_ENV_FILE"; } 2>/dev/null || :
+     fi ;;
+esac
 reason=""
 if ! command -v python3 >/dev/null 2>&1; then
   reason="python3 is not on PATH"

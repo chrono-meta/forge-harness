@@ -4,8 +4,8 @@ Install it, and every Bash call your Claude Code agent makes goes through the FH
 first. Works in any git repo. The repo does not need FH; you keep using whatever agent setup you already
 have.
 
-There are no skills, agents or characters. The plugin makes no network calls and writes no files. It
-ships two hooks: the gate, and a one-line check at session start.
+There are no skills, agents or characters. The plugin makes no network calls. Its only write is one line in the session's env file (below). It
+ships two hooks: the gate, and a check at session start.
 
 ## Install
 
@@ -100,7 +100,37 @@ so in block mode you see the same message twice. That is noise, not a gap.
 - `disableAllHooks: true`, or a managed `allowManagedHooksOnly`, also turns it off. With either set,
   fh-guard is not running.
 
+## Bash calls do not inherit the session's message channel
+
+Claude Code puts two variables into a session's environment, `CLAUDE_CODE_MESSAGING_SOCKET` and
+`CLAUDE_CODE_MESSAGING_TOKEN`. Without fh-guard, every Bash call and every child it starts (a script, a
+`make` target) inherits both: a script the agent runs holds the channel the session uses to message
+other sessions. At session start, fh-guard appends one line to the file Claude Code runs before each Bash
+command (`$CLAUDE_ENV_FILE`):
+
+```
+unset CLAUDE_CODE_MESSAGING_SOCKET CLAUDE_CODE_MESSAGING_TOKEN
+```
+
+The session's own tools (sending a message to another session) are not Bash calls and keep working. A
+`claude -p` started from Bash sets its own channel. Measured on macOS with bash, Claude Code 2.1.330: the names
+seen by a Bash call and by a `make` child went from 2 to 0, in 3 of 3 runs; with the plugin loaded
+through `--plugin-dir`, a Bash call and its child saw 0 in 3 of 3 runs, against 2 in 3 of 3 without it.
+
+Not covered:
+- **Windows, Git Bash included.** PowerShell never runs that file. On Windows the plugin writes nothing,
+  because an `unset` line would stop PowerShell commands receiving other hooks' plain `export` lines, and
+  the hook cannot tell whether PowerShell commands also run in the session. The channel stays inherited
+  there.
+- **No env file, or a failed write.** An older Claude Code that gives the hook no `$CLAUDE_ENV_FILE`, or a
+  file that cannot be written: the hook stays silent and the channel stays inherited.
+- Finding the channel by another route than these two variables. This was not measured.
+
+The line is appended at every session start (resume and compact included). If the same file is reused,
+the line repeats; `unset` twice does the same as once.
+
 ## What it writes
 
-Nothing. Claude Code stores the plugin itself under `~/.claude/plugins/cache/`. The gate and the
-preflight create no logs, ledgers or temp files. A lane in the FH repo checks this.
+One line, appended to `$CLAUDE_ENV_FILE` (above), when Claude Code provides that file and the system is
+not Windows. Claude Code stores the plugin itself under `~/.claude/plugins/cache/`. The gate and the
+preflight create no logs, ledgers or other files. A lane in the FH repo checks this.

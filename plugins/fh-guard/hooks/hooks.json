@@ -1,5 +1,5 @@
 {
-  "description": "fh-guard — the FH destructive-op gate on every Bash call, plus a session-start notice when the gate cannot run. No network; writes no files.",
+  "description": "fh-guard — the FH destructive-op gate on every Bash call, plus a session-start notice when the gate cannot run. No network; the only write is one unset line appended to the session env file.",
   "hooks": {
     "PreToolUse": [
       {
