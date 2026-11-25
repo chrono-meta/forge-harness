@@ -880,6 +880,7 @@ if [[ "$_IS_GIT" == 1 && "$FH_REVIEWER" == "fh" ]]; then
           # the caller spelled the root another way (macOS /var → /private/var): the SHORTEST ancestor of f that is
           # the root wins, so only directories at or above the root are resolved, never one inside the change
           local anc="" s2 p2
+          [[ -n "${f#/}" ]] || return 1   # «/» alone: an empty array would trip set -u on bash 3.2
           IFS=/ read -r -a p2 <<<"${f#/}"
           rel=""
           for s2 in "${p2[@]}"; do
@@ -915,7 +916,7 @@ if [[ "$_IS_GIT" == 1 && "$FH_REVIEWER" == "fh" ]]; then
           _rules_seen="${_rules_seen}${_p}"$'\n'
           git -C "$WORK_ROOT" cat-file -e "${_RULES_BASE}:${_p}" 2>/dev/null || continue
           _rules_body="${_rules_body}--- ${_p} ---
-$(git -C "$WORK_ROOT" show "${_RULES_BASE}:${_p}" 2>/dev/null)
+$(git -C "$WORK_ROOT" show "${_RULES_BASE}:${_p}" 2>/dev/null || true)
 "
           _rules_n=$((_rules_n + 1))
         done
