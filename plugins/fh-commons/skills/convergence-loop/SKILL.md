@@ -60,7 +60,7 @@ Round N (N ≥ 2)
     │        ✅ Declare truly passed  ← the only terminating exit
     │  → All items pass BUT you fixed something this round (any severity):
     │        the fix is unverified → Round N+1
-    │  → New FAIL: List → FIX → Round N+1
+    │  → New FAIL: List → FIX → prove the re-verify can fail (below) → Round N+1
     │
     ▼
     │  → FAILs remain after N rounds: "Structural redesign required" → Escalate
@@ -99,6 +99,33 @@ Escalation:      [who to escalate to / how, if not converged within N rounds]
 **What changes across rounds**:
 - FIX-applied targets (revised TCs, skills, documents)
 - FAIL list (should shrink; growth is also acceptable — it means items are surfacing)
+
+### A FIX round needs a re-verify that could have failed
+
+A green re-verify after a fix can mean the check aims at the wrong spot, the input never passed the
+defect's path, or the defect is really gone — and the output looks the same. Only the last counts. So
+every round that applies a FIX also does this before the next round, for each defect it fixed:
+
+1. **Pre-fix snapshot first.** Run the assertion meant to catch *this* defect on the subject as it was
+   just before the fix (the pre-fix commit, not whatever `main` is now), by the same path, environment
+   and command. That assertion must fail for the defect's reason — an infrastructure error, a missing
+   file or an unrelated failure does not count. If it passes, the check does not reach the defect: move
+   the input onto the defect's path and re-run; do not use the fixed subject's green as evidence.
+2. **Undo only the fix, observe that assertion fail, restore, observe green.** For a file with a lane
+   suite, in an FH checkout: `bash scripts/revert_probe.sh <fixed-file> <lane-suite> --baseline <pre-fix-ref>`
+   — it swaps that one file back, reruns the suite, restores the bytes and names which lanes flipped.
+   The flip must include the defect's own assertion. Zero flips, or only unrelated flips, means the
+   check is not shown to detect this defect. Without the script (a plugin-only install): extract the
+   pre-fix file to a temporary path first (`git show <ref>:<path> > "$tmp"`, check it succeeded), copy
+   the fixed file aside, put the pre-fix bytes in place, rerun, put the fixed bytes back, and compare the
+   file's hash and `git diff --cached` with what they were before. Never `git checkout <ref> -- <path>`
+   (it stages the revert). When the fix spans several files, undo the fix hunks, not whole files.
+3. **Record it** in the round row (`Fail-before` column) with the commands run: `red→green`, or
+   `NOT RUN — <why>` when no runnable check exists.
+
+Any `NOT RUN` carries to the end: the loop may then finish only as **«passed — fix unverified: round
+<n>»**, never as ✅ truly passed. Fixes are a frequent source of new defects, so after the undo check
+also re-run the neighbouring lanes, not only the one the fix targeted.
 
 ### Convergence Judgment
 
@@ -143,13 +170,14 @@ waves: steel-quench §Convergence Criteria.
 Gate: [gate name]
 Max rounds: N | Actual convergence round: M
 
-| Round | Verdict | FAIL Items | New FAILs | FIX Applied |
-|:---:|:---:|---|:---:|:---:|
-| 1 | FAIL/PASS | [item list] | — | Y/N |
-| 2 | FAIL/PASS | [item list] | [new] | Y/N |
-| 3 | PASS | none | none | — |
+| Round | Verdict | FAIL Items | New FAILs | FIX Applied | Fail-before |
+|:---:|:---:|---|:---:|:---:|:---:|
+| 1 | FAIL/PASS | [item list] | — | Y/N | red→green / NOT RUN — why / — |
+| 2 | FAIL/PASS | [item list] | [new] | Y/N | … |
+| 3 | PASS | none | none | — | — |
 
 ✅ Truly passed (converged at round M)
+⚠️ Passed — fix unverified: round <n> (a FIX round's Fail-before is NOT RUN)
 ❌ Not converged within N rounds → Escalation: [root cause classification]
 ```
 
@@ -182,6 +210,11 @@ Setup complete (gate name, pass criteria, max rounds confirmed)
   ⚠️ NOT "2 consecutive rounds": while every round ships repairs that criterion can never fire, so
   it reads as permanently not-converged and gets shipped past. Adjudicated with measured evidence in
   `steel-quench` §Convergence Criteria (2026-08-02).
++ Every round that applied a FIX carries a Fail-before entry: `red→green` (unfixed subject red by the
+  same path, and the fix site reverted → red → restored, e.g. `scripts/revert_probe.sh`) or
+  `NOT RUN — <why>`
+  (measured: the entry per FIX round; any `NOT RUN` caps the final verdict at «passed — fix
+   unverified», because green alone cannot tell a check that misses the defect from one that catches it)
 + Escalation root cause classified when max rounds is hit without convergence
   (judged — adversarial pairing: `fh-commons:quench-challenger` argues that the loop stopped because
    the GATE is blind rather than because the artifact is clean; an unchallenged "converged" on a
