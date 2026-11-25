@@ -368,5 +368,18 @@ setup te; mkgh "$T/te"; run "$T/te" 7 --rerun "$GOOD" --expect-head "$(cut -c1-3
   && ok "L35 --expect-head cut to 37 chars → rc=2, no merge, named" \
   || { bad "L35 truncated --expect-head rc=$RC merged=$(merged "$T/te" && echo yes || echo no)"; printf '%s\n' "$OUT" | tail -3; }
 
+# ── undo line on the receipt (2026-11-25, Ship method borrow: «what changed · how to undo» next to the merge) ──
+# The merge is always --squash, so the undo is `git revert <merge commit>` (no -m). Printed and recorded only when a merge
+# commit exists; a queued merge has none, so its receipt carries no revert command (null), never a guessed one.
+# L36 verified merge → receipt revert = «git revert <merge oid>» and the output says «undo: git revert <merge oid>»
+{ [ "$(rcpt "$T/ok" revert)" = "git revert $(cat "$T/ok/merge.oid")" ] && printf '%s' "$OK_OUT" | grep -qF "undo: git revert $(cat "$T/ok/merge.oid")"; } \
+  && ok "L36 verified merge → receipt + output carry «git revert <merge commit>»" || bad "L36 revert=$(rcpt "$T/ok" revert) out=$(printf '%s' "$OK_OUT" | grep -F undo)"
+# L37 merged but verify failed → the merge stands, so the undo line is there too
+[ "$(rcpt "$T/drop" revert)" = "git revert $(cat "$T/drop/merge.oid")" ] \
+  && ok "L37 verify-failed (merge stands) → receipt still carries the revert command" || bad "L37 revert=$(rcpt "$T/drop" revert)"
+# L38 control: queued merge, no merge commit → no revert command recorded (not a guessed one)
+[ -s "$T/q/receipts.jsonl" ] && tail -1 "$T/q/receipts.jsonl" | python3 -c 'import json,sys;r=json.load(sys.stdin);sys.exit(0 if "revert" in r and r["revert"] is None else 1)' \
+  && ok "L38 queued merge (no merge commit) → revert empty, not guessed" || bad "L38 revert=$(rcpt "$T/q" revert)"
+
 printf 'PASS %d · FAIL %d\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
