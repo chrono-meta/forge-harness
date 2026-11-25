@@ -21,6 +21,13 @@
   - Left for a later change: four rows (`--no-verify`, `git -c`/`GIT_CONFIG_*` core.hooksPath, `DESTRUCTIVE_OP_OK=`) still speak of «the pre-push layer». The fh-guard README names them.
   - Lanes T1–T7 in `scripts/test_destructive_pre_gate_lanes.sh` (T1, T1b, T2, T3, T4 and T7 fail on the previous gate).
 
+### Fixed
+- `fh-gate` (shipped), `FH_REVIEWER=fh`: the review now gets the rule files it checks against. The pass's conventions angle asks whether a changed line breaks a CLAUDE.md or AGENTS.md rule, but nothing put those files in front of the reviewer, and it did not open them itself. Measured on a planted rule: 0 of 8 runs applied it.
+  - What changed: the prompt carries every CLAUDE.md and AGENTS.md on the changed files' path (their directory and each parent up to the root). They are read from the base the change merges into (`FH_GATE_BASE`, else the merge-base with `FH_BASE_BRANCH`), never from the change's own commits or working tree. So a change that deletes or loosens a rule is still reviewed against it, and the deletion shows in the diff. With no resolvable base the reviewer line says «rule files NOT attached».
+  - After (same planted rule, claude-sonnet-5-5, 2 runs each): the rule broken with the file untouched was flagged 2/2; broken in the same change that deletes it, 2/2; a compliant change, 0/2.
+  - Scope: only the `fh` pass. The default `fh-legacy` pass has no conventions angle and gets no rule files.
+  - Where the text goes: these files now reach whichever backend reviews, codex included, like the diff already does.
+
 ### Docs
 - Homebrew is no longer an install path the docs offer: the `brew install` lines and the Homebrew tap badge are gone from the four READMEs, `docs/REFERENCE.md` and `CHEATSHEET.md`. Install through npm (`npx --package @chrono-meta/fh-gate fh-gate`). The tap repository is left as it is; its formula stopped at 3.24.0 and does not track npm.
 
