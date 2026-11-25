@@ -131,7 +131,7 @@ flowchart TD
 - インキュベーターの正式な出力（2026-08-21）。チャンバー実行 #15 が正式なフロー（順序の証人つき）でツールを出力し、そのツールは対象ハーネスで実データに対して動きました（正式な出力はこれまで 1 件）。
 - 穴を仕込んだテスト、モデル固定（2026-07-14）。他の二つのモデルが書いた fail-open の穴が八つ。通常のレビュー 5/8（そのうち 2 件は別のバグを指していた）· + FH の degrade-direction レンズ 6/8 · + 二つ目のモデル系列 8/8、誤検知 0（単一の試行）。単一モデルの実行は二つとも*同じ*二つの穴を見落とし、二つ目の系列がその両方を捉えました。方法は [`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md)、ほかの実行は [`docs/OUTPUT_EVIDENCE.md`](docs/OUTPUT_EVIDENCE.md) にあります。
 - 成熟度は主張ではなく等級です。下に名前を挙げた五つのアイデンティティは、それぞれ [`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md) に日付つきの等級とその根拠を持ちます。
-- このページの数（スキル 47 · エージェント 14）は、`plugins/`（`fh-meta`、`fh-commons`、`fh-qp`、`fh-preprep`）配下のスキルフォルダとエージェントファイルを 2026-11-01 に数えたものです。フレーズ集: [`CHEATSHEET.md` §12](CHEATSHEET.md#12-skills--agents--what-each-does-and-what-to-say)。
+- このページの数（スキル 48 · エージェント 14）は、`plugins/`（`fh-meta`、`fh-commons`、`fh-qp`、`fh-preprep`）配下のスキルフォルダとエージェントファイルを 2026-11-25 に数えたものです。フレーズ集: [`CHEATSHEET.md` §12](CHEATSHEET.md#12-skills--agents--what-each-does-and-what-to-say)。
 
 ## 使い始めると出会う言葉
 
