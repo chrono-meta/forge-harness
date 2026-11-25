@@ -196,6 +196,12 @@ def classify(id_, input_pat, class_tok):
 
 CONSTRUCT_VALUES = ('same', 'partial', 'proxy')
 
+# Tools a probe may add to EVERY arm it runs (primary, control, control_b — held constant, so «tools offered» is not
+# what the pair measures). Observe arms have Read · Grep · Glob; a routing probe needs the Skill and Agent layers to be
+# able to fire an engine at all (2026-11-25, root decision A). Bash, Write and Edit are refused: a nightly arm must not
+# run arbitrary commands or write in its clone, nor spend a sidecar (codex · agy) — that path stays UNMEASURED.
+EXTRA_TOOLS_ALLOWED = ('Skill', 'Agent')
+
 
 def build_selection(probes_md_rows, live_rows):
     """Cross-reference probes.md (source of truth for WHICH probes exist and their class) against
@@ -259,6 +265,25 @@ def build_selection(probes_md_rows, live_rows):
         # row green does not also erase the residual the widening stopped seeing.
         if spec.get('advisory_re'):
             entry['advisory_re'] = spec['advisory_re']
+        # rate: excluded — a CAPABILITY probe (2026-11-25, root decision b): scored and reported in its own section,
+        # never counted in pass_rate or the nightly threshold, which stays a regression alarm. A probe expected to be
+        # red (routing not yet there) must not turn every night red. Any other value excludes the probe by name.
+        if spec.get('rate') is not None:
+            if spec['rate'] != 'excluded':
+                excluded.append({'id': row['id'], 'reason': 'BAD-RATE(%s)' % spec['rate'], 'in_probes_live': True})
+                warnings.append("BAD-RATE: %s declares rate=%r — the only value is «excluded»" % (row['id'], spec['rate']))
+                continue
+            entry['rate'] = 'excluded'
+        if spec.get('extra_tools') is not None:
+            xt = [t.strip() for t in spec['extra_tools'].split(',')]
+            bad = [t for t in xt if t not in EXTRA_TOOLS_ALLOWED]
+            if not xt or bad:
+                excluded.append({'id': row['id'], 'reason': 'BAD-EXTRA-TOOLS(%s)' % ','.join(bad or ['<empty>']),
+                                 'in_probes_live': True})
+                warnings.append("BAD-EXTRA-TOOLS: %s declares extra_tools=%r — only %s may be added to an arm"
+                                % (row['id'], spec['extra_tools'], ','.join(EXTRA_TOOLS_ALLOWED)))
+                continue
+            entry['extra_tools'] = ','.join(xt)
         # Construct validity — RECORD ONLY, never scored (2026-11-06, frontier digest arXiv:2611.05665):
         # what the probe CLAIMS to measure vs what its pattern can actually SEE. A probe whose pattern
         # reads a mention while it claims an order or a proposal is a proxy, and the report says so.
@@ -699,6 +724,14 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
     #
     # HONEST SCOPE: n = 10 nights, one instrument, one repo. The 0.50 line is provisional and the
     # distribution that would refine it is exactly what the newly-preserved run artifacts build.
+    # Capability rows (rate: excluded) leave here: everything below — blackout, the inventory check, pass_rate,
+    # Overall — is the regression alarm and is computed over the other rows only. They come back as
+    # `capability_rows` and print in their own section. Their arms carry extra tools on purpose, so pooling their
+    # inventories would turn the whole run INVALID-COMPARISON; each one's own pair is still checked in its row.
+    capability_rows = [r for r in rows if (by_id.get(r['id']) or {}).get('rate') == 'excluded']
+    for r in capability_rows:
+        r['rate'] = 'excluded'
+    rows = [r for r in rows if r not in capability_rows]
     scored = [r for r in rows if r['verdict'] in (PASS, FAIL, UNCALIBRATED)]
     silent_rows = [r for r in scored if r.get('silent')]
     silent_fraction = (len(silent_rows) / float(len(scored))) if scored else None
@@ -744,6 +777,7 @@ def score_run(live_rows, run_root, ids_in_order, threshold, model, reps=1):
 
     return {
         'rows': rows,
+        'capability_rows': capability_rows,
         'total': len(rows),
         'failed_to_run': len(failed_to_run),
         'uncalibrated': len(uncalibrated),
@@ -773,7 +807,14 @@ def parse_prev_report(path):
     if not text:
         return None
     out = {}
+    in_cap = False
     for line in text.splitlines():
+        # rows in the «Capability probes» section are not regression rows: never in transitions or the matrix (codex R1)
+        if line.startswith('## '):
+            in_cap = line.startswith('## Capability probes')
+            continue
+        if in_cap:
+            continue
         cells = [c.strip() for c in line.strip().strip('|').split('|')]
         if (line.startswith('|') and len(cells) >= 3
                 and cells[1] in (PASS, FAIL, UNCALIBRATED, FAILED_TO_RUN, 'UNKNOWN-ID')):
@@ -983,8 +1024,24 @@ def render_report_md(select_result, score_result, run_date, instrument=None):
         pr = score_result['pass_rate']
         pr_s = ("%.2f" % pr) if pr is not None else "n/a"
         lines.append("**Overall: %s** — ran=%d failed_to_run=%d uncalibrated=%d passed=%d pass_rate=%s"
+                      " · capability probes (not in pass_rate): %d"
                       % (score_result['overall'], score_result['ran'], score_result['failed_to_run'],
-                         score_result['uncalibrated'], score_result['passed'], pr_s))
+                         score_result['uncalibrated'], score_result['passed'], pr_s,
+                         len(score_result.get('capability_rows') or [])))
+        cap = score_result.get('capability_rows') or []
+        if cap:
+            lines.append("")
+            lines.append("## Capability probes — scored, NOT in pass_rate or the Overall verdict")
+            lines.append("")
+            lines.append("`rate: excluded` in probes_live.yaml: these measure whether a capability fires (e.g. routing), "
+                          "not whether a rule regressed. Expected red is a reading, not an alarm.")
+            lines.append("")
+            lines.append("| Probe | Verdict | reps(pass/ran) | scored_by | behave | Reason |")
+            lines.append("|---|---|---|---|---|---|")
+            for r in cap:
+                lines.append("| %s | %s | %s | %s | %s | %s |" % (
+                    r['id'], r['verdict'], r.get('reps', '-'), r.get('scored_by', '-'), _md_escape(r.get('behave', '-')),
+                    _md_escape(r.get('reason', ''))))
         lines.append("")
         lines.append("- scored by behaviour: **%d** of %d PASS · MENTION-ONLY: **%d** (a MENTION-ONLY PASS read the "
                       "reply text; it is not evidence the rule acted) · tool/MCP/plugin surfaces in this run: %s"
@@ -1089,6 +1146,14 @@ def _cmd_select(args):
             if p.get('control_input_b'):
                 with open(os.path.join(args.spec_dir, p['id'] + '.control_b.txt'), 'w', encoding='utf-8') as f:
                     f.write(p['control_input_b'])
+            # A capability probe's preflight failure must not abort the regression run (codex R1): the runner reads this.
+            if p.get('rate') == 'excluded':
+                with open(os.path.join(args.spec_dir, p['id'] + '.rate.txt'), 'w', encoding='utf-8') as f:
+                    f.write('excluded')
+            # Same rule: written only when declared; every arm of the probe gets it (probe_live_eval.sh).
+            if p.get('extra_tools'):
+                with open(os.path.join(args.spec_dir, p['id'] + '.extra_tools.txt'), 'w', encoding='utf-8') as f:
+                    f.write(p['extra_tools'])
         with open(os.path.join(args.spec_dir, 'selected_ids.txt'), 'w', encoding='utf-8') as f:
             for p in filtered:
                 f.write(p['id'] + '\n')
@@ -1155,7 +1220,11 @@ def _cmd_score(args):
         print("⚠️  BLACKOUT-SUSPECT (advisory, verdict unchanged) — majority of probes silent while")
         print("   at least one channel worked. Real broad regression and partial instrument failure")
         print("   look identical here; the preserved response bodies tell them apart.")
-    print("OVERALL: %s (rc=%d)" % (score_result['overall'], score_result['rc']))
+    for r in score_result.get('capability_rows') or []:
+        print("capability (not in pass_rate): %s %s reps=%s scored_by=%s behave=%s"
+              % (r['id'], r['verdict'], r.get('reps', '-'), r.get('scored_by', '-'), r.get('behave', '-')))
+    print("OVERALL: %s (rc=%d) · capability probes not in pass_rate: %d"
+          % (score_result['overall'], score_result['rc'], len(score_result.get('capability_rows') or [])))
 
     if args.report_out:
         md = render_report_md(select_result, score_result, args.run_date or str(date.today()),
