@@ -1221,6 +1221,7 @@ for _pair in \
   "scripts/governor_landing_check.py|scripts/test_governor_landing_check_lanes.sh" \
   "scripts/selfdev_loop.sh|scripts/test_selfdev_loop_lanes.sh" \
   "scripts/release_compare.sh|scripts/test_release_compare_lanes.sh" \
+  "scripts/selfdev_push_note.sh|scripts/test_selfdev_push_note_lanes.sh" \
   "scripts/lane_gap_hint.py|scripts/test_lane_gap_hint_lanes.sh" \
   "scripts/persona_cast_merge.py|scripts/test_persona_cast_merge_lanes.sh" \
   "scripts/convergence_verdict.py|scripts/test_convergence_verdict_lanes.sh" \

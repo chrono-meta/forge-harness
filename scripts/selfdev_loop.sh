@@ -203,6 +203,19 @@ Never run gh pr merge, never push to main, never force-push, never tag. The merg
   # selfdev-<date> branch prefix below keeps an earlier day's PR out of the window
   bstart="$(python3 -c 'import datetime as d;print((d.datetime.now(d.timezone.utc)-d.timedelta(minutes=5)).strftime("%Y-%m-%dT%H:%M:%SZ"))' 2>/dev/null)" \
     || bstart="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  # push notes (2026-11-25, Ship method borrow): heads of the open selfdev PRs before the build, so every PR whose
+  # head moves during it gets one «what changed · how to undo» comment after (scripts/selfdev_push_note.sh).
+  # A failed listing is not «no PRs»: the notes are then skipped and the report says UNMEASURED.
+  # codex R1: --limit applies before the selfdev filter, so a full page (200) may hide a selfdev PR — that listing
+  # is refused as incomplete (a PR missing from «before» would be noted as new), never read as complete.
+  heads_snap() {
+    local raw
+    raw="$(gh pr list -R "$REPO_SLUG" --state open --limit 200 --json number,headRefName,headRefOid \
+      -q '.[] | "\(.number) \(.headRefOid) \(.headRefName)"' 2>/dev/null)" || return 1
+    [ "$(printf '%s\n' "$raw" | grep -c .)" -lt 200 ] || return 1
+    printf '%s\n' "$raw" | awk '$3 ~ /^auto\/selfdev-/ { print $1, $2 }'
+  }
+  HEADS_BEFORE="$(heads_snap)"; hb_rc=$?
   say "build start (timeout ${BUILD_TIMEOUT}s, model ${FD_MODEL:-default})"
   # Subscription only (2026-11-07, video digest _dN-RMh0Tl0 candidate 3): launchd hands the builder no
   # ANTHROPIC_API_KEY, so spend 0 held — but only by accident of the environment. A manual run from a
@@ -265,6 +278,26 @@ Never run gh pr merge, never push to main, never force-push, never tag. The merg
         rep "- no PR — the builder printed nothing: reason UNMEASURED (check $LOG)"
       fi
     fi
+  fi
+  # one note per PR whose head moved (new PRs included). Ids and counts only — see the helper's header.
+  NOTE_SH="$LIVE/scripts/selfdev_push_note.sh"
+  if [ "$hb_rc" -ne 0 ]; then rep "- push notes: UNMEASURED (open-PR heads unreadable before the build) — none posted"
+  elif ! HEADS_AFTER="$(heads_snap)"; then rep "- push notes: UNMEASURED (open-PR heads unreadable after the build) — none posted"
+  elif [ ! -f "$NOTE_SH" ]; then rep "- push notes: NOT posted — $NOTE_SH missing"
+  else
+    git -C "$CLONE" fetch -q origin 2>/dev/null
+    while read -r pn ph; do
+      [ -n "$pn" ] || continue
+      old="$(printf '%s\n' "$HEADS_BEFORE" | awk -v n="$pn" '$1 == n { print $2; exit }')"
+      [ "$old" = "$ph" ] && continue
+      if no="$(bash "$NOTE_SH" --repo "$CLONE" --slug "$REPO_SLUG" --pr "$pn" --to "$ph" ${old:+--from "$old"} 2>&1)"; then
+        rep "- #$pn push note posted (${old:+${old:0:12}..}${ph:0:12})"
+      else
+        rep "- #$pn push note NOT posted (rc $?) — $(printf '%s\n' "$no" | tail -1)"
+      fi
+    done <<HEADS
+$HEADS_AFTER
+HEADS
   fi
   git -C "$CLONE" switch -q main 2>/dev/null
 elif [ "$DRY" = 1 ]; then

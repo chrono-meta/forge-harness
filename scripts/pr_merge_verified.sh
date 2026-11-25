@@ -81,7 +81,8 @@ _receipt() { # outcome merge_oid
 e=os.environ
 print(json.dumps({"at":time.strftime("%Y-%m-%dT%H:%M:%S%z"),"pr":int(e["PMV_R_PR"]),"head":e["PMV_R_HEAD"],"merge":e["PMV_R_MERGE"] or None,
 "outcome":e["PMV_R_OUT"],"actor":e["PMV_R_ACTOR"],"lease":e["PMV_R_LEASE"],"rerun":e["PMV_R_RERUN"],
-"verifier_family":e["PMV_R_VF"],"builder_family":e["PMV_R_BF"]},ensure_ascii=False))' >> "$f" 2>/dev/null; then
+"verifier_family":e["PMV_R_VF"],"builder_family":e["PMV_R_BF"],
+"revert":("git revert "+e["PMV_R_MERGE"]) if e["PMV_R_MERGE"] else None},ensure_ascii=False))' >> "$f" 2>/dev/null; then
     echo "⚠️  merge receipt NOT written (${f:-no git dir}) — record by hand: PR #$PR $1 actor=$actor lease=$LEASE" >&2
   else
     echo "── receipt: $f (actor=$actor · lease=$LEASE · $1)"
@@ -283,6 +284,9 @@ git cat-file -e "$MC^{commit}" 2>/dev/null || git fetch -q origin "$MC" < /dev/n
 git cat-file -e "$MC^{commit}" 2>/dev/null \
   || { _receipt "merged-not-fetchable" "$MC"; echo "🟥 HARNESS-ERROR (AFTER merge): merge commit $MC not fetchable — run post_squash_verify by hand with --tip $HEAD_OID --merge $MC" >&2; exit 4; }
 echo "── merged as $MC"
+# undo line (2026-11-25, Ship method borrow): the merge above is always --squash, so one plain revert undoes it — no -m.
+# Also recorded as «revert» on the receipt; a receipt with no merge commit records null, never a guessed command.
+echo "── undo: git revert $MC   (a new commit on main through a PR — never a reset or force-push)"
 
 # 4. verify
 bash "$PSV" --repo . --tip "$HEAD_OID" --merge "$MC" --rerun "$RERUN"; rc=$?

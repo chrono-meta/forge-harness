@@ -55,6 +55,9 @@ ACCEPTED_ABSENT=(
   #    tool run after this repo's own tag push; a consumer install has no tags of ours to pair with.
   "scripts/release_compare.sh"
   "scripts/test_release_compare_lanes.sh"
+  # 2026-11-25 — the loop's per-push «what changed · how to undo» PR comment and its lanes. Same loop, same scope.
+  "scripts/selfdev_push_note.sh"
+  "scripts/test_selfdev_push_note_lanes.sh"
   # 2026-11-07 — the self-dev loop's ablation nominator and its lanes. Same loop, same scope as above; whether the
   #    public cycle (docs/ABLATION_CYCLE.md, not shipped either) goes to npm is an open operator decision.
   "scripts/ablation_nominate.py"
