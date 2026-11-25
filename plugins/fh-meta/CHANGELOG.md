@@ -15,6 +15,15 @@
   - Third-party marketplaces do not auto-update by default, so gate fixes reach users only when they update. The README says how to turn auto-update on.
 
 ### Changed
+- BREAKING (gate): `fh-gate` (shipped) lists the test files, lane files and test configuration a change touches (Lean RFC item 3, 2026-11-25). It goes into the prompt **body** of every reviewer, so the default `fh-legacy`, which reads no diff, sees it too; it also appears on a new stdout line `FH_GATE_TESTS_CHANGED` and as `tests_changed:` in the governance record.
+  - Why: a change can make a red result go away by editing or deleting a test, or by changing how tests run.
+  - What is listed, by path pattern only:
+    - tests: `tests/` `test/` `__tests__/`, `test_*`, `*_test.*`, `*.test.*`, `*.spec.*`, `*_spec.*`, FH's `*_lanes.sh`
+    - test configuration: `pytest.ini`, `conftest.py`, `tox.ini`, `jest.config.*`, `vitest.config.*`, `karma.conf.*`, `.mocharc*`, `.github/workflows/*`, and `package.json` only when its diff touches a line naming `"test`
+  - The prompt splits entries into added / modified (type changes marked) / deleted, against the same base the execution layer uses; untracked new files count as added. The machine says only «this path looks like a test or its configuration» and does not judge the edit. The prompt asks the reviewer, for each modified or deleted entry, whether the test still checks what it did before.
+  - What can change: a reviewer can raise a finding from that question, so a verdict can change. A change that touches no such file gets no block and `FH_GATE_TESTS_CHANGED: none`. A list that could not be made (a failed diff, or the change given as `FH_DIFF_PATH`) says NOT MEASURED, never «none».
+  - The gate-base computation moves, unchanged, ahead of the first prompt.
+  - Lanes A27a–A27f in `scripts/test_fh_gate_absorb_lanes.sh` (all fail on the previous gate).
 - BREAKING (gate): `fh-gate` execution layer (`scripts/fh_gate_exec.sh`, shipped; `FH_GATE_EXEC=on` only) runs the **base** version of every lane file the change edits or deletes, against the change's code (Lean RFC item 2, 2026-11-25).
   - Why: E1 ran the change's own lanes, so a change that loosened a lane and broke the code it tests came back green.
   - What it does: the lane files are listed before any lane runs (NUL-delimited; a deleted lane is taken from the base). Each one's base version runs in its own fresh copy of the change, and is compared in its own fresh copy of the base. Red here and green at the base → a B finding with `escalate: true`, and `fh-gate` raises the verdict to at least ESCALATE (`FH_GATE_ESCALATE_REASON: base-lane-overlay`). It never BLOCKs by itself: a lane edit can be a legitimate contract change, and a human decides. Red at the base too → C. Could not compare (rc 126/127, rc 2 with `HARNESS-ERROR` such as a renamed subject, no finish, a copy or patch that cannot be rebuilt, a symlinked path, a name with a tab or newline) → B.

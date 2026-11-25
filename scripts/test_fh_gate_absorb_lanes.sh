@@ -30,6 +30,8 @@
 #       (A23c: the branch exists without a merge-base → its tip, said; never HEAD)
 #   A24 the execution layer's JSON is checked as strictly as the review object (status enum, finding shape, grade A/B/C)
 #       — malformed → exit 10; a well-formed A still blocks and a C still passes
+#   A27 test files, lane files and test config the change touches: added/modified/deleted in the prompt BODY of both
+#       reviewers, on stdout and in the record; NOT MEASURED where no list can be made; odd names shell-quoted
 #   A26 an execution-layer finding with escalate:true → at least ESCALATE (BLOCKED stays); a non-boolean escalate → 10
 #   A25 protected paths (.fh-gate-protected, read from the base): a changed protected file → ESCALATE, never BLOCKED by
 #       itself; an edit to the list is held to the base list; only-added files pass; FH_DIFF_PATH → B (A25b: no list)
@@ -422,6 +424,110 @@ GATE="$GC/scripts/fh-gate.sh" gate a26_cross FH_BACKEND=cross FH_GATE_EXEC=on FA
 if [ "$RC" -eq 3 ] && grep -q '^FH_GATE_ESCALATE_REASON: base-lane-overlay' "$TMPROOT/a26_cross.out"; then
   ok "A26b cross mode keeps the base-lane-overlay reason as a top-level line"
 else bad "A26b cross reason" "rc=$RC $(grep -c 'ESCALATE_REASON' "$TMPROOT/a26_cross.out") $(grep -E '^FH_GATE_(VERDICT|LEGS|DEGRADED)' "$TMPROOT/a26_cross.out" | tr '\n' '|')"; fi
+
+# A27 (Lean RFC item 3) — test files, lane files and test configuration the change touches are listed in the prompt BODY
+# of both reviewers (fh-legacy reads no diff), split into added / modified / deleted, on stdout and in the record.
+R27="$TMPROOT/repo27"; mkdir -p "$R27/scripts" "$R27/tests" "$R27/src" "$R27/.github/workflows"
+g -C "$R27" init -q -b main
+printf 'a\n' > "$R27/scripts/test_x_lanes.sh"; printf 'b\n' > "$R27/tests/old_test.py"; printf 'c\n' > "$R27/src/a.sh"
+printf 't\n' > "$R27/scripts/test_t_lanes.sh"; printf '[pytest]\n' > "$R27/pytest.ini"; printf 'on: push\n' > "$R27/.github/workflows/ci.yml"
+printf '{\n  "name": "x",\n  "scripts": {\n    "test": "jest",\n    "build": "tsc"\n  }\n}\n' > "$R27/package.json"
+printf '{"name":"y","version":"1"}\n' > "$R27/src/package.json"
+g -C "$R27" add -A; g -C "$R27" commit -qm base; g -C "$R27" checkout -qb pr
+printf 'a2\n' > "$R27/scripts/test_x_lanes.sh"; g -C "$R27" rm -q tests/old_test.py; printf 'c2\n' > "$R27/src/a.sh"
+rm "$R27/scripts/test_t_lanes.sh"; ln -s ../src/a.sh "$R27/scripts/test_t_lanes.sh"                       # T
+printf '[pytest]\naddopts = -k "not slow"\n' > "$R27/pytest.ini"; printf 'on: [push, pull_request]\n' > "$R27/.github/workflows/ci.yml"
+printf '{\n  "name": "x",\n  "scripts": {\n    "test": "jest --passWithNoTests",\n    "build": "tsc"\n  }\n}\n' > "$R27/package.json"   # the test script
+printf '{"name":"y","version":"2"}\n' > "$R27/src/package.json"                                            # not a test change
+g -C "$R27" add -A; g -C "$R27" commit -qm change
+mkdir -p "$R27/tests"; printf 'n\n' > "$R27/tests/new.spec.js"                                               # untracked → added
+tests_of() { sed -n '/^===== TESTS CHANGED /,/^===== END TESTS CHANGED /p' "$TMPROOT/$1/$2" 2>/dev/null; }
+sec_of() { tests_of "$1" "$2" | awk -v s="$3:" '$0==s {on=1; next} /^(added|modified|deleted):$/ {on=0} on'; }
+mkdir -p "$TMPROOT/rec27a"; RUN_DIR="$R27" gate a27a FH_RECORD_BASE="$TMPROOT/rec27a"
+add=$(sec_of a27a claude_legacy.stdin added); mod=$(sec_of a27a claude_legacy.stdin modified); del=$(sec_of a27a claude_legacy.stdin deleted)
+rec=$(awk '/^  tests_changed:$/ {on=1; next} on && /^    - / {print; next} {on=0}' "$TMPROOT"/rec27a/governance_log_*.yaml 2>/dev/null)
+c27=""
+grep -qxF '  tests/new.spec.js' <<<"$add" || c27="$c27 add:new.spec"
+grep -qxF '  scripts/test_x_lanes.sh' <<<"$mod" || c27="$c27 mod:lane"
+grep -qxF '  scripts/test_t_lanes.sh (type changed)' <<<"$mod" || c27="$c27 mod:T"
+grep -qxF '  pytest.ini (test config)' <<<"$mod" || c27="$c27 mod:pytest"
+grep -qxF '  .github/workflows/ci.yml (test config)' <<<"$mod" || c27="$c27 mod:ci"
+grep -qxF '  package.json (test config)' <<<"$mod" || c27="$c27 mod:pkg"
+grep -qxF '  tests/old_test.py' <<<"$del" || c27="$c27 del:old_test"
+_tb27=$(tests_of a27a claude_legacy.stdin); ! grep -qF 'src/' <<<"$_tb27" || c27="$c27 src-listed"
+has a27a 'FH_GATE_TESTS_CHANGED: 7 — A 1 · D 1 · M 4 · T 1' || c27="$c27 line"
+grep -qF -- '- "D tests/old_test.py"' <<<"$rec" || c27="$c27 rec:D"
+grep -qF -- '- "M package.json (test config)"' <<<"$rec" || c27="$c27 rec:pkg"
+if [ -z "$c27" ]; then
+  ok "A27a default reviewer: tests, lanes and test config split into added/modified/deleted (T noted) in the prompt body, on stdout and in the record; src/ and a non-test package.json are not"
+else bad "A27a tests changed" "missing:$c27 · $(grep TESTS_CHANGED "$TMPROOT/a27a.out")"; fi
+RUN_DIR="$R27" gate a27b FH_REVIEWER=fh
+_m27=$(sec_of a27b claude_abs.stdin modified); _d27=$(sec_of a27b claude_abs.stdin deleted)
+if grep -qxF '  pytest.ini (test config)' <<<"$_m27" && grep -qxF '  tests/old_test.py' <<<"$_d27"; then
+  ok "A27b the fh pass gets the same block"
+else bad "A27b fh pass" "$(grep TESTS_CHANGED "$TMPROOT/a27b.out")"; fi
+mkdir -p "$TMPROOT/rec27c"; gate a27c FH_RECORD_BASE="$TMPROOT/rec27c"   # the shared repo: only scripts/foo.sh changed
+if has a27c 'FH_GATE_TESTS_CHANGED: none' && ! grep -qF 'TESTS CHANGED' "$TMPROOT/a27c/claude_legacy.stdin" 2>/dev/null \
+   && grep -qF 'tests_changed: []' "$TMPROOT"/rec27c/governance_log_*.yaml 2>/dev/null; then
+  ok "A27c a change that touches no test → «none», no block, tests_changed: []"
+else bad "A27c no tests" "$(grep TESTS_CHANGED "$TMPROOT/a27c.out")"; fi
+printf 'diff --git a/tests/x_test.py b/tests/x_test.py\n' > "$TMPROOT/a27d.patch"; mkdir -p "$TMPROOT/rec27d"
+RUN_DIR="$R27" gate a27d FH_DIFF_PATH="$TMPROOT/a27d.patch" FH_RECORD_BASE="$TMPROOT/rec27d"
+RUN_DIR="$R27" gate a27e FH_GATE_BASE=no-such-ref-27e
+if has a27d 'FH_GATE_TESTS_CHANGED: NOT MEASURED (FH_DIFF_PATH' && grep -qF 'tests_changed: "NOT MEASURED' "$TMPROOT"/rec27d/governance_log_*.yaml 2>/dev/null \
+   && has a27e 'FH_GATE_TESTS_CHANGED: NOT MEASURED (git diff against'; then
+  ok "A27d FH_DIFF_PATH or a failed diff → NOT MEASURED (stdout and record), never «none»"
+else bad "A27d not measured" "$(grep -h TESTS_CHANGED "$TMPROOT/a27d.out" "$TMPROOT/a27e.out")"; fi
+R27f="$TMPROOT/repo27f"; mkdir -p "$R27f/tests"; g -C "$R27f" init -q -b main; printf 'x\n' > "$R27f/a"; g -C "$R27f" add -A
+_b27=$(printf 'n\n' | g -C "$R27f" hash-object -w --stdin); g -C "$R27f" update-index --add --cacheinfo "100644,$_b27,tests/e"$'\xff'"f.py"
+g -C "$R27f" commit -qm b
+printf 'n\n' > "$R27f/tests/a"$'\n'"b.py"; printf 'n\n' > "$R27f/tests/c"$'\xc2\x85'"d.py"; mkdir -p "$TMPROOT/rec27f"
+RUN_DIR="$R27f" gate a27f FH_RECORD_BASE="$TMPROOT/rec27f" FH_TARGET_FILES=a
+tf=$(tests_of a27f claude_legacy.stdin); rf=$(cat "$TMPROOT"/rec27f/governance_log_*.yaml 2>/dev/null)
+if grep -qxF "  \$'tests/a\\nb.py'" <<<"$tf" && grep -qxF "  \$'tests/c\\302\\205d.py'" <<<"$tf" && grep -qxF "  \$'tests/e\\377f.py'" <<<"$tf" \
+   && grep -qF "D \$'tests/e\\\\377f.py'" <<<"$rf"; then
+  ok "A27f names with a newline, U+0085 or non-UTF-8 bytes are shell-quoted in the prompt and kept distinct in the record"
+else bad "A27f odd names" "block=[$(tr '\n' '|' <<<"$tf")]"; fi
+
+# A27g (codex R1) — package.json edges: an added manifest with no test script is not listed, one with it is; a "test"
+# key at column one counts; «p[1]/package.json» is a literal path, not a glob that matches p1/; and a list that could
+# not be made says so in the prompt body too (A27d covered stdout and the record)
+R27g="$TMPROOT/repo27g"; mkdir -p "$R27g/pkgs/p1" "$R27g/pkgs/p[1]" "$R27g/col"; g -C "$R27g" init -q -b main
+printf '{"name":"a"}\n' > "$R27g/pkgs/p1/package.json"; printf '{"name":"b"}\n' > "$R27g/pkgs/p[1]/package.json"
+printf '{\n"test": "old"\n}\n' > "$R27g/col/package.json"
+g -C "$R27g" add -A; g -C "$R27g" commit -qm base; g -C "$R27g" checkout -qb pr
+printf '{"name":"a","scripts":{"test":"x"}}\n' > "$R27g/pkgs/p1/package.json"           # changed, names "test
+printf '{"name":"b2"}\n' > "$R27g/pkgs/p[1]/package.json"                                    # changed, no test line — as a glob it would match p1/
+printf '{\n"test": "new"\n}\n' > "$R27g/col/package.json"                                  # key at column one
+mkdir -p "$R27g/plain" "$R27g/withtest"
+printf '{"name":"demo"}\n' > "$R27g/plain/package.json"                                    # added, no test script
+printf '{"scripts":{"test":"jest"}}\n' > "$R27g/withtest/package.json"                     # added, test script
+g -C "$R27g" add -A; g -C "$R27g" commit -qm change
+RUN_DIR="$R27g" gate a27g FH_TARGET_FILES=col/package.json
+tg=$(tests_of a27g claude_legacy.stdin); c27g=""
+grep -qF 'pkgs/p[1]/package.json' <<<"$tg" && c27g="$c27g p[1]-listed"
+grep -qF '  pkgs/p1/package.json (test config)' <<<"$tg" || c27g="$c27g p1-missing"
+grep -qF '  col/package.json (test config)' <<<"$tg" || c27g="$c27g col-missing"
+grep -qF 'plain/package.json' <<<"$tg" && c27g="$c27g plain-listed"
+grep -qF '  withtest/package.json (test config)' <<<"$tg" || c27g="$c27g withtest-missing"
+grep -qF 'they were NOT listed' "$TMPROOT/a27d/claude_legacy.stdin" 2>/dev/null || c27g="$c27g notmeasured-not-in-prompt"
+if [ -z "$c27g" ]; then ok "A27g package.json: literal paths, a column-one \"test key, added manifests only with a test script; NOT MEASURED reaches the prompt"
+else bad "A27g package.json edges" "$c27g · [$(tr '\n' '|' <<<"$tg")]"; fi
+
+# A27h (codex R2) — a repository with color.ui=always still lists a manifest whose test script changed
+g -C "$R27g" config color.ui always
+RUN_DIR="$R27g" gate a27h FH_TARGET_FILES=col/package.json
+g -C "$R27g" config --unset color.ui
+if tests_of a27h claude_legacy.stdin > "$TMPROOT/a27h.blk" && grep -qF '  col/package.json (test config)' "$TMPROOT/a27h.blk"; then
+  ok "A27h color.ui=always does not hide a changed test script"
+else bad "A27h colour" "$(grep TESTS_CHANGED "$TMPROOT/a27h.out")"; fi
+# A27i (codex R2) — FH_DIFF_PATH outside a git repository is NOT MEASURED, and the prompt says so
+N27="$TMPROOT/nogit27"; mkdir -p "$N27/scripts"; printf '#!/usr/bin/env bash\necho ok\n' > "$N27/scripts/foo.sh"
+printf 'diff --git a/tests/x_test.py b/tests/x_test.py\n' > "$TMPROOT/a27i.patch"
+RUN_DIR="$N27" gate a27i FH_DIFF_PATH="$TMPROOT/a27i.patch" FH_TARGET_FILES=scripts/foo.sh
+if has a27i 'FH_GATE_TESTS_CHANGED: NOT MEASURED (FH_DIFF_PATH' && grep -qF 'they were NOT listed' "$TMPROOT/a27i/claude_legacy.stdin" 2>/dev/null; then
+  ok "A27i FH_DIFF_PATH outside git → NOT MEASURED on stdout and in the prompt"
+else bad "A27i diff path outside git" "$(grep TESTS_CHANGED "$TMPROOT/a27i.out")"; fi
 
 # A25 (Lean RFC item 1) — protected paths: `.fh-gate-protected` read from the BASE; a protected file the change modifies,
 # deletes or changes in type → at least ESCALATE (exit 3), never BLOCKED by itself; a BLOCKED from elsewhere stays.
