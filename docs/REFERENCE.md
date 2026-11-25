@@ -63,6 +63,8 @@ npx --package @chrono-meta/fh-gate fh-gate          # nothing to install
     ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
+The step runs `npx --package @chrono-meta/fh-gate@<version>`. It does not run the pull request's `scripts/fh-gate.sh`, but `npx` can use a matching copy already installed in the checkout's `node_modules`, so it is not a guaranteed outside copy. Its `version` input defaults to `latest`, which is not a pinned identity either: the gate that ran can change between two runs of the same commit. Pin it (`version: 3.48.0`) to know which version gave a verdict. When fh-gate runs from the checkout it reviews and that change touches the gate itself, the output says so on `FH_GATE_SELF_CHANGE` (advisory only).
+
 Listed on the [GitHub Actions Marketplace](https://github.com/marketplace/actions/fh-gate-typed-ai-code-review-verdict).
 
 The step exposes `verdict` (PASS · PENDING · BLOCKED · ESCALATE · HARNESS_ERROR · ARG_ERROR · DRY_RUN · UNKNOWN)

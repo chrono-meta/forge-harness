@@ -348,7 +348,7 @@ if [[ "$FH_BACKEND" == "cross" ]]; then
     _CROSS_REASONS="${_CROSS_REASONS:-}$( { printf '%s\n' "$_legout" | grep '^FH_GATE_ESCALATE_REASON:' || true; } )"$'\n'
     _CROSS_OUT="${_CROSS_OUT}
 # ── leg: $_leg (verdict $_legverdict) ──
-$( { printf '%s\n' "$_legout" | grep -E '^FH_GATE_(REVIEWER|ELEPHANT|E0|E1|PROTECTED|ESCALATE_REASON|LAYERS_NOT_BUILT):' || true; } | sed 's/^/# /')
+$( { printf '%s\n' "$_legout" | grep -E '^FH_GATE_(REVIEWER|ELEPHANT|E0|E1|PROTECTED|ESCALATE_REASON|TESTS_CHANGED|SELF_CHANGE|LAYERS_NOT_BUILT):' || true; } | sed 's/^/# /')
 $(printf '%s' "$_legout" | sed -n '/^---$/,$p')"
   done
 
@@ -957,6 +957,48 @@ _exec_get() { printf '%s' "$EXEC_JSON" | jq -r "$1" 2>/dev/null || true; }
 E0_LINE="$(_exec_get '.e0.status + " — " + .e0.detail')"
 E1_LINE="$(_exec_get '.e1.status + " — " + .e1.detail')"
 LAYERS_NOT_BUILT_LINE="E2 (declared real input) · E3 (revert probe) · E4 (repetition) — not built yet"
+
+# --- L1 (advisory, 2026-11-25): is the checker running now part of the change it is checking? ---
+# When fh-gate runs from the same checkout it reviews (a local `scripts/fh-gate.sh`, or a CI step that runs the PR's own
+# copy), a change to fh-gate.sh — or, with the execution layer on, to fh_gate_exec.sh or the scanner it runs — is also a
+# change to the judge. This only SAYS so: FH_GATE_SELF_CHANGE on stdout and checker_in_change in the record. It is not a
+# trust boundary: a change to the checker can remove this line too. The boundary is a caller outside the change.
+SELF_CHANGE_LINE="none (the running checker's files are not part of this change)"; SELF_CHANGED=""
+_real_path() {   # $1 → the file's physical path, symlinks resolved one by one (codex R1: a symlinked checker)
+  local f="$1" d n i=0
+  while [[ -L "$f" && $i -lt 40 ]]; do
+    n=$(readlink -- "$f" 2>/dev/null) || break
+    [[ "$n" == /* ]] && f="$n" || f="$(dirname -- "$f")/$n"
+    i=$((i + 1))
+  done
+  d=$(cd "$(dirname -- "$f")" 2>/dev/null && pwd -P) || return 1
+  printf '%s/%s' "$d" "$(basename -- "$f")"
+}
+if [[ -n "${FH_DIFF_PATH:-}" ]]; then
+  SELF_CHANGE_LINE="NOT MEASURED (FH_DIFF_PATH: the change is a patch, not this checkout — whether it touches the checker is not checked)"
+elif [[ "$_IS_GIT" == 1 && -n "${_GATE_BASE:-}" ]]; then
+  _root_p=$(cd "$WORK_ROOT" 2>/dev/null && pwd -P || true)
+  _checkers=("$0")
+  # only what actually ran (codex R2): the execution layer when E1 or E0 ran, the scanner when E0 ran
+  [[ "$E1_LINE" == ran* || "$E0_LINE" == ran* ]] && _checkers+=("${FH_ROOT}/scripts/fh_gate_exec.sh")
+  [[ "$E0_LINE" == ran* ]] && _checkers+=("${FH_GATE_E0_SCANNER:-${FH_ROOT}/scripts/pipefail_earlyexit_scan.sh}")
+  for _cf in "${_checkers[@]}"; do
+    [[ -f "$_cf" ]] || continue
+    # check the path as invoked AND its resolved target: retargeting a checker symlink is a change too (codex R2)
+    _cdir=$(cd "$(dirname -- "$_cf")" 2>/dev/null && pwd -P || true)
+    for _cfp in "${_cdir:+$_cdir/$(basename -- "$_cf")}" "$(_real_path "$_cf" || true)"; do
+      [[ -n "$_cfp" && -n "$_root_p" && "$_cfp" == "$_root_p"/* ]] || continue   # not inside the checkout under review
+      _crel="${_cfp#"$_root_p"/}"
+      if [[ -n "$(git -C "$WORK_ROOT" diff --name-only "$_GATE_BASE" -- ":(literal)$_crel" 2>/dev/null || true)" ]] \
+         || [[ -n "$(git -C "$WORK_ROOT" ls-files -o --exclude-standard -- ":(literal)$_crel" 2>/dev/null || true)" ]]; then
+        [[ $'\n'"$SELF_CHANGED" == *$'\n'"$_crel"$'\n'* ]] || SELF_CHANGED="${SELF_CHANGED}${_crel}"$'\n'
+      fi
+    done
+  done
+  if [[ -n "$SELF_CHANGED" ]]; then
+    SELF_CHANGE_LINE="ADVISORY — the checker running now is part of this change ($(printf '%s' "$SELF_CHANGED" | paste -sd ',' - | sed 's/,/, /g')); this verdict comes from the changed checker. Re-check with a copy from outside the change."
+  fi
+fi
 
 # --- Protected paths (Lean RFC item 1, 2026-11-25) — token-free, no AST ---
 # A repository can list paths whose change is a contract change, one git glob per line, in `.fh-gate-protected` at its
@@ -1884,12 +1926,13 @@ _provenance_json() {
     --arg base_note "${BASE_NOTE:-}" --arg diff_sha "$_dsha" --arg diff_shown "${PROV_DIFF_SHOWN_SHA:-}" --arg diff_bytes "${PROV_DIFF_BYTES:-}" --arg diff_src "$([[ -n "${FH_DIFF_PATH:-}" ]] && echo FH_DIFF_PATH || echo "git diff against the base")" \
     --arg target "${FH_TARGET_FILES:-}" --arg lanes "${FH_GATE_LANES:-}" --arg lt "${FH_LANE_TIMEOUT:-}" --arg ml "${FH_GATE_MAX_LANES:-}" \
     --arg cross1 "${FH_GATE_CROSS_ALLOW_SINGLE:-}" --arg exec "${FH_GATE_EXEC:-}" --arg rev "${FH_REVIEWER:-}" --arg be "${FH_BACKEND:-}" \
-    --argjson ex "$(printf '%s' "$EXEC_JSON" | jq -c '.provenance // null' 2>/dev/null || echo null)" --argjson nr "$_chk" \
+    --arg selfch "$SELF_CHANGED" --argjson ex "$(printf '%s' "$EXEC_JSON" | jq -c '.provenance // null' 2>/dev/null || echo null)" --argjson nr "$_chk" \
     '{label:$label, base_ref:$base_ref, base_sha:(if $base_sha == "" then null else $base_sha end), base_note:$base_note,
       diff_sha256:(if $diff_sha == "" then null else $diff_sha end), diff_bytes:($diff_bytes|tonumber? // null),
       diff_shown_sha256:(if $diff_shown == "" then null else $diff_shown end), diff_source:$diff_src,
       env_as_given:{FH_TARGET_FILES:$target, FH_GATE_LANES:$lanes, FH_LANE_TIMEOUT:$lt, FH_GATE_MAX_LANES:$ml,
            FH_GATE_CROSS_ALLOW_SINGLE:$cross1, FH_GATE_EXEC:$exec, FH_REVIEWER:$rev, FH_BACKEND:$be},
+      checker_in_change:($selfch | split("\n") | map(select(. != ""))),
       exec:$ex, not_run:$nr}' 2>/dev/null || printf '%s' '"UNRECORDED (provenance could not be serialized)"'
 }
 _rank() { case "$1" in PASS) echo 0 ;; PENDING) echo 1 ;; ESCALATE) echo 2 ;; BLOCKED) echo 3 ;; *) echo 9 ;; esac; }
@@ -1931,6 +1974,7 @@ esac
   printf 'FH_GATE_E1: %s\n' "$E1_LINE"
   printf 'FH_GATE_PROTECTED: %s\n' "$PROTECTED_LINE"
   printf 'FH_GATE_TESTS_CHANGED: %s\n' "$TESTS_LINE"
+  printf 'FH_GATE_SELF_CHANGE: %s\n' "$SELF_CHANGE_LINE"
   [ "$EXEC_ESCALATE_N" -gt 0 ] && printf 'FH_GATE_ESCALATE_REASON: base-lane-overlay (%s lane file(s) this change edits or deletes are red on it in their base version — a human decides)\n' "$EXEC_ESCALATE_N"
   [ "$PROTECTED_N" -gt 0 ] && printf 'FH_GATE_ESCALATE_REASON: protected-path (%s file(s) listed in .fh-gate-protected on the base changed — a human decides)\n' "$PROTECTED_N"
   printf 'FH_GATE_LAYERS_NOT_BUILT: %s\n' "$LAYERS_NOT_BUILT_LINE"
