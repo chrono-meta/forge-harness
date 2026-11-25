@@ -9,7 +9,6 @@
   <a href="https://github.com/marketplace/actions/fh-gate-typed-ai-code-review-verdict"><img src="https://img.shields.io/badge/GitHub_Action-marketplace-2088FF.svg?logo=githubactions" alt="GitHub Actions Marketplace — fh-gate"></a>
   <a href="https://www.npmjs.com/package/@chrono-meta/fh-gate"><img src="https://img.shields.io/npm/v/@chrono-meta/fh-gate.svg?color=cb3837&logo=npm" alt="npm"></a>
   <a href="https://www.npmjs.com/package/@chrono-meta/fh-gate"><img src="https://img.shields.io/npm/dt/@chrono-meta/fh-gate.svg?color=3fb950&logo=npm&label=downloads" alt="npm total downloads"></a>
-  <a href="https://github.com/chrono-meta/homebrew-forge-harness"><img src="https://img.shields.io/badge/homebrew-tap-FBB040.svg?logo=homebrew" alt="Homebrew tap"></a>
 </p>
 
 <p align="center">
@@ -62,7 +61,7 @@ cd your-repo && npx --package @chrono-meta/fh-gate fh-gate     # 현재 레포�
 종료 코드를 출력합니다. PASS 는 리뷰가 실제로 돌았을 때만 PASS 로 칩니다. 백엔드가 끝내 답하지 않았거나, dry run 이거나,
 모르는 종료 코드가 나오면 PASS 가 아니며, GitHub Actions 스텝은 기본값에서 이 경우 실패합니다. Node ≥ 16 과, 설치하고 로그인해 둔
 백엔드 CLI 하나가 필요합니다. `claude`(기본) 또는 `codex`(`FH_BACKEND=codex`)입니다. CI, pre-commit 훅,
-다른 에이전트 옆에서 쓰면 됩니다. GitHub Actions 스텝과 Homebrew tap 도 있습니다 — [게이트 실행하기](docs/REFERENCE.md#run-it-outside-claude-code--the-fh-gate-cli)를 보세요.
+다른 에이전트 옆에서 쓰면 됩니다. GitHub Actions 스텝도 있습니다 — [게이트 실행하기](docs/REFERENCE.md#run-it-outside-claude-code--the-fh-gate-cli)를 보세요.
 
 **한 번 돌리면 무엇이 일어나고 얼마가 드나.** 실행할 때마다 바뀐 파일을 로그인해 둔 백엔드 CLI 로 보내고, 그쪽에
 리뷰 호출을 한 번 합니다. 그 계정의 다른 호출과 똑같이 과금되거나 사용량에 잡힙니다(`FH_BACKEND=cross` 는 최대 두 번,

@@ -51,6 +51,10 @@ ACCEPTED_ABSENT=(
   "scripts/selfdev_queue.py"
   "scripts/test_selfdev_queue_lanes.sh"
   "scripts/test_selfdev_loop_lanes.sh"
+  # 2026-11-25 — release_compare.sh (stage 1: the published tarball's fingerprint vs the registry and the tag). A maintainer
+  #    tool run after this repo's own tag push; a consumer install has no tags of ours to pair with.
+  "scripts/release_compare.sh"
+  "scripts/test_release_compare_lanes.sh"
   # 2026-11-25 — the loop's per-push «what changed · how to undo» PR comment and its lanes. Same loop, same scope.
   "scripts/selfdev_push_note.sh"
   "scripts/test_selfdev_push_note_lanes.sh"

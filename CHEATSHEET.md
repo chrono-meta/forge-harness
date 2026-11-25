@@ -230,7 +230,7 @@ claude plugin list
 
 ## 9.5. npx / CLI — zero-install governance gate (any repo, no Claude Code session)
 
-The npm package `@chrono-meta/fh-gate` runs FH's governance gate as a plain CLI — no clone, no plugin, no `claude` session. Use it in CI or any repo. It shells out to a backend (`claude --print` or `codex exec`) and returns a machine-parseable verdict + exit code. A Homebrew tap ships the exact same content (100% parity — same npm tarball, just a different install path); prefer it if you'd rather not type `npx --package` every time.
+The npm package `@chrono-meta/fh-gate` runs FH's governance gate as a plain CLI — no clone, no plugin, no `claude` session. Use it in CI or any repo. It shells out to a backend (`claude --print` or `codex exec`) and returns a machine-parseable verdict + exit code.
 
 ```bash
 # Governance gate — wraps any coding agent's output as a post-generation check
@@ -246,14 +246,6 @@ FH_BACKEND=codex npx --package @chrono-meta/fh-gate fh-gate   # Codex backend (d
 npx --package @chrono-meta/fh-gate fh-run --skill <name>
 npx --package @chrono-meta/fh-gate fh-goal "<goal text>"      # goal runner
 npx --package @chrono-meta/fh-gate fh-codex-doctor --strict  # Codex adapter drift check
-
-# Homebrew alternative (community tap, not yet in Homebrew Core — `brew search` won't
-# find it without tapping first): install once, then call the binaries directly
-brew tap chrono-meta/forge-harness && brew install forge-harness
-fh-gate                     # same as `npx --package @chrono-meta/fh-gate fh-gate`
-fh-run --skill <name>
-fh-goal "<goal text>"
-fh-codex-doctor --strict
 ```
 
 | Knob | Values | Effect |

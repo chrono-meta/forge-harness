@@ -28,6 +28,9 @@
   - Scope: only the `fh` pass. The default `fh-legacy` pass has no conventions angle and gets no rule files.
   - Where the text goes: these files now reach whichever backend reviews, codex included, like the diff already does.
 
+### Docs
+- Homebrew is no longer an install path the docs offer: the `brew install` lines and the Homebrew tap badge are gone from the four READMEs, `docs/REFERENCE.md` and `CHEATSHEET.md`. Install through npm (`npx --package @chrono-meta/fh-gate fh-gate`). The tap repository is left as it is; its formula stopped at 3.24.0 and does not track npm.
+
 ### [3.48.0] — 2026-11-23
 
 Minor by the version policy. Three gate changes make a shipped gate refuse more by default. Two are in `fh-gate`: a help or version flag is honoured only on its own (#1190), and under CI even a lone one exits 11 (#1191). Both close the same hole, where a file list that reads as a flag printed help, exited 0 and was read as a pass with no review. They close it in the GitHub Action and in CI systems that set `CI`; it stays open in CI systems that do not set `CI` and in local hooks or scripts (named in the second entry). The third is in `destructive_pre_gate.sh`: in block mode, which now includes `auto` as well as `bypassPermissions`, an override written into the command it is judging no longer opens the block, more shapes block, and the block text says to ask the operator (#1192); a follow-up closes three holes a security review found in it (#1195). See their `BREAKING (gate):` entries. `fh-run` and `fh-goal` stop pinning a codex model (#1189). The new shipped lanes are L8 and L9 in `test_action_yml_lanes.sh`, M1–M4 in `test_fh_run_resolver_lanes.sh` and `test_fh_goal_change_detection_lanes.sh`, and K1–K99 in `test_destructive_pre_gate_lanes.sh`. Items marked «not in the npm package» are in the repository checkout only.
