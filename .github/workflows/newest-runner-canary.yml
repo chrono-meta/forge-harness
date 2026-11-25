@@ -28,6 +28,12 @@ jobs:
     runs-on: ubuntu-latest   # deliberately unpinned — that is the whole point of this job
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Same checkout as validate.yml. Without it this job ran selfcheck on a depth-1 clone, which the required
+          # checks never do: on 2026-11-23 (run 45178446585) test_prepush_marker_lookup_lanes.sh (#1119) cloned that
+          # shallow checkout, its push to an empty bare origin was refused («shallow update not allowed»), the suite
+          # said HARNESS-ERROR and SELFCHECK went red for the checkout shape, not the image.
+          fetch-depth: 0
       - name: Runner image (what this run actually measured)
         run: |
           echo "ImageOS=${ImageOS:-?} ImageVersion=${ImageVersion:-?}"
