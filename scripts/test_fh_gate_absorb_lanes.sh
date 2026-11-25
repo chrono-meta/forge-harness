@@ -28,6 +28,8 @@
 #   A23 base = merge-base even with a dirty tree (a committed change stays in the diff); no base branch + dirty →
 #       HEAD, said on the reviewer line
 #       (A23c: the branch exists without a merge-base → its tip, said; never HEAD)
+#   A24 the execution layer's JSON is checked as strictly as the review object (status enum, finding shape, grade A/B/C)
+#       — malformed → exit 10; a well-formed A still blocks and a C still passes
 #   A21 FH_REVIEWER=fh: rule files (CLAUDE.md · AGENTS.md on the changed files' path) come from the base, never
 #       from the change's tree; fh-legacy gets none; no base → NOT attached, named; none on base → said
 #       (A21e ancestor walk · A21f FH_GATE_BASE · A21g fence nonce · A21h subdir/absolute target · A21i symlink)
@@ -374,6 +376,33 @@ RUN_DIR="$R23c" gate a23c FH_REVIEWER=fh
 if has a23c 'base main tip (no merge-base' && ! logh a23c claude_abs.stdin 'git diff against HEAD'; then
   ok "A23c the base branch exists without a merge-base → measured against its tip and said, never HEAD"
 else bad "A23c no merge-base" "$(grep REVIEWER "$TMPROOT/a23c.out")"; fi
+
+# A24 (L6) — the execution layer's JSON is validated as strictly as the review object. Before, a finding graded
+# "BLOCKING" or "a" passed («findings is an array») and dropped out of the verdict, which counts grade=="A"/"B" only.
+# A copy of the gate runs next to a stub fh_gate_exec.sh that prints $FAKE_EXEC_JSON; FH_GATE_EXEC=on.
+GC="$TMPROOT/gatecopy"; mkdir -p "$GC/scripts"; cp "$GATE" "$GC/scripts/fh-gate.sh"; cp "$HERE/../package.json" "$GC/package.json"
+printf '#!/usr/bin/env bash\nprintf "%%s" "$FAKE_EXEC_JSON"\n' > "$GC/scripts/fh_gate_exec.sh"
+_ej() { printf '{"e0":{"status":"%s","detail":"d"},"e1":{"status":"ran","detail":"d"},"findings":[%s]}' "$1" "$2"; }
+_f() { printf '{"grade":%s,"source":"E1","location":"x","title":%s,"evidence":"e","fix":"f"}' "$1" "$2"; }
+l6=""
+for c in ok_A ok_C bad_BLOCKING bad_lower bad_status bad_title bad_two bad_nonobj bad_nodetail; do
+  case $c in
+    ok_A) j=$(_ej ran "$(_f '"A"' '"t"')") ;;
+    ok_C) j=$(_ej ran "$(_f '"C"' '"t"')") ;;
+    bad_BLOCKING) j=$(_ej ran "$(_f '"BLOCKING"' '"t"')") ;;
+    bad_lower) j=$(_ej ran "$(_f '"a"' '"t"')") ;;
+    bad_status) j=$(_ej weird "") ;;
+    bad_title) j=$(_ej ran "$(_f '"A"' 7)") ;;
+    bad_two) j="$(_ej ran "")$(_ej ran "")" ;;
+    bad_nonobj) j=$(_ej ran '"A"') ;;
+    bad_nodetail) j='{"e0":{"status":"ran"},"e1":{"status":"ran","detail":"d"},"findings":[]}' ;;
+  esac
+  GATE="$GC/scripts/fh-gate.sh" gate "a24_$c" FH_GATE_EXEC=on FAKE_EXEC_JSON="$j" FH_TARGET_FILES=scripts/foo.sh
+  l6="$l6 $c=$RC"
+done
+if [ "$l6" = " ok_A=2 ok_C=0 bad_BLOCKING=10 bad_lower=10 bad_status=10 bad_title=10 bad_two=10 bad_nonobj=10 bad_nodetail=10" ]; then
+  ok "A24 malformed execution-layer output (grade BLOCKING / a, unknown status, non-string title, two values, non-object finding, no detail) → exit 10; well-formed A → BLOCKED, C → PASS"
+else bad "A24 exec JSON validation" "$l6"; fi
 
 echo "absorb lanes: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
