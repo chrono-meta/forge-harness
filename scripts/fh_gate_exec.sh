@@ -19,7 +19,8 @@
 # Grades (the caller turns them into a verdict; this script judges nothing else):
 #   A  a lane this change turns red (green, or absent, at the base)
 #   B  a lane that did not finish in time · a scanner that flags a NEW site · a scanner whose own check failed
-#      · a copy that could not be built — a step that did not finish is never green
+#      · a copy that could not be built · a lane red now whose base copy could not be built (not compared)
+#      · target lanes a biting FH_GATE_MAX_LANES left unrun — a step that did not finish is never green
 #   C  a lane that was red at the base too (not introduced by this change)
 # Exit:    0 = the object was emitted (a step that could not run says so in its status/detail, never as 0 hits)
 #          10 = the object could not be produced (jq missing)
@@ -33,8 +34,10 @@
 #
 # Lane discovery (when nothing is declared): FH's own convention. A changed file named scripts/test_*.sh
 # or *_lanes.sh is a lane itself; otherwise a lane is a scripts/test_*.sh or scripts/*_lanes.sh file in
-# the copy whose text names the changed file's basename. Order (it decides which lanes a cap keeps): changed
-# lanes first, then lanes whose own name carries the changed file's stem, then the rest, each in sort order. Lanes run with FH_GATE_EXEC=off so a gate a lane runs does not start this layer again.
+# the copy whose text names the changed file's basename. Order (it decides which lanes a cap keeps): lanes the change
+# leaves untouched, then lanes it edits, then lanes it adds; within each, changed lanes first, then lanes whose own name
+# carries the changed file's stem, then the rest, each in sort order. A cap that bites is a B naming the lanes it left
+# out. Lanes run with FH_GATE_EXEC=off so a gate a lane runs does not start this layer again.
 #
 # 🟥 TRUST: E1 runs the reviewed change's own lane scripts — the same trust as running its test suite.
 #    Where the change is not trusted, set FH_GATE_EXEC=off on the fh-gate call. The copy keeps the caller's tree
@@ -196,11 +199,28 @@ else
     [ -n "$_others" ] && printf '%s\n' "$_others"
   } | awk -F '\t' '!seen[$2]++' > "$LANES_FILE"
 fi
+# Lanes the change does not touch go first, then lanes it edits, then lanes it adds (each group keeps the order above),
+# so a change cannot push a real lane past the cap by adding lanes or touching other ones (G3, 2026-11-25; codex R1:
+# «exists at base» alone let six trivially edited lanes push the unchanged guard out). Declared lanes keep their order.
+if [ "$DECLARED" = 0 ] && [ -s "$LANES_FILE" ]; then
+  : > "$TMP/lanes.keep"; : > "$TMP/lanes.edit"; : > "$TMP/lanes.new"
+  while IFS="$TAB" read -r _k _v; do
+    if ! git -C "$WORK" cat-file -e "${BASE_SHA}:${_v}" 2>/dev/null; then _g=new
+    elif grep -qxF -- "$_v" <<<"$CHANGED"; then _g=edit   # here-string: a pipe into grep -q dies by SIGPIPE under pipefail (codex R2)
+    else _g=keep; fi
+    printf '%s\t%s\n' "$_k" "$_v" >> "$TMP/lanes.$_g"
+  done < "$LANES_FILE"
+  cat "$TMP/lanes.keep" "$TMP/lanes.edit" "$TMP/lanes.new" > "$LANES_FILE"
+fi
 TOTAL=$(grep -c . "$LANES_FILE" 2>/dev/null || true); TOTAL=${TOTAL:-0}
 CAPNOTE=""
 if [ "$TOTAL" -gt "$MAX_LANES" ]; then
+  # a cap that bites leaves lanes unrun: that is a B, never a quiet note (G3)
+  _dropped=$(tail -n +"$((MAX_LANES + 1))" "$LANES_FILE" | cut -f2- | head -c 1500)
   head -n "$MAX_LANES" "$LANES_FILE" > "$TMP/lanes.cap" && mv "$TMP/lanes.cap" "$LANES_FILE"
   CAPNOTE=" (capped at ${MAX_LANES} of ${TOTAL} — FH_GATE_MAX_LANES)"
+  [ "$MODE" = plan ] || add_finding B E1 "(lane cap)" "$((TOTAL - MAX_LANES)) target lane(s) not run — FH_GATE_MAX_LANES=${MAX_LANES} of ${TOTAL}" \
+    "$_dropped" "raise FH_GATE_MAX_LANES, or declare the lanes to run with FH_GATE_LANES"
 fi
 KIND="discovered"; [ "$DECLARED" = 1 ] && KIND="declared"
 RUN_N=$(grep -c . "$LANES_FILE" 2>/dev/null || true); RUN_N=${RUN_N:-0}
@@ -240,8 +260,9 @@ else
         || BASECOPY="FAILED"
     fi
     if [ "$BASECOPY" = "FAILED" ]; then
-      red=$((red + 1))
-      add_finding A E1 "$label" "lane red after this change (the base copy could not be built, so not compared)" "$tailtxt" "fix the change or the lane"
+      # red now, and «green at base» could not be checked: an instrument failure, not a regression — B (G4)
+      nocmp=$((nocmp + 1))
+      add_finding B E1 "$label" "lane red after this change (rc $rc); the base copy could not be built, so not compared" "$tailtxt" "run the lane at the base by hand"
     elif [ "$kind" = L ] && [ ! -f "$BASECOPY/$val" ]; then
       red=$((red + 1))
       add_finding A E1 "$label" "new lane, red after this change (rc $rc)" "$tailtxt" "fix the change or the lane"
@@ -266,7 +287,7 @@ else
   done < "$LANES_FILE"
   E1_STATUS="ran"
   E1_DETAIL="ran ${n} lane(s), ${KIND}${CAPNOTE} — ${red} red, ${pre} red before, ${dnf} did not finish"
-  [ "$nocmp" -gt 0 ] && E1_DETAIL="${E1_DETAIL}, ${nocmp} red but not compared (base did not finish)"
+  [ "$nocmp" -gt 0 ] && E1_DETAIL="${E1_DETAIL}, ${nocmp} red but not compared (the base run did not finish, or the base copy could not be built)"
   [ -z "$_TMO" ] && E1_DETAIL="${E1_DETAIL} (no timeout binary — lanes were not time-bounded)"
 fi
 emit

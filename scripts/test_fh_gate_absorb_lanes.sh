@@ -20,10 +20,14 @@
 #   A15 no fence check reads a variable through a pipe into grep -q (shape; planted known positive)
 #   A16 the goldfish process does not inherit FH_TASK_DESCRIPTION (the elephant's does)
 #   A17 the change's diff cannot be computed → a B finding, said on the reviewer line
-#   A18 a diff past 80000 bytes is truncated aloud (prompt and reviewer line)
+#   A18 a diff past 80000 bytes: the prompt says the rest is not shown, the reviewer line says not reviewed, and a B
+#       finding keeps the verdict off PASS (fh / elephant passes); fh-legacy, which reads no diff, gets no B
 #   A19 codex output with more than one JSON value → 10
 #   A20 CI-shaped checkout (detached, no local base branch): base falls back to origin/<base>; with no base at all
 #       the missing diff is named, not graded, only for fh-legacy with the elephant off
+#   A23 base = merge-base even with a dirty tree (a committed change stays in the diff); no base branch + dirty →
+#       HEAD, said on the reviewer line
+#       (A23c: the branch exists without a merge-base → its tip, said; never HEAD)
 #   A21 FH_REVIEWER=fh: rule files (CLAUDE.md · AGENTS.md on the changed files' path) come from the base, never
 #       from the change's tree; fh-legacy gets none; no base → NOT attached, named; none on base → said
 #       (A21e ancestor walk · A21f FH_GATE_BASE · A21g fence nonce · A21h subdir/absolute target · A21i symlink)
@@ -215,13 +219,19 @@ gate a17 FH_REVIEWER=fh FH_GATE_BASE=no-such-ref
 if [ "$RC" -eq 1 ] && has a17 'NO CHANGE DIFF' && has a17 'location: "(diff)"'; then ok "A17 no change diff → B and said on the reviewer line"
 else bad "A17 diff failure" "rc=$RC $(grep -E 'REVIEWER|VERDICT' "$TMPROOT/a17.out" | tr '\n' '|')"; fi
 
-# A18 — a diff past 80000 bytes is truncated in the prompt, and both the prompt and the reviewer line say so
+# A18 — a diff past 80000 bytes is truncated in the prompt; the prompt, the reviewer line and a B finding say the rest
+# was NOT reviewed (the fh pass has no git to read it — G1, 2026-11-25; before, it was told to «read the rest with git»)
 g -C "$REPO" checkout -q -b big feat
 python3 -c 'import sys;sys.stdout.write("".join("line %d of a large change\n" % i for i in range(6000)))' > "$REPO/scripts/big.txt"
 g -C "$REPO" add scripts/big.txt; g -C "$REPO" commit -qm "big change"
-gate a18 FH_REVIEWER=fh FH_TARGET_FILES=scripts/foo.sh
+gate a18 FH_REVIEWER=fh FH_TARGET_FILES=scripts/foo.sh; rc18=$RC
+gate a18l FH_REVIEWER=fh-legacy FH_GATE_ELEPHANT=off FH_TARGET_FILES=scripts/foo.sh; rc18l=$RC   # the pass that reads no diff
+gate a18e FH_REVIEWER=fh-legacy FH_GATE_ELEPHANT=on FH_TARGET_FILES=scripts/foo.sh                 # the elephant reads it
 g -C "$REPO" checkout -q feat
-if logh a18 claude_abs.stdin 'TRUNCATED: 80000 of' && has a18 'diff truncated in the prompt'; then ok "A18 an oversized diff is truncated aloud (prompt + reviewer line)"
+if logh a18 claude_abs.stdin 'the rest of the change is NOT shown to you' && ! logh a18 claude_abs.stdin 'read the rest' \
+   && has a18 'the rest was not reviewed' && [ "$rc18" -eq 1 ] && has a18 'part of the change was not reviewed' \
+   && [ "$rc18l" -eq 0 ] && ! has a18l 'part of the change was not reviewed' && has a18e 'part of the change was not reviewed'; then
+  ok "A18 an oversized diff: the fh pass is told the rest is not shown, and a B says part of the change was not reviewed (fh-legacy, which reads no diff, gets none)"
 else bad "A18 truncation note" "$(grep REVIEWER "$TMPROOT/a18.out")"; fi
 
 # A19 — codex writes two JSON values → not exactly one object → 10
@@ -338,6 +348,32 @@ ri=$(rules_of a21i claude_abs.stdin)
 if printf '%s' "$ri" | grep -qF 'RULE-SRC-K7' && ! printf '%s' "$ri" | grep -qF 'RULE-OTHER-W3'; then
   ok "A21i a directory the change replaced with a symlink still gets its base rules, not the link target's"
 else bad "A21i symlink steering" "$(grep REVIEWER "$TMPROOT/a21i.out") rules=[$(printf '%s' "$ri" | tr '\n' '|')]"; fi
+
+# A23 (G2) — the base is the merge-base even with a dirty tree: a committed change on the branch stays in the measured
+# diff (before, a dirty tree made HEAD the base and the committed change vanished). With no base branch at all, a dirty
+# tree still measures against HEAD and the reviewer line says so.
+R23="$TMPROOT/repo23"; mkdir -p "$R23/scripts"; g -C "$R23" init -q -b main
+printf 'keep-guard\n' > "$R23/scripts/lane.txt"; printf 'x\n' > "$R23/scripts/other.txt"; g -C "$R23" add -A; g -C "$R23" commit -qm base
+g -C "$R23" checkout -qb pr; printf 'COMMITTED-WEAKENING-23\n' > "$R23/scripts/lane.txt"; g -C "$R23" commit -qam weaken
+printf 'x2\n' > "$R23/scripts/other.txt"   # any dirty edit
+RUN_DIR="$R23" gate a23a FH_REVIEWER=fh
+if logh a23a claude_abs.stdin 'COMMITTED-WEAKENING-23' && ! logh a23a claude_abs.stdin 'git diff against HEAD'; then
+  ok "A23a a dirty tree on a branch: the base stays the merge-base, so the committed change is in the reviewed diff"
+else bad "A23a dirty tree base" "$(grep -o 'git diff against [^)]*' "$TMPROOT/a23a/claude_abs.stdin" | head -1)"; fi
+R23b="$TMPROOT/repo23b"; mkdir -p "$R23b"; g -C "$R23b" init -q -b master; printf 'a\n' > "$R23b/f.txt"; g -C "$R23b" add -A; g -C "$R23b" commit -qm b
+printf 'DIRTY-23B\n' > "$R23b/f.txt"
+RUN_DIR="$R23b" gate a23b FH_REVIEWER=fh
+if logh a23b claude_abs.stdin 'DIRTY-23B' && has a23b 'base HEAD (no main branch'; then
+  ok "A23b no base branch + dirty tree → HEAD stays the base, and the reviewer line says so"
+else bad "A23b no base branch" "$(grep REVIEWER "$TMPROOT/a23b.out")"; fi
+# A23c — the base branch exists but shares no history with HEAD (shallow / unrelated): base = branch tip, never HEAD
+R23c="$TMPROOT/repo23c"; mkdir -p "$R23c"; g -C "$R23c" init -q -b main; printf 'm\n' > "$R23c/m.txt"; g -C "$R23c" add -A; g -C "$R23c" commit -qm m
+g -C "$R23c" checkout -q --orphan other; g -C "$R23c" rm -rqf . ; printf 'o\n' > "$R23c/o.txt"; g -C "$R23c" add -A; g -C "$R23c" commit -qm o
+printf 'DIRTY-23C\n' > "$R23c/o.txt"
+RUN_DIR="$R23c" gate a23c FH_REVIEWER=fh
+if has a23c 'base main tip (no merge-base' && ! logh a23c claude_abs.stdin 'git diff against HEAD'; then
+  ok "A23c the base branch exists without a merge-base → measured against its tip and said, never HEAD"
+else bad "A23c no merge-base" "$(grep REVIEWER "$TMPROOT/a23c.out")"; fi
 
 echo "absorb lanes: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

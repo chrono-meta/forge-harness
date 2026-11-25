@@ -24,6 +24,9 @@
 #   X18 a lane file name with shell syntax in it         → run as a path; its spelling runs nothing
 #   X19 no temporary folder can be made                  → B «could not run», never a silent NOT RUN
 #   X20 a declared lane that is new with the change, red → A, not «red before»
+#   X21 six lanes the change adds, cap 6                → base lanes run first (A), the biting cap is a B
+#   X22 red lane, base copy cannot be built             → B «not compared», never A
+#   X23 six trivially edited lanes, cap 6               → the untouched guard lane still runs → A
 #
 # Run: bash scripts/test_fh_gate_exec_lanes.sh
 set -uo pipefail
@@ -239,6 +242,43 @@ FH_GATE_E0_SCANNER="$FAKESCAN" run_exec x15 "$R" "$B"
 if [ "$(q x15 '[.findings[]|select(.grade=="B" and .source=="E0")]|length')" = 1 ] && qm x15 '.e0.detail' 'instrument error' i; then
   ok "X15 scanner self-test fails → B «instrument error», not «0 new»"
 else bad "X15 scanner instrument error → B" "$(head -c 400 "$TMPROOT/x15.json")"; fi
+
+# ── X21 (G3): six lanes the change adds cannot push a base lane past the cap; the cap that bites is a B ──────────────
+R="$TMPROOT/x21"; mkrepo "$R" 'echo ok'; B=$(g -C "$R" rev-parse HEAD)
+printf '#!/usr/bin/env bash\necho broken\n' > "$R/scripts/foo.sh"
+for i in 1 2 3 4 5 6; do printf '#!/usr/bin/env bash\n# names foo.sh\nexit 0\n' > "$R/scripts/test_pad${i}_lanes.sh"; done
+g -C "$R" add -A; g -C "$R" commit -qm "break foo + pad lanes"
+FH_GATE_MAX_LANES=6 run_exec x21 "$R" "$B"
+if [ "$(q x21 '[.findings[]|select(.grade=="A" and .location=="bash scripts/test_foo_lanes.sh")]|length')" = 1 ] \
+   && [ "$(q x21 '[.findings[]|select(.grade=="B" and .location=="(lane cap)")]|length')" = 1 ]; then
+  ok "X21 lanes the change adds go after base lanes: the real lane still runs (A), and the biting cap is a B"
+else bad "X21 cap ordering" "$(head -c 700 "$TMPROOT/x21.json")"; fi
+# ── X22 (G4): a lane red now whose base copy cannot be built → B «not compared», never A ─────────────────────────────
+# the red lane itself plants a file where the base copy would be cloned, so the clone fails
+R="$TMPROOT/x22"; mkrepo "$R" 'echo ok'; B=$(g -C "$R" rev-parse HEAD)
+printf '#!/usr/bin/env bash\necho broken\n' > "$R/scripts/foo.sh"
+printf '#!/usr/bin/env bash\n: > ../base\nexit 1\n' > "$R/scripts/test_foo_lanes.sh"; g -C "$R" commit -qam change
+run_exec x22 "$R" "$B"
+if [ "$(q x22 '[.findings[]|select(.source=="E1")]|map(.grade)|join(",")')" = B ] && qm x22 '.findings[0].title' 'base copy could not be built'; then
+  ok "X22 base copy cannot be built → B «not compared», not A"
+else bad "X22 base copy failure" "$(head -c 600 "$TMPROOT/x22.json")"; fi
+# ── X23 (G3, codex R1): touching six existing lanes cannot push the untouched guard lane past the cap ───────────────
+R="$TMPROOT/x23"; mkrepo "$R" 'echo ok'
+for i in 1 2 3 4 5 6; do printf '#!/usr/bin/env bash\n# names foo.sh\nexit 0\n' > "$R/scripts/test_aa${i}_lanes.sh"; done
+g -C "$R" add -A; g -C "$R" commit -qm "more lanes"; B=$(g -C "$R" rev-parse HEAD)
+printf '#!/usr/bin/env bash\necho broken\n' > "$R/scripts/foo.sh"
+for i in 1 2 3 4 5 6; do printf '# touched\n' >> "$R/scripts/test_aa${i}_lanes.sh"; done; g -C "$R" commit -qam "break foo + touch lanes"
+FH_GATE_MAX_LANES=6 run_exec x23 "$R" "$B"
+if [ "$(q x23 '[.findings[]|select(.grade=="A" and .location=="bash scripts/test_foo_lanes.sh")]|length')" = 1 ]; then
+  ok "X23 six trivially edited lanes do not push the untouched guard lane past the cap → A"
+else bad "X23 touched-lane ordering" "$(head -c 700 "$TMPROOT/x23.json")"; fi
+# X23b the same on a large change (8000 more changed paths after the edited lanes): the «is this lane edited» test must
+#      not die by SIGPIPE under pipefail and file an edited lane as untouched (codex R2)
+mkdir -p "$R/zz"; ( cd "$R/zz" && i=0; while [ "$i" -lt 8000 ]; do : > "f$i"; i=$((i + 1)); done )
+FH_GATE_MAX_LANES=6 run_exec x23b "$R" "$B"
+if [ "$(q x23b '[.findings[]|select(.grade=="A" and .location=="bash scripts/test_foo_lanes.sh")]|length')" = 1 ]; then
+  ok "X23b on a change with 8000 more paths the edited lanes are still ordered after the guard → A"
+else bad "X23b large change ordering" "$(head -c 500 "$TMPROOT/x23b.json")"; fi
 
 echo "exec lanes: $pass passed, $fail failed$([ "${skip:-0}" -gt 0 ] && printf ', %s skipped (not a pass)' "$skip")"
 [ "$fail" -eq 0 ]
