@@ -38,8 +38,8 @@ done
 # whole-string match (no embedded newline), no leading zeros (codex R1)
 semver() { [[ "$1" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; }
 vlt() { python3 -c 'import sys;a,b=(tuple(map(int,x.split("."))) for x in sys.argv[1:3]);sys.exit(0 if a<b else 1)' "$1" "$2"; }
-semver "$TARGET" || { echo "release-compare: target «$TARGET» is not X.Y.Z" >&2; exit 2; }
-[ -z "$PREV" ] || semver "$PREV" || { echo "release-compare: --previous «$PREV» is not X.Y.Z" >&2; exit 2; }
+semver "$TARGET" || { echo "release-compare: target «${TARGET}» is not X.Y.Z" >&2; exit 2; }
+[ -z "$PREV" ] || semver "$PREV" || { echo "release-compare: --previous «${PREV}» is not X.Y.Z" >&2; exit 2; }
 OUTD="${OUTD:-$(mktemp -d "${TMPDIR:-/tmp}/release_compare.XXXXXX")}" || exit 2
 mkdir -p "$OUTD" || exit 2
 REPORT="$OUTD/release_compare_$TARGET.md"
