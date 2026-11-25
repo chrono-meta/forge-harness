@@ -15,6 +15,11 @@
   - Third-party marketplaces do not auto-update by default, so gate fixes reach users only when they update. The README says how to turn auto-update on.
 
 ### Changed
+- BREAKING (gate): `fh-gate` (shipped) — protected paths (Lean RFC item 1, 2026-11-25). Runs on every call, no flag; a repository without `.fh-gate-protected` sees only the new `FH_GATE_PROTECTED: none declared …` line.
+  - What it does: a repository lists contract paths (one git glob per line, `#` comments) in `.fh-gate-protected` at its root. The list is read from the **base** the change is measured against, never from the change, so a change cannot edit the list it is held to. A protected file the change modifies, deletes or changes in type (uncommitted edits included), or an edit to the list itself, raises the verdict to at least ESCALATE (exit 3, `FH_GATE_ESCALATE_REASON: protected-path`). A legitimate contract change is a human decision, so it never BLOCKs by itself; a BLOCKED from elsewhere stays BLOCKED. Files the change adds are not listed.
+  - Fails closed: where a list can exist (on the base, in the work tree, or anywhere in the history reachable from HEAD) and the check cannot run — no resolvable base, the change given as `FH_DIFF_PATH`, an unreadable list — a B finding says so. A repository that never had the file keeps its verdict when there is no base (A20b).
+  - Not an AST rule: a protected helper or fixture is protected only if a glob names it.
+  - Lanes A25, A25b, A25c in `scripts/test_fh_gate_absorb_lanes.sh` (A25 and A25c fail on the previous gate).
 - BREAKING (gate): `fh-gate` (shipped) checks the execution layer's output as strictly as the review object (L6, Lean RFC follow-up 2026-11-25). Runs only with `FH_GATE_EXEC=on`.
   - Why: the old check was only «e0/e1 status is a string and findings is an array», while the verdict counts findings with `grade` exactly `"A"` or `"B"`. A finding graded `"BLOCKING"` or `"a"` passed the check and dropped out of the verdict.
   - What it checks now: exactly one JSON object; e0/e1 `status` in `ran | not-run | planned` with a string `detail`; every finding an object with `grade` in A/B/C and string `source`, `location`, `title`, `evidence`, `fix`. Anything else → exit 10. A malformed producer is refused; this does not make an honest result out of a dishonest one.

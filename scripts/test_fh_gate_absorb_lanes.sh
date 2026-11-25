@@ -30,6 +30,8 @@
 #       (A23c: the branch exists without a merge-base → its tip, said; never HEAD)
 #   A24 the execution layer's JSON is checked as strictly as the review object (status enum, finding shape, grade A/B/C)
 #       — malformed → exit 10; a well-formed A still blocks and a C still passes
+#   A25 protected paths (.fh-gate-protected, read from the base): a changed protected file → ESCALATE, never BLOCKED by
+#       itself; an edit to the list is held to the base list; only-added files pass; FH_DIFF_PATH → B (A25b: no list)
 #   A21 FH_REVIEWER=fh: rule files (CLAUDE.md · AGENTS.md on the changed files' path) come from the base, never
 #       from the change's tree; fh-legacy gets none; no base → NOT attached, named; none on base → said
 #       (A21e ancestor walk · A21f FH_GATE_BASE · A21g fence nonce · A21h subdir/absolute target · A21i symlink)
@@ -403,6 +405,88 @@ done
 if [ "$l6" = " ok_A=2 ok_C=0 bad_BLOCKING=10 bad_lower=10 bad_status=10 bad_title=10 bad_two=10 bad_nonobj=10 bad_nodetail=10" ]; then
   ok "A24 malformed execution-layer output (grade BLOCKING / a, unknown status, non-string title, two values, non-object finding, no detail) → exit 10; well-formed A → BLOCKED, C → PASS"
 else bad "A24 exec JSON validation" "$l6"; fi
+
+# A25 (Lean RFC item 1) — protected paths: `.fh-gate-protected` read from the BASE; a protected file the change modifies,
+# deletes or changes in type → at least ESCALATE (exit 3), never BLOCKED by itself; a BLOCKED from elsewhere stays.
+P25="$TMPROOT/repo25"; mkdir -p "$P25/scripts" "$P25/tests"
+g -C "$P25" init -q -b main
+printf 'scripts/test_*.sh\ntests/helpers/**\n# a comment line\n' > "$P25/.fh-gate-protected"
+printf '#!/usr/bin/env bash\n[ "$(bash scripts/foo.sh)" = ok ]\n' > "$P25/scripts/test_foo.sh"
+mkdir -p "$P25/tests/helpers"; printf 'assert_ok() { [ "$1" = ok ]; }\n' > "$P25/tests/helpers/lib.sh"
+printf '#!/usr/bin/env bash\necho ok\n' > "$P25/scripts/foo.sh"
+g -C "$P25" add -A; g -C "$P25" commit -qm base
+p25() {   # p25 <name> <setup-cmds> [env...] — fresh branch off main, apply the change, run the gate (legacy stub = PASS)
+  local n="$1" setup="$2"; shift 2
+  g -C "$P25" checkout -q main; g -C "$P25" checkout -q -B "c_$n"
+  ( cd "$P25" && eval "$setup" ) >/dev/null 2>&1
+  g -C "$P25" add -A >/dev/null 2>&1; g -C "$P25" commit -qm "$n" >/dev/null 2>&1
+  RUN_DIR="$P25" gate "a25_$n" FH_TARGET_FILES=scripts/foo.sh "$@"
+}
+p25 weak_lane  'printf "#!/usr/bin/env bash\nexit 0\n" > scripts/test_foo.sh';                                     r_weak=$RC
+p25 weak_help  'printf "assert_ok() { :; }\n" > tests/helpers/lib.sh';                                              r_help=$RC
+p25 strong     'printf "#!/usr/bin/env bash\nout=\$(bash scripts/foo.sh); [ -n \"\$out\" ] && [ \"\$out\" = ok ]\n" > scripts/test_foo.sh'; r_strong=$RC
+p25 untouched  'printf "#!/usr/bin/env bash\n# note\necho ok\n" > scripts/foo.sh';                                  r_untouched=$RC
+p25 unlist     'printf "# nothing protected now\n" > .fh-gate-protected; printf "#!/usr/bin/env bash\nexit 0\n" > scripts/test_foo.sh'; r_unlist=$RC
+p25 added      'printf "x\n" > tests/helpers/new.sh';                                                               r_added=$RC
+p25 deleted    'rm tests/helpers/lib.sh';                                                                           r_del=$RC
+p25 blocked    'printf "#!/usr/bin/env bash\nexit 0\n" > scripts/test_foo.sh' \
+  FAKE_PAYLOAD='{"status":"SUCCESS","verdict":"BLOCKED","findings_count":1,"findings_a":1,"findings_b":0,"findings":[{"grade":"A","location":"x","title":"t","evidence":"e","fix":"f"}]}'; r_blk=$RC
+printf 'x\n' > "$TMPROOT/a25.patch"
+p25 diffpath   'printf "#!/usr/bin/env bash\n# c\necho ok\n" > scripts/foo.sh' FH_DIFF_PATH="$TMPROOT/a25.patch";  r_dp=$RC
+g -C "$P25" checkout -q main
+got="weak=$r_weak help=$r_help strong=$r_strong untouched=$r_untouched unlist=$r_unlist added=$r_added del=$r_del blk=$r_blk dp=$r_dp"
+if [ "$got" = "weak=3 help=3 strong=3 untouched=0 unlist=3 added=0 del=3 blk=2 dp=1" ] \
+   && has a25_weak_lane 'FH_GATE_PROTECTED: 1 protected path(s) changed' && has a25_weak_lane 'FH_GATE_ESCALATE_REASON: protected-path' \
+   && has a25_unlist 'FH_GATE_PROTECTED: 2 protected path(s) changed' && has a25_untouched 'glob(s) declared on base' \
+   && has a25_diffpath 'FH_GATE_PROTECTED: NOT RUN (the change was given as FH_DIFF_PATH'; then
+  ok "A25 protected paths from the base: a weakened lane, a weakened helper, a strengthened lane, a deleted helper and an edit to the list itself → ESCALATE (3); untouched or only-added → PASS; BLOCKED stays BLOCKED; FH_DIFF_PATH → B"
+else
+  _hc=""; for _c in "a25_weak_lane|FH_GATE_PROTECTED: 1 protected path(s) changed" "a25_weak_lane|FH_GATE_ESCALATE_REASON: protected-path" \
+    "a25_unlist|FH_GATE_PROTECTED: 2 protected path(s) changed" "a25_untouched|glob(s) declared on base" "a25_diffpath|FH_GATE_PROTECTED: NOT RUN (the change was given as FH_DIFF_PATH"; do
+    has "${_c%%|*}" "${_c#*|}" || _hc="$_hc [missing in ${_c%%|*}: ${_c#*|}]"; done
+  bad "A25 protected paths" "$got$_hc · weak: $(grep -E "VERDICT|PROTECTED|ESCALATE" "$TMPROOT/a25_weak_lane.out" | tr "\n" "|" | cut -c1-400)"; fi
+gate a25_none FH_TARGET_FILES=scripts/foo.sh   # the shared repo has no .fh-gate-protected
+if [ "$RC" -eq 0 ] && has a25_none 'FH_GATE_PROTECTED: none declared on base'; then ok "A25b no list on the base → «none declared», verdict unchanged"
+else bad "A25b no list" "rc=$RC $(grep PROTECTED "$TMPROOT/a25_none.out")"; fi
+
+# A25c no base at all (single-branch CI clone) and the change deleted .fh-gate-protected: the list is still in this
+# history, so the check fails closed (B); a repo that never had one keeps its verdict (A20b)
+g -C "$P25" checkout -q main; g -C "$P25" checkout -q -B c_dellist
+g -C "$P25" rm -q .fh-gate-protected; printf '#!/usr/bin/env bash\nexit 0\n' > "$P25/scripts/test_foo.sh"; g -C "$P25" commit -qam "drop list + weaken" >/dev/null
+C25="$TMPROOT/ci25"; g clone -q --no-local --single-branch --branch c_dellist "$P25" "$C25"; g -C "$C25" checkout -q --detach
+g -C "$P25" checkout -q main
+RUN_DIR="$C25" gate a25c FH_TARGET_FILES=scripts/foo.sh
+if [ "$RC" -eq 1 ] && has a25c 'exists in this history' && has a25c 'location: "(protected paths)"'; then
+  ok "A25c no base + a list in this history (deleted by the change) → B, the check fails closed"
+else bad "A25c no base, list in history" "rc=$RC $(grep PROTECTED "$TMPROOT/a25c.out")"; fi
+
+# A25d (codex R1) — the list alone, a type change, a rename, an uncommitted edit → ESCALATE; no base branch + a dirty
+# tree (the gate falls back to HEAD) + a committed protected change → B, not a PASS that saw only the dirty edit
+p25 listonly 'printf "scripts/test_*.sh\n" > .fh-gate-protected';                                 r_lo=$RC
+p25 typechg  'rm scripts/test_foo.sh; ln -s foo.sh scripts/test_foo.sh';                       r_tc=$RC
+p25 rename   'git mv scripts/test_foo.sh scripts/test_bar.sh';                                  r_rn=$RC
+g -C "$P25" checkout -q main; g -C "$P25" checkout -q -B c_dirty
+printf '#!/usr/bin/env bash\nexit 0\n' > "$P25/scripts/test_foo.sh"                            # uncommitted
+RUN_DIR="$P25" gate a25_dirty FH_TARGET_FILES=scripts/foo.sh; r_dirty=$RC
+g -C "$P25" checkout -q -- scripts/test_foo.sh 2>/dev/null; g -C "$P25" checkout -q main
+g -C "$P25" checkout -q -B c_headfb; printf '#!/usr/bin/env bash\nexit 0\n' > "$P25/scripts/test_foo.sh"; g -C "$P25" commit -qam weaken >/dev/null
+C25d="$TMPROOT/ci25d"; g clone -q --no-local --single-branch --branch c_headfb "$P25" "$C25d"; g -C "$C25d" checkout -q --detach
+g -C "$P25" checkout -q main
+printf 'dirty\n' >> "$C25d/scripts/foo.sh"                                                     # any unrelated dirty edit
+RUN_DIR="$C25d" gate a25_headfb FH_TARGET_FILES=scripts/foo.sh; r_hf=$RC
+got_d="listonly=$r_lo typechg=$r_tc rename=$r_rn dirty=$r_dirty headfb=$r_hf"
+if [ "$got_d" = "listonly=3 typechg=3 rename=3 dirty=3 headfb=1" ] && has a25_typechg 'T scripts/test_foo.sh' \
+   && has a25_rename 'D scripts/test_foo.sh' && has a25_headfb 'location: "(protected paths)"'; then
+  ok "A25d list-only edit · type change · rename · uncommitted edit → ESCALATE; HEAD fallback with a committed protected change → B"
+else bad "A25d protected-path edges" "$got_d $(grep -h PROTECTED "$TMPROOT"/a25_{typechg,rename,headfb}.out 2>/dev/null | tr '\n' '|' | cut -c1-500)"; fi
+# A25e (codex R2) — a protected path marked assume-unchanged hides its uncommitted edit from git diff → B, not PASS
+g -C "$P25" checkout -q main; g -C "$P25" checkout -q -B c_flag
+g -C "$P25" update-index --assume-unchanged scripts/test_foo.sh
+printf '#!/usr/bin/env bash\nexit 0\n' > "$P25/scripts/test_foo.sh"
+RUN_DIR="$P25" gate a25_flag FH_TARGET_FILES=scripts/foo.sh; r_flag=$RC
+g -C "$P25" update-index --no-assume-unchanged scripts/test_foo.sh; g -C "$P25" checkout -q -- scripts/test_foo.sh; g -C "$P25" checkout -q main
+if [ "$r_flag" -eq 1 ] && has a25_flag 'assume-unchanged or skip-worktree'; then ok "A25e an index flag that hides a protected edit → B, never «none changed»"
+else bad "A25e index flag" "rc=$r_flag $(grep PROTECTED "$TMPROOT/a25_flag.out")"; fi
 
 echo "absorb lanes: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
