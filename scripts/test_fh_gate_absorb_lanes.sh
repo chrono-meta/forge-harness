@@ -605,7 +605,8 @@ else bad "A28d provenance timing" "$c28d · $(printf '%s' "$pd" | cut -c1-400)";
 # a full E1 run is «ran», not «partial» («0 did not finish»); the shown sha is of the bytes as the prompt shows them
 mkdir -p "$TMPROOT/rec28e"; RUN_DIR="$R28" gate a28e FH_GATE_EXEC=on FH_GATE_LANES="bash scripts/test_foo_lanes.sh # x"$'\xc2\x85'"y" FH_RECORD_BASE="$TMPROOT/rec28e" FH_TARGET_FILES=scripts/foo.sh
 pe_raw=$(grep -h '^  provenance: ' "$TMPROOT"/rec28e/governance_log_*.yaml | tail -1)
-shown=$(printf '%s' "$(g -C "$R28" -c core.quotePath=false diff "$B28" | head -c 80000)" | { shasum -a 256 2>/dev/null || sha256sum; } | cut -d' ' -f1)
+g -C "$R28" -c core.quotePath=false diff "$B28" > "$TMPROOT/a28e.diff"
+shown=$(printf '%s' "$(head -c 80000 "$TMPROOT/a28e.diff")" | { shasum -a 256 2>/dev/null || sha256sum; } | cut -d' ' -f1)
 c28e=$(python3 - "$pe_raw" "$shown" <<'PY'
 import json, sys
 raw = sys.argv[1]; miss = []
