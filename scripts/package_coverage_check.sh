@@ -51,6 +51,10 @@ ACCEPTED_ABSENT=(
   "scripts/selfdev_queue.py"
   "scripts/test_selfdev_queue_lanes.sh"
   "scripts/test_selfdev_loop_lanes.sh"
+  # 2026-11-25 — release_compare.sh (stage 1: the published tarball's fingerprint vs the registry and the tag). A maintainer
+  #    tool run after this repo's own tag push; a consumer install has no tags of ours to pair with.
+  "scripts/release_compare.sh"
+  "scripts/test_release_compare_lanes.sh"
   # 2026-11-07 — the self-dev loop's ablation nominator and its lanes. Same loop, same scope as above; whether the
   #    public cycle (docs/ABLATION_CYCLE.md, not shipped either) goes to npm is an open operator decision.
   "scripts/ablation_nominate.py"
