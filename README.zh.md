@@ -131,7 +131,7 @@ flowchart TD
 - 孵化器的一次正式产出（2026-08-21）。Chamber 运行 #15 通过正式流程（有顺序见证）产出了一个工具，该工具随后在目标框架中跑了真实数据（目前正式产出 1 次）。
 - 埋洞测试，模型固定（2026-07-14）。另外两个模型写下的八个 fail-open 漏洞。普通审查 5/8（其中 2 个找错了 bug）· + FH 的 degrade-direction 视角 6/8 · + 第二个模型家族 8/8，误报 0（单次抽样）。两次单模型运行漏掉了*同样*的两个漏洞，第二个模型家族把这两个都抓到了。方法见 [`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md)；更多运行见 [`docs/OUTPUT_EVIDENCE.md`](docs/OUTPUT_EVIDENCE.md)。
 - 成熟度是评级，不是宣称。下面列出的五重身份，各自在 [`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md) 中带有注明日期的等级及其依据。
-- 本页的数字（47 个技能 · 14 个 agent）是 `plugins/`（`fh-meta`、`fh-commons`、`fh-qp`、`fh-preprep`）下的技能文件夹和 agent 文件，统计于 2026-11-01。用语手册：[`CHEATSHEET.md` §12](CHEATSHEET.md#12-skills--agents--what-each-does-and-what-to-say)。
+- 本页的数字（48 个技能 · 14 个 agent）是 `plugins/`（`fh-meta`、`fh-commons`、`fh-qp`、`fh-preprep`）下的技能文件夹和 agent 文件，统计于 2026-11-25。用语手册：[`CHEATSHEET.md` §12](CHEATSHEET.md#12-skills--agents--what-each-does-and-what-to-say)。
 
 ## 用起来之后会遇到的词
 
