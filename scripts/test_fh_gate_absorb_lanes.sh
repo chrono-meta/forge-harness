@@ -30,6 +30,8 @@
 #       (A23c: the branch exists without a merge-base → its tip, said; never HEAD)
 #   A24 the execution layer's JSON is checked as strictly as the review object (status enum, finding shape, grade A/B/C)
 #       — malformed → exit 10; a well-formed A still blocks and a C still passes
+#   A28 one provenance line in the governance record: base sha, reviewed diff sha, effective env, lanes run with file
+#       shas, not-run checks by reason class — recorded, not attested; the verdict does not read it
 #   A27 test files, lane files and test config the change touches: added/modified/deleted in the prompt BODY of both
 #       reviewers, on stdout and in the record; NOT MEASURED where no list can be made; odd names shell-quoted
 #   A26 an execution-layer finding with escalate:true → at least ESCALATE (BLOCKED stays); a non-boolean escalate → 10
@@ -528,6 +530,96 @@ RUN_DIR="$N27" gate a27i FH_DIFF_PATH="$TMPROOT/a27i.patch" FH_TARGET_FILES=scri
 if has a27i 'FH_GATE_TESTS_CHANGED: NOT MEASURED (FH_DIFF_PATH' && grep -qF 'they were NOT listed' "$TMPROOT/a27i/claude_legacy.stdin" 2>/dev/null; then
   ok "A27i FH_DIFF_PATH outside git → NOT MEASURED on stdout and in the prompt"
 else bad "A27i diff path outside git" "$(grep TESTS_CHANGED "$TMPROOT/a27i.out")"; fi
+
+# A28 (Lean RFC item 4 · L2 · L3) — the governance record carries one provenance line: base ref and sha, the sha of the
+# diff the review was given, effective settings, the lanes the execution layer ran with each lane file's sha, and every
+# check that did not run with a reason class. Record only; the verdict does not read it.
+R28="$TMPROOT/repo28"; mkdir -p "$R28/scripts"; g -C "$R28" init -q -b main
+printf '#!/usr/bin/env bash\necho ok\n' > "$R28/scripts/foo.sh"
+printf '#!/usr/bin/env bash\n[ "$(bash scripts/foo.sh)" = ok ]\n' > "$R28/scripts/test_foo_lanes.sh"
+g -C "$R28" add -A; g -C "$R28" commit -qm base; B28=$(g -C "$R28" rev-parse HEAD); g -C "$R28" checkout -qb pr
+printf '#!/usr/bin/env bash\n# still fine\necho ok\n' > "$R28/scripts/foo.sh"; g -C "$R28" commit -qam change
+prov_of() { grep -h '^  provenance: ' "$1"/governance_log_*.yaml 2>/dev/null | tail -1 | sed 's/^  provenance: //'; }
+mkdir -p "$TMPROOT/rec28a"; RUN_DIR="$R28" gate a28a FH_GATE_EXEC=on FH_GATE_MAX_LANES=4 FH_RECORD_BASE="$TMPROOT/rec28a" FH_TARGET_FILES=scripts/foo.sh
+pa=$(prov_of "$TMPROOT/rec28a")
+dsha=$(g -C "$R28" -c core.quotePath=false diff "$B28" | { shasum -a 256 2>/dev/null || sha256sum; } | cut -d' ' -f1)
+lsha=$({ shasum -a 256 "$R28/scripts/test_foo_lanes.sh" 2>/dev/null || sha256sum "$R28/scripts/test_foo_lanes.sh"; } | cut -d' ' -f1)
+c28=$(python3 - "$pa" "$B28" "$dsha" "$lsha" <<'PY'
+import json, sys
+try:
+    p = json.loads(sys.argv[1])
+except Exception as e:
+    print('unparseable'); sys.exit()
+miss = []
+if p.get('base_sha') != sys.argv[2]: miss.append('base_sha')
+if p.get('diff_sha256') != sys.argv[3]: miss.append('diff_sha')
+ex = p.get('exec') or {}
+if not any(l.get('lane') == 'bash scripts/test_foo_lanes.sh' and l.get('sha256') == sys.argv[4] and l.get('rc') == 0 for l in ex.get('lanes', [])): miss.append('lane_sha')
+if ex.get('max_lanes_effective') != 4: miss.append('max_lanes')
+if (p.get('env_as_given') or {}).get('FH_GATE_MAX_LANES') != '4': miss.append('env')
+if not any(n['check'] == 'elephant' and n['class'] == 'intended-omission' for n in p.get('not_run', [])): miss.append('elephant_class')
+if 'not attested' not in p.get('label', ''): miss.append('label')
+print(' '.join(miss) or 'ok')
+PY
+)
+mkdir -p "$TMPROOT/rec28b"; RUN_DIR="$R28" gate a28b FH_RECORD_BASE="$TMPROOT/rec28b" FH_TARGET_FILES=scripts/foo.sh   # exec off by default
+pb=$(prov_of "$TMPROOT/rec28b")
+c28b=$(python3 -c 'import json,sys; p=json.loads(sys.argv[1]); print("ok" if any(n["check"]=="exec.e1" and n["class"]=="intended-omission" for n in p["not_run"]) and p["exec"] is None else "bad")' "$pb" 2>/dev/null || echo unparseable)
+printf 'diff --git a/x b/x\n' > "$TMPROOT/a28c.patch"; mkdir -p "$TMPROOT/rec28c"
+RUN_DIR="$R28" gate a28c FH_DIFF_PATH="$TMPROOT/a28c.patch" FH_RECORD_BASE="$TMPROOT/rec28c" FH_TARGET_FILES=scripts/foo.sh
+psha=$({ shasum -a 256 "$TMPROOT/a28c.patch" 2>/dev/null || sha256sum "$TMPROOT/a28c.patch"; } | cut -d' ' -f1)
+c28c=$(python3 -c 'import json,sys; p=json.loads(sys.argv[1]); print("ok" if p["diff_sha256"]==sys.argv[2] and p["diff_source"]=="FH_DIFF_PATH" else "bad")' "$(prov_of "$TMPROOT/rec28c")" "$psha" 2>/dev/null || echo unparseable)
+if [ "$c28 $c28b $c28c" = "ok ok ok" ]; then
+  ok "A28 the record's provenance names the real base sha, the reviewed diff's sha, each lane run with its file sha, the effective cap and env, and not-run checks by class"
+else bad "A28 provenance" "exec-on=$c28 exec-off=$c28b diffpath=$c28c · $(printf '%s' "$pa" | cut -c1-300)"; fi
+
+# A28d (codex R1) — a lane that rewrites itself while it runs is recorded with the bytes that RAN (hashed before), the
+# base comparison run is recorded too, E2–E4 are named not-built, and an oversized diff records the sha of the bytes the
+# reviewer was shown beside the full sha
+R28d="$TMPROOT/repo28d"; mkdir -p "$R28d/scripts"; g -C "$R28d" init -q -b main
+printf '#!/usr/bin/env bash\necho ok\n' > "$R28d/scripts/foo.sh"
+printf '#!/usr/bin/env bash\n[ "$(bash scripts/foo.sh)" = ok ]\n' > "$R28d/scripts/test_foo_lanes.sh"
+g -C "$R28d" add -A; g -C "$R28d" commit -qm base; g -C "$R28d" checkout -qb pr
+printf '#!/usr/bin/env bash\necho broken\n' > "$R28d/scripts/foo.sh"
+printf '#!/usr/bin/env bash\nprintf "# touched\\n" >> "$0"\n[ "$(bash scripts/foo.sh)" = ok ]\n' > "$R28d/scripts/test_foo_lanes.sh"
+python3 -c 'import sys;sys.stdout.write("".join("pad line %d\n" % i for i in range(6000)))' > "$R28d/scripts/big.txt"
+g -C "$R28d" add -A; g -C "$R28d" commit -qm change
+pre=$({ shasum -a 256 "$R28d/scripts/test_foo_lanes.sh" 2>/dev/null || sha256sum "$R28d/scripts/test_foo_lanes.sh"; } | cut -d' ' -f1)
+mkdir -p "$TMPROOT/rec28d"; RUN_DIR="$R28d" gate a28d FH_REVIEWER=fh FH_GATE_EXEC=on FH_RECORD_BASE="$TMPROOT/rec28d" FH_TARGET_FILES=scripts/foo.sh
+pd=$(prov_of "$TMPROOT/rec28d")
+c28d=$(python3 - "$pd" "$pre" <<'PY'
+import json, sys
+p = json.loads(sys.argv[1]); miss = []
+lanes = (p.get('exec') or {}).get('lanes', [])
+if not any(l['run'] == 'change' and l['lane'] == 'bash scripts/test_foo_lanes.sh' and l['sha256'] == sys.argv[2] for l in lanes): miss.append('pre-run-sha')
+if not any(l['run'] == 'base' for l in lanes): miss.append('base-run')
+if not any(n['check'] == 'exec.e2-e4' and n['class'] == 'not-built' for n in p['not_run']): miss.append('e2-e4')
+if not (p.get('diff_bytes') or 0) > 80000 or p.get('diff_shown_sha256') == p.get('diff_sha256') or not p.get('diff_shown_sha256'): miss.append('shown-sha')
+print(' '.join(miss) or 'ok')
+PY
+)
+if [ "$c28d" = ok ]; then ok "A28d the record hashes a lane before it runs, records base runs, names E2–E4 not-built, and separates the shown diff from the full diff"
+else bad "A28d provenance timing" "$c28d · $(printf '%s' "$pd" | cut -c1-400)"; fi
+
+# A28e (codex R2) — a recorded value with U+0085 keeps it (ASCII-escaped, so a YAML reader cannot turn it into a space);
+# a full E1 run is «ran», not «partial» («0 did not finish»); the shown sha is of the bytes as the prompt shows them
+mkdir -p "$TMPROOT/rec28e"; RUN_DIR="$R28" gate a28e FH_GATE_EXEC=on FH_GATE_LANES="bash scripts/test_foo_lanes.sh # x"$'\xc2\x85'"y" FH_RECORD_BASE="$TMPROOT/rec28e" FH_TARGET_FILES=scripts/foo.sh
+pe_raw=$(grep -h '^  provenance: ' "$TMPROOT"/rec28e/governance_log_*.yaml | tail -1)
+shown=$(printf '%s' "$(g -C "$R28" -c core.quotePath=false diff "$B28" | head -c 80000)" | { shasum -a 256 2>/dev/null || sha256sum; } | cut -d' ' -f1)
+c28e=$(python3 - "$pe_raw" "$shown" <<'PY'
+import json, sys
+raw = sys.argv[1]; miss = []
+if '\\u0085' not in raw: miss.append('nel-escaped')
+p = json.loads(raw.split('provenance: ', 1)[1])
+if not (p['env_as_given']['FH_GATE_LANES'].endswith('x\u0085y')): miss.append('nel-value')
+e1 = [n for n in p['not_run'] if n['check'] == 'exec.e1'][0]
+if e1['class'] != 'ran': miss.append('e1-class=%s' % e1['class'])
+if p.get('diff_shown_sha256') != sys.argv[2]: miss.append('shown-sha')
+print(' '.join(miss) or 'ok')
+PY
+)
+if [ "$c28e" = ok ]; then ok "A28e U+0085 survives the record (ASCII-escaped); a full E1 run is «ran»; the shown sha is of the shown bytes"
+else bad "A28e provenance encoding" "$c28e"; fi
 
 # A25 (Lean RFC item 1) — protected paths: `.fh-gate-protected` read from the BASE; a protected file the change modifies,
 # deletes or changes in type → at least ESCALATE (exit 3), never BLOCKED by itself; a BLOCKED from elsewhere stays.

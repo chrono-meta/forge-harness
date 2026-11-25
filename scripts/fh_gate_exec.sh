@@ -75,9 +75,30 @@ add_finding() {   # grade source location title evidence fix
   FINDINGS=$(jq -c --arg g "$1" --arg s "$2" --arg l "$3" --arg t "$4" --arg e "$5" --arg f "$6" \
     '. + [{grade:$g, source:$s, location:$l, title:$t, evidence:$e, fix:$f}]' <<<"$FINDINGS")
 }
+# Provenance (item 4, record only — never read by a verdict): what this layer actually ran, so a governance record can
+# name it. Labelled provenance, not attestation: a lane's sha says which bytes ran, not that they were the right ones.
+PROV_LANES='[]'
+_sha_file() { { shasum -a 256 "$1" 2>/dev/null || sha256sum "$1" 2>/dev/null; } | cut -d' ' -f1 || true; }
+_sha_text() { printf '%s' "$1" | { shasum -a 256 2>/dev/null || sha256sum 2>/dev/null; } | cut -d' ' -f1 || true; }
+_SCN_SHA=""; [ -f "${SCANNER:-}" ] && _SCN_SHA=$(_sha_file "$SCANNER")   # at start, before anything runs (codex R1)
+prov_lane() {   # what · label · sha256 (of the lane file or the declared command) · rc
+  PROV_LANES=$(jq -c --arg w "$1" --arg l "$2" --arg h "$3" --arg r "$4" \
+    '. + [{run:$w, lane:$l, sha256:(if $h == "" then null else $h end), rc:($r|tonumber? // null)}]' <<<"$PROV_LANES")
+}
 emit() {
+  local _scn="" _scnsha=""
+  [ -f "${SCANNER:-}" ] && { _scn="${SCANNER##*/}"; _scnsha="${_SCN_SHA:-}"; }
+  local _lt="${LANE_TIMEOUT:-}"; [ -n "${_TMO:-}" ] || _lt=""   # no timeout binary: the runs were not time-bounded
   jq -cn --arg e0s "$E0_STATUS" --arg e0d "$E0_DETAIL" --arg e1s "$E1_STATUS" --arg e1d "$E1_DETAIL" \
-    --argjson f "$FINDINGS" '{e0:{status:$e0s,detail:$e0d}, e1:{status:$e1s,detail:$e1d}, findings:$f}'
+    --argjson f "$FINDINGS" --argjson lanes "$PROV_LANES" --arg base "${BASE_SHA:-}" --arg base_ref "${BASE_REF:-}" \
+    --arg ml "${MAX_LANES:-}" --arg lt "$_lt" --arg tmo "${_TMO:-}" --arg decl "${DECLARED:-0}" --arg scn "$_scn" --arg scnsha "$_scnsha" \
+    '{e0:{status:$e0s,detail:$e0d}, e1:{status:$e1s,detail:$e1d}, findings:$f,
+      provenance:{label:"recorded by the execution layer, not attested", base_ref:$base_ref,
+        base_sha:(if $base == "" then null else $base end), max_lanes_effective:($ml|tonumber? // null),
+        lane_timeout_effective:($lt|tonumber? // null), timeout_binary:(if $tmo == "" then null else $tmo end),
+        lanes_declared:($decl == "1"),
+        scanner:(if $scn == "" then null else $scn end), scanner_sha256:(if $scnsha == "" then null else $scnsha end),
+        lanes:$lanes}}'
   exit 0
 }
 not_run_both() { E0_STATUS="not-run"; E0_DETAIL="$1"; E1_STATUS="not-run"; E1_DETAIL="$1"; emit; }
@@ -267,7 +288,9 @@ else
     [ -n "$val" ] || continue
     n=$((n + 1)); log="$TMP/lane_$n.log"
     label="$val"; [ "$kind" = L ] && label="bash $val"
+    if [ "$kind" = L ]; then _lsha=$(_sha_file "$AFTER/$val"); else _lsha=$(_sha_text "$val"); fi   # before it runs (codex R1)
     run_lane "$AFTER" "$kind" "$val" "$log"; rc=$?
+    prov_lane change "$label" "$_lsha" "$rc"
     [ "$rc" -eq 0 ] && continue
     tailtxt=$(tail -n 15 "$log" 2>/dev/null | head -c 1500)
     if dnf_rc "$rc"; then
@@ -290,7 +313,9 @@ else
       red=$((red + 1))
       add_finding A E1 "$label" "new lane, red after this change (rc $rc)" "$tailtxt" "fix the change or the lane"
     else
+      if [ "$kind" = L ]; then _bsha=$(_sha_file "$BASECOPY/$val"); else _bsha=$(_sha_text "$val"); fi
       run_lane "$BASECOPY" "$kind" "$val" "$TMP/lane_${n}_base.log"; brc=$?
+      prov_lane base "$label" "$_bsha" "$brc"
       if [ "$brc" -eq 0 ]; then
         red=$((red + 1))
         add_finding A E1 "$label" "this change turns the lane red (rc $rc; green at base ${BASE_SHA:0:12})" "$tailtxt" "fix the change, or the lane if the lane is wrong"
@@ -374,7 +399,9 @@ if [ "$OVL_N" -gt 0 ] || [ "$OVL_BAD" -gt 0 ]; then
       if [ "$_bmode" = 120000 ]; then   # the base lane was a symlink: put the link back, not its target name as text (codex R2)
         ln -s -- "$(git -C "$WORK" cat-file blob "${BASE_SHA}:${_p}" 2>/dev/null)" "$_oc/$_p" 2>/dev/null || { _cnr "its base version (a symlink) could not be restored"; continue; }
       elif ! git -C "$WORK" show "${BASE_SHA}:${_p}" > "$_oc/$_p" 2>/dev/null; then _cnr "its base version could not be read"; continue; fi
+      _osha=$(_sha_file "$_oc/$_p")
       _ovl_run "$_oc" "$_p" "$_olog"; orc=$?
+      prov_lane base-overlay "$_ol" "$_osha" "$orc"
       [ "$orc" -eq 0 ] && continue
       _tail=$(tail -n 15 "$_olog" 2>/dev/null | head -c 1500)
       if cannot_run_rc "$orc" "$_olog"; then
@@ -383,7 +410,9 @@ if [ "$OVL_N" -gt 0 ] || [ "$OVL_BAD" -gt 0 ]; then
       fi
       _ob="$TMP/ovl_${o_n}_base"
       if ! _ovl_copy "$_ob" base; then _cnr "it is red on this tree (rc $orc), and a fresh base copy could not be built" "$_tail"; continue; fi
+      _obsha=$(_sha_file "$_ob/$_p")
       _ovl_run "$_ob" "$_p" "$TMP/ovl_${o_n}_base.log"; obrc=$?
+      prov_lane base-overlay-at-base "$_ol" "$_obsha" "$obrc"
       if [ "$obrc" -eq 0 ]; then
         o_red=$((o_red + 1))
         # ESCALATE, not A (revised plan 2026-11-25): a lane edit can be a legitimate contract change, and a human decides.

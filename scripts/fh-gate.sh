@@ -79,6 +79,8 @@
 # Provenance lines (after FH_RECORD_PATH): FH_GATE_REVIEWER · FH_GATE_ELEPHANT · FH_GATE_E0 · FH_GATE_E1 · FH_GATE_PROTECTED · FH_GATE_TESTS_CHANGED ·
 # FH_GATE_LAYERS_NOT_BUILT.
 # A step that did not run says NOT RUN and why — never «0 findings».
+# The governance record also carries `provenance:` — base sha, reviewed-diff sha, effective env, the lanes run with their
+# file shas, and not-run checks by reason class. Recorded, not attested; no verdict reads it.
 
 set -euo pipefail
 # Unexpected failure → HARNESS_ERROR (10), never PENDING (1). Under `set -e` a command that fails where
@@ -657,6 +659,9 @@ if [[ -n "$FH_DIFF_PATH" ]]; then
     echo "ERROR: FH_DIFF_PATH not found: $FH_DIFF_PATH" >&2
     exit $EXIT_ARG_ERROR
   fi
+  PROV_DIFF_SHA=$( { shasum -a 256 "$_diff_path" 2>/dev/null || sha256sum "$_diff_path" 2>/dev/null; } | cut -d' ' -f1 || true)
+  PROV_DIFF_SHOWN_SHA=$(printf '%s' "$(cat "$_diff_path")" | { shasum -a 256 2>/dev/null || sha256sum 2>/dev/null; } | cut -d' ' -f1 || true)   # as the prompt shows it
+  PROV_DIFF_BYTES=$(wc -c < "$_diff_path" 2>/dev/null | tr -d ' ' || true)
   if grep -qF "$FENCE" "$_diff_path" 2>/dev/null; then
     echo "ERROR: diff file contains the run's evidence-fence nonce: ${FH_DIFF_PATH}" >&2
     echo "  This is a fence-escape attempt (or a 1-in-2^64 collision) — failing closed." >&2
@@ -1028,7 +1033,7 @@ fi
 # --- Prompts for the FH review pass (goldfish) and the elephant pass ---
 # The change itself as a diff: the caller's FH_DIFF_PATH if given (already fenced in DIFF_CONTENTS), else the
 # repository's diff against the same base the execution layer uses. Untrusted, fenced, nonce-checked.
-CHANGE_BLOCK="$DIFF_CONTENTS"; CHANGE_NOTE=""; CHANGE_FINDING=""
+CHANGE_BLOCK="$DIFF_CONTENTS"; CHANGE_NOTE=""; CHANGE_FINDING=""; PROV_DIFF_SHA="${PROV_DIFF_SHA:-}"; PROV_DIFF_SHOWN_SHA="${PROV_DIFF_SHOWN_SHA:-}"; PROV_DIFF_BYTES="${PROV_DIFF_BYTES:-}"
 if [[ -z "$FH_DIFF_PATH" && "$_IS_GIT" == 1 ]]; then
   _CHG_FILE=$(mktemp "${_TMPDIR}/fh_gate_chg_XXXXXX")
   if git -C "$WORK_ROOT" -c core.quotePath=false diff "$_GATE_BASE" > "$_CHG_FILE" 2>/dev/null; then
@@ -1037,7 +1042,11 @@ if [[ -z "$FH_DIFF_PATH" && "$_IS_GIT" == 1 ]]; then
       rm -f "$_CHG_FILE"; exit $EXIT_HARNESS_ERROR
     fi
     _chg_n=$(wc -c < "$_CHG_FILE" | tr -d ' ')
+    PROV_DIFF_SHA=$( { shasum -a 256 "$_CHG_FILE" 2>/dev/null || sha256sum "$_CHG_FILE" 2>/dev/null; } | cut -d' ' -f1 || true)
+    PROV_DIFF_BYTES="$_chg_n"
     _chg=$(head -c 80000 "$_CHG_FILE")
+    # the sha of the bytes as the reviewer sees them — after the shell strips trailing newlines (codex R2)
+    PROV_DIFF_SHOWN_SHA=$(printf '%s' "$_chg" | { shasum -a 256 2>/dev/null || sha256sum 2>/dev/null; } | cut -d' ' -f1 || true)
     _trunc=""
     if [[ "$_chg_n" -gt 80000 ]]; then
       # The reviewer cannot read the rest: the fh and elephant passes have Read · Glob · Grep, no git (G1, 2026-11-25).
@@ -1842,6 +1851,47 @@ ALL_FINDINGS=$(jq -cn --argjson r "$REVIEW_FINDINGS" --argjson e "$(printf '%s' 
 _FA=$(printf '%s' "$ALL_FINDINGS" | jq -r '[.[]|select(.grade=="A")]|length')
 _FB=$(printf '%s' "$ALL_FINDINGS" | jq -r '[.[]|select(.grade=="B")]|length')
 _FN=$(printf '%s' "$ALL_FINDINGS" | jq -r 'length')
+# L3: a check that did not run gets a reason class from its own status line. The classes are coarse on purpose and the
+# line itself is kept beside them; a wording that matches none is «unclassified», never guessed.
+_nr_class() {
+  # a run that left something out is «partial»; «0 did not finish» is a full run (codex R2)
+  if [[ "$1" == "ran "* ]] && [[ "$1" =~ (capped|not\ compared|INSTRUMENT\ ERROR|could\ not\ read|[1-9][0-9]*\ did\ not\ finish|[1-9][0-9]*\ could\ not\ run) ]]; then
+    echo "partial"; return 0
+  fi
+  case "$1" in
+    "planned "*) echo "planned (nothing ran — dry run)" ;;
+    "ran "*|[0-9]*" protected path"*|[0-9]*" glob"*|"none"|"none "*|[0-9]*" — "*) echo "ran" ;;
+    *"off by default"*|*"=off"*|*"level quick"*|*"FH_GATE_ELEPHANT=on runs it"*) echo "intended-omission" ;;
+    *"jq missing"*|*"not shipped"*|*"scanner not shipped"*) echo "instrument-missing" ;;
+    *"not a git repository"*|*"not applicable"*|*"no change against base"*|*"no target lane"*|*"none declared"*) echo "not-applicable" ;;
+    *"NOT RUN"*|*"NOT MEASURED"*|*"did not finish"*|*"capped at"*|*"could not"*|*"failed"*) echo "incomplete" ;;
+    *) echo "unclassified" ;;
+  esac
+}
+_provenance_json() {
+  local _bsha="" _dsha="" _chk
+  _bsha=$(git -C "$WORK_ROOT" rev-parse -q --verify "${_GATE_BASE:-}^{commit}" 2>/dev/null || true)
+  _dsha="${PROV_DIFF_SHA:-}"
+  _chk=$(jq -cn --arg e0 "$E0_LINE" --arg e1 "$E1_LINE" --arg el "$ELEPHANT_LINE" --arg pr "$PROTECTED_LINE" \
+           --arg ts "$TESTS_LINE" --arg c0 "$(_nr_class "$E0_LINE")" --arg c1 "$(_nr_class "$E1_LINE")" \
+           --arg cl "$(_nr_class "$ELEPHANT_LINE")" --arg cp "$(_nr_class "$PROTECTED_LINE")" --arg ct "$(_nr_class "$TESTS_LINE")" \
+           --arg nb "$LAYERS_NOT_BUILT_LINE" \
+    '[{check:"exec.e0", line:$e0, class:$c0}, {check:"exec.e1", line:$e1, class:$c1}, {check:"elephant", line:$el, class:$cl},
+      {check:"protected_paths", line:$pr, class:$cp}, {check:"tests_changed", line:$ts, class:$ct},
+      {check:"exec.e2-e4", line:$nb, class:"not-built"}]')
+  # -a: ASCII-escaped, so a YAML reader cannot rewrite a U+0085 in a recorded value (codex R2)
+  jq -acn --arg label "recorded by fh-gate, not attested" --arg base_ref "${_GATE_BASE:-}" --arg base_sha "$_bsha" \
+    --arg base_note "${BASE_NOTE:-}" --arg diff_sha "$_dsha" --arg diff_shown "${PROV_DIFF_SHOWN_SHA:-}" --arg diff_bytes "${PROV_DIFF_BYTES:-}" --arg diff_src "$([[ -n "${FH_DIFF_PATH:-}" ]] && echo FH_DIFF_PATH || echo "git diff against the base")" \
+    --arg target "${FH_TARGET_FILES:-}" --arg lanes "${FH_GATE_LANES:-}" --arg lt "${FH_LANE_TIMEOUT:-}" --arg ml "${FH_GATE_MAX_LANES:-}" \
+    --arg cross1 "${FH_GATE_CROSS_ALLOW_SINGLE:-}" --arg exec "${FH_GATE_EXEC:-}" --arg rev "${FH_REVIEWER:-}" --arg be "${FH_BACKEND:-}" \
+    --argjson ex "$(printf '%s' "$EXEC_JSON" | jq -c '.provenance // null' 2>/dev/null || echo null)" --argjson nr "$_chk" \
+    '{label:$label, base_ref:$base_ref, base_sha:(if $base_sha == "" then null else $base_sha end), base_note:$base_note,
+      diff_sha256:(if $diff_sha == "" then null else $diff_sha end), diff_bytes:($diff_bytes|tonumber? // null),
+      diff_shown_sha256:(if $diff_shown == "" then null else $diff_shown end), diff_source:$diff_src,
+      env_as_given:{FH_TARGET_FILES:$target, FH_GATE_LANES:$lanes, FH_LANE_TIMEOUT:$lt, FH_GATE_MAX_LANES:$ml,
+           FH_GATE_CROSS_ALLOW_SINGLE:$cross1, FH_GATE_EXEC:$exec, FH_REVIEWER:$rev, FH_BACKEND:$be},
+      exec:$ex, not_run:$nr}' 2>/dev/null || printf '%s' '"UNRECORDED (provenance could not be serialized)"'
+}
 _rank() { case "$1" in PASS) echo 0 ;; PENDING) echo 1 ;; ESCALATE) echo 2 ;; BLOCKED) echo 3 ;; *) echo 9 ;; esac; }
 _EA=$(printf '%s' "$EXEC_JSON" | jq -r '[.findings[]|select(.grade=="A")]|length')
 _EB=$(printf '%s' "$EXEC_JSON" | jq -r '[.findings[]|select(.grade=="B")]|length')
@@ -1917,6 +1967,9 @@ fi
   printf "  findings_a: %s\n" "$FINDINGS_A_LOG"
   printf "  findings_b: %s\n" "$FINDINGS_B_LOG"
   printf "  protected: %s\n" "$(jq -an --arg v "$PROTECTED_LINE" '$v')"
+  # provenance (item 4 · L2 · L3, 2026-11-25): what was measured against what, with which effective settings, and which
+  # checks did NOT run and why — one JSON value (valid YAML). Recorded, not attested: a sha names bytes, not correctness.
+  printf "  provenance: %s\n" "$(_provenance_json)"
   # test files, lane files and test config the change touches — status + path, JSON-quoted and ASCII-escaped
   if [[ "$TESTS_MEASURED" != 1 ]]; then
     printf "  tests_changed: %s\n" "$(jq -an --arg v "$TESTS_WHY" '$v')"
