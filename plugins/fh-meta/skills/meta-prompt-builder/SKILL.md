@@ -96,6 +96,29 @@ Wave {N}-{ID}: [{agent name}]
 
 When called standalone without an agent-composer plan: collect 4-field directly via Step 0 questions, then generate a single-agent prompt.
 
+### Hazard lines (every draft)
+
+Under each draft's Constraints, add these five lines (they are exempt from the «2 lines max» above).
+Fill each one, or write `n/a — <the condition that makes it not apply>` (e.g. `n/a — read-only, writes
+no file`); a blank line or a bare `n/a` is not allowed. Each line answers a failure that repeated across
+past dispatches.
+
+```
+  Hazards:
+    model:   the model the plan names (FH arms: sonnet or haiku), set in the dispatch call — left out, the subagent takes the parent's model (Opus when the parent runs Opus)
+    out-dir: <scratchpad>/<arm-name>/ for the arm's notes, logs and reports — parallel arms can share one scratchpad, and a same-named file can be overwritten; source files it may edit are listed separately
+    inputs:  absolute path + sha256 for each file that must be one exact version (a frozen target, a corpus, a seal) — a path alone can resolve to an older copy in another checkout; the receiver checks the hash and stops on a mismatch
+    git:     no stash, `checkout -- .` or `checkout <ref> -- <path>`, `reset --hard`, `clean` or `add -A`; stage named paths only — if one ran, stop git work and report the command and the paths it touched in the same reply
+    home:    an isolated HOME and app data dir for anything that installs or rewrites user config, and a check of where it actually wrote — the real ~/.claude is not written
+```
+
+Where each line comes from (the operator's memory notes, outside this repo):
+`model` — `[[feedback_subagent_model_sonnet_or_haiku]]` ·
+`out-dir` — `[[feedback_parallel_arms_share_scratchpad]]` (one arm committed with another arm's message) ·
+`inputs` — `[[feedback_hand_the_hash_not_the_path]]` (a stale copy at the same path gave a false 24/24) ·
+`git` — `[[feedback_stash_is_tree_wide_in_shared_checkout]]` (a stash swallowed a peer session's uncommitted files) ·
+`home` — `[[feedback_fod_work_must_not_touch_real_home]]` (a self-check wrote to the real home on every gate run).
+
 ---
 
 ## Step 3. Quality Self-Validation
@@ -190,6 +213,9 @@ Version / baseline:  the Step 3 checklist and the WARN-trigger table in
 ☐ Every draft carries all four fields (Goal / Context /
   Constraints / Done When), none empty                           (measured: 4 fields × N drafts,
                                                                   0 empty)
+☐ Every draft carries the five Hazard lines, each filled or
+  `n/a — <condition>`                                            (measured: 5 lines × N drafts,
+                                                                  0 blank)
 ☐ Each draft's own Done When was run through the 3-part
   completeness check and the WARN-trigger table, with the
   result recorded per draft                                      (mandatory-pass)
