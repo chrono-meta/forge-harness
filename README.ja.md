@@ -9,7 +9,6 @@
   <a href="https://github.com/marketplace/actions/fh-gate-typed-ai-code-review-verdict"><img src="https://img.shields.io/badge/GitHub_Action-marketplace-2088FF.svg?logo=githubactions" alt="GitHub Actions Marketplace — fh-gate"></a>
   <a href="https://www.npmjs.com/package/@chrono-meta/fh-gate"><img src="https://img.shields.io/npm/v/@chrono-meta/fh-gate.svg?color=cb3837&logo=npm" alt="npm"></a>
   <a href="https://www.npmjs.com/package/@chrono-meta/fh-gate"><img src="https://img.shields.io/npm/dt/@chrono-meta/fh-gate.svg?color=3fb950&logo=npm&label=downloads" alt="npm total downloads"></a>
-  <a href="https://github.com/chrono-meta/homebrew-forge-harness"><img src="https://img.shields.io/badge/homebrew-tap-FBB040.svg?logo=homebrew" alt="Homebrew tap"></a>
 </p>
 
 <p align="center">
@@ -56,7 +55,7 @@
 cd your-repo && npx --package @chrono-meta/fh-gate fh-gate     # 現在のリポジトリの git diff をレビュー
 ```
 
-`git diff` から変更ファイルを見つけてレビューバックエンドに送り、判定（`FH_GATE_VERDICT: PASS | PENDING | BLOCKED | ESCALATE`）と終了コードを出力します。PASS はレビューが実際に走ったときだけ PASS と数えます。バックエンドが一度も応答しなかった場合、dry run、未知の終了コードは PASS ではなく、GitHub Actions のステップはデフォルトでこれらを失敗として扱います。Node ≥ 16 と、インストールしてログイン済みのバックエンド CLI がひとつ必要です。`claude`（デフォルト）または `codex`（`FH_BACKEND=codex`）です。CI、pre-commit フック、別のエージェントと併用できます。GitHub Actions のステップと Homebrew tap もあります — [ゲートを実行する](docs/REFERENCE.md#run-it-outside-claude-code--the-fh-gate-cli)を参照してください。
+`git diff` から変更ファイルを見つけてレビューバックエンドに送り、判定（`FH_GATE_VERDICT: PASS | PENDING | BLOCKED | ESCALATE`）と終了コードを出力します。PASS はレビューが実際に走ったときだけ PASS と数えます。バックエンドが一度も応答しなかった場合、dry run、未知の終了コードは PASS ではなく、GitHub Actions のステップはデフォルトでこれらを失敗として扱います。Node ≥ 16 と、インストールしてログイン済みのバックエンド CLI がひとつ必要です。`claude`（デフォルト）または `codex`（`FH_BACKEND=codex`）です。CI、pre-commit フック、別のエージェントと併用できます。GitHub Actions のステップもあります — [ゲートを実行する](docs/REFERENCE.md#run-it-outside-claude-code--the-fh-gate-cli)を参照してください。
 
 **1 回の実行で何が起き、何がかかるか。** 実行のたびに、変更ファイルをログイン済みのバックエンド CLI に送り、そこでレビューを 1 回呼び出します。そのアカウントの他の呼び出しと同じく課金・利用量に計上されます（`FH_BACKEND=cross` は最大 2 回、オプトインの層を有効にするとさらに増えます）。`FH_DRY_RUN=1` はプロンプトを出力するだけで何も呼び出しません（終了コード 12）。リポジトリのスクリプトをコピー上で実行するゲートの実行層（コピーであってサンドボックスではありません。信頼できない変更では使わないでください）は、`FH_GATE_EXEC=on` にしない限りオフです。既定のレビュー呼び出し自体は読み取りしかできません。`claude` には Read・Glob・Grep だけが渡され（シェル・書き込み・MCP サーバー・スキル・コマンドなし）、`codex` は `-s read-only` で動きます。`claude` では、レビュー対象のチェックアウトのプロジェクト設定・フック・`CLAUDE.md`・`.claude/rules` はその呼び出しで読み込まれません（`--setting-sources user` で動きます）。`codex` では、チェックアウトの `AGENTS.md` は送られず（`-c project_doc_max_bytes=0`）、あなたの codex の `config.toml` も読み込まれません（`--ignore-user-config`）。codex 0.164.0 で測ったところ、あなたの codex 設定が信頼済みとしているチェックアウトでも、その `.codex/config.toml` に書かれた MCP サーバーは起動しませんでした（そのチェックアウトのプロジェクトフックと `.rules` は測っていません）。`config.toml` のほかの設定（MCP サーバー、ログイン情報の保存方式、分析、テレメトリーなど）も、その呼び出しには適用されません。レビューが知らないうちに別の送り先へ行かないよう、fh-gate はまずそのファイルをテキストとして読みます。リクエストの送り先が書かれている場合（`openai` 以外の `model_provider`、`model_providers`、`openai_base_url`、`chatgpt_base_url`）はレビューを送らず、そのキー名を示して終了コード 10 で止まります。行末のコメントに書かれたものや、エスケープ（`\u`、`\U`、`\x`）で書かれたキーも数えます。ファイルを読み取れない場合も終了コード 10 で止まります。オプトインの `FH_REVIEWER=code-review` 呼び出しは読み取り専用ではありません（git の読み取りコマンドを使います）。信頼できる変更にだけ使ってください。また、まだ動作しません。ヘッドレスの `/code-review` は fh-gate が必要とする構造化された結果を返さないため（claude 2.1.330 で 0/11 — fh-gate 経由 0/5、直接 0/6）、現時点では `FH_REVIEWER=code-review` は常に終了コード 10 で止まります。
 
