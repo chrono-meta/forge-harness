@@ -9,7 +9,6 @@
   <a href="https://github.com/marketplace/actions/fh-gate-typed-ai-code-review-verdict"><img src="https://img.shields.io/badge/GitHub_Action-marketplace-2088FF.svg?logo=githubactions" alt="GitHub Actions Marketplace — fh-gate"></a>
   <a href="https://www.npmjs.com/package/@chrono-meta/fh-gate"><img src="https://img.shields.io/npm/v/@chrono-meta/fh-gate.svg?color=cb3837&logo=npm" alt="npm"></a>
   <a href="https://www.npmjs.com/package/@chrono-meta/fh-gate"><img src="https://img.shields.io/npm/dt/@chrono-meta/fh-gate.svg?color=3fb950&logo=npm&label=downloads" alt="npm total downloads"></a>
-  <a href="https://github.com/chrono-meta/homebrew-forge-harness"><img src="https://img.shields.io/badge/homebrew-tap-FBB040.svg?logo=homebrew" alt="Homebrew tap"></a>
 </p>
 
 <p align="center">
@@ -56,7 +55,7 @@ FH 与通常所说的 harness 有何不同、代价是什么，见 [How FH diffe
 cd your-repo && npx --package @chrono-meta/fh-gate fh-gate     # 审查当前仓库的 git diff
 ```
 
-它通过 `git diff` 找到你改动的文件，发给审查后端，并输出判定（`FH_GATE_VERDICT: PASS | PENDING | BLOCKED | ESCALATE`）和退出码。只有审查真的跑过，PASS 才算数：后端始终没有应答、dry run、或者出现未知退出码，都不是 PASS，而 GitHub Actions 步骤默认会因此失败。需要 Node ≥ 16，以及安装并登录好的一个后端 CLI：`claude`（默认）或 `codex`（`FH_BACKEND=codex`）。可用于 CI、pre-commit 钩子，或放在另一个 agent 旁边。也有 GitHub Actions 步骤和 Homebrew tap——见[运行门禁](docs/REFERENCE.md#run-it-outside-claude-code--the-fh-gate-cli)。
+它通过 `git diff` 找到你改动的文件，发给审查后端，并输出判定（`FH_GATE_VERDICT: PASS | PENDING | BLOCKED | ESCALATE`）和退出码。只有审查真的跑过，PASS 才算数：后端始终没有应答、dry run、或者出现未知退出码，都不是 PASS，而 GitHub Actions 步骤默认会因此失败。需要 Node ≥ 16，以及安装并登录好的一个后端 CLI：`claude`（默认）或 `codex`（`FH_BACKEND=codex`）。可用于 CI、pre-commit 钩子，或放在另一个 agent 旁边。也有 GitHub Actions 步骤——见[运行门禁](docs/REFERENCE.md#run-it-outside-claude-code--the-fh-gate-cli)。
 
 **跑一次会发生什么、花多少。** 每次运行都会把改动的文件发给你已登录的后端 CLI，并在那里调用一次审查，和该账号的其他调用一样计费或计入用量（`FH_BACKEND=cross` 最多两次，打开可选层会更多）。`FH_DRY_RUN=1` 只打印提示词，不调用任何东西（退出码 12）。门禁的执行层（在副本里运行你仓库自己的脚本；副本不是沙箱，不要用于不可信的改动）只有设置 `FH_GATE_EXEC=on` 才会打开。默认的审查调用本身只能读取：`claude` 只拿到 Read、Glob 和 Grep（没有 shell、写入、MCP 服务器、技能或命令），`codex` 以 `-s read-only` 运行。在 `claude` 上，被审查检出的项目设置、钩子、`CLAUDE.md` 和 `.claude/rules` 不会在这次调用中加载（以 `--setting-sources user` 运行）。在 `codex` 上，检出的 `AGENTS.md` 不会发送（`-c project_doc_max_bytes=0`），你自己的 codex `config.toml` 也不会加载（`--ignore-user-config`）。在 codex 0.164.0 上测得：即使你的 codex 配置信任这个检出，它的 `.codex/config.toml` 里声明的 MCP 服务器也没有启动（该检出的项目钩子和 `.rules` 没有测）。`config.toml` 里的其他设置（MCP 服务器、登录凭据存储方式、分析、遥测等）同样不适用于这次调用。为了不让审查悄悄发往别处，fh-gate 会先把这个文件当作文本读取：如果其中写明了请求的去向（不是 `openai` 的 `model_provider`、`model_providers`、`openai_base_url` 或 `chatgpt_base_url`），就不发送审查，而是给出那个键名并以退出码 10 停止。行尾注释里写的、用转义（`\u`、`\U`、`\x`）写的键也都算；文件无法读取时同样以退出码 10 停止。可选的 `FH_REVIEWER=code-review` 调用不是只读的（它会用 git 的读取命令），只用于可信的改动。而且它目前还不能用：无头模式下的 `/code-review` 不会返回 fh-gate 需要的结构化结果（在 claude 2.1.330 上 0/11——经 fh-gate 0/5，直接 0/6），所以 `FH_REVIEWER=code-review` 目前总是以退出码 10 停止。
 
