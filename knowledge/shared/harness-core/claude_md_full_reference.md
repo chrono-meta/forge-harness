@@ -1201,6 +1201,9 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc. —
        아니라 «확인하라»다(키 낱말 프로브라 과차단 방향). ①-c~①-e 는 스크립트에만 산다.
   → ② If FH assets changed, **or `close_retro` is granted**: harvest-loop
        (후자는 Step 0-d 세션 회고 — 자산 미변경 세션에도 회고는 의미가 있다)
+  → ②-s 승화 후보 검토 — **마감마다, 조건 없이, 읽기만 하고 제안만 한다** (2026-11-25 운영자 «알아서 스킬로 승화시킬 만한 것을 검토»). Step 0-d 가 같은 마감에 돌면 ②-s 를 먼저 돌린다.
+       입력: 이번 세션의 정정 · 되풀이한 절차(`python3 scripts/correction_moments.py <원장 폴더> --since <7일 전> --all` 에서 이 세션 줄이 든 쌍(다른 날 재발)과 이 세션의 단독 정정 — `--since` 를 오늘로 좁히면 다른 날 짝이 빠진다 · 체크리스트 결과표) + `python3 scripts/memory_gc_report.py --json <memory_dir>` 에서 `status` OK 이고 `distinct_days ≥ 3` 인데 스킬 · 훅 · 규칙 grep 으로 안 덮인 항목. 채널마다 열었는지 · 어디를 찾았는지 적고, 없는 채널은 `UNMEASURED(<채널>)`, grep 0건은 «이 낱말로 못 찾았다» 로 적는다.
+       출력: 마감 보고에 표 하나(최대 5행: 후보 · 근거(정정 시각 / 메모리 키 + N) · 분류(기존 스킬 강화 / 새 스킬 / 훅 / 판단으로 남김) · 가장 작은 형태 한 줄). 후보가 없으면 «없음 — <연 채널>», 채널을 하나도 못 열었으면 «UNMEASURED — <채널>» 이지 «없음» 이 아니다. 짓지 않는다 — 짓기는 4축 게이트와 운영자 선택. Step 0-d 가 도는 마감(`close_retro` granted)이면 이 표가 `FH Registration Candidate` 칸이 되고, 아니면 마감 보고에만 남는다. 원장 · 메모리 내용은 회사 맥락일 수 있다 — 표에는 키 · 날짜 · 한 줄 요지만 적고 원문은 다른 계열 모델 · 바깥 저장소로 옮기지 않는다.
   → ③ Sync local/gitignored session state to your durable companion store, if you keep one
   → ④ Memory hygiene — update stale entries + record new session findings.
        **Deliberately unmechanized** — a judged step; `session_close_check.sh` carries NO ④ check
