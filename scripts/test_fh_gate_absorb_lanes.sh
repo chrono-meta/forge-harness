@@ -29,6 +29,7 @@
 #       HEAD, said on the reviewer line
 #       (A23c: the branch exists without a merge-base → its tip, said; never HEAD)
 #   A24 the execution layer's JSON is checked as strictly as the review object (status enum, finding shape, grade A/B/C)
+#   A24b a finding's attribution, when present, is "undecided" on a C — any other value, type or grade → exit 10
 #       — malformed → exit 10; a well-formed A still blocks and a C still passes
 #   A29 advisory: the running checker's own files in the change → FH_GATE_SELF_CHANGE ADVISORY, verdict unchanged
 #   A28 one provenance line in the governance record: base sha, reviewed diff sha, effective env, lanes run with file
@@ -411,6 +412,24 @@ done
 if [ "$l6" = " ok_A=2 ok_C=0 bad_BLOCKING=10 bad_lower=10 bad_status=10 bad_title=10 bad_two=10 bad_nonobj=10 bad_nodetail=10" ]; then
   ok "A24 malformed execution-layer output (grade BLOCKING / a, unknown status, non-string title, two values, non-object finding, no detail) → exit 10; well-formed A → BLOCKED, C → PASS"
 else bad "A24 exec JSON validation" "$l6"; fi
+
+# A24b (L7 residual) — attribution, when present, is "undecided" on a C (the only thing the layer emits). Before, any
+# value or type passed: a finding marked attribution:7 or attribution:"undecided" on an A went through unchecked.
+_fa() { printf '{"grade":"%s","source":"E1","location":"x","title":"t","evidence":"e","fix":"f","attribution":%s}' "$1" "$2"; }
+l7=""
+for c in ok_und bad_val bad_type bad_onA; do
+  case $c in
+    ok_und) j=$(_ej ran "$(_fa C '"undecided"')") ;;
+    bad_val) j=$(_ej ran "$(_fa C '"maybe"')") ;;
+    bad_type) j=$(_ej ran "$(_fa C 7)") ;;
+    bad_onA) j=$(_ej ran "$(_fa A '"undecided"')") ;;
+  esac
+  GATE="$GC/scripts/fh-gate.sh" gate "a24b_$c" FH_GATE_EXEC=on FAKE_EXEC_JSON="$j" FH_TARGET_FILES=scripts/foo.sh
+  l7="$l7 $c=$RC"
+done
+if [ "$l7" = " ok_und=0 bad_val=10 bad_type=10 bad_onA=10" ]; then
+  ok "A24b attribution: \"undecided\" on a C → PASS; another value, a non-string, or undecided on an A → exit 10"
+else bad "A24b exec attribution shape" "$l7"; fi
 
 # A26 (Lean RFC item 2) — an execution-layer finding with escalate:true (the base overlay) raises the verdict to at least
 # ESCALATE with a reason line; an A beside it stays BLOCKED; escalate that is not a boolean is malformed → exit 10
