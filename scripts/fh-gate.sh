@@ -815,8 +815,17 @@ else
   _exec_mode=""; [[ "$FH_DRY_RUN" == "1" ]] && _exec_mode="--plan"
   _exec_rc=0
   EXEC_JSON=$(bash "$_EXEC_SCRIPT" "$WORK_ROOT" "$_GATE_BASE" $_exec_mode 2>"$ERR_FILE") || _exec_rc=$?
-  if [[ "$_exec_rc" -ne 0 ]] || ! printf '%s' "$EXEC_JSON" | jq -e '(.e0.status|type)=="string" and (.e1.status|type)=="string" and (.findings|type)=="array"' >/dev/null 2>&1; then
-    echo "ERROR: execution layer failed (rc ${_exec_rc}) — failing closed" >&2
+  # As strict as the review object (L6, 2026-11-25): exactly one JSON object; e0/e1 status in the layer's own enum and
+  # detail a string; every finding an object with grade IN("A","B","C") and string source/location/title/evidence/fix.
+  # Before, only «status is a string, findings is an array» was checked, and the verdict counts grade=="A"/"B" exactly —
+  # a finding graded "BLOCKING" or "a" passed validation and silently dropped out of the verdict. Malformed → exit 10.
+  _EXEC_SHAPE='length == 1 and (.[0] | type == "object"
+      and ([.e0, .e1] | all(type == "object" and (.status | IN("ran","not-run","planned")) and (.detail | type == "string")))
+      and (.findings | type == "array")
+      and (.findings | all(type == "object" and (.grade | IN("A","B","C"))
+            and ([.source, .location, .title, .evidence, .fix] | all(type == "string")))))'
+  if [[ "$_exec_rc" -ne 0 ]] || ! printf '%s' "$EXEC_JSON" | jq -e -s "$_EXEC_SHAPE" >/dev/null 2>&1; then
+    echo "ERROR: execution layer failed (rc ${_exec_rc}) or its output is not the expected shape — failing closed" >&2
     cat "$ERR_FILE" >&2
     exit $EXIT_HARNESS_ERROR
   fi
