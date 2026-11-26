@@ -72,7 +72,11 @@
 #                                 base branch resolves and the tree is dirty (said on the reviewer line).
 #   FH_GATE_LANES / FH_LANE_TIMEOUT / FH_GATE_MAX_LANES   see scripts/fh_gate_exec.sh
 #
-# Provenance lines (after FH_RECORD_PATH): FH_GATE_REVIEWER · FH_GATE_ELEPHANT · FH_GATE_E0 · FH_GATE_E1 ·
+# Protected paths: a repository may list contract paths (one git glob per line, `#` comments) in `.fh-gate-protected`
+# at its root. The list is read from the BASE. A protected file the change modifies, deletes or changes in type — or an
+# edit to the list itself — raises the verdict to at least ESCALATE (exit 3) with FH_GATE_ESCALATE_REASON: protected-path;
+# it never BLOCKs by itself. Added files are not listed. If the check cannot run where a list exists: a B finding.
+# Provenance lines (after FH_RECORD_PATH): FH_GATE_REVIEWER · FH_GATE_ELEPHANT · FH_GATE_E0 · FH_GATE_E1 · FH_GATE_PROTECTED ·
 # FH_GATE_LAYERS_NOT_BUILT.
 # A step that did not run says NOT RUN and why — never «0 findings».
 
@@ -339,7 +343,7 @@ if [[ "$FH_BACKEND" == "cross" ]]; then
     [ "$(_sev_rank "$_legverdict")" -gt "$(_sev_rank "$_CROSS_WORST")" ] && _CROSS_WORST="$_legverdict"
     _CROSS_OUT="${_CROSS_OUT}
 # ── leg: $_leg (verdict $_legverdict) ──
-$( { printf '%s\n' "$_legout" | grep -E '^FH_GATE_(REVIEWER|ELEPHANT|E0|E1|LAYERS_NOT_BUILT):' || true; } | sed 's/^/# /')
+$( { printf '%s\n' "$_legout" | grep -E '^FH_GATE_(REVIEWER|ELEPHANT|E0|E1|PROTECTED|ESCALATE_REASON|LAYERS_NOT_BUILT):' || true; } | sed 's/^/# /')
 $(printf '%s' "$_legout" | sed -n '/^---$/,$p')"
   done
 
@@ -770,7 +774,7 @@ PROMPT
 # measured against the already-weakened HEAD). Only when no base branch resolves and the tree is dirty does HEAD stay
 # the base, as before — then the reviewer line says so. Computed once; the execution layer and the prompts share it.
 _IS_GIT=0; git -C "$WORK_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 && _IS_GIT=1
-_GATE_BASE=""; BASE_NOTE=""
+_GATE_BASE=""; BASE_NOTE=""; _BASE_IS_HEAD_FALLBACK=0
 if [[ "$_IS_GIT" == 1 ]]; then
   if [[ -n "${FH_GATE_BASE:-}" ]]; then
     _GATE_BASE="$FH_GATE_BASE"
@@ -790,7 +794,7 @@ if [[ "$_IS_GIT" == 1 ]]; then
         _GATE_BASE="$_br"
         BASE_NOTE=" · base ${_br} tip (no merge-base with HEAD — shallow or unrelated history; set FH_GATE_BASE)"
       elif ! git -C "$WORK_ROOT" diff --quiet HEAD 2>/dev/null; then
-        _GATE_BASE="HEAD"
+        _GATE_BASE="HEAD"; _BASE_IS_HEAD_FALLBACK=1
         BASE_NOTE=" · base HEAD (no ${FH_BASE_BRANCH} branch to measure against — only uncommitted changes are measured; set FH_GATE_BASE)"
       else
         _GATE_BASE="$FH_BASE_BRANCH"   # unresolvable: the diff below fails and says so
@@ -834,6 +838,78 @@ _exec_get() { printf '%s' "$EXEC_JSON" | jq -r "$1" 2>/dev/null || true; }
 E0_LINE="$(_exec_get '.e0.status + " — " + .e0.detail')"
 E1_LINE="$(_exec_get '.e1.status + " — " + .e1.detail')"
 LAYERS_NOT_BUILT_LINE="E2 (declared real input) · E3 (revert probe) · E4 (repetition) — not built yet"
+
+# --- Protected paths (Lean RFC item 1, 2026-11-25) — token-free, no AST ---
+# A repository can list paths whose change is a contract change, one git glob per line, in `.fh-gate-protected` at its
+# root. The list is read from the BASE (the same ref the change is measured against), never from the change: a change
+# cannot edit or empty the list it is held to — the same rule as the review's rule files. A protected file the change
+# modifies, deletes or changes in type (byte/mode compare against the base, uncommitted edits included) raises the
+# verdict to at least ESCALATE: a legitimate contract change is a human decision, so this does not BLOCK; a BLOCKED from
+# elsewhere stays BLOCKED. Editing `.fh-gate-protected` itself counts as such a change. Files the change ADDS are not
+# listed (they modify nothing). A check that could not run while a list may exist is a B, never «nothing changed».
+PROTECTED_FILE_NAME=".fh-gate-protected"
+PROTECTED_LINE="not applicable (not a git repository)"; PROTECTED_CHANGED=""; PROTECTED_N=0; PROTECTED_FINDING=""
+_prot_cnr() {   # $1 = why — a B finding and the line say the check did not run
+  PROTECTED_LINE="NOT RUN ($1)"
+  PROTECTED_FINDING=$(jq -cn --arg w "$1" '[{grade:"B",source:"exec",location:"(protected paths)",
+    title:("the protected-path check could not run: " + $w),
+    evidence:"fh-gate reads .fh-gate-protected from the base and compares those paths with the change",
+    fix:"set FH_GATE_BASE to a ref this repository has, or run fh-gate on the checkout instead of FH_DIFF_PATH"}]')
+}
+if [[ "$_IS_GIT" == 1 ]]; then
+  _prot_base=""
+  # «base HEAD» is the no-base-branch fallback (only uncommitted edits are measured): it cannot see a committed change to
+  # a protected file or to the list, so it counts as no base here (codex R1)
+  [[ "$_BASE_IS_HEAD_FALLBACK" == 1 ]] || _prot_base=$(git -C "$WORK_ROOT" rev-parse -q --verify "${_GATE_BASE}^{commit}" 2>/dev/null || true)
+  if [[ -z "$_prot_base" ]]; then
+    # No base to read the list from. Fail closed only where a list can exist: the file is in the work tree, or in any
+    # commit reachable from HEAD (a change that deletes it still has it in history). A repository that never had one
+    # keeps its verdict — a CI clone with no base branch must not turn every unprotected repo PENDING (A20b).
+    if [[ -e "${WORK_ROOT}/${PROTECTED_FILE_NAME}" ]] \
+       || [[ -n "$(git -C "$WORK_ROOT" log -1 --full-history --format=%H HEAD -- "${PROTECTED_FILE_NAME}" 2>/dev/null || true)" ]]; then   # --full-history: no merge simplification (codex R1)
+      _prot_cnr "no base to read ${PROTECTED_FILE_NAME} from ('${_GATE_BASE}'), and it exists in this history"
+    else
+      PROTECTED_LINE="not applicable (no base, and ${PROTECTED_FILE_NAME} has never existed in this history)"
+    fi
+  elif ! git -C "$WORK_ROOT" cat-file -e "${_prot_base}:${PROTECTED_FILE_NAME}" 2>/dev/null; then
+    PROTECTED_LINE="none declared on base ${_prot_base:0:12}"
+  elif [[ -n "${FH_DIFF_PATH:-}" ]]; then
+    _prot_cnr "the change was given as FH_DIFF_PATH, not as this checkout"
+  elif ! _prot_list=$(git -C "$WORK_ROOT" show "${_prot_base}:${PROTECTED_FILE_NAME}" 2>/dev/null); then
+    _prot_cnr "${PROTECTED_FILE_NAME} on base ${_prot_base:0:12} could not be read"
+  else
+    _prot_specs=(":(literal)${PROTECTED_FILE_NAME}")   # the list itself is always protected
+    while IFS= read -r _pl; do
+      _pl="${_pl%$'\r'}"
+      [[ -z "${_pl//[[:space:]]/}" || "$_pl" == \#* ]] && continue
+      _prot_specs+=(":(glob)${_pl}")
+    done <<<"$_prot_list"
+    # an index flag (assume-unchanged «h…» / skip-worktree «S…») makes git diff skip a work-tree edit: if a protected path
+    # carries one, the check cannot see uncommitted edits there — B, never «none changed» (codex R2)
+    _prot_flagged=$(git -C "$WORK_ROOT" -c core.quotePath=false ls-files -v -- "${_prot_specs[@]}" 2>/dev/null | grep -E '^([a-z]|S) ' | cut -c3- | head -5 || true)
+    _prot_tmp=$(mktemp "${_TMPDIR}/fh_gate_prot_XXXXXX")
+    if [[ -n "$_prot_flagged" ]]; then
+      rm -f "$_prot_tmp"
+      _prot_cnr "a protected path carries assume-unchanged or skip-worktree, so its uncommitted edits are hidden: $(printf '%s' "$_prot_flagged" | paste -sd ',' -)"
+    elif ! git -C "$WORK_ROOT" -c core.quotePath=false diff -z --no-renames --ignore-submodules=none --name-status "$_prot_base" -- "${_prot_specs[@]}" > "$_prot_tmp" 2>/dev/null; then
+      rm -f "$_prot_tmp"
+      _prot_cnr "git diff of the protected paths against ${_prot_base:0:12} failed"
+    else
+      _pst=""
+      while IFS= read -r -d '' _tok; do
+        if [[ -z "$_pst" ]]; then _pst="$_tok"; continue; fi
+        case "${_pst:0:1}" in M|D|T) PROTECTED_CHANGED="${PROTECTED_CHANGED}${_pst:0:1} $(printf '%q' "$_tok")"$'\n'; PROTECTED_N=$((PROTECTED_N + 1)) ;; esac
+        _pst=""
+      done < "$_prot_tmp"
+      rm -f "$_prot_tmp"
+      if [[ "$PROTECTED_N" -gt 0 ]]; then
+        PROTECTED_LINE="${PROTECTED_N} protected path(s) changed against base ${_prot_base:0:12} — $(printf '%s' "$PROTECTED_CHANGED" | paste -sd ';' - | sed 's/;/ ; /g')"
+      else
+        PROTECTED_LINE="$(( ${#_prot_specs[@]} - 1 )) glob(s) declared on base ${_prot_base:0:12}, none changed"
+      fi
+    fi
+  fi
+fi
 
 # --- Prompts for the FH review pass (goldfish) and the elephant pass ---
 # The change itself as a diff: the caller's FH_DIFF_PATH if given (already fenced in DIFF_CONTENTS), else the
@@ -1645,6 +1721,9 @@ fi
 if [[ -n "$CHANGE_FINDING" ]]; then
   EXEC_JSON=$(printf '%s' "$EXEC_JSON" | jq -c --argjson c "$CHANGE_FINDING" '.findings += $c')
 fi
+if [[ -n "$PROTECTED_FINDING" ]]; then
+  EXEC_JSON=$(printf '%s' "$EXEC_JSON" | jq -c --argjson c "$PROTECTED_FINDING" '.findings += $c')
+fi
 ALL_FINDINGS=$(jq -cn --argjson r "$REVIEW_FINDINGS" --argjson e "$(printf '%s' "$EXEC_JSON" | jq -c '.findings')" '$r + $e')
 _FA=$(printf '%s' "$ALL_FINDINGS" | jq -r '[.[]|select(.grade=="A")]|length')
 _FB=$(printf '%s' "$ALL_FINDINGS" | jq -r '[.[]|select(.grade=="B")]|length')
@@ -1657,6 +1736,9 @@ _GRADE_VERDICT="PASS"
 [ "$_EA" -gt 0 ] && _GRADE_VERDICT="BLOCKED"
 VERDICT="$REVIEW_VERDICT"
 [ "$(_rank "$_GRADE_VERDICT")" -gt "$(_rank "$VERDICT")" ] && VERDICT="$_GRADE_VERDICT"
+# a protected path changed: at least ESCALATE (a human decides a contract change); BLOCKED stays BLOCKED
+PROTECTED_ESCALATED=0
+if [ "$PROTECTED_N" -gt 0 ] && [ "$(_rank "$VERDICT")" -lt "$(_rank ESCALATE)" ]; then VERDICT="ESCALATE"; PROTECTED_ESCALATED=1; fi
 case "$VERDICT" in
   PASS|PENDING|BLOCKED|ESCALATE) ;;
   *) echo "ERROR: merged verdict not in the enum (got: ${VERDICT:-EMPTY}) — failing closed" >&2; exit $EXIT_HARNESS_ERROR ;;
@@ -1680,6 +1762,8 @@ esac
   printf 'FH_GATE_ELEPHANT: %s\n' "$ELEPHANT_LINE"
   printf 'FH_GATE_E0: %s\n' "$E0_LINE"
   printf 'FH_GATE_E1: %s\n' "$E1_LINE"
+  printf 'FH_GATE_PROTECTED: %s\n' "$PROTECTED_LINE"
+  [ "$PROTECTED_N" -gt 0 ] && printf 'FH_GATE_ESCALATE_REASON: protected-path (%s file(s) listed in .fh-gate-protected on the base changed — a human decides)\n' "$PROTECTED_N"
   printf 'FH_GATE_LAYERS_NOT_BUILT: %s\n' "$LAYERS_NOT_BUILT_LINE"
   printf -- '---\nfindings:\n'
   printf '%s' "$ALL_FINDINGS" | jq -r '
@@ -1713,6 +1797,7 @@ fi
   printf "  findings_total: %s\n" "$FINDINGS_N_LOG"
   printf "  findings_a: %s\n" "$FINDINGS_A_LOG"
   printf "  findings_b: %s\n" "$FINDINGS_B_LOG"
+  printf "  protected: %s\n" "$(jq -an --arg v "$PROTECTED_LINE" '$v')"
   printf "  files:\n"
   printf '%s\n' "$TARGET_FILES" | sed '/^$/d; s/^/    - /'
   printf "\n"
