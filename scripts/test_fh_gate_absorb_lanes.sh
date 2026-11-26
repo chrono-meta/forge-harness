@@ -30,6 +30,7 @@
 #       (A23c: the branch exists without a merge-base → its tip, said; never HEAD)
 #   A24 the execution layer's JSON is checked as strictly as the review object (status enum, finding shape, grade A/B/C)
 #       — malformed → exit 10; a well-formed A still blocks and a C still passes
+#   A29 advisory: the running checker's own files in the change → FH_GATE_SELF_CHANGE ADVISORY, verdict unchanged
 #   A28 one provenance line in the governance record: base sha, reviewed diff sha, effective env, lanes run with file
 #       shas, not-run checks by reason class — recorded, not attested; the verdict does not read it
 #   A27 test files, lane files and test config the change touches: added/modified/deleted in the prompt BODY of both
@@ -621,6 +622,47 @@ PY
 )
 if [ "$c28e" = ok ]; then ok "A28e U+0085 survives the record (ASCII-escaped); a full E1 run is «ran»; the shown sha is of the shown bytes"
 else bad "A28e provenance encoding" "$c28e"; fi
+
+# A29 (L1, advisory) — fh-gate running from the checkout it reviews says when its own files are part of the change; it
+# never changes the verdict. Run from outside the change (every other lane), the line says none.
+R29="$TMPROOT/repo29"; mkdir -p "$R29/scripts"; g -C "$R29" init -q -b main
+cp "$GATE" "$R29/scripts/fh-gate.sh"; cp "$HERE/../package.json" "$R29/package.json"; printf '#!/usr/bin/env bash\necho ok\n' > "$R29/scripts/foo.sh"
+g -C "$R29" add -A; g -C "$R29" commit -qm base
+g -C "$R29" checkout -qb self; printf '# a change to the judge\n' >> "$R29/scripts/fh-gate.sh"; g -C "$R29" commit -qam self
+RUN_DIR="$R29" GATE="$R29/scripts/fh-gate.sh" gate a29_self FH_TARGET_FILES=scripts/foo.sh; r_self=$RC
+g -C "$R29" checkout -q main; g -C "$R29" checkout -qb other; printf '#!/usr/bin/env bash\n# c\necho ok\n' > "$R29/scripts/foo.sh"; g -C "$R29" commit -qam other
+RUN_DIR="$R29" GATE="$R29/scripts/fh-gate.sh" gate a29_other FH_TARGET_FILES=scripts/foo.sh; r_other=$RC
+g -C "$R29" checkout -q main
+if [ "$r_self" -eq 0 ] && [ "$r_other" -eq 0 ] && has a29_self 'FH_GATE_SELF_CHANGE: ADVISORY' && has a29_self 'scripts/fh-gate.sh' \
+   && has a29_other 'FH_GATE_SELF_CHANGE: none' && has a1 'FH_GATE_SELF_CHANGE: none'; then
+  ok "A29 a change to the running checker is said (ADVISORY, verdict unchanged); a change elsewhere, or a gate run from outside, says none"
+else bad "A29 self-change advisory" "self=$r_self other=$r_other $(grep -h SELF_CHANGE "$TMPROOT/a29_self.out" "$TMPROOT/a29_other.out" | cut -c1-160 | tr '\n' '|')"; fi
+
+# A29b (codex R1) — the record carries checker_in_change; a checker reached through a symlink is resolved to the file
+# that changed; with FH_DIFF_PATH (a patch, not this checkout) the line says NOT MEASURED
+mkdir -p "$TMPROOT/rec29"; g -C "$R29" checkout -q self
+RUN_DIR="$R29" GATE="$R29/scripts/fh-gate.sh" gate a29_rec FH_RECORD_BASE="$TMPROOT/rec29" FH_TARGET_FILES=scripts/foo.sh
+cin=$(python3 -c 'import json,sys; print(",".join(json.loads(sys.argv[1])["checker_in_change"]))' "$(prov_of "$TMPROOT/rec29")" 2>/dev/null || echo unparseable)
+printf 'x\n' > "$TMPROOT/a29.patch"
+RUN_DIR="$R29" GATE="$R29/scripts/fh-gate.sh" gate a29_dp FH_DIFF_PATH="$TMPROOT/a29.patch" FH_TARGET_FILES=scripts/foo.sh
+g -C "$R29" checkout -q main
+R29s="$TMPROOT/repo29s"; mkdir -p "$R29s/real" "$R29s/scripts"; g -C "$R29s" init -q -b main
+cp "$GATE" "$R29s/real/fh-gate.sh"; ln -s ../real/fh-gate.sh "$R29s/scripts/fh-gate.sh"; cp "$HERE/../package.json" "$R29s/package.json"
+printf '#!/usr/bin/env bash\necho ok\n' > "$R29s/scripts/foo.sh"; g -C "$R29s" add -A; g -C "$R29s" commit -qm base; g -C "$R29s" checkout -qb c
+printf '# changed through the link target\n' >> "$R29s/real/fh-gate.sh"; g -C "$R29s" commit -qam c
+RUN_DIR="$R29s" GATE="$R29s/scripts/fh-gate.sh" gate a29_link FH_TARGET_FILES=scripts/foo.sh
+if [ "$cin" = "scripts/fh-gate.sh" ] && has a29_dp 'FH_GATE_SELF_CHANGE: NOT MEASURED (FH_DIFF_PATH' && has a29_link 'FH_GATE_SELF_CHANGE: ADVISORY' && has a29_link 'real/fh-gate.sh'; then
+  ok "A29b checker_in_change is recorded; a symlinked checker resolves to the changed file; FH_DIFF_PATH → NOT MEASURED"
+else bad "A29b self-change edges" "rec=$cin $(grep -h SELF_CHANGE "$TMPROOT/a29_dp.out" "$TMPROOT/a29_link.out" | cut -c1-140 | tr '\n' '|')"; fi
+# A29c (codex R2) — retargeting a checker symlink (both targets unchanged) is a change to the running checker
+g -C "$R29s" checkout -q main; g -C "$R29s" checkout -qb retarget
+cp "$R29s/real/fh-gate.sh" "$R29s/real/fh-gate-b.sh"; g -C "$R29s" add real/fh-gate-b.sh; g -C "$R29s" commit -qm "second copy"
+g -C "$R29s" checkout -q main; g -C "$R29s" merge -q --no-edit retarget >/dev/null 2>&1; g -C "$R29s" checkout -qb retarget2
+rm "$R29s/scripts/fh-gate.sh"; ln -s ../real/fh-gate-b.sh "$R29s/scripts/fh-gate.sh"; g -C "$R29s" add -A; g -C "$R29s" commit -qm retarget
+RUN_DIR="$R29s" GATE="$R29s/scripts/fh-gate.sh" gate a29_retarget FH_TARGET_FILES=scripts/foo.sh
+g -C "$R29s" checkout -q main
+if has a29_retarget 'FH_GATE_SELF_CHANGE: ADVISORY' && has a29_retarget 'scripts/fh-gate.sh'; then ok "A29c a retargeted checker symlink is said (ADVISORY)"
+else bad "A29c symlink retarget" "$(grep SELF_CHANGE "$TMPROOT/a29_retarget.out" | cut -c1-160)"; fi
 
 # A25 (Lean RFC item 1) — protected paths: `.fh-gate-protected` read from the BASE; a protected file the change modifies,
 # deletes or changes in type → at least ESCALATE (exit 3), never BLOCKED by itself; a BLOCKED from elsewhere stays.

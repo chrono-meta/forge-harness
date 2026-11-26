@@ -3,6 +3,10 @@
 ### [Unreleased]
 
 ### Added
+- `fh-gate` (shipped): `FH_GATE_SELF_CHANGE` on stdout and `checker_in_change` in the record provenance (L1, advisory, 2026-11-25). When fh-gate runs from the checkout it reviews and the change touches `fh-gate.sh`, `fh_gate_exec.sh` or the E0 scanner, the line says the verdict comes from the changed checker and suggests re-checking with a copy from outside the change.
+  - It is not a trust boundary: a change to the checker can remove the line too. With `FH_DIFF_PATH` it says NOT MEASURED. A checker reached through a symlink is resolved to the file that changed; the execution layer and its scanner (`FH_GATE_E0_SCANNER` honoured) count only when the execution layer runs.
+  - `docs/REFERENCE.md` and the Action's `version` input now say what the Action runs: `npx --package @chrono-meta/fh-gate@<version>`, not the pull request's `scripts/fh-gate.sh`. `npx` can still use a matching copy in the checkout's `node_modules`, and `latest` is not a pinned identity; pin a version to know which gate ran.
+  - The verdict never changes. Lane A29 in `scripts/test_fh_gate_absorb_lanes.sh`.
 - `fh-gate` (shipped): a `provenance:` line in the governance record (Lean RFC item 4, with the L2/L3 corrections, 2026-11-25). Record only: no verdict reads it, so no `BREAKING (gate)` line.
   - It is one JSON value, labelled «recorded by fh-gate, not attested». A sha names the bytes that were used, not that they were the right ones.
   - What it holds: the base ref, its resolved sha and any fallback note; the sha256 of the diff the review was given (or of `FH_DIFF_PATH`); the effective values of `FH_TARGET_FILES`, `FH_GATE_LANES`, `FH_LANE_TIMEOUT`, `FH_GATE_MAX_LANES`, `FH_GATE_CROSS_ALLOW_SINGLE`, `FH_GATE_EXEC`, `FH_REVIEWER` and `FH_BACKEND`.

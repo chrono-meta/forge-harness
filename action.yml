@@ -59,7 +59,7 @@ inputs:
     required: false
     default: 'BLOCKED,ESCALATE,HARNESS_ERROR,ARG_ERROR,DRY_RUN,UNKNOWN'
   version:
-    description: 'npm version spec of @chrono-meta/fh-gate to run (default: latest).'
+    description: 'npm version spec of @chrono-meta/fh-gate to run (default: latest — not a pinned identity; pin a version to know which gate ran).'
     required: false
     default: 'latest'
   working-directory:
