@@ -111,7 +111,7 @@ cd ~/projects/forge-harness && claude        # then type a greeting: hi · 안�
 - You stop having to pick the check. The harness reads what you are about to do — publish, delete,
   rewrite history, open a PR — and names the gate for that moment. ① is one command you remember; ②
   is the layer that remembers for you.
-- **46 skills · 14 agents** you can call in plain language: diagnose a project, accelerate one, wire a
+- **48 skills · 14 agents** you can call in plain language: diagnose a project, accelerate one, wire a
   new one up.
 - `tracks/` keeps what each session learned, so **session 2 starts where session 1 stopped**. This is
   the part that compounds — and the part you cannot judge on day one.
@@ -395,7 +395,7 @@ sidecar posture: [`docs/MODEL_SETUP.md`](MODEL_SETUP.md).
 
 ---
 
-## 46 skills · 14 agents
+## 48 skills · 14 agents
 
 Count = non-deprecated skills across all four plugins (`fh-meta` · `fh-commons` · `fh-qp` ·
 `fh-preprep`). Clustered as verification · orchestration · diagnosis · harvesting · gates · discovery ·
@@ -461,7 +461,7 @@ restatement of some of them; nothing was deleted. "Moved" means the full text is
 | Where a rule lives — three seats | Moved here |
 | Run it outside Claude Code — the `fh-gate` CLI | Linked from `README.md` (Door ①); full text moved here |
 | Model setup | Moved here (linked under Read next) |
-| 46 skills · 14 agents | Count kept in `README.md` (Evidence); full text moved here |
+| 48 skills · 14 agents | Count kept in `README.md` (Evidence); full text moved here |
 | Learn more (resource table) | Merged into `README.md` (Read next) plus the full table moved here |
 | FH papers (Zenodo · arXiv) | Moved here, last section above |
 

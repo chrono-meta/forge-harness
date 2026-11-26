@@ -172,8 +172,8 @@ flowchart TD
   더 많은 실행은 [`docs/OUTPUT_EVIDENCE.md`](docs/OUTPUT_EVIDENCE.md).
 - 성숙도는 주장이 아니라 등급으로 매깁니다. 아래에 이름을 적은 다섯 정체성은 각각
   [`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md) 에 날짜가 붙은 등급과 그 근거가 있습니다.
-- 이 페이지의 수(스킬 46개 · 에이전트 14개)는 `plugins/`(`fh-meta`, `fh-commons`, `fh-qp`, `fh-preprep`) 아래의 스킬 폴더와
-  에이전트 파일을 2026-10-10 에 센 것입니다. 말 모음: [`CHEATSHEET.md` §12](CHEATSHEET.md#12-skills--agents--what-each-does-and-what-to-say).
+- 이 페이지의 수(스킬 48개 · 에이전트 14개)는 `plugins/`(`fh-meta`, `fh-commons`, `fh-qp`, `fh-preprep`) 아래의 스킬 폴더와
+  에이전트 파일을 2026-11-26 에 센 것입니다. 말 모음: [`CHEATSHEET.md` §12](CHEATSHEET.md#12-skills--agents--what-each-does-and-what-to-say).
 
 ## 쓰다 보면 만나는 말
 
