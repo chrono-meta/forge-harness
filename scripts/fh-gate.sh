@@ -67,8 +67,9 @@
 #                                 tree. A lane this change turns red → A (BLOCKED). It runs the change's own
 #                                 lane scripts, so it is opt-in: default off (on = run them, only where the change
 #                                 is trusted).
-#   FH_GATE_BASE=<ref>            what the execution layer measures the change against. Default: HEAD when
-#                                 the tree has uncommitted changes, else merge-base(FH_BASE_BRANCH, HEAD).
+#   FH_GATE_BASE=<ref>            what the execution layer measures the change against. Default:
+#                                 merge-base(FH_BASE_BRANCH, HEAD), uncommitted changes included; HEAD only when no
+#                                 base branch resolves and the tree is dirty (said on the reviewer line).
 #   FH_GATE_LANES / FH_LANE_TIMEOUT / FH_GATE_MAX_LANES   see scripts/fh_gate_exec.sh
 #
 # Provenance lines (after FH_RECORD_PATH): FH_GATE_REVIEWER · FH_GATE_ELEPHANT · FH_GATE_E0 · FH_GATE_E1 ·
@@ -764,21 +765,37 @@ PROMPT
 # --- Execution layer (E0 · E1) — token-free, runs before any model call ---
 # It runs first so a broken copy or a red lane is known before tokens are spent, and so a dry run can
 # show exactly what would run. Its findings join the review's; the verdict takes the worse of the two.
-# The change these layers measure: against FH_GATE_BASE, else HEAD when the tree has uncommitted changes, else the
-# merge-base with FH_BASE_BRANCH. Computed once; the execution layer and the review prompts use the same one.
+# The change these layers measure: against FH_GATE_BASE, else the merge-base with FH_BASE_BRANCH — also when the tree
+# has uncommitted changes (G2, 2026-11-25: «dirty → HEAD» let a change commit a weakened lane, touch any file, and be
+# measured against the already-weakened HEAD). Only when no base branch resolves and the tree is dirty does HEAD stay
+# the base, as before — then the reviewer line says so. Computed once; the execution layer and the prompts share it.
 _IS_GIT=0; git -C "$WORK_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 && _IS_GIT=1
-_GATE_BASE=""
+_GATE_BASE=""; BASE_NOTE=""
 if [[ "$_IS_GIT" == 1 ]]; then
   if [[ -n "${FH_GATE_BASE:-}" ]]; then
     _GATE_BASE="$FH_GATE_BASE"
-  elif ! git -C "$WORK_ROOT" diff --quiet HEAD 2>/dev/null; then
-    _GATE_BASE="HEAD"
   else
     # A pull-request checkout in CI has a detached HEAD and no local base branch, only origin/<base>
     # (found on #1147: `merge-base main HEAD` failed there). Try the local branch, then the remote-tracking one.
     _GATE_BASE="$(git -C "$WORK_ROOT" merge-base "$FH_BASE_BRANCH" HEAD 2>/dev/null \
-      || git -C "$WORK_ROOT" merge-base "origin/$FH_BASE_BRANCH" HEAD 2>/dev/null \
-      || printf '%s' "$FH_BASE_BRANCH")"
+      || git -C "$WORK_ROOT" merge-base "origin/$FH_BASE_BRANCH" HEAD 2>/dev/null || true)"
+    if [[ -z "$_GATE_BASE" ]]; then
+      _br=""
+      for _c in "$FH_BASE_BRANCH" "origin/$FH_BASE_BRANCH"; do
+        git -C "$WORK_ROOT" rev-parse -q --verify "${_c}^{commit}" >/dev/null 2>&1 && { _br="$_c"; break; }
+      done
+      if [[ -n "$_br" ]]; then
+        # the branch exists but no merge-base was found (a shallow clone, unrelated history): measure against the
+        # branch tip, as before for a clean tree — never fall back to HEAD here (codex R1)
+        _GATE_BASE="$_br"
+        BASE_NOTE=" · base ${_br} tip (no merge-base with HEAD — shallow or unrelated history; set FH_GATE_BASE)"
+      elif ! git -C "$WORK_ROOT" diff --quiet HEAD 2>/dev/null; then
+        _GATE_BASE="HEAD"
+        BASE_NOTE=" · base HEAD (no ${FH_BASE_BRANCH} branch to measure against — only uncommitted changes are measured; set FH_GATE_BASE)"
+      else
+        _GATE_BASE="$FH_BASE_BRANCH"   # unresolvable: the diff below fails and says so
+      fi
+    fi
   fi
 fi
 EXEC_JSON='{"e0":{"status":"not-run","detail":"NOT RUN"},"e1":{"status":"not-run","detail":"NOT RUN"},"findings":[]}'
@@ -824,8 +841,15 @@ if [[ -z "$FH_DIFF_PATH" && "$_IS_GIT" == 1 ]]; then
     _chg=$(head -c 80000 "$_CHG_FILE")
     _trunc=""
     if [[ "$_chg_n" -gt 80000 ]]; then
-      _trunc=" — TRUNCATED: 80000 of ${_chg_n} bytes here; read the rest with git diff ${_GATE_BASE}"
-      CHANGE_NOTE=" · diff truncated in the prompt (80000 of ${_chg_n} bytes; the reviewer reads the rest with git)"
+      # The reviewer cannot read the rest: the fh and elephant passes have Read · Glob · Grep, no git (G1, 2026-11-25).
+      _trunc=" — TRUNCATED: only the first 80000 of ${_chg_n} bytes are shown; the rest of the change is NOT shown to you"
+      CHANGE_NOTE=" · diff truncated in the prompt (80000 of ${_chg_n} bytes; the rest was not reviewed)"
+      if [[ "$FH_REVIEWER" == "fh" || "$ELE_ON" == 1 ]]; then   # the passes that read the change diff
+        CHANGE_FINDING=$(jq -cn --arg n "$_chg_n" '[{grade:"B",source:"exec",location:"(diff)",
+          title:("part of the change was not reviewed: the diff is " + $n + " bytes and the review was shown the first 80000"),
+          evidence:"the fh and elephant passes read only the diff in their prompt; they have no git to read the rest",
+          fix:"split the change, or review it with FH_REVIEWER=code-review (it reads the diff with git)"}]')
+      fi
     fi
     [[ -n "$_chg" ]] && CHANGE_BLOCK="
 The change (git diff against ${_GATE_BASE}${_trunc}):
@@ -936,7 +960,7 @@ EOF_RULES
       fi
       _rules_trunc=""
       if [[ "${#_rules_body}" -gt 40000 ]]; then
-        _rules_trunc=" — TRUNCATED: 40000 of ${#_rules_body} characters here; read the rest with git show ${_RULES_BASE:0:12}:<path>"
+        _rules_trunc=" — TRUNCATED: only the first 40000 of ${#_rules_body} characters are shown; the rest is NOT shown to you"
         _rules_body="${_rules_body:0:40000}"
       fi
       CHANGE_NOTE="${CHANGE_NOTE} · rule files from base ${_RULES_BASE:0:12}: ${_rules_n}${_rules_trunc:+ (truncated)}"
@@ -1643,7 +1667,7 @@ esac
   printf 'FH_FINDINGS_A: %s\n' "$_FA"
   printf 'FH_FINDINGS_B: %s\n' "$_FB"
   printf 'FH_RECORD_PATH: %s\n' "$RECORD_PATH"
-  printf 'FH_GATE_REVIEWER: %s%s\n' "$REVIEWER_NOTE" "$CHANGE_NOTE"
+  printf 'FH_GATE_REVIEWER: %s%s%s\n' "$REVIEWER_NOTE" "$CHANGE_NOTE" "$BASE_NOTE"
   printf 'FH_GATE_ELEPHANT: %s\n' "$ELEPHANT_LINE"
   printf 'FH_GATE_E0: %s\n' "$E0_LINE"
   printf 'FH_GATE_E1: %s\n' "$E1_LINE"
