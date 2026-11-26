@@ -284,13 +284,16 @@ while IFS= read -r id; do
   [ -z "$id" ] && continue
   input_text="$(cat "$SPEC_DIR/$id.input.txt")"
   control_text="$(cat "$SPEC_DIR/$id.control.txt")"
+  # extra tools (probes_live.yaml `extra_tools:`, Skill/Agent only) go to EVERY arm of this probe, so primary and
+  # control are offered the same tools; absent file = the observe set only
+  XT=(); [ -f "$SPEC_DIR/$id.extra_tools.txt" ] && XT=(--extra-tools "$(cat "$SPEC_DIR/$id.extra_tools.txt")")
   probe_out="$OUTDIR/$id"
   mkdir -p "$probe_out"
 
   echo ""
   echo "▶ $id — primary"
   bash "$SIM_RUNNER" --arm primary --reps "$REPS" --prompt "$input_text" \
-       --mode observe --model "$MODEL" --out "$probe_out" ${FH_LIVE_TRACE_ARG:+"$FH_LIVE_TRACE_ARG"} \
+       --mode observe --model "$MODEL" ${XT[@]+"${XT[@]}"} --out "$probe_out" ${FH_LIVE_TRACE_ARG:+"$FH_LIVE_TRACE_ARG"} \
        > "$probe_out/_runner_primary.log" 2>&1
   runner_rc=$?
   tail -n 6 "$probe_out/_runner_primary.log"
@@ -300,6 +303,12 @@ while IFS= read -r id; do
   # condition is identical for every remaining probe in this run, so continuing would just burn
   # the rest of the clones (up to 2*(N-1) more `claude -p` calls) to the same FAILED-TO-RUN wall.
   # Abort loudly instead of quietly producing a 12/12 FAILED-TO-RUN report with no clue why.
+  if [ "$runner_rc" -eq 2 ] && [ -f "$SPEC_DIR/$id.rate.txt" ]; then
+    # a capability probe (rate: excluded) — its preflight failure is its own row (FAILED-TO-RUN in the capability
+    # section), never a reason to abort the regression run (codex R1)
+    echo "⚠️  $id (capability probe) primary runner exited 2 — recorded, run continues" >&2
+    continue
+  fi
   if [ "$runner_rc" -eq 2 ]; then
     echo "" >&2
     echo "❌ $id primary runner call exited 2 (preflight failure, before \`claude\` ran)." >&2
@@ -311,10 +320,14 @@ while IFS= read -r id; do
 
   echo "▶ $id — control"
   bash "$SIM_RUNNER" --arm control --reps "$REPS" --prompt "$control_text" \
-       --mode observe --model "$MODEL" --out "$probe_out" ${FH_LIVE_TRACE_ARG:+"$FH_LIVE_TRACE_ARG"} \
+       --mode observe --model "$MODEL" ${XT[@]+"${XT[@]}"} --out "$probe_out" ${FH_LIVE_TRACE_ARG:+"$FH_LIVE_TRACE_ARG"} \
        > "$probe_out/_runner_control.log" 2>&1
   runner_rc=$?
   tail -n 6 "$probe_out/_runner_control.log"
+  if [ "$runner_rc" -eq 2 ] && [ -f "$SPEC_DIR/$id.rate.txt" ]; then
+    echo "⚠️  $id (capability probe) control runner exited 2 — recorded, run continues" >&2
+    continue
+  fi
   if [ "$runner_rc" -eq 2 ]; then
     echo "" >&2
     echo "❌ $id control runner call exited 2 (preflight failure, before \`claude\` ran)." >&2
@@ -332,11 +345,13 @@ while IFS= read -r id; do
     control_b_text="$(cat "$SPEC_DIR/$id.control_b.txt")"
     echo "▶ $id — control_b"
     bash "$SIM_RUNNER" --arm control_b --reps "$REPS" --prompt "$control_b_text" \
-         --mode observe --model "$MODEL" --out "$probe_out" ${FH_LIVE_TRACE_ARG:+"$FH_LIVE_TRACE_ARG"} \
+         --mode observe --model "$MODEL" ${XT[@]+"${XT[@]}"} --out "$probe_out" ${FH_LIVE_TRACE_ARG:+"$FH_LIVE_TRACE_ARG"} \
          > "$probe_out/_runner_control_b.log" 2>&1
     runner_rc=$?
     tail -n 6 "$probe_out/_runner_control_b.log"
-    if [ "$runner_rc" -eq 2 ]; then
+    if [ "$runner_rc" -eq 2 ] && [ -f "$SPEC_DIR/$id.rate.txt" ]; then
+      echo "⚠️  $id (capability probe) control_b runner exited 2 — recorded, run continues" >&2
+    elif [ "$runner_rc" -eq 2 ]; then
       echo "" >&2
       echo "❌ $id control_b runner call exited 2 (preflight failure, before \`claude\` ran)." >&2
       echo "   Aborting the whole run rather than burning the remaining clones." >&2

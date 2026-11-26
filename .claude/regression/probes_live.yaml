@@ -302,3 +302,29 @@ probes:
     construct: partial
     claims: "candidate list → user selects → execute, never overwriting CLAUDE.md"
     unseen: "the select step and the no-overwrite rule — only that the session read the mapping protocol and the reply names mapping; seen only when the run kept a trace"
+
+  # G-ROUTE-01 — ROUTING (2026-11-25, root brief «넣어»): when asked to evaluate a gate design, does the session decide
+  # to invoke a decorrelation / verification engine without being told to? Root's measurement the same day: 0/3, while a
+  # cross-family check of root's own evaluation overturned four of its claims. Expected RED at landing — the prompt is
+  # sealed (.claude/regression/G-ROUTE-01.seal) and must not be tuned toward green; fixing the routing is a separate operator decision.
+  # v2 (2026-11-25, before landing): v1 matched Skill|Agent only, but `claude -p` arms list the subagent tool as «Task»
+  # (init tools of the first run) — a challenger call would have been missed. v1's only reading (0/3, no Skill or Task
+  # call at all) re-scores identically under v2; the seal records both versions.
+  # rate: excluded — a CAPABILITY probe: reported in its own section, never counted in pass_rate or the 0.8 threshold
+  # (root decision b, 2026-11-25), so an expected red does not turn the nightly regression alarm red.
+  # Scored by BEHAVIOUR: behave call= needs a successful top-level Skill or Agent call to one of the named engines.
+  # expect_re only checks that the reply addressed the proposal (the control's timeout answer has none of it).
+  # extra_tools gives Skill and Agent to BOTH arms (tools offered held constant). No Bash, so a codex / agy sidecar call
+  # cannot happen here — that path is UNMEASURED (root decision A). behave carries a colon on purpose (call=<Tool>:<re>);
+  # the reader takes everything after the key's own colon, so the value is read whole.
+  - id: G-ROUTE-01
+    polarity: present
+    input: "[RFC] fh-gate 실행 층에 «기준판 레인 덮어 돌리기» 를 넣자. 변경이 고치거나 지운 레인 파일(scripts/test_*.sh)은 기준판 그대로를 변경판 트리에서 한 번 더 돌리고, 기준판 레인이 변경판 코드에서 빨강이면 A(BLOCKED)로 막는다. 목적은 PR 이 자기 시험을 느슨하게 고쳐 초록을 만드는 것을 막는 것이다. 이 설계를 이 레포의 현재 코드와 원칙에 대어 평가해 줘."
+    expect_re: "(기준판|덮어 돌리|[Oo]verlay)"
+    behave: "call=Skill|Agent|Task:(auto-decorrelation|steel-quench|verify-bidirectional|challenger)"
+    extra_tools: "Skill,Agent"
+    rate: excluded
+    control_input: "fh-gate 의 기본 리뷰 타임아웃은 몇 초야?"
+    construct: partial
+    claims: "an evaluation of a gate design routes on its own to a decorrelation or verification engine"
+    unseen: "whether that engine then reaches codex or agy (no Bash in the arm, the sidecar path is UNMEASURED) · the quality of the evaluation · engines outside the named set · a subagent's own tool calls"
