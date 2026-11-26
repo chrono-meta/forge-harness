@@ -61,7 +61,7 @@ for n, c in enumerate(sys.argv[5:]):
     if ":" in c.split("=", 1)[0]:
         flag, c = c.split(":", 1)
     name, p = c.split("=", 1)
-    key = "pattern" if name == "Glob" else "file_path" if name == "Read" else "path"
+    key = {"Glob": "pattern", "Read": "file_path", "Skill": "skill", "Agent": "subagent_type", "Task": "subagent_type", "Bash": "command"}.get(name, "path")
     a = {"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "t%d" % n, "name": name, "input": {key: p}}]}}
     if flag == "SUB":
         a["parent_tool_use_id"] = "task0"
@@ -309,7 +309,106 @@ if grep -q 'SURFACE_DIFF_RETURN' "$T/mut3/live_eval_trace.py"; then bad "TR24 mu
 else m3=$(LIB="$T/mut3" score "$T/plg" P 'read=CATALOG\.md')
   [[ "$m3" != *"plugins=fx-chart@builtin — "* ]] && [[ "$m3" == INVALID-COMPARISON* ]] && ok "TR24 revert probe: surface_diff → '' drops the named plugin (TR23 would be red), verdict unchanged" || bad "TR24 mutant still [$m3]"; fi
 
-[ $((pass + fail + skipped)) -eq 26 ] || bad "lane count $pass passed + $fail failed + $skipped skipped != 26 — a case did not run"
+# ── TC1–TC3: behave call=<Tool>:<re> (routing probes, 2026-11-25) ──────────────────────────────────────────────────
+# Known positive: a successful top-level Skill call whose skill name matches, and an Agent call whose subagent_type
+# matches. Known negatives: a Skill call with another name, the matching Skill call that ERRORED, the matching Agent
+# call made inside a subagent (not the arm's own decision), and a Read of a file named after the engine.
+CB='call=Skill|Agent|Task:(auto-decorrelation|steel-quench|verify-bidirectional|challenger)'
+set -f
+mk "$T/c_pos.jsonl" "Read,Skill,Agent" "" "x" Skill=fh-meta:steel-quench
+mk "$T/c_agent.jsonl" "Read,Skill,Agent" "" "x" Agent=fh-commons:quench-challenger
+mk "$T/c_task.jsonl" "Read,Skill,Task" "" "x" Task=fh-meta:challenger   # `claude -p` arms list the subagent tool as Task
+mk "$T/c_other.jsonl" "Read,Skill,Agent" "" "x" Skill=fh-meta:frontier-digest
+mk "$T/c_err.jsonl" "Read,Skill,Agent" "" "x" ERR:Skill=fh-meta:steel-quench
+mk "$T/c_sub.jsonl" "Read,Skill,Agent" "" "x" SUB:Agent=fh-meta:challenger
+mk "$T/c_read.jsonl" "Read,Skill,Agent" "" "x" Read=plugins/fh-meta/skills/steel-quench/SKILL.md
+mk "$T/c_bash.jsonl" "Read,Bash" "" "x" "Bash=codex exec -s read-only -"          # Bash matches on its command
+mk "$T/c_bash2.jsonl" "Read,Bash" "" "x" "Bash=git status"
+set +f
+hits=$(python3 - "$LIB" "$CB" "$T" <<'PY'
+import sys; sys.path.insert(0, sys.argv[1]); import live_eval_trace as L
+spec, d = sys.argv[2], sys.argv[3]
+h = lambda n, s: L.behave_hit(L.parse_stream('%s/c_%s.jsonl' % (d, n)), s)
+print(' '.join('%s=%d' % (n, h(n, spec)) for n in ('pos', 'agent', 'task', 'other', 'err', 'sub', 'read')),
+      'bash=%d bash2=%d' % (h('bash', 'call=Bash:^codex '), h('bash2', 'call=Bash:^codex ')))
+PY
+)
+[ "$hits" = "pos=1 agent=1 task=1 other=0 err=0 sub=0 read=0 bash=1 bash2=0" ] \
+  && ok "TC1 call= matches a successful top-level Skill/Agent call by name; another name, an errored call, a subagent's call and a Read do not" \
+  || bad "TC1 call= hits: $hits"
+badspec=$(python3 - "$LIB" <<'PY'
+import sys; sys.path.insert(0, sys.argv[1]); import live_eval_trace as L
+out = []
+for s in ('call=Write:x', 'call=:x', 'call=Skill', 'call=Skill||Agent:x', 'call=|Skill:x', 'call=Skill:x'):
+    try:
+        L.parse_behave(s); out.append('ok')
+    except ValueError:
+        out.append('err')
+print(' '.join(out))
+PY
+)
+[ "$badspec" = "err err err err err ok" ] && ok "TC2 a call= naming a tool with no matchable field, an empty alternative, no tool or no pattern is BAD-BEHAVE" || bad "TC2 parse: $badspec"
+build "$T/route" P 3 "Read,Skill,Agent||설계 평가|Skill=fh-meta:steel-quench" "Read,Skill,Agent||기본값은 600초|"
+build "$T/noroute" P 3 "Read,Skill,Agent||설계 평가|Read=scripts/fh-gate.sh" "Read,Skill,Agent||기본값은 600초|"
+rt=$(python3 - "$LIB" "$T" "$CB" <<'PY'
+import sys; sys.path.insert(0, sys.argv[1]); import probe_live_eval_lib as L
+spec = {'id': 'P', 'polarity': 'present', 'expect_re': '설계', 'behave': sys.argv[3]}
+a = L.score_run([spec], sys.argv[2] + '/route', ['P'], 0.8, 'sonnet', reps=3)['rows'][0]
+b = L.score_run([spec], sys.argv[2] + '/noroute', ['P'], 0.8, 'sonnet', reps=3)['rows'][0]
+print(a['verdict'], a['scored_by'], '|', b['verdict'], b['scored_by'])
+PY
+)
+case "$rt" in "PASS BEHAVIOUR | FAIL BEHAVIOUR") ok "TC3 scored run: the engine called → PASS by behaviour; the same answer with no engine call → FAIL" ;;
+  *) bad "TC3 scored run: $rt" ;; esac
+
+# ── RX1: rate: excluded (capability probes, 2026-11-25 root decision b) ─────────────────────────────────────────────
+# Known pair: the same roster with and without a red capability probe → identical pass_rate and Overall; the
+# capability row still appears, in its own report section, and the Overall line counts it. The capability probe's arms
+# carry extra tools (a different inventory) — that must not make the whole run INVALID-COMPARISON.
+build "$T/rx" A 3 "$RT||CATALOG here|Read=CATALOG.md" "$RT||오늘 맑아|"
+build "$T/rx" R 3 "Read,Grep,Glob,Skill,Agent||설계 평가|Read=x.md" "Read,Grep,Glob,Skill,Agent||600초|"
+rx=$(python3 - "$LIB" "$T/rx" <<'PY'
+import sys; sys.path.insert(0, sys.argv[1]); import probe_live_eval_lib as L
+A = {'id': 'A', 'polarity': 'present', 'expect_re': 'CATALOG', 'behave': 'read=CATALOG'}
+R = {'id': 'R', 'polarity': 'present', 'expect_re': '설계', 'rate': 'excluded',
+     'behave': 'call=Skill|Agent:(steel-quench)'}
+one = L.score_run([A], sys.argv[2], ['A'], 0.8, 'sonnet', reps=3)
+two = L.score_run([A, R], sys.argv[2], ['A', 'R'], 0.8, 'sonnet', reps=3)
+cap = two.get('capability_rows') or []
+md = L.render_report_md({'selected': [A, R], 'excluded': [], 'warnings': []}, two, '2026-11-25')
+same = (one['pass_rate'], one['overall'], one['ran']) == (two['pass_rate'], two['overall'], two['ran'])
+print('same' if same else 'differ:%s/%s' % (one['overall'], two['overall']),
+      [r['id'] + ':' + r['verdict'] for r in cap],
+      'section' if '## Capability probes' in md and '| R | FAIL' in md else 'nosection',
+      'counted' if 'capability probes (not in pass_rate): 1' in md else 'notcounted',
+      'R-not-in-rows' if all(r['id'] != 'R' for r in two['rows']) else 'R-in-rows')
+# read the rendered report back the way transitions and the matrix do: the capability row must not come back
+import tempfile, os
+fd, fn = tempfile.mkstemp(suffix='.md'); os.write(fd, md.encode('utf-8')); os.close(fd)
+prev = L.parse_prev_report(fn) or {}; os.unlink(fn)
+print('prev-ok' if 'A' in prev and 'R' not in prev else 'prev-bad:%s' % prev)
+PY
+)
+[ "$rx" = "same ['R:FAIL'] section counted R-not-in-rows
+prev-ok" ] \
+  && ok "RX1 a red rate: excluded probe leaves pass_rate and Overall unchanged, is reported in its own section, and is not read back as a regression row (transitions · matrix)" \
+  || bad "RX1 capability probe: $rx"
+# RX1b blackout is decided over regression rows only: three instrument-silent regression probes stay a RUN-BLACKOUT
+# (UNCALIBRATED, rc 2) even when a capability probe in the same run did match (codex R2)
+for p in S1 S2 S3; do build "$T/rxb" $p 3 "$RT||nothing here|" "$RT||nothing either|"; done
+build "$T/rxb" C 3 "Read,Grep,Glob,Skill,Agent||설계 평가|Skill=fh-meta:steel-quench" "Read,Grep,Glob,Skill,Agent||600초|"
+rxb=$(python3 - "$LIB" "$T/rxb" <<'PY'
+import sys; sys.path.insert(0, sys.argv[1]); import probe_live_eval_lib as L
+S = [{'id': i, 'polarity': 'present', 'expect_re': 'CATALOG'} for i in ('S1', 'S2', 'S3')]
+C = {'id': 'C', 'polarity': 'present', 'expect_re': '설계', 'rate': 'excluded', 'behave': 'call=Skill:(steel-quench)'}
+r = L.score_run(S + [C], sys.argv[2], ['S1', 'S2', 'S3', 'C'], 0.8, 'sonnet', reps=3)
+print(r['overall'], r['rc'], r['blackout'], [x['verdict'] for x in r['capability_rows']])
+PY
+)
+[ "$rxb" = "UNCALIBRATED 2 True ['PASS']" ] && ok "RX1b three silent regression probes are still a RUN-BLACKOUT when a capability probe matched" \
+  || bad "RX1b blackout with a capability probe: $rxb"
+
+[ $((pass + fail + skipped)) -eq 31 ] || bad "lane count $pass passed + $fail failed + $skipped skipped != 31 — a case did not run"
 if [ "$skipped" -gt 0 ]; then
   echo "live_eval_trace lanes: $pass passed, $fail failed, $skipped skipped (named, not a pass)"
 else

@@ -246,8 +246,10 @@ fi
 #     Unlike G-LINT-01 this DOES move the counts — it had been selected and authored — so 13 -> 12
 #     and 20 -> 21. It should have moved on 2026-09-14 with its twin; leaving it behind is the
 #     half-fix shape, and these three pinned numbers are what surfaced it.
-_lane S2 select-guard "selected count == 12 (13 - G-TRIG-01, 2026-09-17)" "12" "$sel_count"
-_lane S3 select-guard "excluded count == 20 (32 probes.md rows - 12 selected)" "20" "$exc_count"
+#   +G-ROUTE-01 — 2026-11-25: a routing probe (rate: excluded — scored in its own section, not in pass_rate), so
+#     12 -> 13 selected and 32 -> 33 probes.md rows; excluded stays 20.
+_lane S2 select-guard "selected count == 13 (12 + G-ROUTE-01, 2026-11-25)" "13" "$sel_count"
+_lane S3 select-guard "excluded count == 20 (33 probes.md rows - 13 selected)" "20" "$exc_count"
 
 # S7/S8: the two newly-covered rows must actually be IN the selection, and the state-excluded row
 # must carry its OWN reason rather than the generic utterance-shape one. Counting alone would pass
@@ -347,10 +349,10 @@ _lane R1 dry-run "probe_live_eval.sh --dry-run exits 0" "0" "$dry_rc"
 _lane R2 dry-run "--dry-run creates no OUTDIR (no live run attempted)" "absent" "$([ -d "$DRY_OUT" ] && echo present || echo absent)"
 # Pinned like S2/S3 and for the same reason — see the S2 note for why 11 became 13 on 2026-09-14.
 case "$dry_stdout" in
-  *"SELECTED (12)"*) r3=yes ;;
+  *"SELECTED (13)"*) r3=yes ;;
   *) r3=no ;;
 esac
-_lane R3 dry-run "--dry-run stdout shows the real 12-probe selection" "yes" "$r3"
+_lane R3 dry-run "--dry-run stdout shows the real 13-probe selection" "yes" "$r3"
 
 # ── fail-fast: probe_live_eval.sh aborts on the FIRST rc=2 runner call, not after burning the
 # rest of the selected set (2026-09-05, the launchd incident this exists for) ────────────────────
@@ -1110,6 +1112,103 @@ echo ""
 echo "── summary ──────────────────────────────────────────────────────"
 echo "lanes: $N   failed: $([ "$FAIL" -eq 0 ] && echo 0 || echo '>=1')"
 [ -n "$SKIPPED_BLOCKS" ] && echo "skipped (installed package, not a pass):$SKIPPED_BLOCKS"
+# ── XT1–XT2: per-probe extra_tools (routing probes, 2026-11-25) ─────────────────────────────────────────────────────
+# XT1 only Skill and Agent may be added; anything else (Bash) excludes the probe by name
+xt_sel=$(python3 - "$REPO_ROOT" <<'PY'
+import sys, os
+sys.path.insert(0, os.path.join(sys.argv[1], 'scripts')); import probe_live_eval_lib as L
+md = [{'id': 'G-X-01', 'input': '"a"', 'class': 'measured'}, {'id': 'G-X-02', 'input': '"b"', 'class': 'measured'}]
+base = {'polarity': 'present', 'input': 'a', 'expect_re': 'x', 'control_input': 'c', 'construct': 'partial'}
+live = [dict(base, id='G-X-01', extra_tools='Skill,Agent'), dict(base, id='G-X-02', extra_tools='Skill,Bash')]
+r = L.build_selection(md, live)
+sel = {e['id']: e.get('extra_tools') for e in r['selected']}
+exc = {e['id']: e['reason'] for e in r['excluded']}
+print(sel.get('G-X-01'), exc.get('G-X-02'))
+PY
+)
+_lane XT1 extra-tools "Skill,Agent is carried; Bash excludes the probe as BAD-EXTRA-TOOLS" "Skill,Agent BAD-EXTRA-TOOLS(Bash)" "$xt_sel"
+# XT3 rate takes only «excluded»; another value excludes the probe by name (never silently counted in the rate)
+xt_rate=$(python3 - "$REPO_ROOT" <<'PY'
+import sys, os
+sys.path.insert(0, os.path.join(sys.argv[1], 'scripts')); import probe_live_eval_lib as L
+md = [{'id': 'G-X-01', 'input': '"a"', 'class': 'measured'}, {'id': 'G-X-02', 'input': '"b"', 'class': 'measured'}]
+base = {'polarity': 'present', 'input': 'a', 'expect_re': 'x', 'control_input': 'c', 'construct': 'partial'}
+r = L.build_selection(md, [dict(base, id='G-X-01', rate='excluded'), dict(base, id='G-X-02', rate='skip')])
+print({e['id']: e.get('rate') for e in r['selected']}.get('G-X-01'), {e['id']: e['reason'] for e in r['excluded']}.get('G-X-02'))
+PY
+)
+_lane XT3 extra-tools "rate: excluded is carried; another value excludes the probe as BAD-RATE" "excluded BAD-RATE(skip)" "$xt_rate"
+# XT4/XT5 — a throwaway copy of the runner and the probe files with two test probes appended, so a control_b arm and a
+# failing capability probe can be exercised without changing the real roster (codex R1)
+RR="$T/rr"; mkdir -p "$RR/.claude"; cp -R "$REPO_ROOT/scripts" "$RR/scripts"; cp -R "$REPO_ROOT/.claude/regression" "$RR/.claude/regression"
+awk '{print} /^\| `G-MAP-01` \|/ {print "| `G-ZZ-01` | \"zz one\" | test | test | measured — test |"; print "| `G-ZZ-02` | \"zz two\" | test | test | measured — test |"}' \
+  "$REPO_ROOT/.claude/regression/probes.md" > "$RR/.claude/regression/probes.md"
+cat >> "$RR/.claude/regression/probes_live.yaml" <<'YML'
+  - id: G-ZZ-01
+    polarity: present
+    input: "zz one"
+    expect_re: "zz"
+    extra_tools: "Skill,Agent"
+    rate: excluded
+    control_input: "c"
+    control_input_b: "cb"
+    construct: partial
+  - id: G-ZZ-02
+    polarity: present
+    input: "zz two"
+    expect_re: "zz"
+    extra_tools: "Skill,Agent"
+    rate: excluded
+    control_input: "c"
+    construct: partial
+YML
+cat > "$STUBROOT/fake_sim_failid.sh" <<'FAKEFAIL'
+#!/usr/bin/env bash
+arm=""; out=""; xt="-"
+while [ $# -gt 0 ]; do
+  case "$1" in --arm) arm="$2"; shift 2 ;; --out) out="$2"; shift 2 ;; --extra-tools) xt="$2"; shift 2 ;; *) shift ;; esac
+done
+echo "$(basename "$out") $arm $xt" >> "$FH_FAKESIM_ARGV"
+[ "$(basename "$out")" = "${FH_FAKESIM_FAIL_ID:-none}" ] && exit 2
+mkdir -p "$out"; echo "stub" > "$out/${arm}_r1.txt"; exit 0
+FAKEFAIL
+chmod +x "$STUBROOT/fake_sim_failid.sh"
+A4="$T/xt4_argv.log"; : > "$A4"
+( cd "$RR" && FH_SIM_RUNNER_BIN="$STUBROOT/fake_sim_failid.sh" FH_FAKESIM_ARGV="$A4" \
+    bash "$RR/scripts/probe_live_eval.sh" --ids G-ZZ-01 --model sonnet --no-evidence --out "$T/xt4_run" --report-out "$T/xt4_report.md" ) >/dev/null 2>&1
+_lane XT4 extra-tools "a probe with control_input_b gives Skill,Agent to all three arms" \
+  "G-ZZ-01 control Skill,Agent;G-ZZ-01 control_b Skill,Agent;G-ZZ-01 primary Skill,Agent;" "$(sort "$A4" | tr '\n' ';')"
+A5="$T/xt5_argv.log"; : > "$A5"
+x5_out=$( cd "$RR" && FH_SIM_RUNNER_BIN="$STUBROOT/fake_sim_failid.sh" FH_FAKESIM_ARGV="$A5" FH_FAKESIM_FAIL_ID=G-ZZ-02 \
+    bash "$RR/scripts/probe_live_eval.sh" --ids G-ZZ-02,G-GREET-01 --model sonnet --no-evidence --out "$T/xt5_run" --report-out "$T/xt5_report.md" 2>&1 )
+case "$x5_out" in *"Aborting the whole run"*) x5=aborted ;; *) x5=continued ;; esac
+if grep -q '^G-GREET-01 primary' "$A5"; then x5="$x5+greet-ran"; else x5="$x5+greet-skipped"; fi
+_lane XT5 extra-tools "a capability probe's preflight failure (rc 2) does not abort the run; the regression probe after it still runs" "continued+greet-ran" "$x5"
+# XT2 the runner hands --extra-tools to the primary AND the control arm of that probe, and to no arm of a probe
+#     without it (stub runner records each call's argv)
+cat > "$STUBROOT/fake_sim_argv.sh" <<'FAKEARGV'
+#!/usr/bin/env bash
+arm=""; out=""; xt="-"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --arm) arm="$2"; shift 2 ;;
+    --out) out="$2"; shift 2 ;;
+    --extra-tools) xt="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+mkdir -p "$out"; echo "stub" > "$out/${arm}_r1.txt"
+echo "$(basename "$out") $arm $xt" >> "$FH_FAKESIM_ARGV"
+exit 0
+FAKEARGV
+chmod +x "$STUBROOT/fake_sim_argv.sh"
+ARGV_LOG="$T/xt_argv.log"; : > "$ARGV_LOG"
+( cd "$REPO_ROOT" && FH_SIM_RUNNER_BIN="$STUBROOT/fake_sim_argv.sh" FH_FAKESIM_ARGV="$ARGV_LOG" \
+    bash "$RUNNER" --ids G-ROUTE-01,G-GREET-01 --model sonnet --no-evidence --out "$T/xt_run" --report-out "$T/xt_report.md" ) >/dev/null 2>&1
+xt_got=$(sort "$ARGV_LOG" | tr '\n' ';')
+_lane XT2 extra-tools "G-ROUTE-01 primary and control both get Skill,Agent; G-GREET-01 gets none" \
+  "G-GREET-01 control -;G-GREET-01 primary -;G-ROUTE-01 control Skill,Agent;G-ROUTE-01 primary Skill,Agent;" "$xt_got"
+
 if [ "$FAIL" -ne 0 ]; then
   echo "RESULT: REGRESSION"
   exit 1
