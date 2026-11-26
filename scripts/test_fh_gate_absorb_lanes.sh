@@ -30,6 +30,7 @@
 #       (A23c: the branch exists without a merge-base → its tip, said; never HEAD)
 #   A24 the execution layer's JSON is checked as strictly as the review object (status enum, finding shape, grade A/B/C)
 #       — malformed → exit 10; a well-formed A still blocks and a C still passes
+#   A26 an execution-layer finding with escalate:true → at least ESCALATE (BLOCKED stays); a non-boolean escalate → 10
 #   A25 protected paths (.fh-gate-protected, read from the base): a changed protected file → ESCALATE, never BLOCKED by
 #       itself; an edit to the list is held to the base list; only-added files pass; FH_DIFF_PATH → B (A25b: no list)
 #   A21 FH_REVIEWER=fh: rule files (CLAUDE.md · AGENTS.md on the changed files' path) come from the base, never
@@ -405,6 +406,22 @@ done
 if [ "$l6" = " ok_A=2 ok_C=0 bad_BLOCKING=10 bad_lower=10 bad_status=10 bad_title=10 bad_two=10 bad_nonobj=10 bad_nodetail=10" ]; then
   ok "A24 malformed execution-layer output (grade BLOCKING / a, unknown status, non-string title, two values, non-object finding, no detail) → exit 10; well-formed A → BLOCKED, C → PASS"
 else bad "A24 exec JSON validation" "$l6"; fi
+
+# A26 (Lean RFC item 2) — an execution-layer finding with escalate:true (the base overlay) raises the verdict to at least
+# ESCALATE with a reason line; an A beside it stays BLOCKED; escalate that is not a boolean is malformed → exit 10
+_fe() { printf '{"grade":"%s","source":"E1","location":"base version of scripts/test_x.sh","title":"t","evidence":"e","fix":"f","escalate":%s}' "$1" "$2"; }
+GATE="$GC/scripts/fh-gate.sh" gate a26_esc FH_GATE_EXEC=on FAKE_EXEC_JSON="$(_ej ran "$(_fe B true)")" FH_TARGET_FILES=scripts/foo.sh; r1=$RC
+GATE="$GC/scripts/fh-gate.sh" gate a26_blk FH_GATE_EXEC=on FAKE_EXEC_JSON="$(_ej ran "$(_fe B true),$(_f '"A"' '"t"')")" FH_TARGET_FILES=scripts/foo.sh; r2=$RC
+GATE="$GC/scripts/fh-gate.sh" gate a26_bad FH_GATE_EXEC=on FAKE_EXEC_JSON="$(_ej ran "$(_fe B '"yes"')")" FH_TARGET_FILES=scripts/foo.sh; r3=$RC
+GATE="$GC/scripts/fh-gate.sh" gate a26_no  FH_GATE_EXEC=on FAKE_EXEC_JSON="$(_ej ran "$(_fe B false)")" FH_TARGET_FILES=scripts/foo.sh; r4=$RC
+if [ "$r1 $r2 $r3 $r4" = "3 2 10 1" ] && has a26_esc 'FH_GATE_ESCALATE_REASON: base-lane-overlay' && ! has a26_no 'base-lane-overlay'; then
+  ok "A26 escalate:true → ESCALATE (3) with its reason; with an A beside it BLOCKED (2); a non-boolean escalate → 10; escalate:false is a plain B (1)"
+else bad "A26 escalate channel" "esc=$r1 blk=$r2 bad=$r3 no=$r4"; fi
+# A26b under FH_BACKEND=cross the leg's escalate reason stays a top-level line (codex R1): consumers match its line start
+GATE="$GC/scripts/fh-gate.sh" gate a26_cross FH_BACKEND=cross FH_GATE_EXEC=on FAKE_EXEC_JSON="$(_ej ran "$(_fe B true)")" FH_TARGET_FILES=scripts/foo.sh
+if [ "$RC" -eq 3 ] && grep -q '^FH_GATE_ESCALATE_REASON: base-lane-overlay' "$TMPROOT/a26_cross.out"; then
+  ok "A26b cross mode keeps the base-lane-overlay reason as a top-level line"
+else bad "A26b cross reason" "rc=$RC $(grep -c 'ESCALATE_REASON' "$TMPROOT/a26_cross.out") $(grep -E '^FH_GATE_(VERDICT|LEGS|DEGRADED)' "$TMPROOT/a26_cross.out" | tr '\n' '|')"; fi
 
 # A25 (Lean RFC item 1) — protected paths: `.fh-gate-protected` read from the BASE; a protected file the change modifies,
 # deletes or changes in type → at least ESCALATE (exit 3), never BLOCKED by itself; a BLOCKED from elsewhere stays.

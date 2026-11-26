@@ -341,6 +341,9 @@ if [[ "$FH_BACKEND" == "cross" ]]; then
     [[ -z "$_EXEC_DEFAULTED" ]] && _CROSS_EXEC=off   # the layer is the same for every leg: it runs in the first leg that REACHES A VERDICT. A leg that fails
                       # before its verdict does not count, so the next leg runs the layer again (into its own temp copy).
     [ "$(_sev_rank "$_legverdict")" -gt "$(_sev_rank "$_CROSS_WORST")" ] && _CROSS_WORST="$_legverdict"
+    # a leg's escalate reasons (protected-path, base-lane-overlay) stay machine-readable at top level, not only as
+    # «# »-prefixed leg notes (codex R1, 2026-11-25)
+    _CROSS_REASONS="${_CROSS_REASONS:-}$( { printf '%s\n' "$_legout" | grep '^FH_GATE_ESCALATE_REASON:' || true; } )"$'\n'
     _CROSS_OUT="${_CROSS_OUT}
 # ── leg: $_leg (verdict $_legverdict) ──
 $( { printf '%s\n' "$_legout" | grep -E '^FH_GATE_(REVIEWER|ELEPHANT|E0|E1|PROTECTED|ESCALATE_REASON|LAYERS_NOT_BUILT):' || true; } | sed 's/^/# /')
@@ -382,6 +385,7 @@ $(printf '%s' "$_legout" | sed -n '/^---$/,$p')"
   else
     printf 'FH_GATE_DECORRELATED: yes\n'
   fi
+  [ -n "${_CROSS_REASONS:-}" ] && printf '%s\n' "$_CROSS_REASONS" | sed '/^$/d' | sort -u
   printf '%s\n' "$_CROSS_OUT"
   echo "→ fh-gate: cross mode — legs [$_CROSS_LEGS], union verdict $_CROSS_WORST, final $_CROSS_FINAL" >&2 || :
   _FH_VERDICT_EXIT=1
@@ -827,7 +831,8 @@ else
       and ([.e0, .e1] | all(type == "object" and (.status | IN("ran","not-run","planned")) and (.detail | type == "string")))
       and (.findings | type == "array")
       and (.findings | all(type == "object" and (.grade | IN("A","B","C"))
-            and ([.source, .location, .title, .evidence, .fix] | all(type == "string")))))'
+            and ([.source, .location, .title, .evidence, .fix] | all(type == "string"))
+            and ((has("escalate") | not) or (.escalate | type == "boolean")))))'
   if [[ "$_exec_rc" -ne 0 ]] || ! printf '%s' "$EXEC_JSON" | jq -e -s "$_EXEC_SHAPE" >/dev/null 2>&1; then
     echo "ERROR: execution layer failed (rc ${_exec_rc}) or its output is not the expected shape — failing closed" >&2
     cat "$ERR_FILE" >&2
@@ -1736,6 +1741,9 @@ _GRADE_VERDICT="PASS"
 [ "$_EA" -gt 0 ] && _GRADE_VERDICT="BLOCKED"
 VERDICT="$REVIEW_VERDICT"
 [ "$(_rank "$_GRADE_VERDICT")" -gt "$(_rank "$VERDICT")" ] && VERDICT="$_GRADE_VERDICT"
+# an execution-layer finding marked escalate (the base version of an edited lane is red on the change): at least ESCALATE
+EXEC_ESCALATE_N=$(printf '%s' "$EXEC_JSON" | jq -r '[.findings[]|select(.escalate == true)]|length')
+if [ "$EXEC_ESCALATE_N" -gt 0 ] && [ "$(_rank "$VERDICT")" -lt "$(_rank ESCALATE)" ]; then VERDICT="ESCALATE"; fi
 # a protected path changed: at least ESCALATE (a human decides a contract change); BLOCKED stays BLOCKED
 PROTECTED_ESCALATED=0
 if [ "$PROTECTED_N" -gt 0 ] && [ "$(_rank "$VERDICT")" -lt "$(_rank ESCALATE)" ]; then VERDICT="ESCALATE"; PROTECTED_ESCALATED=1; fi
@@ -1763,6 +1771,7 @@ esac
   printf 'FH_GATE_E0: %s\n' "$E0_LINE"
   printf 'FH_GATE_E1: %s\n' "$E1_LINE"
   printf 'FH_GATE_PROTECTED: %s\n' "$PROTECTED_LINE"
+  [ "$EXEC_ESCALATE_N" -gt 0 ] && printf 'FH_GATE_ESCALATE_REASON: base-lane-overlay (%s lane file(s) this change edits or deletes are red on it in their base version — a human decides)\n' "$EXEC_ESCALATE_N"
   [ "$PROTECTED_N" -gt 0 ] && printf 'FH_GATE_ESCALATE_REASON: protected-path (%s file(s) listed in .fh-gate-protected on the base changed — a human decides)\n' "$PROTECTED_N"
   printf 'FH_GATE_LAYERS_NOT_BUILT: %s\n' "$LAYERS_NOT_BUILT_LINE"
   printf -- '---\nfindings:\n'

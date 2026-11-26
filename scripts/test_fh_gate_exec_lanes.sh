@@ -27,6 +27,11 @@
 #   X21 six lanes the change adds, cap 6                → base lanes run first (A), the biting cap is a B
 #   X22 red lane, base copy cannot be built             → B «not compared», never A
 #   X23 six trivially edited lanes, cap 6               → the untouched guard lane still runs → A
+#   O1–O14 base overlay (Lean RFC item 2): the BASE version of each lane file the change edits or deletes runs on the
+#       change; red here and green at base → B with escalate:true (never A); red at base too → C; could not compare → B.
+#       O1 loosened lane · O2 strengthened · O3 untouched · O4 renamed subject · O5 deleted lane · O6 red at base · O7 plan
+#       · O8 self-restoring lane · O9 tab in name · O10 lane → symlink · O11 base-copy tamper · O12 base = HEAD
+#       · O13 patch tamper · O14 base lane was a symlink
 #
 # Run: bash scripts/test_fh_gate_exec_lanes.sh
 set -uo pipefail
@@ -259,7 +264,8 @@ R="$TMPROOT/x22"; mkrepo "$R" 'echo ok'; B=$(g -C "$R" rev-parse HEAD)
 printf '#!/usr/bin/env bash\necho broken\n' > "$R/scripts/foo.sh"
 printf '#!/usr/bin/env bash\n: > ../base\nexit 1\n' > "$R/scripts/test_foo_lanes.sh"; g -C "$R" commit -qam change
 run_exec x22 "$R" "$B"
-if [ "$(q x22 '[.findings[]|select(.source=="E1")]|map(.grade)|join(",")')" = B ] && qm x22 '.findings[0].title' 'base copy could not be built'; then
+# (the change also edits the lane, so the base overlay adds its own finding — X22 reads only the E1 lane run)
+if [ "$(q x22 '[.findings[]|select(.source=="E1" and (.location|startswith("base version of")|not))]|map(.grade)|join(",")')" = B ] && qm x22 '.findings[0].title' 'base copy could not be built'; then
   ok "X22 base copy cannot be built → B «not compared», not A"
 else bad "X22 base copy failure" "$(head -c 600 "$TMPROOT/x22.json")"; fi
 # ── X23 (G3, codex R1): touching six existing lanes cannot push the untouched guard lane past the cap ───────────────
@@ -279,6 +285,113 @@ FH_GATE_MAX_LANES=6 run_exec x23b "$R" "$B"
 if [ "$(q x23b '[.findings[]|select(.grade=="A" and .location=="bash scripts/test_foo_lanes.sh")]|length')" = 1 ]; then
   ok "X23b on a change with 8000 more paths the edited lanes are still ordered after the guard → A"
 else bad "X23b large change ordering" "$(head -c 500 "$TMPROOT/x23b.json")"; fi
+
+# ── O1–O14: base overlay (Lean RFC item 2) — red here + green at base is B with escalate:true («B!»), never A; the base version of a lane file the change edits or deletes, run on the change's tree ───
+ovl_q() { q "$1" '[.findings[]|select(.location|startswith("base version of"))]|map(.grade + (if .escalate == true then "!" else "" end))|join(",")'; }
+# O1 (a) the change breaks foo AND loosens its lane so it passes → E1 green, base overlay A
+R="$TMPROOT/o1"; mkrepo "$R" 'echo ok'; B=$(g -C "$R" rev-parse HEAD)
+printf '#!/usr/bin/env bash\necho broken\n' > "$R/scripts/foo.sh"
+printf '#!/usr/bin/env bash\nbash scripts/foo.sh >/dev/null\necho "PASS foo"\n' > "$R/scripts/test_foo_lanes.sh"; g -C "$R" commit -qam "loosen"
+run_exec o1 "$R" "$B"
+if [ "$(ovl_q o1)" = "B!" ] && [ "$(q o1 '[.findings[]|select(.location=="bash scripts/test_foo_lanes.sh")]|length')" = 0 ] \
+   && qm o1 '.findings[0].title' 'base version is red on this tree' && qm o1 '.e1.detail' 'base overlay: 1 .* 1 red here'; then
+  ok "O1 lane loosened + code broken → the change's own lane is green, its base version is B with escalate (never A)"
+else bad "O1 loosened lane → A" "$(head -c 600 "$TMPROOT/o1.json")"; fi
+# O2 (b) the change strengthens the lane; code correct → no finding
+R="$TMPROOT/o2"; mkrepo "$R" 'echo ok'; B=$(g -C "$R" rev-parse HEAD)
+printf '#!/usr/bin/env bash\nout=$(bash scripts/foo.sh)\n[ -n "$out" ] || exit 1\n[ "$out" = ok ] || { echo "FAIL foo printed: $out"; exit 1; }\necho "PASS foo"\n' > "$R/scripts/test_foo_lanes.sh"; g -C "$R" commit -qam "strengthen"
+run_exec o2 "$R" "$B"
+if [ "$(q o2 '.findings|length')" = 0 ] && qm o2 '.e1.detail' 'base overlay: 1 .* 0 red here, 0 red at base too, 0 could not run'; then
+  ok "O2 lane strengthened, code correct → base version green, no finding"
+else bad "O2 strengthened lane → none" "$(head -c 600 "$TMPROOT/o2.json")"; fi
+# O3 (c) no lane file touched → no overlay at all (detail as before)
+R="$TMPROOT/o3"; mkrepo "$R" 'echo ok'; B=$(g -C "$R" rev-parse HEAD)
+printf '#!/usr/bin/env bash\n# still fine\necho ok\n' > "$R/scripts/foo.sh"; g -C "$R" commit -qam change
+run_exec o3 "$R" "$B"
+if [ "$(q o3 '.findings|length')" = 0 ] && ! qm o3 '.e1.detail' 'overlay' && qm o3 '.e1.detail' '^ran 1 lane\(s\), discovered — 0 red, 0 red before, 0 did not finish'; then
+  ok "O3 no lane file touched → no overlay, detail unchanged"
+else bad "O3 untouched lanes → as today" "$(q o3 '.e1.detail')"; fi
+# O4 the change renames the subject and updates its lane; the base lane cannot find its subject → B «could not run»
+R="$TMPROOT/o4"; mkrepo "$R" 'echo ok'
+printf '#!/usr/bin/env bash\n[ -f scripts/foo.sh ] || { echo "HARNESS-ERROR: scripts/foo.sh missing"; exit 2; }\n[ "$(bash scripts/foo.sh)" = ok ] || exit 1\n' > "$R/scripts/test_foo_lanes.sh"; g -C "$R" commit -qam "guarded lane"; B=$(g -C "$R" rev-parse HEAD)
+g -C "$R" mv scripts/foo.sh scripts/bar.sh
+printf '#!/usr/bin/env bash\n[ -f scripts/bar.sh ] || { echo "HARNESS-ERROR: scripts/bar.sh missing"; exit 2; }\n[ "$(bash scripts/bar.sh)" = ok ] || exit 1\n' > "$R/scripts/test_foo_lanes.sh"; g -C "$R" add -A; g -C "$R" commit -qm rename
+run_exec o4 "$R" "$B"
+if [ "$(ovl_q o4)" = B ] && qm o4 '.findings[0].title' 'could not run on this tree \(rc 2\)'; then
+  ok "O4 subject renamed → the base lane cannot run here → B «could not run» (no escalate), never silent"
+else bad "O4 rename → B" "$(head -c 600 "$TMPROOT/o4.json")"; fi
+# O5 the change deletes the lane and breaks foo → no lane is discovered, the base version still runs → A
+R="$TMPROOT/o5"; mkrepo "$R" 'echo ok'; B=$(g -C "$R" rev-parse HEAD)
+printf '#!/usr/bin/env bash\necho broken\n' > "$R/scripts/foo.sh"; g -C "$R" rm -q scripts/test_foo_lanes.sh; g -C "$R" commit -qam "drop lane"
+run_exec o5 "$R" "$B"
+if [ "$(ovl_q o5)" = "B!" ] && [ "$(q o5 '.e1.status')" = ran ] && qm o5 '.findings[0].title' 'deleted by this change'; then
+  ok "O5 lane deleted + code broken → the base version runs anyway → B escalate"
+else bad "O5 deleted lane → A" "$(head -c 600 "$TMPROOT/o5.json")"; fi
+# O6 the base lane was red at base too → C, not A
+R="$TMPROOT/o6"; mkrepo "$R" 'echo broken'; B=$(g -C "$R" rev-parse HEAD)
+printf '# edited\n' >> "$R/scripts/test_foo_lanes.sh"; g -C "$R" commit -qam "touch lane"
+run_exec o6 "$R" "$B"
+if [ "$(ovl_q o6)" = C ]; then ok "O6 base version red at base too → C"
+else bad "O6 red before → C" "$(head -c 600 "$TMPROOT/o6.json")"; fi
+# O7 --plan names the overlay, runs nothing
+run_exec o7 "$TMPROOT/o1" "$(g -C "$TMPROOT/o1" rev-parse HEAD~1)" --plan
+if [ "$(q o7 '.e1.status')" = planned ] && qm o7 '.e1.detail' 'would also run the base version of 1 lane file' && [ "$(q o7 '.findings|length')" = 0 ]; then
+  ok "O7 --plan lists the base overlay, runs nothing"
+else bad "O7 plan" "$(q o7 '.e1.detail')"; fi
+# O8 the edited lane restores its own base copy when E1 runs it, then exits 0 — the overlay list was made before
+#     any lane ran, so the base version still runs → A (codex R1)
+R="$TMPROOT/o8"; mkrepo "$R" 'echo ok'; B=$(g -C "$R" rev-parse HEAD)
+printf '#!/usr/bin/env bash\necho broken\n' > "$R/scripts/foo.sh"
+printf '#!/usr/bin/env bash\ngit checkout -q HEAD~1 -- scripts/test_foo_lanes.sh 2>/dev/null\nexit 0\n' > "$R/scripts/test_foo_lanes.sh"; g -C "$R" commit -qam "self-restoring lane"
+run_exec o8 "$R" "$B"
+if [ "$(ovl_q o8)" = "B!" ]; then ok "O8 a lane that restores its base copy while E1 runs it is still overlaid → B escalate"
+else bad "O8 self-restoring lane" "$(head -c 600 "$TMPROOT/o8.json")"; fi
+# O9 an edited lane whose name holds a tab (git quotes it) → B, never skipped (codex R1)
+R="$TMPROOT/o9"; mkrepo "$R" 'echo ok'
+printf '#!/usr/bin/env bash\nexit 0\n' > "$R/scripts/test_a	b_lanes.sh"; g -C "$R" add -A; g -C "$R" commit -qm tabbed; B=$(g -C "$R" rev-parse HEAD)
+printf '# edit\n' >> "$R/scripts/test_a	b_lanes.sh"; g -C "$R" commit -qam edit
+run_exec o9 "$R" "$B"
+if [ "$(q o9 '[.findings[]|select(.location=="(base overlay)" and .grade=="B")]|length')" = 1 ]; then ok "O9 a tab in an edited lane's name → B, not skipped"
+else bad "O9 tabbed lane name" "$(head -c 600 "$TMPROOT/o9.json")"; fi
+# O10 the change turns the lane into a symlink to foo.sh → writing the base lane there would overwrite foo.sh → B (codex R1)
+R="$TMPROOT/o10"; mkrepo "$R" 'echo ok'; B=$(g -C "$R" rev-parse HEAD)
+g -C "$R" rm -q scripts/test_foo_lanes.sh; ln -s foo.sh "$R/scripts/test_foo_lanes.sh"; g -C "$R" add -A; g -C "$R" commit -qm "lane → symlink"
+run_exec o10 "$R" "$B"
+if [ "$(ovl_q o10)" = B ] && qm o10 '[.findings[]|select(.location|startswith("base version of"))][0].title' 'symlink'; then
+  ok "O10 a lane turned into a symlink → B (the base lane is not written through it)"
+else bad "O10 symlinked lane" "$(head -c 600 "$TMPROOT/o10.json")"; fi
+# O11 a declared E1 command rewrites the lane inside the shared base copy → the overlay uses its own fresh base copy,
+#     so a real regression stays A, not C (codex R1)
+R="$TMPROOT/o11"; mkrepo "$R" 'echo ok'; B=$(g -C "$R" rev-parse HEAD)
+printf '#!/usr/bin/env bash\necho broken\n' > "$R/scripts/foo.sh"
+printf '#!/usr/bin/env bash\necho PASS\n' > "$R/scripts/test_foo_lanes.sh"; g -C "$R" commit -qam "loosen"
+FH_GATE_LANES="printf 'exit 1\n' > scripts/test_foo_lanes.sh; exit 1" run_exec o11 "$R" "$B"
+if [ "$(ovl_q o11)" = "B!" ]; then ok "O11 an E1 command that rewrites the base copy's lane does not turn the overlay's B escalate into C"
+else bad "O11 base copy tamper" "$(head -c 600 "$TMPROOT/o11.json")"; fi
+# O12 base = HEAD, the change is uncommitted; red at base too → C. The base copy must be the base commit alone, not
+#     HEAD + the uncommitted patch (that would run the loosened lane and say A) (codex R2)
+R="$TMPROOT/o12"; mkrepo "$R" 'echo broken'; B=$(g -C "$R" rev-parse HEAD)
+printf '#!/usr/bin/env bash\necho PASS\n' > "$R/scripts/test_foo_lanes.sh"
+run_exec o12 "$R" "$B"
+if [ "$(ovl_q o12)" = C ]; then ok "O12 uncommitted lane edit with base = HEAD → the base copy has no patch → C"
+else bad "O12 base copy carries the patch" "$(head -c 600 "$TMPROOT/o12.json")"; fi
+# O13 an edited lane that, while E1 runs it, empties the files next to its copy (the old list file, the patch) →
+#     the overlay still runs (the list is in memory) and a tampered patch is B, never silent (codex R2)
+R="$TMPROOT/o13"; mkrepo "$R" 'echo ok'; B=$(g -C "$R" rev-parse HEAD)
+printf '#!/usr/bin/env bash\necho broken\n' > "$R/scripts/foo.sh"
+printf '#!/usr/bin/env bash\n: > ../overlay_lanes 2>/dev/null; : > ../overlay.patch 2>/dev/null; exit 0\n' > "$R/scripts/test_foo_lanes.sh"
+run_exec o13 "$R" "$B"
+if [ "$(ovl_q o13)" = B ] && qm o13 '.e1.detail' 'base overlay: 1 '; then ok "O13 a lane that tampers with files next to its copy → the overlay still runs; tampered patch → B"
+else bad "O13 tamper" "$(head -c 700 "$TMPROOT/o13.json")"; fi
+# O14 the base lane was a symlink to a real lane script; the change replaces it with a loosened file and breaks foo →
+#     the link is put back and the real lane runs → A, not a spurious B (codex R2)
+R="$TMPROOT/o14"; mkrepo "$R" 'echo ok'
+g -C "$R" mv scripts/test_foo_lanes.sh scripts/real_check.sh; ln -s real_check.sh "$R/scripts/test_foo_lanes.sh"; g -C "$R" add -A; g -C "$R" commit -qm "lane is a link"; B=$(g -C "$R" rev-parse HEAD)
+rm "$R/scripts/test_foo_lanes.sh"; printf '#!/usr/bin/env bash\necho PASS\n' > "$R/scripts/test_foo_lanes.sh"
+printf '#!/usr/bin/env bash\necho broken\n' > "$R/scripts/foo.sh"; g -C "$R" add -A; g -C "$R" commit -qm "loosen"
+run_exec o14 "$R" "$B"
+if [ "$(ovl_q o14)" = "B!" ]; then ok "O14 a base lane that was a symlink is restored as a link → B escalate"
+else bad "O14 base symlink lane" "$(head -c 700 "$TMPROOT/o14.json")"; fi
 
 echo "exec lanes: $pass passed, $fail failed$([ "${skip:-0}" -gt 0 ] && printf ', %s skipped (not a pass)' "$skip")"
 [ "$fail" -eq 0 ]
