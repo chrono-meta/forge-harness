@@ -1,0 +1,18 @@
+# G-ROUTE-01 seal — written BEFORE the first live run (2026-11-25). Re-derive with the snippet in the PR body.
+# Any change to the prompt, control, pattern or behave spec after this is a NEW probe version, not a re-run.
+entry_sha256 d86d3fb7a15a4e3cd5a33d0d3729eaf3f228384a4b5d3a371430417d40926ddb
+probes_md_row_sha256 857876e46d45552dced7a0bcab4a33f920262f8ae20a49655a6d14bd8abc76ba
+input_sha256 407569172525417457eb40ece9cb7e3d6379f9a7aa4858bd96ec80fa7196288b
+control_sha256 644fa96f3320181a7cc89ee9e8847ea5b6ccc466205b43d28046fb2085946375
+behave_sha256 ab965fcdad5dc17131593f2b773c69726a1dff4e782aa3a70137244c49783c5a
+expect_re_sha256 c57640a677daa30d093601e59a93bcdb825af4f1d4d2608bafd6a84f779a0a0c
+sealed_utc 2026-11-25T13:13Z
+
+# v2 — behave widened to Skill|Agent|Task (the subagent tool is «Task» in claude -p arms). Prompt, control and
+# expect_re unchanged (their hashes below equal v1). v1's only reading (0/3) was re-scored under v2: 0/3.
+v2_entry_sha256 9813f02bbbdfb0c4f462f626f80caf72580885210c7f0255298573199783a3b3
+v2_input_sha256 407569172525417457eb40ece9cb7e3d6379f9a7aa4858bd96ec80fa7196288b
+v2_control_sha256 644fa96f3320181a7cc89ee9e8847ea5b6ccc466205b43d28046fb2085946375
+v2_behave_sha256 07a49cd380112d9714eebefd0f3ae6bd09c74a9e76a65c1ebf047295632e66e4
+v2_expect_re_sha256 c57640a677daa30d093601e59a93bcdb825af4f1d4d2608bafd6a84f779a0a0c
+v2_sealed_utc 2026-11-25T13:19Z
