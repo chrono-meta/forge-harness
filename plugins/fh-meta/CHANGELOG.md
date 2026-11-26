@@ -3,6 +3,13 @@
 ### [Unreleased]
 
 ### Added
+- `fh-gate` (shipped): a `provenance:` line in the governance record (Lean RFC item 4, with the L2/L3 corrections, 2026-11-25). Record only: no verdict reads it, so no `BREAKING (gate)` line.
+  - It is one JSON value, labelled «recorded by fh-gate, not attested». A sha names the bytes that were used, not that they were the right ones.
+  - What it holds: the base ref, its resolved sha and any fallback note; the sha256 of the diff the review was given (or of `FH_DIFF_PATH`); the effective values of `FH_TARGET_FILES`, `FH_GATE_LANES`, `FH_LANE_TIMEOUT`, `FH_GATE_MAX_LANES`, `FH_GATE_CROSS_ALLOW_SINGLE`, `FH_GATE_EXEC`, `FH_REVIEWER` and `FH_BACKEND`.
+  - From the execution layer (`FH_GATE_EXEC=on`): every lane it ran, base overlay included, with the sha256 of the lane file (or of the declared command) and its exit code, plus the effective cap and timeout and the scanner's name and sha256.
+  - Every check that did not run (E0, E1, elephant, protected paths, test list) keeps its status line and gets a reason class: intended-omission, instrument-missing (for example execution requested but jq missing), not-applicable, incomplete, or unclassified when the wording matches none. No single «not run» count is kept.
+  - The execution-layer validator accepts `provenance` as an object only.
+  - Lane A28 in `scripts/test_fh_gate_absorb_lanes.sh` (fails on the previous gate).
 - Live eval: a routing probe and two pieces it needs (2026-11-25). Not in the npm package except `live_eval_trace.py`'s new grammar.
   - `behave: call=<Tool>[|<Tool>…]:<re>` in `scripts/live_eval_trace.py`: a successful top-level call to Skill (matched on `skill`), Agent or Task (`subagent_type`) or Bash (`command`). An errored call, a subagent's call or a Read of the engine's file does not count.
   - `extra_tools:` (Skill and Agent only) and `rate: excluded` per probe in `probes_live.yaml`. Extra tools go to every arm of that probe, so the pair is offered the same tools. A `rate: excluded` probe is scored and reported in its own «capability» section and counted on the Overall line, but never enters pass_rate or the 0.8 threshold.
