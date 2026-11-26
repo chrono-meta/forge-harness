@@ -3,6 +3,10 @@
 ### [Unreleased]
 
 ### Added
+- `fh-gate` execution layer (shipped): a lane that is red at the base and red after the change is named «attribution undecided» (L7, 2026-11-26). The grade stays C and the verdict does not change, so no `BREAKING (gate)` line.
+  - Why: red at the base does not show the change is harmless — it can break the same lane a second way. The old fix text, «pre-existing — not introduced by this change», said more than the run measured.
+  - Where it shows: the finding gets `attribution: "undecided"` and the words in its title and fix; the E1 detail adds `attribution undecided: N red at base and after this change`; the record's execution-layer provenance gains `attribution_undecided` (each lane, with `run: change` or `run: base-overlay`). Both the E1 lane run and the base-overlay run are covered.
+  - Lane L7 in `scripts/test_fh_gate_exec_lanes.sh` (fails on the previous layer; an A finding carries none of it).
 - `fh-gate` (shipped): `FH_GATE_SELF_CHANGE` on stdout and `checker_in_change` in the record provenance (L1, advisory, 2026-11-25). When fh-gate runs from the checkout it reviews and the change touches `fh-gate.sh`, `fh_gate_exec.sh` or the E0 scanner, the line says the verdict comes from the changed checker and suggests re-checking with a copy from outside the change.
   - It is not a trust boundary: a change to the checker can remove the line too. With `FH_DIFF_PATH` it says NOT MEASURED. A checker reached through a symlink is resolved to the file that changed; the execution layer and its scanner (`FH_GATE_E0_SCANNER` honoured) count only when the execution layer runs.
   - `docs/REFERENCE.md` and the Action's `version` input now say what the Action runs: `npx --package @chrono-meta/fh-gate@<version>`, not the pull request's `scripts/fh-gate.sh`. `npx` can still use a matching copy in the checkout's `node_modules`, and `latest` is not a pinned identity; pin a version to know which gate ran.

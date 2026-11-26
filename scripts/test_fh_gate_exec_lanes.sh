@@ -32,6 +32,8 @@
 #       O1 loosened lane · O2 strengthened · O3 untouched · O4 renamed subject · O5 deleted lane · O6 red at base · O7 plan
 #       · O8 self-restoring lane · O9 tab in name · O10 lane → symlink · O11 base-copy tamper · O12 base = HEAD
 #       · O13 patch tamper · O14 base lane was a symlink
+#   L7  red at base and red after the change (X2 · O6) → still C, and named «attribution undecided» in the finding,
+#       the E1 detail and the provenance record; an A (X1) carries no such name
 #
 # Run: bash scripts/test_fh_gate_exec_lanes.sh
 set -uo pipefail
@@ -392,6 +394,30 @@ printf '#!/usr/bin/env bash\necho broken\n' > "$R/scripts/foo.sh"; g -C "$R" add
 run_exec o14 "$R" "$B"
 if [ "$(ovl_q o14)" = "B!" ]; then ok "O14 a base lane that was a symlink is restored as a link → B escalate"
 else bad "O14 base symlink lane" "$(head -c 700 "$TMPROOT/o14.json")"; fi
+
+# ── L7 ─────────────────────────────────────────────────────────────────────────────────────────
+# Red at base and red after the change does not show the change is harmless — it may break the lane a second way.
+# The grade stays C; the case is named, so a reader of the finding, the detail or the record does not read «not ours».
+l7_ok=1; l7_why=""
+for n in x2 o6; do
+  if [ "$n" = x2 ]; then sel='[.findings[]|select(.source=="E1" and (.location|startswith("base version of")|not))]'
+  else sel='[.findings[]|select(.location|startswith("base version of"))]'; fi
+  [ "$(q "$n" "$sel|map(.grade)|join(\",\")")" = C ] || { l7_ok=0; l7_why="$l7_why $n:grade"; }
+  [ "$(q "$n" "$sel|map(.attribution // \"-\")|join(\",\")")" = undecided ] || { l7_ok=0; l7_why="$l7_why $n:field"; }
+  qm "$n" "$sel|.[0].title" 'attribution undecided' || { l7_ok=0; l7_why="$l7_why $n:title"; }
+  qm "$n" "$sel|.[0].fix" 'attribution undecided' || { l7_ok=0; l7_why="$l7_why $n:fix"; }
+  [ "$(q "$n" '[.provenance.attribution_undecided[]?]|length')" -ge 1 ] 2>/dev/null || { l7_ok=0; l7_why="$l7_why $n:prov"; }
+done
+qm x2 '.e1.detail' 'attribution undecided: 1 ' || { l7_ok=0; l7_why="$l7_why x2:detail"; }
+qm o6 '.e1.detail' 'base overlay: [^·]* · attribution undecided: 1 ' || { l7_ok=0; l7_why="$l7_why o6:overlay-detail"; }   # the overlay's own segment
+[ "$(q x2 '[.provenance.attribution_undecided[]?|select(.run=="change")]|length')" = 1 ] || { l7_ok=0; l7_why="$l7_why x2:prov-run"; }
+[ "$(q o6 '[.provenance.attribution_undecided[]?|select(.run=="base-overlay")]|length')" = 1 ] || { l7_ok=0; l7_why="$l7_why o6:prov-run"; }
+# control: an A is not «undecided», and a run with no red/red says nothing
+[ "$(q x1 '[.findings[]|select(has("attribution"))]|length')" = 0 ] || { l7_ok=0; l7_why="$l7_why x1:has-field"; }
+[ "$(q x1 '[.provenance.attribution_undecided[]?]|length')" = 0 ] || { l7_ok=0; l7_why="$l7_why x1:prov"; }
+qm x1 '.e1.detail' 'attribution undecided' && { l7_ok=0; l7_why="$l7_why x1:detail"; }
+if [ "$l7_ok" = 1 ]; then ok "L7 red/red stays C and is named «attribution undecided» (finding · detail · provenance); an A is not"
+else bad "L7 red/red attribution undecided" "missing:$l7_why"; fi
 
 echo "exec lanes: $pass passed, $fail failed$([ "${skip:-0}" -gt 0 ] && printf ', %s skipped (not a pass)' "$skip")"
 [ "$fail" -eq 0 ]

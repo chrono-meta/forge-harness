@@ -23,7 +23,9 @@
 #      · target lanes a biting FH_GATE_MAX_LANES left unrun — a step that did not finish is never green
 #      · with escalate:true — the BASE version of a lane file the change edits or deletes is red on the change (the
 #        caller raises the verdict to at least ESCALATE; a human decides whether the lane edit is a legitimate change)
-#   C  a lane that was red at the base too (not introduced by this change)
+#   C  a lane that was red at the base too — attribution undecided (L7): red at base does not show this change is
+#      harmless, it may break the lane a second way. The grade is C; the finding carries attribution:"undecided",
+#      the E1 detail counts it and provenance.attribution_undecided lists it.
 # Exit:    0 = the object was emitted (a step that could not run says so in its status/detail, never as 0 hits)
 #          10 = the object could not be produced (jq missing)
 #
@@ -75,9 +77,15 @@ add_finding() {   # grade source location title evidence fix
   FINDINGS=$(jq -c --arg g "$1" --arg s "$2" --arg l "$3" --arg t "$4" --arg e "$5" --arg f "$6" \
     '. + [{grade:$g, source:$s, location:$l, title:$t, evidence:$e, fix:$f}]' <<<"$FINDINGS")
 }
+add_finding_undecided() {   # a C for red at base and red after the change (L7): as add_finding, plus attribution:"undecided"
+  FINDINGS=$(jq -c --arg g C --arg s "$1" --arg l "$2" --arg t "$3" --arg e "$4" --arg f "$5" \
+    '. + [{grade:$g, source:$s, location:$l, title:$t, evidence:$e, fix:$f, attribution:"undecided"}]' <<<"$FINDINGS")
+  PROV_UNDECIDED=$(jq -c --arg w "$6" --arg l "$2" '. + [{run:$w, lane:$l}]' <<<"$PROV_UNDECIDED")
+}
 # Provenance (item 4, record only — never read by a verdict): what this layer actually ran, so a governance record can
 # name it. Labelled provenance, not attestation: a lane's sha says which bytes ran, not that they were the right ones.
 PROV_LANES='[]'
+PROV_UNDECIDED='[]'
 _sha_file() { { shasum -a 256 "$1" 2>/dev/null || sha256sum "$1" 2>/dev/null; } | cut -d' ' -f1 || true; }
 _sha_text() { printf '%s' "$1" | { shasum -a 256 2>/dev/null || sha256sum 2>/dev/null; } | cut -d' ' -f1 || true; }
 _SCN_SHA=""; [ -f "${SCANNER:-}" ] && _SCN_SHA=$(_sha_file "$SCANNER")   # at start, before anything runs (codex R1)
@@ -90,7 +98,7 @@ emit() {
   [ -f "${SCANNER:-}" ] && { _scn="${SCANNER##*/}"; _scnsha="${_SCN_SHA:-}"; }
   local _lt="${LANE_TIMEOUT:-}"; [ -n "${_TMO:-}" ] || _lt=""   # no timeout binary: the runs were not time-bounded
   jq -cn --arg e0s "$E0_STATUS" --arg e0d "$E0_DETAIL" --arg e1s "$E1_STATUS" --arg e1d "$E1_DETAIL" \
-    --argjson f "$FINDINGS" --argjson lanes "$PROV_LANES" --arg base "${BASE_SHA:-}" --arg base_ref "${BASE_REF:-}" \
+    --argjson f "$FINDINGS" --argjson lanes "$PROV_LANES" --argjson und "${PROV_UNDECIDED:-[]}" --arg base "${BASE_SHA:-}" --arg base_ref "${BASE_REF:-}" \
     --arg ml "${MAX_LANES:-}" --arg lt "$_lt" --arg tmo "${_TMO:-}" --arg decl "${DECLARED:-0}" --arg scn "$_scn" --arg scnsha "$_scnsha" \
     '{e0:{status:$e0s,detail:$e0d}, e1:{status:$e1s,detail:$e1d}, findings:$f,
       provenance:{label:"recorded by the execution layer, not attested", base_ref:$base_ref,
@@ -98,7 +106,7 @@ emit() {
         lane_timeout_effective:($lt|tonumber? // null), timeout_binary:(if $tmo == "" then null else $tmo end),
         lanes_declared:($decl == "1"),
         scanner:(if $scn == "" then null else $scn end), scanner_sha256:(if $scnsha == "" then null else $scnsha end),
-        lanes:$lanes}}'
+        lanes:$lanes, attribution_undecided:$und}}'
   exit 0
 }
 not_run_both() { E0_STATUS="not-run"; E0_DETAIL="$1"; E1_STATUS="not-run"; E1_DETAIL="$1"; emit; }
@@ -329,12 +337,14 @@ else
         add_finding B E1 "$label" "lane red after this change (rc $rc); the base run did not finish within ${LANE_TIMEOUT}s, so not compared" "$tailtxt" "raise FH_LANE_TIMEOUT or run the lane at the base by hand"
       else
         pre=$((pre + 1))
-        add_finding C E1 "$label" "lane red before this change too (rc $rc here, rc $brc at base ${BASE_SHA:0:12})" "$tailtxt" "pre-existing — not introduced by this change"
+        add_finding_undecided E1 "$label" "lane red before this change too (rc $rc here, rc $brc at base ${BASE_SHA:0:12}) — attribution undecided" "$tailtxt" \
+          "attribution undecided — the lane was red at base, so this run cannot tell whether this change also breaks it" change
       fi
     fi
   done < "$LANES_FILE"
   E1_STATUS="ran"
   E1_DETAIL="ran ${n} lane(s), ${KIND}${CAPNOTE} — ${red} red, ${pre} red before, ${dnf} did not finish"
+  [ "$pre" -gt 0 ] && E1_DETAIL="${E1_DETAIL} · attribution undecided: ${pre} red at base and after this change"
   [ "$nocmp" -gt 0 ] && E1_DETAIL="${E1_DETAIL}, ${nocmp} red but not compared (the base run did not finish, or the base copy could not be built)"
   [ -z "$_TMO" ] && E1_DETAIL="${E1_DETAIL} (no timeout binary — lanes were not time-bounded)"
 fi
@@ -423,11 +433,13 @@ if [ "$OVL_N" -gt 0 ] || [ "$OVL_BAD" -gt 0 ]; then
         _cnr "it is red on this tree (rc $orc), and it could not run at the base either (rc $obrc)" "$_tail"
       else
         o_pre=$((o_pre + 1))
-        add_finding C E1 "$_ol" "lane file ${_how} by this change; its base version was red at base too (rc $orc here, rc $obrc at base ${BASE_SHA:0:12})" "$_tail" "pre-existing — not introduced by this change"
+        add_finding_undecided E1 "$_ol" "lane file ${_how} by this change; its base version was red at base too (rc $orc here, rc $obrc at base ${BASE_SHA:0:12}) — attribution undecided" "$_tail" \
+          "attribution undecided — the base version was red at base, so this run cannot tell whether this change also breaks it" base-overlay
       fi
     done <<<"$OVL_LIST"
     o_cnr=$((o_cnr + OVL_BAD))
     _ol="base overlay: $((o_n + OVL_BAD)) lane file(s) this change edits or deletes — ${o_red} red here, ${o_pre} red at base too, ${o_cnr} could not run"
+    [ "$o_pre" -gt 0 ] && _ol="${_ol} · attribution undecided: ${o_pre} red at base and after this change"
     if [ "$E1_STATUS" = not-run ]; then E1_STATUS="ran"; E1_DETAIL="$_ol"; else E1_DETAIL="${E1_DETAIL} · ${_ol}"; fi
   fi
 fi
