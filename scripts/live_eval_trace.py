@@ -18,6 +18,10 @@ Two uses:
 `behave:` grammar (one per probe, value is an ERE, no colon by probes_live.yaml convention):
   read=<re>         some SUCCESSFUL Read (file_path) or Grep (path) call matches — Python `re`, not POSIX
   first_read=<re>   the FIRST Read/Grep/Glob call of the top-level session is that successful call
+  call=<Tool>[|<Tool>…]:<re>   some SUCCESSFUL top-level call to one of those tools whose own field matches:
+                    Skill → skill · Agent / Task → subagent_type · Bash → command (2026-11-25: routing probes —
+                    did the session decide to invoke an engine, not merely name it). A tool with no field listed
+                    here is a BAD-BEHAVE, never «matched nothing».
 Credited calls: top-level only (a subagent's call, parent_tool_use_id set, is not the arm's action),
 with a matching tool_result that is not is_error (a denied or failed Read did not read anything).
 Glob and a Grep `pattern` never count as reading a file. Residual: «first» is emission order; two
@@ -152,18 +156,40 @@ def _read_hit(call, trace, pat):
     return any(pat.search(str(inp[k])) for k in READ_KEYS.get(name, ()) if k in inp)
 
 
+CALL_FIELDS = {'Skill': 'skill', 'Agent': 'subagent_type', 'Task': 'subagent_type', 'Bash': 'command'}
+
+
 def parse_behave(spec):
-    """'first_read=CATALOG' -> ('first_read', compiled). ValueError on anything else (a typo must
-    not silently become «no behaviour declared»)."""
-    m = re.match(r'^(read|first_read)=(.+)$', (spec or '').strip())
+    """'first_read=CATALOG' -> ('first_read', compiled); 'call=Skill|Agent:x' -> ('call', (('Skill','Agent'), compiled)).
+    ValueError on anything else (a typo must not silently become «no behaviour declared»)."""
+    spec = (spec or '').strip()
+    m = re.match(r'^call=([A-Za-z|]+):(.+)$', spec)
+    if m:
+        tools = tuple(m.group(1).split('|'))
+        bad = [t or '<empty>' for t in tools if t not in CALL_FIELDS]   # «Skill||Agent» or a trailing | is a typo (codex R1)
+        if not tools or bad:
+            raise ValueError('behave %r names a tool with no matchable field (%s) — known: %s'
+                             % (spec, ','.join(bad) or '<none>', ','.join(sorted(CALL_FIELDS))))
+        return 'call', (tools, re.compile(m.group(2)))
+    m = re.match(r'^(read|first_read)=(.+)$', spec)
     if not m:
-        raise ValueError('behave %r is not read=<re> or first_read=<re>' % spec)
+        raise ValueError('behave %r is not read=<re>, first_read=<re> or call=<Tool>:<re>' % spec)
     return m.group(1), re.compile(m.group(2))
 
 
 def behave_hit(trace, spec):
     """True/False whether the trace shows the declared action. Caller handles trace None."""
     kind, pat = parse_behave(spec)
+    if kind == 'call':
+        tools, rx = pat
+        for c in trace['calls']:
+            name, inp, cid = c[0], c[1], (c[2] if len(c) > 2 else None)
+            if name not in tools or cid not in trace['ok_ids'] or not isinstance(inp, dict):
+                continue   # another tool, or a call that errored / never got a result (denied, failed)
+            v = inp.get(CALL_FIELDS[name])
+            if v is not None and rx.search(str(v)):
+                return True
+        return False
     file_calls = [c for c in trace['calls'] if c[0] in FILE_TOOLS]
     if kind == 'first_read':
         return bool(file_calls) and _read_hit(file_calls[0], trace, pat)
