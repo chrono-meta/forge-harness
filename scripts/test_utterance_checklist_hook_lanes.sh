@@ -70,7 +70,13 @@ printf '%s' "$OUT" | python3 -c 'import json,sys;o=json.load(sys.stdin);h=o["hoo
 SCC="$HERE/session_close_check.sh"; SCPY="$HERE/session_checklist.py"
 if grep -q '①-g' "$SCC" && grep -q 'python3 "$_SC_PY" check --file "$_f"' "$SCC"; then ok "U7a ①-g calls session_checklist.py check"; else no U7a "wiring missing"; fi
 grep -q 'session_checklist_\*_"${_UI_SID:0:8}".md' "$SCC" && ok "U7c ①-g selects this session's sheet by id (not any sheet of today)" || no U7c "selection by today only"
-grep -q 'restates it on each mostly-Hangul message' "$HERE/../CLAUDE.md" && grep -q 'every 15 written-down requests' "$HERE/../CLAUDE.md" && ok "U7d CLAUDE.md describes what the hook really does" || no U7d "wording drift" 
+# U7d the docs describe what the hook really does. Since the 2026-11-27 diet the two sentences live in
+# claude_md_full_reference.md, and resident CLAUDE.md must still point there (not just mention the file).
+_FR="$HERE/../knowledge/shared/harness-core/claude_md_full_reference.md"
+grep -q 'restates the reply-language rule on each mostly-Hangul message' "$_FR" && grep -q 'every 15 written-down requests' "$_FR" \
+  && grep -q 'claude_md_full_reference.md §Session Wrap-up' "$HERE/../CLAUDE.md" \
+  && grep -q 'claude_md_full_reference.md`' "$HERE/../CLAUDE.md" \
+  && ok "U7d full_reference describes what the hook really does, and CLAUDE.md points there" || no U7d "wording drift (full_reference text or CLAUDE.md pointer)"
 cat > "$T/ok.md" <<'MD'
 | # | 발화 | 상태 | 증거 | 사유 | 제안 |
 |---|---|---|---|---|---|
