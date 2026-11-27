@@ -77,6 +77,8 @@ Four foundational assets for hub operations. **Mandatory pre-reference** before 
 
 ## Voice / Tone — Soft Charisma (delivery layer only)
 
+> Moved from resident CLAUDE.md §Voice / Tone (2026-11-27): a UserPromptSubmit hook restates the reply-language rule on each mostly-Hangul message.
+
 🐿️ The Control Tower speaks with soft charisma: warm in vocabulary and texture, plain in judgment.
 Two orthogonal layers — never collapse them.
 
@@ -372,6 +374,8 @@ Simplification guard: trivial denials with one obvious fix → state block + sin
 
 > **Full 4-step detail**: `knowledge/shared/harness-core/fh_detail_protocols.md`
 > **Read this file before Step 1 begins** — duplicate-install detection (Step 1-b) and registry scan (Step 1-c) are only defined there, not in this summary.
+
+> Moved from resident CLAUDE.md §Active Onboarding Protocol (2026-11-27): The door set, markers and the English welcome lines are anchors for downstream forks: keep their meaning and order, translate the labels.
 
 **Triggers**: greetings (`hi`/`hello`/`hey`/`안녕` — and the same word in any language; FH is English-based but language-agnostic, a bare greeting in any tongue fires this) · start intent (`resume`, `continue`, `where were we`) · new task (`new project`, `new task`) · discovery (`what is this`, `what can you do`, `first time here`)
 
@@ -851,6 +855,9 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | **"진단해줘", "개선해줘", "diagnose this", "improve this harness", "check this project", "audit this project"** — said while working **in a mapped project** (not a single-file ask) | **Field-Harness Diagnostic** (see §Field-Harness Diagnostic above → compose existing checks into one ranked M/S/R list → HITL approval per item, nothing auto-fixed) |
 | **"새 프로젝트", "하네스 작성해줘", "이 프로젝트 가속화", "harness-ify this", "accelerate this project"** — an onboarding/acceleration door (returning-menu ①②③) | **Onboarding / Acceleration Autopilot** (see §Onboarding / Acceleration Autopilot above → Phase 0 auto-discover + branch → innovator-centered recommend → ranked install plan → HITL per item, non-overwriting; "끝까지 자율로" → full-autonomy under /goal-quench gate) |
 
+| starting an expedition (external repo at full stretch) | `claude_md_full_reference.md §Expedition` — declare the target identity, wall clock, readable vs `UNMEASURED` costs |
+| "sync" · "save session" | `knowledge/shared/rules/sync_push_protocols.md` |
+
 **Guard**: Do not propose a skill that is already running. One signal = one-line proposal (no pressure). Before proposing, consult the UAP (§Operational Adaptation Loop): a skill the user has rejected 3+ times is **suppressed**, not re-proposed — and, symmetrically, a class **accepted 3× consecutively** earns a one-time "stop asking?" offer (§Consent promotion; never on irreversible surfaces).
 For per-skill utterance patterns, see the relevant `SKILL.md §Trigger Phrases` section.
 
@@ -1183,6 +1190,8 @@ Tiers: S=light(~5K) · M=standard(~15K, FH default) · L=full(~30K) · XL=max(~6
 > Usage modes (A/B/C) + what-you-get (Layer 1/2) + **ephemeral-session handoff rule** (leave a surfaced handoff in a durable location before an ephemeral/cloud session ends): `knowledge/shared/rules/modes_and_value.md`
 
 ## Session Wrap-up — Card Update Protocol
+
+> Moved from resident CLAUDE.md §Session Wrap-up ①-g (2026-11-27): a hook also nudges the request-checklist result sheet mid-session, every 15 written-down requests.
 
 **Real-time completion tracking (card bug prevention)**: When any S-tier/A-tier/backlog item is completed during a session, **immediately** (before context compression) append to `tracks/_meta/fh_completed_{YYYY-MM-DD}.md`.  
 Format: `- ✅ {item title} — {one-line completion method}`  
