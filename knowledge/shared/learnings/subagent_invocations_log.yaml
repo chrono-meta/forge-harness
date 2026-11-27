@@ -5778,3 +5778,10 @@
   purpose: blind check, one disposable clone per rep with the diet text — six moved rows, one kept row (known-positive), one off-topic question (known-negative)
   output: done — moved rows found 18/18, kept row 3/3, off-topic «no rule found» 3/3; headless sim arms could not run (claude login expired; runner still printed RESULT CLEAN)
   lease: subagent standing request (operator 2026-11-11 → 2027-02-11)
+- date: 2026-11-27
+  session: sim runner auth fix (side session of root)
+  agent: general-purpose
+  model: sonnet
+  purpose: context-free soul-line restatement (run after the fix was drafted, so design order not met)
+  output: done — SUCCESS RESTATABLE, NEVER-DO RESTATABLE; mixed-run question answered in the PR (rep tally only, RESULT stays CLEAN)
+  lease: subagent standing request (operator 2026-11-11 → 2027-02-11)

@@ -51,6 +51,9 @@ case "${FH_STUB_MODE:-say}" in
   say)      echo "stub answer" ;;
   silent)   : ;;                                   # rc 0, no output  → EMPTY
   die)      exit 7 ;;                              # rc!=0, no output → UNMEASURED
+  # L33 (2026-11-27) — the real CLI's expired-login reply: an error on STDOUT, rc 1. Seen live:
+  #    three reps printed only this and the run still ended «captured=3 · RESULT: CLEAN».
+  autherr)  echo "Failed to authenticate: this login reached its time limit and cannot be renewed. Run \`claude auth login\` to sign in again"; exit 1 ;;
   write)    echo "wrote"; : > "./LANE_SIDE_EFFECT.txt" ;;   # dirties its own clone
   machine)  echo "ok"; mkdir -p "$HOME/Library/LaunchAgents"
             : > "$HOME/Library/LaunchAgents/com.lane.probe.plist" ;;
@@ -772,6 +775,27 @@ OUT=$( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say \
   && printf '%s' "$OUT" | grep -q "^REPS: captured=0 empty=0 unmeasured=0 not_launched=2 of 2$"; } \
   && ok "L32e every clone failed → not_launched=2 + FAILED-TO-RUN (not a quiet CLEAN)" \
   || no "L32e never-launched reps not counted: $(printf '%s' "$OUT" | grep -E '^(REPS|RUN):' | tr '\n' ' ')"
+
+# ── L33 (2026-11-27) — an rc!=0 rep that PRINTED something is still a dead rep. The live case:
+#    an expired login answers on stdout with rc 1, so bytes>0 and the rep was counted as captured
+#    («REPS: captured=3 … RESULT: CLEAN») — a scorer then reads the error text as the arm's answer.
+#    Known-positive: every rep answers with the auth error. Known-negative: every rep answers normally.
+OUTDIR="$WORKROOT/o33a"
+OUT=$( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=autherr \
+   bash "$SUT" --arm a --reps 2 --prompt p --out "$OUTDIR" 2>&1 ); RC=$?
+{ [ "$RC" = 0 ] && printf '%s' "$OUT" | grep -q "^REPS: captured=0 empty=0 unmeasured=2 not_launched=0 of 2$" \
+  && printf '%s' "$OUT" | grep -q "^RUN: FAILED-TO-RUN" \
+  && printf '%s' "$OUT" | grep -q "^RESULT: FAILED-TO-RUN" \
+  && ! printf '%s' "$OUT" | grep -q "^RESULT: CLEAN"; } \
+  && ok "L33a rc!=0 with output (auth error on stdout) → unmeasured=2, RUN and RESULT FAILED-TO-RUN, never CLEAN" \
+  || no "L33a auth-error reps not FAILED-TO-RUN (rc=$RC): $(printf '%s' "$OUT" | grep -E '^(REPS|RUN|RESULT):' | tr '\n' ' ')"
+OUTDIR="$WORKROOT/o33b"
+OUT=$( cd "$SRC" && PATH="$STUBBIN:$PATH" HOME="$FAKEHOME" FH_STUB_MODE=say \
+   bash "$SUT" --arm a --reps 2 --prompt p --out "$OUTDIR" 2>&1 ); RC=$?
+{ [ "$RC" = 0 ] && printf '%s' "$OUT" | grep -q "^REPS: captured=2 empty=0 unmeasured=0 not_launched=0 of 2$" \
+  && printf '%s' "$OUT" | grep -q "^RESULT: CLEAN$" && ! printf '%s' "$OUT" | grep -q "FAILED-TO-RUN"; } \
+  && ok "L33b CONTROL — normal replies stay captured=2 and RESULT: CLEAN" \
+  || no "L33b CONTROL — a healthy run was not CLEAN: $(printf '%s' "$OUT" | grep -E '^(REPS|RUN|RESULT):' | tr '\n' ' ')"
 
 echo "sim_isolated_run lanes: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1

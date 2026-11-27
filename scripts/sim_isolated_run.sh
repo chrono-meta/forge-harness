@@ -936,12 +936,19 @@ for r in $(seq 1 "$REPS"); do
   # even when every turn died — under --turns a rep with no rc-0 turn row counts as unmeasured.
   _tk=captured
   if [ "$rc" -ne 0 ] && [ "$bytes" -eq 0 ]; then _tk=unmeasured
+  # 🟥 rc!=0 WITH output is a dead rep too (2026-11-27, L33). An expired login answers on STDOUT
+  #    with rc 1, so bytes>0 and the rep used to count as captured — three reps of a blind check
+  #    printed only «Failed to authenticate» and the run still ended «captured=3 · RESULT: CLEAN».
+  #    Single-shot only: under --turns the per-turn rows below decide (a later rc-0 turn is output).
+  elif [ -z "$TURNS" ] && [ "$rc" -ne 0 ]; then _tk=unmeasured_out
   elif [ "$bytes" -eq 0 ]; then _tk=empty
   elif [ -n "$TURNS" ] && ! awk -F'\t' 'NR>1 && $2=="0"{f=1} END{exit !f}' "$OUTDIR/${ARM}_r${r}.turns.tsv" 2>/dev/null; then _tk=unmeasured
   fi
-  case "$_tk" in unmeasured) N_UNMEASURED=$((N_UNMEASURED+1)) ;; empty) N_EMPTY=$((N_EMPTY+1)) ;; *) N_CAPTURED=$((N_CAPTURED+1)) ;; esac
+  case "$_tk" in unmeasured|unmeasured_out) N_UNMEASURED=$((N_UNMEASURED+1)) ;; empty) N_EMPTY=$((N_EMPTY+1)) ;; *) N_CAPTURED=$((N_CAPTURED+1)) ;; esac
   if [ "$rc" -ne 0 ] && [ "$bytes" -eq 0 ]; then
     echo "  ⚠️  r$r UNMEASURED (rc=$rc, 0 bytes) — timeout or crash, NOT a negative result"
+  elif [ "$_tk" = unmeasured_out ]; then
+    echo "  ⚠️  r$r UNMEASURED (rc=$rc, ${bytes}B) — exited non-zero; the output is an error (auth · CLI), NOT an answer"
   elif [ "$bytes" -eq 0 ]; then
     echo "  ⚠️  r$r EMPTY (rc=0) — the session said nothing; distinct from UNMEASURED"
   else
@@ -992,10 +999,15 @@ echo ""
 #    not_launched = reps that left the loop before the sim (clone / base-clone / blind-strip failure).
 N_NOTLAUNCHED=$(( REPS - N_CAPTURED - N_EMPTY - N_UNMEASURED )); [ "$N_NOTLAUNCHED" -ge 0 ] || N_NOTLAUNCHED=0
 echo "REPS: captured=$N_CAPTURED empty=$N_EMPTY unmeasured=$N_UNMEASURED not_launched=$N_NOTLAUNCHED of $REPS"
+_failed_to_run=0
 if [ "$REPS" -gt 0 ] && [ $(( N_CAPTURED + N_EMPTY )) -eq 0 ]; then
+  _failed_to_run=1
   echo "RUN: FAILED-TO-RUN — no rep produced output ($N_UNMEASURED died, $N_NOTLAUNCHED never launched, of $REPS). Not a score of 0: fix the cause (auth · timeout · CLI · clone) and rerun."
 fi
-[ "$CONTAMINATED" -eq 1 ] && echo "RESULT: CONTAMINATED — do not score" || echo "RESULT: CLEAN"
+# CLEAN means «ran and was not contaminated» — a run where nothing ran is never CLEAN (L33).
+if [ "$CONTAMINATED" -eq 1 ]; then echo "RESULT: CONTAMINATED — do not score"
+elif [ "$_failed_to_run" -eq 1 ]; then echo "RESULT: FAILED-TO-RUN — do not score"
+else echo "RESULT: CLEAN"; fi
 echo "OUT: $OUTDIR"
 # Detector, never a gate: always exit 0 so a caller cannot be trained to skip running it.
 exit 0
