@@ -22,6 +22,7 @@ When the `contention-layer` skill harvests contentions and generates new skill c
 | `convergence-loop` | General-purpose gate reinforcement that replaces single-pass structures with a convergence loop of up to N rounds | harvest-loop (recurring single-pass-distrust pattern across hub gates) |
 | `deliberation` | Innovator → Devil-Advocate → Mediator 3-layer multi-perspective synthesis. Generates conditional verdicts without binary win/loss | Migrated from fh-meta (2026-05-23 — domain-agnostic general decision structure) |
 | `ko-tech-writer` | Korean technical-writing pipeline — register detection, venue calibration, translationese scan, honesty layering, number/claim gate, perceptual QA, **spoken-script pass (Step 5-s: sound render + listening QA)** | Field-session harvest (2026-08-10 — conference tech-doc revision session, operator-driven shipping) |
+| `essay-writer` | Reflective non-fiction essays and serials — author decision sheet before any edit, claim gate (fact · contested · interpretation, every number sourced or `UNVERIFIED`), cross-episode repetition map, hedge calibration, mobile rhythm; the technical reviewer stays read-only | Field-session harvest (2026-11-28 — essay-serial review session, operator-driven shipping) |
 
 ## The `origin` Field
 
