@@ -627,6 +627,16 @@ if [ -n "$PUSH_RANGES" ] && [ -n "$_LB_FILES" ] && [ -d "$EVIDENCE_ROOT/tracks/_
   _cf_branches="$PUSHED_BRANCHES"
   [ -n "$_cf_branches" ] || _cf_branches=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
   _cf_line=""; _cf_missing=""
+  # RECORD ONLY — provenance of the leg this gate is about to accept. Measured 2026-11-23 (clean-room
+  # audit, round 10) with a known pair on one tree: a marker named <slug>_2026-10-01 (53 days old) and
+  # one named <slug>_<today> produced a BYTE-IDENTICAL «✅ FH Load-Bearing Change Gate: …» line, so the
+  # reader could not tell which evidence passed the push. `_cf_find_marker` matches any date for the
+  # slug by design (a commit on one day may be pushed the next, and blocking that is the operator's
+  # call, not this line's) — but the pre-commit side reads ONE address, <slug>_<TODAY>, and
+  # scripts/test_marker_address_lanes.sh exists precisely because «I wrote a marker» gets read as «the
+  # evidence was checked». This records which file answered, and says when it is not today's.
+  # It changes no verdict and no exit code: see M9/M10 in scripts/test_prepush_marker_lookup_lanes.sh.
+  _cf_src=""; _cf_today=$(date +%Y-%m-%d)
   while IFS= read -r _cf_br; do
     [ -z "$_cf_br" ] && continue
     _cf_slug="${_cf_br//\//_}"
@@ -643,7 +653,14 @@ if [ -n "$PUSH_RANGES" ] && [ -n "$_LB_FILES" ] && [ -d "$EVIDENCE_ROOT/tracks/_
       echo "  (branch '$_cf_br' shares its marker name with another local branch — its marker cannot be attributed)"
     fi
     _cf_one=$(grep -m1 -E '^[[:space:]]*crossfamily:[[:space:]]*[^[:space:]]' "$_cf_marker" 2>/dev/null || true)
-    if [ -n "$_cf_one" ]; then _cf_line="${_cf_line:-$_cf_one}"; else _cf_missing="$_cf_missing $_cf_br"; fi
+    if [ -n "$_cf_one" ]; then
+      _cf_line="${_cf_line:-$_cf_one}"
+      # The name is <slug>_YYYY-MM-DD.marker — _cf_find_marker accepted it against exactly that
+      # pattern, so the date is always there to read; no «date unknown» case can reach this line.
+      _cf_mb="${_cf_marker##*/}"; _cf_md="${_cf_mb%.marker}"; _cf_md="${_cf_md##*_}"
+      _cf_age=""; [ "$_cf_md" = "$_cf_today" ] || _cf_age=" — dated $_cf_md, NOT today ($_cf_today)"
+      _cf_src="${_cf_src:+$_cf_src · }$_cf_br → $_cf_mb$_cf_age"
+    else _cf_missing="$_cf_missing $_cf_br"; fi
   done <<CFB
 $_cf_branches
 CFB
@@ -672,6 +689,7 @@ CFB
       "$(date +%Y-%m-%dT%H:%M:%S)" >> "$REPO_ROOT/tracks/_meta/.psa_override_log" 2>/dev/null || true
   else
     echo "  ✅ FH Load-Bearing Change Gate: $(printf '%s' "$_cf_line" | cut -c1-88)"
+    [ -n "$_cf_src" ] && echo "     evidence read from: $_cf_src"
   fi
 fi
 
