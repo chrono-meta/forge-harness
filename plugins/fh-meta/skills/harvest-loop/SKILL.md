@@ -80,6 +80,7 @@ Session end
     + Session Retrospective 5필드가 전부 채워졌다                             — mandatory-pass
     + 정정 건수는 **세었지 회상하지 않았다**                                   — measured
     + FH Registration Candidate 가 비면 그 이유가 한 줄 적혀 있다             — mandatory-pass
+    + 같은 마감에 먼저 돈 ②-s 승화 후보 표(claude_md_full_reference §Session Wrap-up)를 그 칸에 옮겼다 — mandatory-pass
 
   ⚠️ `session_close_check.sh` 에 기계 검사를 **붙이지 않는다.** 값싸게 붙일 수 있는 형태는
      «오늘자 signal 이 있나» 인데 그건 *존재*만 재고 *회고했나*는 못 잰다 — CLAUDE.md 가 ④ 메모리

@@ -55,7 +55,15 @@ def collect(folder):
     ids = {i for r in reports.values() for i in r}
     for d, rows in reports.items():
         text = L._read_text(os.path.join(folder, "live_eval_%s.md" % d)) or ""
+        in_cap = False
         for line in text.splitlines():
+            # same boundary as parse_prev_report: a capability row (rate: excluded) is not a regression row and must not
+            # come back as OUT-OF-ENUM for a probe that was a regression row in an older report (codex R2)
+            if line.startswith("## "):
+                in_cap = line.startswith("## Capability probes")
+                continue
+            if in_cap:
+                continue
             cells = [c.strip() for c in line.strip().strip("|").split("|")]
             if line.startswith("|") and len(cells) >= 2 and cells[0] in ids and cells[0] not in rows:
                 rows[cells[0]] = OUT_OF_ENUM

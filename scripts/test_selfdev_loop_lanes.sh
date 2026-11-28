@@ -402,6 +402,40 @@ t1=$(tal p1); t4=$(tal p4); t6=$(tal p6)
 t11=$(tal p11); t20=$(tal c20)
 [[ "$t11" == *"AUTO-eligible 0 of 1 reviewed"*"request-changed=1"* ]] && ok "LT4 a HOLD at the final snapshot (request changed) is tallied" || bad "LT4 [$t11]"
 [[ "$t20" == *"AUTO-eligible 2 of 2 reviewed"*"auto-merge-cap=1"* ]] && ok "LT5 two PRs: both eligible, the capped one tagged auto-merge-cap" || bad "LT5 [$t20]"
-[ $((pass+fail)) -eq 62 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 62"; exit 2; }
+# LN1–LN2 (2026-11-25, Ship method borrow — one «what changed · how to undo» note per pushed PR): the loop snapshots the open
+# selfdev PR heads before the build and calls scripts/selfdev_push_note.sh for each PR whose head moved, with --from only
+# when the PR existed before. The helper is a stub here that records its arguments (its own lanes:
+# scripts/test_selfdev_push_note_lanes.sh). LN1: #5 moved, #6 new, #7 unchanged → two calls, none for #7.
+# LN2 control: the heads listing fails → UNMEASURED and no call (a failed listing is not «nothing moved»).
+OH=1111111111111111111111111111111111111111; NH=2222222222222222222222222222222222222222; XH=3333333333333333333333333333333333333333
+# LN3: a full 200-row listing — gh's --limit applies before the selfdev filter, so the page may hide one → UNMEASURED.
+for ln in 1 2 3; do
+  setup "pn$ln"; DN="$W/pn$ln"; rm -rf "$DN/clone"; git clone -q "$DN/origin.git" "$DN/clone" 2>/dev/null
+  printf '5 %s auto/selfdev-a\n7 %s auto/selfdev-c\n9 %s feature/other\n' "$OH" "$XH" "$NH" > "$DN/knobs/heads"
+  sed -i.bak 's#"pr list|number,headRefName") echo 5 ;;#"pr list|number,headRefName") echo 5 ;;\n  "pr list|number,headRefName,headRefOid") [ -f "$K/heads_fail" ] \&\& exit 1; cat "$K/heads" ;;#' "$DN/bin/gh"
+  grep -q 'heads_fail' "$DN/bin/gh" || { echo "HARNESS-ERROR: LN$ln fixture edit did not apply"; exit 2; }
+  # the builder «pushes»: #5 moves, #6 appears, #7 stays, #9 (not a selfdev branch) moves
+  printf '5 %s auto/selfdev-a\n6 %s auto/selfdev-b\n7 %s auto/selfdev-c\n9 %s feature/other\n' "$NH" "$NH" "$XH" "$OH" > "$DN/knobs/heads_after"
+  printf '#!/usr/bin/env bash\ncp "%s/knobs/heads_after" "%s/knobs/heads"\nexit 0\n' "$DN" "$DN" > "$DN/bin/claude-stub"; chmod +x "$DN/bin/claude-stub"
+  printf '#!/usr/bin/env bash\necho "$*" >> "%s/note_calls"; exit 0\n' "$DN" > "$DN/live/scripts/selfdev_push_note.sh"
+  [ "$ln" = 2 ] && : > "$DN/knobs/heads_fail"
+  if [ "$ln" = 3 ]; then for i in $(seq 1 200); do echo "$((1000+i)) $XH feature/f$i"; done > "$DN/knobs/heads"; cp "$DN/knobs/heads" "$DN/knobs/heads_after"; fi
+  OUT=$(cd "$DN/live" && env PATH="$DN/bin:$PATH" SELFDEV_DRY_RUN=0 SELFDEV_NO_MERGE=1 FH_SELFDEV_DIR="$DN/clone" FD_CLAUDE_BIN="$DN/bin/claude-stub" \
+        bash scripts/selfdev_loop.sh 2>&1); RC=$?
+  REP="$(cat "$DN/live/tracks/_meta/selfdev/report_$DATE.md" 2>/dev/null)"
+done
+C1="$(cat "$W/pn1/note_calls" 2>/dev/null)"
+if [ "$(printf '%s\n' "$C1" | grep -c .)" -eq 2 ] && printf '%s\n' "$C1" | grep -qF -- "--pr 5 --to $NH --from $OH" \
+   && printf '%s\n' "$C1" | grep -F -- "--pr 6 " | grep -qvF -- '--from' && ! printf '%s\n' "$C1" | grep -qE -- '--pr (7|9) ' \
+   && grep -qF '#5 push note posted (111111111111..222222222222)' "$W/pn1/live/tracks/_meta/selfdev/report_$DATE.md"; then
+  ok "LN1 moved head → note with --from · new PR → note without --from · unchanged or non-selfdev PR → no note"
+else bad "LN1 calls=[$C1]"; grep -F 'push note' "$W/pn1/live/tracks/_meta/selfdev/report_$DATE.md" | sed 's/^/       /'; fi
+if [ ! -s "$W/pn2/note_calls" ] && grep -qF 'push notes: UNMEASURED' "$W/pn2/live/tracks/_meta/selfdev/report_$DATE.md"; then
+  ok "LN2 control: heads unreadable → UNMEASURED, no note posted"
+else bad "LN2 calls=[$(cat "$W/pn2/note_calls" 2>/dev/null)]"; fi
+if [ ! -s "$W/pn3/note_calls" ] && grep -qF 'push notes: UNMEASURED' "$W/pn3/live/tracks/_meta/selfdev/report_$DATE.md"; then
+  ok "LN3 a full 200-row page → incomplete listing, UNMEASURED, no note"
+else bad "LN3 calls=[$(cat "$W/pn3/note_calls" 2>/dev/null)]"; fi
+[ $((pass+fail)) -eq 65 ] || { echo "HARNESS-ERROR: counted $((pass+fail)) lanes, expected 65"; exit 2; }
 echo "selfdev_loop lanes: $pass passed · $fail failed"
 [ "$fail" -eq 0 ]

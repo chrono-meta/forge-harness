@@ -49,5 +49,18 @@ mkdir -p "$T/bad"; cp "$T/r/live_eval_2026-11-01.md" "$T/bad/"; cp "$T/r/live_ev
 python3 "$S" --dir "$T/bad" >/dev/null; rc=$?
 ok M13-no-verdict-rc '[ $rc -eq 0 ]'
 
+# M14 a probe that became rate: excluded (its rows sit under «## Capability probes») is not read back as a regression
+# row: absent from those reports, never OUT-OF-ENUM, never in a FAIL bin (codex R2, 2026-11-25)
+mkdir -p "$T/cap"
+{ echo "| id | verdict | note |"; echo "|---|---|---|"; echo "| G-CAP | FAIL | x |"; echo "| G-REG | PASS | x |"; } > "$T/cap/live_eval_2026-11-01.md"
+for d in 02 03; do
+  { echo "| id | verdict | note |"; echo "|---|---|---|"; echo "| G-REG | PASS | x |"; echo
+    echo "## Capability probes — scored, NOT in pass_rate or the Overall verdict"; echo
+    echo "| Probe | Verdict | reps(pass/ran) | scored_by | behave | Reason |"; echo "|---|---|---|---|---|---|"
+    echo "| G-CAP | FAIL | 0/3 | BEHAVIOUR | 0/3 did | |"; } > "$T/cap/live_eval_2026-11-$d.md"
+done
+out=$(python3 "$S" --dir "$T/cap")
+ok M14-capability-rows 'grep -Eq "^G-CAP +F\.\. +pass=0 fail=1 not-scored=0 absent=2 +too-few$" <<<"$out" && ! grep -q "^never-pass: .*G-CAP" <<<"$out"'
+
 echo "live_eval_matrix lanes: pass=$pass fail=$fail"
 [ $fail -eq 0 ]

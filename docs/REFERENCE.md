@@ -19,7 +19,6 @@
   <a href="https://github.com/marketplace/actions/fh-gate-typed-ai-code-review-verdict"><img src="https://img.shields.io/badge/GitHub_Action-marketplace-2088FF.svg?logo=githubactions" alt="GitHub Actions Marketplace — fh-gate"></a>
   <a href="https://www.npmjs.com/package/@chrono-meta/fh-gate"><img src="https://img.shields.io/npm/v/@chrono-meta/fh-gate.svg?color=cb3837&logo=npm" alt="npm"></a>
   <a href="https://www.npmjs.com/package/@chrono-meta/fh-gate"><img src="https://img.shields.io/npm/dt/@chrono-meta/fh-gate.svg?color=3fb950&logo=npm&label=downloads" alt="npm total downloads"></a>
-  <a href="https://github.com/chrono-meta/homebrew-forge-harness"><img src="https://img.shields.io/badge/homebrew-tap-FBB040.svg?logo=homebrew" alt="Homebrew tap"></a>
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e.svg" alt="MIT License"></a>
 </p>
 
@@ -52,7 +51,6 @@
 
 ```bash
 npx --package @chrono-meta/fh-gate fh-gate          # nothing to install
-brew tap chrono-meta/forge-harness && brew install forge-harness   # or this
 ```
 
 **In GitHub Actions** — the same gate as a step, with the verdict kept typed:
@@ -64,6 +62,8 @@ brew tap chrono-meta/forge-harness && brew install forge-harness   # or this
   env:
     ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
+
+The step runs `npx --package @chrono-meta/fh-gate@<version>`. It does not run the pull request's `scripts/fh-gate.sh`, but `npx` can use a matching copy already installed in the checkout's `node_modules`, so it is not a guaranteed outside copy. Its `version` input defaults to `latest`, which is not a pinned identity either: the gate that ran can change between two runs of the same commit. Pin it (`version: 3.48.0`) to know which version gave a verdict. When fh-gate runs from the checkout it reviews and that change touches the gate itself, the output says so on `FH_GATE_SELF_CHANGE` (advisory only).
 
 Listed on the [GitHub Actions Marketplace](https://github.com/marketplace/actions/fh-gate-typed-ai-code-review-verdict).
 
@@ -111,7 +111,7 @@ cd ~/projects/forge-harness && claude        # then type a greeting: hi · 안�
 - You stop having to pick the check. The harness reads what you are about to do — publish, delete,
   rewrite history, open a PR — and names the gate for that moment. ① is one command you remember; ②
   is the layer that remembers for you.
-- **46 skills · 14 agents** you can call in plain language: diagnose a project, accelerate one, wire a
+- **48 skills · 14 agents** you can call in plain language: diagnose a project, accelerate one, wire a
   new one up.
 - `tracks/` keeps what each session learned, so **session 2 starts where session 1 stopped**. This is
   the part that compounds — and the part you cannot judge on day one.
@@ -395,7 +395,7 @@ sidecar posture: [`docs/MODEL_SETUP.md`](MODEL_SETUP.md).
 
 ---
 
-## 46 skills · 14 agents
+## 48 skills · 14 agents
 
 Count = non-deprecated skills across all four plugins (`fh-meta` · `fh-commons` · `fh-qp` ·
 `fh-preprep`). Clustered as verification · orchestration · diagnosis · harvesting · gates · discovery ·
@@ -449,7 +449,7 @@ restatement of some of them; nothing was deleted. "Moved" means the full text is
 |---|---|
 | Banner · badges · language row · taglines | Kept in `README.md` (top) |
 | Gate-block demo GIF | Kept in `README.md` (Who it is for) |
-| Pick one. ① Just the gate (npx · brew · GitHub Actions · verdict fields · What you get) | Short form in `README.md` (Door ①); full text moved here |
+| Pick one. ① Just the gate (npx · GitHub Actions · verdict fields · What you get) | Short form in `README.md` (Door ①); full text moved here |
 | ② The whole harness (plugin install · clone · door2 GIF · What you get · pre-commit hook warning · "Not sure?") | Install lines + GIF kept in `README.md` (Door ②); the rest moved here |
 | What neither door is | Restated in `README.md` (Can / Cannot); full text moved here |
 | Does it actually catch anything? (OpenCode run · 8-hole table) | Condensed in `README.md` (Evidence); full text moved here |
@@ -461,7 +461,7 @@ restatement of some of them; nothing was deleted. "Moved" means the full text is
 | Where a rule lives — three seats | Moved here |
 | Run it outside Claude Code — the `fh-gate` CLI | Linked from `README.md` (Door ①); full text moved here |
 | Model setup | Moved here (linked under Read next) |
-| 46 skills · 14 agents | Count kept in `README.md` (Evidence); full text moved here |
+| 48 skills · 14 agents | Count kept in `README.md` (Evidence); full text moved here |
 | Learn more (resource table) | Merged into `README.md` (Read next) plus the full table moved here |
 | FH papers (Zenodo · arXiv) | Moved here, last section above |
 

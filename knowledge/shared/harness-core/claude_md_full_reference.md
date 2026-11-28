@@ -77,6 +77,8 @@ Four foundational assets for hub operations. **Mandatory pre-reference** before 
 
 ## Voice / Tone — Soft Charisma (delivery layer only)
 
+> Moved from resident CLAUDE.md §Voice / Tone (2026-11-27): a UserPromptSubmit hook restates the reply-language rule on each mostly-Hangul message.
+
 🐿️ The Control Tower speaks with soft charisma: warm in vocabulary and texture, plain in judgment.
 Two orthogonal layers — never collapse them.
 
@@ -372,6 +374,8 @@ Simplification guard: trivial denials with one obvious fix → state block + sin
 
 > **Full 4-step detail**: `knowledge/shared/harness-core/fh_detail_protocols.md`
 > **Read this file before Step 1 begins** — duplicate-install detection (Step 1-b) and registry scan (Step 1-c) are only defined there, not in this summary.
+
+> Moved from resident CLAUDE.md §Active Onboarding Protocol (2026-11-27): The door set, markers and the English welcome lines are anchors for downstream forks: keep their meaning and order, translate the labels.
 
 **Triggers**: greetings (`hi`/`hello`/`hey`/`안녕` — and the same word in any language; FH is English-based but language-agnostic, a bare greeting in any tongue fires this) · start intent (`resume`, `continue`, `where were we`) · new task (`new project`, `new task`) · discovery (`what is this`, `what can you do`, `first time here`)
 
@@ -851,6 +855,9 @@ Proposal format: `"I see [X]. Want me to run /[skill] to [one-line description]?
 | **"진단해줘", "개선해줘", "diagnose this", "improve this harness", "check this project", "audit this project"** — said while working **in a mapped project** (not a single-file ask) | **Field-Harness Diagnostic** (see §Field-Harness Diagnostic above → compose existing checks into one ranked M/S/R list → HITL approval per item, nothing auto-fixed) |
 | **"새 프로젝트", "하네스 작성해줘", "이 프로젝트 가속화", "harness-ify this", "accelerate this project"** — an onboarding/acceleration door (returning-menu ①②③) | **Onboarding / Acceleration Autopilot** (see §Onboarding / Acceleration Autopilot above → Phase 0 auto-discover + branch → innovator-centered recommend → ranked install plan → HITL per item, non-overwriting; "끝까지 자율로" → full-autonomy under /goal-quench gate) |
 
+| starting an expedition (external repo at full stretch) | `claude_md_full_reference.md §Expedition` — declare the target identity, wall clock, readable vs `UNMEASURED` costs |
+| "sync" · "save session" | `knowledge/shared/rules/sync_push_protocols.md` |
+
 **Guard**: Do not propose a skill that is already running. One signal = one-line proposal (no pressure). Before proposing, consult the UAP (§Operational Adaptation Loop): a skill the user has rejected 3+ times is **suppressed**, not re-proposed — and, symmetrically, a class **accepted 3× consecutively** earns a one-time "stop asking?" offer (§Consent promotion; never on irreversible surfaces).
 For per-skill utterance patterns, see the relevant `SKILL.md §Trigger Phrases` section.
 
@@ -1184,6 +1191,8 @@ Tiers: S=light(~5K) · M=standard(~15K, FH default) · L=full(~30K) · XL=max(~6
 
 ## Session Wrap-up — Card Update Protocol
 
+> Moved from resident CLAUDE.md §Session Wrap-up ①-g (2026-11-27): a hook also nudges the request-checklist result sheet mid-session, every 15 written-down requests.
+
 **Real-time completion tracking (card bug prevention)**: When any S-tier/A-tier/backlog item is completed during a session, **immediately** (before context compression) append to `tracks/_meta/fh_completed_{YYYY-MM-DD}.md`.  
 Format: `- ✅ {item title} — {one-line completion method}`  
 harvest-loop Step 0-b uses this file as its source — relying on LLM memory after compression causes omissions.
@@ -1201,6 +1210,9 @@ Closing phrase detected ("wrap up", "done", "good work", "end session", etc. —
        아니라 «확인하라»다(키 낱말 프로브라 과차단 방향). ①-c~①-e 는 스크립트에만 산다.
   → ② If FH assets changed, **or `close_retro` is granted**: harvest-loop
        (후자는 Step 0-d 세션 회고 — 자산 미변경 세션에도 회고는 의미가 있다)
+  → ②-s 승화 후보 검토 — **마감마다, 조건 없이, 읽기만 하고 제안만 한다** (2026-11-25 운영자 «알아서 스킬로 승화시킬 만한 것을 검토»). Step 0-d 가 같은 마감에 돌면 ②-s 를 먼저 돌린다.
+       입력: 이번 세션의 정정 · 되풀이한 절차(`python3 scripts/correction_moments.py <원장 폴더> --since <7일 전> --all` 에서 이 세션 줄이 든 쌍(다른 날 재발)과 이 세션의 단독 정정 — `--since` 를 오늘로 좁히면 다른 날 짝이 빠진다 · 체크리스트 결과표) + `python3 scripts/memory_gc_report.py --json <memory_dir>` 에서 `status` OK 이고 `distinct_days ≥ 3` 인데 스킬 · 훅 · 규칙 grep 으로 안 덮인 항목. 채널마다 열었는지 · 어디를 찾았는지 적고, 없는 채널은 `UNMEASURED(<채널>)`, grep 0건은 «이 낱말로 못 찾았다» 로 적는다.
+       출력: 마감 보고에 표 하나(최대 5행: 후보 · 근거(정정 시각 / 메모리 키 + N) · 분류(기존 스킬 강화 / 새 스킬 / 훅 / 판단으로 남김) · 가장 작은 형태 한 줄). 후보가 없으면 «없음 — <연 채널>», 채널을 하나도 못 열었으면 «UNMEASURED — <채널>» 이지 «없음» 이 아니다. 짓지 않는다 — 짓기는 4축 게이트와 운영자 선택. Step 0-d 가 도는 마감(`close_retro` granted)이면 이 표가 `FH Registration Candidate` 칸이 되고, 아니면 마감 보고에만 남는다. 원장 · 메모리 내용은 회사 맥락일 수 있다 — 표에는 키 · 날짜 · 한 줄 요지만 적고 원문은 다른 계열 모델 · 바깥 저장소로 옮기지 않는다.
   → ③ Sync local/gitignored session state to your durable companion store, if you keep one
   → ④ Memory hygiene — update stale entries + record new session findings.
        **Deliberately unmechanized** — a judged step; `session_close_check.sh` carries NO ④ check

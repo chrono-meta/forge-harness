@@ -15,12 +15,17 @@
 #   <base_ref>  the state this change is measured against (fh-gate passes FH_GATE_BASE or its default)
 #   --plan      list what would run; run nothing
 # Output:  one JSON object on stdout:
-#   {"e0":{"status":"ran|not-run|planned","detail":"…"},"e1":{…},"findings":[{grade,location,title,evidence,fix,source}]}
+#   {"e0":{"status":"ran|not-run|planned","detail":"…"},"e1":{…},"findings":[{grade,location,title,evidence,fix,source[,escalate]}]}
 # Grades (the caller turns them into a verdict; this script judges nothing else):
 #   A  a lane this change turns red (green, or absent, at the base)
 #   B  a lane that did not finish in time · a scanner that flags a NEW site · a scanner whose own check failed
-#      · a copy that could not be built — a step that did not finish is never green
-#   C  a lane that was red at the base too (not introduced by this change)
+#      · a copy that could not be built · a lane red now whose base copy could not be built (not compared)
+#      · target lanes a biting FH_GATE_MAX_LANES left unrun — a step that did not finish is never green
+#      · with escalate:true — the BASE version of a lane file the change edits or deletes is red on the change (the
+#        caller raises the verdict to at least ESCALATE; a human decides whether the lane edit is a legitimate change)
+#   C  a lane that was red at the base too — attribution undecided (L7): red at base does not show this change is
+#      harmless, it may break the lane a second way. The grade is C; the finding carries attribution:"undecided",
+#      the E1 detail counts it and provenance.attribution_undecided lists it.
 # Exit:    0 = the object was emitted (a step that could not run says so in its status/detail, never as 0 hits)
 #          10 = the object could not be produced (jq missing)
 #
@@ -33,8 +38,10 @@
 #
 # Lane discovery (when nothing is declared): FH's own convention. A changed file named scripts/test_*.sh
 # or *_lanes.sh is a lane itself; otherwise a lane is a scripts/test_*.sh or scripts/*_lanes.sh file in
-# the copy whose text names the changed file's basename. Order (it decides which lanes a cap keeps): changed
-# lanes first, then lanes whose own name carries the changed file's stem, then the rest, each in sort order. Lanes run with FH_GATE_EXEC=off so a gate a lane runs does not start this layer again.
+# the copy whose text names the changed file's basename. Order (it decides which lanes a cap keeps): lanes the change
+# leaves untouched, then lanes it edits, then lanes it adds; within each, changed lanes first, then lanes whose own name
+# carries the changed file's stem, then the rest, each in sort order. A cap that bites is a B naming the lanes it left
+# out. Lanes run with FH_GATE_EXEC=off so a gate a lane runs does not start this layer again.
 #
 # 🟥 TRUST: E1 runs the reviewed change's own lane scripts — the same trust as running its test suite.
 #    Where the change is not trusted, set FH_GATE_EXEC=off on the fh-gate call. The copy keeps the caller's tree
@@ -62,13 +69,44 @@ command -v jq >/dev/null 2>&1 || { echo "ERROR: fh_gate_exec: jq not found" >&2;
 FINDINGS='[]'
 E0_STATUS="not-run"; E0_DETAIL=""; E1_STATUS="not-run"; E1_DETAIL=""
 
+add_finding_esc() {   # as add_finding, plus escalate:true — fh-gate raises the verdict to at least ESCALATE
+  FINDINGS=$(jq -c --arg g "$1" --arg s "$2" --arg l "$3" --arg t "$4" --arg e "$5" --arg f "$6" \
+    '. + [{grade:$g, source:$s, location:$l, title:$t, evidence:$e, fix:$f, escalate:true}]' <<<"$FINDINGS")
+}
 add_finding() {   # grade source location title evidence fix
   FINDINGS=$(jq -c --arg g "$1" --arg s "$2" --arg l "$3" --arg t "$4" --arg e "$5" --arg f "$6" \
     '. + [{grade:$g, source:$s, location:$l, title:$t, evidence:$e, fix:$f}]' <<<"$FINDINGS")
 }
+add_finding_undecided() {   # a C for red at base and red after the change (L7): as add_finding, plus attribution:"undecided"
+  FINDINGS=$(jq -c --arg g C --arg s "$1" --arg l "$2" --arg t "$3" --arg e "$4" --arg f "$5" \
+    '. + [{grade:$g, source:$s, location:$l, title:$t, evidence:$e, fix:$f, attribution:"undecided"}]' <<<"$FINDINGS")
+  PROV_UNDECIDED=$(jq -c --arg w "$6" --arg l "$2" '. + [{run:$w, lane:$l}]' <<<"$PROV_UNDECIDED")
+}
+# Provenance (item 4, record only — never read by a verdict): what this layer actually ran, so a governance record can
+# name it. Labelled provenance, not attestation: a lane's sha says which bytes ran, not that they were the right ones.
+PROV_LANES='[]'
+PROV_UNDECIDED='[]'
+_sha_file() { { shasum -a 256 "$1" 2>/dev/null || sha256sum "$1" 2>/dev/null; } | cut -d' ' -f1 || true; }
+_sha_text() { printf '%s' "$1" | { shasum -a 256 2>/dev/null || sha256sum 2>/dev/null; } | cut -d' ' -f1 || true; }
+_SCN_SHA=""; [ -f "${SCANNER:-}" ] && _SCN_SHA=$(_sha_file "$SCANNER")   # at start, before anything runs (codex R1)
+prov_lane() {   # what · label · sha256 (of the lane file or the declared command) · rc
+  PROV_LANES=$(jq -c --arg w "$1" --arg l "$2" --arg h "$3" --arg r "$4" \
+    '. + [{run:$w, lane:$l, sha256:(if $h == "" then null else $h end), rc:($r|tonumber? // null)}]' <<<"$PROV_LANES")
+}
 emit() {
+  local _scn="" _scnsha=""
+  [ -f "${SCANNER:-}" ] && { _scn="${SCANNER##*/}"; _scnsha="${_SCN_SHA:-}"; }
+  local _lt="${LANE_TIMEOUT:-}"; [ -n "${_TMO:-}" ] || _lt=""   # no timeout binary: the runs were not time-bounded
   jq -cn --arg e0s "$E0_STATUS" --arg e0d "$E0_DETAIL" --arg e1s "$E1_STATUS" --arg e1d "$E1_DETAIL" \
-    --argjson f "$FINDINGS" '{e0:{status:$e0s,detail:$e0d}, e1:{status:$e1s,detail:$e1d}, findings:$f}'
+    --argjson f "$FINDINGS" --argjson lanes "$PROV_LANES" --argjson und "${PROV_UNDECIDED:-[]}" --arg base "${BASE_SHA:-}" --arg base_ref "${BASE_REF:-}" \
+    --arg ml "${MAX_LANES:-}" --arg lt "$_lt" --arg tmo "${_TMO:-}" --arg decl "${DECLARED:-0}" --arg scn "$_scn" --arg scnsha "$_scnsha" \
+    '{e0:{status:$e0s,detail:$e0d}, e1:{status:$e1s,detail:$e1d}, findings:$f,
+      provenance:{label:"recorded by the execution layer, not attested", base_ref:$base_ref,
+        base_sha:(if $base == "" then null else $base end), max_lanes_effective:($ml|tonumber? // null),
+        lane_timeout_effective:($lt|tonumber? // null), timeout_binary:(if $tmo == "" then null else $tmo end),
+        lanes_declared:($decl == "1"),
+        scanner:(if $scn == "" then null else $scn end), scanner_sha256:(if $scnsha == "" then null else $scnsha end),
+        lanes:$lanes, attribution_undecided:$und}}'
   exit 0
 }
 not_run_both() { E0_STATUS="not-run"; E0_DETAIL="$1"; E1_STATUS="not-run"; E1_DETAIL="$1"; emit; }
@@ -116,6 +154,23 @@ fi
 CHANGED=$( { git -C "$AFTER" -c core.quotePath=false diff --name-only "$BASE_SHA" 2>/dev/null
              git -C "$AFTER" -c core.quotePath=false ls-files -o --exclude-standard 2>/dev/null; } | sed '/^$/d' | sort -u)
 [ -n "$CHANGED" ] || not_run_both "NOT RUN (no change against base ${BASE_SHA:0:12})"
+
+# ── lane files this change edits or deletes (for the E1 base overlay below) ──────────────────────────────────────────
+# Listed NOW, before any lane runs: a lane that ran could restore its own base copy and drop out of a later listing
+# (codex R1). NUL-delimited: git quotes a name with a tab, quote or backslash even with quotePath off. A name with a
+# newline or tab cannot be carried in the list file — it is a B, never skipped.
+# Held in a variable, not a file: lanes run next to $TMP and could rewrite a file there (codex R2). The patch the
+# fresh copies are rebuilt from is pinned by hash for the same reason.
+OVL_LIST=""; OVL_BAD=0; _ovl_status=""
+OVL_PATCH_SHA=$( { shasum -a 256 "$TMP/overlay.patch" 2>/dev/null || sha256sum "$TMP/overlay.patch" 2>/dev/null; } | cut -d' ' -f1)
+while IFS= read -r -d '' _tok; do
+  if [ -z "$_ovl_status" ]; then _ovl_status="$_tok"; continue; fi
+  _p="$_tok"; _st="$_ovl_status"; _ovl_status=""
+  case "$_st" in M|D|T) ;; *) continue ;; esac
+  case "$_p" in scripts/test_*.sh|*_lanes.sh) ;; *) continue ;; esac
+  if [[ "$_p" == *$'\n'* || "$_p" == *$'\t'* ]]; then OVL_BAD=$((OVL_BAD + 1)); continue; fi
+  OVL_LIST="${OVL_LIST}${_st}"$'\t'"${_p}"$'\n'
+done < <(git -C "$AFTER" diff -z --no-renames --name-status "$BASE_SHA" 2>/dev/null)
 
 # ── E0: static class scanners ────────────────────────────────────────────────────────────────────
 if [ ! -f "$SCANNER" ]; then
@@ -196,11 +251,28 @@ else
     [ -n "$_others" ] && printf '%s\n' "$_others"
   } | awk -F '\t' '!seen[$2]++' > "$LANES_FILE"
 fi
+# Lanes the change does not touch go first, then lanes it edits, then lanes it adds (each group keeps the order above),
+# so a change cannot push a real lane past the cap by adding lanes or touching other ones (G3, 2026-11-25; codex R1:
+# «exists at base» alone let six trivially edited lanes push the unchanged guard out). Declared lanes keep their order.
+if [ "$DECLARED" = 0 ] && [ -s "$LANES_FILE" ]; then
+  : > "$TMP/lanes.keep"; : > "$TMP/lanes.edit"; : > "$TMP/lanes.new"
+  while IFS="$TAB" read -r _k _v; do
+    if ! git -C "$WORK" cat-file -e "${BASE_SHA}:${_v}" 2>/dev/null; then _g=new
+    elif grep -qxF -- "$_v" <<<"$CHANGED"; then _g=edit   # here-string: a pipe into grep -q dies by SIGPIPE under pipefail (codex R2)
+    else _g=keep; fi
+    printf '%s\t%s\n' "$_k" "$_v" >> "$TMP/lanes.$_g"
+  done < "$LANES_FILE"
+  cat "$TMP/lanes.keep" "$TMP/lanes.edit" "$TMP/lanes.new" > "$LANES_FILE"
+fi
 TOTAL=$(grep -c . "$LANES_FILE" 2>/dev/null || true); TOTAL=${TOTAL:-0}
 CAPNOTE=""
 if [ "$TOTAL" -gt "$MAX_LANES" ]; then
+  # a cap that bites leaves lanes unrun: that is a B, never a quiet note (G3)
+  _dropped=$(tail -n +"$((MAX_LANES + 1))" "$LANES_FILE" | cut -f2- | head -c 1500)
   head -n "$MAX_LANES" "$LANES_FILE" > "$TMP/lanes.cap" && mv "$TMP/lanes.cap" "$LANES_FILE"
   CAPNOTE=" (capped at ${MAX_LANES} of ${TOTAL} — FH_GATE_MAX_LANES)"
+  [ "$MODE" = plan ] || add_finding B E1 "(lane cap)" "$((TOTAL - MAX_LANES)) target lane(s) not run — FH_GATE_MAX_LANES=${MAX_LANES} of ${TOTAL}" \
+    "$_dropped" "raise FH_GATE_MAX_LANES, or declare the lanes to run with FH_GATE_LANES"
 fi
 KIND="discovered"; [ "$DECLARED" = 1 ] && KIND="declared"
 RUN_N=$(grep -c . "$LANES_FILE" 2>/dev/null || true); RUN_N=${RUN_N:-0}
@@ -224,7 +296,9 @@ else
     [ -n "$val" ] || continue
     n=$((n + 1)); log="$TMP/lane_$n.log"
     label="$val"; [ "$kind" = L ] && label="bash $val"
+    if [ "$kind" = L ]; then _lsha=$(_sha_file "$AFTER/$val"); else _lsha=$(_sha_text "$val"); fi   # before it runs (codex R1)
     run_lane "$AFTER" "$kind" "$val" "$log"; rc=$?
+    prov_lane change "$label" "$_lsha" "$rc"
     [ "$rc" -eq 0 ] && continue
     tailtxt=$(tail -n 15 "$log" 2>/dev/null | head -c 1500)
     if dnf_rc "$rc"; then
@@ -240,13 +314,16 @@ else
         || BASECOPY="FAILED"
     fi
     if [ "$BASECOPY" = "FAILED" ]; then
-      red=$((red + 1))
-      add_finding A E1 "$label" "lane red after this change (the base copy could not be built, so not compared)" "$tailtxt" "fix the change or the lane"
+      # red now, and «green at base» could not be checked: an instrument failure, not a regression — B (G4)
+      nocmp=$((nocmp + 1))
+      add_finding B E1 "$label" "lane red after this change (rc $rc); the base copy could not be built, so not compared" "$tailtxt" "run the lane at the base by hand"
     elif [ "$kind" = L ] && [ ! -f "$BASECOPY/$val" ]; then
       red=$((red + 1))
       add_finding A E1 "$label" "new lane, red after this change (rc $rc)" "$tailtxt" "fix the change or the lane"
     else
+      if [ "$kind" = L ]; then _bsha=$(_sha_file "$BASECOPY/$val"); else _bsha=$(_sha_text "$val"); fi
       run_lane "$BASECOPY" "$kind" "$val" "$TMP/lane_${n}_base.log"; brc=$?
+      prov_lane base "$label" "$_bsha" "$brc"
       if [ "$brc" -eq 0 ]; then
         red=$((red + 1))
         add_finding A E1 "$label" "this change turns the lane red (rc $rc; green at base ${BASE_SHA:0:12})" "$tailtxt" "fix the change, or the lane if the lane is wrong"
@@ -260,13 +337,110 @@ else
         add_finding B E1 "$label" "lane red after this change (rc $rc); the base run did not finish within ${LANE_TIMEOUT}s, so not compared" "$tailtxt" "raise FH_LANE_TIMEOUT or run the lane at the base by hand"
       else
         pre=$((pre + 1))
-        add_finding C E1 "$label" "lane red before this change too (rc $rc here, rc $brc at base ${BASE_SHA:0:12})" "$tailtxt" "pre-existing — not introduced by this change"
+        add_finding_undecided E1 "$label" "lane red before this change too (rc $rc here, rc $brc at base ${BASE_SHA:0:12}) — attribution undecided" "$tailtxt" \
+          "attribution undecided — the lane was red at base, so this run cannot tell whether this change also breaks it" change
       fi
     fi
   done < "$LANES_FILE"
   E1_STATUS="ran"
   E1_DETAIL="ran ${n} lane(s), ${KIND}${CAPNOTE} — ${red} red, ${pre} red before, ${dnf} did not finish"
-  [ "$nocmp" -gt 0 ] && E1_DETAIL="${E1_DETAIL}, ${nocmp} red but not compared (base did not finish)"
+  [ "$pre" -gt 0 ] && E1_DETAIL="${E1_DETAIL} · attribution undecided: ${pre} red at base and after this change"
+  [ "$nocmp" -gt 0 ] && E1_DETAIL="${E1_DETAIL}, ${nocmp} red but not compared (the base run did not finish, or the base copy could not be built)"
   [ -z "$_TMO" ] && E1_DETAIL="${E1_DETAIL} (no timeout binary — lanes were not time-bounded)"
+fi
+# ── E1 base overlay: the base version of every lane file this change edits or deletes ──────────────────────────────
+# E1 above runs the change's own lanes, so a change that loosens a lane and breaks the code it tests stays green.
+# Here the BASE version of each such lane file (listed before any lane ran) is run against the change's code. This
+# states a record property only — «a lane file changed, and its base version is red on this tree» — never whether
+# the edit was a weakening; a human judges that. Red here and green at base → B with escalate:true (fh-gate raises the
+# verdict to at least ESCALATE — a lane edit may be a legitimate contract change, so it never BLOCKs by itself); red
+# at base too → C. Anything that keeps the comparison from being made is B «could not run» (codex R1): the base version cannot
+# run on this tree (rc 126/127, or rc 2 with «HARNESS-ERROR», FH's lane convention for «my subject is missing» — a
+# rename, say), a run that does not finish, a copy that cannot be built, a path through a symlink.
+# Each lane gets its OWN fresh copy of the change and of the base (codex R1): E1's lanes already ran in the copies
+# above and may have changed them, and one overlay must not leave a restored lane behind for the next.
+# (Lean RH-formalization RFC, root review 2026-11-25: «Golden Overlay» — the reviewed change must not edit its own test.)
+# NAMED RESIDUALS, not covered: a change that leaves the lane file alone and edits a helper it sources or a fixture it
+# reads (the base lane then reads the changed helper — protect such paths with .fh-gate-protected); lanes declared as
+# commands in FH_GATE_LANES (a command string has no base file to overlay); test files outside FH's lane naming.
+OVL_N=$(printf '%s' "$OVL_LIST" | grep -c . || true); OVL_N=${OVL_N:-0}
+dnf_rc() { [ "$1" -eq 124 ] || [ "$1" -eq 137 ]; }   # also defined in E1 above, which may not have run
+cannot_run_rc() { dnf_rc "$1" || [ "$1" -eq 126 ] || [ "$1" -eq 127 ] || { [ "$1" -eq 2 ] && grep -q 'HARNESS-ERROR' "$2" 2>/dev/null; }; }
+if [ "$OVL_BAD" -gt 0 ]; then
+  add_finding B E1 "(base overlay)" "${OVL_BAD} lane file(s) edited or deleted by this change have a newline in the name — their base version was not run" "" "rename the lane file"
+fi
+if [ "$OVL_N" -gt 0 ] || [ "$OVL_BAD" -gt 0 ]; then
+  if [ "$MODE" = plan ]; then
+    _ol="would also run the base version of ${OVL_N} lane file(s) this change edits or deletes: $(printf '%s' "$OVL_LIST" | cut -f2 | paste -sd ';' -)"
+    if [ "$E1_STATUS" = not-run ]; then E1_STATUS="planned"; E1_DETAIL="$_ol"; else E1_DETAIL="${E1_DETAIL} · ${_ol}"; fi
+  else
+    # _ovl_copy <dir> change|base — a fresh copy of the change (same recipe as AFTER: HEAD + uncommitted + untracked)
+    # or of the base (the base commit alone — even when it equals HEAD, codex R2)
+    _ovl_copy() {
+      local sha="$BASE_SHA"; [ "$2" = change ] && sha="$HEAD_SHA"
+      git clone -q --shared --no-checkout "$WORK" "$1" >/dev/null 2>&1 || return 1
+      git -C "$1" -c advice.detachedHead=false checkout -q --detach "$sha" >/dev/null 2>&1 || return 1
+      [ "$2" = change ] || return 0
+      # checked before the empty test: a lane that empties the patch must not turn into «no uncommitted change»
+      [ "$( { shasum -a 256 "$TMP/overlay.patch" 2>/dev/null || sha256sum "$TMP/overlay.patch" 2>/dev/null; } | cut -d' ' -f1)" = "$OVL_PATCH_SHA" ] || return 1
+      if [ -s "$TMP/overlay.patch" ]; then git -C "$1" apply --whitespace=nowarn "$TMP/overlay.patch" >/dev/null 2>&1 || return 1; fi
+      ( cd "$WORK" && git ls-files -o --exclude-standard -z | tar --null -T - -cf - 2>/dev/null ) | ( cd "$1" && tar -xf - 2>/dev/null )
+    }
+    _no_link_on_path() {   # root rel → 0 when no existing component of rel under root is a symlink
+      local acc="$1" seg parts
+      IFS=/ read -r -a parts <<<"$2"
+      for seg in "${parts[@]}"; do acc="$acc/$seg"; [ -L "$acc" ] && return 1; done
+      return 0
+    }
+    _ovl_run() {   # dir path log → rc
+      ( cd "$1" && env FH_GATE_EXEC=off FH_GATE_NESTED=1 ${_TMO:+$_TMO "$LANE_TIMEOUT"} bash -- "$2" < /dev/null > "$3" 2>&1 )
+    }
+    o_red=0; o_pre=0; o_cnr=0; o_n=0
+    while IFS="$TAB" read -r _st _p; do
+      [ -n "$_p" ] || continue
+      o_n=$((o_n + 1)); _olog="$TMP/ovl_$o_n.log"; _ol="base version of $_p"
+      _how="edited"; [ "$_st" = D ] && _how="deleted"
+      _cnr() { o_cnr=$((o_cnr + 1)); add_finding B E1 "$_ol" "lane file ${_how} by this change; its base version could not be compared — $1" "${2:-}" "${3:-run git show ${BASE_SHA:0:12}:$_p on the changed tree by hand}"; }
+      _oc="$TMP/ovl_${o_n}_after"
+      if ! _ovl_copy "$_oc" change; then _cnr "a fresh copy of the change could not be built"; continue; fi
+      if ! _no_link_on_path "$_oc" "$_p"; then _cnr "a component of its path is a symlink in the change's tree (writing the base lane there would land elsewhere)"; continue; fi
+      mkdir -p "$_oc/$(dirname -- "$_p")" && rm -f -- "$_oc/$_p"
+      _bmode=$(git -C "$WORK" ls-tree "$BASE_SHA" -- "$_p" 2>/dev/null | cut -d' ' -f1)
+      if [ "$_bmode" = 120000 ]; then   # the base lane was a symlink: put the link back, not its target name as text (codex R2)
+        ln -s -- "$(git -C "$WORK" cat-file blob "${BASE_SHA}:${_p}" 2>/dev/null)" "$_oc/$_p" 2>/dev/null || { _cnr "its base version (a symlink) could not be restored"; continue; }
+      elif ! git -C "$WORK" show "${BASE_SHA}:${_p}" > "$_oc/$_p" 2>/dev/null; then _cnr "its base version could not be read"; continue; fi
+      _osha=$(_sha_file "$_oc/$_p")
+      _ovl_run "$_oc" "$_p" "$_olog"; orc=$?
+      prov_lane base-overlay "$_ol" "$_osha" "$orc"
+      [ "$orc" -eq 0 ] && continue
+      _tail=$(tail -n 15 "$_olog" 2>/dev/null | head -c 1500)
+      if cannot_run_rc "$orc" "$_olog"; then
+        _cnr "it could not run on this tree (rc $orc)" "$_tail" "if a file it tests was renamed, say so; otherwise run git show ${BASE_SHA:0:12}:$_p on this tree by hand"
+        continue
+      fi
+      _ob="$TMP/ovl_${o_n}_base"
+      if ! _ovl_copy "$_ob" base; then _cnr "it is red on this tree (rc $orc), and a fresh base copy could not be built" "$_tail"; continue; fi
+      _obsha=$(_sha_file "$_ob/$_p")
+      _ovl_run "$_ob" "$_p" "$TMP/ovl_${o_n}_base.log"; obrc=$?
+      prov_lane base-overlay-at-base "$_ol" "$_obsha" "$obrc"
+      if [ "$obrc" -eq 0 ]; then
+        o_red=$((o_red + 1))
+        # ESCALATE, not A (revised plan 2026-11-25): a lane edit can be a legitimate contract change, and a human decides.
+        # Grade B keeps the verdict off PASS even for a consumer that does not read `escalate`.
+        add_finding_esc B E1 "$_ol" "lane file ${_how} by this change; its base version is red on this tree (rc $orc; green at base ${BASE_SHA:0:12})" "$_tail" \
+          "the change's code fails the lane as it was before this change — a human decides whether the lane edit is a legitimate contract change"
+      elif cannot_run_rc "$obrc" "$TMP/ovl_${o_n}_base.log"; then
+        _cnr "it is red on this tree (rc $orc), and it could not run at the base either (rc $obrc)" "$_tail"
+      else
+        o_pre=$((o_pre + 1))
+        add_finding_undecided E1 "$_ol" "lane file ${_how} by this change; its base version was red at base too (rc $orc here, rc $obrc at base ${BASE_SHA:0:12}) — attribution undecided" "$_tail" \
+          "attribution undecided — the base version was red at base, so this run cannot tell whether this change also breaks it" base-overlay
+      fi
+    done <<<"$OVL_LIST"
+    o_cnr=$((o_cnr + OVL_BAD))
+    _ol="base overlay: $((o_n + OVL_BAD)) lane file(s) this change edits or deletes — ${o_red} red here, ${o_pre} red at base too, ${o_cnr} could not run"
+    [ "$o_pre" -gt 0 ] && _ol="${_ol} · attribution undecided: ${o_pre} red at base and after this change"
+    if [ "$E1_STATUS" = not-run ]; then E1_STATUS="ran"; E1_DETAIL="$_ol"; else E1_DETAIL="${E1_DETAIL} · ${_ol}"; fi
+  fi
 fi
 emit

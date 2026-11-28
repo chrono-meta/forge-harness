@@ -9,7 +9,6 @@
   <a href="https://github.com/marketplace/actions/fh-gate-typed-ai-code-review-verdict"><img src="https://img.shields.io/badge/GitHub_Action-marketplace-2088FF.svg?logo=githubactions" alt="GitHub Actions Marketplace — fh-gate"></a>
   <a href="https://www.npmjs.com/package/@chrono-meta/fh-gate"><img src="https://img.shields.io/npm/v/@chrono-meta/fh-gate.svg?color=cb3837&logo=npm" alt="npm"></a>
   <a href="https://www.npmjs.com/package/@chrono-meta/fh-gate"><img src="https://img.shields.io/npm/dt/@chrono-meta/fh-gate.svg?color=3fb950&logo=npm&label=downloads" alt="npm total downloads"></a>
-  <a href="https://github.com/chrono-meta/homebrew-forge-harness"><img src="https://img.shields.io/badge/homebrew-tap-FBB040.svg?logo=homebrew" alt="Homebrew tap"></a>
 </p>
 
 <p align="center">
@@ -64,7 +63,7 @@ cd your-repo && npx --package @chrono-meta/fh-gate fh-gate     # reviews the git
 It finds your changed files from `git diff`, sends them to a review backend, and prints a verdict
 (`FH_GATE_VERDICT: PASS | PENDING | BLOCKED | ESCALATE`) plus an exit code. A PASS counts only if the review actually ran: a backend that never answered, a dry run, or an unknown exit code is not a PASS, and the GitHub Actions step fails on it by default. Needs Node ≥ 16 and one backend
 CLI installed and logged in: `claude` (default) or `codex` (`FH_BACKEND=codex`). Use it in CI, a pre-commit
-hook, or beside another agent. A GitHub Actions step and a Homebrew tap exist too — see [Run the gate](docs/REFERENCE.md#run-it-outside-claude-code--the-fh-gate-cli).
+hook, or beside another agent. A GitHub Actions step exists too — see [Run the gate](docs/REFERENCE.md#run-it-outside-claude-code--the-fh-gate-cli).
 
 **What a run costs and does.** Each run sends the changed files to the backend CLI you are logged in to and makes
 one review call there, billed or counted against that account like any other call (`FH_BACKEND=cross` makes up to two, and the
@@ -190,8 +189,8 @@ back to it. Full map, every node a real path: [`docs/map/FH_MAP.md`](docs/map/FH
   missed the *same* two holes, and the second family caught both. Method in [`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md); more runs in [`docs/OUTPUT_EVIDENCE.md`](docs/OUTPUT_EVIDENCE.md).
 - Maturity is graded, not claimed. Each of the five identities named below carries a dated grade, with its grounds, in
   [`ship_readiness_gate.md`](knowledge/shared/harness-core/ship_readiness_gate.md).
-- Counts on this page (47 skills · 14 agents) are the skill folders and agent files under `plugins/`
-  (`fh-meta`, `fh-commons`, `fh-qp`, `fh-preprep`), counted 2026-11-01. Phrasebook: [`CHEATSHEET.md` §12](CHEATSHEET.md#12-skills--agents--what-each-does-and-what-to-say).
+- Counts on this page (48 skills · 14 agents) are the skill folders and agent files under `plugins/`
+  (`fh-meta`, `fh-commons`, `fh-qp`, `fh-preprep`), counted 2026-11-25. Phrasebook: [`CHEATSHEET.md` §12](CHEATSHEET.md#12-skills--agents--what-each-does-and-what-to-say).
 
 ## Words you will meet once you use it
 
